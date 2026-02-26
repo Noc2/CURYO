@@ -1,6 +1,6 @@
 import { waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { fastForwardTime, triggerKeeper, waitForDrandReadiness, waitForSettlementIndexed } from "../helpers/keeper";
+import { fastForwardTime, triggerKeeper, waitForSettlementIndexed } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentById, getContentList } from "../helpers/ponder-api";
 import { voteOnSpecificContent } from "../helpers/vote-helpers";
@@ -27,11 +27,6 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("Tied round lifecycle", () => {
   test.describe.configure({ mode: "serial" });
-
-  test.beforeAll(async () => {
-    const ready = await waitForDrandReadiness();
-    if (!ready) throw new Error("Drand beacons not available after 18 min wait");
-  });
 
   let newContentId: string | null = null;
 

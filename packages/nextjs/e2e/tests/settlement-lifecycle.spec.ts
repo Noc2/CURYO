@@ -1,16 +1,11 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { fastForwardTime, triggerKeeper, waitForDrandReadiness, waitForSettlementIndexed } from "../helpers/keeper";
+import { fastForwardTime, triggerKeeper, waitForSettlementIndexed } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentById, getContentList } from "../helpers/ponder-api";
 import { voteOnContent } from "../helpers/vote-helpers";
 import { expect, test } from "@playwright/test";
 
 test.describe("Settlement lifecycle", () => {
-  test.beforeAll(async () => {
-    const ready = await waitForDrandReadiness();
-    if (!ready) throw new Error("Drand beacons not available after 18 min wait");
-  });
-
   // Extend timeout: 3 votes × ~45s + time fast-forward + keeper calls
   test("full cycle: vote → reveal → settle", async ({ browser }) => {
     test.setTimeout(240_000);

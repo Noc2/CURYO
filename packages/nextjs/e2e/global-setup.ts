@@ -110,6 +110,61 @@ async function checkKeeperConfigured(): Promise<void> {
   }
 }
 
+/**
+ * Wait for drand beacons to become available by polling chain age.
+ * Tlock decryption requires ~15 min of real wall-clock time after chain start.
+ * Blocks until chain age >= 15 min, logging progress every 30s.
+ */
+async function waitForDrandReadiness(): Promise<void> {
+  const ANVIL_RPC = "http://localhost:8545";
+  const MIN_AGE_MINUTES = 15;
+  const MAX_WAIT_MS = 20 * 60 * 1000; // 20 min max
+
+  async function getChainAgeMinutes(): Promise<number> {
+    const res = await fetch(ANVIL_RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getBlockByNumber",
+        params: ["0x1", false],
+        id: 1,
+      }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    const { result } = await res.json();
+    if (!result?.timestamp) return 0;
+    const blockTimestamp = parseInt(result.timestamp, 16);
+    return (Math.floor(Date.now() / 1000) - blockTimestamp) / 60;
+  }
+
+  const age = await getChainAgeMinutes();
+  if (age >= MIN_AGE_MINUTES) {
+    console.log(`  ✓ Chain is ${age.toFixed(0)} min old — drand beacons available`);
+    return;
+  }
+
+  const waitMinutes = Math.ceil(MIN_AGE_MINUTES - age);
+  console.log(`  ⏳ Chain is ${age.toFixed(1)} min old — waiting ~${waitMinutes} min for drand beacons...`);
+
+  const start = Date.now();
+  while (Date.now() - start < MAX_WAIT_MS) {
+    await new Promise(resolve => setTimeout(resolve, 30_000));
+    const currentAge = await getChainAgeMinutes();
+    if (currentAge >= MIN_AGE_MINUTES) {
+      console.log(`  ✓ Chain is ${currentAge.toFixed(0)} min old — drand beacons available`);
+      return;
+    }
+    const remaining = Math.ceil(MIN_AGE_MINUTES - currentAge);
+    console.log(`  ⏳ Chain is ${currentAge.toFixed(1)} min old (~${remaining} min remaining)`);
+  }
+
+  throw new Error(
+    "\n\n  ✗ Drand beacons not available after 20 min wait\n" +
+      "    Settlement tests require ~15 min of wall-clock time after chain start.\n",
+  );
+}
+
 async function globalSetup() {
   console.log("\n  Checking E2E infrastructure...");
 
@@ -135,6 +190,9 @@ async function globalSetup() {
 
   // Validate keeper has a signing key (prevents silent test skips)
   await checkKeeperConfigured();
+
+  // Wait for drand beacons — settlement tests need ~15 min chain age
+  await waitForDrandReadiness();
 
   console.log("  ✓ All services ready\n");
 }

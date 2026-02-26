@@ -1,7 +1,7 @@
 import { claimSubmitterReward, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
-import { fastForwardTime, triggerKeeper, waitForDrandReadiness, waitForSettlementIndexed } from "../helpers/keeper";
+import { fastForwardTime, triggerKeeper, waitForSettlementIndexed } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentList, getSubmitterRewards, ponderGet } from "../helpers/ponder-api";
 import { voteOnContent } from "../helpers/vote-helpers";
@@ -17,11 +17,6 @@ import { expect, test } from "@playwright/test";
 test.describe("Reward claim lifecycle", () => {
   // These tests depend on each other and share state
   test.describe.configure({ mode: "serial" });
-
-  test.beforeAll(async () => {
-    const ready = await waitForDrandReadiness();
-    if (!ready) throw new Error("Drand beacons not available after 18 min wait");
-  });
 
   // Extend timeout for the entire describe
   let settledContentId: string | null = null;
