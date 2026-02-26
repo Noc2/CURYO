@@ -1,7 +1,7 @@
 import { claimSubmitterReward, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
-import { fastForwardTime, triggerKeeper, waitForSettlementIndexed } from "../helpers/keeper";
+import { fastForwardTime, triggerKeeper, waitForDrandReadiness, waitForSettlementIndexed } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentList, getSubmitterRewards, ponderGet } from "../helpers/ponder-api";
 import { voteOnContent } from "../helpers/vote-helpers";
@@ -17,6 +17,11 @@ import { expect, test } from "@playwright/test";
 test.describe("Reward claim lifecycle", () => {
   // These tests depend on each other and share state
   test.describe.configure({ mode: "serial" });
+
+  test.beforeAll(async () => {
+    const ready = await waitForDrandReadiness();
+    if (!ready) throw new Error("Drand beacons not available after 18 min wait");
+  });
 
   // Extend timeout for the entire describe
   let settledContentId: string | null = null;
@@ -61,19 +66,15 @@ test.describe("Reward claim lifecycle", () => {
     let totalRevealed = 0;
     let totalSettled = 0;
 
-    for (let attempt = 0; attempt < 5; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 4_000));
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 5_000));
       const resp = await triggerKeeper("http://localhost:3000");
       totalRevealed += resp.result.votesRevealed;
       totalSettled += resp.result.roundsSettled;
       if (totalRevealed > 0 && totalSettled > 0) break;
     }
 
-    // If no reveals happened, drand beacons aren't available yet (chain too fresh).
-    if (totalRevealed === 0) {
-      test.skip(true, "Drand beacons not yet available (chain started < 15 min ago)");
-      return;
-    }
+    expect(totalRevealed, "Drand beacons not available — keeper revealed 0 votes").toBeGreaterThan(0);
     expect(totalSettled).toBeGreaterThanOrEqual(1);
 
     // Step 4: Find the settled content for later tests

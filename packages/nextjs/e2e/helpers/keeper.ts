@@ -47,6 +47,32 @@ export async function checkDrandReadiness(): Promise<{ ready: boolean; message: 
 }
 
 /**
+ * Wait for drand beacons to become available by polling chain age.
+ * Blocks up to maxWaitMs (default 18 min) and logs progress every 30s.
+ * Returns true once chain age >= 15 min, false on timeout.
+ */
+export async function waitForDrandReadiness(maxWaitMs = 18 * 60 * 1000): Promise<boolean> {
+  const first = await checkDrandReadiness();
+  if (first.ready) return true;
+
+  console.log(`    ⏳ ${first.message} — waiting for drand beacons...`);
+  const start = Date.now();
+
+  while (Date.now() - start < maxWaitMs) {
+    await new Promise(resolve => setTimeout(resolve, 30_000));
+    const check = await checkDrandReadiness();
+    if (check.ready) {
+      console.log(`    ✓ ${check.message}`);
+      return true;
+    }
+    const remaining = Math.ceil((maxWaitMs - (Date.now() - start)) / 60_000);
+    console.log(`    ⏳ ${check.message} (${remaining} min remaining)`);
+  }
+
+  return false;
+}
+
+/**
  * Fast-forward Anvil's block timestamp by the given number of seconds,
  * then mine a block to make the new timestamp take effect.
  */
