@@ -1,28 +1,74 @@
-import { claimSubmitterReward, waitForPonderIndexed } from "../helpers/admin-helpers";
+import { approveCREP, claimSubmitterReward, submitContentDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { fastForwardTime, triggerKeeper, waitForSettlementIndexed } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentList, getSubmitterRewards, ponderGet } from "../helpers/ponder-api";
-import { voteOnContent } from "../helpers/vote-helpers";
+import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { expect, test } from "@playwright/test";
 
 /**
  * Reward claiming after settlement.
  * Triggers Ponder events: RewardClaimed, SubmitterRewardClaimed, RatingUpdated.
  *
- * Uses accounts #3-#7 for voting (5 voters = minVoters threshold).
- * Tests run serially: vote → settle → verify → claim → submitter claim.
+ * Submits fresh content via direct contract call so that voters have
+ * no cooldown collisions with other test files (vote.spec, settlement-lifecycle).
+ *
+ * Account allocation (exclusive to this file for voting):
+ * - Account #2 — submits fresh content (also used for submitter reward tests)
+ * - Accounts #3, #4, #5, #6 — vote UP (winning side)
+ * - Account #7 — votes DOWN (losing side, tests reward absence)
+ *
+ * Tests run serially: submit → vote → settle → verify → claim → submitter claim.
  */
 test.describe("Reward claim lifecycle", () => {
   // These tests depend on each other and share state
   test.describe.configure({ mode: "serial" });
 
-  // Extend timeout for the entire describe
+  let newContentId: string | null = null;
   let settledContentId: string | null = null;
+
+  test("submit fresh content for reward claim test", async () => {
+    test.setTimeout(60_000);
+
+    const submitter = ANVIL_ACCOUNTS.account2;
+    const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
+    const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+
+    // Approve MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry
+    const approved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
+    expect(approved, "cREP approval for content submission failed").toBe(true);
+
+    // Submit content with a unique URL
+    const uniqueId = Date.now();
+    const success = await submitContentDirect(
+      `https://www.youtube.com/watch?v=reward_test_${uniqueId}`,
+      `Reward Claim Test ${uniqueId}`,
+      "test",
+      1, // categoryId 1 = YouTube
+      submitter.address,
+      CONTENT_REGISTRY,
+    );
+    expect(success, "Content submission tx failed").toBe(true);
+
+    // Wait for Ponder to index the new content
+    const indexed = await waitForPonderIndexed(async () => {
+      const { items } = await getContentList({ status: "all", sortBy: "newest", limit: 5 });
+      const match = items.find(item => item.url.includes(`reward_test_${uniqueId}`));
+      if (match) {
+        newContentId = match.id;
+        return true;
+      }
+      return false;
+    }, 30_000);
+
+    expect(indexed, "Ponder did not index the newly submitted content").toBe(true);
+    expect(newContentId).toBeTruthy();
+  });
 
   test("vote with 5 accounts and settle a round", async ({ browser }) => {
     test.setTimeout(300_000);
+    test.skip(!newContentId, "No content from previous test");
 
     const voters = [
       { account: ANVIL_ACCOUNTS.account3, direction: "up" as const },
@@ -34,23 +80,20 @@ test.describe("Reward claim lifecycle", () => {
 
     let successCount = 0;
 
-    // Step 1: Five accounts vote on content
+    // Step 1: Five accounts vote on the fresh content (no cooldown possible)
     for (const voter of voters) {
       const context = await browser.newContext();
       const page = await context.newPage();
       await setupWallet(page, voter.account.privateKey);
 
-      const success = await voteOnContent(page, voter.direction);
+      const success = await voteOnSpecificContent(page, newContentId!, voter.direction);
       if (success) successCount++;
 
       await context.close();
     }
 
     // Need 5 votes for settlement (minVoters=5)
-    if (successCount < 5) {
-      test.skip(true, `Only ${successCount}/5 votes succeeded (cooldowns from prior runs)`);
-      return;
-    }
+    expect(successCount, `Only ${successCount}/5 votes succeeded on fresh content`).toBeGreaterThanOrEqual(5);
 
     // Step 2: Fast-forward past the epoch boundary (900s + buffer)
     await fastForwardTime(901);
@@ -73,13 +116,19 @@ test.describe("Reward claim lifecycle", () => {
     expect(totalRevealed, "Drand beacons not available — keeper revealed 0 votes").toBeGreaterThan(0);
     expect(totalSettled).toBeGreaterThanOrEqual(1);
 
-    // Step 4: Find the settled content for later tests
-    const { items } = await getContentList({ status: "all", limit: 20 });
-    for (const item of items) {
-      const settled = await waitForSettlementIndexed(item.id, "http://localhost:42069", 15_000);
-      if (settled) {
-        settledContentId = item.id;
-        break;
+    // Step 4: Verify settlement on the fresh content
+    const settled = await waitForSettlementIndexed(newContentId!, "http://localhost:42069", 30_000);
+    if (settled) {
+      settledContentId = newContentId;
+    } else {
+      // Fallback: check other content that may have settled
+      const { items } = await getContentList({ status: "all", limit: 20 });
+      for (const item of items) {
+        const s = await waitForSettlementIndexed(item.id, "http://localhost:42069", 5_000);
+        if (s) {
+          settledContentId = item.id;
+          break;
+        }
       }
     }
 
@@ -152,7 +201,7 @@ test.describe("Reward claim lifecycle", () => {
   test("submitter rewards visible in Ponder API", async () => {
     test.skip(!settledContentId, "No settled content from previous test");
 
-    // Account #2 submitted content #1 — check their reward data
+    // Account #2 submitted the fresh content — check their reward data
     const address = ANVIL_ACCOUNTS.account2.address.toLowerCase();
     const data = await ponderGet(`/rewards?voter=${address}`);
     expect(data).toHaveProperty("items");

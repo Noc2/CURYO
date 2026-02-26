@@ -93,14 +93,14 @@ test.describe("Round cancellation", () => {
 
   test("cancelled rounds verified via Ponder or on-chain", async () => {
     test.skip(cancelledCount === 0, "No rounds were cancelled in previous test");
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
-    // Ponder may be indexing a remote chain (Celo Sepolia) rather than local Anvil.
-    // Try Ponder first, but consider the test passed if on-chain cancellation succeeded.
+    // Poll Ponder for cancelled rounds. After a 7-day time skip, Ponder needs
+    // time to process the new blocks. Give it up to 60s to catch up.
     let foundCancelled = false;
     const start = Date.now();
 
-    while (Date.now() - start < 15_000) {
+    while (Date.now() - start < 60_000) {
       try {
         const { items } = await getContentList({ status: "all", limit: 50 });
         for (const item of items.slice(0, 10)) {
@@ -118,11 +118,10 @@ test.describe("Round cancellation", () => {
       await new Promise(resolve => setTimeout(resolve, 3_000));
     }
 
+    // On-chain cancellation already verified in previous test (tx succeeded).
+    // If Ponder hasn't indexed it yet, that's a Ponder lag issue, not a test failure.
     if (!foundCancelled) {
-      // Ponder likely indexes a different chain (e.g. Celo Sepolia, not local Anvil).
-      // The on-chain cancellation was already verified in the previous test
-      // (cancelExpiredRoundDirect returned true = tx succeeded without revert).
-      test.skip(true, "Ponder not indexing local Anvil — on-chain cancellation verified in previous test");
+      console.log("    ⚠ Ponder has not indexed the cancelled round yet (on-chain tx verified)");
     }
 
     expect(foundCancelled).toBe(true);

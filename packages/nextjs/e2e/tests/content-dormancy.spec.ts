@@ -69,16 +69,13 @@ test.describe("Content dormancy lifecycle", () => {
     const success = await markDormant(BigInt(targetContentId), ANVIL_ACCOUNTS.account0.address, CONTENT_REGISTRY);
     expect(success).toBe(true);
 
-    // Wait for Ponder to index the dormancy
+    // Wait for Ponder to index the dormancy (60s — after 30-day time skip Ponder needs time)
     const indexed = await waitForPonderIndexed(async () => {
       const { content } = await getContentById(targetContentId!);
       return content.status === 1; // Dormant
-    });
+    }, 60_000);
 
-    if (!indexed) {
-      test.skip(true, "Ponder not indexing dormancy — on-chain tx succeeded");
-      return;
-    }
+    expect(indexed, "Ponder did not index dormancy within 60s — on-chain tx succeeded").toBe(true);
 
     dormantContentId = targetContentId;
     const { content: after } = await getContentById(targetContentId);
@@ -102,16 +99,13 @@ test.describe("Content dormancy lifecycle", () => {
     const success = await reviveContent(BigInt(dormantContentId!), ANVIL_ACCOUNTS.account2.address, CONTENT_REGISTRY);
     expect(success).toBe(true);
 
-    // Wait for Ponder to index the revival
+    // Wait for Ponder to index the revival (60s — large time skips slow Ponder)
     const indexed = await waitForPonderIndexed(async () => {
       const { content } = await getContentById(dormantContentId!);
       return content.status === 0; // Active again
-    });
+    }, 60_000);
 
-    if (!indexed) {
-      test.skip(true, "Ponder not indexing revival — on-chain tx succeeded");
-      return;
-    }
+    expect(indexed, "Ponder did not index revival within 60s — on-chain tx succeeded").toBe(true);
 
     const { content: after } = await getContentById(dormantContentId!);
     expect(after.status).toBe(0); // Active
@@ -144,16 +138,13 @@ test.describe("Content dormancy lifecycle", () => {
     );
     expect(reviveSuccess).toBe(true);
 
-    // Verify content is active again
+    // Verify content is active again (60s timeout for Ponder after time skips)
     const indexed = await waitForPonderIndexed(async () => {
       const { content } = await getContentById(dormantContentId!);
       return content.status === 0;
-    });
+    }, 60_000);
 
-    if (!indexed) {
-      test.skip(true, "Ponder not indexing 2nd revival — on-chain tx succeeded");
-      return;
-    }
+    expect(indexed, "Ponder did not index 2nd revival within 60s — on-chain tx succeeded").toBe(true);
 
     const { content } = await getContentById(dormantContentId!);
     expect(content.status).toBe(0);
