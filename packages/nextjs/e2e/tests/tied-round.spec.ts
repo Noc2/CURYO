@@ -146,8 +146,8 @@ test.describe("Tied round lifecycle", () => {
     let totalRevealed = 0;
     let totalSettled = 0;
 
-    for (let attempt = 0; attempt < 8; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 5_000));
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 15_000));
       const resp = await triggerKeeper("http://localhost:3000");
       totalRevealed += resp.result.votesRevealed;
       totalSettled += resp.result.roundsSettled;

@@ -57,12 +57,13 @@ test.describe("Reward claim lifecycle", () => {
 
     // Step 3: Trigger keeper to reveal and settle.
     // Tlock decryption needs the drand beacon for the targeted round, which is
-    // produced in real wall-clock time (~15 min after chain start).
+    // produced in real wall-clock time. Even after the chain is 15+ min old,
+    // the specific beacon for this epoch may need a few more minutes to appear.
     let totalRevealed = 0;
     let totalSettled = 0;
 
-    for (let attempt = 0; attempt < 8; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 5_000));
+    for (let attempt = 0; attempt < 20; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 15_000));
       const resp = await triggerKeeper("http://localhost:3000");
       totalRevealed += resp.result.votesRevealed;
       totalSettled += resp.result.roundsSettled;
