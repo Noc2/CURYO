@@ -1,0 +1,24 @@
+{
+  "name": "@curyo/keeper",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "drand-client": "^1.2.6",
+    "tlock-js": "^0.9.0",
+    "viem": "2.39.0"
+  },
+  "devDependencies": {
+    "@types/node": "~18.19.50",
+    "tsx": "^4.19.0",
+    "typescript": "~5.8.2"
+  },
+  "engines": {
+    "node": ">=20.18.3"
+  }
+}

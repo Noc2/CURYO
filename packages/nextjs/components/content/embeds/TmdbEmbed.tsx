@@ -1,0 +1,170 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+import type { PlatformInfo } from "~~/utils/platforms";
+
+interface TmdbEmbedProps {
+  info: PlatformInfo;
+  compact?: boolean;
+}
+
+interface TmdbMovie {
+  title: string;
+  overview?: string;
+  posterUrl?: string;
+  releaseYear?: string;
+}
+
+/** TMDB brand icon */
+function TmdbIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20 3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 12H9.5v-2H11V9H9.5v1.5h-2V9H6v6h1.5v-2H9v2h2zm3 0h-2V9h2v6zm6-4.5h-1.5V12h-2v-1.5H15V9h1.5v1.5h2V9H20v1.5z" />
+    </svg>
+  );
+}
+
+/**
+ * TMDB movie embed component.
+ * Fetches movie data via server-side proxy to hide API key and cache results.
+ * Includes required TMDB attribution.
+ */
+export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
+  const [movie, setMovie] = useState<TmdbMovie | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  const movieId = info.id || (info.metadata?.movieId as string);
+
+  useEffect(() => {
+    if (!movieId) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    fetch(`/api/thumbnail?url=${encodeURIComponent(info.url)}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!cancelled && data?.title) {
+          setMovie({
+            title: data.title,
+            overview: data.description,
+            posterUrl: data.imageUrl,
+            releaseYear: data.releaseYear,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [movieId, info.url]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className={`flex items-center gap-3 bg-base-200 rounded-xl ${compact ? "p-3" : "p-5"}`}>
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0d253f] to-[#01b4e4] flex items-center justify-center shrink-0">
+          <span className="loading loading-spinner loading-sm text-white"></span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-base font-medium truncate">Loading from TMDB...</p>
+          <p className="text-base text-base-content/50 mt-0.5">Movie ID: {movieId}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state or no movie found
+  if (!movie) {
+    return (
+      <a
+        href={info.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+          compact ? "p-3" : "p-5"
+        }`}
+      >
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0d253f] to-[#01b4e4] flex items-center justify-center shrink-0">
+          <TmdbIcon className="w-5 h-5 text-white" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-base font-medium truncate">Movie not found</p>
+          <p className="text-base text-base-content/50 mt-0.5">View on TMDB</p>
+        </div>
+      </a>
+    );
+  }
+
+  // No poster available - show link card
+  if (!movie.posterUrl || imageError) {
+    return (
+      <a
+        href={info.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+          compact ? "p-3" : "p-5"
+        }`}
+      >
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0d253f] to-[#01b4e4] flex items-center justify-center shrink-0">
+          <TmdbIcon className="w-5 h-5 text-white" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-base font-medium truncate">
+            {movie.title} {movie.releaseYear && `(${movie.releaseYear})`}
+          </p>
+          <p className="text-base text-base-content/50 mt-0.5 line-clamp-1">{movie.overview || "View on TMDB"}</p>
+        </div>
+      </a>
+    );
+  }
+
+  // Image card with poster and TMDB attribution
+  return (
+    <div
+      className={`block w-full overflow-hidden rounded-xl bg-base-200 relative ${
+        compact ? "max-w-[200px] mx-auto" : "max-w-[350px] mx-auto"
+      }`}
+    >
+      <a href={info.url} target="_blank" rel="noopener noreferrer" className="block relative group">
+        {!imageLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-base-200">
+            <span className="loading loading-spinner loading-md text-primary"></span>
+          </div>
+        )}
+        <img
+          src={movie.posterUrl}
+          alt={movie.title}
+          className={`w-full h-auto rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
+            imageLoaded ? "opacity-100" : "opacity-0"
+          }`}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
+        />
+        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+          <p className="text-white text-base font-bold text-center">
+            {movie.title} {movie.releaseYear && `(${movie.releaseYear})`}
+          </p>
+          {movie.overview && (
+            <p className="text-white/70 text-base text-center mt-0.5 line-clamp-2">{movie.overview}</p>
+          )}
+        </div>
+      </a>
+      {/* TMDB Attribution - Required by TMDB Terms of Use */}
+      <div className="flex items-center justify-center gap-2 py-2 px-3 bg-base-300/50 rounded-b-xl">
+        <Image src="/tmdb-logo.svg" alt="TMDB" width={60} height={14} className="opacity-70" />
+        <span className="text-xs text-base-content/50">Data provided by TMDB</span>
+      </div>
+    </div>
+  );
+}

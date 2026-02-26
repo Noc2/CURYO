@@ -1,0 +1,501 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import { Test, console } from "forge-std/Test.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
+
+/// @title Mock RoundVotingEngine for testing FrontendRegistry
+contract MockVotingEngine is IRoundVotingEngine {
+    uint256 public totalAddedToReserve;
+
+    function addToConsensusReserve(uint256 amount) external override {
+        totalAddedToReserve += amount;
+    }
+
+    function getContentCommitCount(uint256) external pure override returns (uint256) {
+        return 0;
+    }
+
+    function hasUnrevealedVotes(uint256) external pure override returns (bool) {
+        return false;
+    }
+
+    function transferReward(address, uint256) external override { }
+    function claimFrontendFee(uint256, uint256, address) external override { }
+    function claimParticipationReward(uint256, uint256) external override { }
+}
+
+/// @title FrontendRegistry Test Suite
+contract FrontendRegistryTest is Test {
+    FrontendRegistry public registry;
+    CuryoReputation public crepToken;
+    MockVotingEngine public votingEngine;
+
+    address public admin = address(1);
+    address public frontend1 = address(3);
+    address public frontend2 = address(4);
+    address public feeCreditor = address(5);
+
+    uint256 public constant STAKE = 1000e6; // Fixed 1,000 cREP
+
+    function setUp() public {
+        vm.startPrank(admin);
+
+        // Deploy cREP token
+        crepToken = new CuryoReputation(admin, admin);
+
+        // Grant minter role to admin
+        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
+
+        // Deploy mock voting engine
+        votingEngine = new MockVotingEngine();
+
+        // Deploy registry (UUPS proxy)
+        FrontendRegistry impl = new FrontendRegistry();
+        registry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                )
+            )
+        );
+
+        // Set voting engine for slashing
+        registry.setVotingEngine(address(votingEngine));
+
+        // Grant fee creditor role
+        registry.addFeeCreditor(feeCreditor);
+
+        // Mint cREP tokens for frontends (not transfer, to avoid governance lock checks)
+        crepToken.mint(frontend1, 10_000e6);
+        crepToken.mint(frontend2, 10_000e6);
+
+        // Mint cREP for fee crediting (to registry)
+        crepToken.mint(address(registry), 1_000_000e6);
+
+        vm.stopPrank();
+
+        // Advance blocks to activate voting power
+        vm.roll(block.number + 5);
+    }
+
+    // --- Initialization Tests ---
+
+    function test_Initialization() public view {
+        assertEq(address(registry.crepToken()), address(crepToken));
+        assertEq(registry.STAKE_AMOUNT(), 1000e6);
+    }
+
+    // --- Registration Tests ---
+
+    function test_Register() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        (address operator, uint256 stakedAmount, bool approved, bool slashed) = registry.getFrontendInfo(frontend1);
+        assertEq(operator, frontend1);
+        assertEq(stakedAmount, STAKE);
+        assertFalse(approved);
+        assertFalse(slashed);
+
+        assertEq(registry.getFrontendCount(), 1);
+        assertEq(registry.getRegisteredFrontends()[0], frontend1);
+    }
+
+    function test_RevertRegisterAlreadyRegistered() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE * 2);
+        registry.register();
+
+        vm.expectRevert("Already registered");
+        registry.register();
+        vm.stopPrank();
+    }
+
+    // --- Deregister Tests ---
+
+    function test_Deregister() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+
+        vm.prank(frontend1);
+        registry.deregister();
+
+        uint256 balanceAfter = crepToken.balanceOf(frontend1);
+        assertEq(balanceAfter - balanceBefore, STAKE);
+
+        (address operator, uint256 stakedAmount, bool approved,) = registry.getFrontendInfo(frontend1);
+        assertEq(operator, address(0));
+        assertEq(stakedAmount, 0);
+        assertFalse(approved);
+    }
+
+    function test_RevertDeregisterNotRegistered() public {
+        vm.prank(frontend1);
+        vm.expectRevert("Not registered");
+        registry.deregister();
+    }
+
+    function test_RevertDeregisterSlashed() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, 500e6, "Test slash");
+
+        vm.prank(frontend1);
+        vm.expectRevert("Frontend is slashed");
+        registry.deregister();
+    }
+
+    function test_DeregisterWithPendingFees() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        // Credit some fees
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 200e6);
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+
+        vm.prank(frontend1);
+        registry.deregister();
+
+        // Should receive stake + pending fees
+        uint256 balanceAfter = crepToken.balanceOf(frontend1);
+        assertEq(balanceAfter - balanceBefore, STAKE + 200e6);
+
+        // Fees should be zeroed
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
+    }
+
+    function test_ReregisterAfterDeregister() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        registry.deregister();
+
+        // Should be able to register again
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        (address operator, uint256 stakedAmount,,) = registry.getFrontendInfo(frontend1);
+        assertEq(operator, frontend1);
+        assertEq(stakedAmount, STAKE);
+    }
+
+    function test_DeregisterAfterUnslash() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, 500e6, "Test");
+        registry.unslashFrontend(frontend1);
+        vm.stopPrank();
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        vm.prank(frontend1);
+        registry.deregister();
+
+        // Should return remaining 500e6 (half was slashed)
+        uint256 balanceAfter = crepToken.balanceOf(frontend1);
+        assertEq(balanceAfter - balanceBefore, 500e6);
+    }
+
+    // --- Approval Tests ---
+
+    function test_ApproveFrontend() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        assertFalse(registry.isApproved(frontend1));
+
+        vm.prank(admin);
+        registry.approveFrontend(frontend1);
+
+        assertTrue(registry.isApproved(frontend1));
+
+        (,, bool approved,) = registry.getFrontendInfo(frontend1);
+        assertTrue(approved);
+    }
+
+    function test_RevertApproveFrontendNotRegistered() public {
+        vm.prank(admin);
+        vm.expectRevert("Frontend not registered");
+        registry.approveFrontend(frontend1);
+    }
+
+    function test_RevertApproveFrontendSlashed() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, STAKE / 2, "Test");
+
+        vm.expectRevert("Frontend is slashed");
+        registry.approveFrontend(frontend1);
+        vm.stopPrank();
+    }
+
+    function test_RevokeFrontend() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        registry.approveFrontend(frontend1);
+        assertTrue(registry.isApproved(frontend1));
+
+        registry.revokeFrontend(frontend1);
+        assertFalse(registry.isApproved(frontend1));
+        vm.stopPrank();
+    }
+
+    // --- Slash Tests ---
+
+    function test_SlashFrontend() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        uint256 slashAmount = STAKE / 2;
+        uint256 voterPoolBefore = votingEngine.totalAddedToReserve();
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, slashAmount, "Malicious behavior");
+
+        (, uint256 stakedAmount, bool approved, bool slashed) = registry.getFrontendInfo(frontend1);
+        assertEq(stakedAmount, STAKE - slashAmount);
+        assertFalse(approved);
+        assertTrue(slashed);
+
+        // Slashed amount goes to voter pool
+        assertEq(votingEngine.totalAddedToReserve(), voterPoolBefore + slashAmount);
+    }
+
+    function test_UnslashFrontend() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, STAKE / 2, "Test");
+
+        (,,, bool slashed) = registry.getFrontendInfo(frontend1);
+        assertTrue(slashed);
+
+        registry.unslashFrontend(frontend1);
+
+        (,,, slashed) = registry.getFrontendInfo(frontend1);
+        assertFalse(slashed);
+        vm.stopPrank();
+    }
+
+    function test_RevertUnslashFrontendNotSlashed() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(admin);
+        vm.expectRevert("Frontend not slashed");
+        registry.unslashFrontend(frontend1);
+    }
+
+    // --- Fee Crediting Tests ---
+
+    function test_CreditFees() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        uint256 crepFees = registry.getAccumulatedFees(frontend1);
+        assertEq(crepFees, 100e6);
+    }
+
+    function test_CreditFeesAccumulates() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+        registry.creditFees(frontend1, 100e6);
+        vm.stopPrank();
+
+        uint256 crepFees = registry.getAccumulatedFees(frontend1);
+        assertEq(crepFees, 200e6);
+    }
+
+    function test_CreditFeesRevertsForUnregisteredFrontend() public {
+        // L-02: Should revert for unregistered frontend to prevent silent token loss
+        vm.prank(feeCreditor);
+        vm.expectRevert("Frontend not registered");
+        registry.creditFees(frontend1, 100e6);
+    }
+
+    function test_RevertCreditFeesNonCreditor() public {
+        vm.prank(frontend1);
+        vm.expectRevert();
+        registry.creditFees(frontend1, 100e6);
+    }
+
+    // --- Claim Fees Tests ---
+
+    function test_ClaimFees() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        uint256 curyoBefore = crepToken.balanceOf(frontend1);
+
+        vm.prank(frontend1);
+        registry.claimFees();
+
+        assertEq(crepToken.balanceOf(frontend1) - curyoBefore, 100e6);
+
+        // Fees should be reset
+        uint256 crepFees = registry.getAccumulatedFees(frontend1);
+        assertEq(crepFees, 0);
+    }
+
+    function test_RevertClaimFeesNotRegistered() public {
+        vm.prank(frontend1);
+        vm.expectRevert("Not registered");
+        registry.claimFees();
+    }
+
+    function test_RevertClaimFeesNoFees() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+
+        vm.expectRevert("No fees to claim");
+        registry.claimFees();
+        vm.stopPrank();
+    }
+
+    // --- isApproved Tests ---
+
+    function test_IsApprovedChecksSlashed() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        registry.approveFrontend(frontend1);
+        assertTrue(registry.isApproved(frontend1));
+
+        registry.slashFrontend(frontend1, 1, "Test");
+        assertFalse(registry.isApproved(frontend1));
+        vm.stopPrank();
+    }
+
+    // --- Admin Functions Tests ---
+
+    function test_SetVotingEngine() public {
+        address newVotingEngine = address(100);
+
+        vm.prank(admin);
+        registry.setVotingEngine(newVotingEngine);
+
+        assertEq(address(registry.votingEngine()), newVotingEngine);
+    }
+
+    function test_RevertSetVotingEngineZeroAddress() public {
+        vm.prank(admin);
+        vm.expectRevert("Invalid voting engine");
+        registry.setVotingEngine(address(0));
+    }
+
+    function test_SlashFrontendRequiresVotingEngine() public {
+        // L-05: slashFrontend should revert if votingEngine is not set
+        // Deploy a fresh registry without setting voting engine
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry noEngineRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                )
+            )
+        );
+        // Do NOT call setVotingEngine
+
+        // Mint and register a frontend
+        crepToken.mint(frontend1, 10_000e6);
+        vm.stopPrank();
+
+        vm.startPrank(frontend1);
+        crepToken.approve(address(noEngineRegistry), STAKE);
+        noEngineRegistry.register();
+        vm.stopPrank();
+
+        // Try to slash — should revert
+        vm.prank(admin);
+        vm.expectRevert("VotingEngine not set");
+        noEngineRegistry.slashFrontend(frontend1, STAKE / 2, "Test");
+    }
+
+    function test_AddAndRemoveFeeCreditor() public {
+        address newCreditor = address(100);
+
+        vm.startPrank(admin);
+        registry.addFeeCreditor(newCreditor);
+        vm.stopPrank();
+
+        // New creditor can credit fees
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(newCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        uint256 crepFees = registry.getAccumulatedFees(frontend1);
+        assertEq(crepFees, 100e6);
+
+        // Remove creditor
+        vm.prank(admin);
+        registry.removeFeeCreditor(newCreditor);
+
+        // Should now revert
+        vm.prank(newCreditor);
+        vm.expectRevert();
+        registry.creditFees(frontend1, 100e6);
+    }
+}

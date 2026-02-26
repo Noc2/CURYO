@@ -1,0 +1,77 @@
+# Curyo — Keeper (Round Resolution Service)
+
+Stateless service that continuously reveals tlock-encrypted votes using public drand beacons, settles rounds, processes unrevealed stakes, cancels expired rounds, and marks dormant content. Designed for horizontal scaling — multiple instances run independently for redundancy.
+
+## Quick Start
+
+```bash
+# Copy and configure environment:
+cp .env.example .env.local
+# Edit .env.local with your contract addresses and wallet
+
+# From the monorepo root:
+yarn keeper:dev    # Development mode (with file watching)
+yarn keeper:start  # Production mode (one-shot)
+```
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `yarn keeper:dev` | Development mode with auto-restart on file changes |
+| `yarn keeper:start` | Production mode |
+
+## Configuration
+
+Copy `.env.example` to `.env.local` and configure:
+
+| Variable | Default | Description |
+|---|---|---|
+| `RPC_URL` | — | Blockchain RPC endpoint (required) |
+| `CHAIN_ID` | — | Network chain ID (required) |
+| `VOTING_ENGINE_ADDRESS` | — | Deployed VotingEngine contract address |
+| `CONTENT_REGISTRY_ADDRESS` | — | Deployed ContentRegistry contract address |
+| `KEYSTORE_ACCOUNT` | — | Foundry keystore account name (preferred) |
+| `KEYSTORE_PASSWORD` | — | Keystore decryption password |
+| `KEEPER_INTERVAL_MS` | `30000` | Resolution loop frequency (ms) |
+| `KEEPER_STARTUP_JITTER_MS` | `0` | Random startup delay for multi-instance staggering |
+| `TLOCK_MOCK` | `false` | Use mock tlock decryption (local dev only) |
+| `METRICS_ENABLED` | `true` | Enable Prometheus metrics server |
+| `METRICS_PORT` | `9090` | Metrics server port |
+| `LOG_FORMAT` | `json` | Log format: `json` (production) or `text` (development) |
+
+## Docker
+
+```bash
+cd packages/keeper
+docker build -t curyo-keeper .
+docker run --env-file .env curyo-keeper
+```
+
+## Monitoring
+
+- **Prometheus metrics:** `http://localhost:9090/metrics`
+- **Health check:** `http://localhost:9090/health`
+
+Key metrics: `keeper_is_running` (gauge), `keeper_votes_revealed` (counter), `keeper_rounds_settled` (counter).
+
+## Project Structure
+
+```
+src/
+├── index.ts      # Main entry point & event loop
+├── keeper.ts     # Core resolution logic (reveal, settle, dormancy)
+├── config.ts     # Configuration from environment
+├── client.ts     # viem public & wallet clients
+├── tlock.ts      # Tlock decryption + drand beacon fetching
+├── keystore.ts   # Foundry keystore decryption
+├── logger.ts     # Structured logging
+├── metrics.ts    # Prometheus metrics server
+└── abis/         # Contract ABIs
+
+Dockerfile        # Production container image
+```
+
+## Redundancy
+
+Run 2+ instances with different wallet addresses and set `KEEPER_STARTUP_JITTER_MS=15000` to stagger execution cycles. Duplicate reveal/settle transactions revert harmlessly — already-processed votes fail silently on-chain.

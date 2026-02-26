@@ -1,0 +1,385 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme {
+  --shadow-center: 0 0 12px -2px rgb(0 0 0 / 0.05);
+  --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+}
+
+@plugin "daisyui" {
+  themes: dark --prefersdark;
+}
+
+@plugin "daisyui/theme" {
+  name: "dark";
+
+  --color-primary: #359eee;
+  --color-primary-content: #000000;
+  --color-secondary: #03cea4;
+  --color-secondary-content: #000000;
+  --color-accent: #03cea4;
+  --color-accent-content: #000000;
+  --color-neutral: #e0e0e0;
+  --color-neutral-content: #121212;
+  --color-base-100: #000000;
+  --color-base-200: #1e1e1e;
+  --color-base-300: #2c2c2c;
+  --color-base-content: #e0e0e0;
+  --color-info: #359eee;
+  --color-success: #03cea4;
+  --color-warning: #ffc43d;
+  --color-error: #ef476f;
+
+  --radius-field: 0.75rem;
+  --radius-box: 1rem;
+  --tt-tailw: 6px;
+  --tt-bg: var(--color-primary);
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+
+  body {
+    min-height: 100vh;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin-bottom: 0;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    font-family: var(--font-heading);
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+:root,
+[data-theme] {
+  background: var(--color-base-100);
+}
+
+.btn {
+  @apply shadow-none font-medium tracking-normal;
+  font-size: 1rem; /* Enforce minimum 16px */
+}
+
+/* Override DaisyUI small button font size */
+.btn-sm {
+  font-size: 1rem; /* Enforce minimum 16px */
+}
+
+/* Override DaisyUI menu font sizes */
+.menu {
+  font-size: 1rem !important; /* Enforce minimum 16px */
+}
+
+.menu li,
+.menu li > *,
+.menu li > a,
+.menu li > button,
+.menu li > span,
+.menu-item {
+  font-size: 1rem !important; /* Enforce minimum 16px */
+}
+
+/* Override DaisyUI input-sm font size */
+.input-sm {
+  font-size: 1rem !important; /* Enforce minimum 16px */
+}
+
+/* Override DaisyUI menu-compact font size */
+.menu-compact,
+.menu-compact li,
+.menu-compact li > *,
+.menu-compact li > a,
+.menu-compact li > button {
+  font-size: 1rem !important; /* Enforce minimum 16px */
+}
+
+/* Override DaisyUI dropdown content */
+.dropdown-content {
+  font-size: 1rem !important; /* Enforce minimum 16px */
+}
+
+/* Override DaisyUI select */
+.select,
+.select-sm {
+  font-size: 1rem !important; /* Enforce minimum 16px */
+}
+
+.btn-primary {
+  @apply shadow-sm;
+  background: linear-gradient(135deg, #2b7fcc 0%, #359eee 100%);
+  border: none;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #3a8fdc 0%, #45aefe 100%);
+}
+
+.btn-submit {
+  @apply shadow-sm text-black;
+  background: linear-gradient(135deg, #029b7b 0%, #03cea4 100%);
+  border: none;
+}
+
+.btn-submit:hover {
+  background: linear-gradient(135deg, #03cea4 0%, #1adbb5 100%);
+}
+
+.btn-curyo {
+  @apply shadow-sm text-black;
+  background: linear-gradient(135deg, #e5a824 0%, #ffc43d 100%);
+  border: none;
+}
+
+.btn-curyo:hover {
+  background: linear-gradient(135deg, #ffc43d 0%, #ffd060 100%);
+}
+
+.btn.btn-ghost {
+  @apply shadow-none;
+}
+
+.link {
+  text-underline-offset: 2px;
+}
+
+.link:hover {
+  opacity: 80%;
+}
+
+/* Surface card */
+.surface-card {
+  background: var(--color-base-200);
+}
+
+/* Plus / Minus vote buttons */
+.vote-btn {
+  position: relative;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.vote-btn .vote-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.vote-btn.vote-yes .vote-bg {
+  background: linear-gradient(135deg, #03cea4 0%, #029b7b 100%);
+  box-shadow: 0 2px 8px rgba(3, 206, 164, 0.4);
+}
+
+.vote-btn.vote-no .vote-bg {
+  background: linear-gradient(135deg, #ef476f 0%, #c73559 100%);
+  box-shadow: 0 2px 8px rgba(239, 71, 111, 0.4);
+}
+
+.vote-btn .vote-symbol {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vote-btn:hover .vote-bg {
+  transform: scale(1.08);
+}
+
+.vote-btn.vote-yes:hover .vote-bg {
+  background: linear-gradient(135deg, #1adbb5 0%, #03cea4 100%);
+  box-shadow: 0 4px 12px rgba(3, 206, 164, 0.5);
+}
+
+.vote-btn.vote-no:hover .vote-bg {
+  background: linear-gradient(135deg, #f25c7f 0%, #ef476f 100%);
+  box-shadow: 0 4px 12px rgba(239, 71, 111, 0.5);
+}
+
+.vote-btn:active .vote-bg {
+  transform: scale(0.92);
+}
+
+.vote-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.vote-btn:disabled:hover .vote-bg {
+  transform: none;
+}
+
+.vote-btn:disabled.vote-yes:hover .vote-bg {
+  background: linear-gradient(135deg, #03cea4 0%, #029b7b 100%);
+  box-shadow: 0 2px 8px rgba(3, 206, 164, 0.4);
+}
+
+.vote-btn:disabled.vote-no:hover .vote-bg {
+  background: linear-gradient(135deg, #ef476f 0%, #c73559 100%);
+  box-shadow: 0 2px 8px rgba(239, 71, 111, 0.4);
+}
+
+/* Prose typography for docs pages */
+.prose {
+  color: var(--color-base-content);
+  line-height: 1.7;
+}
+
+.prose h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.025em;
+}
+
+.prose h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.01em;
+}
+
+.prose h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose p {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.prose .lead {
+  margin-bottom: 1.5rem;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.prose ul {
+  list-style-type: disc;
+}
+
+.prose ol {
+  list-style-type: decimal;
+}
+
+.prose li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.prose code {
+  font-size: 1rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--color-base-content) 6%, transparent);
+  font-weight: 500;
+}
+
+.prose strong {
+  font-weight: 600;
+}
+
+.prose hr {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  border-color: color-mix(in srgb, var(--color-base-content) 8%, transparent);
+}
+
+.prose a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover {
+  opacity: 0.8;
+}
+
+.docs-prose a {
+  color: #ef476f;
+}
+
+/* Progress bar — brand gradient */
+#nprogress .bar {
+  background: linear-gradient(90deg, #359eee, #03cea4, #ffc43d, #ef476f) !important;
+}
+
+/* Brand gradient text */
+.text-gradient {
+  background: linear-gradient(90deg, #359eee, #03cea4, #ffc43d, #ef476f);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Active tab pill — green (Submit page) */
+.pill-active {
+  background: #03cea4;
+  color: #000;
+}
+
+/* Active tab pill — yellow (Governance page) */
+.pill-active-yellow {
+  background: #ffc43d;
+  color: #000;
+}
+
+/* Category filter pill — blue (Discover page) */
+.pill-category {
+  background: #359eee;
+  color: #000;
+}
+
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Lite YouTube embed overrides */
+.yt-lite {
+  border-radius: 0.75rem !important;
+  overflow: hidden !important;
+}
+
+.yt-lite::before {
+  display: none !important;
+}

@@ -1,0 +1,317 @@
+import { onchainTable, index, relations } from "ponder";
+
+// ============================================================
+// CONTENT
+// ============================================================
+
+export const content = onchainTable(
+  "content",
+  (t) => ({
+    id: t.bigint().primaryKey(),
+    submitter: t.hex().notNull(),
+    contentHash: t.hex().notNull(),
+    url: t.text().notNull(),
+    goal: t.text().notNull(),
+    tags: t.text().notNull(),
+    categoryId: t.bigint().notNull(),
+    status: t.integer().notNull(), // 0=Active, 1=Dormant, 2=Cancelled, 3=Flagged
+    rating: t.integer().notNull(), // 0-100, starts at 50
+    submitterStakeReturned: t.boolean().notNull(),
+    createdAt: t.bigint().notNull(),
+    lastActivityAt: t.bigint().notNull(),
+    dormantCount: t.integer().notNull(),
+    reviver: t.hex(),
+    totalVotes: t.integer().notNull(),
+    totalRounds: t.integer().notNull(),
+  }),
+  (table) => ({
+    submitterIdx: index().on(table.submitter),
+    categoryIdx: index().on(table.categoryId),
+    statusIdx: index().on(table.status),
+    ratingIdx: index().on(table.rating),
+    createdAtIdx: index().on(table.createdAt),
+  }),
+);
+
+export const contentRelations = relations(content, ({ many, one }) => ({
+  rounds: many(round),
+  category: one(category, {
+    fields: [content.categoryId],
+    references: [category.id],
+  }),
+}));
+
+// ============================================================
+// ROUND (per content per round)
+// ============================================================
+
+export const round = onchainTable(
+  "round",
+  (t) => ({
+    id: t.text().primaryKey(), // `${contentId}-${roundId}`
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    state: t.integer().notNull(), // 0=Open, 1=Settled, 2=Cancelled, 3=Tied
+    voteCount: t.integer().notNull(),
+    revealedCount: t.integer().notNull().default(0),
+    totalStake: t.bigint().notNull(),
+    upPool: t.bigint().notNull(),
+    downPool: t.bigint().notNull(),
+    upCount: t.integer().notNull(),
+    downCount: t.integer().notNull(),
+    upWins: t.boolean(),
+    totalPool: t.bigint(),
+    epochDuration: t.bigint(), // epoch duration for this round
+    startTime: t.bigint(),
+    settledAt: t.bigint(),
+  }),
+  (table) => ({
+    contentIdx: index().on(table.contentId),
+    roundIdx: index().on(table.roundId),
+    stateIdx: index().on(table.state),
+  }),
+);
+
+export const roundRelations = relations(round, ({ many, one }) => ({
+  contentRef: one(content, {
+    fields: [round.contentId],
+    references: [content.id],
+  }),
+  votes: many(vote),
+}));
+
+// ============================================================
+// VOTE (revealed votes only)
+// ============================================================
+
+export const vote = onchainTable(
+  "vote",
+  (t) => ({
+    id: t.text().primaryKey(), // `${contentId}-${roundId}-${voter}`
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    voter: t.hex().notNull(),
+    isUp: t.boolean().notNull(),
+    stake: t.bigint().notNull(),
+    commitHash: t.hex().notNull(),
+    revealedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    voterIdx: index().on(table.voter),
+    contentIdx: index().on(table.contentId),
+    roundIdx: index().on(table.roundId),
+    contentRoundIdx: index().on(table.contentId, table.roundId),
+  }),
+);
+
+export const voteRelations = relations(vote, ({ one }) => ({
+  roundRef: one(round, {
+    fields: [vote.contentId, vote.roundId],
+    references: [round.contentId, round.roundId],
+  }),
+  voterProfile: one(profile, {
+    fields: [vote.voter],
+    references: [profile.address],
+  }),
+}));
+
+// ============================================================
+// PENDING COMMIT (before reveal)
+// ============================================================
+
+export const pendingCommit = onchainTable(
+  "pending_commit",
+  (t) => ({
+    id: t.text().primaryKey(), // `${contentId}-${roundId}-${commitKey}`
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    voter: t.hex().notNull(),
+    commitHash: t.hex().notNull(),
+    stake: t.bigint().notNull(),
+    committedAt: t.bigint().notNull(),
+    revealableAfter: t.bigint(), // epoch end timestamp — when this commit becomes revealable
+    revealed: t.boolean().notNull(),
+  }),
+  (table) => ({
+    voterIdx: index().on(table.voter),
+    contentIdx: index().on(table.contentId),
+    roundIdx: index().on(table.roundId),
+  }),
+);
+
+// ============================================================
+// REWARD CLAIMS
+// ============================================================
+
+export const rewardClaim = onchainTable(
+  "reward_claim",
+  (t) => ({
+    id: t.text().primaryKey(), // unique claim/event id
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    epochId: t.bigint(), // set only for epoch-based claims (distinguishes from round-based)
+    source: t.text().notNull(), // "round", "epoch", or "participation"
+    voter: t.hex().notNull(),
+    stakeReturned: t.bigint().notNull(),
+    crepReward: t.bigint().notNull(),
+    claimedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    voterIdx: index().on(table.voter),
+    contentIdx: index().on(table.contentId),
+  }),
+);
+
+export const submitterRewardClaim = onchainTable(
+  "submitter_reward_claim",
+  (t) => ({
+    id: t.text().primaryKey(), // `${contentId}-${roundId}`
+    contentId: t.bigint().notNull(),
+    roundId: t.bigint().notNull(),
+    epochId: t.bigint(), // set only for epoch-based claims
+    source: t.text().notNull(), // "round" or "epoch"
+    submitter: t.hex().notNull(),
+    crepAmount: t.bigint().notNull(),
+    claimedAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    submitterIdx: index().on(table.submitter),
+  }),
+);
+
+// ============================================================
+// CATEGORY
+// ============================================================
+
+export const category = onchainTable(
+  "category",
+  (t) => ({
+    id: t.bigint().primaryKey(),
+    name: t.text().notNull(),
+    domain: t.text().notNull(),
+    submitter: t.hex().notNull(),
+    status: t.integer().notNull(), // 0=Pending, 1=Approved, 2=Rejected
+    proposalId: t.bigint(),
+    createdAt: t.bigint().notNull(),
+    totalVotes: t.integer().notNull(),
+    totalContent: t.integer().notNull(),
+  }),
+  (table) => ({
+    statusIdx: index().on(table.status),
+    domainIdx: index().on(table.domain),
+  }),
+);
+
+export const categoryRelations = relations(category, ({ many }) => ({
+  contents: many(content),
+}));
+
+// ============================================================
+// PROFILE
+// ============================================================
+
+export const profile = onchainTable("profile", (t) => ({
+  address: t.hex().primaryKey(),
+  name: t.text().notNull(),
+  imageUrl: t.text().notNull(),
+  createdAt: t.bigint().notNull(),
+  updatedAt: t.bigint().notNull(),
+  totalVotes: t.integer().notNull(),
+  totalContent: t.integer().notNull(),
+  totalRewardsClaimed: t.bigint().notNull(),
+}));
+
+// ============================================================
+// FRONTEND
+// ============================================================
+
+export const frontend = onchainTable("frontend", (t) => ({
+  address: t.hex().primaryKey(),
+  operator: t.hex().notNull(),
+  stakedAmount: t.bigint().notNull(),
+  approved: t.boolean().notNull(),
+  slashed: t.boolean().notNull(),
+  totalFeesCredited: t.bigint().notNull(),
+  totalFeesClaimed: t.bigint().notNull(),
+  registeredAt: t.bigint().notNull(),
+}));
+
+// ============================================================
+// VOTER ID NFT
+// ============================================================
+
+export const voterId = onchainTable(
+  "voter_id",
+  (t) => ({
+    tokenId: t.bigint().primaryKey(),
+    holder: t.hex().notNull(),
+    nullifier: t.bigint().notNull(),
+    mintedAt: t.bigint().notNull(),
+    revoked: t.boolean().notNull().default(false),
+  }),
+  (table) => ({
+    holderIdx: index().on(table.holder),
+  }),
+);
+
+// ============================================================
+// TOKEN HOLDERS (cREP)
+// ============================================================
+
+export const tokenHolder = onchainTable("token_holder", (t) => ({
+  address: t.hex().primaryKey(),
+  firstSeenAt: t.bigint().notNull(),
+}));
+
+// ============================================================
+// TOKEN TRANSFERS (cREP balance history)
+// ============================================================
+
+export const tokenTransfer = onchainTable(
+  "token_transfer",
+  (t) => ({
+    id: t.text().primaryKey(), // `${txHash}-${logIndex}`
+    from: t.hex().notNull(),
+    to: t.hex().notNull(),
+    amount: t.bigint().notNull(),
+    blockNumber: t.bigint().notNull(),
+    timestamp: t.bigint().notNull(),
+  }),
+  (table) => ({
+    fromIdx: index().on(table.from),
+    toIdx: index().on(table.to),
+    timestampIdx: index().on(table.timestamp),
+  }),
+);
+
+// ============================================================
+// GLOBAL STATS (singleton, id="global")
+// ============================================================
+
+export const globalStats = onchainTable("global_stats", (t) => ({
+  id: t.text().primaryKey(),
+  totalContent: t.integer().notNull(),
+  totalVotes: t.integer().notNull(),
+  totalRoundsSettled: t.integer().notNull(),
+  totalRewardsClaimed: t.bigint().notNull(),
+  totalProfiles: t.integer().notNull(),
+  totalVoterIds: t.integer().notNull(),
+}));
+
+// ============================================================
+// RATING HISTORY
+// ============================================================
+
+export const ratingChange = onchainTable(
+  "rating_change",
+  (t) => ({
+    id: t.text().primaryKey(), // `${contentId}-${blockNumber}`
+    contentId: t.bigint().notNull(),
+    oldRating: t.integer().notNull(),
+    newRating: t.integer().notNull(),
+    timestamp: t.bigint().notNull(),
+  }),
+  (table) => ({
+    contentIdx: index().on(table.contentId),
+  }),
+);

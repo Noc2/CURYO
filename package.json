@@ -1,0 +1,71 @@
+{
+  "name": "curyo",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  },
+  "scripts": {
+    "account": "yarn foundry:account",
+    "account:generate": "yarn foundry:generate",
+    "account:import": "yarn foundry:account-import",
+    "account:reveal-pk": "yarn workspace @curyo/foundry account:reveal-pk",
+    "chain": "yarn foundry:chain",
+    "compile": "yarn foundry:compile",
+    "deploy": "yarn workspace @curyo/foundry deploy",
+    "flatten": "yarn foundry:flatten",
+    "fork": "yarn foundry:fork",
+    "format": "yarn next:format && yarn foundry:format",
+    "foundry:account": "yarn workspace @curyo/foundry account",
+    "foundry:account-import": "yarn workspace @curyo/foundry account:import",
+    "foundry:chain": "yarn workspace @curyo/foundry chain",
+    "foundry:clean": "yarn workspace @curyo/foundry clean",
+    "foundry:compile": "yarn workspace @curyo/foundry compile",
+    "foundry:deploy": "yarn workspace @curyo/foundry deploy",
+    "foundry:deploy-verify": "yarn workspace @curyo/foundry deploy:verify",
+    "foundry:flatten": "yarn workspace @curyo/foundry flatten",
+    "foundry:fork": "yarn workspace @curyo/foundry fork",
+    "foundry:format": "yarn workspace @curyo/foundry format",
+    "foundry:generate": "yarn workspace @curyo/foundry account:generate",
+    "foundry:lint": "yarn workspace @curyo/foundry lint",
+    "foundry:test": "yarn workspace @curyo/foundry test",
+    "foundry:verify": "yarn workspace @curyo/foundry verify",
+    "generate": "yarn foundry:generate",
+    "seed": "bash packages/foundry/script/SeedContent.sh",
+    "postinstall": "husky install",
+    "ipfs": "yarn workspace @curyo/nextjs ipfs",
+    "lint": "yarn next:lint && yarn foundry:lint",
+    "next:build": "yarn workspace @curyo/nextjs build",
+    "next:check-types": "yarn workspace @curyo/nextjs check-types",
+    "next:format": "yarn workspace @curyo/nextjs format",
+    "next:lint": "yarn workspace @curyo/nextjs lint",
+    "next:serve": "yarn workspace @curyo/nextjs serve",
+    "precommit": "lint-staged",
+    "start": "yarn workspace @curyo/nextjs dev",
+    "test": "yarn foundry:test",
+    "vercel": "yarn workspace @curyo/nextjs vercel",
+    "vercel:login": "yarn workspace @curyo/nextjs vercel:login",
+    "vercel:yolo": "yarn workspace @curyo/nextjs vercel:yolo",
+    "verify": "yarn foundry:verify",
+    "ponder:dev": "yarn workspace @curyo/ponder dev",
+    "ponder:start": "yarn workspace @curyo/ponder start",
+    "ponder:codegen": "yarn workspace @curyo/ponder codegen",
+    "bot:vote": "yarn workspace @curyo/bot vote",
+    "bot:submit": "yarn workspace @curyo/bot submit",
+    "bot:status": "yarn workspace @curyo/bot status",
+    "keeper:start": "yarn workspace @curyo/keeper start",
+    "keeper:dev": "yarn workspace @curyo/keeper dev",
+    "e2e": "yarn workspace @curyo/nextjs e2e",
+    "e2e:ui": "yarn workspace @curyo/nextjs e2e:ui"
+  },
+  "devDependencies": {
+    "husky": "~9.1.6",
+    "lint-staged": "~13.2.2"
+  },
+  "packageManager": "yarn@3.2.3",
+  "engines": {
+    "node": ">=20.18.3"
+  }
+}

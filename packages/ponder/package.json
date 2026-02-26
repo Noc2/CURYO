@@ -1,0 +1,24 @@
+{
+  "name": "@curyo/ponder",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ./scripts/devWithRecovery.mjs",
+    "dev:raw": "ponder dev",
+    "start": "ponder start",
+    "codegen": "ponder codegen",
+    "serve": "ponder serve"
+  },
+  "dependencies": {
+    "hono": "~4.12.2",
+    "ponder": "^1.0.0",
+    "viem": "^2.39.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.2"
+  },
+  "engines": {
+    "node": ">=20.18.3"
+  }
+}

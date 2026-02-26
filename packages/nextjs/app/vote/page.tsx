@@ -1,0 +1,663 @@
+"use client";
+
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { blo } from "blo";
+import { AnimatePresence, motion } from "framer-motion";
+import type { NextPage } from "next";
+import { useAccount, useReadContracts } from "wagmi";
+import { ShareIcon } from "@heroicons/react/24/outline";
+import { CategoryFilter } from "~~/components/CategoryFilter";
+import { ShareContentModal } from "~~/components/shared/ShareContentModal";
+import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
+import { StakeSelector } from "~~/components/swipe/StakeSelector";
+import { SwipeCard } from "~~/components/swipe/SwipeCard";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
+import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
+import type { ContentItem } from "~~/hooks/useContentFeed";
+import { useContentFeed } from "~~/hooks/useContentFeed";
+import { useRoundVote } from "~~/hooks/useRoundVote";
+import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
+import { useUrlValidation } from "~~/hooks/useUrlValidation";
+import { useUserPreferences } from "~~/hooks/useUserPreferences";
+import { trackContentClick } from "~~/utils/clickTracker";
+import { isContentItemBlocked } from "~~/utils/contentFilter";
+import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
+import { notification } from "~~/utils/scaffold-eth";
+
+const ALL_FILTER = "All";
+const BROKEN_FILTER = "Broken";
+const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
+type SortOption = "for_you" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: "for_you", label: "For You" },
+  { value: "newest", label: "Newest" },
+  { value: "oldest", label: "Oldest" },
+  { value: "highest_rated", label: "Highest Rated" },
+  { value: "lowest_rated", label: "Lowest Rated" },
+];
+
+const HomeInner = () => {
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get("q") ?? "";
+  const contentParam = searchParams.get("content");
+
+  const { address } = useAccount();
+  const { feed, isLoading } = useContentFeed(address);
+  const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
+  const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
+  const voteCounts = useCategoryPopularity(feed);
+
+  // URL validation — async check for broken URLs
+  const feedUrls = useMemo(() => feed.map(item => item.url), [feed]);
+  const { validationMap } = useUrlValidation(feedUrls);
+
+  // Filter & sort state
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
+  const [sortBy, setSortBy] = useState<SortOption>("for_you");
+
+  // Sync category selection with URL hash (e.g. /#books, /#board-games)
+  const selectCategory = useCallback((name: string) => {
+    setActiveCategory(name);
+    const hash = name === ALL_FILTER ? "" : `#${slugify(name)}`;
+    history.replaceState(null, "", hash || window.location.pathname + window.location.search);
+  }, []);
+
+  // Selected content for featured card
+  const [selectedId, setSelectedId] = useState<bigint | null>(null);
+
+  // Deep link: select content from ?content= query param
+  useEffect(() => {
+    if (contentParam && feed.length > 0) {
+      try {
+        const id = BigInt(contentParam);
+        if (feed.some(item => item.id === id)) {
+          setSelectedId(id);
+        }
+      } catch {
+        // ignore invalid content param
+      }
+    }
+  }, [contentParam, feed]);
+
+  // Infinite scroll state
+  const [visibleCount, setVisibleCount] = useState(20);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Voting state
+  const [stakeModal, setStakeModal] = useState<{
+    isOpen: boolean;
+    isUp: boolean;
+    contentId: bigint;
+    categoryId: bigint;
+  }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
+  const { commitVote, isCommitting, error: voteError } = useRoundVote();
+
+  // Batch-fetch ratings via multicall
+  const { data: registryInfo } = useDeployedContractInfo({ contractName: "ContentRegistry" });
+  const ratingCalls = useMemo(() => {
+    if (!registryInfo || feed.length === 0) return [];
+    return feed.map(item => ({
+      address: registryInfo.address,
+      abi: registryInfo.abi,
+      functionName: "getRating" as const,
+      args: [item.id],
+    }));
+  }, [registryInfo, feed]);
+
+  const { data: ratingsData } = useReadContracts({ contracts: ratingCalls });
+
+  const ratingsMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!ratingsData) return map;
+    feed.forEach((item, i) => {
+      const result = ratingsData[i];
+      if (result?.status === "success") {
+        map.set(item.id.toString(), Number(result.result));
+      }
+    });
+    return map;
+  }, [ratingsData, feed]);
+
+  // Apply search, category filter, and sort
+  const displayFeed = useMemo(() => {
+    let items = feed.filter(item => !isContentItemBlocked(item));
+
+    // Broken URL filter: show only broken when selected, exclude broken otherwise
+    if (activeCategory === BROKEN_FILTER) {
+      items = items.filter(item => validationMap.get(item.url) === false);
+    } else {
+      items = items.filter(item => validationMap.get(item.url) !== false);
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter(
+        item =>
+          item.goal.toLowerCase().includes(q) ||
+          item.url.toLowerCase().includes(q) ||
+          item.tags.some(tag => tag.toLowerCase().includes(q)),
+      );
+    }
+
+    if (activeCategory !== ALL_FILTER && activeCategory !== BROKEN_FILTER) {
+      const categoryId = categoryNameToId.get(activeCategory);
+      if (categoryId !== undefined) {
+        // Filter by categoryId (platform-based filtering)
+        items = items.filter(item => item.categoryId === categoryId);
+      } else {
+        // Fallback to tag-based filtering for legacy categories
+        items = items.filter(item => item.tags.includes(activeCategory));
+      }
+    }
+
+    switch (sortBy) {
+      case "for_you":
+        if (hasPreferences && activeCategory === ALL_FILTER) {
+          items.sort((a, b) => {
+            const scoreA = categoryScores.get(a.categoryId.toString()) ?? 0;
+            const scoreB = categoryScores.get(b.categoryId.toString()) ?? 0;
+            if (scoreA !== scoreB) return scoreB - scoreA;
+            return Number(b.id - a.id);
+          });
+        } else {
+          items.sort((a, b) => Number(b.id - a.id));
+        }
+        break;
+      case "newest":
+        items.sort((a, b) => Number(b.id - a.id));
+        break;
+      case "oldest":
+        items.sort((a, b) => Number(a.id - b.id));
+        break;
+      case "highest_rated":
+        items.sort((a, b) => {
+          const rA = ratingsMap.get(a.id.toString()) ?? 50;
+          const rB = ratingsMap.get(b.id.toString()) ?? 50;
+          return rB - rA;
+        });
+        break;
+      case "lowest_rated":
+        items.sort((a, b) => {
+          const rA = ratingsMap.get(a.id.toString()) ?? 50;
+          const rB = ratingsMap.get(b.id.toString()) ?? 50;
+          return rA - rB;
+        });
+        break;
+    }
+
+    return items;
+  }, [
+    feed,
+    searchQuery,
+    activeCategory,
+    sortBy,
+    ratingsMap,
+    categoryNameToId,
+    categoryScores,
+    hasPreferences,
+    validationMap,
+  ]);
+
+  // Fetch submitter profiles for all visible content
+  const submitterAddresses = useMemo(() => {
+    return displayFeed.map(item => item.submitter);
+  }, [displayFeed]);
+
+  const { profiles: submitterProfiles } = useSubmitterProfiles(submitterAddresses);
+
+  // Selected item (defaults to first in filtered list)
+  const selectedItem = useMemo(() => {
+    if (displayFeed.length === 0) return null;
+    if (selectedId !== null) {
+      const found = displayFeed.find(i => i.id === selectedId);
+      if (found) return found;
+    }
+    return displayFeed[0];
+  }, [displayFeed, selectedId]);
+
+  // Thumbnail grid items (everything except the selected item)
+  const gridItems = useMemo(() => {
+    if (!selectedItem) return displayFeed;
+    return displayFeed.filter(i => i.id !== selectedItem.id);
+  }, [displayFeed, selectedItem]);
+
+  // Visible grid items for infinite scroll
+  const visibleGridItems = useMemo(() => {
+    return gridItems.slice(0, visibleCount);
+  }, [gridItems, visibleCount]);
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [searchQuery, activeCategory, sortBy]);
+
+  // Infinite scroll with Intersection Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && visibleCount < gridItems.length) {
+          setVisibleCount(prev => Math.min(prev + 20, gridItems.length));
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [visibleCount, gridItems.length]);
+
+  // Vote handlers
+  const handleSwipe = useCallback(
+    (direction: "left" | "right") => {
+      if (!selectedItem) return;
+      const isUp = direction === "right";
+      setStakeModal({ isOpen: true, isUp, contentId: selectedItem.id, categoryId: selectedItem.categoryId });
+    },
+    [selectedItem],
+  );
+
+  const handleButtonVote = (isUp: boolean) => {
+    if (!selectedItem) return;
+    setStakeModal({ isOpen: true, isUp, contentId: selectedItem.id, categoryId: selectedItem.categoryId });
+  };
+
+  const handleConfirmStake = async (stakeAmount: number) => {
+    const item = displayFeed.find(i => i.id === stakeModal.contentId);
+    const success = await commitVote({
+      contentId: stakeModal.contentId,
+      isUp: stakeModal.isUp,
+      stakeAmount,
+      submitter: item?.submitter,
+    });
+    setStakeModal(prev => ({ ...prev, isOpen: false }));
+    if (success) {
+      notification.success(`Vote committed! Stake: ${stakeAmount} cREP`);
+      // Advance to next item
+      if (selectedItem && displayFeed.length > 1) {
+        const currentIdx = displayFeed.findIndex(i => i.id === selectedItem.id);
+        const nextIdx = (currentIdx + 1) % displayFeed.length;
+        const nextId = displayFeed[nextIdx].id;
+        setSelectedId(nextId);
+        const url = new URL(window.location.href);
+        url.searchParams.set("content", nextId.toString());
+        history.replaceState(null, "", url.toString());
+      }
+    }
+  };
+
+  const handleCancelStake = () => {
+    setStakeModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // Count broken URLs for the filter pill
+  const brokenCount = useMemo(() => {
+    return feed.filter(item => !isContentItemBlocked(item) && validationMap.get(item.url) === false).length;
+  }, [feed, validationMap]);
+
+  // Build category filter list sorted by popularity (vote count)
+  const categories = useMemo(() => {
+    const sorted = [...websiteCategories].sort((a, b) => {
+      const countA = voteCounts.get(a.id.toString()) ?? 0;
+      const countB = voteCounts.get(b.id.toString()) ?? 0;
+      return countB - countA;
+    });
+    const cats = [ALL_FILTER, ...sorted.map(cat => cat.name)];
+    if (brokenCount > 0) cats.push(BROKEN_FILTER);
+    return cats;
+  }, [websiteCategories, voteCounts, brokenCount]);
+
+  // Apply URL hash to category selection (on mount and hash change)
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (!hash) return;
+      const match = categories.find(c => slugify(c) === hash);
+      if (match) setActiveCategory(match);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [categories]);
+
+  return (
+    <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
+      <div className="w-full max-w-5xl">
+        {/* Filter bar: sort + category pills */}
+        <div className="flex items-center gap-3 mb-5">
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as SortOption)}
+            className="select bg-base-200 text-base font-medium border-none focus:outline-none shrink-0 w-auto"
+          >
+            {SORT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <div className="w-px h-5 bg-base-content/10 shrink-0" />
+
+          <CategoryFilter
+            categories={categories}
+            activeCategory={activeCategory}
+            onSelect={selectCategory}
+            pillClassName={(cat, isActive) => {
+              if (cat !== BROKEN_FILTER) return undefined;
+              return isActive
+                ? "bg-warning/20 text-warning border border-warning/40"
+                : "bg-base-200 text-warning/70 hover:bg-warning/10";
+            }}
+          />
+        </div>
+
+        {/* Main content */}
+        {isLoading || categoriesLoading ? (
+          <div className="flex justify-center py-16">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+          </div>
+        ) : displayFeed.length === 0 ? (
+          <div className="text-center py-16 text-base-content/30 text-base">
+            {searchQuery
+              ? `No results for "${searchQuery}"`
+              : activeCategory === BROKEN_FILTER
+                ? "No broken URLs detected."
+                : activeCategory === ALL_FILTER
+                  ? "No content submitted yet. Be the first!"
+                  : `No content found in "${activeCategory}".`}
+          </div>
+        ) : (
+          <>
+            {/* Featured card */}
+            {selectedItem && (
+              <div className="mb-8">
+                {isCommitting && (
+                  <div className="flex items-center justify-center mb-2">
+                    <span className="text-base text-base-content/50">
+                      <span className="loading loading-spinner loading-xs mr-1.5"></span>
+                      Committing...
+                    </span>
+                  </div>
+                )}
+
+                {/* Unified content + voting card */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={selectedItem.id.toString()}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="surface-card rounded-2xl p-3 mb-4"
+                  >
+                    <div className="flex flex-col lg:flex-row gap-3 items-stretch">
+                      {/* Content sub-card */}
+                      <div
+                        className="w-full lg:w-3/5 rounded-2xl overflow-hidden"
+                        style={{ background: "var(--color-base-300)" }}
+                      >
+                        <SwipeCard
+                          content={selectedItem}
+                          submitterProfile={submitterProfiles[selectedItem.submitter.toLowerCase()]}
+                          onSwipe={handleSwipe}
+                          isTop={true}
+                          index={0}
+                          canVote={!!address}
+                          standalone
+                          embedded
+                        />
+                      </div>
+
+                      {/* Voting sub-card */}
+                      <div className="w-full lg:w-2/5 rounded-2xl" style={{ background: "var(--color-base-300)" }}>
+                        <VotingQuestionCard
+                          contentId={selectedItem.id}
+                          categoryId={selectedItem.categoryId}
+                          onVote={handleButtonVote}
+                          isCommitting={isCommitting}
+                          address={address}
+                          error={voteError}
+                          isOwnContent={selectedItem.isOwnContent}
+                          embedded
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* Thumbnail grid with infinite scroll */}
+            {gridItems.length > 0 && (
+              <div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  {visibleGridItems.map(item => (
+                    <ThumbnailCard
+                      key={item.id.toString()}
+                      item={item}
+                      rating={ratingsMap.get(item.id.toString())}
+                      submitterProfile={submitterProfiles[item.submitter.toLowerCase()]}
+                      onClick={() => {
+                        trackContentClick(item.id, item.categoryId);
+                        setSelectedId(item.id);
+                        const url = new URL(window.location.href);
+                        url.searchParams.set("content", item.id.toString());
+                        history.replaceState(null, "", url.toString());
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    />
+                  ))}
+                </div>
+                {/* Load more trigger */}
+                {visibleCount < gridItems.length && (
+                  <div ref={loadMoreRef} className="flex justify-center py-8">
+                    <span className="loading loading-spinner loading-md text-primary"></span>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Stake selector modal */}
+      <StakeSelector
+        isOpen={stakeModal.isOpen}
+        isUp={stakeModal.isUp}
+        contentId={stakeModal.contentId}
+        categoryId={stakeModal.categoryId}
+        onConfirm={handleConfirmStake}
+        onCancel={handleCancelStake}
+      />
+    </div>
+  );
+};
+
+function ThumbnailCard({
+  item,
+  rating,
+  submitterProfile,
+  onClick,
+}: {
+  item: ContentItem;
+  rating?: number;
+  submitterProfile?: SubmitterProfile;
+  onClick: () => void;
+}) {
+  const platformInfo = detectPlatform(item.url);
+  const staticThumbnail = getThumbnailUrl(item.url);
+  const [asyncThumbnail, setAsyncThumbnail] = useState<string | null>(null);
+  const thumbnail = staticThumbnail || asyncThumbnail;
+
+  // Fetch thumbnail via server-side proxy (avoids CORS and caches results)
+  // Stagger requests with a random delay to avoid burst 429s on page load
+  useEffect(() => {
+    if (staticThumbnail) return;
+
+    let cancelled = false;
+    const delay = Math.random() * 1000; // spread over 1s
+
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      fetch(`/api/thumbnail?url=${encodeURIComponent(item.url)}`)
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => {
+          if (!cancelled && data?.thumbnailUrl) {
+            // Route external images through the proxy to avoid CORS issues
+            const url = data.thumbnailUrl as string;
+            const isExternal = url.startsWith("http://") || url.startsWith("https://");
+            setAsyncThumbnail(isExternal ? `/api/image-proxy?url=${encodeURIComponent(url)}` : url);
+          }
+        })
+        .catch(() => {});
+    }, delay);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [staticThumbnail, item.url]);
+
+  const [showShare, setShowShare] = useState(false);
+
+  const isVideo = ["youtube", "twitch"].includes(platformInfo.type);
+  const displayRating = rating ?? 50;
+  const ratingColor =
+    displayRating >= 60 ? "text-success" : displayRating <= 40 ? "text-error" : "text-base-content/60";
+  const submitterDisplayName = submitterProfile?.username || `${item.submitter.slice(0, 6)}...`;
+
+  // Platform badge component
+  const PlatformBadge = () => {
+    switch (platformInfo.type) {
+      case "youtube":
+        return (
+          <svg className="w-4 h-4 text-[#FF0000]" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+          </svg>
+        );
+      case "twitch":
+        return (
+          <svg className="w-4 h-4 text-[#9146FF]" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg
+            className="w-4 h-4 text-base-content/40"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1.5}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-3.02a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364L4.343 8.05"
+            />
+          </svg>
+        );
+    }
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className="group text-left rounded-xl overflow-hidden transition-all surface-card hover:scale-[1.02] cursor-pointer"
+    >
+      {/* Thumbnail */}
+      <div className="relative aspect-video bg-base-200 overflow-hidden">
+        {thumbnail ? (
+          <img src={thumbnail} alt="" className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <PlatformBadge />
+          </div>
+        )}
+        {/* Play icon overlay for video platforms */}
+        {isVideo && thumbnail && (
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
+              <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+        )}
+        {/* Platform badge */}
+        <div className="absolute bottom-1.5 left-1.5">
+          <div className="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur">
+            <PlatformBadge />
+          </div>
+        </div>
+        {/* Rating badge */}
+        <div className="absolute top-1.5 right-1.5">
+          <span
+            className={`px-1.5 py-0.5 rounded-full bg-base-100/80 backdrop-blur text-base font-semibold tabular-nums ${ratingColor}`}
+          >
+            {displayRating}%
+          </span>
+        </div>
+        {/* Share button (visible on hover) */}
+        <div
+          className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={e => {
+            e.stopPropagation();
+            setShowShare(true);
+          }}
+        >
+          <div className="p-1 rounded bg-black/60 backdrop-blur cursor-pointer hover:bg-black/80">
+            <ShareIcon className="w-4 h-4 text-white" />
+          </div>
+        </div>
+      </div>
+
+      {/* Card body */}
+      <div className="p-2.5 space-y-1.5">
+        {/* Submitter info */}
+        <div className="flex items-center gap-1.5">
+          <img
+            src={submitterProfile?.profileImageUrl || blo(item.submitter as `0x${string}`)}
+            onError={e => {
+              e.currentTarget.src = blo(item.submitter as `0x${string}`);
+            }}
+            className="w-4 h-4 rounded-full object-cover shrink-0"
+            alt=""
+          />
+          <span className="text-base text-base-content/60 truncate">{submitterDisplayName}</span>
+        </div>
+        <p className="text-base font-medium line-clamp-2 leading-snug">{item.goal}</p>
+        {item.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {item.tags.slice(0, 2).map(tag => (
+              <span key={tag} className="px-1.5 py-0.5 bg-primary/10 text-primary text-base font-medium rounded-full">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showShare && <ShareContentModal contentId={item.id} goal={item.goal} onClose={() => setShowShare(false)} />}
+    </button>
+  );
+}
+
+const Home: NextPage = () => (
+  <Suspense>
+    <HomeInner />
+  </Suspense>
+);
+
+export default Home;

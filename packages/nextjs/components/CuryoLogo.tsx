@@ -1,0 +1,34 @@
+/**
+ * Curyo logo — orbital ellipses forming a sphere.
+ */
+export function CuryoLogo({ className = "w-8 h-8" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 128 128"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Curyo logo"
+    >
+      <g transform="translate(64,64)">
+        <ellipse rx="48" ry="28" fill="none" stroke="#359EEE" strokeWidth="1.5" opacity="0.3" transform="rotate(0)" />
+        <ellipse rx="48" ry="28" fill="none" stroke="#359EEE" strokeWidth="1.5" opacity="0.35" transform="rotate(30)" />
+        <ellipse rx="48" ry="28" fill="none" stroke="#359EEE" strokeWidth="1.5" opacity="0.4" transform="rotate(60)" />
+        <ellipse rx="44" ry="32" fill="none" stroke="#03CEA4" strokeWidth="1.5" opacity="0.45" transform="rotate(90)" />
+        <ellipse rx="42" ry="34" fill="none" stroke="#03CEA4" strokeWidth="1.5" opacity="0.5" transform="rotate(120)" />
+        <ellipse
+          rx="40"
+          ry="36"
+          fill="none"
+          stroke="#FFC43D"
+          strokeWidth="1.8"
+          opacity="0.55"
+          transform="rotate(150)"
+        />
+        <ellipse rx="38" ry="38" fill="none" stroke="#FFC43D" strokeWidth="1.8" opacity="0.6" transform="rotate(0)" />
+        <ellipse rx="36" ry="40" fill="none" stroke="#EF476F" strokeWidth="2" opacity="0.7" transform="rotate(45)" />
+        <ellipse rx="34" ry="42" fill="none" stroke="#EF476F" strokeWidth="2" opacity="0.8" transform="rotate(90)" />
+      </g>
+    </svg>
+  );
+}

@@ -1,0 +1,75 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1" # Weekly Monday 6am UTC
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: yarn
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Start Anvil and deploy contracts
+        env:
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        run: |
+          yarn chain &
+          sleep 5
+          yarn deploy
+
+      - name: Start Ponder indexer
+        run: yarn ponder:dev &
+
+      - name: Build and start Next.js
+        run: |
+          yarn workspace @curyo/nextjs build
+          yarn start &
+
+      - name: Wait for services
+        run: |
+          # Wait for Next.js
+          timeout 120 bash -c 'until curl -s http://localhost:3000 > /dev/null 2>&1; do sleep 2; done'
+          echo "✓ Next.js ready"
+
+          # Wait for Ponder
+          timeout 120 bash -c 'until curl -s "http://localhost:42069/content?limit=1" > /dev/null 2>&1; do sleep 2; done'
+          echo "✓ Ponder ready"
+
+      - name: Run E2E tests
+        run: yarn e2e
+        env:
+          CI: true
+          KEEPER_PRIVATE_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: packages/nextjs/e2e/playwright-report/
+          retention-days: 14

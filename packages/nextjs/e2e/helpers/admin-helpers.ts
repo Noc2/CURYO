@@ -1,0 +1,670 @@
+/**
+ * Direct contract call helpers for admin/governance E2E tests.
+ *
+ * On local Anvil (chain 31337, mock mode), the deployer (account #0)
+ * serves as governance and holds all roles: ADMIN_ROLE, GOVERNANCE_ROLE,
+ * MODERATOR_ROLE, CONFIG_ROLE. No impersonation needed.
+ *
+ * Pattern follows cancelExpiredRoundDirect() in keeper.ts — ABI-encode
+ * the call with viem and send via eth_sendTransaction.
+ */
+
+const ANVIL_RPC = "http://localhost:8545";
+
+/** Send a raw transaction to the Anvil RPC, return true if it succeeded on-chain. */
+async function sendTx(from: string, to: string, data: `0x${string}`): Promise<boolean> {
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_sendTransaction",
+      params: [{ from, to, data, gas: "0x1E8480" }], // 2M gas
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error) return false;
+
+  // Anvil auto-mines, but the receipt may not be available instantly when
+  // the keeper is also sending transactions. Retry a few times.
+  const txHash = json.result;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const receiptRes = await fetch(ANVIL_RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+        id: Date.now(),
+      }),
+    });
+    const receiptJson = await receiptRes.json();
+    const status = receiptJson.result?.status;
+    if (status === "0x1") return true;
+    if (status === "0x0") return false; // Definite revert
+    // Receipt not yet available — wait and retry
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  return false;
+}
+
+/**
+ * Approve a pending category via the timelock.
+ * Calls CategoryRegistry.approveCategory(uint256 categoryId).
+ * In mock mode, deployer == timelock so account #0 can call directly.
+ */
+export async function approveCategory(
+  categoryId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "approveCategory",
+        type: "function",
+        inputs: [{ name: "categoryId", type: "uint256" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "approveCategory",
+    args: [BigInt(categoryId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Add an approved category directly (admin fast-path, no stake required).
+ * Calls CategoryRegistry.addApprovedCategory(string, string, string[], string).
+ */
+export async function addApprovedCategory(
+  name: string,
+  domain: string,
+  subcategories: string[],
+  rankingQuestion: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "addApprovedCategory",
+        type: "function",
+        inputs: [
+          { name: "name", type: "string" },
+          { name: "domain", type: "string" },
+          { name: "subcategories", type: "string[]" },
+          { name: "rankingQuestion", type: "string" },
+        ],
+        outputs: [{ name: "categoryId", type: "uint256" }],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "addApprovedCategory",
+    args: [name, domain, subcategories, rankingQuestion],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Register the caller as a frontend operator.
+ * Calls FrontendRegistry.register().
+ * Caller must have approved 1000 cREP to the FrontendRegistry.
+ */
+export async function registerFrontend(fromAddress: string, contractAddress: string): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "register",
+        type: "function",
+        inputs: [],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "register",
+    args: [],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Approve a registered frontend to start earning fees.
+ * Calls FrontendRegistry.approveFrontend(address frontend).
+ * Requires GOVERNANCE_ROLE (deployer has it in mock mode).
+ */
+export async function approveFrontend(
+  frontendAddr: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "approveFrontend",
+        type: "function",
+        inputs: [{ name: "frontend", type: "address" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "approveFrontend",
+    args: [frontendAddr as `0x${string}`],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Flag content as policy violation.
+ * Calls ContentRegistry.flagContent(uint256 contentId).
+ * Requires MODERATOR_ROLE (deployer has it in mock mode).
+ */
+export async function flagContent(
+  contentId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "flagContent",
+        type: "function",
+        inputs: [{ name: "contentId", type: "uint256" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "flagContent",
+    args: [BigInt(contentId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Submit content directly via contract call.
+ * Caller must have approved MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry.
+ * Returns the transaction hash on success, or null on failure.
+ */
+export async function submitContentDirect(
+  url: string,
+  goal: string,
+  tags: string,
+  categoryId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "submitContent",
+        type: "function",
+        inputs: [
+          { name: "url", type: "string" },
+          { name: "goal", type: "string" },
+          { name: "tags", type: "string" },
+          { name: "categoryId", type: "uint256" },
+        ],
+        outputs: [{ name: "", type: "uint256" }],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "submitContent",
+    args: [url, goal, tags, BigInt(categoryId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Cancel content before any votes (submitter only).
+ * Calls ContentRegistry.cancelContent(uint256 contentId).
+ */
+export async function cancelContent(
+  contentId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "cancelContent",
+        type: "function",
+        inputs: [{ name: "contentId", type: "uint256" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "cancelContent",
+    args: [BigInt(contentId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Deregister a frontend (operator only — must call from the registered address).
+ * Calls FrontendRegistry.deregister(). Returns stake + pending fees to caller.
+ */
+export async function deregisterFrontend(fromAddress: string, contractAddress: string): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "deregister",
+        type: "function",
+        inputs: [],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "deregister",
+    args: [],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Slash a registered frontend's stake.
+ * Calls FrontendRegistry.slashFrontend(address, uint256, string).
+ * Requires GOVERNANCE_ROLE (deployer has it in mock mode).
+ */
+export async function slashFrontend(
+  frontendAddr: string,
+  amount: bigint,
+  reason: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "slashFrontend",
+        type: "function",
+        inputs: [
+          { name: "frontend", type: "address" },
+          { name: "amount", type: "uint256" },
+          { name: "reason", type: "string" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "slashFrontend",
+    args: [frontendAddr as `0x${string}`, amount, reason],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Unslash a frontend so it can be deregistered.
+ * Calls FrontendRegistry.unslashFrontend(address).
+ * Requires GOVERNANCE_ROLE (deployer in mock mode).
+ */
+export async function unslashFrontend(
+  frontendAddr: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "unslashFrontend",
+        type: "function",
+        inputs: [{ name: "frontend", type: "address" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "unslashFrontend",
+    args: [frontendAddr as `0x${string}`],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Advance the Anvil chain time by a given number of seconds.
+ * Calls evm_increaseTime + evm_mine.
+ */
+export async function evmIncreaseTime(seconds: number): Promise<void> {
+  await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "evm_increaseTime", params: [seconds], id: 1 }),
+  });
+  await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "evm_mine", params: [], id: 2 }),
+  });
+}
+
+/**
+ * Mint a voter ID NFT for a holder.
+ * Calls VoterIdNFT.mint(address to, uint256 nullifier).
+ * Requires authorized minter (account #0 in mock mode).
+ */
+export async function mintVoterId(
+  holderAddress: string,
+  nullifier: bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "mint",
+        type: "function",
+        inputs: [
+          { name: "to", type: "address" },
+          { name: "nullifier", type: "uint256" },
+        ],
+        outputs: [{ name: "tokenId", type: "uint256" }],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "mint",
+    args: [holderAddress as `0x${string}`, nullifier],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Revoke a voter ID NFT from a holder.
+ * Calls VoterIdNFT.revokeVoterId(address holder).
+ * Requires owner (deployer in mock mode).
+ */
+export async function revokeVoterId(
+  holderAddress: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "revokeVoterId",
+        type: "function",
+        inputs: [{ name: "holder", type: "address" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "revokeVoterId",
+    args: [holderAddress as `0x${string}`],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Mark content as dormant after DORMANCY_PERIOD (30 days) of inactivity.
+ * Calls ContentRegistry.markDormant(uint256 contentId).
+ * Permissionless — anyone can call after the dormancy period expires.
+ */
+export async function markDormant(
+  contentId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "markDormant",
+        type: "function",
+        inputs: [{ name: "contentId", type: "uint256" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "markDormant",
+    args: [BigInt(contentId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Revive dormant content by staking 5 cREP.
+ * Calls ContentRegistry.reviveContent(uint256 contentId).
+ * Requires caller to have approved 5 cREP (5e6) to the ContentRegistry.
+ */
+export async function reviveContent(
+  contentId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "reviveContent",
+        type: "function",
+        inputs: [{ name: "contentId", type: "uint256" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "reviveContent",
+    args: [BigInt(contentId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Transfer cREP tokens from one address to another.
+ * Calls CuryoReputation.transfer(address to, uint256 amount).
+ */
+export async function transferCREP(
+  toAddress: string,
+  amount: bigint,
+  fromAddress: string,
+  tokenAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "transfer",
+        type: "function",
+        inputs: [
+          { name: "to", type: "address" },
+          { name: "amount", type: "uint256" },
+        ],
+        outputs: [{ name: "", type: "bool" }],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "transfer",
+    args: [toAddress as `0x${string}`, amount],
+  });
+  return sendTx(fromAddress, tokenAddress, data);
+}
+
+/**
+ * Approve ERC20 token spending.
+ * Calls CuryoReputation.approve(address spender, uint256 amount).
+ */
+export async function approveCREP(
+  spender: string,
+  amount: bigint,
+  fromAddress: string,
+  tokenAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "approve",
+        type: "function",
+        inputs: [
+          { name: "spender", type: "address" },
+          { name: "amount", type: "uint256" },
+        ],
+        outputs: [{ name: "", type: "bool" }],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "approve",
+    args: [spender as `0x${string}`, amount],
+  });
+  return sendTx(fromAddress, tokenAddress, data);
+}
+
+/**
+ * Claim submitter reward after round settlement.
+ * Calls RoundRewardDistributor.claimSubmitterReward(uint256 contentId, uint256 roundId).
+ * Permissionless but only the submitter gets the reward.
+ */
+export async function claimSubmitterReward(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "claimSubmitterReward",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "claimSubmitterReward",
+    args: [BigInt(contentId), BigInt(roundId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Check if an address has a VoterID on-chain (not Ponder).
+ * Calls holderToTokenId(address) — returns true if tokenId > 0.
+ */
+export async function hasVoterIdOnChain(holderAddress: string, contractAddress: string): Promise<boolean> {
+  const { encodeFunctionData, decodeFunctionResult } = await import("viem");
+  const abi = [
+    {
+      name: "holderToTokenId",
+      type: "function",
+      inputs: [{ name: "holder", type: "address" }],
+      outputs: [{ name: "", type: "uint256" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({
+    abi,
+    functionName: "holderToTokenId",
+    args: [holderAddress as `0x${string}`],
+  });
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: contractAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) return false;
+  const tokenId = decodeFunctionResult({ abi, functionName: "holderToTokenId", data: json.result });
+  return tokenId > 0n;
+}
+
+/**
+ * Check if an address is registered as a frontend on-chain (not Ponder).
+ * Calls FrontendRegistry.getFrontendInfo(address) — returns true if operator != address(0).
+ */
+export async function isFrontendRegisteredOnChain(frontendAddr: string, contractAddress: string): Promise<boolean> {
+  const info = await getFrontendInfoOnChain(frontendAddr, contractAddress);
+  return info.registered;
+}
+
+/**
+ * Get full frontend info from chain.
+ * Calls FrontendRegistry.getFrontendInfo(address).
+ */
+export async function getFrontendInfoOnChain(
+  frontendAddr: string,
+  contractAddress: string,
+): Promise<{ registered: boolean; stakedAmount: bigint; approved: boolean; slashed: boolean }> {
+  const { encodeFunctionData, decodeFunctionResult } = await import("viem");
+  const abi = [
+    {
+      name: "getFrontendInfo",
+      type: "function",
+      inputs: [{ name: "frontend", type: "address" }],
+      outputs: [
+        { name: "operator", type: "address" },
+        { name: "stakedAmount", type: "uint256" },
+        { name: "approved", type: "bool" },
+        { name: "slashed", type: "bool" },
+      ],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({
+    abi,
+    functionName: "getFrontendInfo",
+    args: [frontendAddr as `0x${string}`],
+  });
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: contractAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) return { registered: false, stakedAmount: 0n, approved: false, slashed: false };
+  const [operator, stakedAmount, approved, slashed] = decodeFunctionResult({
+    abi,
+    functionName: "getFrontendInfo",
+    data: json.result,
+  });
+  return {
+    registered: operator !== "0x0000000000000000000000000000000000000000",
+    stakedAmount,
+    approved,
+    slashed,
+  };
+}
+
+/**
+ * Generic Ponder polling helper. Polls until the predicate returns true or timeout.
+ */
+export async function waitForPonderIndexed(
+  pollFn: () => Promise<boolean>,
+  maxWaitMs = 30_000,
+  pollInterval = 2_000,
+): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    try {
+      if (await pollFn()) return true;
+    } catch {
+      // Ponder may not have indexed yet
+    }
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+  }
+  return false;
+}

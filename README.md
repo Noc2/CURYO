@@ -1,0 +1,143 @@
+# Curyo
+
+**The Reputation Game for the Age of AI.**
+
+The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified reputation. When you stake real tokens on your judgment, low-quality content loses and high-quality content rises — no algorithms, no ads, no manipulation.
+
+## How It Works
+
+Curyo replaces passive likes with **prediction games**. Voters predict whether content's rating will go UP or DOWN and back their predictions with cREP token stakes. The majority side wins — the losing side's stakes are redistributed to the winning side.
+
+- **Skin in the Game** — every vote requires a token stake
+- **Sybil Resistant** — one soulbound Voter ID NFT per verified human
+- **Per-Content Rounds** — each content item accumulates votes across 15-minute epochs until 3 revealed votes trigger settlement
+- **Tlock Commit-Reveal** — votes are timelock-encrypted to each epoch's end time and revealed trustlessly via drand beacons
+- **Fully Decentralized** — no team, no foundation, no central authority
+
+Read the full [Game Theory Analysis](docs/GAME_THEORY_ANALYSIS.md) and [Security Audit](SECURITY_AUDIT.md).
+
+## Architecture
+
+Curyo is a monorepo with five packages:
+
+| Package | Description |
+|---|---|
+| `packages/foundry` | Solidity smart contracts, tests, and deployment scripts |
+| `packages/nextjs` | Next.js frontend with in-app documentation at `/docs` |
+| `packages/ponder` | Ponder indexer for on-chain event processing and API |
+| `packages/keeper` | Standalone keeper service for trustless vote reveals and round settlement |
+| `packages/bot` | CLI voting bot with pluggable rating strategies |
+
+Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, RainbowKit, wagmi, and viem.
+
+## Quick Start
+
+### Prerequisites
+
+- [Node.js >= 20](https://nodejs.org/)
+- [Yarn v3](https://yarnpkg.com/)
+- [Foundry](https://book.getfoundry.sh/getting-started/installation)
+- [Git](https://git-scm.com/)
+
+### Setup
+
+```bash
+git clone https://github.com/YOUR_USERNAME/curyo.git
+cd curyo
+yarn install
+```
+
+### Run Locally
+
+Open four terminals:
+
+**1. Local chain:**
+```bash
+yarn chain
+```
+
+**2. Deploy contracts:**
+```bash
+yarn deploy
+```
+
+**3. Start the indexer:**
+```bash
+yarn ponder:dev
+```
+
+**4. Start the frontend:**
+```bash
+yarn start
+```
+
+Visit [http://localhost:3000](http://localhost:3000).
+
+### Run the Keeper
+
+The keeper is a standalone stateless service that reveals tlock-encrypted votes using public drand beacons, settles rounds, processes unrevealed stakes, cancels expired rounds, and marks dormant content. Anyone can run a keeper — all data is public, and multiple instances provide redundancy with no coordination.
+
+**Configure** by copying `.env.example` and setting contract addresses and a wallet:
+
+```bash
+cp packages/keeper/.env.example packages/keeper/.env.local
+# Edit packages/keeper/.env.local with your contract addresses and wallet key
+```
+
+**Start the keeper:**
+
+```bash
+# Development (with file watching)
+yarn keeper:dev
+
+# Production
+yarn keeper:start
+```
+
+**Docker:**
+
+```bash
+cd packages/keeper
+docker build -t curyo-keeper .
+docker run --env-file .env curyo-keeper
+```
+
+**Monitoring:**
+
+- Prometheus metrics: `http://localhost:9090/metrics`
+- Health check: `http://localhost:9090/health`
+
+**Redundancy:** Run 2+ instances with different wallets and `KEEPER_STARTUP_JITTER_MS=15000` to stagger execution. Duplicate transactions revert harmlessly.
+
+### Run Tests
+
+```bash
+# Solidity unit tests
+yarn foundry:test
+
+# E2E browser tests (requires all services running — see "Run Locally" above)
+# Ensure NEXT_PUBLIC_TLOCK_MOCK=true in packages/nextjs/.env.local
+yarn e2e
+
+# Interactive Playwright UI mode
+yarn e2e:ui
+```
+
+## Documentation
+
+In-app documentation is available at `/docs` when running the frontend, covering:
+
+- Getting Started
+- How It Works
+- Tokenomics
+- Governance
+- Smart Contracts
+- Security Audit
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.

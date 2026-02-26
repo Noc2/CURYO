@@ -1,0 +1,71 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
+import { useTheme } from "next-themes";
+import { Toaster } from "react-hot-toast";
+import { WagmiProvider } from "wagmi";
+import { Footer } from "~~/components/Footer";
+import { Header } from "~~/components/Header";
+import { TermsAcceptanceModal } from "~~/components/legal/TermsAcceptanceModal";
+import { BlockieAvatar } from "~~/components/scaffold-eth";
+import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
+import { TermsAcceptanceProvider } from "~~/contexts/TermsAcceptanceContext";
+import { useKeeperInit } from "~~/hooks/useKeeperInit";
+import { wagmiConfig } from "~~/services/web3/wagmiConfig";
+
+const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <>
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        {/* Main content: offset by left sidebar on desktop (224px at xl) */}
+        <div className="flex flex-col flex-1 min-h-0 xl:pl-56">
+          <main className="relative flex flex-col flex-1 min-h-0 overflow-y-auto">{children}</main>
+          <Footer />
+        </div>
+      </div>
+      <Toaster />
+    </>
+  );
+};
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
+export const ScaffoldEthAppWithProviders = ({ children }: { children: React.ReactNode }) => {
+  useKeeperInit();
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === "dark";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <RainbowKitProvider
+          avatar={BlockieAvatar}
+          theme={mounted ? (isDarkMode ? darkTheme() : lightTheme()) : lightTheme()}
+        >
+          <ProgressBar height="3px" color="#D9641E" />
+          <TermsAcceptanceProvider>
+            <OptimisticVoteProvider>
+              <ScaffoldEthApp>{children}</ScaffoldEthApp>
+            </OptimisticVoteProvider>
+            <TermsAcceptanceModal />
+          </TermsAcceptanceProvider>
+        </RainbowKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+};

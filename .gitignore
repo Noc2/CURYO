@@ -1,0 +1,38 @@
+# dependencies
+node_modules
+
+# yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# eslint
+.eslintcache
+
+# env
+.env
+.env.*
+
+# build cache
+*.tsbuildinfo
+
+# misc
+.DS_Store
+
+# IDE
+.vscode
+.idea
+.cursor
+
+# AI tools
+CLAUDE.md
+.claudeignore
+
+# Foundry broadcast artifacts
+packages/foundry/broadcast/
+
+# cli
+dist
