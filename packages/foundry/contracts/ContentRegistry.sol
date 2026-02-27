@@ -214,7 +214,7 @@ contract ContentRegistry is
         require(!urlSubmitted[urlHash], "URL already submitted");
         urlSubmitted[urlHash] = true;
 
-        bytes32 contentHash = keccak256(abi.encodePacked(url, goal, tags));
+        bytes32 contentHash = keccak256(abi.encode(url, goal, tags));
 
         crepToken.safeTransferFrom(msg.sender, address(this), MIN_SUBMITTER_STAKE);
 
