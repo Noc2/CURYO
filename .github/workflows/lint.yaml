@@ -19,7 +19,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Init nested submodules (skip unavailable mobile-sdk-native)
+        run: |
+          cd packages/foundry/lib/self
+          git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
 
       - name: Setup node env
         uses: actions/setup-node@v3

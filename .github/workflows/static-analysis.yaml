@@ -43,6 +43,11 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/cyfrin/aderyn/releases/latest/download/aderyn-installer.sh | bash
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Verify Aderyn version
+        run: aderyn --version
+      - name: Build contracts for Aderyn
+        working-directory: packages/foundry
+        run: forge build
       - name: Patch OZ submodule configs (aderyn doesn't support evm_version osaka yet)
         run: |
           sed -i "s/evm_version = 'osaka'/evm_version = 'cancun'/" packages/foundry/lib/openzeppelin-contracts/foundry.toml packages/foundry/lib/openzeppelin-contracts-upgradeable/foundry.toml
