@@ -34,7 +34,7 @@ test.describe("Unrevealed vote processing", () => {
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const STAKE = BigInt(1e6); // 1 cREP (MIN_STAKE)
+  const STAKE = BigInt(10e6); // 10 cREP (must be >= MIN_STAKE_FOR_RATING for rating delta > 0)
 
   let contentId: string | null = null;
   let roundId: bigint = 0n;

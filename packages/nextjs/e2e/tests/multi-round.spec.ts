@@ -33,7 +33,7 @@ test.describe("Multi-round succession", () => {
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-  const STAKE = BigInt(1e6); // 1 cREP
+  const STAKE = BigInt(10e6); // 10 cREP (must be >= MIN_STAKE_FOR_RATING for rating delta > 0)
 
   let contentId: string | null = null;
   let round1Id: bigint = 0n;
