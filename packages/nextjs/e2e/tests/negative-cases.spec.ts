@@ -1,4 +1,4 @@
-import { cancelContent, flagContent } from "../helpers/admin-helpers";
+import { cancelContent } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { setupWallet } from "../helpers/local-storage";
@@ -10,7 +10,7 @@ import { expect, test } from "@playwright/test";
  * Verify that invalid actions are properly rejected on-chain and in the UI.
  *
  * Account allocation:
- * - Account #9 (scaffold-eth deployer) — has MODERATOR_ROLE, GOVERNANCE_ROLE
+ * - Account #9 (scaffold-eth deployer) — has GOVERNANCE_ROLE
  * - Account #1 (no cREP, no VoterID) — unauthorized user
  * - Account #2 (1000 cREP + VoterID) — submitter of content #1
  * - Account #3 (1000 cREP + VoterID) — non-submitter
@@ -19,12 +19,6 @@ test.describe("Negative cases", () => {
   test("non-submitter cannot cancel content", async () => {
     // Content #1 was submitted by account #2. Account #3 should NOT be able to cancel it.
     const success = await cancelContent(BigInt(1), ANVIL_ACCOUNTS.account3.address, CONTRACT_ADDRESSES.ContentRegistry);
-    expect(success).toBe(false);
-  });
-
-  test("non-moderator cannot flag content", async () => {
-    // Account #3 does NOT have MODERATOR_ROLE — flagContent should revert.
-    const success = await flagContent(BigInt(1), ANVIL_ACCOUNTS.account3.address, CONTRACT_ADDRESSES.ContentRegistry);
     expect(success).toBe(false);
   });
 

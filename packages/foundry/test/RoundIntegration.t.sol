@@ -1686,14 +1686,6 @@ contract RoundIntegrationTest is Test {
         vm.stopPrank();
     }
 
-    function test_FlagContentWithoutTreasuryReverts() public {
-        uint256 contentId = _submitContent();
-
-        vm.prank(owner);
-        vm.expectRevert("Treasury not set");
-        registry.flagContent(contentId);
-    }
-
     // =========================================================================
     // AUDIT TESTS: Unauthorized participation reward claim
     // =========================================================================

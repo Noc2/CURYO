@@ -1008,55 +1008,6 @@ contract ContentRegistryCoverageTest is Test {
         vm.stopPrank();
     }
 
-    // --- flagContent: success ---
-
-    function test_FlagContentSuccess() public {
-        uint256 id = _submitContent(submitter, "https://example.com/flag");
-
-        uint256 treasuryBefore = crep.balanceOf(treasury);
-        vm.prank(admin);
-        registry.flagContent(id);
-
-        ContentRegistry.Content memory c = registry.getContent(id);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Flagged));
-        assertEq(crep.balanceOf(treasury) - treasuryBefore, 10e6); // Stake slashed to treasury
-    }
-
-    // --- flagContent: dormant content ---
-
-    function test_FlagDormantContentSuccess() public {
-        uint256 id = _submitContent(submitter, "https://example.com/flagdormant");
-        vm.warp(block.timestamp + 31 days);
-        registry.markDormant(id);
-
-        // Flagging dormant content — stake already returned, so no transfer
-        vm.prank(admin);
-        registry.flagContent(id);
-
-        ContentRegistry.Content memory c = registry.getContent(id);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Flagged));
-    }
-
-    // --- flagContent: non-existent content ---
-
-    function test_FlagNonExistentContentReverts() public {
-        vm.prank(admin);
-        vm.expectRevert("Content does not exist");
-        registry.flagContent(999);
-    }
-
-    // --- flagContent: already cancelled ---
-
-    function test_FlagCancelledContentReverts() public {
-        uint256 id = _submitContent(submitter, "https://example.com/flagcancel");
-        vm.prank(submitter);
-        registry.cancelContent(id);
-
-        vm.prank(admin);
-        vm.expectRevert("Invalid status");
-        registry.flagContent(id);
-    }
-
     // --- updateRating: up vote capped at 100 ---
 
     function test_UpdateRatingCappedAt100() public {

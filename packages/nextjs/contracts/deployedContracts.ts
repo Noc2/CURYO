@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     CuryoReputation: {
-      address: "0xe031A491d0ec16f32f9BE25046956425034F0918",
+      address: "0x700b6A60ce7EaaEA56F065753d8dcB9653dbAD35",
       abi: [
         {
           type: "constructor",
@@ -1400,7 +1400,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     ContentRegistry: {
-      address: "0x7d3A31e45AdfC5b5c95DA3bA89625B61d448Dd91",
+      address: "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
       abi: [
         {
           type: "constructor",
@@ -2913,7 +2913,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     RoundVotingEngine: {
-      address: "0x5094103dE460dF9BC1A0F2D69d6D6547cc97c050",
+      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
       abi: [
         {
           type: "constructor",
@@ -6182,7 +6182,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     RoundRewardDistributor: {
-      address: "0x4e97bf98a0301D0f53BA0846ad7BafFFA334196C",
+      address: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
       abi: [
         {
           type: "constructor",
@@ -6813,7 +6813,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     FrontendRegistry: {
-      address: "0xD775B3E8Df1C9ea0eFA37af8E19cF2Bc429d8dE4",
+      address: "0x0C8E79F3534B00D9a3D4a856B665Bf4eBC22f2ba",
       abi: [
         {
           type: "constructor",
@@ -7774,7 +7774,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     ProfileRegistry: {
-      address: "0xd13255517dC6B0212a11b53D16Dc40e74a65f8aD",
+      address: "0xeD1DB453C3156Ff3155a97AD217b3087D5Dc5f6E",
       abi: [
         {
           type: "constructor",
@@ -8475,7 +8475,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     ERC1967Proxy: {
-      address: "0xd775b3e8df1c9ea0efa37af8e19cf2bc429d8de4",
+      address: "0x0c8e79f3534b00d9a3d4a856b665bf4ebc22f2ba",
       abi: [
         {
           type: "constructor",
@@ -8549,10 +8549,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 14,
+      deployedOnBlock: 3,
     },
     CategoryRegistry: {
-      address: "0x1Cff7CDEcEF22D70FedefE1774831F18b86E9888",
+      address: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
       abi: [
         {
           type: "constructor",
@@ -9519,7 +9519,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     VoterIdNFT: {
-      address: "0x32e0a4F5c9846C8C504103E41d7E8EdF03CE8CBC",
+      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
       abi: [
         {
           type: "constructor",
@@ -10695,7 +10695,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     ParticipationPool: {
-      address: "0x725310Cb2BE955Da0d527C6DddE2028D6558bE1d",
+      address: "0xBF3cD410Aa5a3E9dA22FD9109AdD5D3655fcb1c5",
       abi: [
         {
           type: "constructor",
@@ -11097,7 +11097,7 @@ const deployedContracts = {
       inheritedFunctions: {},
     },
     MockIdentityVerificationHub: {
-      address: "0x12061cc3c316c680723f0781bbd6fc5c16c4bb40",
+      address: "0x86b3e65cdd7f9321118d5d4901a9800200c11b8a",
       abi: [
         {
           type: "function",
@@ -11255,8 +11255,7 @@ const deployedContracts = {
             {
               name: "output",
               type: "tuple",
-              internalType:
-                "struct ISelfVerificationRoot.GenericDiscloseOutputV2",
+              internalType: "struct ISelfVerificationRoot.GenericDiscloseOutputV2",
               components: [
                 {
                   name: "attestationId",
@@ -11467,10 +11466,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 18,
+      deployedOnBlock: 4,
     },
     HumanFaucet: {
-      address: "0xe36F523356407a752552b4F4ad6CED1a37cbDe58",
+      address: "0xC624801dd98beF87C0718DDb43aD3a566cc51ecc",
       abi: [
         {
           type: "constructor",

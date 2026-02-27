@@ -232,9 +232,6 @@ const SmartContracts: NextPage = () => {
           <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 cREP, max 2 times).
         </li>
         <li>
-          <code>flagContent(contentId)</code> &mdash; Flag for violations (MODERATOR_ROLE).
-        </li>
-        <li>
           <code>updateRating(contentId, upWins, ratingDelta)</code> &mdash; Called by RoundVotingEngine after
           settlement. Rating delta is 1&ndash;5 based on winning stake size, capped by winning voter count.
         </li>

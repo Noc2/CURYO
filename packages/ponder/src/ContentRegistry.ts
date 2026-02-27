@@ -84,13 +84,6 @@ ponder.on("ContentRegistry:ContentCancelled", async ({ event, context }) => {
   });
 });
 
-ponder.on("ContentRegistry:ContentFlagged", async ({ event, context }) => {
-  const { contentId } = event.args;
-  await context.db.update(content, { id: contentId }).set({
-    status: 3,
-  });
-});
-
 ponder.on("ContentRegistry:RatingUpdated", async ({ event, context }) => {
   const { contentId, oldRating, newRating } = event.args;
   await context.db.update(content, { id: contentId }).set({

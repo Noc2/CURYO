@@ -14,7 +14,7 @@ export const content = onchainTable(
     goal: t.text().notNull(),
     tags: t.text().notNull(),
     categoryId: t.bigint().notNull(),
-    status: t.integer().notNull(), // 0=Active, 1=Dormant, 2=Cancelled, 3=Flagged
+    status: t.integer().notNull(), // 0=Active, 1=Dormant, 2=Cancelled
     rating: t.integer().notNull(), // 0-100, starts at 50
     submitterStakeReturned: t.boolean().notNull(),
     createdAt: t.bigint().notNull(),

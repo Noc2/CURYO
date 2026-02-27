@@ -312,19 +312,6 @@ const SecurityAudit: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td>H-08</td>
-              <td>
-                <strong>flagContent bypasses grace period.</strong> <code>STAKE_GRACE_EPOCHS</code> (96 epochs ~ 24h) is
-                enforced for organic rating-based slashing, but <code>flagContent()</code> ignores it entirely. A
-                moderator can slash stakes on brand-new content before any votes occur. Documented as intentional:
-                moderator action represents a policy violation (spam, illegal content) that warrants immediate action.
-              </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
-              <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
-              </td>
-            </tr>
-            <tr>
               <td>H-09</td>
               <td>
                 <strong>CategoryRegistry missing ReentrancyGuard.</strong> FrontendRegistry has{" "}
@@ -356,18 +343,6 @@ const SecurityAudit: NextPage = () => {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>M-01</td>
-              <td>
-                <strong>Flagged content submitter stake has no recovery path.</strong> <code>flagContent()</code> now
-                slashes the submitter stake directly to the bonus pool as a penalty for policy violations. Uses the
-                existing <code>submitterStakeReturned</code> guard to prevent double-slashing.
-              </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
-              <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
-              </td>
-            </tr>
             <tr>
               <td>M-02</td>
               <td>
@@ -1575,10 +1550,9 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>V5-M-06</td>
               <td>
-                <strong>Content status transitions verified.</strong> Valid: Active&rarr;Dormant/Cancelled/Flagged,
-                Dormant&rarr;Active(revive)/Flagged. Invalid transitions blocked by status checks in each function.
-                Double return/slash prevented by <code>submitterStakeReturned</code> flag checked in all 5 relevant
-                paths.
+                <strong>Content status transitions verified.</strong> Valid: Active&rarr;Dormant/Cancelled,
+                Dormant&rarr;Active(revive). Invalid transitions blocked by status checks in each function. Double
+                return/slash prevented by <code>submitterStakeReturned</code> flag checked in all relevant paths.
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
@@ -1588,9 +1562,8 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>V5-M-07</td>
               <td>
-                <strong>Dormant URL stays locked.</strong> URL hash is cleared on cancel but not on flag/dormancy.
-                Flagged URLs staying locked is intentional (policy violation). Dormant URLs staying locked prevents
-                legitimate resubmission. Verify if this is the intended behavior.
+                <strong>Dormant URL stays locked.</strong> URL hash is cleared on cancel but not on dormancy. Dormant
+                URLs staying locked prevents legitimate resubmission. Verify if this is the intended behavior.
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>

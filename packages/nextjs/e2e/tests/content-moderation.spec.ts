@@ -1,7 +1,6 @@
 import {
   approveCREP,
   cancelContent,
-  flagContent,
   submitContentDirect,
   transferCREP,
   waitForPonderIndexed,
@@ -13,11 +12,11 @@ import { expect, test } from "@playwright/test";
 
 /**
  * Content moderation tests (contract-level).
- * Triggers Ponder events: ContentCancelled, ContentFlagged, SubmitterStakeSlashed.
+ * Triggers Ponder events: ContentCancelled.
  *
  * Account allocation:
  * - Account #2 (cREP + VoterID) — submits content, cancels own content
- * - Account #9 (deployer = governance in mock mode) — funds account #2, flags content
+ * - Account #9 (deployer = governance in mock mode) — funds account #2
  *
  * All interactions use direct contract calls for reliability.
  */
@@ -31,7 +30,6 @@ test.describe("Content moderation", () => {
   const SUBMIT_STAKE = BigInt(10e6);
 
   let cancelledContentId: string | null = null;
-  let flaggedContentId: string | null = null;
 
   /**
    * Helper: submit content via contract call and wait for Ponder to index it.
@@ -107,60 +105,18 @@ test.describe("Content moderation", () => {
     expect(after.status).toBe(2);
   });
 
-  test("moderator flags content", async () => {
-    test.setTimeout(90_000);
-
-    const contentId = await submitAndWaitForPonder("flag_mod");
-    expect(contentId, "Ponder should index the new content").not.toBeNull();
-
-    // Verify it's active (status=0)
-    const { content: before } = await getContentById(contentId!);
-    expect(before.status).toBe(0);
-
-    // Flag content — deployer has MODERATOR_ROLE
-    const success = await flagContent(BigInt(contentId!), DEPLOYER.address, CONTENT_REGISTRY);
-    expect(success).toBe(true);
-
-    // Wait for Ponder to index the flagging
-    const indexed = await waitForPonderIndexed(async () => {
-      const { content } = await getContentById(contentId!);
-      return content.status === 3; // Flagged
-    });
-    expect(indexed, "Ponder should index the flagging").toBe(true);
-
-    flaggedContentId = contentId;
-    const { content: after } = await getContentById(contentId!);
-    expect(after.status).toBe(3);
-
-    // Verify SubmitterStakeSlashed was also indexed:
-    // flagContent() → _slashContent() → slashSubmitterStake() sets this to true
-    expect(after.submitterStakeReturned).toBe(true);
-  });
-
-  test("flagged and cancelled content filtered from default feed", async () => {
-    test.skip(!cancelledContentId && !flaggedContentId, "No cancelled or flagged content from previous tests");
+  test("cancelled content filtered from default feed", async () => {
+    test.skip(!cancelledContentId, "No cancelled content from previous tests");
     test.setTimeout(30_000);
 
-    // Default feed (status=0, active only) should NOT contain them
+    // Default feed (status=0, active only) should NOT contain it
     const { items: activeItems } = await getContentList({ limit: 200 });
-    if (cancelledContentId) {
-      expect(activeItems.find(c => c.id === cancelledContentId)).toBeUndefined();
-    }
-    if (flaggedContentId) {
-      expect(activeItems.find(c => c.id === flaggedContentId)).toBeUndefined();
-    }
+    expect(activeItems.find(c => c.id === cancelledContentId)).toBeUndefined();
 
-    // All-status feed should contain them
+    // All-status feed should contain it
     const { items: allItems } = await getContentList({ status: "all", limit: 200 });
-    if (cancelledContentId) {
-      const cancelled = allItems.find(c => c.id === cancelledContentId);
-      expect(cancelled).toBeTruthy();
-      expect(cancelled!.status).toBe(2);
-    }
-    if (flaggedContentId) {
-      const flagged = allItems.find(c => c.id === flaggedContentId);
-      expect(flagged).toBeTruthy();
-      expect(flagged!.status).toBe(3);
-    }
+    const cancelled = allItems.find(c => c.id === cancelledContentId);
+    expect(cancelled).toBeTruthy();
+    expect(cancelled!.status).toBe(2);
   });
 });

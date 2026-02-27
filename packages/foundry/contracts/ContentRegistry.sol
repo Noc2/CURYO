@@ -14,7 +14,7 @@ import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 
 /// @title ContentRegistry
-/// @notice Manages content lifecycle: submission → active → dormant → revived / cancelled / flagged.
+/// @notice Manages content lifecycle: submission → active → dormant → revived / cancelled.
 /// @dev Stores only content hash on-chain; full URL/goal emitted in events.
 contract ContentRegistry is
     Initializable,
@@ -28,7 +28,6 @@ contract ContentRegistry is
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
-    bytes32 public constant MODERATOR_ROLE = keccak256("MODERATOR_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
@@ -54,8 +53,7 @@ contract ContentRegistry is
     enum ContentStatus {
         Active,
         Dormant,
-        Cancelled,
-        Flagged
+        Cancelled
     }
 
     // --- Structs ---
@@ -107,7 +105,6 @@ contract ContentRegistry is
     event ContentCancelled(uint256 indexed contentId);
     event ContentDormant(uint256 indexed contentId);
     event ContentRevived(uint256 indexed contentId, address indexed reviver);
-    event ContentFlagged(uint256 indexed contentId);
     event SubmitterStakeReturned(uint256 indexed contentId, uint256 amount);
     event SubmitterStakeSlashed(uint256 indexed contentId, uint256 slashedAmount);
     event RatingUpdated(uint256 indexed contentId, uint256 oldRating, uint256 newRating);
@@ -130,7 +127,6 @@ contract ContentRegistry is
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
         _grantRole(ADMIN_ROLE, _governance);
         _grantRole(CONFIG_ROLE, _governance);
-        _grantRole(MODERATOR_ROLE, _governance);
         _grantRole(PAUSER_ROLE, _governance);
         _grantRole(UPGRADER_ROLE, _governance);
 
@@ -322,30 +318,6 @@ contract ContentRegistry is
         c.reviver = msg.sender;
 
         emit ContentRevived(contentId, msg.sender);
-    }
-
-    /// @notice Flag content for policy violations. Slashes submitter stake to treasury.
-    /// @dev Only callable by MODERATOR_ROLE. Submitter stake is slashed as penalty.
-    ///      Note: Unlike organic rating-based slashing (which respects STAKE_GRACE_EPOCHS),
-    ///      moderator flagging intentionally bypasses the grace period. This is a deliberate
-    ///      design choice — moderator action represents a policy violation (spam, illegal content,
-    ///      etc.) that warrants immediate action regardless of content age.
-    function flagContent(uint256 contentId) external onlyRole(MODERATOR_ROLE) {
-        Content storage c = contents[contentId];
-        require(c.id != 0, "Content does not exist");
-        require(c.status == ContentStatus.Active || c.status == ContentStatus.Dormant, "Invalid status");
-
-        c.status = ContentStatus.Flagged;
-
-        // Slash submitter stake to treasury (penalty for policy violation)
-        if (!c.submitterStakeReturned && c.submitterStake > 0) {
-            require(treasury != address(0), "Treasury not set");
-            c.submitterStakeReturned = true;
-            crepToken.safeTransfer(treasury, c.submitterStake);
-            emit SubmitterStakeSlashed(contentId, c.submitterStake);
-        }
-
-        emit ContentFlagged(contentId);
     }
 
     // --- VotingEngine callbacks ---

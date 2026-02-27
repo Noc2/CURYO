@@ -3,7 +3,7 @@
  *
  * On local Anvil (chain 31337, mock mode), the deployer (account #0)
  * serves as governance and holds all roles: ADMIN_ROLE, GOVERNANCE_ROLE,
- * MODERATOR_ROLE, CONFIG_ROLE. No impersonation needed.
+ * CONFIG_ROLE. No impersonation needed.
  *
  * Pattern follows cancelExpiredRoundDirect() in keeper.ts — ABI-encode
  * the call with viem and send via eth_sendTransaction.
@@ -13,6 +13,13 @@ const ANVIL_RPC = "http://localhost:8545";
 
 /** Send a raw transaction to the Anvil RPC, return true if it succeeded on-chain. */
 async function sendTx(from: string, to: string, data: `0x${string}`): Promise<boolean> {
+  // Impersonate the sender so accounts beyond Anvil's default 10 can send txs
+  await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "anvil_impersonateAccount", params: [from], id: Date.now() }),
+  });
+
   const res = await fetch(ANVIL_RPC, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -24,6 +31,14 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
     }),
   });
   const json = await res.json();
+
+  // Stop impersonation (non-fatal if it fails)
+  await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "anvil_stopImpersonatingAccount", params: [from], id: Date.now() }),
+  });
+
   if (json.error) return false;
 
   // Anvil auto-mines, but the receipt may not be available instantly when
@@ -157,33 +172,6 @@ export async function approveFrontend(
     ],
     functionName: "approveFrontend",
     args: [frontendAddr as `0x${string}`],
-  });
-  return sendTx(fromAddress, contractAddress, data);
-}
-
-/**
- * Flag content as policy violation.
- * Calls ContentRegistry.flagContent(uint256 contentId).
- * Requires MODERATOR_ROLE (deployer has it in mock mode).
- */
-export async function flagContent(
-  contentId: number | bigint,
-  fromAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
-  const { encodeFunctionData } = await import("viem");
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "flagContent",
-        type: "function",
-        inputs: [{ name: "contentId", type: "uint256" }],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "flagContent",
-    args: [BigInt(contentId)],
   });
   return sendTx(fromAddress, contractAddress, data);
 }
