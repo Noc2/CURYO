@@ -38,8 +38,8 @@ test.describe("Smoke tests", () => {
     await page.goto("/submit", { waitUntil: "domcontentloaded" });
 
     await expect(page).toHaveURL(/\/submit/);
-    // Verify the submit page rendered (either the form or VoterID prompt)
-    const heading = page.getByRole("heading", { name: /Submit Content|Voter ID Required/i });
+    // Verify the submit page rendered (form, VoterID prompt, or connect wallet prompt)
+    const heading = page.getByRole("heading", { name: /^Submit$|Submit Content|Voter ID Required/i });
     await expect(heading).toBeVisible({ timeout: 15_000 });
   });
 });
