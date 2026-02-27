@@ -39,7 +39,10 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
     body: JSON.stringify({ jsonrpc: "2.0", method: "anvil_stopImpersonatingAccount", params: [from], id: Date.now() }),
   });
 
-  if (json.error) return false;
+  if (json.error) {
+    console.error(`[sendTx] RPC error from=${from} to=${to}: ${JSON.stringify(json.error)}`);
+    return false;
+  }
 
   // Anvil auto-mines, but the receipt may not be available instantly when
   // the keeper is also sending transactions. Retry a few times.
@@ -58,7 +61,12 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
     const receiptJson = await receiptRes.json();
     const status = receiptJson.result?.status;
     if (status === "0x1") return true;
-    if (status === "0x0") return false; // Definite revert
+    if (status === "0x0") {
+      // Log revert data for debugging
+      const revertData = receiptJson.result?.revertReason || "no revert reason";
+      console.error(`[sendTx] Tx reverted from=${from} to=${to} hash=${txHash} reason=${revertData}`);
+      return false;
+    }
     // Receipt not yet available — wait and retry
     await new Promise(resolve => setTimeout(resolve, 500));
   }
