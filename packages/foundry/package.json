@@ -30,6 +30,7 @@
     "toml": "~3.0.0",
     "viem": "2.39.0"
   },
+  "license": "MIT",
   "devDependencies": {
     "shx": "^0.3.4"
   }

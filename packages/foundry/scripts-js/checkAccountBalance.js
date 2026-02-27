@@ -8,8 +8,7 @@ import { readFileSync } from "fs";
 import { parse } from "toml";
 import { ethers } from "ethers";
 
-const ALCHEMY_API_KEY =
-  process.env.ALCHEMY_API_KEY || "oKxs-03sij-U_N0iOlrSsZFr29-IqbuF";
+const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
 
 // Load environment variables
 const __filename = fileURLToPath(import.meta.url);
