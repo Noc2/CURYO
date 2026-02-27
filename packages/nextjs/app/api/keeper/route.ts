@@ -276,8 +276,11 @@ async function resolveRounds(): Promise<KeeperResult> {
     return emptyResult();
   }
 
-  // Resolve account: keystore first, then raw private key fallback
-  const account = KEEPER_ACCOUNT ?? (KEEPER_KEY ? privateKeyToAccount(KEEPER_KEY as `0x${string}`) : null);
+  // Resolve account: on localhost prefer raw private key (keystore holds production wallet
+  // with no ETH on Anvil); on live chains prefer keystore for security.
+  const isLocalhost = chainId === 31337;
+  const rawKeyAccount = KEEPER_KEY ? privateKeyToAccount(KEEPER_KEY as `0x${string}`) : null;
+  const account = isLocalhost ? (rawKeyAccount ?? KEEPER_ACCOUNT) : (KEEPER_ACCOUNT ?? rawKeyAccount);
   if (!account) {
     console.log("[Keeper] No keystore or KEEPER_PRIVATE_KEY configured, skipping");
     return emptyResult();
