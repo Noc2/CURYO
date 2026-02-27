@@ -41,6 +41,16 @@ const curyoBetaAbi = [
   },
   {
     type: "function",
+    name: "transfer",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "balanceOf",
     inputs: [{ name: "account", type: "address" }],
     outputs: [{ name: "", type: "uint256" }],
@@ -195,29 +205,58 @@ export const Faucet = () => {
       notification.error("Missing destination address or CuryoReputation contract");
       return;
     }
-    if (!faucetAddress) {
-      notification.error("Missing faucet address");
-      return;
-    }
+
+    const humanFaucetAddr = (deployedContracts as any)[31337]?.HumanFaucet?.address as AddressType | undefined;
 
     try {
       setCuryoLoading(true);
-
       const amount = parseUnits(curyoAmount, CREP_DECIMALS);
-      const mintHash = await localWalletClient.writeContract({
-        address: crepTokenAddress,
-        abi: curyoBetaAbi,
-        functionName: "mint",
-        args: [inputAddress, amount],
-        account: faucetAddress,
-      });
-      await localPublicClient.waitForTransactionReceipt({ hash: mintHash });
-      queryClient.invalidateQueries();
-      notification.success(`Minted ${curyoAmount} cREP to ${inputAddress.slice(0, 6)}...${inputAddress.slice(-4)}`);
 
+      if (humanFaucetAddr) {
+        // Deploy script mints 100% of MAX_SUPPLY, so direct mint() reverts.
+        // Instead, impersonate the HumanFaucet contract (holds ~52M cREP) and transfer.
+        // The impersonated address needs ETH for gas.
+        await (localPublicClient as any).request({
+          method: "anvil_setBalance",
+          params: [humanFaucetAddr, "0xDE0B6B3A7640000"], // 1 ETH
+        });
+        await (localPublicClient as any).request({
+          method: "anvil_impersonateAccount",
+          params: [humanFaucetAddr],
+        });
+        const txHash = await localWalletClient.writeContract({
+          address: crepTokenAddress,
+          abi: curyoBetaAbi,
+          functionName: "transfer",
+          args: [inputAddress, amount],
+          account: humanFaucetAddr,
+        });
+        await localPublicClient.waitForTransactionReceipt({ hash: txHash });
+        await (localPublicClient as any).request({
+          method: "anvil_stopImpersonatingAccount",
+          params: [humanFaucetAddr],
+        });
+      } else if (faucetAddress) {
+        // Fallback: try mint (works only if supply allows)
+        const txHash = await localWalletClient.writeContract({
+          address: crepTokenAddress,
+          abi: curyoBetaAbi,
+          functionName: "mint",
+          args: [inputAddress, amount],
+          account: faucetAddress,
+        });
+        await localPublicClient.waitForTransactionReceipt({ hash: txHash });
+      } else {
+        notification.error("Missing faucet address");
+        setCuryoLoading(false);
+        return;
+      }
+
+      queryClient.invalidateQueries();
+      notification.success(`Sent ${curyoAmount} cREP to ${inputAddress.slice(0, 6)}...${inputAddress.slice(-4)}`);
       setCuryoLoading(false);
     } catch (error: any) {
-      notification.error(error?.message || "Failed to mint cREP tokens");
+      notification.error(error?.message || "Failed to claim cREP tokens");
       setCuryoLoading(false);
     }
   };
