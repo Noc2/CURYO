@@ -1,10 +1,23 @@
 # Curyo
 
-**The Reputation Game for the Age of AI.**
+[![standard-readme compliant](https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square)](https://github.com/RichardLitt/standard-readme)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+
+Decentralized reputation game where users stake cREP tokens on content quality predictions.
 
 The web is drowning in clickbait and fake engagement. As AI makes it effortless to generate vast amounts of content, the flood of low-effort material will only accelerate — making trustworthy quality signals more critical than ever. Curyo fights back by tying every vote to a verified reputation. When you stake real tokens on your judgment, low-quality content loses and high-quality content rises — no algorithms, no ads, no manipulation.
 
-## How It Works
+## Table of Contents
+
+- [Background](#background)
+- [Architecture](#architecture)
+- [Install](#install)
+- [Usage](#usage)
+- [API](#api)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Background
 
 Curyo replaces passive likes with **prediction games**. Voters predict whether content's rating will go UP or DOWN and back their predictions with cREP token stakes. The majority side wins — the losing side's stakes are redistributed to the winning side.
 
@@ -28,9 +41,16 @@ Curyo is a monorepo with five packages:
 | `packages/keeper` | Standalone keeper service for trustless vote reveals and round settlement |
 | `packages/bot` | CLI voting bot with pluggable rating strategies |
 
+```
+foundry (compile) → ABIs + addresses
+ponder  (index)   → REST API at localhost:42069
+nextjs  (frontend)→ reads contracts via wagmi + Ponder API
+keeper  (service) → reveals tlock-encrypted votes via drand beacons, settles rounds
+```
+
 Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, RainbowKit, wagmi, and viem.
 
-## Quick Start
+## Install
 
 ### Prerequisites
 
@@ -42,10 +62,12 @@ Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, R
 ### Setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/curyo.git
-cd curyo
+git clone https://github.com/Noc2/CURYO.git
+cd CURYO
 yarn install
 ```
+
+## Usage
 
 ### Run Locally
 
@@ -123,7 +145,7 @@ yarn e2e
 yarn e2e:ui
 ```
 
-## Documentation
+## API
 
 In-app documentation is available at `/docs` when running the frontend, covering:
 
@@ -140,4 +162,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+[MIT](LICENSE) © Hawig Ventures UG
