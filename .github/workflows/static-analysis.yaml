@@ -18,11 +18,15 @@ jobs:
           cd packages/foundry/lib/self
           git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
       - uses: foundry-rs/foundry-toolchain@v1
+      - name: Build contracts
+        working-directory: packages/foundry
+        run: forge build
       - uses: crytic/slither-action@v0.4.0
         with:
           target: packages/foundry
           slither-config: packages/foundry/slither.config.json
           fail-on: high
+          ignore-compile: true
 
   aderyn:
     runs-on: ubuntu-latest
