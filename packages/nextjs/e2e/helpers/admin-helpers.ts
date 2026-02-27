@@ -649,6 +649,232 @@ export async function getFrontendInfoOnChain(
   };
 }
 
+// ============================================================
+// ROUND VOTING ENGINE — Direct contract calls
+// ============================================================
+
+/**
+ * Commit a vote directly via contract call (bypasses UI).
+ * In mock mode, the ciphertext is: [isUp(1 byte) | salt(32 bytes) | contentId(32 bytes)].
+ * commitHash = keccak256(abi.encodePacked(isUp, salt, contentId)).
+ *
+ * Caller must have approved stakeAmount of cREP to the RoundVotingEngine.
+ */
+export async function commitVoteDirect(
+  contentId: number | bigint,
+  isUp: boolean,
+  salt: `0x${string}`,
+  stakeAmount: bigint,
+  frontend: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<{ success: boolean; commitHash: `0x${string}` }> {
+  const { encodeFunctionData, keccak256, encodePacked, toHex } = await import("viem");
+
+  const contentIdBn = BigInt(contentId);
+  const commitHash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentIdBn]));
+
+  // Mock ciphertext: [isUp(1 byte) | salt(32 bytes) | contentId(32 bytes)]
+  const isUpByte = isUp ? "01" : "00";
+  const saltHex = salt.slice(2); // remove 0x
+  const contentIdHex = toHex(contentIdBn, { size: 32 }).slice(2);
+  const ciphertext = `0x${isUpByte}${saltHex}${contentIdHex}` as `0x${string}`;
+
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "commitVote",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "commitHash", type: "bytes32" },
+          { name: "ciphertext", type: "bytes" },
+          { name: "stakeAmount", type: "uint256" },
+          { name: "frontend", type: "address" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "commitVote",
+    args: [contentIdBn, commitHash, ciphertext, stakeAmount, frontend as `0x${string}`],
+  });
+
+  const success = await sendTx(fromAddress, contractAddress, data);
+  return { success, commitHash };
+}
+
+/**
+ * Reveal a vote by commit key directly via contract call.
+ * commitKey = keccak256(abi.encodePacked(voter, commitHash)).
+ */
+export async function revealVoteDirect(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  voter: string,
+  commitHash: `0x${string}`,
+  isUp: boolean,
+  salt: `0x${string}`,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData, keccak256, encodePacked } = await import("viem");
+
+  const commitKey = keccak256(encodePacked(["address", "bytes32"], [voter as `0x${string}`, commitHash]));
+
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "revealVoteByCommitKey",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+          { name: "commitKey", type: "bytes32" },
+          { name: "isUp", type: "bool" },
+          { name: "salt", type: "bytes32" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "revealVoteByCommitKey",
+    args: [BigInt(contentId), BigInt(roundId), commitKey, isUp, salt],
+  });
+
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Settle a round directly via contract call.
+ */
+export async function settleRoundDirect(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "settleRound",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "settleRound",
+    args: [BigInt(contentId), BigInt(roundId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Process unrevealed votes for a settled/tied round.
+ * Forfeits stakes from past-epoch unrevealed commits, refunds current-epoch ones.
+ */
+export async function processUnrevealedDirect(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  startIndex: number | bigint,
+  count: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "processUnrevealedVotes",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+          { name: "startIndex", type: "uint256" },
+          { name: "count", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "processUnrevealedVotes",
+    args: [BigInt(contentId), BigInt(roundId), BigInt(startIndex), BigInt(count)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Claim voter reward for a settled round.
+ * Only winning voters get a payout; losing voters are notified.
+ */
+export async function claimVoterReward(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "claimReward",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "claimReward",
+    args: [BigInt(contentId), BigInt(roundId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Read a public uint256 view function from a contract (e.g. consensusReserve).
+ */
+export async function readUint256(functionName: string, contractAddress: string, args: bigint[] = []): Promise<bigint> {
+  const { encodeFunctionData, decodeFunctionResult } = await import("viem");
+  const abi = [
+    {
+      name: functionName,
+      type: "function",
+      inputs: args.map((_, i) => ({ name: `arg${i}`, type: "uint256" })),
+      outputs: [{ name: "", type: "uint256" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({ abi, functionName, args });
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: contractAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) return 0n;
+  return decodeFunctionResult({ abi, functionName, data: json.result }) as bigint;
+}
+
+/**
+ * Read the active round ID for a content item.
+ */
+export async function getActiveRoundId(contentId: number | bigint, contractAddress: string): Promise<bigint> {
+  return readUint256("getActiveRoundId", contractAddress, [BigInt(contentId)]);
+}
+
 /**
  * Generic Ponder polling helper. Polls until the predicate returns true or timeout.
  */
