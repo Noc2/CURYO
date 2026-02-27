@@ -7,32 +7,13 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
+// Navbar brand colors: Discover=#359EEE, Submit=#03CEA4, cREP=#FFC43D, Docs=#EF476F
 const STEPS = [
-  { label: "Browse", desc: "explore submitted content in the feed", color: "text-info", numBg: "bg-info/15 text-info" },
-  {
-    label: "Vote",
-    desc: "predict whether the content rating will go up or down",
-    color: "text-secondary",
-    numBg: "bg-secondary/15 text-secondary",
-  },
-  {
-    label: "Stake",
-    desc: "back your prediction with cREP tokens",
-    color: "text-accent",
-    numBg: "bg-accent/15 text-accent",
-  },
-  {
-    label: "Settle",
-    desc: "rounds resolve automatically after the voting period",
-    color: "text-warning",
-    numBg: "bg-warning/15 text-warning",
-  },
-  {
-    label: "Claim",
-    desc: "collect your rewards if your prediction was correct",
-    color: "text-success",
-    numBg: "bg-success/15 text-success",
-  },
+  { label: "Browse", desc: "explore submitted content in the feed", hex: "#359EEE" },
+  { label: "Vote", desc: "predict whether the content rating will go up or down", hex: "#03CEA4" },
+  { label: "Stake", desc: "back your prediction with cREP tokens", hex: "#FFC43D" },
+  { label: "Settle", desc: "rounds resolve automatically after the voting period", hex: "#EF476F" },
+  { label: "Claim", desc: "collect your rewards if your prediction was correct", hex: "#359EEE" },
 ];
 
 /**
@@ -76,12 +57,15 @@ export function VotingGuide() {
           {STEPS.map((step, i) => (
             <div key={step.label} className="flex items-start gap-3">
               <span
-                className={`shrink-0 flex items-center justify-center w-6 h-6 rounded-full ${step.numBg} text-xs font-bold`}
+                className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
+                style={{ color: step.hex, backgroundColor: `${step.hex}20` }}
               >
                 {i + 1}
               </span>
               <p className="text-sm leading-snug">
-                <span className={`font-semibold ${step.color}`}>{step.label}</span>
+                <span className="font-semibold" style={{ color: step.hex }}>
+                  {step.label}
+                </span>
                 <span className="text-base-content/60"> — {step.desc}</span>
               </p>
             </div>
