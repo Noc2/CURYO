@@ -1,5 +1,3 @@
-"use client";
-
 const STEPS = [
   {
     label: "Commit",

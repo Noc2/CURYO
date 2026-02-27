@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { blo } from "blo";
 import { AnimatePresence, motion } from "framer-motion";
@@ -8,7 +9,6 @@ import type { NextPage } from "next";
 import { useAccount, useReadContracts } from "wagmi";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
-import { ShareContentModal } from "~~/components/shared/ShareContentModal";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { StakeSelector } from "~~/components/swipe/StakeSelector";
 import { SwipeCard } from "~~/components/swipe/SwipeCard";
@@ -25,6 +25,11 @@ import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
+
+const ShareContentModal = dynamic(
+  () => import("~~/components/shared/ShareContentModal").then(m => m.ShareContentModal),
+  { ssr: false },
+);
 
 const ALL_FILTER = "All";
 const BROKEN_FILTER = "Broken";
@@ -300,6 +305,15 @@ const HomeInner = () => {
     setStakeModal(prev => ({ ...prev, isOpen: false }));
   };
 
+  const handleSelectCard = useCallback((id: bigint, categoryId: bigint) => {
+    trackContentClick(id, categoryId);
+    setSelectedId(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set("content", id.toString());
+    history.replaceState(null, "", url.toString());
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   // Count broken URLs for the filter pill
   const brokenCount = useMemo(() => {
     return feed.filter(item => !isContentItemBlocked(item) && validationMap.get(item.url) === false).length;
@@ -448,14 +462,7 @@ const HomeInner = () => {
                       item={item}
                       rating={ratingsMap.get(item.id.toString())}
                       submitterProfile={submitterProfiles[item.submitter.toLowerCase()]}
-                      onClick={() => {
-                        trackContentClick(item.id, item.categoryId);
-                        setSelectedId(item.id);
-                        const url = new URL(window.location.href);
-                        url.searchParams.set("content", item.id.toString());
-                        history.replaceState(null, "", url.toString());
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                      }}
+                      onSelect={handleSelectCard}
                     />
                   ))}
                 </div>
@@ -484,17 +491,18 @@ const HomeInner = () => {
   );
 };
 
-function ThumbnailCard({
+const ThumbnailCard = memo(function ThumbnailCard({
   item,
   rating,
   submitterProfile,
-  onClick,
+  onSelect,
 }: {
   item: ContentItem;
   rating?: number;
   submitterProfile?: SubmitterProfile;
-  onClick: () => void;
+  onSelect: (id: bigint, categoryId: bigint) => void;
 }) {
+  const onClick = useCallback(() => onSelect(item.id, item.categoryId), [onSelect, item.id, item.categoryId]);
   const platformInfo = detectPlatform(item.url);
   const staticThumbnail = getThumbnailUrl(item.url);
   const [asyncThumbnail, setAsyncThumbnail] = useState<string | null>(null);
@@ -652,7 +660,7 @@ function ThumbnailCard({
       {showShare && <ShareContentModal contentId={item.id} goal={item.goal} onClose={() => setShowShare(false)} />}
     </button>
   );
-}
+});
 
 const Home: NextPage = () => (
   <Suspense>

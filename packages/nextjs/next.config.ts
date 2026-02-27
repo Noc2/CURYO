@@ -1,3 +1,4 @@
+import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 const securityHeaders = [
@@ -43,4 +44,4 @@ if (isIpfs) {
   };
 }
 
-module.exports = nextConfig;
+module.exports = process.env.ANALYZE === "true" ? withBundleAnalyzer({ enabled: true })(nextConfig) : nextConfig;

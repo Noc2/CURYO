@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { PanInfo, motion, useMotionValue, useTransform } from "framer-motion";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GoalDisplay } from "~~/components/content/GoalDisplay";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
-import { ShareContentModal } from "~~/components/shared/ShareContentModal";
 import { SwipeOverlay } from "~~/components/swipe/SwipeOverlay";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
+
+const ShareContentModal = dynamic(
+  () => import("~~/components/shared/ShareContentModal").then(m => m.ShareContentModal),
+  { ssr: false },
+);
 
 const SWIPE_THRESHOLD = 120;
 
