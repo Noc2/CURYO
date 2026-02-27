@@ -16,7 +16,7 @@ import { expect, test } from "@playwright/test";
  *
  * Account allocation (exclusive to this file for voting):
  * - Account #2 — submits fresh content (also used for submitter reward tests)
- * - Accounts #3, #4, #5, #6 — vote UP (winning side)
+ * - Accounts #3, #4 — vote UP (winning side)
  * - Account #7 — votes DOWN (losing side, tests reward absence)
  *
  * Tests run serially: submit → vote → settle → verify → claim → submitter claim.
@@ -66,21 +66,19 @@ test.describe("Reward claim lifecycle", () => {
     expect(newContentId).toBeTruthy();
   });
 
-  test("vote with 5 accounts and settle a round", async ({ browser }) => {
+  test("vote with 3 accounts and settle a round", async ({ browser }) => {
     test.setTimeout(300_000);
     test.skip(!newContentId, "No content from previous test");
 
     const voters = [
       { account: ANVIL_ACCOUNTS.account3, direction: "up" as const },
       { account: ANVIL_ACCOUNTS.account4, direction: "up" as const },
-      { account: ANVIL_ACCOUNTS.account5, direction: "up" as const },
-      { account: ANVIL_ACCOUNTS.account6, direction: "up" as const },
       { account: ANVIL_ACCOUNTS.account7, direction: "down" as const },
     ];
 
     let successCount = 0;
 
-    // Step 1: Five accounts vote on the fresh content (no cooldown possible)
+    // Step 1: Three accounts vote on the fresh content (no cooldown possible)
     for (const voter of voters) {
       const context = await browser.newContext();
       const page = await context.newPage();
@@ -92,8 +90,8 @@ test.describe("Reward claim lifecycle", () => {
       await context.close();
     }
 
-    // Need 5 votes for settlement (minVoters=5)
-    expect(successCount, `Only ${successCount}/5 votes succeeded on fresh content`).toBeGreaterThanOrEqual(5);
+    // Need 3 votes for settlement (minVoters=3)
+    expect(successCount, `Only ${successCount}/3 votes succeeded on fresh content`).toBeGreaterThanOrEqual(3);
 
     // Step 2: Fast-forward past the epoch boundary (900s + buffer)
     await fastForwardTime(901);
@@ -264,7 +262,7 @@ test.describe("Reward claim lifecycle", () => {
   test("losing voter has no reward for the settled round", async () => {
     test.skip(!settledContentId, "No settled content from previous test");
 
-    // Account #7 voted DOWN while accounts #3-#6 voted UP → account #7 is the loser
+    // Account #7 voted DOWN while accounts #3-#4 voted UP → account #7 is the loser
     const loserAddress = ANVIL_ACCOUNTS.account7.address.toLowerCase();
 
     // Get the settled round info to know which roundId to check
