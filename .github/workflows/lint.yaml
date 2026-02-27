@@ -38,6 +38,7 @@ jobs:
       - name: Run foundry node, deploy contracts (& generate contracts typescript output)
         env:
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+          LOCALHOST_KEYSTORE_ACCOUNT: scaffold-eth-default
         run: yarn chain & yarn deploy
 
       - name: Run nextjs lint
