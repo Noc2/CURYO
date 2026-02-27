@@ -15,33 +15,37 @@ const DEFAULT_STATE: OnboardingState = {
   guideShown: false,
 };
 
+// Cached snapshot — useSyncExternalStore requires referential stability
+// (getSnapshot must return the same object if nothing changed).
+let cachedRaw: string | null = null;
+let cachedState: OnboardingState = DEFAULT_STATE;
+
 function getState(): OnboardingState {
   if (typeof window === "undefined") return DEFAULT_STATE;
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw === cachedRaw) return cachedState;
+  cachedRaw = raw;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_STATE;
-    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+    cachedState = raw ? { ...DEFAULT_STATE, ...JSON.parse(raw) } : DEFAULT_STATE;
   } catch {
-    return DEFAULT_STATE;
+    cachedState = DEFAULT_STATE;
   }
+  return cachedState;
 }
 
 function setState(update: Partial<OnboardingState>) {
   const current = getState();
   const next = { ...current, ...update };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  // Dispatch storage event so useSyncExternalStore re-renders
+  // Invalidate cache so getSnapshot returns fresh data
+  cachedRaw = null;
   window.dispatchEvent(new Event("onboarding-change"));
 }
 
-let listeners: (() => void)[] = [];
-
 function subscribe(cb: () => void) {
-  listeners.push(cb);
   const handler = () => cb();
   window.addEventListener("onboarding-change", handler);
   return () => {
-    listeners = listeners.filter(l => l !== cb);
     window.removeEventListener("onboarding-change", handler);
   };
 }
