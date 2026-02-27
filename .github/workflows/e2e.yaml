@@ -15,7 +15,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
+      - name: Init nested submodules (skip unavailable mobile-sdk-native)
+        run: |
+          cd packages/foundry/lib/self
+          git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

@@ -12,7 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
+      - name: Init nested submodules (skip unavailable mobile-sdk-native)
+        run: |
+          cd packages/foundry/lib/self
+          git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
       - uses: foundry-rs/foundry-toolchain@v1
       - uses: crytic/slither-action@v0.4.0
         with:
@@ -25,7 +29,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
+      - name: Init nested submodules (skip unavailable mobile-sdk-native)
+        run: |
+          cd packages/foundry/lib/self
+          git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
       - uses: foundry-rs/foundry-toolchain@v1
       - name: Install Aderyn
         run: |
@@ -39,7 +47,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
+      - name: Init nested submodules (skip unavailable mobile-sdk-native)
+        run: |
+          cd packages/foundry/lib/self
+          git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
       - uses: foundry-rs/foundry-toolchain@v1
       - name: Run forge coverage
         working-directory: packages/foundry
