@@ -56,10 +56,12 @@ KEYS=(
   "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"  # Account 3 (reused)
   "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a"  # Account 4 (reused for Crypto)
   "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"  # Account 5 (reused for Crypto)
+  "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e"  # Account 6 (reused for GitHub)
+  "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"  # Account 7 (reused for GitHub)
 )
 
 # Example content from multiple platforms: (url, goal, tags, categoryId)
-# CategoryIds: 1=YouTube, 2=Twitch, 3=MTG, 4=Movies (TMDB), 5=People (Wikipedia), 6=Games (RAWG), 7=Books (Open Library), 8=AI (HuggingFace), 9=Crypto Tokens (CoinGecko), 10=Tweets (X)
+# CategoryIds: 1=YouTube, 2=Twitch, 3=MTG, 4=Movies (TMDB), 5=People (Wikipedia), 6=Games (RAWG), 7=Books (Open Library), 8=AI (HuggingFace), 9=Crypto Tokens (CoinGecko), 10=Tweets (X), 11=GitHub Repos
 URLS=(
   "https://www.youtube.com/watch?v=rUCAdMnb1Oc"
   "https://www.twitch.tv/videos/2aborhwf"
@@ -74,6 +76,8 @@ URLS=(
   "https://openlibrary.org/works/OL27516W/The_Hitchhikers_Guide_to_the_Galaxy"
   "https://www.coingecko.com/en/coins/bitcoin"
   "https://www.coingecko.com/en/coins/ethereum"
+  "https://github.com/ethereum/go-ethereum"
+  "https://github.com/foundry-rs/foundry"
 )
 
 GOALS=(
@@ -90,6 +94,8 @@ GOALS=(
   "Douglas Adams' comedic sci-fi classic — the answer is 42."
   "The original cryptocurrency — a peer-to-peer electronic cash system that pioneered decentralized finance."
   "The world's leading smart contract platform — powering DeFi, NFTs, and decentralized applications."
+  "Official Go implementation of Ethereum — the backbone of most Ethereum nodes worldwide."
+  "Blazing-fast Solidity toolkit — forge, cast, anvil, and chisel for smart contract development."
 )
 
 TAGS=(
@@ -106,23 +112,27 @@ TAGS=(
   "Science Fiction,Fiction"
   "Layer 1,Infrastructure"
   "Layer 1,DeFi"
+  "Infrastructure,DeFi/Web3"
+  "Developer Tools,Infrastructure"
 )
 
-# CategoryIds mapping to URLs (1=YouTube, 2=Twitch, 3=MTG, 4=Movies, 5=People, 6=Games, 7=Books, 8=AI, 9=Crypto)
+# CategoryIds mapping to URLs (1=YouTube, 2=Twitch, 3=MTG, 4=Movies, 5=People, 6=Games, 7=Books, 8=AI, 9=Crypto, 10=Tweets, 11=GitHub)
 CATEGORY_IDS=(
-  1  # YouTube
-  2  # Twitch
-  1  # YouTube
-  3  # MTG (Scryfall)
-  4  # Movies (TMDB)
-  5  # People (Wikipedia)
-  5  # People (Wikipedia)
-  6  # Games (RAWG)
-  6  # Games (RAWG)
-  7  # Books (Open Library)
-  7  # Books (Open Library)
-  9  # Crypto Tokens (CoinGecko)
-  9  # Crypto Tokens (CoinGecko)
+  1   # YouTube
+  2   # Twitch
+  1   # YouTube
+  3   # MTG (Scryfall)
+  4   # Movies (TMDB)
+  5   # People (Wikipedia)
+  5   # People (Wikipedia)
+  6   # Games (RAWG)
+  6   # Games (RAWG)
+  7   # Books (Open Library)
+  7   # Books (Open Library)
+  9   # Crypto Tokens (CoinGecko)
+  9   # Crypto Tokens (CoinGecko)
+  11  # GitHub Repos
+  11  # GitHub Repos
 )
 
 echo "=== Seeding example content from multiple platforms ==="
@@ -130,7 +140,7 @@ echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
 # Submit content from accounts 2-10 (some reused for Games & Books)
-for i in {0..12}; do
+for i in {0..14}; do
   KEY="${KEYS[$i]}"
   URL="${URLS[$i]}"
   GOAL="${GOALS[$i]}"
@@ -138,7 +148,7 @@ for i in {0..12}; do
   CATEGORY_ID="${CATEGORY_IDS[$i]}"
 
   ADDR=$(cast wallet address "$KEY")
-  echo "[$((i+1))/13] Account: $ADDR"
+  echo "[$((i+1))/15] Account: $ADDR"
 
   # Ensure account has ETH for gas (Anvil only pre-funds first 10 accounts)
   ETH_BAL=$(cast balance "$ADDR" --rpc-url "$RPC" 2>/dev/null || echo "0")
@@ -158,7 +168,7 @@ for i in {0..12}; do
   echo ""
 done
 
-echo "=== Seed complete: 13 content items submitted ==="
+echo "=== Seed complete: 15 content items submitted ==="
 echo ""
 
 # --- Voting Section ---
