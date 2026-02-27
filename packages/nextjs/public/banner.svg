@@ -50,8 +50,8 @@
   </g>
 
   <!-- Title text -->
-  <text x="640" y="172" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="88" font-weight="700" fill="white" text-anchor="middle" letter-spacing="-1">Curyo</text>
+  <text x="640" y="172" font-family="'Space Grotesk', 'Inter', 'Segoe UI', sans-serif" font-size="88" font-weight="700" fill="white" text-anchor="middle" letter-spacing="8">CURYO</text>
 
   <!-- Subtitle -->
-  <text x="640" y="212" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="17" font-weight="400" fill="#777" text-anchor="middle" letter-spacing="3">DECENTRALIZED REPUTATION GAME</text>
+  <text x="640" y="212" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', sans-serif" font-size="17" font-weight="400" fill="#777" text-anchor="middle" letter-spacing="3">DECENTRALIZED REPUTATION GAME</text>
 </svg>
