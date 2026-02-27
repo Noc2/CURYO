@@ -1,0 +1,10 @@
+{
+  "filter_paths": "lib,test,script,node_modules",
+  "solc_remaps": [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts",
+    "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts",
+    "@prb/math/=lib/prb-math/src/",
+    "@selfxyz/contracts/=lib/self/contracts/"
+  ],
+  "exclude_informational": true
+}

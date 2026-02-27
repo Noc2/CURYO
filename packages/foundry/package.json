@@ -17,7 +17,10 @@
     "postinstall": "shx cp -n .env.example .env",
     "lint": "make lint",
     "test": "forge test",
-    "verify": "make verify RPC_URL=${1:-localhost}"
+    "verify": "make verify RPC_URL=${1:-localhost}",
+    "slither": "make slither",
+    "aderyn": "make aderyn",
+    "coverage": "make coverage"
   },
   "dependencies": {
     "dotenv": "~16.3.1",

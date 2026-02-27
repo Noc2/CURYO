@@ -1,4 +1,4 @@
-.PHONY: build deploy generate-abis get-address account chain compile flatten fork format lint test verify verify-blockscout
+.PHONY: build deploy generate-abis get-address account chain compile flatten fork format lint test verify verify-blockscout slither aderyn coverage
 
 DEPLOY_SCRIPT ?= script/Deploy.s.sol
 
@@ -64,4 +64,14 @@ verify:
 BLOCKSCOUT_URL ?= https://celo-sepolia.blockscout.com/api/
 verify-blockscout:
 	forge verify-contract $(CONTRACT_ADDRESS) $(CONTRACT_NAME) --verifier blockscout --verifier-url $(BLOCKSCOUT_URL) --chain 11142220
+
+# Static analysis
+slither:
+	slither . --config-file slither.config.json
+
+aderyn:
+	aderyn .
+
+coverage:
+	forge coverage --ir-minimum
 
