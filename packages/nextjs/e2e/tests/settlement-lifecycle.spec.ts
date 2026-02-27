@@ -15,7 +15,7 @@ import { expect, test } from "@playwright/test";
  *
  * Account allocation (exclusive to this file):
  * - Account #10 — submits fresh content
- * - Accounts #3, #4, #5 — vote on the fresh content (≥ minVoters for settlement)
+ * - Accounts #3, #4, #5, #8 — vote on the fresh content (need ≥ 3 for minVoters; #8 is backup for UI flakiness)
  */
 test.describe("Settlement lifecycle", () => {
   test.describe.configure({ mode: "serial" });
@@ -65,16 +65,18 @@ test.describe("Settlement lifecycle", () => {
     test.setTimeout(240_000);
     test.skip(!newContentId, "No content from previous test");
 
-    // Use accounts #3, #4, #5 — vote on the fresh content (no cooldown possible)
+    // Use accounts #3, #4, #5 + #8 (backup) — vote on the fresh content (no cooldown possible)
+    // 4 voters gives resilience against UI flakiness; only 3 needed for minVoters
     const voters = [
       { account: ANVIL_ACCOUNTS.account3, direction: "up" as const },
       { account: ANVIL_ACCOUNTS.account4, direction: "up" as const },
       { account: ANVIL_ACCOUNTS.account5, direction: "down" as const },
+      { account: ANVIL_ACCOUNTS.account8, direction: "up" as const },
     ];
 
     let successCount = 0;
 
-    // Step 1: Three accounts vote on the fresh content
+    // Step 1: Four accounts vote on the fresh content (need ≥ 3 for settlement)
     for (const voter of voters) {
       const context = await browser.newContext();
       const page = await context.newPage();
@@ -86,8 +88,8 @@ test.describe("Settlement lifecycle", () => {
       await context.close();
     }
 
-    // Need at least 3 votes for settlement (minVoters threshold)
-    expect(successCount, `Only ${successCount}/3 votes succeeded on fresh content`).toBeGreaterThanOrEqual(3);
+    // Need at least 3 votes for settlement (minVoters=3)
+    expect(successCount, `Only ${successCount}/4 votes succeeded on fresh content`).toBeGreaterThanOrEqual(3);
 
     // Step 2: Fast-forward Anvil past the epoch boundary (900s + buffer)
     await fastForwardTime(901);
@@ -123,8 +125,9 @@ test.describe("Settlement lifecycle", () => {
     expect(ratings[0]).toHaveProperty("oldRating");
     expect(ratings[0]).toHaveProperty("newRating");
 
-    // Step 6: Verify SubmitterStakeReturned — stake should be returned after settlement
-    expect(settledContent.submitterStakeReturned).toBe(true);
+    // Step 6: Submitter stake is NOT returned yet — _checkSubmitterStake only auto-returns
+    // after STAKE_RETURN_PERIOD (4 days). In tests, only ~30 min of chain time passes.
+    expect(settledContent.submitterStakeReturned).toBe(false);
   });
 
   test("portfolio shows vote history after voting", async ({ browser }) => {

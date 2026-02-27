@@ -185,7 +185,8 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     const latestRating = data.ratings[data.ratings.length - 1];
     expect(latestRating.newRating).toBeGreaterThan(latestRating.oldRating);
 
-    // Submitter stake should be returned
-    expect(data.content.submitterStakeReturned).toBe(true);
+    // Submitter stake is NOT returned yet — _checkSubmitterStake only auto-returns
+    // after STAKE_RETURN_PERIOD (4 days). In tests, only ~30 min of chain time passes.
+    expect(data.content.submitterStakeReturned).toBe(false);
   });
 });
