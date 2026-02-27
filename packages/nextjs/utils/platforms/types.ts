@@ -9,6 +9,7 @@ export type PlatformType =
   | "coingecko"
   | "huggingface"
   | "twitter"
+  | "github"
   | "generic";
 
 export interface PlatformInfo {

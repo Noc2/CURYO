@@ -177,7 +177,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         registry.setBonusPool(address(rewardDistributor));
         registry.setTreasury(governance);
         votingEngine.setTreasury(governance);
-        votingEngine.setConfig(15 minutes, 7 days, 5, 1000);
+        votingEngine.setConfig(15 minutes, 7 days, 3, 1000);
         votingEngine.setKeeperReward(0.1e6); // 0.1 cREP per keeper operation
 
         // 12. Fund consensus reserve (pre-funded reserve for unanimous round rewards)
@@ -567,6 +567,23 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "x.com",
             tweetSubcats,
             "Is this tweet insightful or impactful enough to score above {rating} out of 100?"
+        );
+
+        // GitHub Repos (categoryId: 11)
+        string[] memory githubSubcats = new string[](8);
+        githubSubcats[0] = "Libraries";
+        githubSubcats[1] = "Developer Tools";
+        githubSubcats[2] = "Frameworks";
+        githubSubcats[3] = "DeFi/Web3";
+        githubSubcats[4] = "AI/ML";
+        githubSubcats[5] = "Infrastructure";
+        githubSubcats[6] = "Security";
+        githubSubcats[7] = "Education";
+        registry.addApprovedCategory(
+            "GitHub Repos",
+            "github.com",
+            githubSubcats,
+            "Is this repository worth adopting or recommending enough to score above {rating} out of 100?"
         );
     }
 }

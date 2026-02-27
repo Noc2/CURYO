@@ -1,5 +1,6 @@
 import { coingeckoHandler } from "./handlers/coingecko";
 import { genericHandler } from "./handlers/generic";
+import { githubHandler } from "./handlers/github";
 import { huggingfaceHandler } from "./handlers/huggingface";
 import { openLibraryHandler } from "./handlers/openlibrary";
 import { rawgHandler } from "./handlers/rawg";
@@ -34,6 +35,7 @@ const handlers: PlatformHandler[] = [
   coingeckoHandler,
   huggingfaceHandler,
   twitterHandler,
+  githubHandler,
   genericHandler, // Always last as fallback
 ];
 

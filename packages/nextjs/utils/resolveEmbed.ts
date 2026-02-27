@@ -11,6 +11,9 @@ export interface EmbedResult {
   authors?: string[];
   releaseYear?: string;
   symbol?: string;
+  stars?: number;
+  forks?: number;
+  language?: string;
 }
 
 const CACHE_OPTIONS = { next: { revalidate: 86400 } }; // 24h cache
@@ -51,6 +54,8 @@ export async function resolveEmbed(
         return await resolveRawg(id);
       case "twitter":
         return await resolveTwitter(id);
+      case "github":
+        return await resolveGitHub(id);
       default:
         return { thumbnailUrl: null };
     }
@@ -235,6 +240,21 @@ async function resolveRawg(slug: string): Promise<EmbedResult> {
     imageUrl: data?.background_image ?? undefined,
     title: data?.name,
     description: data?.description_raw?.slice(0, 200),
+  };
+}
+
+async function resolveGitHub(repoSlug: string): Promise<EmbedResult> {
+  const data = await safeFetchJson(`https://api.github.com/repos/${repoSlug}`);
+  if (!data) return { thumbnailUrl: null };
+
+  return {
+    thumbnailUrl: data?.owner?.avatar_url ?? null,
+    imageUrl: data?.owner?.avatar_url ?? undefined,
+    title: data?.full_name,
+    description: data?.description,
+    stars: data?.stargazers_count,
+    forks: data?.forks_count,
+    language: data?.language,
   };
 }
 

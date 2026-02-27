@@ -80,6 +80,10 @@ const PLATFORM_CONFIG: Record<string, { urlPlaceholder: string; urlHint: string 
     urlPlaceholder: "https://twitter.com/elonmusk/status/1234567890",
     urlHint: "Paste a tweet URL",
   },
+  "github.com": {
+    urlPlaceholder: "https://github.com/ethereum/go-ethereum",
+    urlHint: "Paste a GitHub repository URL",
+  },
 };
 
 const DEFAULT_URL_CONFIG = {

@@ -19,6 +19,7 @@ const ALLOWED_HOSTS = new Set([
   "cdn-avatars.huggingface.co",
   "pbs.twimg.com",
   "media.rawg.io",
+  "avatars.githubusercontent.com",
 ]);
 
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10 MB

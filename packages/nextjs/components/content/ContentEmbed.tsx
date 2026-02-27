@@ -32,6 +32,9 @@ const OpenLibraryEmbed = dynamic(() => import("./embeds/OpenLibraryEmbed").then(
 const CoinGeckoEmbed = dynamic(() => import("./embeds/CoinGeckoEmbed").then(m => m.CoinGeckoEmbed), {
   loading: EmbedSpinner,
 });
+const GitHubEmbed = dynamic(() => import("./embeds/GitHubEmbed").then(m => m.GitHubEmbed), {
+  loading: EmbedSpinner,
+});
 const HuggingFaceEmbed = dynamic(() => import("./embeds/HuggingFaceEmbed").then(m => m.HuggingFaceEmbed), {
   loading: EmbedSpinner,
 });
@@ -102,6 +105,9 @@ export function ContentEmbed({ url, compact = false }: ContentEmbedProps) {
       break;
     case "twitter":
       embed = <TwitterEmbed info={platformInfo} compact={compact} />;
+      break;
+    case "github":
+      embed = <GitHubEmbed info={platformInfo} compact={compact} />;
       break;
     default:
       return <GenericLinkCard url={url} compact={compact} />;
