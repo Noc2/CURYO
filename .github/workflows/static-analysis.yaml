@@ -42,6 +42,9 @@ jobs:
       - name: Install Aderyn
         run: |
           cargo install aderyn || (curl -L https://raw.githubusercontent.com/Cyfrin/aderyn/dev/cyfrinup/install | bash && cyfrinup)
+      - name: Patch OZ submodule configs (aderyn doesn't support evm_version osaka yet)
+        run: |
+          sed -i "s/evm_version = 'osaka'/evm_version = 'cancun'/" packages/foundry/lib/openzeppelin-contracts/foundry.toml packages/foundry/lib/openzeppelin-contracts-upgradeable/foundry.toml
       - name: Run Aderyn
         working-directory: packages/foundry
         run: aderyn .
