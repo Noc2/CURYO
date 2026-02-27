@@ -140,6 +140,45 @@ export interface PonderSubmitterRewardClaim {
   claimedAt: string;
 }
 
+export interface PonderVoterStats {
+  voter: string;
+  totalSettledVotes: number;
+  totalWins: number;
+  totalLosses: number;
+  totalStakeWon: string;
+  totalStakeLost: string;
+  currentStreak: number;
+  bestWinStreak: number;
+  winRate: number;
+}
+
+export interface PonderVoterCategoryStats {
+  id: string;
+  voter: string;
+  categoryId: string;
+  totalSettledVotes: number;
+  totalWins: number;
+  totalLosses: number;
+  totalStakeWon: string;
+  totalStakeLost: string;
+  categoryName: string | null;
+  winRate: number;
+}
+
+export interface PonderAccuracyLeaderboardItem {
+  voter: string;
+  totalSettledVotes: number;
+  totalWins: number;
+  totalLosses: number;
+  totalStakeWon: string;
+  totalStakeLost: string;
+  currentStreak?: number;
+  bestWinStreak?: number;
+  profileName: string | null;
+  profileImageUrl: string | null;
+  winRate: number;
+}
+
 export const ponderApi = {
   getContent(params?: { categoryId?: string; status?: string; sortBy?: string; limit?: string; offset?: string }) {
     return ponderGet<PonderContentResponse>("/content", params);
@@ -220,5 +259,21 @@ export const ponderApi = {
       totalProfiles: number;
       totalVoterIds: number;
     }>("/stats");
+  },
+
+  getAccuracyLeaderboard(params?: {
+    categoryId?: string;
+    sortBy?: string;
+    minVotes?: string;
+    limit?: string;
+    offset?: string;
+  }) {
+    return ponderGet<{ items: PonderAccuracyLeaderboardItem[]; categoryId?: string }>("/accuracy-leaderboard", params);
+  },
+
+  getVoterAccuracy(address: string) {
+    return ponderGet<{ stats: PonderVoterStats | null; categories: PonderVoterCategoryStats[] }>(
+      `/voter-accuracy/${address}`,
+    );
   },
 };

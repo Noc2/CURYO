@@ -16,8 +16,10 @@ import {
   voterId,
   tokenHolder,
   tokenTransfer,
+  voterStats,
+  voterCategoryStats,
 } from "ponder:schema";
-import { eq, desc, asc, and, or, inArray, sql, replaceBigInts } from "ponder";
+import { eq, desc, asc, and, or, inArray, sql, gte, replaceBigInts } from "ponder";
 
 const app = new Hono();
 
@@ -400,6 +402,149 @@ app.get("/leaderboard", async (c) => {
 
   const items = [...profileItems, ...holderOnly];
   return jsonBig(c, { items, type });
+});
+
+// ============================================================
+// ACCURACY LEADERBOARD
+// ============================================================
+
+app.get("/accuracy-leaderboard", async (c) => {
+  const categoryIdParam = c.req.query("categoryId");
+  const sortBy = c.req.query("sortBy") ?? "winRate";
+  const minVotesParam = c.req.query("minVotes") ?? "3";
+  const limit = safeLimit(c.req.query("limit"), 20, 100);
+  const offset = safeOffset(c.req.query("offset"));
+
+  const minVotes = parseInt(minVotesParam);
+  if (isNaN(minVotes) || minVotes < 1) return c.json({ error: "Invalid minVotes" }, 400);
+
+  let orderByExpr;
+  switch (sortBy) {
+    case "wins":
+      orderByExpr = categoryIdParam
+        ? desc(voterCategoryStats.totalWins)
+        : desc(voterStats.totalWins);
+      break;
+    case "stakeWon":
+      orderByExpr = categoryIdParam
+        ? desc(voterCategoryStats.totalStakeWon)
+        : desc(voterStats.totalStakeWon);
+      break;
+    case "winRate":
+    default:
+      orderByExpr = categoryIdParam
+        ? desc(sql`CAST(${voterCategoryStats.totalWins} AS FLOAT) / ${voterCategoryStats.totalSettledVotes}`)
+        : desc(sql`CAST(${voterStats.totalWins} AS FLOAT) / ${voterStats.totalSettledVotes}`);
+      break;
+  }
+
+  if (categoryIdParam) {
+    const categoryId = safeBigInt(categoryIdParam);
+    if (categoryId === null) return c.json({ error: "Invalid categoryId" }, 400);
+
+    const items = await db
+      .select({
+        voter: voterCategoryStats.voter,
+        totalSettledVotes: voterCategoryStats.totalSettledVotes,
+        totalWins: voterCategoryStats.totalWins,
+        totalLosses: voterCategoryStats.totalLosses,
+        totalStakeWon: voterCategoryStats.totalStakeWon,
+        totalStakeLost: voterCategoryStats.totalStakeLost,
+        profileName: profile.name,
+        profileImageUrl: profile.imageUrl,
+      })
+      .from(voterCategoryStats)
+      .leftJoin(profile, eq(voterCategoryStats.voter, profile.address))
+      .where(
+        and(
+          eq(voterCategoryStats.categoryId, categoryId),
+          gte(voterCategoryStats.totalSettledVotes, minVotes),
+        ),
+      )
+      .orderBy(orderByExpr)
+      .limit(limit)
+      .offset(offset);
+
+    const result = items.map((item) => ({
+      ...item,
+      winRate: item.totalSettledVotes > 0 ? item.totalWins / item.totalSettledVotes : 0,
+    }));
+
+    return jsonBig(c, { items: result, categoryId: categoryIdParam });
+  }
+
+  // Global accuracy leaderboard
+  const items = await db
+    .select({
+      voter: voterStats.voter,
+      totalSettledVotes: voterStats.totalSettledVotes,
+      totalWins: voterStats.totalWins,
+      totalLosses: voterStats.totalLosses,
+      totalStakeWon: voterStats.totalStakeWon,
+      totalStakeLost: voterStats.totalStakeLost,
+      currentStreak: voterStats.currentStreak,
+      bestWinStreak: voterStats.bestWinStreak,
+      profileName: profile.name,
+      profileImageUrl: profile.imageUrl,
+    })
+    .from(voterStats)
+    .leftJoin(profile, eq(voterStats.voter, profile.address))
+    .where(gte(voterStats.totalSettledVotes, minVotes))
+    .orderBy(orderByExpr)
+    .limit(limit)
+    .offset(offset);
+
+  const result = items.map((item) => ({
+    ...item,
+    winRate: item.totalSettledVotes > 0 ? item.totalWins / item.totalSettledVotes : 0,
+  }));
+
+  return jsonBig(c, { items: result });
+});
+
+// ============================================================
+// VOTER ACCURACY (individual)
+// ============================================================
+
+app.get("/voter-accuracy/:address", async (c) => {
+  const address = c.req.param("address").toLowerCase() as `0x${string}`;
+  if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
+
+  const [stats] = await db
+    .select()
+    .from(voterStats)
+    .where(eq(voterStats.voter, address))
+    .limit(1);
+
+  const categoryRows = await db
+    .select({
+      id: voterCategoryStats.id,
+      voter: voterCategoryStats.voter,
+      categoryId: voterCategoryStats.categoryId,
+      totalSettledVotes: voterCategoryStats.totalSettledVotes,
+      totalWins: voterCategoryStats.totalWins,
+      totalLosses: voterCategoryStats.totalLosses,
+      totalStakeWon: voterCategoryStats.totalStakeWon,
+      totalStakeLost: voterCategoryStats.totalStakeLost,
+      categoryName: category.name,
+    })
+    .from(voterCategoryStats)
+    .leftJoin(category, eq(voterCategoryStats.categoryId, category.id))
+    .where(eq(voterCategoryStats.voter, address));
+
+  const statsWithRate = stats
+    ? {
+        ...stats,
+        winRate: stats.totalSettledVotes > 0 ? stats.totalWins / stats.totalSettledVotes : 0,
+      }
+    : null;
+
+  const categories = categoryRows.map((row) => ({
+    ...row,
+    winRate: row.totalSettledVotes > 0 ? row.totalWins / row.totalSettledVotes : 0,
+  }));
+
+  return jsonBig(c, { stats: statsWithRate, categories });
 });
 
 // ============================================================

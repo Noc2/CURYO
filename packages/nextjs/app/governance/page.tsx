@@ -11,15 +11,17 @@ import { ProposalList } from "~~/components/governance/ProposalList";
 import { ReferralSection } from "~~/components/governance/ReferralSection";
 import { TokenManagement } from "~~/components/governance/TokenManagement";
 import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
+import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
 import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
 import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
 import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
+import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
 import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { ProfileForm } from "~~/components/profile/ProfileForm";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
-type GovernanceTab = "leaderboard" | "profile" | "vote" | "faucet";
+type GovernanceTab = "leaderboard" | "accuracy" | "profile" | "vote" | "faucet";
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
@@ -37,7 +39,7 @@ function GovernancePageInner() {
   useEffect(() => {
     const applyHash = () => {
       const hash = window.location.hash.replace(/^#/, "") as GovernanceTab;
-      if (hash && ["leaderboard", "profile", "vote", "faucet"].includes(hash)) {
+      if (hash && ["leaderboard", "accuracy", "profile", "vote", "faucet"].includes(hash)) {
         setActiveTab(hash);
       }
     };
@@ -114,6 +116,14 @@ function GovernancePageInner() {
                 Leaderboard
               </button>
               <button
+                onClick={() => selectTab("accuracy")}
+                className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
+                  activeTab === "accuracy" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+                }`}
+              >
+                Accuracy
+              </button>
+              <button
                 onClick={() => selectTab("profile")}
                 className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
                   activeTab === "profile" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
@@ -142,6 +152,14 @@ function GovernancePageInner() {
             <BalanceHistory />
             <StakeBreakdown />
             <LeaderboardTable />
+          </>
+        )}
+
+        {/* Accuracy Tab */}
+        {activeTab === "accuracy" && (
+          <>
+            <VoterAccuracyStats />
+            <AccuracyLeaderboard />
           </>
         )}
 

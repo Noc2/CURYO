@@ -222,6 +222,43 @@ export const profile = onchainTable("profile", (t) => ({
 }));
 
 // ============================================================
+// VOTER ACCURACY STATS (global per voter)
+// ============================================================
+
+export const voterStats = onchainTable("voter_stats", (t) => ({
+  voter: t.hex().primaryKey(),
+  totalSettledVotes: t.integer().notNull(),
+  totalWins: t.integer().notNull(),
+  totalLosses: t.integer().notNull(),
+  totalStakeWon: t.bigint().notNull(),
+  totalStakeLost: t.bigint().notNull(),
+  currentStreak: t.integer().notNull(), // positive = win streak, negative = loss streak
+  bestWinStreak: t.integer().notNull(),
+}));
+
+// ============================================================
+// VOTER CATEGORY STATS (per voter per category)
+// ============================================================
+
+export const voterCategoryStats = onchainTable(
+  "voter_category_stats",
+  (t) => ({
+    id: t.text().primaryKey(), // `${voter}-${categoryId}`
+    voter: t.hex().notNull(),
+    categoryId: t.bigint().notNull(),
+    totalSettledVotes: t.integer().notNull(),
+    totalWins: t.integer().notNull(),
+    totalLosses: t.integer().notNull(),
+    totalStakeWon: t.bigint().notNull(),
+    totalStakeLost: t.bigint().notNull(),
+  }),
+  (table) => ({
+    voterIdx: index().on(table.voter),
+    categoryIdx: index().on(table.categoryId),
+  }),
+);
+
+// ============================================================
 // FRONTEND
 // ============================================================
 

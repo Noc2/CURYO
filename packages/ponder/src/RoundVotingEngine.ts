@@ -1,5 +1,6 @@
 import { ponder } from "ponder:registry";
 import { encodePacked, keccak256 } from "viem";
+import { eq, and } from "ponder";
 import {
   pendingCommit,
   round,
@@ -9,6 +10,8 @@ import {
   profile,
   rewardClaim,
   globalStats,
+  voterStats,
+  voterCategoryStats,
 } from "ponder:schema";
 
 // Round states: Open(0), Settled(1), Cancelled(2), Tied(3)
@@ -273,6 +276,73 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
     .onConflictDoUpdate((row) => ({
       totalRoundsSettled: row.totalRoundsSettled + 1,
     }));
+
+  // ---- Accuracy tracking ----
+  // Query all revealed votes for this round
+  const roundVotes = await context.db.sql
+    .select()
+    .from(vote)
+    .where(and(eq(vote.contentId, contentId), eq(vote.roundId, roundId)));
+
+  // Get categoryId from content record (already fetched above)
+  const categoryId = contentRecord?.categoryId ?? 0n;
+
+  for (const v of roundVotes) {
+    const won = v.isUp === upWins;
+    const stake = v.stake;
+
+    // Upsert voterStats
+    await context.db
+      .insert(voterStats)
+      .values({
+        voter: v.voter,
+        totalSettledVotes: 1,
+        totalWins: won ? 1 : 0,
+        totalLosses: won ? 0 : 1,
+        totalStakeWon: won ? stake : 0n,
+        totalStakeLost: won ? 0n : stake,
+        currentStreak: won ? 1 : -1,
+        bestWinStreak: won ? 1 : 0,
+      })
+      .onConflictDoUpdate((row) => {
+        const newStreak = won
+          ? (row.currentStreak > 0 ? row.currentStreak + 1 : 1)
+          : (row.currentStreak < 0 ? row.currentStreak - 1 : -1);
+        return {
+          totalSettledVotes: row.totalSettledVotes + 1,
+          totalWins: row.totalWins + (won ? 1 : 0),
+          totalLosses: row.totalLosses + (won ? 0 : 1),
+          totalStakeWon: row.totalStakeWon + (won ? stake : 0n),
+          totalStakeLost: row.totalStakeLost + (won ? 0n : stake),
+          currentStreak: newStreak,
+          bestWinStreak: Math.max(row.bestWinStreak, won ? newStreak : 0),
+        };
+      });
+
+    // Upsert voterCategoryStats (only if content has a category)
+    if (categoryId > 0n) {
+      const catStatsId = `${v.voter}-${categoryId}`;
+      await context.db
+        .insert(voterCategoryStats)
+        .values({
+          id: catStatsId,
+          voter: v.voter,
+          categoryId,
+          totalSettledVotes: 1,
+          totalWins: won ? 1 : 0,
+          totalLosses: won ? 0 : 1,
+          totalStakeWon: won ? stake : 0n,
+          totalStakeLost: won ? 0n : stake,
+        })
+        .onConflictDoUpdate((row) => ({
+          totalSettledVotes: row.totalSettledVotes + 1,
+          totalWins: row.totalWins + (won ? 1 : 0),
+          totalLosses: row.totalLosses + (won ? 0 : 1),
+          totalStakeWon: row.totalStakeWon + (won ? stake : 0n),
+          totalStakeLost: row.totalStakeLost + (won ? 0n : stake),
+        }));
+    }
+  }
 });
 
 ponder.on("RoundVotingEngine:RoundCancelled", async ({ event, context }) => {
