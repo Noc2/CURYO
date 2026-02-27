@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
-import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
 
@@ -26,7 +25,6 @@ const PRESET_AMOUNTS = [1, 5, 25, 50, 100];
  */
 export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, onCancel }: StakeSelectorProps) {
   const contentLabel = useContentLabel(categoryId);
-  const { isFirstVote } = useOnboarding();
   const [amount, setAmount] = useState(5);
   const { address } = useAccount();
   const voterIdData = useVoterIdNFT(address);
@@ -113,13 +111,6 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
                 {isUp ? "Rating goes UP" : "Rating goes DOWN"}
               </div>
             </div>
-
-            {isFirstVote && (
-              <div className="bg-info/10 border border-info/20 rounded-xl p-3 mb-4 text-sm text-base-content/70">
-                Your stake is your confidence bet. Stake more cREP to earn more if your prediction is correct &mdash;
-                but you&apos;ll lose your stake if you&apos;re wrong.
-              </div>
-            )}
 
             <h3 className="text-lg font-semibold text-center mb-3">
               How much to stake?
