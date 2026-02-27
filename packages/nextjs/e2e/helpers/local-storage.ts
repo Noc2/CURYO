@@ -21,6 +21,10 @@ function seedWalletScript(privateKey: string): string {
       termsAccepted: true,
       privacyAcknowledged: true,
     }));
+    localStorage.setItem("curyo_onboarding", JSON.stringify({
+      firstVoteCompleted: true,
+      guideShown: true,
+    }));
   `;
 }
 
