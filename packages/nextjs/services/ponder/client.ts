@@ -179,6 +179,8 @@ export interface PonderAccuracyLeaderboardItem {
   winRate: number;
 }
 
+export type PonderVoterStatsBatch = Record<string, PonderVoterStats>;
+
 export const ponderApi = {
   getContent(params?: { categoryId?: string; status?: string; sortBy?: string; limit?: string; offset?: string }) {
     return ponderGet<PonderContentResponse>("/content", params);
@@ -275,5 +277,11 @@ export const ponderApi = {
     return ponderGet<{ stats: PonderVoterStats | null; categories: PonderVoterCategoryStats[] }>(
       `/voter-accuracy/${address}`,
     );
+  },
+
+  getVoterStatsBatch(voters: string[]) {
+    return ponderGet<PonderVoterStatsBatch>("/voter-stats-batch", {
+      voters: voters.join(","),
+    });
   },
 };

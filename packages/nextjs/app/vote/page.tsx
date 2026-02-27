@@ -9,6 +9,7 @@ import type { NextPage } from "next";
 import { useAccount, useReadContracts } from "wagmi";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
+import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { StakeSelector } from "~~/components/swipe/StakeSelector";
 import { SwipeCard } from "~~/components/swipe/SwipeCard";
@@ -17,10 +18,12 @@ import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
+import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUrlValidation } from "~~/hooks/useUrlValidation";
 import { useUserPreferences } from "~~/hooks/useUserPreferences";
+import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
@@ -50,6 +53,7 @@ const HomeInner = () => {
   const contentParam = searchParams.get("content");
 
   const { address } = useAccount();
+  const { isFirstVote, markVoteCompleted } = useOnboarding();
   const { feed, isLoading } = useContentFeed(address);
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
@@ -213,6 +217,22 @@ const HomeInner = () => {
 
   const { profiles: submitterProfiles } = useSubmitterProfiles(submitterAddresses);
 
+  // Fetch voter accuracy stats and merge into profiles
+  const { statsMap: accuracyMap } = useVoterAccuracyBatch(submitterAddresses);
+
+  const enrichedProfiles = useMemo(() => {
+    const result: Record<string, SubmitterProfile> = {};
+    for (const [addr, profile] of Object.entries(submitterProfiles)) {
+      const stats = accuracyMap[addr];
+      result[addr] = {
+        ...profile,
+        winRate: stats?.winRate,
+        totalSettledVotes: stats?.totalSettledVotes,
+      };
+    }
+    return result;
+  }, [submitterProfiles, accuracyMap]);
+
   // Selected item (defaults to first in filtered list)
   const selectedItem = useMemo(() => {
     if (displayFeed.length === 0) return null;
@@ -288,6 +308,10 @@ const HomeInner = () => {
     setStakeModal(prev => ({ ...prev, isOpen: false }));
     if (success) {
       notification.success(`Vote committed! Stake: ${stakeAmount} cREP`);
+      if (isFirstVote) {
+        markVoteCompleted();
+        notification.info("Great first vote! Keep going to build your reputation.", { duration: 5000 });
+      }
       // Advance to next item
       if (selectedItem && displayFeed.length > 1) {
         const currentIdx = displayFeed.findIndex(i => i.id === selectedItem.id);
@@ -347,6 +371,7 @@ const HomeInner = () => {
   return (
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
       <div className="w-full max-w-5xl">
+        <VotingGuide />
         {/* Filter bar: sort + category pills */}
         <div className="flex items-center gap-3 mb-5">
           <select
@@ -423,7 +448,7 @@ const HomeInner = () => {
                       >
                         <SwipeCard
                           content={selectedItem}
-                          submitterProfile={submitterProfiles[selectedItem.submitter.toLowerCase()]}
+                          submitterProfile={enrichedProfiles[selectedItem.submitter.toLowerCase()]}
                           onSwipe={handleSwipe}
                           isTop={true}
                           index={0}
@@ -461,7 +486,7 @@ const HomeInner = () => {
                       key={item.id.toString()}
                       item={item}
                       rating={ratingsMap.get(item.id.toString())}
-                      submitterProfile={submitterProfiles[item.submitter.toLowerCase()]}
+                      submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
                       onSelect={handleSelectCard}
                     />
                   ))}

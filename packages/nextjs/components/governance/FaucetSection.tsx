@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import {
@@ -152,6 +153,10 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             <li>Refer friends and gain reputation</li>
           </ul>
         </div>
+
+        <Link href="/vote" className="btn btn-primary text-white w-full mt-4">
+          Start Voting
+        </Link>
       </div>
     );
   }

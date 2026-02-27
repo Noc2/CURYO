@@ -548,6 +548,42 @@ app.get("/voter-accuracy/:address", async (c) => {
 });
 
 // ============================================================
+// VOTER STATS BATCH
+// ============================================================
+
+app.get("/voter-stats-batch", async (c) => {
+  const votersParam = c.req.query("voters");
+  if (!votersParam) {
+    return c.json({ error: "voters parameter required" }, 400);
+  }
+
+  const voters = votersParam
+    .split(",")
+    .slice(0, 50)
+    .map((a) => a.trim().toLowerCase() as `0x${string}`)
+    .filter((a) => isValidAddress(a));
+
+  if (voters.length === 0) {
+    return jsonBig(c, {});
+  }
+
+  const items = await db
+    .select()
+    .from(voterStats)
+    .where(inArray(voterStats.voter, voters));
+
+  const statsMap: Record<string, any> = {};
+  for (const item of items) {
+    statsMap[item.voter.toLowerCase()] = {
+      ...item,
+      winRate: item.totalSettledVotes > 0 ? item.totalWins / item.totalSettledVotes : 0,
+    };
+  }
+
+  return jsonBig(c, statsMap);
+});
+
+// ============================================================
 // VOTES
 // ============================================================
 

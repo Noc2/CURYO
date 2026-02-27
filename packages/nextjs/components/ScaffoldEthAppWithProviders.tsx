@@ -9,6 +9,7 @@ import { Toaster } from "react-hot-toast";
 import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
+import { RewardNotifier } from "~~/components/RewardNotifier";
 import { TermsAcceptanceModal } from "~~/components/legal/TermsAcceptanceModal";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
@@ -28,6 +29,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
         </div>
       </div>
       <Toaster />
+      <RewardNotifier />
     </>
   );
 };
