@@ -177,9 +177,17 @@ function processAllDeployments(broadcastPath) {
   });
 
   const allContracts = {};
+  const deployers = {};
 
   allDeployments.forEach((deployment) => {
     const { chainId, contractName } = deployment;
+
+    // Capture deployer address from first CREATE transaction per chain
+    if (!deployers[chainId]) {
+      const from = deployment.transaction?.transaction?.from;
+      if (from) deployers[chainId] = from;
+    }
+
     const artifact = getArtifactOfContract(contractName);
 
     if (artifact) {
@@ -200,7 +208,7 @@ function processAllDeployments(broadcastPath) {
     }
   });
 
-  return allContracts;
+  return { contracts: allContracts, deployers };
 }
 
 function main() {
@@ -221,7 +229,7 @@ function main() {
   });
 
   // Process all deployments from all script folders
-  const allGeneratedContracts = processAllDeployments(
+  const { contracts: allGeneratedContracts, deployers } = processAllDeployments(
     current_path_to_broadcast
   );
 
@@ -305,7 +313,7 @@ function main() {
   updateScaffoldConfig(Object.keys(allGeneratedContracts).map(Number));
 
   // --- Auto-update Ponder env with latest deployment for the selected target network ---
-  updatePonderEnv(allGeneratedContracts);
+  updatePonderEnv(allGeneratedContracts, deployers);
 
   // --- Auto-update bot config.ts contract addresses ---
   updateBotConfig(allGeneratedContracts);
@@ -494,7 +502,7 @@ function serializeEnvFile(env) {
   return `${header.join("\n")}${body.join("\n")}\n`;
 }
 
-function updatePonderEnv(allGeneratedContracts) {
+function updatePonderEnv(allGeneratedContracts, deployers = {}) {
   const deployTarget = process.env.DEPLOY_TARGET_NETWORK;
   const ponderNetwork = DEPLOY_TARGET_TO_PONDER_NETWORK[deployTarget];
 
@@ -545,6 +553,12 @@ function updatePonderEnv(allGeneratedContracts) {
     .filter((blockNumber) => Number.isFinite(blockNumber) && blockNumber > 0);
   const chainStartBlock =
     deployedBlocks.length > 0 ? Math.min(...deployedBlocks) : 0;
+
+  // Exclude deployer from token holder tracking (leaderboard)
+  const deployerAddress = deployers[String(chainId)];
+  if (deployerAddress) {
+    existingEnv["PONDER_DEPLOYER_ADDRESS"] = deployerAddress;
+  }
 
   const updatedContracts = [];
   for (const [contractName, addressEnvKey] of Object.entries(
