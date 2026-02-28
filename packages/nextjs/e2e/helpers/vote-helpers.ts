@@ -86,10 +86,12 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
   if (!confirmVisible) return false;
   await confirmBtn.click();
 
-  // Wait for EITHER success OR error — the contract call may revert
+  // Wait for EITHER success OR error — the contract call may revert.
+  // NOTE: Do NOT match /success/i — scaffold-eth fires a generic
+  // "Transaction completed successfully!" toast for the approve tx,
+  // which would match before the actual vote commit completes.
   const successIndicator = page
     .getByText(/committed/i)
-    .or(page.getByText(/success/i))
     .or(page.getByText(/voted/i));
 
   const errorIndicator = page
@@ -184,10 +186,9 @@ export async function voteOnSpecificContent(
   }
   await confirmBtn.click();
 
-  // Wait for outcome
+  // Wait for outcome — avoid /success/i which matches the approve tx toast
   const successIndicator = page
     .getByText(/committed/i)
-    .or(page.getByText(/success/i))
     .or(page.getByText(/voted/i));
 
   const errorIndicator = page
