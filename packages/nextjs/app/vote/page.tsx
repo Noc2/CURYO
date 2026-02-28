@@ -585,8 +585,22 @@ const ThumbnailCard = memo(function ThumbnailCard({
             <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
           </svg>
         );
-      default:
-        return (
+      default: {
+        const domain = (() => {
+          try {
+            return new URL(item.url).hostname.replace(/^(www\.|en\.)/, "");
+          } catch {
+            return null;
+          }
+        })();
+        return domain ? (
+          <img
+            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+            alt={`${domain} icon`}
+            className="w-4 h-4 rounded-sm"
+            loading="lazy"
+          />
+        ) : (
           <svg
             className="w-4 h-4 text-base-content/40"
             fill="none"
@@ -601,6 +615,7 @@ const ThumbnailCard = memo(function ThumbnailCard({
             />
           </svg>
         );
+      }
     }
   };
 
