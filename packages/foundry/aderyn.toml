@@ -1,0 +1,24 @@
+# Aderyn Configuration File
+version = 1
+
+root = "."
+
+# Exclude test mocks from analysis
+exclude = ["/mocks/"]
+
+[detectors]
+# Exclude detectors that produce false positives for this codebase:
+# - abi-encode-packed-collision: used for string concatenation (SVG/JSON), not hashed for uniqueness
+# - locked-ether: none of our contracts have receive()/fallback()/payable — they can't accept ETH
+# - reentrancy: all flagged functions use nonReentrant; external calls target trusted system contracts
+# - storage-array-edit-with-memory: storage pointer is used correctly (read, not write)
+# - weak-randomness: only in mocks (already excluded above, belt-and-suspenders)
+exclude = [
+  "abi-encode-packed-hash-collision",
+  "contract-locks-ether",
+  "reentrancy-state-change",
+  "storage-array-memory-edit",
+  "weak-randomness",
+]
+
+[env]
