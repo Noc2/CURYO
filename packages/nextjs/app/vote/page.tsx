@@ -627,7 +627,15 @@ const ThumbnailCard = memo(function ThumbnailCard({
       {/* Thumbnail */}
       <div className="relative aspect-video bg-base-200 overflow-hidden">
         {thumbnail ? (
-          <img src={thumbnail} alt="" className="w-full h-full object-cover" loading="lazy" />
+          <img
+            src={thumbnail}
+            alt=""
+            className="w-full h-full object-cover"
+            loading="lazy"
+            onError={e => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <PlatformBadge />

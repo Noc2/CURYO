@@ -20,6 +20,8 @@ const ALLOWED_HOSTS = new Set([
   "pbs.twimg.com",
   "media.rawg.io",
   "avatars.githubusercontent.com",
+  "api.scryfall.com",
+  "cards.scryfall.io",
 ]);
 
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10 MB
