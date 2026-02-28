@@ -1,30 +1,39 @@
-import { approveCREP, claimSubmitterReward, submitContentDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
+import {
+  approveCREP,
+  claimSubmitterReward,
+  commitVoteDirect,
+  submitContentDirect,
+  waitForPonderIndexed,
+} from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { fastForwardTime, triggerKeeper, waitForSettlementIndexed } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentList, getSubmitterRewards, ponderGet } from "../helpers/ponder-api";
-import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { expect, test } from "@playwright/test";
 
 /**
  * Reward claiming after settlement.
  * Triggers Ponder events: RewardClaimed, SubmitterRewardClaimed, RatingUpdated.
  *
- * Submits fresh content via direct contract call so that voters have
- * no cooldown collisions with other test files (vote.spec, settlement-lifecycle).
+ * Uses direct contract calls for voting (bypasses UI) for reliability.
+ * The keeper handles reveal + settle via its API endpoint.
  *
  * Account allocation (exclusive to this file for voting):
  * - Account #2 — submits fresh content (also used for submitter reward tests)
  * - Accounts #3, #4 — vote UP (winning side)
  * - Account #7 — votes DOWN (losing side, tests reward absence)
- * - Account #6 — backup UP vote (UI voting can fail intermittently)
  *
  * Tests run serially: submit → vote → settle → verify → claim → submitter claim.
  */
 test.describe("Reward claim lifecycle", () => {
   // These tests depend on each other and share state
   test.describe.configure({ mode: "serial" });
+
+  const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
+  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
+  const STAKE = BigInt(1e6); // 1 cREP
 
   let newContentId: string | null = null;
   let settledContentId: string | null = null;
@@ -33,8 +42,6 @@ test.describe("Reward claim lifecycle", () => {
     test.setTimeout(60_000);
 
     const submitter = ANVIL_ACCOUNTS.account2;
-    const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
-    const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
 
     // Approve MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry
     const approved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
@@ -67,34 +74,31 @@ test.describe("Reward claim lifecycle", () => {
     expect(newContentId).toBeTruthy();
   });
 
-  test("vote with 3 accounts and settle a round", async ({ browser }) => {
+  test("vote with 3 accounts and settle a round", async () => {
     test.setTimeout(300_000);
     test.skip(!newContentId, "No content from previous test");
 
-    // 4 voters give resilience against UI flakiness; only 3 needed for minVoters
+    // Vote via direct contract calls — #3 UP, #4 UP, #7 DOWN
     const voters = [
-      { account: ANVIL_ACCOUNTS.account3, direction: "up" as const },
-      { account: ANVIL_ACCOUNTS.account4, direction: "up" as const },
-      { account: ANVIL_ACCOUNTS.account7, direction: "down" as const },
-      { account: ANVIL_ACCOUNTS.account6, direction: "up" as const },
+      { account: ANVIL_ACCOUNTS.account3, isUp: true },
+      { account: ANVIL_ACCOUNTS.account4, isUp: true },
+      { account: ANVIL_ACCOUNTS.account7, isUp: false },
     ];
 
-    let successCount = 0;
-
-    // Step 1: Four accounts vote on the fresh content (need ≥ 3 for settlement)
-    for (const voter of voters) {
-      const context = await browser.newContext();
-      const page = await context.newPage();
-      await setupWallet(page, voter.account.privateKey);
-
-      const success = await voteOnSpecificContent(page, newContentId!, voter.direction);
-      if (success) successCount++;
-
-      await context.close();
+    for (let i = 0; i < voters.length; i++) {
+      const salt = `0x${(i + 100).toString(16).padStart(64, "0")}` as `0x${string}`;
+      await approveCREP(VOTING_ENGINE, STAKE, voters[i].account.address, CREP_TOKEN);
+      const { success } = await commitVoteDirect(
+        BigInt(newContentId!),
+        voters[i].isUp,
+        salt,
+        STAKE,
+        "0x0000000000000000000000000000000000000000",
+        voters[i].account.address,
+        VOTING_ENGINE,
+      );
+      expect(success, `Commit failed for voter ${i}`).toBe(true);
     }
-
-    // Need at least 3 votes for settlement (minVoters=3)
-    expect(successCount, `Only ${successCount}/4 votes succeeded on fresh content`).toBeGreaterThanOrEqual(3);
 
     // Step 2: Fast-forward past the epoch boundary (900s + buffer)
     await fastForwardTime(901);
