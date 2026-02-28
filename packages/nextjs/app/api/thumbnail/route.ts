@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { db } from "~~/lib/db";
+import { contentMetadata } from "~~/lib/db/schema";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
 import { checkRateLimit } from "~~/utils/rateLimit";
-import { resolveEmbed } from "~~/utils/resolveEmbed";
+import { EmbedResult, resolveEmbed } from "~~/utils/resolveEmbed";
 
 const RATE_LIMIT = { limit: 200, windowMs: 60_000 }; // 200 req/min per IP
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 /**
  * Embed metadata proxy — resolves thumbnails and metadata server-side.
@@ -39,8 +43,66 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ thumbnailUrl: staticThumbnail });
   }
 
+  // Check DB cache
+  try {
+    const [cached] = await db.select().from(contentMetadata).where(eq(contentMetadata.url, url)).limit(1);
+    if (cached && Date.now() - cached.fetchedAt.getTime() < CACHE_TTL_MS) {
+      const result: EmbedResult = {
+        thumbnailUrl: cached.thumbnailUrl,
+        ...(cached.title && { title: cached.title }),
+        ...(cached.description && { description: cached.description }),
+        ...(cached.imageUrl && { imageUrl: cached.imageUrl }),
+        ...(cached.authors && { authors: JSON.parse(cached.authors) }),
+        ...(cached.releaseYear && { releaseYear: cached.releaseYear }),
+        ...(cached.symbol && { symbol: cached.symbol }),
+        ...(cached.stars != null && { stars: cached.stars }),
+        ...(cached.forks != null && { forks: cached.forks }),
+        ...(cached.language && { language: cached.language }),
+      };
+      return NextResponse.json(result);
+    }
+  } catch (e) {
+    console.warn("[thumbnail] cache read failed, falling through to API:", e);
+  }
+
   const info = detectPlatform(url);
   const result = await resolveEmbed(info.type, info.id, info.metadata);
+
+  // Cache the result (fire-and-forget) — skip empty failures
+  if (result.thumbnailUrl || result.title || result.description) {
+    db.insert(contentMetadata)
+      .values({
+        url,
+        thumbnailUrl: result.thumbnailUrl,
+        title: result.title ?? null,
+        description: result.description ?? null,
+        imageUrl: result.imageUrl ?? null,
+        authors: result.authors ? JSON.stringify(result.authors) : null,
+        releaseYear: result.releaseYear ?? null,
+        symbol: result.symbol ?? null,
+        stars: result.stars ?? null,
+        forks: result.forks ?? null,
+        language: result.language ?? null,
+        fetchedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: contentMetadata.url,
+        set: {
+          thumbnailUrl: result.thumbnailUrl,
+          title: result.title ?? null,
+          description: result.description ?? null,
+          imageUrl: result.imageUrl ?? null,
+          authors: result.authors ? JSON.stringify(result.authors) : null,
+          releaseYear: result.releaseYear ?? null,
+          symbol: result.symbol ?? null,
+          stars: result.stars ?? null,
+          forks: result.forks ?? null,
+          language: result.language ?? null,
+          fetchedAt: new Date(),
+        },
+      })
+      .catch(e => console.warn("[thumbnail] cache write failed:", e));
+  }
 
   return NextResponse.json(result);
 }

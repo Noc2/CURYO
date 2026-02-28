@@ -32,3 +32,21 @@ export const urlValidations = sqliteTable("url_validations", {
 });
 
 export type UrlValidation = typeof urlValidations.$inferSelect;
+
+export const contentMetadata = sqliteTable("content_metadata", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  url: text("url").notNull().unique(),
+  thumbnailUrl: text("thumbnail_url"),
+  title: text("title"),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  authors: text("authors"), // JSON string array
+  releaseYear: text("release_year"),
+  symbol: text("symbol"),
+  stars: integer("stars"),
+  forks: integer("forks"),
+  language: text("language"),
+  fetchedAt: integer("fetched_at", { mode: "timestamp" }).notNull(),
+});
+
+export type ContentMetadata = typeof contentMetadata.$inferSelect;
