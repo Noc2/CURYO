@@ -1,0 +1,13 @@
+name: "Setup Foundry Environment"
+description: "Init nested submodules and install Foundry"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Init nested submodules (skip unavailable mobile-sdk-native)
+      shell: bash
+      run: |
+        cd packages/foundry/lib/self
+        git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
