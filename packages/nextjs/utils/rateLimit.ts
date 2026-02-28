@@ -43,15 +43,17 @@ export function checkRateLimit(request: NextRequest, config: RateLimitConfig): N
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     (request as NextRequest & { ip?: string }).ip ||
     "unknown";
+  // Namespace by route path so different API routes don't share counters
+  const key = `${ip}:${request.nextUrl.pathname}`;
   const now = Date.now();
   const cutoff = now - config.windowMs;
 
   cleanup(config.windowMs);
 
-  let entry = store.get(ip);
+  let entry = store.get(key);
   if (!entry) {
     entry = { timestamps: [] };
-    store.set(ip, entry);
+    store.set(key, entry);
   }
 
   // Drop timestamps outside the window

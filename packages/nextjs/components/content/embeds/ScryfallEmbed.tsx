@@ -66,7 +66,7 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
         </div>
       )}
       <img
-        src={info.thumbnailUrl}
+        src={`/api/image-proxy?url=${encodeURIComponent(info.thumbnailUrl)}`}
         alt={formattedName}
         className={`w-full h-auto rounded-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
           imageLoaded ? "opacity-100" : "opacity-0"
