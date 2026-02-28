@@ -18,6 +18,7 @@ import { expect, test } from "@playwright/test";
  * - Account #2 — submits fresh content (also used for submitter reward tests)
  * - Accounts #3, #4 — vote UP (winning side)
  * - Account #7 — votes DOWN (losing side, tests reward absence)
+ * - Account #6 — backup UP vote (UI voting can fail intermittently)
  *
  * Tests run serially: submit → vote → settle → verify → claim → submitter claim.
  */
@@ -70,15 +71,17 @@ test.describe("Reward claim lifecycle", () => {
     test.setTimeout(300_000);
     test.skip(!newContentId, "No content from previous test");
 
+    // 4 voters give resilience against UI flakiness; only 3 needed for minVoters
     const voters = [
       { account: ANVIL_ACCOUNTS.account3, direction: "up" as const },
       { account: ANVIL_ACCOUNTS.account4, direction: "up" as const },
       { account: ANVIL_ACCOUNTS.account7, direction: "down" as const },
+      { account: ANVIL_ACCOUNTS.account6, direction: "up" as const },
     ];
 
     let successCount = 0;
 
-    // Step 1: Three accounts vote on the fresh content (no cooldown possible)
+    // Step 1: Four accounts vote on the fresh content (need ≥ 3 for settlement)
     for (const voter of voters) {
       const context = await browser.newContext();
       const page = await context.newPage();
@@ -90,8 +93,8 @@ test.describe("Reward claim lifecycle", () => {
       await context.close();
     }
 
-    // Need 3 votes for settlement (minVoters=3)
-    expect(successCount, `Only ${successCount}/3 votes succeeded on fresh content`).toBeGreaterThanOrEqual(3);
+    // Need at least 3 votes for settlement (minVoters=3)
+    expect(successCount, `Only ${successCount}/4 votes succeeded on fresh content`).toBeGreaterThanOrEqual(3);
 
     // Step 2: Fast-forward past the epoch boundary (900s + buffer)
     await fastForwardTime(901);

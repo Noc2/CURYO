@@ -98,7 +98,8 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
     .getByText(/reverted/i)
     .or(page.getByText(/failed/i))
     .or(page.getByText(/error/i))
-    .or(page.getByText(/rejected/i));
+    .or(page.getByText(/rejected/i))
+    .or(page.getByText(/not confirmed/i));
 
   const outcome = successIndicator.or(errorIndicator);
 
@@ -195,7 +196,8 @@ export async function voteOnSpecificContent(
     .getByText(/reverted/i)
     .or(page.getByText(/failed/i))
     .or(page.getByText(/error/i))
-    .or(page.getByText(/rejected/i));
+    .or(page.getByText(/rejected/i))
+    .or(page.getByText(/not confirmed/i));
 
   try {
     await successIndicator.or(errorIndicator).first().waitFor({ state: "visible", timeout: 30_000 });
