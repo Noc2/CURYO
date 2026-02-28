@@ -2,12 +2,14 @@ import {
   approveCREP,
   commitVoteDirect,
   getActiveRoundId,
+  revealVoteDirect,
+  settleRoundDirect,
   submitContentDirect,
   waitForPonderIndexed,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
-import { fastForwardTime, triggerKeeper, waitForSettlementIndexed } from "../helpers/keeper";
+import { fastForwardTime, triggerKeeper } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentById, getContentList } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
@@ -15,12 +17,13 @@ import { expect, test } from "@playwright/test";
 /**
  * Settlement lifecycle — full vote → reveal → settle cycle.
  *
- * Uses direct contract calls for voting (bypasses UI) for reliability.
- * The keeper handles reveal + settle via its API endpoint.
+ * Uses direct contract calls for the entire flow (commit, reveal, settle)
+ * to avoid drand beacon timing dependencies.
  *
  * Account allocation (exclusive to this file):
  * - Account #10 — submits fresh content
- * - Accounts #3, #4, #5 — vote on the fresh content via direct contract calls
+ * - Accounts #3, #4, #5 — vote via direct contract calls
+ * - Account #1 (keeper) — reveals and settles
  */
 test.describe("Settlement lifecycle", () => {
   test.describe.configure({ mode: "serial" });
@@ -37,23 +40,20 @@ test.describe("Settlement lifecycle", () => {
 
     const submitter = ANVIL_ACCOUNTS.account10;
 
-    // Approve MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry
     const approved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
     expect(approved, "cREP approval for content submission failed").toBe(true);
 
-    // Submit content with a unique URL
     const uniqueId = Date.now();
     const success = await submitContentDirect(
       `https://www.youtube.com/watch?v=settlement_test_${uniqueId}`,
       `Settlement Test ${uniqueId}`,
       "test",
-      1, // categoryId 1 = YouTube
+      1,
       submitter.address,
       CONTENT_REGISTRY,
     );
     expect(success, "Content submission tx failed").toBe(true);
 
-    // Wait for Ponder to index the new content
     const indexed = await waitForPonderIndexed(async () => {
       const { items } = await getContentList({ status: "all", sortBy: "newest", limit: 5 });
       const match = items.find(item => item.url.includes(`settlement_test_${uniqueId}`));
@@ -69,20 +69,21 @@ test.describe("Settlement lifecycle", () => {
   });
 
   test("full cycle: vote → reveal → settle", async () => {
-    test.setTimeout(240_000);
+    test.setTimeout(120_000);
     test.skip(!newContentId, "No content from previous test");
 
-    // Vote via direct contract calls — accounts #3 (up), #4 (up), #5 (down)
+    // Step 1: Commit votes via direct contract calls
     const voters = [
       { account: ANVIL_ACCOUNTS.account3, isUp: true },
       { account: ANVIL_ACCOUNTS.account4, isUp: true },
       { account: ANVIL_ACCOUNTS.account5, isUp: false },
     ];
+    const commitData: Array<{ voter: string; commitHash: `0x${string}`; salt: `0x${string}`; isUp: boolean }> = [];
 
     for (let i = 0; i < voters.length; i++) {
       const salt = `0x${(i + 1).toString(16).padStart(64, "0")}` as `0x${string}`;
       await approveCREP(VOTING_ENGINE, STAKE, voters[i].account.address, CREP_TOKEN);
-      const { success } = await commitVoteDirect(
+      const { success, commitHash } = await commitVoteDirect(
         BigInt(newContentId!),
         voters[i].isUp,
         salt,
@@ -92,65 +93,70 @@ test.describe("Settlement lifecycle", () => {
         VOTING_ENGINE,
       );
       expect(success, `Commit failed for voter ${i}`).toBe(true);
+      commitData.push({ voter: voters[i].account.address, commitHash, salt, isUp: voters[i].isUp });
     }
 
-    // Step 2: Fast-forward Anvil past the epoch boundary (900s + buffer)
+    // Step 2: Get the active round ID
+    const roundId = await getActiveRoundId(BigInt(newContentId!), VOTING_ENGINE);
+    expect(roundId).toBeGreaterThan(0n);
+
+    // Step 3: Fast-forward past the epoch boundary
     await fastForwardTime(901);
 
-    // Step 3: Trigger the keeper to reveal votes and settle rounds.
-    // Tlock decryption needs the drand beacon for the targeted round, which is
-    // produced in real wall-clock time (~15 min after chain start). Retry with
-    // increasing waits to give the beacon time to appear.
-    let totalRevealed = 0;
-    let totalSettled = 0;
-
-    for (let attempt = 0; attempt < 20; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 15_000));
-      const resp = await triggerKeeper("http://localhost:3000");
-      totalRevealed += resp.result.votesRevealed;
-      totalSettled += resp.result.roundsSettled;
-      if (totalRevealed > 0 && totalSettled > 0) break;
+    // Step 4: Reveal all votes directly (bypasses drand/tlock)
+    const keeper = ANVIL_ACCOUNTS.account1;
+    for (const cd of commitData) {
+      const revealed = await revealVoteDirect(
+        BigInt(newContentId!),
+        roundId,
+        cd.voter,
+        cd.commitHash,
+        cd.isUp,
+        cd.salt,
+        keeper.address,
+        VOTING_ENGINE,
+      );
+      expect(revealed, `Reveal failed for ${cd.voter}`).toBe(true);
     }
 
-    expect(totalRevealed, "Drand beacons not available — keeper revealed 0 votes").toBeGreaterThan(0);
-    expect(totalSettled).toBeGreaterThanOrEqual(1);
+    // Step 5: Fast-forward for settlement delay
+    await fastForwardTime(901);
 
-    // Step 4: Verify settlement via Ponder API
-    const settled = await waitForSettlementIndexed(newContentId!, "http://localhost:42069", 30_000);
-    expect(settled, "Ponder did not index settlement for the fresh content").toBe(true);
+    // Step 6: Settle the round directly
+    const settled = await settleRoundDirect(BigInt(newContentId!), roundId, keeper.address, VOTING_ENGINE);
+    expect(settled, "Settlement failed").toBe(true);
 
-    // Step 5: Verify RatingUpdated — settled content should have rating history
+    // Step 7: Wait for Ponder to index the settlement
+    const settledIndexed = await waitForPonderIndexed(async () => {
+      const data = await getContentById(newContentId!);
+      return data.rounds.some(r => String(r.roundId) === String(roundId) && (r.state === 1 || r.state === 3));
+    }, 30_000);
+    expect(settledIndexed, "Ponder did not index settlement for the fresh content").toBe(true);
+
+    // Step 8: Verify RatingUpdated
     const { content: settledContent, ratings } = await getContentById(newContentId!);
-
-    // After settlement the rating may have moved from the default (50)
-    // and a ratingChange record should exist
     expect(ratings.length).toBeGreaterThanOrEqual(1);
     expect(ratings[0]).toHaveProperty("oldRating");
     expect(ratings[0]).toHaveProperty("newRating");
 
-    // Step 6: Submitter stake is NOT returned yet — _checkSubmitterStake only auto-returns
-    // after STAKE_RETURN_PERIOD (4 days). In tests, only ~30 min of chain time passes.
+    // Submitter stake is NOT returned yet (needs STAKE_RETURN_PERIOD = 4 days)
     expect(settledContent.submitterStakeReturned).toBe(false);
   });
 
   test("portfolio shows vote history after voting", async ({ browser }) => {
-    // Use account #2 which has cREP and submitted content
     const context = await browser.newContext();
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
     await page.goto("/portfolio");
 
-    // Wait for Portfolio heading (replaces arbitrary timeout)
     const heading = page.getByRole("heading", { name: "Portfolio" });
     await expect(heading).toBeVisible({ timeout: 15_000 });
 
-    // Stats section — scope to main to avoid sidebar matches
     const main = page.locator("main");
     const totalVotesLabel = main.getByText("Total Votes");
     await expect(totalVotesLabel).toBeVisible({ timeout: 10_000 });
 
-    // Vote history section — use heading role to avoid matching h4s in sidebar
     const voteHistoryHeading = page.getByRole("heading", { name: "Vote History" });
     await expect(voteHistoryHeading).toBeVisible({ timeout: 10_000 });
 
