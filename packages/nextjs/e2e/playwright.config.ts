@@ -24,14 +24,14 @@ export default defineConfig({
       // - settlement/reward/tied-round: need drand beacons (~15 min after chain start)
       // - round-cancellation/content-dormancy: need time-skip (fast-forward days)
       testIgnore:
-        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|unrevealed-votes|multi-round|unanimous-settlement/,
+        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|unrevealed-votes|zz-multi-round|unanimous-settlement/,
     },
     {
       // Settlement tests need drand beacons (~15 min after chain start).
       // Run with: yarn e2e:settlement
       name: "settlement",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: /settlement-lifecycle|reward-claim|tied-round|unrevealed-votes|multi-round|unanimous-settlement/,
+      testMatch: /settlement-lifecycle|reward-claim|tied-round|unrevealed-votes|zz-multi-round|unanimous-settlement/,
       dependencies: ["chromium"],
     },
     {
