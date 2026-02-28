@@ -126,12 +126,15 @@ test.describe("Settlement lifecycle", () => {
     const settled = await settleRoundDirect(BigInt(newContentId!), roundId, keeper.address, VOTING_ENGINE);
     expect(settled, "Settlement failed").toBe(true);
 
-    // Step 7: Wait for Ponder to index the settlement
+    // Step 7: Wait for Ponder to index the settlement AND rating update
     const settledIndexed = await waitForPonderIndexed(async () => {
       const data = await getContentById(newContentId!);
-      return data.rounds.some(r => String(r.roundId) === String(roundId) && (r.state === 1 || r.state === 3));
+      const roundSettled = data.rounds.some(
+        r => String(r.roundId) === String(roundId) && (r.state === 1 || r.state === 3),
+      );
+      return roundSettled && data.ratings.length >= 1;
     }, 30_000);
-    expect(settledIndexed, "Ponder did not index settlement for the fresh content").toBe(true);
+    expect(settledIndexed, "Ponder did not index settlement + rating for the fresh content").toBe(true);
 
     // Step 8: Verify RatingUpdated
     const { content: settledContent, ratings } = await getContentById(newContentId!);
