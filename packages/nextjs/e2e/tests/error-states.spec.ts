@@ -27,27 +27,20 @@ test.describe("Error states and edge cases", () => {
   });
 
   test("own content shows 'Your submission' label", async ({ browser }) => {
-    // Account #2 submitted content #1 and #10 — try both to find one that's active
+    // Account #2 submitted content #1 and #10 (from seed), and content-moderation
+    // tests may add more. Navigate to /vote — the "For You" sort shows own content
+    // in the feed, so "Your submission" should appear on the expanded card.
+    // Avoid deep-linking to specific IDs because async URL-validation can filter
+    // seed content from displayFeed before the deep-link effect resolves.
     const context = await browser.newContext();
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
-    const ownContentIds = [1, 10];
-    let foundOwnContent = false;
+    await page.goto("/vote");
+    await waitForFeedLoaded(page);
 
-    for (const id of ownContentIds) {
-      await page.goto(`/vote?content=${id}`);
-      await waitForFeedLoaded(page);
-
-      const ownContentLabel = page.getByText("Your submission");
-      const isOwnContent = await ownContentLabel.isVisible({ timeout: 5_000 }).catch(() => false);
-      if (isOwnContent) {
-        foundOwnContent = true;
-        break;
-      }
-    }
-
-    expect(foundOwnContent, "At least one of content #1 or #10 should show 'Your submission'").toBe(true);
+    const ownContentLabel = page.getByText("Your submission");
+    await expect(ownContentLabel).toBeVisible({ timeout: 15_000 });
 
     // Verify vote buttons are NOT visible on own content
     const voteUp = page.getByRole("button", { name: "Vote up" });
