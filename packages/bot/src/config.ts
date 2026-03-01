@@ -48,8 +48,6 @@ export const config = {
   // Voting
   voteStake: BigInt(process.env.VOTE_STAKE || "1000000"), // 1 cREP default
   voteThreshold: parseFloat(process.env.VOTE_THRESHOLD || "5.0"),
-  tlockMock: process.env.TLOCK_MOCK === "true",
-
   // Limits
   maxVotesPerRun: parseInt(process.env.MAX_VOTES_PER_RUN || "10"),
   maxSubmissionsPerRun: parseInt(process.env.MAX_SUBMISSIONS_PER_RUN || "5"),

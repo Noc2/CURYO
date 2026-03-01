@@ -1,12 +1,10 @@
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
-import { generateSalt, computeCommitHash, encryptVote } from "../tlock.js";
 import { ponder } from "../ponder.js";
 import { getStrategy } from "../strategies/index.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
-const RATE_BOT_STAKE = 1_000_000n; // 1 cREP (6 decimals) — fixed for rating bot
 
 export async function runVote() {
   const account = getAccount(config.rateBot);
@@ -33,20 +31,12 @@ export async function runVote() {
   })) as bigint;
   log.info(`cREP balance: ${Number(balance) / 1e6} cREP`);
 
-  if (balance < RATE_BOT_STAKE) {
-    log.error(`Insufficient cREP. Need ${Number(RATE_BOT_STAKE) / 1e6}, have ${Number(balance) / 1e6}`);
+  if (balance < config.voteStake) {
+    log.error(`Insufficient cREP. Need ${Number(config.voteStake) / 1e6}, have ${Number(balance) / 1e6}`);
     return;
   }
 
-  // 3. Read round config (epochDuration for tlock encryption target)
-  const [epochDuration] = await publicClient.readContract({
-    ...contractConfig.votingEngine,
-    functionName: "config",
-  });
-  const epochDurationSecs = Number(epochDuration);
-  log.info(`Round config: ${epochDurationSecs / 60}min epochs`);
-
-  // 4. Fetch active content from Ponder
+  // 3. Fetch active content from Ponder
   if (!(await ponder.isAvailable())) {
     log.error("Ponder indexer is not available. Start it with: yarn ponder:dev");
     return;
@@ -62,10 +52,10 @@ export async function runVote() {
   }
   log.info(`Found ${items.length} active content items`);
 
-  let votesCommitted = 0;
+  let votesPlaced = 0;
 
   for (const item of items) {
-    if (votesCommitted >= config.maxVotesPerRun) {
+    if (votesPlaced >= config.maxVotesPerRun) {
       log.info(`Reached max votes per run (${config.maxVotesPerRun}), stopping`);
       break;
     }
@@ -84,7 +74,6 @@ export async function runVote() {
     }
 
     const contentId = BigInt(item.id);
-    const now = Math.floor(Date.now() / 1000);
 
     // Vote-once check: if we have EVER voted on this content, skip entirely
     try {
@@ -96,33 +85,6 @@ export async function runVote() {
       if (lastVote > 0n) {
         log.debug(`Skipping content #${item.id} (already voted — one-time only)`);
         continue;
-      }
-    } catch {
-      continue;
-    }
-
-    // Check active round for epoch timing
-    let epochEnd: number;
-    try {
-      const activeRoundId = await publicClient.readContract({
-        ...contractConfig.votingEngine,
-        functionName: "getActiveRoundId",
-        args: [contentId],
-      });
-
-      if (activeRoundId > 0n) {
-        // Read round startTime to compute epoch end
-        const round = await publicClient.readContract({
-          ...contractConfig.votingEngine,
-          functionName: "getRound",
-          args: [contentId, activeRoundId],
-        }) as { startTime: bigint };
-        const roundStartTime = Number(round.startTime);
-        const epochIndex = Math.floor((now - roundStartTime) / epochDurationSecs);
-        epochEnd = roundStartTime + (epochIndex + 1) * epochDurationSecs;
-      } else {
-        // No active round — commitVote will create one with startTime ≈ now
-        epochEnd = now + epochDurationSecs;
       }
     } catch {
       continue;
@@ -144,42 +106,29 @@ export async function runVote() {
     const isUp = score >= config.voteThreshold;
     log.info(`Content #${item.id}: ${strategy.name} score=${score.toFixed(1)} -> vote ${isUp ? "UP" : "DOWN"}`);
 
-    // Generate salt and commit hash
-    const salt = generateSalt();
-    const commitHash = computeCommitHash(isUp, salt, contentId);
-
-    // Encrypt vote with tlock to epoch end
-    let ciphertext: `0x${string}`;
     try {
-      ciphertext = await encryptVote(isUp, salt, contentId, epochEnd);
-    } catch (err: any) {
-      log.warn(`Tlock encryption failed for content #${item.id}: ${err.message}`);
-      continue;
-    }
-
-    try {
-      // Approve cREP for staking (1 cREP)
+      // Approve cREP for staking
       const approveTx = await wallet.writeContract({
         ...contractConfig.token,
         functionName: "approve",
-        args: [config.contracts.votingEngine, RATE_BOT_STAKE],
+        args: [config.contracts.votingEngine, config.voteStake],
       });
       await publicClient.waitForTransactionReceipt({ hash: approveTx });
       log.debug(`Approved cREP: ${approveTx}`);
 
-      // Commit vote with 1 cREP stake
-      const commitTx = await wallet.writeContract({
+      // Public vote — single-step, no commit/reveal
+      const voteTx = await wallet.writeContract({
         ...contractConfig.votingEngine,
-        functionName: "commitVote",
-        args: [contentId, commitHash, ciphertext, RATE_BOT_STAKE, ZERO_ADDRESS],
+        functionName: "vote",
+        args: [contentId, isUp, config.voteStake, ZERO_ADDRESS],
       });
-      await publicClient.waitForTransactionReceipt({ hash: commitTx });
-      log.info(`Committed vote on content #${item.id} (1 cREP): ${commitTx}`);
-      votesCommitted++;
+      await publicClient.waitForTransactionReceipt({ hash: voteTx });
+      log.info(`Voted on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"}): ${voteTx}`);
+      votesPlaced++;
     } catch (err: any) {
       log.error(`Failed to vote on content #${item.id}: ${err.message}`);
     }
   }
 
-  log.info(`Vote run complete: ${votesCommitted} votes committed (1 cREP each, one-time per content)`);
+  log.info(`Vote run complete: ${votesPlaced} votes placed (${Number(config.voteStake) / 1e6} cREP each, one-time per content)`);
 }
