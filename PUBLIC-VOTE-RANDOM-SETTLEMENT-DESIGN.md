@@ -150,12 +150,12 @@ The common objection is "this is a Keynesian beauty contest — voters predict w
 ### Edge Cases
 
 **Unanimous votes (all UP, no DOWN):**
-There's no losing pool to distribute. Options:
-- **Recommended: Epoch doesn't settle.** Settlement requires at least 1 voter on each side. If the settlement trigger fires but only one side has voters, the epoch extends. This incentivizes contrarian participation — if you see a one-sided epoch, there's an opportunity.
-- Alternative: Return all stakes (no reward, no loss). This is simpler but provides no incentive.
+There's no losing pool to distribute. Settlement requires at least 1 voter on each side. If the settlement trigger fires but only one side has voters, the epoch extends. This incentivizes contrarian participation — if you see a one-sided epoch, there's an opportunity.
+
+**However:** one-sided epochs can't stay open forever. If `MAX_EPOCH_BLOCKS` is reached with only one side voting, the epoch settles as a **draw** — all stakes returned, no rewards. This prevents indefinite capital lockup. The content retains its current rating and a new epoch begins.
 
 **Single voter:**
-The epoch has minimum participation requirements. At least 2 voters, with at least 1 on each side, must exist for settlement. A single voter's epoch stays open until someone takes the other side.
+Same rule — at least 2 voters with at least 1 on each side. A single voter's epoch stays open until someone takes the other side, or until `MAX_EPOCH_BLOCKS` triggers a draw.
 
 **Very low participation (2 voters, opposite sides):**
 This works fine. It's a direct heads-up bet. Both voters get a clear risk/reward picture. The random settlement means neither can time their exit.
@@ -447,30 +447,95 @@ The `b` parameter controls how sensitive the rating is to individual votes:
 
 `b` should be configurable via governance. It may also be useful to scale `b` per content item based on total lifetime vote activity (similar to the adaptive epoch concept in `ADAPTIVE-EPOCH-DESIGN.md`).
 
-### What Happens to Existing Components
+### What Gets Built vs. What Gets Dropped
 
-| Component | Current Role | New Role |
-|-----------|-------------|----------|
-| tlock encryption | Hide vote directions | **Removed** |
-| drand integration | Timelock encryption target | **Removed** |
-| Keeper service | Decrypt + reveal + settle | **Simplified or removed**: periodic `trySettle()` calls |
-| `RoundVotingEngine.sol` | Commit-reveal rounds | **Rewritten**: pricing curve + random settlement |
-| `commitVote()` | Hash commitment + encrypted payload | **Replaced** by `vote(contentId, direction, stake)` |
-| `revealVote()` | Tlock decryption + verify | **Removed** |
-| `settleRound()` | Count reveals, determine majority | **Modified**: compare final rating to epoch start |
-| Frontend vote flow | Encrypt → commit → wait → reveal | **Simplified**: pick direction → set stake → confirm |
-| `useRoundVote.ts` | tlock encryption, drand target | **Simplified**: direct contract call |
-| `useRoundPhase.ts` | Track commit/reveal/settle phases | **Simplified**: track open/settled |
-| Vote display | Hidden until reveal | **Live**: shows current rating, positions, potential returns |
+Since no contracts are deployed on mainnet, this is a clean-slate build. No migration logic needed.
 
-### Migration Path
+**Dropped entirely:**
+- tlock encryption (`utils/tlock.ts`, all encryption logic)
+- drand integration (beacon monitoring, round targets)
+- `revealVote()` and all reveal state management
+- `processUnrevealedVotes()` and forfeiture logic
+- Keeper reveal pipeline (drand monitoring, ciphertext decryption)
+- Commit hash / ciphertext storage
+- Adaptive epoch tiers (`ADAPTIVE-EPOCH-DESIGN.md` — replaced by pricing curve)
+- WE-BLS dual keeper design (`WE-BLS-DUAL-KEEPER-DESIGN.md` — not needed)
 
-Since this is a fundamental mechanism change, it requires a new contract deployment (not an upgrade):
+**Rewritten:**
+- `RoundVotingEngine.sol` → new contract with pricing curve + random settlement
+- `commitVote()` → `vote(contentId, direction, stake)` (single public transaction)
+- `settleRound()` → settlement via `_shouldSettle()` probability check
+- `useRoundVote.ts` → direct contract call, no encryption
+- `useRoundPhase.ts` → track open/settled (no commit/reveal phases)
+- Vote UI → live rating display, potential return calculator
 
-1. **Deploy new VotingEngine** alongside the existing one
-2. **New content uses the new mechanism** from deployment forward
-3. **Existing content continues** with the old commit-reveal mechanism until its current rounds settle
-4. **Frontend shows both** modes during transition, with the old mechanism for legacy content
+**Kept as-is:**
+- `ContentRegistry.sol`, `CategoryRegistry.sol`, `CuryoReputation.sol`
+- `VoterRegistry.sol` (sybil-resistant Voter IDs)
+- `ParticipationPool.sol` (minor wording change only)
+- `RoundRewardDistributor.sol` (formula change: shares instead of stakes)
+- `RewardMath.sol` (adjust split percentages, share-based calculation)
+- Ponder indexer (reindex new events instead of old ones)
+- Frontend content/category components
+
+## Tokenomics Impact
+
+No contracts are deployed on mainnet yet, so this is a clean-slate build — not a migration.
+
+### What Stays the Same
+
+| Component | Allocation | Change? |
+|-----------|-----------|---------|
+| cREP token (100M max supply) | — | No change |
+| Faucet pool | 51,899,900 cREP | No change |
+| Participation pool | 34,000,000 cREP | Minor: "revealed voters" → "all voters" |
+| Treasury | 10,000,000 cREP | No change |
+| Keeper reward pool | 100,000 cREP | Reduced scope (no reveal/processUnrevealed) |
+| Category registry | 100 cREP | No change |
+
+### What Changes
+
+**1. Consensus Subsidy (4,000,000 cREP) — removed.**
+
+The consensus subsidy exists for unanimous rounds (losingPool = 0). Under the new design, epochs require voters on both sides to settle. One-sided epochs settle as draws (stakes returned). There's never a case where `losingPool = 0` at a normal settlement.
+
+This 4M cREP can be reallocated to the participation pool (extending bootstrap incentives) or kept as governance reserve.
+
+**2. Losing Pool Split — adjusted.**
+
+| Recipient | Current | Proposed |
+|-----------|---------|----------|
+| Winning voters | 82% | **87%** |
+| Content submitter | 10% | 10% |
+| Platform fees (frontend + category) | 2% | 2% |
+| Treasury | 1% | 1% |
+| Consensus subsidy | 5% | **0% (removed)** |
+
+The 5% that went to consensus subsidy is redistributed to winning voters.
+
+**3. Winning Voter Reward Formula — share-weighted instead of stake-weighted.**
+
+Current: `reward = voterPool * voterStake / totalWinningStake`
+Proposed: `reward = voterPool * voterShares / totalWinningShares`
+
+Since early/contrarian voters hold more shares per cREP, they get a bigger cut. **Total amount distributed is the same — only the split among winners changes.**
+
+**4. Unrevealed Vote Processing — eliminated entirely.**
+
+`processUnrevealedVotes()` and all its forfeiture/refund logic disappears. There are no "unrevealed" votes — all votes are public and locked. This means treasury loses the unrevealed-forfeiture income source, but this was always meant to be a small, incidental amount.
+
+**5. Participation Pool — minor adjustment.**
+
+Currently pays "all revealed voters" at settlement. Becomes "all voters" since there's no reveal step. The rate halving tiers, deferred-to-settlement logic, and pull-based claiming all remain identical.
+
+### Net Impact
+
+The token economics are structurally the same. The changes are:
+- Share-weighted reward distribution (early voters earn more) instead of stake-weighted (all winners equal)
+- 5% from consensus subsidy → winning voters (82% becomes 87%)
+- Elimination of unrevealed vote processing (pure simplification)
+
+No new pools, no new emission schedules, no changes to the 100M cap.
 
 ## Advantages
 
