@@ -120,7 +120,7 @@ test.describe("Negative cases", () => {
     await confirmBtn.click();
 
     // Wait for success or error (includes approval failures)
-    const successMsg = page.getByText(/committed|success|voted/i);
+    const successMsg = page.getByText(/voted|success/i);
     const errorMsg = page.getByText(/reverted|failed|error|rejected|not confirmed/i);
     await expect(successMsg.or(errorMsg).first()).toBeVisible({ timeout: 30_000 });
 
@@ -136,10 +136,10 @@ test.describe("Negative cases", () => {
     }
 
     // After successful vote, stay on the page and verify the UI shows voted state.
-    // The VotingQuestionCard reads the vote from localStorage and shows
+    // The VotingQuestionCard reads the vote from contract state and shows
     // "Voted Up"/"Voted Down" badge or "Cooldown" instead of vote buttons.
     // The page may auto-advance to the next content after voting.
-    // Also accept "commitVote reverted" as evidence: the contract rejects
+    // Also accept "vote reverted" as evidence: the contract rejects
     // duplicate votes, so a revert when revisiting means the prior vote stuck.
     await page.waitForTimeout(3_000);
 
@@ -147,7 +147,7 @@ test.describe("Negative cases", () => {
       .getByText("Voted Up")
       .or(page.getByText("Voted Down"))
       .or(page.getByText(/Cooldown/i))
-      .or(page.getByText(/commitVote.*reverted/i));
+      .or(page.getByText(/vote.*reverted/i));
 
     let foundVotedState = await votedOrCooldown
       .first()
@@ -177,7 +177,7 @@ test.describe("Negative cases", () => {
     }
 
     // The voted content should show "Voted Up/Down", "Cooldown", or
-    // "commitVote reverted" (contract rejects duplicate votes).
+    // "vote reverted" (contract rejects duplicate votes).
     // After voting the page auto-advances to the next card, so re-finding
     // the voted content in the thumbnail grid can be flaky — skip gracefully.
     if (!foundVotedState) {

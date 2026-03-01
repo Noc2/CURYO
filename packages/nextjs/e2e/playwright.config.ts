@@ -21,17 +21,17 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
       // Exclude tests that need special conditions:
-      // - settlement/reward/tied-round: need drand beacons (~15 min after chain start)
+      // - settlement/reward/tied-round: need block advancement for settlement
       // - round-cancellation/content-dormancy: need time-skip (fast-forward days)
       testIgnore:
-        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|unrevealed-votes|zz-multi-round|unanimous-settlement/,
+        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement/,
     },
     {
-      // Settlement tests need drand beacons (~15 min after chain start).
+      // Settlement tests need block advancement for random settlement.
       // Run with: yarn e2e:settlement
       name: "settlement",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: /settlement-lifecycle|reward-claim|tied-round|unrevealed-votes|zz-multi-round|unanimous-settlement/,
+      testMatch: /settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement/,
       dependencies: ["chromium"],
     },
     {
