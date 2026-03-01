@@ -1,16 +1,15 @@
 import {
   approveCREP,
-  commitVoteDirect,
   getActiveRoundId,
+  mineBlocks,
   readUint256,
-  revealVoteDirect,
-  settleRoundDirect,
   submitContentDirect,
+  trySettleDirect,
+  voteDirect,
   waitForPonderIndexed,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
-import { fastForwardTime } from "../helpers/keeper";
 import { getContentById } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
 
@@ -83,7 +82,7 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     expect(contentId).toBeTruthy();
   });
 
-  test("commit and reveal 3 unanimous UP votes, then settle", async () => {
+  test("vote 3 unanimous UP votes, then settle", async () => {
     test.setTimeout(120_000);
     test.skip(!contentId, "No content from previous test");
 
@@ -92,52 +91,30 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     expect(reserveBefore).toBeGreaterThan(0n);
 
     const voters = [ANVIL_ACCOUNTS.account3, ANVIL_ACCOUNTS.account4, ANVIL_ACCOUNTS.account5];
-    const commitData: Array<{ voter: string; commitHash: `0x${string}`; salt: `0x${string}` }> = [];
 
-    // All vote UP — unanimous
+    // All vote UP — unanimous (public voting, no commit-reveal)
     for (let i = 0; i < voters.length; i++) {
-      const salt = `0x${(i + 1).toString(16).padStart(64, "0")}` as `0x${string}`;
       await approveCREP(VOTING_ENGINE, STAKE, voters[i].address, CREP_TOKEN);
-      const { success, commitHash } = await commitVoteDirect(
+      const success = await voteDirect(
         BigInt(contentId!),
         true, // UP
-        salt,
         STAKE,
         "0x0000000000000000000000000000000000000000",
         voters[i].address,
         VOTING_ENGINE,
       );
-      expect(success, `Commit failed for voter ${i}`).toBe(true);
-      commitData.push({ voter: voters[i].address, commitHash, salt });
+      expect(success, `Vote failed for voter ${i}`).toBe(true);
     }
 
     roundId = await getActiveRoundId(BigInt(contentId!), VOTING_ENGINE);
     expect(roundId).toBeGreaterThan(0n);
 
-    // Fast-forward past epoch boundary
-    await fastForwardTime(901);
-
-    // Reveal all votes
-    const keeper = ANVIL_ACCOUNTS.account1;
-    for (const cd of commitData) {
-      const revealed = await revealVoteDirect(
-        BigInt(contentId!),
-        roundId,
-        cd.voter,
-        cd.commitHash,
-        true,
-        cd.salt,
-        keeper.address,
-        VOTING_ENGINE,
-      );
-      expect(revealed, "Reveal failed").toBe(true);
-    }
-
-    // Fast-forward for settlement delay
-    await fastForwardTime(901);
+    // Advance past maxEpochBlocks for guaranteed settlement
+    await mineBlocks(1801);
 
     // Settle the round
-    const settled = await settleRoundDirect(BigInt(contentId!), roundId, keeper.address, VOTING_ENGINE);
+    const keeper = ANVIL_ACCOUNTS.account1;
+    const settled = await trySettleDirect(BigInt(contentId!), keeper.address, VOTING_ENGINE);
     expect(settled, "Settlement failed").toBe(true);
 
     // Wait for Ponder to index
@@ -172,13 +149,13 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     const round = data.rounds.find(r => String(r.roundId) === String(roundId));
 
     expect(round).toBeTruthy();
-    expect(round!.state).toBe(1); // Settled (not tied — all UP, downPool=0)
+    expect(round!.state).toBe(1); // Settled (not tied — all UP, downStake=0)
     expect(round!.upWins).toBe(true);
-    expect(Number(round!.revealedCount)).toBe(3);
+    expect(Number(round!.voteCount)).toBe(3);
 
-    // Unanimous: downPool should be "0" and upPool should equal totalStake
-    expect(round!.downPool).toBe("0");
-    expect(BigInt(round!.upPool)).toBe(STAKE * 3n);
+    // Unanimous: downStake should be "0" and upStake should equal totalStake
+    expect(round!.downStake).toBe("0");
+    expect(BigInt(round!.upStake)).toBe(STAKE * 3n);
 
     // Rating should have increased from default (50) since UP won
     expect(data.ratings.length).toBeGreaterThanOrEqual(1);

@@ -1,6 +1,7 @@
-import { waitForPonderIndexed } from "../helpers/admin-helpers";
+import { mineBlocks, trySettleDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { fastForwardTime, triggerKeeper, waitForSettlementIndexed } from "../helpers/keeper";
+import { CONTRACT_ADDRESSES } from "../helpers/contracts";
+import { fastForwardTime, waitForSettlementIndexed } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentById, getContentList } from "../helpers/ponder-api";
 import { voteOnSpecificContent } from "../helpers/vote-helpers";
@@ -8,13 +9,13 @@ import { expect, test } from "@playwright/test";
 
 /**
  * Tied round lifecycle test.
- * Verifies that when upPool === downPool the round settles as Tied (state=3),
+ * Verifies that when upStake === downStake the round settles as Tied (state=3),
  * the content rating does NOT change, and rewards are handled correctly.
  *
  * Strategy:
  * 1. Submit fresh content via the UI to get a clean round with 0 votes
  * 2. 4 accounts vote on the SAME content: 2 UP + 2 DOWN, all 1 cREP
- * 3. Fast-forward + keeper reveal + settle
+ * 3. Mine past maxEpochBlocks + settle
  * 4. Verify round.state === 3 (Tied) and rating unchanged
  *
  * Account allocation:
@@ -139,22 +140,11 @@ test.describe("Tied round lifecycle", () => {
     const preData = await getContentById(newContentId!);
     const preRating = preData.content.rating;
 
-    // Fast-forward past epoch boundary
-    await fastForwardTime(901);
+    // Mine past maxEpochBlocks for guaranteed settlement
+    await mineBlocks(1801);
 
-    // Trigger keeper
-    let totalRevealed = 0;
-    let totalSettled = 0;
-
-    for (let attempt = 0; attempt < 20; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, 15_000));
-      const resp = await triggerKeeper("http://localhost:3000");
-      totalRevealed += resp.result.votesRevealed;
-      totalSettled += resp.result.roundsSettled;
-      if (totalRevealed > 0 && totalSettled > 0) break;
-    }
-
-    expect(totalRevealed, "Drand beacons not available — keeper revealed 0 votes").toBeGreaterThan(0);
+    // Try to settle
+    await trySettleDirect(BigInt(newContentId!), ANVIL_ACCOUNTS.account1.address, CONTRACT_ADDRESSES.RoundVotingEngine);
 
     // Wait for settlement in Ponder
     const settled = await waitForSettlementIndexed(newContentId!, "http://localhost:42069", 30_000);
@@ -166,7 +156,6 @@ test.describe("Tied round lifecycle", () => {
     const settledRound = postData.rounds.find(r => r.state === 1);
 
     // With equal pools, the round should be tied (state=3)
-    // However, if reveals happen asynchronously, one side might have more reveals
     // Accept either Tied (3) or Settled (1) — the important thing is the round resolved
     expect(tiedRound || settledRound).toBeTruthy();
 
@@ -175,7 +164,7 @@ test.describe("Tied round lifecycle", () => {
       expect(postData.content.rating).toBe(preRating);
 
       // Verify equal pools
-      expect(tiedRound.upPool).toBe(tiedRound.downPool);
+      expect(tiedRound.upStake).toBe(tiedRound.downStake);
     }
   });
 });

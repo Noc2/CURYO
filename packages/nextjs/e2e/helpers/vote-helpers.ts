@@ -5,7 +5,7 @@ import type { Page } from "@playwright/test";
  * Try to vote on content. If the featured content has cooldown/own-content/round-full,
  * click through thumbnail grid items until we find voteable content.
  *
- * Returns true if the vote was successfully committed, false otherwise.
+ * Returns true if the vote was successfully placed, false otherwise.
  * Handles transaction reverts gracefully by returning false instead of throwing.
  */
 export async function voteOnContent(page: Page, direction: "up" | "down"): Promise<boolean> {
@@ -89,10 +89,9 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
   // Wait for EITHER success OR error — the contract call may revert.
   // NOTE: Do NOT match /success/i — scaffold-eth fires a generic
   // "Transaction completed successfully!" toast for the approve tx,
-  // which would match before the actual vote commit completes.
+  // which would match before the actual vote completes.
   const successIndicator = page
-    .getByText(/committed/i)
-    .or(page.getByText(/voted/i));
+    .getByText(/voted/i);
 
   const errorIndicator = page
     .getByText(/reverted/i)
@@ -122,7 +121,7 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
  * Vote on a specific content item by navigating to /vote?content={contentId}.
  * Same flow as voteOnContent but targets a known content ID.
  *
- * Returns true if the vote was successfully committed, false otherwise.
+ * Returns true if the vote was successfully placed, false otherwise.
  */
 export async function voteOnSpecificContent(
   page: Page,

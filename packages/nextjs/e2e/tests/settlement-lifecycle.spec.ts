@@ -1,29 +1,28 @@
 import {
   approveCREP,
-  commitVoteDirect,
   getActiveRoundId,
-  revealVoteDirect,
-  settleRoundDirect,
+  mineBlocks,
   submitContentDirect,
+  trySettleDirect,
+  voteDirect,
   waitForPonderIndexed,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
-import { fastForwardTime, triggerKeeper } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
 import { getContentById, getContentList } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
 
 /**
- * Settlement lifecycle — full vote → reveal → settle cycle.
+ * Settlement lifecycle — full vote → settle cycle.
  *
- * Uses direct contract calls for the entire flow (commit, reveal, settle)
- * to avoid drand beacon timing dependencies.
+ * Uses direct contract calls for the entire flow (vote, settle)
+ * with public voting (no commit-reveal).
  *
  * Account allocation (exclusive to this file):
  * - Account #10 — submits fresh content
  * - Accounts #3, #4, #5 — vote via direct contract calls
- * - Account #1 (keeper) — reveals and settles
+ * - Account #1 (keeper) — settles
  */
 test.describe("Settlement lifecycle", () => {
   test.describe.configure({ mode: "serial" });
@@ -32,6 +31,7 @@ test.describe("Settlement lifecycle", () => {
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const STAKE = BigInt(10e6); // 10 cREP (above MIN_STAKE_FOR_RATING threshold)
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
   let newContentId: string | null = null;
 
@@ -68,65 +68,43 @@ test.describe("Settlement lifecycle", () => {
     expect(newContentId).toBeTruthy();
   });
 
-  test("full cycle: vote → reveal → settle", async () => {
+  test("full cycle: vote → settle", async () => {
     test.setTimeout(120_000);
     test.skip(!newContentId, "No content from previous test");
 
-    // Step 1: Commit votes via direct contract calls
+    // Step 1: Vote via direct contract calls (public voting — no commit/reveal)
     const voters = [
       { account: ANVIL_ACCOUNTS.account3, isUp: true },
       { account: ANVIL_ACCOUNTS.account4, isUp: true },
       { account: ANVIL_ACCOUNTS.account5, isUp: false },
     ];
-    const commitData: Array<{ voter: string; commitHash: `0x${string}`; salt: `0x${string}`; isUp: boolean }> = [];
 
     for (let i = 0; i < voters.length; i++) {
-      const salt = `0x${(i + 1).toString(16).padStart(64, "0")}` as `0x${string}`;
       await approveCREP(VOTING_ENGINE, STAKE, voters[i].account.address, CREP_TOKEN);
-      const { success, commitHash } = await commitVoteDirect(
+      const success = await voteDirect(
         BigInt(newContentId!),
         voters[i].isUp,
-        salt,
         STAKE,
-        "0x0000000000000000000000000000000000000000",
+        ZERO_ADDRESS,
         voters[i].account.address,
         VOTING_ENGINE,
       );
-      expect(success, `Commit failed for voter ${i}`).toBe(true);
-      commitData.push({ voter: voters[i].account.address, commitHash, salt, isUp: voters[i].isUp });
+      expect(success, `Vote failed for voter ${i}`).toBe(true);
     }
 
     // Step 2: Get the active round ID
     const roundId = await getActiveRoundId(BigInt(newContentId!), VOTING_ENGINE);
     expect(roundId).toBeGreaterThan(0n);
 
-    // Step 3: Fast-forward past the epoch boundary
-    await fastForwardTime(901);
+    // Step 3: Mine blocks past maxEpochBlocks for guaranteed settlement
+    await mineBlocks(1801);
 
-    // Step 4: Reveal all votes directly (bypasses drand/tlock)
+    // Step 4: Settle the round
     const keeper = ANVIL_ACCOUNTS.account1;
-    for (const cd of commitData) {
-      const revealed = await revealVoteDirect(
-        BigInt(newContentId!),
-        roundId,
-        cd.voter,
-        cd.commitHash,
-        cd.isUp,
-        cd.salt,
-        keeper.address,
-        VOTING_ENGINE,
-      );
-      expect(revealed, `Reveal failed for ${cd.voter}`).toBe(true);
-    }
-
-    // Step 5: Fast-forward for settlement delay
-    await fastForwardTime(901);
-
-    // Step 6: Settle the round directly
-    const settled = await settleRoundDirect(BigInt(newContentId!), roundId, keeper.address, VOTING_ENGINE);
+    const settled = await trySettleDirect(BigInt(newContentId!), keeper.address, VOTING_ENGINE);
     expect(settled, "Settlement failed").toBe(true);
 
-    // Step 7: Wait for Ponder to index the settlement AND rating update
+    // Step 5: Wait for Ponder to index the settlement AND rating update
     const settledIndexed = await waitForPonderIndexed(async () => {
       const data = await getContentById(newContentId!);
       const roundSettled = data.rounds.some(
@@ -136,7 +114,7 @@ test.describe("Settlement lifecycle", () => {
     }, 30_000);
     expect(settledIndexed, "Ponder did not index settlement + rating for the fresh content").toBe(true);
 
-    // Step 8: Verify RatingUpdated
+    // Step 6: Verify RatingUpdated
     const { content: settledContent, ratings } = await getContentById(newContentId!);
     expect(ratings.length).toBeGreaterThanOrEqual(1);
     expect(ratings[0]).toHaveProperty("oldRating");
@@ -164,14 +142,5 @@ test.describe("Settlement lifecycle", () => {
     await expect(voteHistoryHeading).toBeVisible({ timeout: 10_000 });
 
     await context.close();
-  });
-
-  test("keeper API returns valid response", async () => {
-    const response = await triggerKeeper("http://localhost:3000");
-    expect(response).toHaveProperty("success");
-    expect(response).toHaveProperty("result");
-    expect(response.result).toHaveProperty("votesRevealed");
-    expect(response.result).toHaveProperty("roundsSettled");
-    expect(response.result).toHaveProperty("roundsCancelled");
   });
 });

@@ -1,10 +1,10 @@
 import {
   approveCREP,
-  commitVoteDirect,
   getActiveRoundId,
-  revealVoteDirect,
-  settleRoundDirect,
+  mineBlocks,
   submitContentDirect,
+  trySettleDirect,
+  voteDirect,
   waitForPonderIndexed,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
@@ -79,57 +79,35 @@ test.describe("Multi-round succession", () => {
     expect(contentId).toBeTruthy();
   });
 
-  test("round 1: commit, reveal, settle (3 UP votes)", async () => {
+  test("round 1: vote and settle (3 UP votes)", async () => {
     test.setTimeout(120_000);
     test.skip(!contentId, "No content from previous test");
 
     const voters = [ANVIL_ACCOUNTS.account3, ANVIL_ACCOUNTS.account4, ANVIL_ACCOUNTS.account5];
-    const commitData: Array<{ voter: string; commitHash: `0x${string}`; salt: `0x${string}` }> = [];
 
-    // Commit 3 UP votes
+    // Cast 3 UP votes (public voting, no commit-reveal)
     for (let i = 0; i < voters.length; i++) {
-      const salt = `0x${(i + 1).toString(16).padStart(64, "0")}` as `0x${string}`;
       await approveCREP(VOTING_ENGINE, STAKE, voters[i].address, CREP_TOKEN);
-      const { success, commitHash } = await commitVoteDirect(
+      const success = await voteDirect(
         BigInt(contentId!),
         true, // UP
-        salt,
         STAKE,
         "0x0000000000000000000000000000000000000000",
         voters[i].address,
         VOTING_ENGINE,
       );
-      expect(success, `Round 1 commit failed for voter ${i}`).toBe(true);
-      commitData.push({ voter: voters[i].address, commitHash, salt });
+      expect(success, `Round 1 vote failed for voter ${i}`).toBe(true);
     }
 
     round1Id = await getActiveRoundId(BigInt(contentId!), VOTING_ENGINE);
     expect(round1Id).toBeGreaterThan(0n);
 
-    // Fast-forward past epoch boundary
-    await fastForwardTime(901);
-
-    // Reveal all 3 votes
-    const keeper = ANVIL_ACCOUNTS.account1;
-    for (const cd of commitData) {
-      const revealed = await revealVoteDirect(
-        BigInt(contentId!),
-        round1Id,
-        cd.voter,
-        cd.commitHash,
-        true,
-        cd.salt,
-        keeper.address,
-        VOTING_ENGINE,
-      );
-      expect(revealed, "Round 1 reveal failed").toBe(true);
-    }
-
-    // Fast-forward for settlement delay
-    await fastForwardTime(901);
+    // Advance past maxEpochBlocks for guaranteed settlement
+    await mineBlocks(1801);
 
     // Settle round 1
-    const settled = await settleRoundDirect(BigInt(contentId!), round1Id, keeper.address, VOTING_ENGINE);
+    const keeper = ANVIL_ACCOUNTS.account1;
+    const settled = await trySettleDirect(BigInt(contentId!), keeper.address, VOTING_ENGINE);
     expect(settled, "Round 1 settlement failed").toBe(true);
 
     // Wait for Ponder to index settlement
@@ -152,54 +130,31 @@ test.describe("Multi-round succession", () => {
     await fastForwardTime(86401);
 
     const voters = [ANVIL_ACCOUNTS.account3, ANVIL_ACCOUNTS.account4, ANVIL_ACCOUNTS.account5];
-    const commitData: Array<{ voter: string; commitHash: `0x${string}`; salt: `0x${string}` }> = [];
 
-    // Commit 3 DOWN votes for round 2 (opposite direction to show rating moves both ways)
+    // Cast 3 DOWN votes for round 2 (opposite direction to show rating moves both ways)
     for (let i = 0; i < voters.length; i++) {
-      // Different salts from round 1
-      const salt = `0x${(i + 100).toString(16).padStart(64, "0")}` as `0x${string}`;
       await approveCREP(VOTING_ENGINE, STAKE, voters[i].address, CREP_TOKEN);
-      const { success, commitHash } = await commitVoteDirect(
+      const success = await voteDirect(
         BigInt(contentId!),
         false, // DOWN
-        salt,
         STAKE,
         "0x0000000000000000000000000000000000000000",
         voters[i].address,
         VOTING_ENGINE,
       );
-      expect(success, `Round 2 commit failed for voter ${i}`).toBe(true);
-      commitData.push({ voter: voters[i].address, commitHash, salt });
+      expect(success, `Round 2 vote failed for voter ${i}`).toBe(true);
     }
 
     // A new round should have been created
     round2Id = await getActiveRoundId(BigInt(contentId!), VOTING_ENGINE);
     expect(round2Id).toBeGreaterThan(round1Id);
 
-    // Fast-forward past epoch
-    await fastForwardTime(901);
-
-    // Reveal all 3 votes
-    const keeper = ANVIL_ACCOUNTS.account1;
-    for (const cd of commitData) {
-      const revealed = await revealVoteDirect(
-        BigInt(contentId!),
-        round2Id,
-        cd.voter,
-        cd.commitHash,
-        false,
-        cd.salt,
-        keeper.address,
-        VOTING_ENGINE,
-      );
-      expect(revealed, "Round 2 reveal failed").toBe(true);
-    }
-
-    // Fast-forward for settlement delay
-    await fastForwardTime(901);
+    // Advance past maxEpochBlocks for guaranteed settlement
+    await mineBlocks(1801);
 
     // Settle round 2
-    const settled = await settleRoundDirect(BigInt(contentId!), round2Id, keeper.address, VOTING_ENGINE);
+    const keeper = ANVIL_ACCOUNTS.account1;
+    const settled = await trySettleDirect(BigInt(contentId!), keeper.address, VOTING_ENGINE);
     expect(settled, "Round 2 settlement failed").toBe(true);
 
     // Wait for Ponder to index
