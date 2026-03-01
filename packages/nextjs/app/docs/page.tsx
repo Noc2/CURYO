@@ -37,7 +37,7 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Per-Content Rounds"
-          description="Each content item accumulates votes across 15-minute tlock-encrypted epochs. After each epoch, votes are revealed via drand beacons. Settlement occurs when 3 or more votes have been revealed."
+          description="Each content item accumulates public votes within a round. A bonding curve rewards early conviction with more shares. Settlement is probabilistic, triggered after a minimum block count."
         />
         <FeatureCard
           title="Contributor Rewards"
@@ -48,24 +48,25 @@ const DocsIntro: NextPage = () => {
       <h2>Voting Flow</h2>
       <p>
         Voters predict whether content&apos;s rating will go <strong>UP</strong> or <strong>DOWN</strong> and back their
-        prediction with a cREP stake. Votes are encrypted so no one can see others&apos; votes before the epoch ends.
+        prediction with a cREP stake. Votes are immediately public and price-moving &mdash; a bonding curve determines
+        how many shares each voter receives, rewarding early conviction.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
       </div>
       <ol>
         <li>
-          <strong>Commit:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Vote is encrypted
-          and committed on-chain.
+          <strong>Vote:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote is public
+          and immediately recorded on-chain.
         </li>
         <li>
-          <strong>Reveal:</strong> After each epoch ends (15 minutes by default), votes become revealable. Keepers
-          typically submit reveals, and any account can call reveal with valid plaintext.
+          <strong>Accumulate:</strong> Votes accumulate within the round. Live tallies are visible at all times.
         </li>
         <li>
-          <strong>Settlement:</strong> Once at least <strong>3 votes</strong> have been revealed and the settlement
-          delay has elapsed, anyone can settle the round. The majority side wins and the losing side&apos;s stakes
-          become the reward pool.
+          <strong>Settlement:</strong> After the minimum epoch length has passed and enough votes have been cast, anyone
+          can trigger settlement via <code>trySettle()</code>. Settlement is probabilistic, using{" "}
+          <code>block.prevrandao</code> randomness. The majority side wins and the losing side&apos;s stakes become the
+          reward pool.
         </li>
       </ol>
       <p>The losing pool is split:</p>

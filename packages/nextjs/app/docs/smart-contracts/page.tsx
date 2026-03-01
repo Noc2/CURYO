@@ -40,7 +40,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
-              <td>Core voting: encrypted commits, reveals, per-content round settlement</td>
+              <td>Core voting: public votes, bonding curve shares, probabilistic settlement</td>
               <td>UUPS</td>
             </tr>
             <tr>
@@ -145,7 +145,7 @@ const SmartContracts: NextPage = () => {
           <code>revokeVoterId(holder)</code> &mdash; Revoke a Voter ID (owner/governance).
         </li>
         <li>
-          <code>recordStake(contentId, epochId, tokenId, amount)</code> &mdash; Record stake against a Voter ID (voting
+          <code>recordStake(contentId, roundId, tokenId, amount)</code> &mdash; Record stake against a Voter ID (voting
           engine only).
         </li>
         <li>
@@ -226,7 +226,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>markDormant(contentId)</code> &mdash; Mark inactive content as dormant after 30 days. Permissionless;
-          reverts if content has pending unrevealed votes.
+          reverts if content has an active open round.
         </li>
         <li>
           <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 cREP, max 2 times).
@@ -253,8 +253,8 @@ const SmartContracts: NextPage = () => {
 
       <h2>RoundVotingEngine</h2>
       <p>
-        Manages per-content voting rounds with tlock-encrypted commits, epoch-based reveals, and settlement when enough
-        votes are revealed.
+        Manages per-content voting rounds with public votes, bonding curve share allocation, and probabilistic
+        settlement. One-sided rounds (consensus) receive a subsidy from the consensus reserve.
       </p>
       <h3>Configuration</h3>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -278,19 +278,39 @@ const SmartContracts: NextPage = () => {
               <td>Maximum vote stake per Voter ID per round</td>
             </tr>
             <tr>
-              <td className="font-mono">epochDuration</td>
-              <td>15 minutes</td>
-              <td>Duration of each tlock-encrypted voting epoch within a round</td>
+              <td className="font-mono">minEpochBlocks</td>
+              <td>Configurable</td>
+              <td>Minimum blocks before settlement becomes possible</td>
             </tr>
             <tr>
-              <td className="font-mono">maxRoundDuration</td>
-              <td>7 days</td>
-              <td>Maximum time before an unsettled round is cancelled</td>
+              <td className="font-mono">maxEpochBlocks</td>
+              <td>Configurable</td>
+              <td>Maximum blocks before round expires if unsettled</td>
+            </tr>
+            <tr>
+              <td className="font-mono">baseRateBps</td>
+              <td>Configurable</td>
+              <td>Starting settlement probability (basis points) after minEpochBlocks</td>
+            </tr>
+            <tr>
+              <td className="font-mono">growthRateBps</td>
+              <td>Configurable</td>
+              <td>Settlement probability increase per block (basis points)</td>
+            </tr>
+            <tr>
+              <td className="font-mono">maxProbBps</td>
+              <td>Configurable</td>
+              <td>Maximum settlement probability cap (basis points)</td>
+            </tr>
+            <tr>
+              <td className="font-mono">liquidityParam</td>
+              <td>Configurable</td>
+              <td>Bonding curve parameter (b) controlling share allocation</td>
             </tr>
             <tr>
               <td className="font-mono">minVotersToSettle</td>
               <td>5</td>
-              <td>Minimum revealed votes required before settlement</td>
+              <td>Minimum votes required before settlement</td>
             </tr>
             <tr>
               <td className="font-mono">maxVotersPerRound</td>
@@ -308,19 +328,15 @@ const SmartContracts: NextPage = () => {
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend)</code> &mdash; Submit encrypted
-          vote with cREP stake (1&ndash;100). Requires Voter ID. Per-identity stake cap enforced.
+          <code>vote(contentId, isUp, stakeAmount, frontend)</code> &mdash; Submit a public vote with cREP stake
+          (1&ndash;100). Requires Voter ID. Per-identity stake cap enforced. Shares are calculated via the bonding
+          curve: <code>shares = stake * b / (sameDirectionStake + b)</code>.
         </li>
         <li>
-          <code>commitVoteWithPermit(...)</code> &mdash; Same as above but uses ERC-2612 permit for gasless approval.
-        </li>
-        <li>
-          <code>revealVote(contentId, roundId, commitHash, isUp, salt)</code> &mdash; Reveal a vote after epoch ends.
-          Permissionless &mdash; anyone can call this with data decrypted from drand.
-        </li>
-        <li>
-          <code>settleRound(contentId, roundId)</code> &mdash; Settle round once &ge;3 votes are revealed. O(1) gas cost
-          regardless of voter count. Determines winners, splits reward pools, and updates content rating.
+          <code>trySettle(contentId)</code> &mdash; Attempt to settle the current round. Settlement is probabilistic:
+          probability increases each block after <code>minEpochBlocks</code> using <code>block.prevrandao</code>{" "}
+          randomness. O(1) gas cost regardless of voter count. Determines winners, splits reward pools, and updates
+          content rating.
         </li>
         <li>
           <code>claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators claim their
@@ -331,7 +347,7 @@ const SmartContracts: NextPage = () => {
           snapshotted at settlement time for fairness). Pull-based.
         </li>
         <li>
-          <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxRoundDuration
+          <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxEpochBlocks
           without reaching the minimum voter threshold. Full refund to all participants.
         </li>
         <li>
@@ -499,8 +515,8 @@ const SmartContracts: NextPage = () => {
           platform (1% frontend + 1% category) / 1% treasury.
         </li>
         <li>
-          <code>calculateVoterReward(stake, totalWinning, voterPool)</code> &mdash; Proportional reward from the
-          content-specific pool. 100% of the voter share goes to the content-specific pool.
+          <code>calculateVoterReward(shares, totalWinningShares, voterPool)</code> &mdash; Share-proportional reward
+          from the content-specific pool. 100% of the voter share goes to the content-specific pool.
         </li>
         <li>
           <code>calculateRatingDelta(winningStake, winningVoterCount)</code> &mdash; Returns 1&ndash;5 based on stake

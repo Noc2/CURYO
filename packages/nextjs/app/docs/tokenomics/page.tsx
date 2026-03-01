@@ -187,11 +187,11 @@ const Tokenomics = () => {
       <p>
         The participation pool solves the <strong>cold start problem</strong>. When the platform is new and vote stakes
         are small, round rewards alone may not be enough to attract voters and submitters. The participation pool pays a{" "}
-        <strong>proportional bonus on stake</strong>: submitters are rewarded immediately on submission, while revealed
-        voters can claim their participation rewards after round settlement (regardless of vote outcome). The voter
-        reward rate is snapshotted at settlement time for fairness. Early participants receive the most thanks to a
-        halving schedule: as cumulative rewards grow, the reward rate decreases. This creates a strong incentive to
-        participate early and helps bootstrap the network.
+        <strong>proportional bonus on stake</strong>: submitters are rewarded immediately on submission, while voters
+        can claim their participation rewards after round settlement (regardless of vote outcome). The voter reward rate
+        is snapshotted at settlement time for fairness. Early participants receive the most thanks to a halving
+        schedule: as cumulative rewards grow, the reward rate decreases. This creates a strong incentive to participate
+        early and helps bootstrap the network.
       </p>
       <p>
         Reward formula: <code>reward = stakeAmount &times; currentRate</code>. The rate starts at <strong>90%</strong>{" "}
@@ -248,10 +248,10 @@ const Tokenomics = () => {
         </table>
       </div>
       <p>
-        Voter participation rewards are distributed only after a round settles &mdash; deferred from commit time to
-        prevent exploitation where attackers could commit votes, collect immediate rewards, and then have rounds cancel
-        without risk. Submitter participation rewards are paid at submission time to bootstrap content supply. The pool
-        is funded with <strong>34M cREP</strong> and governed by the same timelock as all other protocol contracts.
+        Voter participation rewards are distributed only after a round settles &mdash; deferred from vote time to
+        prevent exploitation where attackers could vote, collect immediate rewards, and then have rounds cancel without
+        risk. Submitter participation rewards are paid at submission time to bootstrap content supply. The pool is
+        funded with <strong>34M cREP</strong> and governed by the same timelock as all other protocol contracts.
       </p>
       <div className="not-prose my-6">
         <FaucetHalvingChart />
@@ -259,10 +259,10 @@ const Tokenomics = () => {
 
       <h3>Treasury</h3>
       <p>
-        The governance treasury starts with <strong>10M cREP</strong> and grows over time through three inflow sources:
-        a 1% fee from every round settlement, slashed submitter stakes (when content rating drops below 10%), and
-        forfeited unrevealed vote stakes. Treasury tokens are distributed exclusively via governance proposals &mdash;
-        for grants, whistleblower rewards, and protocol development.
+        The governance treasury starts with <strong>10M cREP</strong> and grows over time through two inflow sources: a
+        1% fee from every round settlement and slashed submitter stakes (when content rating drops below 10%). Treasury
+        tokens are distributed exclusively via governance proposals &mdash; for grants, whistleblower rewards, and
+        protocol development.
       </p>
 
       <hr />
@@ -314,10 +314,11 @@ const Tokenomics = () => {
       </div>
 
       <p>
-        The 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by stake to
-        winning voters on that content. An additional 5% goes to a consensus subsidy reserve. Because each content item
-        has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement.
-        The 1% treasury fee goes to the governance timelock.
+        The 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
+        <strong>shares</strong> to winning voters on that content. Shares are determined by a bonding curve, so early
+        voters on the winning side receive a larger reward per cREP staked. An additional 5% goes to a consensus subsidy
+        reserve. Because each content item has independent rounds that settle on their own timeline, rewards are
+        claimable immediately after settlement. The 1% treasury fee goes to the governance timelock.
       </p>
 
       <hr />
@@ -353,7 +354,6 @@ const Tokenomics = () => {
       </div>
       <p>
         Submitter stakes are slashed (100% to treasury) if content rating drops below 10% after a 24-hour grace period.
-        Unrevealed votes forfeit their entire stake to the treasury.
       </p>
     </article>
   );

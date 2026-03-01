@@ -28,10 +28,10 @@ const WhitepaperPage: NextPage = () => {
           <strong>Introduction</strong> &mdash; Mission, key principles, and voting flow overview
         </li>
         <li>
-          <strong>How It Works</strong> &mdash; Round and epoch mechanics, voter ID, reward distribution, content rating
+          <strong>How It Works</strong> &mdash; Round mechanics, voter ID, reward distribution, content rating
         </li>
         <li>
-          <strong>Commit-Reveal Scheme</strong> &mdash; Cryptographic vote privacy using tlock and drand
+          <strong>Public Voting</strong> &mdash; Bonding curve shares and random settlement
         </li>
         <li>
           <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards

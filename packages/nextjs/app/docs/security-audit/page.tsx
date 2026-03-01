@@ -76,7 +76,7 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">UUPS</span>
               </td>
-              <td>Core voting: commits, tlock-encrypted reveals, settlement, consensus subsidy</td>
+              <td>Core voting: public votes, bonding curve shares, probabilistic settlement, consensus subsidy</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
@@ -160,7 +160,7 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Library</span>
               </td>
-              <td>Round states, timing, epoch computation</td>
+              <td>Round states, timing, settlement probability</td>
             </tr>
           </tbody>
         </table>
@@ -190,8 +190,8 @@ const SecurityAudit: NextPage = () => {
         </li>
       </ul>
       <p className="text-base-content/60 text-sm">
-        Iterative review across 5 rounds (V1&ndash;V5) plus final consolidation. Epoch-based findings without round
-        equivalents have been removed. New round-based findings from inline audit notes incorporated.
+        Iterative review across 5 rounds (V1&ndash;V5) plus final consolidation. Updated for the public voting + random
+        settlement architecture. New round-based findings from inline audit notes incorporated.
       </p>
 
       <hr />
@@ -227,10 +227,9 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>C-02</td>
               <td>
-                <strong>Token conservation invariant.</strong> For any round that reaches a terminal state:
-                SUM(committed stakes) must equal SUM(claimed rewards) + SUM(forfeited stakes) + SUM(platform fees) +
-                SUM(treasury fees) + SUM(submitter rewards) + dust. Should be formally verified with stateful fuzz
-                testing.
+                <strong>Token conservation invariant.</strong> For any round that reaches a terminal state: SUM(vote
+                stakes) must equal SUM(claimed rewards) + SUM(platform fees) + SUM(treasury fees) + SUM(submitter
+                rewards) + dust. Should be formally verified with stateful fuzz testing.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -241,9 +240,9 @@ const SecurityAudit: NextPage = () => {
               <td>C-03</td>
               <td>
                 <strong>VotingEngine balance solvency invariant.</strong> At any point:{" "}
-                <code>crepToken.balanceOf(votingEngine)</code> must be &ge; SUM(unrevealed pending stakes) +
-                SUM(unclaimed winner rewards) + SUM(unclaimed refunds) + SUM(unclaimed submitter rewards). Should be
-                tested as a Foundry invariant test with random commit/reveal/settle/claim sequences.
+                <code>crepToken.balanceOf(votingEngine)</code> must be &ge; SUM(open round stakes) + SUM(unclaimed
+                winner rewards) + SUM(unclaimed refunds) + SUM(unclaimed submitter rewards). Should be tested as a
+                Foundry invariant test with random vote/settle/claim sequences.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -270,8 +269,8 @@ const SecurityAudit: NextPage = () => {
               <td>H-01</td>
               <td>
                 <strong>cancelContent with active votes strands voter stakes.</strong> Submitter can cancel content
-                after voters commit, preventing reveals (isActive check fails). Voter stakes forfeit. Fix: cancelContent
-                now reverts if any votes have been committed.
+                after voters have voted, preventing settlement (isActive check fails). Voter stakes forfeit. Fix:
+                cancelContent now reverts if any votes have been cast.
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
@@ -282,8 +281,8 @@ const SecurityAudit: NextPage = () => {
               <td>H-02</td>
               <td>
                 <strong>markDormant lacks vote check.</strong> Anyone can mark active content dormant after 30 days of
-                inactivity, even with active committed votes, blocking reveals. Fix: markDormant reverts if unrevealed
-                votes exist in active rounds.
+                inactivity, even with an active open round, blocking settlement. Fix: markDormant reverts if an active
+                open round exists.
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
@@ -329,10 +328,10 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>H-06</td>
               <td>
-                <strong>Critical functions missing whenNotPaused.</strong> <code>commitVote</code> has{" "}
-                <code>whenNotPaused</code> but <code>settleRound</code>, <code>revealVote</code>, and{" "}
-                <code>processUnrevealedVotes</code> did not. During an emergency pause, settlements could still execute
-                and distribute rewards incorrectly. Added <code>whenNotPaused</code> to all three functions.
+                <strong>Critical functions missing whenNotPaused.</strong> <code>vote</code> has{" "}
+                <code>whenNotPaused</code> but <code>trySettle</code> did not. During an emergency pause, settlements
+                could still execute and distribute rewards incorrectly. Added <code>whenNotPaused</code> to settlement
+                functions.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -342,9 +341,8 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>H-07</td>
               <td>
-                <strong>MAX_VOTERS cap enforced at commit time.</strong> Previously only enforced on reveal &mdash; if
-                300 users committed, only the first 200 to reveal succeed. Added commit-count mapping to enforce the cap
-                at commit time, preventing users from losing stakes through no fault of their own.
+                <strong>MAX_VOTERS cap enforced at vote time.</strong> Cap is enforced when the vote is cast, preventing
+                users from losing stakes through no fault of their own.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -421,8 +419,8 @@ const SecurityAudit: NextPage = () => {
               <td>H-13</td>
               <td>
                 <strong>Failed refund handling in batch processing.</strong> If a token transfer fails during batch
-                processing of unrevealed votes, the entire batch reverts. Individual try-catch or skip logic ensures one
-                failed refund does not block processing of remaining votes.
+                processing of cancelled round refunds, the entire batch reverts. Individual try-catch or skip logic
+                ensures one failed refund does not block processing of remaining claims.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -488,7 +486,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>M-01</td>
               <td>
-                <strong>Unbounded iteration in processUnrevealedVotes.</strong> Added <code>startIndex</code> and{" "}
+                <strong>Unbounded iteration in batch refund processing.</strong> Added <code>startIndex</code> and{" "}
                 <code>count</code> parameters for batched processing. Keepers can call in multiple transactions for any
                 size array.
               </td>
@@ -523,9 +521,9 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>M-04</td>
               <td>
-                <strong>Selective reveal griefing.</strong> Mitigated by design: revealVote is permissionless and tlock
-                encryption ensures anyone can decrypt after the timelock expires. Keeper reads on-chain ciphertexts and
-                decrypts via drand &mdash; no secret reveal data.
+                <strong>Settlement timing manipulation.</strong> Mitigated by design: <code>trySettle</code> is
+                permissionless and settlement probability is determined by <code>block.prevrandao</code> randomness. No
+                single party can deterministically control when settlement occurs.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -597,7 +595,7 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <strong>VoterIdNFT recordStake() has no cap.</strong> <code>recordStake()</code> accumulates{" "}
                 <code>_epochContentStake</code> without checking MAX_STAKE. The cap is enforced by RoundVotingEngine at
-                commit time. If <code>stakeRecorder</code> is changed to a buggy contract, the cap could be bypassed.{" "}
+                vote time. If <code>stakeRecorder</code> is changed to a buggy contract, the cap could be bypassed.{" "}
                 <code>stakeRecorder</code> is set by owner (governance).
               </td>
               <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
@@ -732,9 +730,9 @@ const SecurityAudit: NextPage = () => {
               <td>M-21</td>
               <td>
                 <strong>ERC2612 permit front-running.</strong> A front-runner can extract the permit signature from a{" "}
-                <code>commitVoteWithPermit</code> transaction and call <code>permit()</code> directly, consuming the
-                nonce. The user&apos;s transaction reverts but they can retry with standard <code>approve()</code>. UX
-                issue, not a fund risk. Standard ERC2612 limitation.
+                <code>voteWithPermit</code> transaction and call <code>permit()</code> directly, consuming the nonce.
+                The user&apos;s transaction reverts but they can retry with standard <code>approve()</code>. UX issue,
+                not a fund risk. Standard ERC2612 limitation.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -999,10 +997,10 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>I-09</td>
               <td>
-                <strong>contentId visible at commit time.</strong> contentId is passed in cleartext during commitVote
-                and stored in public hasCommitted mapping. By design: the commit-reveal scheme hides vote direction
-                (UP/DOWN), not which content is being voted on. Required for double-vote prevention, self-vote
-                prevention, cooldown periods, sybil stake limits, and cancellation vote-check.
+                <strong>Vote direction visible at vote time.</strong> Both contentId and vote direction (UP/DOWN) are
+                public when a vote is cast. By design: the public voting model relies on bonding curve economics rather
+                than cryptographic privacy to incentivize independent assessment. Required for double-vote prevention,
+                self-vote prevention, cooldown periods, and sybil stake limits.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -1012,10 +1010,10 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>I-10</td>
               <td>
-                <strong>processUnrevealedVotes is permissionless.</strong> Anyone can call this function after the
-                reveal deadline to forfeit unrevealed stakes to treasury. Intentionally permissionless so any keeper or
-                user can trigger cleanup. The reveal deadline protects voters &mdash; if they reveal before the
-                deadline, their vote is safe.
+                <strong>trySettle is permissionless.</strong> Anyone can call <code>trySettle(contentId)</code> to
+                attempt settlement after the minimum epoch length has passed. Intentionally permissionless so any keeper
+                or user can trigger settlement. The probabilistic mechanism using <code>block.prevrandao</code> prevents
+                deterministic timing manipulation.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -1162,12 +1160,12 @@ const SecurityAudit: NextPage = () => {
             </tr>
             <tr>
               <td>
-                <strong>Selective reveal</strong> &mdash; Malicious keeper reveals only losing-side votes. Mitigated:
-                tlock encryption ensures anyone can decrypt after the timelock expires, and revealVote is
-                permissionless.
+                <strong>Settlement timing manipulation</strong> &mdash; Malicious keeper attempts to control settlement
+                timing. Mitigated: settlement probability is determined by <code>block.prevrandao</code> randomness, and{" "}
+                <code>trySettle</code> is permissionless.
               </td>
               <td>Gas only</td>
-              <td>No impact: any party can reveal all votes</td>
+              <td>No impact: any party can attempt settlement</td>
               <td>
                 <span className="badge badge-success badge-sm">Mitigated</span>
               </td>
@@ -1175,8 +1173,8 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>
                 <strong>Vote stranding</strong> &mdash; Submitter cancels or content goes dormant while voters have
-                active stakes. cancelContent reverts if votes have been committed; markDormant reverts if unrevealed
-                votes exist.
+                active stakes. cancelContent reverts if votes have been cast; markDormant reverts if an active open
+                round exists.
               </td>
               <td>10 cREP submitter stake</td>
               <td>Blocked: cancel/dormancy checks vote state</td>
@@ -1219,13 +1217,13 @@ const SecurityAudit: NextPage = () => {
             </tr>
             <tr>
               <td>
-                <strong>Participation pool drain via commit-never-reveal</strong> &mdash; Commit votes across many
-                content items, earn participation rewards, never reveal (forfeit stakes to treasury).
+                <strong>Participation pool drain via losing votes</strong> &mdash; Vote across many content items to
+                earn participation rewards, regardless of round outcome.
               </td>
-              <td>1&ndash;100 cREP per commit</td>
+              <td>1&ndash;100 cREP per vote</td>
               <td>
-                At tier 0: commit 100 cREP, earn 90 cREP reward, forfeit 100 cREP stake. Net loss: 10 cREP per vote. At
-                all tiers, stake exceeds reward.
+                At tier 0: vote 100 cREP, earn 90 cREP participation reward, but losing side forfeits stake. Net loss if
+                on losing side. At all tiers, participation reward is less than stake.
               </td>
               <td>
                 <span className="badge badge-success badge-sm">Not Profitable</span>
@@ -1234,7 +1232,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>
                 <strong>Self-opposition + participation pool</strong> &mdash; Vote both sides to control outcome and
-                earn participation rewards on both commits.
+                earn participation rewards on both votes.
               </td>
               <td>2 stakes (1 + 100 cREP)</td>
               <td>
@@ -1247,12 +1245,12 @@ const SecurityAudit: NextPage = () => {
             </tr>
             <tr>
               <td>
-                <strong>MAX_VOTERS cap griefing</strong> &mdash; Fill 200 commit slots with minimum-stake sybil votes.
+                <strong>MAX_VOTERS cap griefing</strong> &mdash; Fill voter slots with minimum-stake sybil votes.
               </td>
               <td>200 cREP (200 VoterIDs)</td>
               <td>
-                With VoterIdNFT: impractical (200 verified identities). Without: trivially sybilable. Cap now enforced
-                at commit time.
+                With VoterIdNFT: impractical (requires verified identities). Without: trivially sybilable. Cap enforced
+                at vote time.
               </td>
               <td>
                 <span className="badge badge-warning badge-sm text-white">Deployment</span>
@@ -1261,7 +1259,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>
                 <strong>Coordinated rating floor attack</strong> &mdash; 41+ voters push rating below 10 to trigger
-                submitter stake slash. 96-epoch cooldown per voter per content limits repeats.
+                submitter stake slash. 24-hour cooldown per voter per content limits repeats.
               </td>
               <td>41 voters &times; 1&ndash;100 cREP (returned if unopposed)</td>
               <td>
@@ -1274,11 +1272,12 @@ const SecurityAudit: NextPage = () => {
             </tr>
             <tr>
               <td>
-                <strong>MEV in reveal ordering</strong> &mdash; Order of reveals during reveal window.
+                <strong>MEV in settlement timing</strong> &mdash; Attempting to time settlement for favorable outcomes.
               </td>
               <td>Gas only</td>
               <td>
-                No MEV surface: settlement cannot happen before reveal deadline, tlock decryption is deterministic.
+                No MEV surface: settlement is probabilistic via block.prevrandao, no party can deterministically control
+                timing.
               </td>
               <td>
                 <span className="badge badge-success badge-sm">No Issue</span>
@@ -1317,15 +1316,15 @@ const SecurityAudit: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td>Vote commit &rarr; reveal &rarr; settle &rarr; claim</td>
+              <td>Vote &rarr; settle &rarr; claim</td>
               <td>User &rarr; VotingEngine &rarr; (settlement splits) &rarr; RewardDistributor &rarr; User</td>
               <td>
                 <span className="badge badge-success badge-sm">Verified</span>
               </td>
             </tr>
             <tr>
-              <td>Unrevealed forfeit</td>
-              <td>VotingEngine &rarr; Treasury via processUnrevealedVotes</td>
+              <td>Consensus subsidy</td>
+              <td>ConsensusReserve &rarr; VotingEngine (one-sided round payouts)</td>
               <td>
                 <span className="badge badge-success badge-sm">Verified</span>
               </td>
@@ -1354,7 +1353,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>Settlement callback chain</td>
               <td>
-                settleRound() makes external calls: safeTransfer to treasury, frontendRegistry; registry.updateRating();
+                trySettle() makes external calls: safeTransfer to treasury, frontendRegistry; registry.updateRating();
                 registry.returnSubmitterStake()/slashSubmitterStake()
               </td>
               <td>
@@ -1447,8 +1446,8 @@ const SecurityAudit: NextPage = () => {
           storage (0).
         </li>
         <li>
-          <strong>Gas-bounded settlement:</strong> Round voters capped at 200 per content (enforced at commit time);
-          batched processing for unrevealed votes.
+          <strong>Gas-bounded settlement:</strong> Round voters capped per content (enforced at vote time); O(1)
+          settlement gas cost.
         </li>
         <li>
           <strong>Soulbound enforcement:</strong> VoterIdNFT _update override blocks all non-mint transfers;
@@ -1493,7 +1492,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td className="font-mono text-[#EF476F]">RoundIntegration.t.sol</td>
               <td>53</td>
-              <td>Full commit/reveal/settle/claim cycles</td>
+              <td>Full vote/settle/claim cycles</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">RoundSettlementEdgeCaseTest</td>
@@ -1639,8 +1638,8 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>INV-01</td>
               <td>
-                <strong>Token conservation.</strong> For any terminal round: SUM(committed stakes) == SUM(claimed
-                rewards) + SUM(forfeited) + SUM(fees) + dust
+                <strong>Token conservation.</strong> For any terminal round: SUM(vote stakes) == SUM(claimed rewards) +
+                SUM(fees) + dust
               </td>
               <td>Critical</td>
               <td>

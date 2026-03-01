@@ -6,9 +6,11 @@ const HowItWorks: NextPage = () => {
   return (
     <article className="prose max-w-none">
       <h1>How It Works</h1>
-      <p className="lead text-base-content/60 text-lg">Per-content round voting with tlock-encrypted epochs.</p>
+      <p className="lead text-base-content/60 text-lg">
+        Per-content round voting with public stakes and random settlement.
+      </p>
 
-      <h2>Voter ID & Sybil Resistance</h2>
+      <h2>Voter ID &amp; Sybil Resistance</h2>
       <p>
         To prevent manipulation through multiple wallets (sybil attacks), Curyo uses <strong>Voter ID NFTs</strong>{" "}
         &mdash; soulbound tokens tied to verified human identities via Self.xyz passport verification.
@@ -36,34 +38,34 @@ const HowItWorks: NextPage = () => {
 
       <h2>Voting Flow</h2>
       <p>
-        Each content item has independent <strong>rounds</strong>. Within a round, votes accumulate across implicit{" "}
-        <strong>15-minute epochs</strong>. Voters predict whether content&apos;s rating will go <strong>UP</strong> or{" "}
-        <strong>DOWN</strong> and back their prediction with a cREP stake. Votes are{" "}
-        <strong>tlock-encrypted to the epoch&apos;s end time</strong> using drand timelock, so no one can see
-        others&apos; votes before the epoch ends.
+        Each content item has independent <strong>rounds</strong>. Voters predict whether content&apos;s rating will go{" "}
+        <strong>UP</strong> or <strong>DOWN</strong> and back their prediction with a cREP stake. Votes are{" "}
+        <strong>immediately public and price-moving</strong> &mdash; each vote shifts the round&apos;s tally in real
+        time. A bonding curve determines how many <strong>shares</strong> each voter receives: early voters on a given
+        side get more shares per cREP staked than later voters on the same side.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
       </div>
       <ol>
         <li>
-          <strong>Commit:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Vote is encrypted to
-          the current epoch&apos;s end time and committed on-chain.
+          <strong>Vote:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote is submitted
+          on-chain via <code>vote(contentId, isUp, stakeAmount, frontendAddress)</code>. The bonding curve calculates
+          your shares: <code>shares = stake &times; b / (sameDirectionStake + b)</code>, where <code>b</code> is the
+          liquidity parameter. Early conviction is rewarded with more shares.
         </li>
         <li>
-          <strong>Reveal:</strong> After each epoch ends, the drand beacon publishes the decryption key. Anyone can
-          decrypt and reveal votes &mdash; no secret data needed. A stateless keeper handles this automatically.
+          <strong>Accumulate:</strong> Votes accumulate within the round. The current tallies are publicly visible at
+          all times, creating a live prediction market for content quality.
         </li>
         <li>
-          <strong>Accumulate:</strong> Revealed votes accumulate across epochs within the round. After each epoch,
-          revealed tallies become publicly visible.
-        </li>
-        <li>
-          <strong>Settlement:</strong> Once &ge;3 votes have been revealed across all epochs in the round, the round can
-          be settled (O(1) gas cost regardless of voter count). The majority side wins. The losing side&apos;s stakes
-          become the reward pool. Content rating is updated by 1&ndash;5 points based on winning stake size. After
-          settlement, winners claim rewards, frontends claim fees, and all voters claim participation rewards
-          individually (pull-based).
+          <strong>Settlement:</strong> After the minimum epoch length (in blocks) has passed and enough votes have been
+          cast, anyone can call <code>trySettle(contentId)</code>. Settlement is <strong>probabilistic</strong> &mdash;
+          the probability starts at a base rate after <code>minEpochBlocks</code> and increases each block until it
+          reaches a cap at <code>maxEpochBlocks</code>. Randomness comes from <code>block.prevrandao</code>. Once
+          settled, the majority side wins. The losing side&apos;s stakes become the reward pool. Content rating is
+          updated by 1&ndash;5 points based on winning stake size. Winners claim rewards, frontends claim fees, and all
+          voters claim participation rewards individually (pull-based).
         </li>
       </ol>
 
@@ -81,8 +83,8 @@ const HowItWorks: NextPage = () => {
 
       <h3>What Happens After You Vote</h3>
       <p>
-        After committing a vote, your stake goes through an automated lifecycle. You can track the status from the
-        sidebar wallet section or on the content page.
+        After casting a vote, your stake goes through an automated lifecycle. You can track the status from the sidebar
+        wallet section or on the content page.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -97,26 +99,18 @@ const HowItWorks: NextPage = () => {
           <tbody>
             <tr>
               <td>
-                <span className="badge badge-secondary badge-sm">Committed</span>
+                <span className="badge badge-secondary badge-sm">Open</span>
               </td>
-              <td>Vote encrypted, epoch countdown</td>
-              <td className="font-mono">Up to 15 min</td>
+              <td>Vote recorded, live tallies visible, settlement window approaching</td>
+              <td className="font-mono">minEpochBlocks&ndash;maxEpochBlocks</td>
               <td>None</td>
             </tr>
             <tr>
               <td>
-                <span className="badge badge-secondary badge-sm">Epoch ended</span>
+                <span className="badge badge-secondary badge-sm">Settlement window</span>
               </td>
-              <td>Votes being decrypted via drand</td>
-              <td className="font-mono">&lt; 30 sec</td>
-              <td>None</td>
-            </tr>
-            <tr>
-              <td>
-                <span className="badge badge-secondary badge-sm">Accumulating</span>
-              </td>
-              <td>Waiting for 3+ revealed votes</td>
-              <td className="font-mono">Up to 7 days</td>
+              <td>Round eligible for probabilistic settlement via trySettle()</td>
+              <td className="font-mono">Variable (probability increases per block)</td>
               <td>None</td>
             </tr>
             <tr>
@@ -131,11 +125,12 @@ const HowItWorks: NextPage = () => {
         </table>
       </div>
       <p>
-        After each epoch ends, the drand beacon publishes the decryption key for that epoch&apos;s tlock-encrypted
-        votes. A stateless keeper reads on-chain ciphertexts, decrypts them via drand, and calls{" "}
-        <code>revealVote()</code>. This is fully trustless &mdash; the keeper holds no secrets and anyone can run one.
-        Once &ge;3 votes have been revealed across all epochs in the round, anyone can trigger settlement. Winners
-        receive their original stake plus a share of the losing pool.
+        Once the minimum epoch length has passed and enough votes have been cast, anyone can call{" "}
+        <code>trySettle(contentId)</code>. Settlement uses <code>block.prevrandao</code> for randomness &mdash; the
+        probability of settlement increases each block, preventing manipulation of exact settlement timing. A keeper
+        service calls <code>trySettle()</code> automatically. This is fully trustless &mdash; the keeper holds no
+        secrets and anyone can run one. Winners receive their original stake plus a share-proportional portion of the
+        losing pool.
       </p>
 
       <h2>Reward Distribution</h2>
@@ -181,23 +176,24 @@ const HowItWorks: NextPage = () => {
       </div>
       <p>
         The <strong>82%</strong> voter share goes entirely to a <strong>content-specific pool</strong> distributed
-        proportionally by stake to winning voters on that content. An additional <strong>5%</strong> goes to a consensus
-        subsidy reserve. Rewards become claimable immediately after the round settles. There is no global pool &mdash;
-        each content round is self-contained.
+        proportionally by <strong>shares</strong> to winning voters on that content. Because shares are determined by a
+        bonding curve, early voters on the winning side receive a larger reward per cREP staked than later voters. An
+        additional <strong>5%</strong> goes to a consensus subsidy reserve. Rewards become claimable immediately after
+        the round settles. There is no global pool &mdash; each content round is self-contained.
       </p>
 
       <h2>Content Rating</h2>
       <p>
         Each content item has a rating from 0 to 100 (starting at 50). The rating{" "}
-        <strong>only changes when a round settles</strong> &mdash; it stays unchanged during voting, epoch transitions,
-        and vote reveals. Once settlement is triggered, the rating moves by 1&ndash;5 points toward the winning side
-        based on the total winning stake. The delta is also capped by the number of unique winning voters (1 voter = max
-        1 point, 2 voters = max 2 points, etc.), preventing a single actor from making large rating swings.
+        <strong>only changes when a round settles</strong> &mdash; it stays unchanged while voting is ongoing. Once
+        settlement is triggered, the rating moves by 1&ndash;5 points toward the winning side based on the total winning
+        stake. The delta is also capped by the number of unique winning voters (1 voter = max 1 point, 2 voters = max 2
+        points, etc.), preventing a single actor from making large rating swings.
       </p>
       <p>
-        If a round <strong>expires</strong> (7 days pass without reaching 3 revealed votes) or ends in a{" "}
-        <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive settlement with a
-        clear majority updates the rating.
+        If a round <strong>expires</strong> (maxEpochBlocks pass without reaching the minimum voter threshold) or ends
+        in a <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive settlement
+        with a clear majority updates the rating.
       </p>
 
       <h2>Content Dormancy &amp; Revival</h2>
@@ -208,8 +204,8 @@ const HowItWorks: NextPage = () => {
       </p>
       <ul>
         <li>
-          <strong>Safety check:</strong> Content with pending unrevealed votes cannot be marked dormant, protecting
-          voters from stranded stakes.
+          <strong>Safety check:</strong> Content with an active open round cannot be marked dormant, protecting voters
+          from stranded stakes.
         </li>
         <li>
           <strong>Revival:</strong> Dormant content can be revived by staking <strong>5 cREP</strong>. This resets the

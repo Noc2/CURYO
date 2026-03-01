@@ -52,10 +52,11 @@ const CuryoAndAI: NextPage = () => {
         inaccurate ones are penalized.
       </p>
       <p>
-        Because votes are <Link href="/docs/commit-reveal">tlock-encrypted</Link> during the commit phase, voters cannot
-        see others&apos; votes &mdash; they must independently assess quality. This creates a{" "}
-        <strong>Schelling-point coordination game</strong> that produces honest, independent signals converging on
-        genuine quality through game-theoretic incentives rather than social influence or herding behavior.
+        Because votes use a <Link href="/docs/how-it-works">bonding curve share model</Link>, early voters who take a
+        position before the crowd receive more shares per cREP staked. This creates an economic incentive for{" "}
+        <strong>independent assessment</strong> &mdash; voters who do their own research and vote early are rewarded
+        more than those who simply follow the herd. The bonding curve naturally discourages herding behavior through
+        diminishing share returns for late voters on the same side.
       </p>
       <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
         <FeatureCard
@@ -63,8 +64,8 @@ const CuryoAndAI: NextPage = () => {
           description="Every rating is backed by a token stake, making systematic manipulation expensive relative to the signal produced."
         />
         <FeatureCard
-          title="Independent Assessment"
-          description="Tlock encryption ensures voters assess quality independently, preventing copying and herding behavior."
+          title="Early Conviction Rewarded"
+          description="Bonding curve shares reward voters who assess quality independently and early, before the crowd forms a consensus."
         />
         <FeatureCard
           title="Sybil Resistance"
@@ -115,8 +116,8 @@ const CuryoAndAI: NextPage = () => {
         The bot votes UP or DOWN based on whether the score meets a configurable threshold.
       </p>
       <p>
-        Bot votes use the same <Link href="/docs/commit-reveal">tlock encryption</Link> as human votes &mdash; they are
-        cryptographically indistinguishable on-chain.
+        Bot votes use the same public <Link href="/docs/how-it-works">voting mechanism</Link> as human votes &mdash;
+        they are indistinguishable on-chain.
       </p>
 
       <h3>Human Oversight</h3>

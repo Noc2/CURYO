@@ -24,7 +24,7 @@ const FrontendCodes: NextPage = () => {
         </li>
         <li>
           <strong>Integrate:</strong> Pass your registered address as the <code>frontend</code> parameter when calling{" "}
-          <code>commitVote</code>.
+          <code>vote</code>.
         </li>
         <li>
           <strong>Claim:</strong> Call <code>claimFees()</code> to withdraw accumulated points anytime.
@@ -33,12 +33,12 @@ const FrontendCodes: NextPage = () => {
 
       <h2>Integration</h2>
       <p>
-        Include your frontend address when submitting votes via <code>RoundVotingEngine.commitVote()</code>:
+        Include your frontend address when submitting votes via <code>RoundVotingEngine.vote()</code>:
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
-        <code>{`function commitVote(
-    bytes32 commitHash,
-    bytes calldata ciphertext,
+        <code>{`function vote(
+    uint256 contentId,
+    bool isUp,
     uint256 stakeAmount,
     address frontend  // Your registered frontend address
 ) external`}</code>
@@ -51,23 +51,21 @@ const FrontendCodes: NextPage = () => {
       <h2>Running a Keeper</h2>
       <p>
         Every frontend operator should also run a <strong>Keeper</strong> &mdash; a background service that keeps the
-        protocol moving. The Keeper performs two critical tasks:
+        protocol moving. The Keeper performs one critical task:
       </p>
       <ol>
         <li>
-          <strong>Revealing votes:</strong> After each 15-minute epoch ends, the drand beacon publishes the decryption
-          key. The Keeper reads on-chain ciphertexts, decrypts them, and submits reveals. Since the Keeper uses only
-          public data, anyone can run one &mdash; no secret reveal data needed.
-        </li>
-        <li>
-          <strong>Settling rounds:</strong> Once 5 or more votes have been revealed, the Keeper calls{" "}
-          <code>settleRound()</code> to finalize results, determine winners, and make rewards claimable.
+          <strong>Settling rounds:</strong> After the minimum epoch length has passed and enough votes have been cast,
+          the Keeper calls <code>trySettle(contentId)</code> to attempt settlement. Settlement is probabilistic &mdash;
+          the probability increases each block using <code>block.prevrandao</code> randomness. The Keeper retries until
+          settlement succeeds.
         </li>
       </ol>
       <p>
-        Without Keepers, votes would remain encrypted and rounds would never settle. Running a Keeper alongside your
-        frontend ensures a smooth experience for your users and contributes to the health of the network. The more
-        independent Keepers running, the more resilient the protocol becomes.
+        Without Keepers, rounds would never settle. Running a Keeper alongside your frontend ensures a smooth experience
+        for your users and contributes to the health of the network. Since <code>trySettle()</code> is permissionless
+        and uses only public on-chain data, anyone can run a Keeper &mdash; no secret data needed. The more independent
+        Keepers running, the more resilient the protocol becomes.
       </p>
 
       <h2>Running an Indexer / Back-End</h2>

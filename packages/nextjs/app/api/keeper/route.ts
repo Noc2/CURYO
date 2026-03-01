@@ -35,7 +35,12 @@ import deployedContracts from "~~/contracts/deployedContracts";
 import externalContracts from "~~/contracts/externalContracts";
 import scaffoldConfig from "~~/scaffold.config";
 import { getKeystoreAccount } from "~~/utils/keystore";
-import { decryptVote } from "~~/utils/tlock";
+
+const decryptVote = async (
+  _ciphertext: `0x${string}`,
+): Promise<{ isUp: boolean; salt: `0x${string}`; contentId: bigint }> => {
+  throw new Error("DEPRECATED: tlock decryption removed -- public voting system no longer uses encryption");
+};
 
 // --- Round states (mirrors RoundVotingEngine.RoundState enum) ---
 const RoundState = {
