@@ -57,9 +57,7 @@ contract FormalVerification_GameTheoryTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -530,7 +528,9 @@ contract FormalVerification_GameTheoryTest is Test {
         engine.trySettle(cid);
 
         RoundLib.Round memory afterAttempt = engine.getRound(cid, rid);
-        assertEq(uint256(afterAttempt.state), uint256(RoundLib.RoundState.Open), "Round still Open before minEpochBlocks");
+        assertEq(
+            uint256(afterAttempt.state), uint256(RoundLib.RoundState.Open), "Round still Open before minEpochBlocks"
+        );
 
         // After maxEpochBlocks, settlement is guaranteed
         vm.roll(startBlock + MAX_EPOCH_BLOCKS);

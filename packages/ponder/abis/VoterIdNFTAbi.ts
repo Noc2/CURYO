@@ -99,6 +99,44 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "delegateOf",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "delegateTo",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getApproved",
     "inputs": [
       {
@@ -424,6 +462,13 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "removeDelegate",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "removeMinter",
     "inputs": [
       {
@@ -441,6 +486,25 @@ export const VoterIdNFTAbi = [
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "resolveHolder",
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -523,6 +587,19 @@ export const VoterIdNFTAbi = [
     ],
     "outputs": [],
     "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "setDelegate",
+    "inputs": [
+      {
+        "name": "delegate",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -708,6 +785,44 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "event",
+    "name": "DelegateRemoved",
+    "inputs": [
+      {
+        "name": "holder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "previousDelegate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DelegateSet",
+    "inputs": [
+      {
+        "name": "holder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "delegate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "MinterAdded",
     "inputs": [
       {
@@ -876,6 +991,31 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "error",
+    "name": "CallerIsDelegate",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CallerNotHolder",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CannotDelegateSelf",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DelegateAlreadyAssigned",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DelegateIsHolder",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ERC721IncorrectOwner",
     "inputs": [
       {
@@ -980,6 +1120,11 @@ export const VoterIdNFTAbi = [
   {
     "type": "error",
     "name": "InvalidAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoDelegateSet",
     "inputs": []
   },
   {

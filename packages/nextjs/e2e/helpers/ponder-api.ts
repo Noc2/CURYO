@@ -42,7 +42,7 @@ export type VoteItem = {
   roundId: string;
   stake: string;
   isUp: boolean;
-  revealedAt: number;
+  votedAt: number;
 };
 
 export type RatingChangeItem = {

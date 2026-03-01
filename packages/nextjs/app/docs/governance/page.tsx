@@ -123,17 +123,25 @@ const GovernanceDocs: NextPage = () => {
               <td className="font-mono">Minimum voters</td>
               <td>5</td>
               <td>
-                Minimum revealed votes required before a round can settle. Prevents thin-market exploitation by
-                coordinated minorities. Rounds that don&apos;t reach this threshold within 1 week are cancelled with
+                Minimum votes required before a round can settle. Prevents thin-market exploitation by coordinated
+                minorities. Rounds that don&apos;t reach this threshold within the max epoch window are cancelled with
                 full refunds.
               </td>
             </tr>
             <tr>
-              <td className="font-mono">Epoch duration</td>
-              <td>15 minutes</td>
+              <td className="font-mono">Min epoch blocks</td>
+              <td>150 (~30 min)</td>
               <td>
-                Duration of each voting epoch. Votes within an epoch are tlock-encrypted and hidden until the epoch
-                ends.
+                Minimum number of blocks before a round becomes eligible for settlement. Ensures a meaningful voting
+                window.
+              </td>
+            </tr>
+            <tr>
+              <td className="font-mono">Max epoch blocks</td>
+              <td>1,800 (~6 hrs)</td>
+              <td>
+                Maximum blocks before a round must settle or expire. Two-sided rounds settle randomly; one-sided rounds
+                trigger consensus settlement at this limit.
               </td>
             </tr>
             <tr>
@@ -182,8 +190,8 @@ const GovernanceDocs: NextPage = () => {
           unfavorable ratings, the submitter&apos;s 10 cREP stake is slashed to the treasury.
         </li>
         <li>
-          <strong>Forfeited vote stakes</strong> &mdash; unrevealed votes from past epochs (where the tlock ciphertext
-          was already decryptable) forfeit their staked cREP to the treasury after round settlement.
+          <strong>Consensus subsidy</strong> &mdash; when one-sided rounds settle at the maximum epoch limit, a small
+          consensus subsidy from the treasury rewards voters who identified uncontroversial content.
         </li>
       </ul>
       <p>

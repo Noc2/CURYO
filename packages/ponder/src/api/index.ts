@@ -5,7 +5,6 @@ import {
   content,
   round,
   vote,
-  pendingCommit,
   category,
   profile,
   rewardClaim,
@@ -209,23 +208,9 @@ app.get("/voting-stakes", async (c) => {
 
   const voterAddr = voter.toLowerCase() as `0x${string}`;
 
-  // Unrevealed commits: stakes in pendingCommit where revealed = false
-  const [pendingResult] = await db
-    .select({
-      total: sql<string>`coalesce(sum(${pendingCommit.stake}), 0)`,
-      count: sql<number>`count(*)`,
-    })
-    .from(pendingCommit)
-    .where(
-      and(
-        eq(pendingCommit.voter, voterAddr),
-        eq(pendingCommit.revealed, false),
-      ),
-    );
-
-  // Revealed but unsettled votes: stakes in vote where round state is Open (0)
+  // Active voting stakes: votes in open rounds (state = 0)
   // Round states: Open(0), Settled(1), Cancelled(2), Tied(3)
-  const [revealedResult] = await db
+  const [activeResult] = await db
     .select({
       total: sql<string>`coalesce(sum(${vote.stake}), 0)`,
       count: sql<number>`count(*)`,
@@ -240,10 +225,8 @@ app.get("/voting-stakes", async (c) => {
     );
 
   return jsonBig(c, {
-    pendingStake: pendingResult?.total ?? "0",
-    pendingCount: pendingResult?.count ?? 0,
-    revealingStake: revealedResult?.total ?? "0",
-    revealingCount: revealedResult?.count ?? 0,
+    activeStake: activeResult?.total ?? "0",
+    activeCount: activeResult?.count ?? 0,
     voter: voterAddr,
   });
 });
@@ -335,7 +318,7 @@ app.get("/profile/:address", async (c) => {
     .select()
     .from(vote)
     .where(eq(vote.voter, address))
-    .orderBy(desc(vote.revealedAt))
+    .orderBy(desc(vote.votedAt))
     .limit(20);
 
   // Get recent rewards
@@ -616,7 +599,7 @@ app.get("/votes", async (c) => {
     .select()
     .from(vote)
     .where(where)
-    .orderBy(desc(vote.revealedAt))
+    .orderBy(desc(vote.votedAt))
     .limit(limit)
     .offset(offset);
 

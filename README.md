@@ -27,8 +27,8 @@ Curyo replaces passive likes with **prediction games**. Voters predict whether c
 
 - **Skin in the Game** — every vote requires a token stake
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
-- **Per-Content Rounds** — each content item accumulates votes across 15-minute epochs until 3 revealed votes trigger settlement
-- **Tlock Commit-Reveal** — votes are timelock-encrypted to each epoch's end time and revealed trustlessly via drand beacons
+- **Per-Content Rounds** — each content item accumulates votes; settlement triggers randomly with increasing probability
+- **Public Voting** — votes are immediately visible and price-moving via bonding curve share pricing; early/contrarian voters earn more shares
 - **Fully Decentralized** — no team, no foundation, no central authority
 
 Read the full [Game Theory Analysis](docs/GAME_THEORY_ANALYSIS.md) and [Security Audit](SECURITY_AUDIT.md).
@@ -49,7 +49,7 @@ Curyo is a monorepo with five packages:
 foundry (compile) → ABIs + addresses
 ponder  (index)   → REST API at localhost:42069
 nextjs  (frontend)→ reads contracts via wagmi + Ponder API
-keeper  (service) → reveals tlock-encrypted votes via drand beacons, settles rounds
+keeper  (service) → settles rounds via trySettle(), cancels expired rounds
 ```
 
 Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, RainbowKit, wagmi, and viem.
@@ -101,7 +101,7 @@ Visit [http://localhost:3000](http://localhost:3000).
 
 ### Run the Keeper
 
-The keeper is a standalone stateless service that reveals tlock-encrypted votes using public drand beacons, settles rounds, processes unrevealed stakes, cancels expired rounds, and marks dormant content. Anyone can run a keeper — all data is public, and multiple instances provide redundancy with no coordination.
+The keeper is a lightweight stateless service that calls trySettle() on active rounds, cancels expired rounds, and marks dormant content. Anyone can run a keeper — all data is public, and multiple instances provide redundancy with no coordination.
 
 **Configure** by copying `.env.example` and setting contract addresses and a wallet:
 

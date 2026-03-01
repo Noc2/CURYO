@@ -53,15 +53,16 @@ export const round = onchainTable(
     roundId: t.bigint().notNull(),
     state: t.integer().notNull(), // 0=Open, 1=Settled, 2=Cancelled, 3=Tied
     voteCount: t.integer().notNull(),
-    revealedCount: t.integer().notNull().default(0),
     totalStake: t.bigint().notNull(),
-    upPool: t.bigint().notNull(),
-    downPool: t.bigint().notNull(),
+    upStake: t.bigint().notNull(),
+    downStake: t.bigint().notNull(),
+    totalUpShares: t.bigint().notNull().default(0n),
+    totalDownShares: t.bigint().notNull().default(0n),
     upCount: t.integer().notNull(),
     downCount: t.integer().notNull(),
     upWins: t.boolean(),
     totalPool: t.bigint(),
-    epochDuration: t.bigint(), // epoch duration for this round
+    startBlock: t.bigint(), // block number when round started
     startTime: t.bigint(),
     settledAt: t.bigint(),
   }),
@@ -81,7 +82,7 @@ export const roundRelations = relations(round, ({ many, one }) => ({
 }));
 
 // ============================================================
-// VOTE (revealed votes only)
+// VOTE (public votes)
 // ============================================================
 
 export const vote = onchainTable(
@@ -93,8 +94,8 @@ export const vote = onchainTable(
     voter: t.hex().notNull(),
     isUp: t.boolean().notNull(),
     stake: t.bigint().notNull(),
-    commitHash: t.hex().notNull(),
-    revealedAt: t.bigint().notNull(),
+    shares: t.bigint().notNull(),
+    votedAt: t.bigint().notNull(),
   }),
   (table) => ({
     voterIdx: index().on(table.voter),
@@ -114,30 +115,6 @@ export const voteRelations = relations(vote, ({ one }) => ({
     references: [profile.address],
   }),
 }));
-
-// ============================================================
-// PENDING COMMIT (before reveal)
-// ============================================================
-
-export const pendingCommit = onchainTable(
-  "pending_commit",
-  (t) => ({
-    id: t.text().primaryKey(), // `${contentId}-${roundId}-${commitKey}`
-    contentId: t.bigint().notNull(),
-    roundId: t.bigint().notNull(),
-    voter: t.hex().notNull(),
-    commitHash: t.hex().notNull(),
-    stake: t.bigint().notNull(),
-    committedAt: t.bigint().notNull(),
-    revealableAfter: t.bigint(), // epoch end timestamp — when this commit becomes revealable
-    revealed: t.boolean().notNull(),
-  }),
-  (table) => ({
-    voterIdx: index().on(table.voter),
-    contentIdx: index().on(table.contentId),
-    roundIdx: index().on(table.roundId),
-  }),
-);
 
 // ============================================================
 // REWARD CLAIMS

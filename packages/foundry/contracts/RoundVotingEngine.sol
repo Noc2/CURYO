@@ -212,10 +212,7 @@ contract RoundVotingEngine is
         _disableInitializers();
     }
 
-    function initialize(address _admin, address _governance, address _crepToken, address _registry)
-        public
-        initializer
-    {
+    function initialize(address _admin, address _governance, address _crepToken, address _registry) public initializer {
         __AccessControl_init();
         __Pausable_init();
 
@@ -472,13 +469,8 @@ contract RoundVotingEngine is
         uint256 shares = RewardMath.calculateShares(stakeAmount, sameDirectionStake, roundCfg.liquidityParam);
 
         // Store vote
-        votes[contentId][roundId][msg.sender] = RoundLib.Vote({
-            voter: msg.sender,
-            stake: stakeAmount,
-            shares: shares,
-            isUp: isUp,
-            frontend: frontend
-        });
+        votes[contentId][roundId][msg.sender] =
+            RoundLib.Vote({ voter: msg.sender, stake: stakeAmount, shares: shares, isUp: isUp, frontend: frontend });
 
         // Track for iteration
         roundVoters[contentId][roundId].push(msg.sender);
@@ -527,11 +519,9 @@ contract RoundVotingEngine is
 
         // Update content rating live
         uint16 newRating = RewardMath.calculateRating(round.totalUpStake, round.totalDownStake);
-        try registry.updateRatingDirect(contentId, newRating) { }
-        catch { }
+        try registry.updateRatingDirect(contentId, newRating) { } catch { }
 
-        try registry.updateActivity(contentId) { }
-        catch { }
+        try registry.updateActivity(contentId) { } catch { }
 
         emit VotePublished(contentId, roundId, msg.sender, isUp, stakeAmount, shares, newRating);
     }
@@ -582,8 +572,7 @@ contract RoundVotingEngine is
         round.state = RoundLib.RoundState.Cancelled;
 
         // Restore the epoch-start rating since the round is cancelled
-        try registry.updateRatingDirect(contentId, round.epochStartRating) { }
-        catch { }
+        try registry.updateRatingDirect(contentId, round.epochStartRating) { } catch { }
 
         emit RoundCancelled(contentId, roundId);
         _rewardKeeper("cancel");
@@ -658,8 +647,7 @@ contract RoundVotingEngine is
         if (prob > roundCfg.maxProbBps) prob = roundCfg.maxProbBps;
 
         // Random check using prevrandao
-        uint256 rand =
-            uint256(keccak256(abi.encodePacked(block.prevrandao, contentId, roundId, block.number)));
+        uint256 rand = uint256(keccak256(abi.encodePacked(block.prevrandao, contentId, roundId, block.number)));
         return (rand % 10000) < prob;
     }
 
@@ -676,8 +664,7 @@ contract RoundVotingEngine is
             round.settledAt = block.timestamp;
 
             // Restore epoch-start rating
-            try registry.updateRatingDirect(contentId, round.epochStartRating) { }
-            catch { }
+            try registry.updateRatingDirect(contentId, round.epochStartRating) { } catch { }
 
             emit RoundTied(contentId, roundId);
             return;

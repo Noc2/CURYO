@@ -120,9 +120,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // RoundVotingEngine proxy
         ERC1967Proxy votingEngineProxy = new ERC1967Proxy(
             address(votingEngineImpl),
-            abi.encodeCall(
-                RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry))
-            )
+            abi.encodeCall(RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry)))
         );
         RoundVotingEngine votingEngine = RoundVotingEngine(address(votingEngineProxy));
 

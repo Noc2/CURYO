@@ -124,7 +124,7 @@ export const AddressInfoDropdown = ({
   const isLocalNetwork = targetNetwork.id === hardhat.id && chain?.id === hardhat.id;
   const showFaucet = isLocalNetwork;
 
-  const { claimableItems, totalClaimable, pendingStake, refetch: refetchClaimable } = useAllClaimableRewards();
+  const { claimableItems, totalClaimable, activeStake, refetch: refetchClaimable } = useAllClaimableRewards();
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked: votingStaked } = useVotingStakes(address);
   const { claimAll, isClaiming, progress } = useClaimAll();
@@ -132,8 +132,8 @@ export const AddressInfoDropdown = ({
   const claimableFormatted =
     totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
 
-  const pendingFormatted =
-    pendingStake > 0n ? (Number(pendingStake) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
+  const activeFormatted =
+    activeStake > 0n ? (Number(activeStake) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
 
   const handleClaimAll = () => {
     claimAll(claimableItems, () => refetchClaimable());
@@ -196,12 +196,12 @@ export const AddressInfoDropdown = ({
           <InfoTooltip text={stakeTooltip} position="bottom" />
         </div>
       )}
-      {pendingStake > 0n && (
+      {activeStake > 0n && (
         <div
           className="tooltip tooltip-top text-sm text-base-content/40 text-left px-4 pl-12 cursor-help"
           data-tip="Staked in active rounds. Your claim will appear once each round settles."
         >
-          {pendingFormatted} cREP in active votes
+          {activeFormatted} cREP in active votes
         </div>
       )}
       {totalClaimable > 0n && (
@@ -247,12 +247,12 @@ export const AddressInfoDropdown = ({
           <InfoTooltip text={stakeTooltip} position="top" />
         </span>
       )}
-      {pendingStake > 0n && (
+      {activeStake > 0n && (
         <span
           className="tooltip tooltip-right text-sm text-base-content/40 hidden xl:inline xl:px-2 cursor-help"
           data-tip="Staked in active rounds. Your claim will appear once each round settles."
         >
-          {pendingFormatted} cREP in active votes
+          {activeFormatted} cREP in active votes
         </span>
       )}
       {totalClaimable > 0n && (

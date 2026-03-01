@@ -49,8 +49,8 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   const voteCount = Number(round.voteCount);
 
   // Pool breakdown (all public in real-time)
-  const upPoolFormatted = Number(round.upStake) / 1e6;
-  const downPoolFormatted = Number(round.downStake) / 1e6;
+  const upStakeFormatted = Number(round.upStake) / 1e6;
+  const downStakeFormatted = Number(round.downStake) / 1e6;
   const upCount = Number(round.upCount);
   const downCount = Number(round.downCount);
 
@@ -89,7 +89,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
               <InfoTooltip text="Votes and stake in the UP pool." position="bottom" />
             </span>
             <span className="font-semibold tabular-nums text-success">
-              {upCount} ({upPoolFormatted.toFixed(0)} cREP)
+              {upCount} ({upStakeFormatted.toFixed(0)} cREP)
             </span>
           </div>
           <div className="w-px h-4 bg-base-content/10" />
@@ -99,7 +99,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
               <InfoTooltip text="Votes and stake in the DOWN pool." position="bottom" />
             </span>
             <span className="font-semibold tabular-nums text-error">
-              {downCount} ({downPoolFormatted.toFixed(0)} cREP)
+              {downCount} ({downStakeFormatted.toFixed(0)} cREP)
             </span>
           </div>
         </div>

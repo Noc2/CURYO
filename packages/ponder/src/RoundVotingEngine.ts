@@ -1,8 +1,6 @@
 import { ponder } from "ponder:registry";
-import { encodePacked, keccak256 } from "viem";
 import { eq, and } from "ponder";
 import {
-  pendingCommit,
   round,
   vote,
   content,
@@ -16,112 +14,41 @@ import {
 
 // Round states: Open(0), Settled(1), Cancelled(2), Tied(3)
 
-ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
-  const { contentId, roundId, voter, commitHash, stake } = event.args;
+ponder.on("RoundVotingEngine:VotePublished", async ({ event, context }) => {
+  const { contentId, roundId, voter, isUp, stake, shares, newRating } = event.args;
   const roundKey = `${contentId}-${roundId}`;
-  const commitKey = keccak256(encodePacked(["address", "bytes32"], [voter, commitHash]));
+  const voteKey = `${contentId}-${roundId}-${voter}`;
 
-  // Upsert round record — VoteCommitted is the first event for a new round
+  // Upsert round record — VotePublished is the first event for a new round
   const existingRound = await context.db.find(round, { id: roundKey });
   if (!existingRound) {
-    // Read epochDuration from contract config
-    let epochDuration: bigint | undefined;
-    try {
-      const cfg = await context.client.readContract({
-        abi: context.contracts.RoundVotingEngine.abi,
-        address: context.contracts.RoundVotingEngine.address!,
-        functionName: "config",
-        args: [],
-      });
-      epochDuration = (cfg as any).epochDuration ?? (cfg as any)[0];
-    } catch {
-      // Fallback — will be null
-    }
-
     await context.db.insert(round).values({
       id: roundKey,
       contentId,
       roundId,
       state: 0, // Open
       voteCount: 1,
-      revealedCount: 0,
       totalStake: stake,
-      upPool: 0n,
-      downPool: 0n,
-      upCount: 0,
-      downCount: 0,
-      epochDuration,
+      upStake: isUp ? stake : 0n,
+      downStake: isUp ? 0n : stake,
+      totalUpShares: isUp ? shares : 0n,
+      totalDownShares: isUp ? 0n : shares,
+      upCount: isUp ? 1 : 0,
+      downCount: isUp ? 0 : 1,
+      startBlock: BigInt(event.block.number),
       startTime: event.block.timestamp,
     });
   } else {
     await context.db.update(round, { id: roundKey }).set((row) => ({
       voteCount: row.voteCount + 1,
       totalStake: row.totalStake + stake,
+      upStake: isUp ? row.upStake + stake : row.upStake,
+      downStake: isUp ? row.downStake : row.downStake + stake,
+      totalUpShares: isUp ? row.totalUpShares + shares : row.totalUpShares,
+      totalDownShares: isUp ? row.totalDownShares : row.totalDownShares + shares,
+      upCount: isUp ? row.upCount + 1 : row.upCount,
+      downCount: isUp ? row.downCount : row.downCount + 1,
     }));
-  }
-
-  // Read revealableAfter from the commit struct on-chain
-  let revealableAfter: bigint | undefined;
-  try {
-    const commitData = await context.client.readContract({
-      abi: context.contracts.RoundVotingEngine.abi,
-      address: context.contracts.RoundVotingEngine.address!,
-      functionName: "getCommit",
-      args: [contentId, roundId, commitKey],
-    });
-    revealableAfter =
-      (commitData as any).revealableAfter ?? (commitData as any)[2];
-  } catch {
-    // Fallback — will be null
-  }
-
-  // Create pending commit record
-  await context.db
-    .insert(pendingCommit)
-    .values({
-      id: `${contentId}-${roundId}-${commitKey}`,
-      contentId,
-      roundId,
-      voter,
-      commitHash,
-      stake,
-      committedAt: event.block.timestamp,
-      revealableAfter: revealableAfter ?? null,
-      revealed: false,
-    })
-    .onConflictDoNothing();
-});
-
-ponder.on("RoundVotingEngine:VoteRevealed", async ({ event, context }) => {
-  const { contentId, roundId, voter, isUp } = event.args;
-  const roundKey = `${contentId}-${roundId}`;
-  const voteKey = `${contentId}-${roundId}-${voter}`;
-
-  // VoteRevealed doesn't include commitHash/stake — read from contract state
-  const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
-  let stakeAmount = 0n;
-  let commitHash: `0x${string}` = ZERO_HASH;
-  let commitKey: `0x${string}` = ZERO_HASH;
-  try {
-    commitHash = (await context.client.readContract({
-      abi: context.contracts.RoundVotingEngine.abi,
-      address: context.contracts.RoundVotingEngine.address!,
-      functionName: "getVoterCommitHash",
-      args: [contentId, roundId, voter],
-    })) as `0x${string}`;
-
-    if (commitHash !== ZERO_HASH) {
-      commitKey = keccak256(encodePacked(["address", "bytes32"], [voter, commitHash]));
-      const commitData = await context.client.readContract({
-        abi: context.contracts.RoundVotingEngine.abi,
-        address: context.contracts.RoundVotingEngine.address!,
-        functionName: "getCommit",
-        args: [contentId, roundId, commitKey],
-      });
-      stakeAmount = (commitData as any).stakeAmount ?? (commitData as any)[1] ?? 0n;
-    }
-  } catch {
-    // If contract read fails, stake will be 0 — best effort
   }
 
   // Create vote record
@@ -133,55 +60,20 @@ ponder.on("RoundVotingEngine:VoteRevealed", async ({ event, context }) => {
       roundId,
       voter,
       isUp,
-      stake: stakeAmount,
-      commitHash,
-      revealedAt: event.block.timestamp,
+      stake,
+      shares,
+      votedAt: event.block.timestamp,
     })
     .onConflictDoNothing();
 
-  // Mark the pending commit as revealed (skip if not found)
-  if (commitKey !== ZERO_HASH) {
-    const existingCommit = await context.db.find(pendingCommit, { id: `${contentId}-${roundId}-${commitKey}` });
-    if (existingCommit) {
-      await context.db
-        .update(pendingCommit, { id: `${contentId}-${roundId}-${commitKey}` })
-        .set({ revealed: true });
-    }
-  }
-
-  // Upsert round record — update pools and revealedCount
-  const existingRound = await context.db.find(round, { id: roundKey });
-  if (!existingRound) {
-    await context.db.insert(round).values({
-      id: roundKey,
-      contentId,
-      roundId,
-      state: 0, // Open
-      voteCount: 0,
-      revealedCount: 1,
-      totalStake: 0n,
-      upPool: isUp ? stakeAmount : 0n,
-      downPool: isUp ? 0n : stakeAmount,
-      upCount: isUp ? 1 : 0,
-      downCount: isUp ? 0 : 1,
-    });
-  } else {
-    await context.db.update(round, { id: roundKey }).set((row) => ({
-      revealedCount: row.revealedCount + 1,
-      upPool: isUp ? row.upPool + stakeAmount : row.upPool,
-      downPool: isUp ? row.downPool : row.downPool + stakeAmount,
-      upCount: isUp ? row.upCount + 1 : row.upCount,
-      downCount: isUp ? row.downCount : row.downCount + 1,
-    }));
-  }
-
-  // Update content aggregate and lastActivityAt (skip if content not yet indexed)
+  // Update content aggregate, rating, and lastActivityAt (skip if content not yet indexed)
   const contentRecord = await context.db.find(content, { id: contentId });
   if (contentRecord) {
     await context.db
       .update(content, { id: contentId })
       .set((row) => ({
         totalVotes: row.totalVotes + 1,
+        rating: newRating,
         lastActivityAt: event.block.timestamp,
       }));
 
@@ -225,7 +117,7 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
   const { contentId, roundId, upWins, totalPool } = event.args;
   const roundKey = `${contentId}-${roundId}`;
 
-  // Upsert round — may not exist if no votes were revealed for this content
+  // Upsert round — may not exist if no votes were indexed for this content
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
     await context.db.update(round, { id: roundKey }).set({
@@ -241,10 +133,11 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
       roundId,
       state: 1, // Settled
       voteCount: 0,
-      revealedCount: 0,
       totalStake: 0n,
-      upPool: 0n,
-      downPool: 0n,
+      upStake: 0n,
+      downStake: 0n,
+      totalUpShares: 0n,
+      totalDownShares: 0n,
       upCount: 0,
       downCount: 0,
       upWins,
@@ -278,7 +171,7 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
     }));
 
   // ---- Accuracy tracking ----
-  // Query all revealed votes for this round
+  // Query all votes for this round
   const roundVotes = await context.db.sql
     .select()
     .from(vote)
@@ -359,10 +252,11 @@ ponder.on("RoundVotingEngine:RoundCancelled", async ({ event, context }) => {
       roundId,
       state: 2, // Cancelled
       voteCount: 0,
-      revealedCount: 0,
       totalStake: 0n,
-      upPool: 0n,
-      downPool: 0n,
+      upStake: 0n,
+      downStake: 0n,
+      totalUpShares: 0n,
+      totalDownShares: 0n,
       upCount: 0,
       downCount: 0,
     });
@@ -371,7 +265,6 @@ ponder.on("RoundVotingEngine:RoundCancelled", async ({ event, context }) => {
 
 ponder.on("RoundVotingEngine:FrontendFeeClaimed", async ({ event, context }) => {
   const { contentId, roundId, frontend, amount } = event.args;
-  const roundKey = `${contentId}-${roundId}`;
 
   // Update global stats — track total rewards claimed
   await context.db
@@ -446,10 +339,11 @@ ponder.on("RoundVotingEngine:RoundTied", async ({ event, context }) => {
       roundId,
       state: 3, // Tied
       voteCount: 0,
-      revealedCount: 0,
       totalStake: 0n,
-      upPool: 0n,
-      downPool: 0n,
+      upStake: 0n,
+      downStake: 0n,
+      totalUpShares: 0n,
+      totalDownShares: 0n,
       upCount: 0,
       downCount: 0,
     });

@@ -90,8 +90,7 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
   // NOTE: Do NOT match /success/i — scaffold-eth fires a generic
   // "Transaction completed successfully!" toast for the approve tx,
   // which would match before the actual vote completes.
-  const successIndicator = page
-    .getByText(/voted/i);
+  const successIndicator = page.getByText(/voted/i);
 
   const errorIndicator = page
     .getByText(/reverted/i)
@@ -187,9 +186,7 @@ export async function voteOnSpecificContent(
   await confirmBtn.click();
 
   // Wait for outcome — avoid /success/i which matches the approve tx toast
-  const successIndicator = page
-    .getByText(/committed/i)
-    .or(page.getByText(/voted/i));
+  const successIndicator = page.getByText(/committed/i).or(page.getByText(/voted/i));
 
   const errorIndicator = page
     .getByText(/reverted/i)

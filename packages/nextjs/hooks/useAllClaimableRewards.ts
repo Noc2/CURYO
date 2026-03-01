@@ -46,7 +46,7 @@ export function useAllClaimableRewards() {
   return {
     claimableItems: [] as ClaimableItem[],
     totalClaimable: 0n,
-    pendingStake: 0n,
+    activeStake: 0n,
     isLoading: false,
     refetch: () => {},
   };

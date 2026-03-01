@@ -128,10 +128,8 @@ test.describe("Ponder API endpoints", () => {
   test("GET /voting-stakes returns stake breakdown for voter", async () => {
     const voter = ANVIL_ACCOUNTS.account3.address.toLowerCase();
     const data = await ponderGet(`/voting-stakes?voter=${voter}`);
-    expect(data).toHaveProperty("pendingStake");
-    expect(data).toHaveProperty("pendingCount");
-    expect(data).toHaveProperty("revealingStake");
-    expect(data).toHaveProperty("revealingCount");
+    expect(data).toHaveProperty("activeStake");
+    expect(data).toHaveProperty("activeCount");
     expect(data).toHaveProperty("voter");
     expect(data.voter).toBe(voter);
   });
