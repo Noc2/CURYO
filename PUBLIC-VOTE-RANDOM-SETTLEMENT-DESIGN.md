@@ -8,643 +8,573 @@ Curyo's current tlock commit-reveal system ensures vote privacy within epochs, p
 - **Keeper infrastructure** — a dedicated keeper service must reveal votes via drand beacons
 - **drand dependency** — the system relies on an external distributed randomness beacon
 - **Two-phase UX** — voters cannot see their vote's impact until the reveal phase
+- **Reveal failures** — voters who don't return to reveal lose their stake (UX friction)
 
-This document explores an alternative: **public voting with immediate rating impact and random settlement timing**, which could achieve similar strategic properties with dramatically simpler architecture.
+This document explores an alternative: **public voting with immediate rating impact and random settlement timing**.
 
-## Proposed Mechanism
+## Core Idea in Plain Language
 
-### Core Idea
+1. You see content. You vote UP or DOWN and stake cREP.
+2. Your vote **immediately moves the content's rating**. Everyone can see it.
+3. But here's the catch: **the more people have already voted the same direction, the less you stand to gain** — and the more you risk. The 4th person voting UP earns far less than the 1st.
+4. Nobody knows when the epoch will settle. It could be the next block or two hours from now. At settlement, one side wins and the other loses.
+5. **If the rating ended up higher than where it started**, UP voters win. DOWN voters' stakes are redistributed to UP voters — with early and contrarian voters receiving the largest share.
 
-1. **Votes are public and immediate.** When a voter stakes cREP and votes UP or DOWN, the content's rating moves instantly.
-2. **Each vote shifts the rating** along a pricing curve. The more votes already exist in one direction, the more expensive (riskier) it becomes to vote in that same direction.
-3. **Settlement happens randomly.** At any point during the epoch, settlement can be triggered. No one knows when. At settlement, voters on the "correct" side are rewarded; the "incorrect" side loses their stakes.
-4. **"Correct" is defined by the final rating direction** relative to a reference point (the rating at epoch start).
+This creates a self-correcting dynamic: following the crowd is expensive and risky, going against it is cheap and potentially very rewarding. You don't need hidden votes to prevent herding — the economics prevent it.
 
-### Why This Works
+## Voter Experience
 
-The key insight is that **the pricing curve creates its own anti-herding incentive**. In traditional public voting (Reddit, HN), following the crowd is costless. Here, following the crowd is *expensive* because the risk/reward ratio worsens with each additional aligned vote.
-
-**Example flow:**
-- Content starts epoch at rating 50 (neutral)
-- Voter A stakes 10 cREP and votes UP. Rating moves to 55. Cost was low, potential reward is high.
-- Voter B stakes 10 cREP and votes UP. Rating moves to 58. Cost was slightly higher, reward potential slightly lower.
-- Voter C stakes 10 cREP and votes UP. Rating moves to 60. More expensive still.
-- Now Voter D faces a decision: voting UP is expensive (rating already high, less room to grow). Voting DOWN is cheap and potentially very rewarding if the rating corrects.
-- This creates natural **contrarian pressure** that self-corrects toward true quality.
-
-Meanwhile, settlement could trigger at any moment. Voters can't wait and pile on at the last second because there is no known "last second."
-
-## Prior Art and Research
-
-### Curation Markets and Token Curated Registries (TCRs)
-
-Simon de la Rouviere introduced **curation markets** in 2017 — bonding curves where staking tokens on content creates a price signal for quality. Token Curated Registries (TCRs) extended this with challenge/voting mechanisms.
-
-**Known TCR failure modes:**
-- **Plutocracy** — large token holders dominate curation decisions
-- **Apathy** — most token holders don't bother to participate in challenges
-- **Fake curation signals** — staking doesn't necessarily correlate with genuine quality assessment
-- **No incentive for accuracy** — TCR voters are rewarded for agreeing with the majority, not for being right
-
-**Lesson for this design:** The pricing curve must make it *expensive* to vote with the majority and *rewarding* to provide new information. Settlement must reference something beyond pure vote tally.
-
-### Logarithmic Market Scoring Rule (LMSR)
-
-Robin Hanson's LMSR is the most theoretically sound mechanism for this design pattern. It was designed specifically for prediction/information markets.
-
-**Cost function (binary outcome — quality vs. not quality):**
+### What a Voter Sees
 
 ```
-C(q_up, q_down) = b * ln(exp(q_up / b) + exp(q_down / b))
+┌─────────────────────────────────────────────────────┐
+│  "Why Rust's Borrow Checker Is Brilliant"           │
+│                                                     │
+│  Rating: ████████░░ 73/100  (epoch start: 50)       │
+│  Epoch: Active · 47 min elapsed · 8 votes           │
+│                                                     │
+│  Current positions:                                 │
+│    UP:   6 votes · 142 cREP total stake             │
+│    DOWN: 2 votes · 38 cREP total stake              │
+│                                                     │
+│  Your potential reward if you vote now:              │
+│    UP:   ~0.3x return (crowded — low reward)        │
+│    DOWN: ~2.8x return (contrarian — high reward)    │
+│                                                     │
+│  ┌──────────┐  ┌───────────┐                        │
+│  │  VOTE UP  │  │ VOTE DOWN │   Stake: [10] cREP    │
+│  └──────────┘  └───────────┘                        │
+└─────────────────────────────────────────────────────┘
 ```
 
-**Price of a "quality" share:**
+### What Decisions a Voter Makes
 
-```
-p_up = exp(q_up / b) / (exp(q_up / b) + exp(q_down / b))
-```
+1. **Direction:** UP or DOWN. Based on their assessment of content quality.
+2. **Stake amount:** Between `MIN_STAKE` and `MAX_STAKE`. Higher stake = more shares, more risk, more reward.
+3. **Timing:** Vote now (secure a position, but with current info) or wait (more info, but risk missing the epoch or getting a worse price).
 
-This is a **softmax function**. The parameter `b` (liquidity) controls sensitivity:
-- **Large b** — thick market, prices move slowly, harder to manipulate but less responsive
-- **Small b** — thin market, prices move quickly, more responsive but more volatile
+### What Happens After Voting
 
-**Critical properties:**
-- **Bounded market maker loss:** The maximum subsidy required is `b * ln(2)`. This is the protocol's worst-case cost per content item.
-- **Quadratic manipulation cost:** Moving the price by `delta` costs approximately `b * delta^2 / 2`. A 2x larger manipulation costs 4x as much.
-- **Natural early-mover advantage:** Shares bought when the price is low (early contrarian) cost less and pay out more if correct.
-
-**Example with b = 100:**
-| Action | Price Before | Price After | Cost |
-|--------|-------------|-------------|------|
-| Move rating from 50% to 60% | 0.50 | 0.60 | ~10.1 cREP |
-| Move rating from 60% to 70% | 0.60 | 0.70 | ~12.4 cREP |
-| Move rating from 70% to 80% | 0.70 | 0.80 | ~16.1 cREP |
-| Move rating from 80% to 90% | 0.80 | 0.90 | ~24.8 cREP |
-| Move rating from 90% to 95% | 0.90 | 0.95 | ~30.5 cREP |
-
-The cost increases superlinearly as the rating approaches extremes. This is exactly the "risk increases for followers" property we want.
-
-### Parimutuel Markets and Timing Research
-
-Ottaviani & Sorensen (2006) studied "The Timing of Parimutuel Bets" and found that **informed bettors strategically wait until the last moment** in fixed-deadline parimutuel markets. Nearly 40% of the wagering pool arrives in the final minute of horse racing betting windows.
-
-**Key finding:** When settlement time is known, rational actors delay to maximize information advantage. Random settlement breaks this dynamic by making delay costly — each moment you wait, there's a probability `p` that settlement occurs and you miss the epoch entirely.
-
-### Wisdom of Crowds (Surowiecki)
-
-For crowd aggregation to produce accurate results, four conditions must hold:
-
-1. **Diversity of opinion** — participants have heterogeneous information
-2. **Independence** — individual judgments aren't influenced by others
-3. **Decentralization** — no central authority determines the outcome
-4. **Aggregation** — a mechanism exists to combine individual signals
-
-Public voting **violates independence** (voters see each other's votes). However, the LMSR pricing mechanism compensates: even though votes are visible, the cost structure makes herding unprofitable. The mechanism provides **incentive-based independence** rather than information-based independence.
-
-### Ocean Protocol Lessons
-
-Ocean Protocol's curation staking V1-V3 used bonding curves (AMM pools) for data quality curation. They encountered:
-- Impermanent loss for curators
-- Rug-pull risk from publishers
-- Fake curation signals
-
-They eventually migrated to vote-escrow (veOCEAN) model. **Lesson:** Bonding curves alone are insufficient — the settlement/resolution mechanism matters as much as the pricing mechanism.
+- The rating updates instantly — the voter sees their impact.
+- Their position is locked until settlement. No cancellation, no changing sides.
+- Settlement can happen at any time. When it does, rewards are automatically calculated and distributed. The voter doesn't need to return (unlike the current reveal step).
 
 ## Mechanism Design
 
 ### Rating Model
 
-Each content item has a **rating** that evolves based on votes:
+Each content item has a rating between 0 and 100, derived from the balance of UP and DOWN stakes in the current epoch:
 
 ```
-rating(t) = softmax(q_up(t), q_down(t))
-          = exp(q_up / b) / (exp(q_up / b) + exp(q_down / b))
+rating = 50 + 50 * (q_up - q_down) / (q_up + q_down + b)
 ```
 
-where `q_up` and `q_down` are the cumulative effective stake on each side, and `b` is the liquidity parameter.
+where `q_up` and `q_down` are the effective cumulative stakes on each side and `b` is the liquidity parameter that controls sensitivity. When `q_up = q_down = 0` (no votes), the rating stays at its starting value.
 
-- **Rating = 0.5** means equal conviction on both sides (neutral)
-- **Rating > 0.5** means net positive quality signal
-- **Rating < 0.5** means net negative quality signal
-
-When a voter stakes `s` cREP and votes UP:
+**Alternative: LMSR-based rating.** The rating can also be computed via Robin Hanson's Logarithmic Market Scoring Rule, which gives a softmax function:
 
 ```
-q_up_new = q_up + s
-cost = C(q_up + s, q_down) - C(q_up, q_down)
-     = b * ln(exp((q_up + s)/b) + exp(q_down/b)) - b * ln(exp(q_up/b) + exp(q_down/b))
+rating_normalized = exp(q_up / b) / (exp(q_up / b) + exp(q_down / b))
 ```
 
-The voter receives "UP shares" proportional to their stake, purchased at the current price.
+LMSR has stronger theoretical properties (bounded market maker loss, proper scoring rule, proven truthful equilibrium). The tradeoff is on-chain exp/ln computation via fixed-point math libraries (Solady, PRBMath). Both approaches produce the same qualitative behavior — the choice is an implementation decision.
 
-### Vote Mechanics
+### How Votes Move the Rating
 
-**When a voter votes:**
-1. Voter stakes `s` cREP (between `MIN_STAKE` and `MAX_STAKE`)
-2. Voter chooses direction: UP or DOWN
-3. The contract computes the current price `p` for that direction
-4. Voter receives `shares = s / p` shares of that direction
-5. Rating updates immediately based on new `q_up` or `q_down`
+The key property: **each additional vote in the same direction has diminishing marginal impact on the rating, but increasing marginal cost in terms of risk/reward ratio.**
 
-**What the voter receives at settlement:**
-- If their direction matches the "correct" outcome: `payout = shares * 1.0` (each share pays 1 unit)
-- If their direction is "incorrect": `payout = 0` (shares are worthless)
+**Concrete example (b = 100):**
 
-**Profit = payout - cost.** Since early voters buy shares at lower prices, their profit is higher.
+| Voter | Direction | Stake | Rating Before | Rating After | Potential Return |
+|-------|-----------|-------|---------------|--------------|------------------|
+| Alice | UP | 10 cREP | 50 | 55 | ~1.8x if UP wins |
+| Bob | UP | 10 cREP | 55 | 59 | ~1.4x if UP wins |
+| Carol | UP | 10 cREP | 59 | 62 | ~1.1x if UP wins |
+| Dave | DOWN | 10 cREP | 62 | 58 | ~2.5x if DOWN wins |
+| Eve | UP | 10 cREP | 58 | 61 | ~1.2x if UP wins |
 
-### Epoch Structure
+Alice took the most risk (voted first, least information) and gets the best return if correct. Carol gets a thin margin because she followed an established trend. Dave, the contrarian, gets a large potential return because he's going against 3 prior UP voters.
 
-Each content item has an active **epoch** during which votes accumulate.
+This is the core incentive: **the market rewards information, not agreement.**
 
-**Epoch lifecycle:**
-```
-1. OPEN — First vote on content creates a new epoch
-2. ACTIVE — Votes accumulate, rating moves with each vote
-3. SETTLEMENT — Random trigger fires, epoch settles
-4. NEW EPOCH — A new epoch starts immediately (content retains its rating)
-```
+### Shares and Payouts
 
-### Random Settlement
-
-Settlement is triggered probabilistically. Two approaches:
-
-#### Option A: Per-Block Geometric Distribution (Memoryless)
-
-Each block has independent probability `p` of triggering settlement:
+Under the hood, each vote purchases "shares" at the current market price:
 
 ```
-Pr(settlement at block k) = p * (1-p)^(k-1)
-E[epoch_length] = 1/p blocks
+shares_received = stake / current_price_for_direction
 ```
 
-**Memoryless property:** `Pr(settle next block | not settled yet) = p` (constant).
-
-This means there is literally no information about when settlement will occur — the next block is always equally likely to be the last.
-
-**Pros:** Perfectly eliminates timing games.
-**Cons:** Can produce very short or very long epochs. No guaranteed minimum voting period.
-
-#### Option B: Increasing Hazard Rate (Recommended)
-
-The probability of settlement starts low and increases over time:
-
+The current price for a direction is its implied probability:
 ```
-h(t) = base_rate + growth_rate * max(0, t - min_blocks)
+price_UP = q_up / (q_up + q_down + b)   (simplified model)
 ```
 
-**Implementation:**
-```solidity
-function settlementProbability(uint256 blocksElapsed) public pure returns (uint256) {
-    if (blocksElapsed < MIN_EPOCH_BLOCKS) return 0;
-    if (blocksElapsed >= MAX_EPOCH_BLOCKS) return 10000; // 100% — forced settlement
+Early voters buy at low prices (many shares per cREP). Late followers buy at high prices (few shares per cREP). At settlement, winning shares split the losing pool proportionally.
 
-    uint256 elapsed = blocksElapsed - MIN_EPOCH_BLOCKS;
-    uint256 prob = BASE_RATE_BPS + elapsed * GROWTH_RATE_BPS;
-    return prob > 10000 ? 10000 : prob;
-}
+**Payout formula (parimutuel — zero-sum):**
+```
+losing_pool = sum of all losing-side stakes
+payout_per_winning_share = losing_pool / total_winning_shares
+voter_payout = voter_shares * payout_per_winning_share
+voter_profit = voter_payout - voter_original_stake
 ```
 
-**Example parameters:**
-| Parameter | Value | Meaning |
-|-----------|-------|---------|
-| `MIN_EPOCH_BLOCKS` | 100 | ~20 min on L2, guaranteed minimum voting window |
-| `MAX_EPOCH_BLOCKS` | 1500 | ~5 hours, forced settlement |
-| `BASE_RATE_BPS` | 50 | 0.5% chance per block after minimum |
-| `GROWTH_RATE_BPS` | 5 | +0.05% per block (probability grows linearly) |
+This means:
+- **No protocol subsidy needed.** Losers fund winners. The system is fully self-sustaining.
+- **Early correct voters profit most.** They hold more shares per unit staked.
+- **Late followers on the winning side may barely break even** — they bought expensive shares, and the payout per share may be less than 1.
+- **Late followers on the losing side lose their entire stake** — same as the current system.
 
-**Expected epoch length:** ~250-400 blocks (~50-80 minutes) with this configuration.
+### What Determines the Winner
 
-**Properties:**
-- Nobody can predict settlement timing
-- Early in the epoch, settlement is unlikely (gives time for votes to accumulate)
-- Late in the epoch, settlement becomes very likely (prevents endless epochs)
-- Maximum duration provides a hard cap
-
-#### Settlement Trigger Mechanism
-
-Settlement doesn't happen automatically — it requires a transaction. Anyone can call `trySettle()`:
-
-```solidity
-function trySettle(uint256 contentId) external {
-    Epoch storage epoch = epochs[contentId];
-    require(!epoch.settled, "already settled");
-
-    uint256 elapsed = block.number - epoch.startBlock;
-    uint256 prob = settlementProbability(elapsed);
-
-    // Use block randomness to determine settlement
-    uint256 rand = uint256(keccak256(abi.encodePacked(block.prevrandao, contentId, epoch.id)));
-
-    if (rand % 10000 < prob) {
-        _settle(contentId);
-        emit EpochSettled(contentId, epoch.id, block.number);
-    }
-}
-```
-
-**Who calls trySettle?**
-- A keeper bot (much simpler than the current keeper — no tlock, no drand, just periodic `trySettle()` calls)
-- Any interested user
-- Could be called within the `vote()` function itself (each vote checks if settlement should trigger)
-
-**Calling within vote()** is particularly elegant: each vote itself has a chance of triggering settlement. This means:
-- No separate keeper is needed for settlement triggering
-- The more votes there are, the more settlement checks occur
-- There's a natural tension: do you vote and risk triggering settlement, or wait and risk someone else triggering it?
-
-### Settlement Reference: TWAP
-
-To prevent last-second manipulation, settlement uses a **Time-Weighted Average Price (TWAP)** rather than the instantaneous rating:
+At settlement, compare the epoch's final rating to its starting rating:
 
 ```
-TWAP = sum(rating_i * duration_i) / total_duration
-```
-
-**Implementation:**
-```solidity
-struct TWAPState {
-    uint256 cumulativeRating;  // sum of (rating * blocks_at_that_rating)
-    uint256 lastUpdateBlock;
-    int256 lastRating;         // rating in basis points (5000 = 0.50)
-}
-
-function _updateTWAP(uint256 contentId, int256 newRating) internal {
-    TWAPState storage state = twap[contentId];
-    uint256 elapsed = block.number - state.lastUpdateBlock;
-    state.cumulativeRating += uint256(state.lastRating) * elapsed;
-    state.lastRating = newRating;
-    state.lastUpdateBlock = block.number;
-}
-
-function _settlementRating(uint256 contentId) internal view returns (int256) {
-    TWAPState storage state = twap[contentId];
-    uint256 elapsed = block.number - state.lastUpdateBlock;
-    uint256 cumulative = state.cumulativeRating + uint256(state.lastRating) * elapsed;
-    uint256 totalBlocks = block.number - epochs[contentId].startBlock;
-    return int256(cumulative / totalBlocks);
-}
-```
-
-**Effect:** A whale who votes large at the last moment barely moves the TWAP. To meaningfully affect the TWAP, they'd need to maintain a manipulated rating for a significant fraction of the epoch.
-
-### What "Correct Direction" Means
-
-At settlement, we need to determine which side wins. Two options:
-
-#### Option 1: Direction Relative to Epoch Start Rating
-
-The "correct" direction is determined by comparing the TWAP at settlement to the rating at epoch start:
-
-```
-if TWAP_at_settlement > rating_at_epoch_start:
+if rating_at_settlement > rating_at_epoch_start:
     UP voters win, DOWN voters lose
-else if TWAP_at_settlement < rating_at_epoch_start:
+else if rating_at_settlement < rating_at_epoch_start:
     DOWN voters win, UP voters lose
 else:
     Draw — all stakes returned
 ```
 
-**Pros:** Simple, objective, doesn't depend on external oracle.
-**Cons:** This is a Schelling point game — voters are rewarded for predicting what other voters will do, not for assessing content quality.
+**Why this is the right choice:**
 
-#### Option 2: Direction Relative to Long-Term Average
+This is the same fundamental mechanic as the current Curyo system — majority direction wins. The current system counts revealed votes; this system uses the net rating movement. Both are coordination games, not oracle-based truth games.
 
-Compare the TWAP to a longer-term rolling average across multiple epochs:
+The common objection is "this is a Keynesian beauty contest — voters predict what others will predict, not actual quality." But this is already true today. Curyo voters are rewarded for being on the majority side, not for agreeing with some external quality oracle. The proposed system doesn't introduce this property — it makes it more transparent and adds a pricing mechanism that penalizes mindless agreement.
 
-```
-if TWAP_this_epoch > long_term_average:
-    Epoch result = UP
-else:
-    Epoch result = DOWN
-```
+**Content quality emerges over time** from the accumulation of many epochs. If a piece of content consistently triggers UP votes across dozens of epochs, its long-term rating reflects genuine collective assessment — the same way a stock price reflects collective valuation despite each trade being a coordination game.
 
-**Pros:** Anchors to a more stable reference. Harder to manipulate a long-term average.
-**Cons:** Introduces path dependency. Early epochs have no reference.
+### Edge Cases
 
-#### Option 3: Pure Parimutuel (No "Correct" Side)
+**Unanimous votes (all UP, no DOWN):**
+There's no losing pool to distribute. Options:
+- **Recommended: Epoch doesn't settle.** Settlement requires at least 1 voter on each side. If the settlement trigger fires but only one side has voters, the epoch extends. This incentivizes contrarian participation — if you see a one-sided epoch, there's an opportunity.
+- Alternative: Return all stakes (no reward, no loss). This is simpler but provides no incentive.
 
-This is the simplest interpretation that matches the original proposal most closely:
+**Single voter:**
+The epoch has minimum participation requirements. At least 2 voters, with at least 1 on each side, must exist for settlement. A single voter's epoch stays open until someone takes the other side.
 
-At settlement, the rating's **final position** determines the outcome. Voters who voted in the direction the rating ultimately moved earn rewards from those who voted the opposite direction.
+**Very low participation (2 voters, opposite sides):**
+This works fine. It's a direct heads-up bet. Both voters get a clear risk/reward picture. The random settlement means neither can time their exit.
 
-Concretely: if the rating went UP on net during the epoch, UP voters split the DOWN voters' stakes (proportional to their shares). Vice versa if rating went DOWN.
+**Stale content (no one votes for a long time):**
+No epoch is active if no one has voted. The content retains its last settled rating. The existing dormancy marking mechanism (`markDormant`) still applies.
 
-```
-net_direction = q_up_final - q_up_initial vs q_down_final - q_down_initial
-if net UP votes dominated: UP shares pay out, DOWN shares are worthless
-if net DOWN votes dominated: DOWN shares pay out, UP shares are worthless
-```
+**Rating at exactly 50 at settlement (draw):**
+All stakes returned. This should be rare — even a 0.01 difference triggers a winner. For the simplified model, use a small epsilon: `if |rating - epoch_start| < epsilon: draw`.
 
-But because shares were purchased at different prices via LMSR, early contrarian voters get more shares per unit staked, earning proportionally more.
+## Random Settlement
 
-**This is the recommended approach.** It's a pure coordination/prediction game, but the LMSR pricing prevents the standard pathologies (herding, whale domination).
+### How It Works
 
-### Reward Distribution
+Settlement is triggered probabilistically. Each time the contract is called (via a vote or a dedicated `trySettle` call), it checks whether settlement should occur:
 
-Under LMSR, rewards distribute naturally:
+```solidity
+function _shouldSettle(uint256 contentId) internal view returns (bool) {
+    Epoch storage epoch = epochs[contentId];
+    uint256 elapsed = block.number - epoch.startBlock;
 
-1. **Winning side's shares pay out 1 unit each**
-2. **Each voter's profit = (shares * 1.0) - cost_of_shares**
-3. **Earlier voters on the winning side paid less per share, so they profit more**
+    // Phase 1: Grace period — no settlement possible
+    if (elapsed < MIN_EPOCH_BLOCKS) return false;
 
-**Formal payout:**
+    // Phase 2: Forced settlement — epoch must end
+    if (elapsed >= MAX_EPOCH_BLOCKS) return true;
 
-For a voter who bought `n` shares of the winning direction at average price `p_avg`:
-```
-payout = n * 1.0
-cost = n * p_avg
-profit = n * (1.0 - p_avg)
-```
+    // Phase 3: Increasing probability
+    uint256 window = elapsed - MIN_EPOCH_BLOCKS;
+    uint256 prob = BASE_RATE_BPS + window * GROWTH_RATE_BPS;
+    if (prob > MAX_PROB_BPS) prob = MAX_PROB_BPS;
 
-The protocol's subsidy/deficit:
-```
-protocol_subsidy = total_winning_payout - total_losing_stakes
-```
-
-Under LMSR, this is bounded by `b * ln(2)`. The protocol can prefund this from treasury or treat it as a cost of running the curation system.
-
-Alternatively, to make the system zero-sum (no protocol subsidy needed):
-
-**Parimutuel LMSR hybrid:**
-```
-winning_pool = total_losing_stakes (what the losers put in)
-payout_per_share = winning_pool / total_winning_shares
-voter_payout = voter_shares * payout_per_share
+    uint256 rand = uint256(keccak256(abi.encodePacked(
+        block.prevrandao, contentId, epoch.id, block.number
+    )));
+    return (rand % 10000) < prob;
+}
 ```
 
-This distributes all losing stakes to winners, proportional to shares. Early contrarian voters still benefit because they acquired more shares per cREP staked.
+### Parameter Recommendations
 
-## Game-Theoretic Analysis
+| Parameter | Value | Effect |
+|-----------|-------|--------|
+| `MIN_EPOCH_BLOCKS` | 150 | ~30 min grace period. Votes accumulate before settlement can trigger. |
+| `MAX_EPOCH_BLOCKS` | 1800 | ~6 hours hard cap. Prevents indefinite epochs. |
+| `BASE_RATE_BPS` | 30 | 0.3% chance per block initially. Low — settlement is unlikely right after grace period. |
+| `GROWTH_RATE_BPS` | 3 | +0.03% per block. Probability grows steadily. |
+| `MAX_PROB_BPS` | 500 | 5% cap per block. Prevents near-certainty before forced settlement. |
 
-### Nash Equilibrium
+**Expected epoch length with these parameters:** ~300-600 blocks (~1-2 hours), with a guaranteed minimum of 30 minutes and maximum of 6 hours.
 
-**Proposition: Under LMSR pricing with random settlement, truthful voting is a Bayesian Nash Equilibrium.**
+**Why increasing hazard rate (not memoryless):**
+A pure geometric distribution (constant probability per block) can produce very short epochs (settling at block 151, just after the grace period). The increasing hazard rate means:
+- Right after the grace period: settlement is very unlikely (0.3%)
+- After 1 hour: probability has climbed to ~1.5% per block
+- After 3 hours: ~3% per block, settlement is imminent
+- At 6 hours: forced
 
-**Intuition:** Each vote is effectively a bet. Buying a "quality" share at price `p` has expected profit:
+This gives content enough time to attract voters while maintaining unpredictability.
 
-```
-E[profit] = Pr(quality) * 1 - p
-```
+### Who Triggers Settlement
 
-This is positive only if `Pr(quality) > p`. A rational voter buys when their private belief exceeds the market price. This is truthful revelation.
+**Option A: Embedded in vote() (Recommended)**
 
-**Critical caveat:** This holds when the settlement outcome is determined by **true quality** (or a sufficiently accurate proxy). In the parimutuel variant (Option 3 above), the outcome is determined by collective action, which introduces coordination game dynamics. However, the LMSR pricing curve still makes it expensive to coordinate on the "wrong" answer, because doing so requires sustained capital at increasing cost.
+Each vote checks for settlement before executing:
 
-### Herding Resistance
+```solidity
+function vote(uint256 contentId, bool isUp, uint256 stake) external {
+    // Check if the current epoch should settle
+    if (_shouldSettle(contentId) && _hasMinimumParticipation(contentId)) {
+        _settle(contentId);
+    }
 
-Traditional wisdom of crowds theory (Surowiecki) requires independence — voters shouldn't see each other's votes. Public voting violates this.
+    // Get or create epoch (new epoch if previous just settled)
+    Epoch storage epoch = _getOrCreateEpoch(contentId);
 
-**However, LMSR provides a substitute mechanism:**
-
-| Traditional crowd wisdom | LMSR-based curation |
-|--------------------------|---------------------|
-| Independence: can't see others' votes | Pricing: expensive to follow the crowd |
-| Diversity: heterogeneous information | Contrarian incentive: cheap to disagree |
-| Aggregation: mechanism to combine | Market price: continuous aggregation |
-
-The LMSR curve creates **incentive-based independence**: even though you *can* see how others voted, the cost structure makes it *irrational* to blindly follow. Following the crowd means buying expensive shares with low expected returns.
-
-### Whale Manipulation
-
-**Scenario:** A whale with budget `W >> average_stake` votes first to set direction.
-
-**Under LMSR:**
-- The whale moves the price from `p_0` to `p_1`, spending approximately `b * (p_1 - p_0)^2 / 2`
-- If the whale is wrong, informed voters will move the price back, and the whale's shares become worthless
-- If the whale is right, they profit — but this is desirable (they provided genuine information)
-- The whale's break-even requires their belief `Pr(quality) > p_1` (the post-purchase price)
-
-**Result:** LMSR naturally punishes uninformed manipulation. A whale pushing the price away from truth loses money proportional to the distance.
-
-**Remaining risk:** If most other voters are unsophisticated and follow the whale (herding), the whale profits. This is mitigated by:
-1. The LMSR cost structure (following gets expensive)
-2. Sybil-resistant identity (each Voter ID is one human — existing in Curyo)
-3. Optional: quadratic staking (effective_stake = sqrt(raw_stake)) to cap whale influence
-
-### Last-Mover Problem
-
-Even with random settlement, late voters have more information. Is this a problem?
-
-**With geometric stopping (probability `p` per block):**
-
-The value of waiting `k` more blocks:
-```
-E[wait_k] = (1-p)^k * E[profit_with_info | unsettled]
+    // Execute the vote
+    _executeVote(epoch, msg.sender, isUp, stake);
+}
 ```
 
-Each block of delay discounts the value of new information by factor `(1-p)`. For `p = 0.005` (0.5% per block):
-- Wait 10 blocks: value = 95% of full information value
-- Wait 50 blocks: value = 78%
-- Wait 100 blocks: value = 61%
-- Wait 200 blocks: value = 37%
+Note: settlement is checked **before** the vote, not after. This means the voter's own vote does not trigger settlement on itself — it goes into the current (or new) epoch cleanly. Settlement is triggered by the *randomness of the block* the voter happens to transact on.
 
-This creates a natural **time value of voting**. Waiting is costly because you might miss the epoch entirely.
+**Option B: Separate trySettle() for keeper/anyone**
 
-**With increasing hazard rate:** The cost of waiting accelerates over time, creating even stronger incentives to vote promptly.
+A simpler keeper that just calls `trySettle(contentId)` for all active epochs periodically. This is much simpler than the current keeper — no tlock decryption, no drand monitoring.
 
-## Comparison with Current System
-
-| Property | Current (tlock commit-reveal) | Proposed (public + random settlement) |
-|----------|-------------------------------|---------------------------------------|
-| Vote privacy | Full (tlock encrypted) | None (votes are public) |
-| Herding prevention | Cryptographic (can't see votes) | Economic (expensive to follow) |
-| Infrastructure | tlock + drand + keeper | Simple keeper (or self-settling) |
-| Transactions per vote | 1 (commit) + 1 (reveal) | 1 |
-| UX complexity | High (encryption, reveal wait) | Low (stake and vote, see impact) |
-| Settlement timing | Fixed (epoch end) | Random (unpredictable) |
-| Continuous price discovery | No (votes hidden until reveal) | Yes (rating updates live) |
-| On-chain randomness need | drand (off-chain) | RANDAO or VRF (simpler) |
-| Keeper role | Decrypt + reveal + settle | Trigger settlement check |
-| First-mover disadvantage | Addressed by epoch duration | Addressed by pricing curve |
-| Game theory foundation | Schelling point + privacy | LMSR + random stopping |
-| Protocol subsidy needed | No (pure redistribution) | `b * ln(2)` per content item per epoch, OR zero with parimutuel variant |
-
-## Implementation Considerations
+**Recommended: Both.** Embed the check in `vote()` for self-settling, AND expose `trySettle()` for a lightweight keeper to catch epochs where voting has stalled but settlement should occur.
 
 ### Randomness Source
 
 **Recommended: `block.prevrandao` (RANDAO)**
 
-- Free (no gas overhead beyond the keccak256 hash)
-- Available on all post-merge EVM chains
-- 1-bit bias risk is negligible for content rating settlement (unlike high-value DeFi)
-- No external dependencies
+- Free — no gas overhead beyond a keccak256 hash
+- Available on all post-merge EVM chains and L2s
+- The 1-bit bias risk (a validator can choose to skip their block) is negligible for content rating settlement. This isn't DeFi liquidation or lottery — the stakes per epoch are bounded.
 
-**Fallback: Chainlink VRF** for chains without reliable RANDAO or if stronger guarantees are needed. Higher cost (~$0.25-$2 per request).
+**When to use Chainlink VRF instead:**
+- On chains without reliable RANDAO
+- If total epoch stake pools regularly exceed ~1 ETH in value (where validator manipulation becomes rational)
+
+### Can Validators/Sequencers Game Settlement Timing?
+
+On L2s with a single sequencer (Optimism, Arbitrum, Base):
+- The sequencer sees pending transactions and knows `block.prevrandao`
+- It could theoretically delay or reorder transactions to influence settlement timing
+
+**Why this is acceptable:**
+- The sequencer doesn't know individual voters' positions (they'd need to track all historical votes)
+- Even if it delays settlement by a few blocks, the epoch's outcome is determined by accumulated votes over 1-2 hours — a few blocks don't change much
+- The sequencer has no financial incentive (they don't hold cREP positions)
+- If this becomes a concern, Chainlink VRF provides stronger guarantees
+
+## TWAP: Needed or Not?
+
+The original draft proposed Time-Weighted Average Price (TWAP) for settlement. After reflection:
+
+**TWAP is NOT recommended for the initial design.**
+
+**Why not:**
+- Random settlement already eliminates the known-deadline problem that TWAP solves. There is no "last second" to manipulate.
+- TWAP adds storage and gas costs (cumulative tracking on every vote).
+- TWAP makes the mechanism harder for voters to reason about — "where is the TWAP?" is much less intuitive than "where is the rating?"
+
+**When TWAP would matter:**
+- If a whale can see that settlement is about to trigger (because they can see `block.prevrandao` for the current block), they could submit a last-second vote to flip the direction. On most L2s, this requires sequencer-level access.
+- If this attack vector proves real in practice, TWAP can be added later as a hardening measure.
+
+**Simpler alternative defense:** Use the rating as of `block.number - 1` for settlement (one-block delay). This makes within-block manipulation impossible at near-zero cost.
+
+## Cross-Epoch Rating Persistence
+
+**The rating carries over across epochs. The share pools reset.**
+
+When an epoch settles:
+1. Winning/losing sides are determined
+2. Stakes are redistributed
+3. All share positions are cleared
+4. A new epoch begins with:
+   - **Starting rating = final rating of the previous epoch**
+   - `q_up = 0`, `q_down = 0` (fresh share pools)
+   - The displayed rating stays at its current value
+
+This means:
+- Content builds a reputation over time through many epochs
+- Each epoch is an independent betting round — you're wagering on whether the rating moves UP or DOWN from *here*
+- The long-term rating is the accumulated result of many epochs, similar to how a stock price accumulates through many trading sessions
+
+**First epoch for new content:** Rating starts at 50 (neutral). The first epoch determines the initial direction.
+
+## Game-Theoretic Analysis
+
+### Why the Pricing Curve Replaces Vote Privacy
+
+The standard argument against public voting comes from Surowiecki's *Wisdom of Crowds*: independent judgment requires that voters cannot see each other's votes. Public voting creates information cascades and herding.
+
+**LMSR pricing inverts this logic.** In traditional public voting (Reddit, HN), agreement is free. In LMSR, agreement is expensive:
+
+| System | See others' votes? | Cost to agree with majority | Result |
+|--------|-------------------|----------------------------|--------|
+| Reddit | Yes | Free (click arrow) | Herding, echo chambers |
+| Curyo (current) | No (tlock) | Fixed stake | Independent judgment |
+| Curyo (proposed) | Yes | **Increasing** (more stake for same shares) | **Economic independence** |
+
+The proposed system doesn't need information hiding because the cost structure provides the same incentive: **vote your genuine belief, not the crowd's belief.** If you disagree with the current direction, it's *cheap and profitable* to say so. If you agree, it's *expensive and low-margin* to pile on.
+
+This is a weaker guarantee than cryptographic privacy — a sophisticated whale could still move the market to create a false signal. But Curyo already has sybil-resistant Voter IDs (one per verified human), which limits this attack surface.
+
+### Nash Equilibrium
+
+**Under the parimutuel model, truthful voting is a Bayesian Nash Equilibrium when:**
+
+1. Each voter has a private signal about content quality
+2. The crowd's aggregate signal correlates with "correct" assessment (i.e., if most people independently think content is good, it probably is)
+3. The pricing mechanism makes it more profitable to vote your true signal than to herd
+
+**Condition 3 is the critical one.** Under LMSR:
+
+A voter who believes content quality is higher than the current rating (price_UP < voter's belief) profits by buying UP shares:
+
+```
+E[profit] = Pr(UP wins) * payout_per_share - price_paid
+          = Pr(UP wins) / price_UP - 1  (per share)
+```
+
+This is positive when `Pr(UP wins) > price_UP`, which is exactly when the voter's belief exceeds the market's current assessment. Truthful voting is profitable; lying is not.
+
+**Caveat:** This assumes voters are rational and understand the mechanism. In practice, many voters will be casual users who may still follow the crowd. The pricing mechanism limits the damage from herding (it's expensive) but doesn't eliminate it.
+
+### Whale Manipulation Resistance
+
+A whale who votes first with a large stake:
+
+1. Moves the rating sharply in one direction
+2. Makes that direction expensive for followers (protecting against herding)
+3. Makes the opposite direction cheap for contrarians (inviting correction)
+4. Is locked in — can't exit before random settlement
+
+**If the whale is right** (content actually is high quality), they profit deservedly — they provided genuine early information.
+
+**If the whale is wrong**, contrarians buy cheap shares on the other side. The whale's shares lose value as the rating corrects. At settlement, the whale loses their stake.
+
+**The key defense is that random settlement prevents the whale from timing their exit.** In a traditional bonding curve (Ocean Protocol style), a whale can buy to pump the price, attract followers, then sell before the price corrects. Here, there's no "selling" — you're locked in until settlement, which could be any time.
+
+### Last-Mover Discount
+
+Late voters have more information (they can see how others voted) but face increasing risk of missing the epoch. Under increasing hazard rate settlement:
+
+| Wait time after grace period | Probability of missing | Information value | Net expected value |
+|-----|------|-----|-----|
+| 0 blocks | 0% | Low | Medium |
+| 100 blocks | ~5% | Medium | Medium-High |
+| 300 blocks | ~20% | High | Medium (discounted) |
+| 600 blocks | ~50% | Very High | Low (likely missed) |
+
+The optimal strategy is to vote when you have a genuine opinion, not to wait for maximum information. The random settlement creates a **discount rate on information** that naturally incentivizes prompt voting.
+
+## Comparison with Current System
+
+| Property | Current (tlock commit-reveal) | Proposed (public + random settlement) |
+|----------|-------------------------------|---------------------------------------|
+| Herding prevention | Cryptographic (can't see votes) | Economic (expensive to follow) |
+| Transactions per vote | 1 (commit) + 1 (reveal) | **1 (vote)** |
+| Need to return later | Yes (reveal phase) | **No** |
+| Infrastructure | tlock + drand + keeper (reveal + settle) | **Lightweight keeper (settle only), or self-settling** |
+| External dependencies | drand beacon network | **None (RANDAO is in-protocol)** |
+| Continuous price signal | No (hidden until reveal) | **Yes (live rating)** |
+| Settlement timing | Fixed (epoch end) | **Random (unpredictable)** |
+| First-mover protection | Adaptive epoch duration | **LMSR pricing curve** |
+| Game theory basis | Schelling point + privacy | **Market mechanism + random stopping** |
+| Protocol subsidy needed | No (pure redistribution) | **No (parimutuel redistribution)** |
+| On-chain math | Simple (counts, comparisons) | **Moderate (exp/ln or simpler curve)** |
+
+### When Is Commit-Reveal Actually Better?
+
+Public voting with LMSR pricing is **not** strictly better. There are scenarios where the current system wins:
+
+1. **Social pressure environments.** If voters' identities are publicly linked to their addresses, public voting creates social pressure. A community member might not vote DOWN on a friend's content even if they believe it's low quality. Tlock hides this.
+
+2. **Sophisticated adversaries.** A well-funded adversary can model the LMSR curve and compute optimal manipulation strategies. Cryptographic privacy provides a harder guarantee — you literally cannot see the votes.
+
+3. **Very small communities.** With few voters, the LMSR contrarian incentive may be insufficient. If only 5 people ever vote on a piece of content, the pricing curve is too thin to prevent one whale from dominating. In small communities, privacy-based mechanisms are more robust.
+
+4. **High-stakes content.** If a single content item's epoch has very high total stakes, the incentive to manipulate increases. Cryptographic privacy scales its protection with stakes; economic incentives may not.
+
+**Recommendation:** The proposed mechanism is better for the **common case** (moderate participation, moderate stakes, UX matters). The current mechanism is better for **adversarial scenarios** (high stakes, sophisticated attackers, small voter pools). A future version could offer both modes: public voting by default, with commit-reveal available for content that exceeds a stake threshold.
+
+## Implementation Considerations
+
+### On-Chain Math
+
+Two approaches for the pricing curve:
+
+**Option A: LMSR with exp/ln (Most Theoretically Sound)**
+- Uses Solady or PRBMath for fixed-point exp() and ln()
+- Gas cost: ~5,000-15,000 gas per vote for curve computation
+- Bounded market maker loss: `b * ln(2)` (in the subsidized variant)
+- Well-studied game theory properties
+
+**Option B: Simplified Linear-With-Dampening (Easier to Implement)**
+```solidity
+function ratingImpact(uint256 stake, uint256 sameDirectionStake, uint256 b) pure returns (uint256) {
+    // Impact diminishes as more stake accumulates on the same side
+    return stake * b / (sameDirectionStake + b);
+}
+```
+- No exp/ln needed — pure integer math
+- Gas cost: ~500 gas per vote
+- Similar qualitative behavior (diminishing returns for followers)
+- Weaker theoretical guarantees
+
+**Recommendation:** Start with Option B for simplicity. Upgrade to LMSR if the system needs stronger manipulation resistance.
 
 ### Liquidity Parameter `b`
 
-The `b` parameter is the most important tuning knob:
+The `b` parameter controls how sensitive the rating is to individual votes:
 
-| `b` value | Market maker max loss | Cost to move 50%→90% | Character |
-|-----------|----------------------|----------------------|-----------|
-| 10 | 6.9 cREP | ~16 cREP | Very responsive, volatile |
-| 50 | 34.6 cREP | ~80 cREP | Moderate |
-| 100 | 69.3 cREP | ~161 cREP | Stable, requires conviction |
-| 500 | 346 cREP | ~803 cREP | Very stable, whale-resistant |
+| `b` value | Character | 10 cREP vote moves rating by... |
+|-----------|-----------|----------------------------------|
+| 20 | Very responsive | ~4 points (of 100) |
+| 50 | Moderate | ~2 points |
+| 100 | Stable | ~1 point |
+| 500 | Very stable | ~0.2 points |
 
-`b` could be:
-- **Fixed globally** (simplest)
-- **Per-content based on history** (more votes → higher b → more stable rating)
-- **Governance-controlled** (DAO sets optimal b)
+**Recommendation:** Start with `b = 50`. This means:
+- A 10 cREP vote on fresh content (no prior votes) moves the rating ~2 points
+- After 100 cREP of UP votes, a 10 cREP UP vote moves it ~0.7 points
+- A 10 cREP DOWN vote against that same 100 cREP wall moves it ~1.5 points (contrarian gets more bang)
+
+`b` should be configurable via governance. It may also be useful to scale `b` per content item based on total lifetime vote activity (similar to the adaptive epoch concept in `ADAPTIVE-EPOCH-DESIGN.md`).
 
 ### What Happens to Existing Components
 
 | Component | Current Role | New Role |
 |-----------|-------------|----------|
 | tlock encryption | Hide vote directions | **Removed** |
-| drand integration | Timelock encryption target | **Removed** (unless used for randomness) |
-| Keeper service | Decrypt + reveal + settle | **Simplified:** call `trySettle()` periodically |
-| `RoundVotingEngine.sol` | Commit-reveal rounds | **Rewritten:** LMSR pricing + random settlement |
-| `commitVote()` | Hash commitment | **Replaced** by `vote(contentId, direction, stake)` |
+| drand integration | Timelock encryption target | **Removed** |
+| Keeper service | Decrypt + reveal + settle | **Simplified or removed**: periodic `trySettle()` calls |
+| `RoundVotingEngine.sol` | Commit-reveal rounds | **Rewritten**: pricing curve + random settlement |
+| `commitVote()` | Hash commitment + encrypted payload | **Replaced** by `vote(contentId, direction, stake)` |
 | `revealVote()` | Tlock decryption + verify | **Removed** |
-| `settleRound()` | Count reveals, distribute | **Modified:** settle based on TWAP, distribute per shares |
-| Frontend vote flow | Encrypt → commit → wait → reveal | **Simplified:** choose direction → stake → see impact |
+| `settleRound()` | Count reveals, determine majority | **Modified**: compare final rating to epoch start |
+| Frontend vote flow | Encrypt → commit → wait → reveal | **Simplified**: pick direction → set stake → confirm |
+| `useRoundVote.ts` | tlock encryption, drand target | **Simplified**: direct contract call |
+| `useRoundPhase.ts` | Track commit/reveal/settle phases | **Simplified**: track open/settled |
+| Vote display | Hidden until reveal | **Live**: shows current rating, positions, potential returns |
 
-### Self-Settling Design (No Keeper Needed)
+### Migration Path
 
-The most elegant implementation embeds settlement checks within the vote function:
+Since this is a fundamental mechanism change, it requires a new contract deployment (not an upgrade):
 
-```solidity
-function vote(uint256 contentId, bool isUp, uint256 stake) external {
-    // First, check if the current epoch should settle
-    _trySettle(contentId);
-
-    // If epoch just settled, this vote goes into a new epoch
-    Epoch storage epoch = _getOrCreateEpoch(contentId);
-
-    // Execute vote via LMSR
-    uint256 shares = _executeVote(epoch, isUp, stake);
-
-    // Check again (this vote might trigger settlement!)
-    _trySettle(contentId);
-
-    emit Voted(contentId, msg.sender, isUp, stake, shares);
-}
-```
-
-This means **every vote has a chance of immediately settling the epoch**, including its own. The voter doesn't know if their vote will be the one that triggers settlement. This creates maximum unpredictability.
-
-## Open Questions
-
-### 1. Parimutuel vs. Subsidized LMSR
-
-**Parimutuel (zero-sum):** Losing stakes fund winning payouts. No protocol subsidy needed. But payout depends on how much the other side staked — could be very high or very low.
-
-**Subsidized LMSR:** Protocol guarantees payouts. Bounded loss of `b * ln(2)` per epoch. More predictable for voters but requires treasury funding.
-
-**Hybrid:** Protocol subsidizes a minimum payout rate, losing stakes provide the rest.
-
-### 2. Cross-Epoch Rating Persistence
-
-Does the rating reset to 0.5 each epoch? Or does it carry over?
-
-**Reset each epoch:** Clean slate. Every epoch is independent. Simpler to reason about.
-
-**Carry over:** Rating accumulates over time. Established content has a "reputation" that's hard to move. More like the current system where content builds rating across rounds.
-
-**Recommendation:** Carry the rating over, but reset the LMSR share pools each epoch. The rating is persistent; the betting is per-epoch.
-
-### 3. Minimum Voters Per Epoch
-
-Should epochs require a minimum number of voters to settle? Currently, Curyo requires 3 revealed votes.
-
-**Yes (minimum N):** Prevents settlement with a single vote. More robust consensus signal.
-**No (settle anytime):** Simpler. If only one person voted and settlement triggers, they're exposed to maximum risk with no counterparty — they might win everything or lose everything.
-
-**Recommendation:** Require at least 2 voters on opposite sides for settlement. If settlement triggers with insufficient participation, extend the epoch (defer settlement check).
-
-### 4. What Happens to the Rating Display
-
-With the current system, content has a stable rating between rounds. With continuous LMSR, the rating fluctuates in real-time.
-
-**Options:**
-- Show the live LMSR price as the rating (most transparent, but volatile)
-- Show the TWAP (smoother, less gameable display)
-- Show a blended score: 80% long-term average + 20% current epoch LMSR (stable but responsive)
-
-### 5. Interaction with Voter IDs and Sybil Resistance
-
-The current sybil-resistance (one Voter ID per verified human) remains important. With public voting, it also prevents:
-- Splitting stakes across identities to game quadratic staking (if implemented)
-- Creating wash trades (voting both sides to manipulate TWAP)
-- Claiming multiple early-mover positions
-
-### 6. Fixed-Point Math for LMSR On-Chain
-
-LMSR requires `exp()` and `ln()` operations, which aren't native to the EVM. Implementation options:
-- **PRBMath or Solady** fixed-point math libraries (exp, ln with 18-decimal precision)
-- **Lookup tables** for common ranges (less precise but cheaper gas)
-- **Approximations** (Taylor series truncated at sufficient precision)
-
-Gas cost estimate: ~5,000-15,000 gas per vote for LMSR computation, which is acceptable.
+1. **Deploy new VotingEngine** alongside the existing one
+2. **New content uses the new mechanism** from deployment forward
+3. **Existing content continues** with the old commit-reveal mechanism until its current rounds settle
+4. **Frontend shows both** modes during transition, with the old mechanism for legacy content
 
 ## Advantages
 
-| Property | Benefit |
-|----------|---------|
-| Dramatic simplification | Remove tlock, drand, keeper reveal logic, commit-reveal pattern |
-| Single-transaction voting | Better UX, lower gas, no need to return for reveal |
-| Continuous price discovery | Users see real-time quality signals |
-| Self-settling | No dedicated keeper needed for triggering settlement |
-| Natural contrarian incentive | LMSR makes disagreement profitable, agreement expensive |
-| Proven game theory | LMSR is the gold standard for information aggregation markets |
-| Lower infrastructure cost | No drand dependency, simpler keeper, no encryption |
+1. **Dramatic UX improvement.** One transaction, instant feedback, no need to return for reveal. This alone may significantly increase voter participation.
+2. **Infrastructure simplification.** Remove tlock, drand, the entire keeper reveal pipeline. The keeper becomes a trivial settlement trigger (or isn't needed at all with self-settling).
+3. **Continuous price discovery.** Users see real-time quality signals. The rating is alive, not frozen between reveal phases.
+4. **Self-correcting economics.** The pricing curve naturally attracts contrarian capital when the rating is mispriced, creating organic mean reversion without relying on hidden votes.
+5. **Zero protocol subsidy** in the parimutuel variant. Losers fund winners, same as today.
+6. **Novel mechanism.** Research found no existing project combining public votes + LMSR pricing + random settlement. This is a genuinely original design.
 
 ## Disadvantages and Risks
 
 ### 1. Loss of Vote Privacy
 
-The most significant tradeoff. Public votes mean:
-- Social pressure can influence voting (fear of being seen voting against popular content)
-- Targeted retaliation against contrarian voters (if identities are known)
-- Sophisticated actors can model voter behavior from observed patterns
+The most significant tradeoff. Voters can see how others voted, creating social pressure and enabling targeted behavior (e.g., retaliating against someone who voted DOWN on your content).
 
-**Mitigation:** The LMSR cost structure makes following the crowd unprofitable, providing *economic* privacy protection even without cryptographic privacy.
+**Severity:** Moderate. Curyo uses Voter IDs (pseudonymous), not real identities. Social pressure exists but is limited.
+
+**Mitigation:** The pricing curve makes following social pressure unprofitable. If you vote UP on a friend's content just because it's their content, you're buying expensive shares with low expected return.
 
 ### 2. Front-Running (MEV)
 
-On public mempools, MEV searchers could see pending votes and front-run:
-- See a large contrarian vote coming
-- Place their own contrarian vote first (at a better price)
-- The original voter gets a worse price
+MEV searchers could see pending votes in the mempool and front-run them to get better prices.
 
-**Mitigation:**
-- L2s with private/sequenced mempools (e.g., Optimism sequencer, Arbitrum)
-- Maximum slippage parameter on votes (revert if price moved too much since submission)
-- Flashbot-style private submission
+**Severity:** Low on L2s. Optimism, Arbitrum, and Base use sequencers with ordered mempools. Flashbots-style private submission is also an option.
 
-### 3. Keynesian Beauty Contest Risk
+**Mitigation:** Add a `maxPrice` parameter to `vote()` that reverts if the price has moved past the voter's tolerance.
 
-If settlement is based on collective action rather than ground truth, the game becomes "predict what others will predict" rather than "assess quality." This can lead to:
-- Self-fulfilling prophecies (early whale sets direction, everyone follows because "that's what will win")
-- Disconnection from actual content quality
+### 3. Cold Start / Low Participation
 
-**Mitigation:**
-- The LMSR cost curve makes herding expensive
-- Random settlement prevents coordination on timing
-- Cross-epoch rating persistence anchors expectations
-- Long term: could introduce external quality oracles as additional settlement inputs
+With very few voters, the contrarian incentive is weak and a single whale can dominate. This is the same problem the current system faces (hence the 3-vote minimum for settlement).
 
-### 4. Protocol Subsidy (LMSR Variant)
+**Severity:** Moderate for new content.
 
-Under pure LMSR, the protocol must subsidize up to `b * ln(2)` per content item per epoch. For `b = 100`, that's ~69 cREP per epoch.
+**Mitigation:** Minimum participation requirements (at least 1 voter on each side). Content-adaptive `b` parameter (lower `b` for new content = more responsive, higher `b` for established content = more stable).
 
-**Mitigation:** Use the parimutuel variant (zero-sum redistribution) or hybrid approach where protocol subsidy is minimal.
+### 4. Keynesian Beauty Contest Dynamics
 
-### 5. Complexity of LMSR Math On-Chain
+Voters are predicting what other voters will do, not assessing ground truth.
 
-Fixed-point exponential and logarithm operations add gas cost and audit surface.
+**Severity:** Low, because **this is already true in the current system.** Majority wins is majority wins, whether votes are hidden or public. The proposed system doesn't introduce this dynamic — it makes it more transparent and adds economic friction against mindless agreement.
 
-**Mitigation:** Well-audited libraries (PRBMath, Solady) handle this. Gas cost is manageable on L2.
+### 5. On-Chain Math Complexity
 
-## References
+LMSR requires exp/ln operations. Even the simplified model adds more computation than simple vote counting.
 
-- Hanson, R. (2003). ["Logarithmic Market Scoring Rules for Modular Combinatorial Information Aggregation"](https://mason.gmu.edu/~rhanson/mktscore.pdf). George Mason University.
-- Ottaviani, M. & Sorensen, P.N. (2006). ["The Timing of Parimutuel Bets"](https://web.econ.ku.dk/sorensen/papers/TheTimingofParimutuelBets.pdf). University of Copenhagen.
-- Surowiecki, J. (2004). *The Wisdom of Crowds*. Doubleday.
-- Buterin, V. (2021). ["Moving Beyond Coin Voting Governance"](https://vitalik.eth.limo/general/2021/08/16/voting3.html).
-- de la Rouviere, S. (2017). "Curation Markets" — bonding curves for content curation.
-- McConaghy, T. (2020). ["On Staking on Data in Ocean Market"](https://blog.oceanprotocol.com/on-staking-on-data-in-ocean-market-3d8e09eb0a13). Ocean Protocol.
-- [Cultivate Labs: How LMSR Works](https://www.cultivatelabs.com/crowdsourced-forecasting-guide/how-does-logarithmic-market-scoring-rule-lmsr-work)
-- [Zeitgeist: Rikiddo Scoring Rule](https://medium.com/zeitgeistseer/introducing-zeitgeists-rikiddo-scoring-rule-89c8222e31c) — LMSR variant for prediction markets.
+**Severity:** Low. Solady and PRBMath are well-audited. Gas cost is manageable on L2 (~5k-15k gas). The simplified linear model avoids this entirely.
+
+## Prior Art
+
+### Directly Relevant
+
+- **Robin Hanson, LMSR (2003)** — The mathematical foundation for pricing curves in information markets. [Paper](https://mason.gmu.edu/~rhanson/mktscore.pdf)
+- **Ottaviani & Sorensen, "The Timing of Parimutuel Bets" (2006)** — Proves that known settlement time causes strategic delay; random settlement eliminates it. [Paper](https://web.econ.ku.dk/sorensen/papers/TheTimingofParimutuelBets.pdf)
+- **Surowiecki, *The Wisdom of Crowds* (2004)** — The independence condition and when it can be relaxed.
+
+### Lessons Learned from Failures
+
+- **Token Curated Registries** — Failed due to voter apathy, plutocracy, and incentive misalignment. Lesson: voters need direct financial skin in the game (not just governance token value), and settlement must be automatic (not challenge-based).
+- **Ocean Protocol curation (V1-V3)** — AMM-based curation produced speculation, not quality signals. Migrated to vote-escrow. Lesson: the exit mechanism matters as much as the entry mechanism. Random settlement with no exit is better than continuous bonding curves with sell-back.
+- **Augur** — Overcomplicated dispute resolution (60-day forks!) killed UX. Lesson: settlement must be automatic and fast. Random settlement within hours, not weeks.
+- **Kleros** — Schelling point instability when the "honest" answer isn't clearly salient. Lesson: with public votes, the Schelling point can drift. The pricing curve is the defense.
+
+### Related Mechanisms
+
+- **Vitalik Buterin, "Moving Beyond Coin Voting" (2021)** — Argues for proof-of-personhood and quadratic weighting. Curyo's Voter IDs align with this. [Post](https://vitalik.eth.limo/general/2021/08/16/voting3.html)
+- **Simon de la Rouviere, "Curation Markets" (2017)** — Bonding curves for content curation. The direct ancestor of this design, but without random settlement.
+- **Zeitgeist Rikiddo Scoring Rule** — LMSR variant for prediction markets on Polkadot. Demonstrates LMSR is implementable on-chain. [Article](https://medium.com/zeitgeistseer/introducing-zeitgeists-rikiddo-scoring-rule-89c8222e31c)
+
+## Open Questions
+
+### 1. Can Voters Change Their Position?
+
+**Option A: No (locked until settlement).** Simplest. Forces genuine commitment. No exit = no timing games on the sell side.
+
+**Option B: Yes, but at a cost.** Voters can "sell" their shares back to the pool at the current (worse) price. This adds liquidity but also enables more sophisticated strategies.
+
+**Recommendation:** Start with Option A. Locked positions are simpler, match the current Curyo model, and prevent the bonding curve exit problems that plagued Ocean Protocol.
+
+### 2. Multiple Votes Per Epoch?
+
+Can a voter vote multiple times in the same epoch (adding to their position)?
+
+**Option A: One vote per voter per epoch per content** (current model). Simpler, prevents averaging in.
+
+**Option B: Multiple votes allowed.** A voter can add stake in the same or different direction. More flexible but complex.
+
+**Recommendation:** One vote per voter per epoch. Multiple votes allow sophisticated actors to gradually build positions while observing the market, giving them an advantage over casual users.
+
+### 3. Optimal `b` Scaling
+
+Should `b` be:
+- Fixed globally (simplest)
+- Adaptive per content (based on lifetime vote count, similar to adaptive epoch tiers)
+- Dynamic within an epoch (increase as more votes arrive)
+
+**Recommendation:** Adaptive per content. New content gets low `b` (responsive to early votes), established content gets high `b` (stable, hard to move). This is the same adaptive principle from `ADAPTIVE-EPOCH-DESIGN.md` applied to a different parameter.
+
+### 4. Keeper Incentives
+
+If a keeper calls `trySettle()`, should they receive a reward?
+
+**Current system:** Keeper gets a reward for revealing votes and settling rounds.
+
+**Proposed system:** Settlement is simpler (just a probability check), but someone still needs to trigger it. A small reward (from a fraction of the epoch's stakes) incentivizes keepers to call `trySettle()` promptly.
+
+**If self-settling via vote():** Keepers are only needed for stale epochs where no one is voting. Reward should be proportional to how "overdue" the settlement is.
