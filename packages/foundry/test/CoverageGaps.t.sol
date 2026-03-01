@@ -1104,7 +1104,7 @@ contract RoundSettlementEdgeCaseTest is Test {
 
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
-        vm.expectRevert(RoundVotingEngine.AlreadyVoted.selector);
+        vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         engine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
