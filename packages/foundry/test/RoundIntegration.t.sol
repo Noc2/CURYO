@@ -780,6 +780,7 @@ contract RoundIntegrationTest is Test {
     function test_SettlementProbabilityIncreasesOverTime() public {
         uint256 contentId = _submitContent();
 
+        // Votes placed at block 100 (from setUp). Round startBlock = 100.
         _vote(voter1, contentId, true, STAKE);
         _vote(voter2, contentId, false, STAKE);
 
@@ -789,18 +790,19 @@ contract RoundIntegrationTest is Test {
         uint256 prob0 = votingEngine.getSettlementProbability(contentId, roundId);
         assertEq(prob0, 0, "Probability should be 0 before minEpochBlocks");
 
-        // At minEpochBlocks — probability equals baseRateBps
-        vm.roll(block.number + 10);
+        // At minEpochBlocks (block 110) — probability equals baseRateBps
+        vm.roll(110);
         uint256 probMin = votingEngine.getSettlementProbability(contentId, roundId);
         assertEq(probMin, 30, "Probability should equal baseRateBps at minEpochBlocks");
 
-        // After minEpochBlocks — probability increases
-        vm.roll(block.number + 10); // 20 blocks total from start
+        // After minEpochBlocks (block 120) — probability increases
+        // elapsed=20, window=10, prob=30+10*3=60
+        vm.roll(120);
         uint256 probLater = votingEngine.getSettlementProbability(contentId, roundId);
         assertGt(probLater, probMin, "Probability should increase after minEpochBlocks");
 
-        // At/after maxEpochBlocks — probability is 10000 (100%)
-        vm.roll(100 + 50); // at maxEpochBlocks
+        // At/after maxEpochBlocks (block 150) — probability is 10000 (100%)
+        vm.roll(150);
         uint256 probMax = votingEngine.getSettlementProbability(contentId, roundId);
         assertEq(probMax, 10000, "Probability should be 10000 at maxEpochBlocks");
     }

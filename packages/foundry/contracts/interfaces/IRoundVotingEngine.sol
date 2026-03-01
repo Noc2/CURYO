@@ -4,15 +4,15 @@ pragma solidity ^0.8.20;
 /// @title IRoundVotingEngine
 /// @notice Interface for RoundVotingEngine contract used by ContentRegistry and other contracts.
 interface IRoundVotingEngine {
-    /// @notice Get total lifetime commit count for a content item.
+    /// @notice Get total lifetime vote count for a content item.
     /// @param contentId The content ID to query.
-    /// @return Total number of commits ever made for this content.
-    function getContentCommitCount(uint256 contentId) external view returns (uint256);
+    /// @return Total number of votes ever cast for this content.
+    function getContentVoteCount(uint256 contentId) external view returns (uint256);
 
-    /// @notice Check if content has unrevealed votes in active rounds.
+    /// @notice Check if content has active (unsettled) votes.
     /// @param contentId The content ID to query.
-    /// @return True if there are pending unrevealed votes.
-    function hasUnrevealedVotes(uint256 contentId) external view returns (bool);
+    /// @return True if there are votes in an open round.
+    function hasActiveVotes(uint256 contentId) external view returns (bool);
 
     /// @notice Transfer cREP reward tokens to a recipient. Only callable by RewardDistributor.
     /// @param recipient The address to receive tokens.

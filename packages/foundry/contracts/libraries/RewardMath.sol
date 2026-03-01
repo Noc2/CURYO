@@ -2,8 +2,10 @@
 pragma solidity ^0.8.20;
 
 /// @title RewardMath
-/// @notice Pure functions for parimutuel reward calculations.
+/// @notice Pure functions for parimutuel reward calculations with bonding curve share pricing.
 /// @dev Pool split: 82% voters, 10% submitter, 2% platform (1% frontend, 1% category), 1% treasury, 5% consensus subsidy.
+///      Voter rewards are distributed proportional to shares (not stakes). Early/contrarian voters
+///      get more shares per cREP staked, creating natural anti-herding incentives.
 library RewardMath {
     uint256 internal constant PRECISION = 1e18;
 
@@ -18,50 +20,59 @@ library RewardMath {
     // Consensus subsidy: payout rate when losingPool == 0 (5% of total round stake)
     uint256 internal constant CONSENSUS_SUBSIDY_RATE = 500; // 5% of totalStake
 
-    // Stake thresholds for rating impact (6 decimals)
-    uint256 internal constant MIN_STAKE_FOR_RATING = 10e6; // $10
-    uint256 internal constant MAX_STAKE_FOR_RATING = 100e6; // $100
-    uint256 internal constant MIN_RATING_DELTA = 1;
-    uint256 internal constant MAX_RATING_DELTA = 5;
+    // Rating calculation parameter (fixed, not configurable)
+    uint256 internal constant RATING_B = 50e6; // Smoothing parameter for rating formula (50 cREP in 6 decimals)
 
-    /// @notice Calculate rating delta based on per-content winning stake, capped by voter count.
-    /// @dev The voter count cap is intentional sybil resistance: a single voter staking 100 cREP
-    ///      produces delta=1, while 5 voters staking 20 cREP each produce delta=5. This makes
-    ///      unique voter participation more impactful than raw stake for rating changes.
-    /// @param winningStake Total stake from the winning side for this content.
-    /// @param winningVoterCount Number of unique voters on the winning side.
-    /// @return delta Rating change (0-5). Capped at winningVoterCount to prevent single-voter manipulation.
-    function calculateRatingDelta(uint256 winningStake, uint256 winningVoterCount) internal pure returns (uint8) {
-        if (winningStake < MIN_STAKE_FOR_RATING) return 0;
-        if (winningVoterCount == 0) return 0;
-
-        uint8 stakeDelta;
-        if (winningStake >= MAX_STAKE_FOR_RATING) {
-            stakeDelta = uint8(MAX_RATING_DELTA);
-        } else {
-            // Linear interpolation: 1 + (stake - 10) * 4 / 90
-            uint256 range = MAX_STAKE_FOR_RATING - MIN_STAKE_FOR_RATING;
-            uint256 excess = winningStake - MIN_STAKE_FOR_RATING;
-            stakeDelta = uint8(MIN_RATING_DELTA + (excess * (MAX_RATING_DELTA - MIN_RATING_DELTA)) / range);
-        }
-
-        // Cap by voter count: 1 voter → max delta 1, 2 voters → max delta 2, etc.
-        uint256 voterCap = winningVoterCount > MAX_RATING_DELTA ? MAX_RATING_DELTA : winningVoterCount;
-        return stakeDelta > uint8(voterCap) ? uint8(voterCap) : stakeDelta;
+    /// @notice Calculate bonding curve shares for a vote.
+    /// @dev shares = stake * b / (sameDirectionStake + b)
+    ///      Early voters get more shares because sameDirectionStake is smaller.
+    ///      b (liquidityParam) controls the curve steepness.
+    /// @param stake The voter's stake amount.
+    /// @param sameDirectionStake Total stake already on the same side (before this vote).
+    /// @param b Liquidity parameter controlling curve steepness.
+    /// @return shares Number of shares awarded to this voter.
+    function calculateShares(uint256 stake, uint256 sameDirectionStake, uint256 b) internal pure returns (uint256) {
+        if (b == 0) return stake; // Degenerate case: flat pricing
+        return (stake * b) / (sameDirectionStake + b);
     }
 
-    /// @notice Calculate a voter's reward from the losing pool (parimutuel).
-    /// @param voterStake The voter's individual stake.
-    /// @param totalWinningStake Sum of all winning voters' stakes.
+    /// @notice Calculate live content rating based on stake pools.
+    /// @dev rating = 50 + 50 * (qUp - qDown) / (qUp + qDown + b)
+    ///      Clamped to [0, 100]. Uses fixed b=50 cREP for smoothing.
+    /// @param totalUpStake Total UP stake in the current round.
+    /// @param totalDownStake Total DOWN stake in the current round.
+    /// @return rating New content rating [0, 100].
+    function calculateRating(uint256 totalUpStake, uint256 totalDownStake) internal pure returns (uint16) {
+        if (totalUpStake == 0 && totalDownStake == 0) return 50;
+
+        // rating = 50 + 50 * (qUp - qDown) / (qUp + qDown + b)
+        // Using signed arithmetic internally for the difference
+        uint256 sum = totalUpStake + totalDownStake + RATING_B;
+
+        if (totalUpStake >= totalDownStake) {
+            uint256 diff = totalUpStake - totalDownStake;
+            uint256 delta = (50 * diff) / sum;
+            uint256 r = 50 + delta;
+            return r > 100 ? uint16(100) : uint16(r);
+        } else {
+            uint256 diff = totalDownStake - totalUpStake;
+            uint256 delta = (50 * diff) / sum;
+            return delta >= 50 ? uint16(0) : uint16(50 - delta);
+        }
+    }
+
+    /// @notice Calculate a voter's reward from the voter pool (share-proportional).
+    /// @param voterShares The voter's shares.
+    /// @param totalWinningShares Sum of all winning voters' shares.
     /// @param voterPool The portion of losing stakes allocated to voters (82%).
     /// @return reward Amount of tokens the voter earns (excludes original stake return).
-    function calculateVoterReward(uint256 voterStake, uint256 totalWinningStake, uint256 voterPool)
+    function calculateVoterReward(uint256 voterShares, uint256 totalWinningShares, uint256 voterPool)
         internal
         pure
         returns (uint256)
     {
-        if (totalWinningStake == 0) return 0;
-        return (voterPool * voterStake) / totalWinningStake;
+        if (totalWinningShares == 0) return 0;
+        return (voterPool * voterShares) / totalWinningShares;
     }
 
     /// @notice Split the losing pool into the 5 reward buckets.
@@ -106,22 +117,5 @@ library RewardMath {
     function splitConsensusSubsidy(uint256 subsidy) internal pure returns (uint256 voterShare, uint256 submitterShare) {
         submitterShare = (subsidy * SUBMITTER_BPS) / (VOTER_BPS + SUBMITTER_BPS);
         voterShare = subsidy - submitterShare;
-    }
-
-    /// @notice Split the voter share into global and content-specific pools.
-    /// @dev Legacy function, not used by RoundVotingEngine which sends 100% to content-specific pool.
-    ///      Note: integer division truncation means globalShare may receive slightly less than
-    ///      its intended BPS allocation over many rounds (dust stays in contentShare).
-    /// @param voterShare Total voter share (82% of losing pool).
-    /// @param globalBps Basis points of voter share going to global pool (e.g., 2500 = 25%).
-    /// @return globalShare Amount for global shared pool (all winning voters).
-    /// @return contentShare Amount for content-specific winning voters.
-    function splitVoterPool(uint256 voterShare, uint256 globalBps)
-        internal
-        pure
-        returns (uint256 globalShare, uint256 contentShare)
-    {
-        globalShare = (voterShare * globalBps) / BPS_TOTAL;
-        contentShare = voterShare - globalShare;
     }
 }

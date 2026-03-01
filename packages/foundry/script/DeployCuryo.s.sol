@@ -121,7 +121,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         ERC1967Proxy votingEngineProxy = new ERC1967Proxy(
             address(votingEngineImpl),
             abi.encodeCall(
-                RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry), isMockMode)
+                RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry))
             )
         );
         RoundVotingEngine votingEngine = RoundVotingEngine(address(votingEngineProxy));
@@ -177,7 +177,17 @@ contract DeployCuryo is ScaffoldETHDeploy {
         registry.setBonusPool(address(rewardDistributor));
         registry.setTreasury(governance);
         votingEngine.setTreasury(governance);
-        votingEngine.setConfig(15 minutes, 7 days, 3, 1000);
+        votingEngine.setConfig(
+            150, // minEpochBlocks (~30 min)
+            1800, // maxEpochBlocks (~6 hrs)
+            7 days, // maxDuration
+            3, // minVoters
+            1000, // maxVoters
+            30, // baseRateBps (0.3%)
+            3, // growthRateBps (0.03%)
+            500, // maxProbBps (5%)
+            1000e6 // liquidityParam (1000 cREP)
+        );
         votingEngine.setKeeperReward(0.1e6); // 0.1 cREP per keeper operation
 
         // 12. Fund consensus reserve (pre-funded reserve for unanimous round rewards)

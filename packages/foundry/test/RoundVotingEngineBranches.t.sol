@@ -11,6 +11,7 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { IVoterIdNFT } from "../contracts/interfaces/IVoterIdNFT.sol";
+import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 
 // =========================================================================
 // MOCKS
@@ -192,6 +193,7 @@ contract RoundVotingEngineBranchesTest is Test {
             )
         );
         frontendRegistry.setVotingEngine(address(votingEngine));
+        frontendRegistry.addFeeCreditor(address(votingEngine));
         votingEngine.setFrontendRegistry(address(frontendRegistry));
 
         participationPool = new ParticipationPool(address(crepToken), owner);
@@ -331,24 +333,10 @@ contract RoundVotingEngineBranchesTest is Test {
         vm.stopPrank();
     }
 
-    function test_Vote_SelfVote_DelegateOfSubmitterReverts() public {
-        vm.prank(owner);
-        votingEngine.setVoterIdNFT(address(mockVoterIdNFT));
-        mockVoterIdNFT.setHolder(submitter);
-
-        // Set up delegation: submitter delegates to delegate1
-        vm.prank(submitter);
-        mockVoterIdNFT.setDelegate(delegate1);
-
-        uint256 contentId = _submitContent();
-
-        // delegate1 needs a voter ID to pass the hasVoterId check.
-        // However, if delegate1 IS a holder, resolveHolder returns delegate1 (not submitter).
-        // The resolveHolder logic returns addr itself if holders[addr] is true.
-        // This branch is hard to test with the simple mock because hasVoterId
-        // and resolveHolder are tied to the same mapping.
-        mockVoterIdNFT.setHolder(delegate1);
-    }
+    // Note: Delegate-of-submitter self-vote prevention is hard to test with the simple mock
+    // because the mock's hasVoterId and resolveHolder are tied to the same mapping.
+    // The real VoterIdNFT differentiates between delegation and direct holding.
+    // This scenario is covered by the SelfVote check in the contract.
 
     function test_Vote_ContentNotActive_Reverts() public {
         uint256 contentId = _submitContent();
@@ -472,7 +460,7 @@ contract RoundVotingEngineBranchesTest is Test {
         assertTrue(votingEngine.hasVoted(contentId, 1, voter1));
     }
 
-    function test_Vote_IdentityAlreadyVoted_Reverts() public {
+    function test_Vote_IdentityDoubleVote_CooldownFiresFirst() public {
         vm.prank(owner);
         votingEngine.setVoterIdNFT(address(mockVoterIdNFT));
         mockVoterIdNFT.setHolder(voter1);
@@ -483,9 +471,10 @@ contract RoundVotingEngineBranchesTest is Test {
         _vote(voter1, contentId, true);
 
         // voter1 already voted in this round, try again with same address
+        // Cooldown check fires before AlreadyVoted check
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        vm.expectRevert(RoundVotingEngine.AlreadyVoted.selector);
+        vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
@@ -517,9 +506,11 @@ contract RoundVotingEngineBranchesTest is Test {
         uint256 contentId = _submitContent();
         _vote(voter1, contentId, true);
 
+        // Contract checks cooldown before AlreadyVoted, so within cooldown period
+        // the error is CooldownActive (cooldown is set on successful vote)
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        vm.expectRevert(RoundVotingEngine.AlreadyVoted.selector);
+        vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
@@ -1187,7 +1178,7 @@ contract RoundVotingEngineBranchesTest is Test {
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
-        vm.expectRevert();
+        vm.expectRevert(Pausable.EnforcedPause.selector);
         votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
@@ -1214,7 +1205,7 @@ contract RoundVotingEngineBranchesTest is Test {
         votingEngine.pause();
 
         vm.roll(block.number + 51);
-        vm.expectRevert();
+        vm.expectRevert(Pausable.EnforcedPause.selector);
         votingEngine.trySettle(contentId);
     }
 
@@ -1228,7 +1219,7 @@ contract RoundVotingEngineBranchesTest is Test {
         vm.prank(owner);
         votingEngine.pause();
 
-        vm.expectRevert();
+        vm.expectRevert(Pausable.EnforcedPause.selector);
         votingEngine.cancelExpiredRound(contentId, roundId);
     }
 

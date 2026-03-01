@@ -39,19 +39,39 @@ contract RoundRewardDistributorBranchesTest is Test {
         RoundRewardDistributor distImpl = new RoundRewardDistributor();
 
         registry = ContentRegistry(
-            address(new ERC1967Proxy(address(registryImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))))
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                )
+            )
         );
         votingEngine = RoundVotingEngine(
-            address(new ERC1967Proxy(address(engineImpl), abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true))))
+            address(
+                new ERC1967Proxy(
+                    address(engineImpl),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
+                    )
+                )
+            )
         );
         rewardDistributor = RoundRewardDistributor(
-            address(new ERC1967Proxy(address(distImpl), abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(crepToken), address(votingEngine), address(registry)))))
+            address(
+                new ERC1967Proxy(
+                    address(distImpl),
+                    abi.encodeCall(
+                        RoundRewardDistributor.initialize,
+                        (owner, address(crepToken), address(votingEngine), address(registry))
+                    )
+                )
+            )
         );
 
         registry.setVotingEngine(address(votingEngine));
         votingEngine.setRewardDistributor(address(rewardDistributor));
         votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(15 minutes, 7 days, 2, 200);
+        votingEngine.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
 
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);
@@ -65,8 +85,17 @@ contract RoundRewardDistributorBranchesTest is Test {
         vm.stopPrank();
     }
 
-    function _mockCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
-        return abi.encodePacked(isUp ? bytes1(uint8(1)) : bytes1(uint8(0)), salt, bytes32(contentId));
+    function _vote(address voter, uint256 contentId, bool isUp) internal {
+        vm.startPrank(voter);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.vote(contentId, isUp, STAKE, address(0));
+        vm.stopPrank();
+    }
+
+    /// @dev Force settlement by rolling past maxEpochBlocks
+    function _forceSettle(uint256 contentId) internal {
+        vm.roll(block.number + 51);
+        votingEngine.trySettle(contentId);
     }
 
     /// @dev Setup and settle a non-unanimous round (2 up, 1 down)
@@ -77,39 +106,12 @@ contract RoundRewardDistributorBranchesTest is Test {
         vm.stopPrank();
         contentId = 1;
 
-        bytes32 salt1 = bytes32(uint256(111));
-        bytes32 salt2 = bytes32(uint256(222));
-        bytes32 salt3 = bytes32(uint256(333));
-        bytes32 hash1 = keccak256(abi.encodePacked(true, salt1, contentId));
-        bytes32 hash2 = keccak256(abi.encodePacked(true, salt2, contentId));
-        bytes32 hash3 = keccak256(abi.encodePacked(false, salt3, contentId));
-
-        vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, hash1, _mockCiphertext(true, salt1, contentId), STAKE, address(0));
-        vm.stopPrank();
-        vm.startPrank(voter2);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, hash2, _mockCiphertext(true, salt2, contentId), STAKE, address(0));
-        vm.stopPrank();
-        vm.startPrank(voter3);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, hash3, _mockCiphertext(false, salt3, contentId), STAKE, address(0));
-        vm.stopPrank();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, true);
+        _vote(voter3, contentId, false);
 
         roundId = votingEngine.getActiveRoundId(contentId);
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        vm.prank(keeper);
-        votingEngine.revealVoteByCommitKey(contentId, roundId, keccak256(abi.encodePacked(voter1, hash1)), true, salt1);
-        vm.prank(keeper);
-        votingEngine.revealVoteByCommitKey(contentId, roundId, keccak256(abi.encodePacked(voter2, hash2)), true, salt2);
-        vm.prank(keeper);
-        votingEngine.revealVoteByCommitKey(contentId, roundId, keccak256(abi.encodePacked(voter3, hash3)), false, salt3);
-
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
+        _forceSettle(contentId);
     }
 
     // =========================================================================
@@ -133,12 +135,7 @@ contract RoundRewardDistributorBranchesTest is Test {
         registry.submitContent("https://example.com/1", "goal", "tags", 0);
         vm.stopPrank();
 
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 hash = keccak256(abi.encodePacked(true, salt, uint256(1)));
-        vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(1, hash, _mockCiphertext(true, salt, 1), STAKE, address(0));
-        vm.stopPrank();
+        _vote(voter1, 1, true);
 
         uint256 roundId = votingEngine.getActiveRoundId(1);
 
@@ -207,12 +204,7 @@ contract RoundRewardDistributorBranchesTest is Test {
         registry.submitContent("https://example.com/1", "goal", "tags", 0);
         vm.stopPrank();
 
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 hash = keccak256(abi.encodePacked(true, salt, uint256(1)));
-        vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(1, hash, _mockCiphertext(true, salt, 1), STAKE, address(0));
-        vm.stopPrank();
+        _vote(voter1, 1, true);
 
         uint256 roundId = votingEngine.getActiveRoundId(1);
 
@@ -234,9 +226,6 @@ contract RoundRewardDistributorBranchesTest is Test {
     }
 
     function test_ClaimSubmitterReward_ZeroReward_NoTransfer() public {
-        // Unanimous round → submitter reward comes from consensus subsidy
-        // With large reserve, subsidy > 0. But if reserve is 0, submitter reward = 0.
-        // For simplicity, just verify the claim succeeds and emits event with the stored amount.
         (uint256 contentId, uint256 roundId) = _setupSettledRound();
 
         vm.prank(submitter);
@@ -251,24 +240,45 @@ contract RoundRewardDistributorBranchesTest is Test {
     function test_Initialize_ZeroGovernance_Reverts() public {
         RoundRewardDistributor impl = new RoundRewardDistributor();
         vm.expectRevert("Invalid governance");
-        new ERC1967Proxy(address(impl), abi.encodeCall(RoundRewardDistributor.initialize, (address(0), address(crepToken), address(votingEngine), address(registry))));
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(
+                RoundRewardDistributor.initialize,
+                (address(0), address(crepToken), address(votingEngine), address(registry))
+            )
+        );
     }
 
     function test_Initialize_ZeroCrepToken_Reverts() public {
         RoundRewardDistributor impl = new RoundRewardDistributor();
         vm.expectRevert("Invalid cREP token");
-        new ERC1967Proxy(address(impl), abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(0), address(votingEngine), address(registry))));
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(
+                RoundRewardDistributor.initialize, (owner, address(0), address(votingEngine), address(registry))
+            )
+        );
     }
 
     function test_Initialize_ZeroVotingEngine_Reverts() public {
         RoundRewardDistributor impl = new RoundRewardDistributor();
         vm.expectRevert("Invalid voting engine");
-        new ERC1967Proxy(address(impl), abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(crepToken), address(0), address(registry))));
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(
+                RoundRewardDistributor.initialize, (owner, address(crepToken), address(0), address(registry))
+            )
+        );
     }
 
     function test_Initialize_ZeroRegistry_Reverts() public {
         RoundRewardDistributor impl = new RoundRewardDistributor();
         vm.expectRevert("Invalid registry");
-        new ERC1967Proxy(address(impl), abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(crepToken), address(votingEngine), address(0))));
+        new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(
+                RoundRewardDistributor.initialize, (owner, address(crepToken), address(votingEngine), address(0))
+            )
+        );
     }
 }

@@ -14,20 +14,20 @@ contract RewardMathHarness {
         return RewardMath.calculateConsensusSubsidy(totalStake, reserveBalance);
     }
 
-    function splitVoterPool(uint256 voterShare, uint256 globalBps) external pure returns (uint256, uint256) {
-        return RewardMath.splitVoterPool(voterShare, globalBps);
-    }
-
-    function calculateVoterReward(uint256 voterStake, uint256 totalWinningStake, uint256 voterPool)
+    function calculateVoterReward(uint256 voterShares, uint256 totalWinningShares, uint256 voterPool)
         external
         pure
         returns (uint256)
     {
-        return RewardMath.calculateVoterReward(voterStake, totalWinningStake, voterPool);
+        return RewardMath.calculateVoterReward(voterShares, totalWinningShares, voterPool);
     }
 
-    function calculateRatingDelta(uint256 winningStake, uint256 winningVoterCount) external pure returns (uint8) {
-        return RewardMath.calculateRatingDelta(winningStake, winningVoterCount);
+    function calculateShares(uint256 stake, uint256 sameDirectionStake, uint256 b) external pure returns (uint256) {
+        return RewardMath.calculateShares(stake, sameDirectionStake, b);
+    }
+
+    function calculateRating(uint256 totalUpStake, uint256 totalDownStake) external pure returns (uint16) {
+        return RewardMath.calculateRating(totalUpStake, totalDownStake);
     }
 
     function splitConsensusSubsidy(uint256 subsidy) external pure returns (uint256, uint256) {
@@ -105,16 +105,125 @@ contract RewardMathTest is Test {
     }
 
     // ====================================================
-    // splitVoterPool — Fuzz Tests
+    // calculateShares — Fuzz Tests
     // ====================================================
 
-    function testFuzz_SplitVoterPool_Conservation(uint256 voterShare, uint256 globalBps) public view {
-        voterShare = bound(voterShare, 0, type(uint128).max);
-        globalBps = bound(globalBps, 0, 10000);
+    function testFuzz_CalculateShares_DecreasesWithPool(uint256 stake, uint256 pool1, uint256 pool2, uint256 b)
+        public
+        view
+    {
+        stake = bound(stake, 1, type(uint64).max);
+        b = bound(b, 1, type(uint64).max);
+        pool1 = bound(pool1, 0, type(uint64).max - 1);
+        pool2 = bound(pool2, pool1 + 1, type(uint64).max);
 
-        (uint256 globalShare, uint256 contentShare) = harness.splitVoterPool(voterShare, globalBps);
+        uint256 shares1 = harness.calculateShares(stake, pool1, b);
+        uint256 shares2 = harness.calculateShares(stake, pool2, b);
 
-        assertEq(globalShare + contentShare, voterShare, "Voter pool split must conserve total");
+        assertGe(shares1, shares2, "Shares must decrease as sameDirectionStake increases");
+    }
+
+    function testFuzz_CalculateShares_IncreasesWithStake(uint256 stake1, uint256 stake2, uint256 pool, uint256 b)
+        public
+        view
+    {
+        stake1 = bound(stake1, 1, type(uint64).max);
+        stake2 = bound(stake2, stake1, type(uint64).max);
+        b = bound(b, 1, type(uint64).max);
+        pool = bound(pool, 0, type(uint64).max);
+
+        uint256 shares1 = harness.calculateShares(stake1, pool, b);
+        uint256 shares2 = harness.calculateShares(stake2, pool, b);
+
+        assertLe(shares1, shares2, "Higher stake must yield >= shares");
+    }
+
+    function testFuzz_CalculateShares_NeverExceedsStake(uint256 stake, uint256 pool, uint256 b) public view {
+        stake = bound(stake, 0, type(uint64).max);
+        b = bound(b, 1, type(uint64).max);
+        pool = bound(pool, 0, type(uint64).max);
+
+        uint256 shares = harness.calculateShares(stake, pool, b);
+
+        assertLe(shares, stake, "Shares must never exceed stake");
+    }
+
+    function test_CalculateShares_ZeroPool() public view {
+        // First voter: shares = stake * b / (0 + b) = stake
+        uint256 shares = harness.calculateShares(100e6, 0, 1000e6);
+        assertEq(shares, 100e6, "First voter gets full shares when pool is empty");
+    }
+
+    function test_CalculateShares_ZeroB() public view {
+        // Degenerate case: b=0 returns stake directly
+        uint256 shares = harness.calculateShares(100e6, 500e6, 0);
+        assertEq(shares, 100e6, "b=0 gives flat pricing (shares = stake)");
+    }
+
+    function test_CalculateShares_LateVoterGetsLess() public view {
+        uint256 b = 1000e6;
+        // First voter: pool=0 → shares = 50e6 * 1000e6 / 1000e6 = 50e6
+        uint256 shares1 = harness.calculateShares(50e6, 0, b);
+        // Second voter: pool=50e6 → shares = 50e6 * 1000e6 / 1050e6 ≈ 47.6e6
+        uint256 shares2 = harness.calculateShares(50e6, 50e6, b);
+        // Third voter: pool=100e6 → shares = 50e6 * 1000e6 / 1100e6 ≈ 45.5e6
+        uint256 shares3 = harness.calculateShares(50e6, 100e6, b);
+
+        assertGt(shares1, shares2, "First voter gets more shares than second");
+        assertGt(shares2, shares3, "Second voter gets more shares than third");
+    }
+
+    // ====================================================
+    // calculateRating — Fuzz Tests
+    // ====================================================
+
+    function testFuzz_CalculateRating_Bounded(uint256 upStake, uint256 downStake) public view {
+        upStake = bound(upStake, 0, type(uint128).max);
+        downStake = bound(downStake, 0, type(uint128).max);
+
+        uint16 rating = harness.calculateRating(upStake, downStake);
+
+        assertLe(rating, 100, "Rating must be <= 100");
+    }
+
+    function testFuzz_CalculateRating_UpBias(uint256 upStake, uint256 downStake) public view {
+        upStake = bound(upStake, 1, type(uint128).max);
+        downStake = bound(downStake, 0, upStake - 1);
+
+        uint16 rating = harness.calculateRating(upStake, downStake);
+
+        assertGe(rating, 50, "More UP stake must produce rating >= 50");
+    }
+
+    function testFuzz_CalculateRating_DownBias(uint256 upStake, uint256 downStake) public view {
+        downStake = bound(downStake, 1, type(uint128).max);
+        upStake = bound(upStake, 0, downStake - 1);
+
+        uint16 rating = harness.calculateRating(upStake, downStake);
+
+        assertLe(rating, 50, "More DOWN stake must produce rating <= 50");
+    }
+
+    function test_CalculateRating_ZeroStakes() public view {
+        uint16 rating = harness.calculateRating(0, 0);
+        assertEq(rating, 50, "Zero stakes must return neutral rating of 50");
+    }
+
+    function test_CalculateRating_EqualStakes() public view {
+        uint16 rating = harness.calculateRating(100e6, 100e6);
+        assertEq(rating, 50, "Equal stakes must return neutral rating of 50");
+    }
+
+    function test_CalculateRating_AllUp() public view {
+        // rating = 50 + 50 * 1000e6 / (1000e6 + 50e6) ≈ 50 + 47.6 = 97
+        uint16 rating = harness.calculateRating(1000e6, 0);
+        assertGt(rating, 90, "All-UP heavy stake should produce high rating");
+        assertLe(rating, 100, "Rating capped at 100");
+    }
+
+    function test_CalculateRating_AllDown() public view {
+        uint16 rating = harness.calculateRating(0, 1000e6);
+        assertLt(rating, 10, "All-DOWN heavy stake should produce low rating");
     }
 
     // ====================================================
@@ -122,80 +231,43 @@ contract RewardMathTest is Test {
     // ====================================================
 
     function testFuzz_CalculateVoterReward_NeverExceedsPool(
-        uint256 voterStake,
-        uint256 totalWinningStake,
+        uint256 voterShares,
+        uint256 totalWinningShares,
         uint256 voterPool
     ) public view {
-        voterStake = bound(voterStake, 1, type(uint128).max);
-        totalWinningStake = bound(totalWinningStake, voterStake, type(uint128).max);
+        voterShares = bound(voterShares, 1, type(uint128).max);
+        totalWinningShares = bound(totalWinningShares, voterShares, type(uint128).max);
         voterPool = bound(voterPool, 0, type(uint128).max);
 
-        uint256 reward = harness.calculateVoterReward(voterStake, totalWinningStake, voterPool);
+        uint256 reward = harness.calculateVoterReward(voterShares, totalWinningShares, voterPool);
 
         assertLe(reward, voterPool, "Individual reward must never exceed pool");
     }
 
     function testFuzz_CalculateVoterReward_Proportional(
-        uint256 stake1,
-        uint256 stake2,
-        uint256 totalWinningStake,
+        uint256 shares1,
+        uint256 shares2,
+        uint256 totalWinningShares,
         uint256 voterPool
     ) public view {
-        stake1 = bound(stake1, 1, type(uint64).max);
-        stake2 = bound(stake2, stake1, type(uint64).max);
-        totalWinningStake = bound(totalWinningStake, stake2, type(uint128).max);
+        shares1 = bound(shares1, 1, type(uint64).max);
+        shares2 = bound(shares2, shares1, type(uint64).max);
+        totalWinningShares = bound(totalWinningShares, shares2, type(uint128).max);
         voterPool = bound(voterPool, 1, type(uint128).max);
 
-        uint256 reward1 = harness.calculateVoterReward(stake1, totalWinningStake, voterPool);
-        uint256 reward2 = harness.calculateVoterReward(stake2, totalWinningStake, voterPool);
+        uint256 reward1 = harness.calculateVoterReward(shares1, totalWinningShares, voterPool);
+        uint256 reward2 = harness.calculateVoterReward(shares2, totalWinningShares, voterPool);
 
-        assertLe(reward1, reward2, "Higher stake must get >= reward");
+        assertLe(reward1, reward2, "Higher shares must get >= reward");
     }
 
-    function testFuzz_CalculateVoterReward_ZeroTotal(uint256 voterStake, uint256 voterPool) public view {
-        voterStake = bound(voterStake, 0, type(uint128).max);
+    function testFuzz_CalculateVoterReward_ZeroTotal(uint256 voterShares, uint256 voterPool) public view {
+        voterShares = bound(voterShares, 0, type(uint128).max);
         voterPool = bound(voterPool, 0, type(uint128).max);
 
-        uint256 reward = harness.calculateVoterReward(voterStake, 0, voterPool);
+        uint256 reward = harness.calculateVoterReward(voterShares, 0, voterPool);
 
-        assertEq(reward, 0, "Zero total winning stake must return zero reward");
-    }
-
-    // ====================================================
-    // calculateRatingDelta — Fuzz Tests
-    // ====================================================
-
-    function testFuzz_CalculateRatingDelta_Bounded(uint256 winningStake, uint256 winningVoterCount) public view {
-        winningStake = bound(winningStake, 0, type(uint128).max);
-        winningVoterCount = bound(winningVoterCount, 0, 1000);
-
-        uint8 delta = harness.calculateRatingDelta(winningStake, winningVoterCount);
-
-        assertLe(delta, 5, "Rating delta must be <= 5");
-    }
-
-    function testFuzz_CalculateRatingDelta_ZeroBelowMinStake(uint256 winningStake, uint256 winningVoterCount)
-        public
-        view
-    {
-        winningStake = bound(winningStake, 0, 10e6 - 1);
-        winningVoterCount = bound(winningVoterCount, 1, 100);
-
-        uint8 delta = harness.calculateRatingDelta(winningStake, winningVoterCount);
-
-        assertEq(delta, 0, "Below min stake must return 0");
-    }
-
-    function testFuzz_CalculateRatingDelta_CappedByVoterCount(uint256 winningStake, uint256 winningVoterCount)
-        public
-        view
-    {
-        winningStake = bound(winningStake, 10e6, type(uint128).max);
-        winningVoterCount = bound(winningVoterCount, 1, 5);
-
-        uint8 delta = harness.calculateRatingDelta(winningStake, winningVoterCount);
-
-        assertLe(uint256(delta), winningVoterCount, "Delta must be capped by voter count");
+        assertEq(reward, 0, "Zero total winning shares must return zero reward");
     }
 
     // ====================================================
@@ -276,30 +348,6 @@ contract RewardMathTest is Test {
     function test_ConsensusSubsidy_ZeroStake() public view {
         uint256 subsidy = harness.calculateConsensusSubsidy(0, 1_000_000e6);
         assertEq(subsidy, 0, "Zero stake must return zero");
-    }
-
-    // ====================================================
-    // calculateRatingDelta — Edge Case Unit Tests
-    // ====================================================
-
-    function test_CalculateRatingDelta_ZeroVoters() public view {
-        uint8 delta = harness.calculateRatingDelta(100e6, 0);
-        assertEq(delta, 0, "Zero voters must return 0");
-    }
-
-    function test_CalculateRatingDelta_ExactMinStake() public view {
-        uint8 delta = harness.calculateRatingDelta(10e6, 5);
-        assertEq(delta, 1, "Exact min stake should give delta of 1");
-    }
-
-    function test_CalculateRatingDelta_ExactMaxStake() public view {
-        uint8 delta = harness.calculateRatingDelta(100e6, 10);
-        assertEq(delta, 5, "Exact max stake with enough voters should give max delta");
-    }
-
-    function test_CalculateRatingDelta_MaxStakeSingleVoter() public view {
-        uint8 delta = harness.calculateRatingDelta(100e6, 1);
-        assertEq(delta, 1, "Single voter should cap delta at 1");
     }
 
     // ====================================================

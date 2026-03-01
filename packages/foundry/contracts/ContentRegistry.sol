@@ -253,7 +253,7 @@ contract ContentRegistry is
         require(c.submitter == msg.sender, "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
         if (votingEngine != address(0)) {
-            require(IRoundVotingEngine(votingEngine).getContentCommitCount(contentId) == 0, "Content has votes");
+            require(IRoundVotingEngine(votingEngine).getContentVoteCount(contentId) == 0, "Content has votes");
         }
 
         c.status = ContentStatus.Cancelled;
@@ -286,9 +286,9 @@ contract ContentRegistry is
         Content storage c = contents[contentId];
         require(c.status == ContentStatus.Active, "Not active");
         require(block.timestamp > c.lastActivityAt + DORMANCY_PERIOD, "Dormancy period not elapsed");
-        // Prevent dormancy if content has unrevealed votes in active epochs
+        // Prevent dormancy if content has active votes in an open round
         if (votingEngine != address(0)) {
-            require(!IRoundVotingEngine(votingEngine).hasUnrevealedVotes(contentId), "Content has pending votes");
+            require(!IRoundVotingEngine(votingEngine).hasActiveVotes(contentId), "Content has active votes");
         }
 
         c.status = ContentStatus.Dormant;
@@ -328,24 +328,20 @@ contract ContentRegistry is
         contents[contentId].lastActivityAt = block.timestamp;
     }
 
-    /// @notice Called by VotingEngine to update content rating after epoch settlement.
+    /// @notice Called by VotingEngine to set content rating directly (live updates on each vote).
     /// @param contentId The content ID.
-    /// @param upWins Whether the UP side won the epoch.
-    /// @param delta The rating change amount (0-5), based on winning stake.
-    function updateRating(uint256 contentId, bool upWins, uint8 delta) external {
+    /// @param newRating The new rating value [0, 100].
+    function updateRatingDirect(uint256 contentId, uint16 newRating) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
-        if (delta == 0) return; // No rating change for low-stake epochs
 
         Content storage c = contents[contentId];
         uint256 oldRating = c.rating;
+        uint256 clampedRating = newRating > 100 ? 100 : uint256(newRating);
 
-        if (upWins) {
-            c.rating = oldRating + delta > 100 ? 100 : oldRating + delta;
-        } else {
-            c.rating = oldRating >= delta ? oldRating - delta : 0;
-        }
+        if (clampedRating == oldRating) return;
 
-        emit RatingUpdated(contentId, oldRating, c.rating);
+        c.rating = clampedRating;
+        emit RatingUpdated(contentId, oldRating, clampedRating);
     }
 
     /// @notice Called by VotingEngine to return submitter stake after milestone 0 resolves favorably.

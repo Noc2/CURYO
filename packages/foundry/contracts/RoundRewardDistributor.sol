@@ -15,8 +15,8 @@ import { RewardMath } from "./libraries/RewardMath.sol";
 /// @title RoundRewardDistributor
 /// @notice Pull-based reward claiming for settled rounds.
 /// @dev NOT pausable — users must always be able to withdraw their funds.
-///      Simplified from EpochRewardDistributor: no global pool, no isEpochFullySettled gate.
-///      Claims work immediately after a round settles.
+///      Rewards are distributed proportional to shares (not stakes).
+///      Early/contrarian voters earn more per cREP staked.
 contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, ReentrancyGuardTransient, UUPSUpgradeable {
     // --- Access Control Roles ---
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
@@ -72,9 +72,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // --- Voter Reward Claiming ---
 
     /// @notice Claim reward for a settled round.
-    /// @dev Returns stake + proportional rewards from the content-specific voter pool.
-    ///      No global pool — all 87% of voter share is content-specific.
-    ///      No waiting for other content to settle — claims work immediately.
+    /// @dev Returns stake + share-proportional rewards from the content-specific voter pool.
+    ///      Early/contrarian voters earn more per cREP because they hold more shares.
     /// @param contentId The content ID.
     /// @param roundId The round ID.
     function claimReward(uint256 contentId, uint256 roundId) external nonReentrant {
@@ -83,31 +82,30 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
         require(round.state == RoundLib.RoundState.Settled, "Round not settled");
 
-        // Find voter's commit
-        RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, msg.sender);
-        require(commit.voter == msg.sender, "No vote found");
-        require(commit.revealed, "Vote not revealed");
+        // Find voter's vote
+        RoundLib.Vote memory v = votingEngine.getVote(contentId, roundId, msg.sender);
+        require(v.voter == msg.sender, "No vote found");
 
         rewardClaimed[contentId][roundId][msg.sender] = true;
 
-        bool voterWon = (commit.isUp == round.upWins);
+        bool voterWon = (v.isUp == round.upWins);
 
         if (!voterWon) {
             emit LoserNotified(contentId, roundId, msg.sender);
             return;
         }
 
-        // Voter won: return stake + content-specific pool reward
+        // Voter won: return stake + share-proportional pool reward
         uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
-        uint256 winningStake = votingEngine.roundWinningStake(contentId, roundId);
-        uint256 reward = RewardMath.calculateVoterReward(commit.stakeAmount, winningStake, voterPool);
+        uint256 winningShares = votingEngine.roundWinningShares(contentId, roundId);
+        uint256 reward = RewardMath.calculateVoterReward(v.shares, winningShares, voterPool);
 
         // Total = stake return + reward
-        uint256 crepReward = commit.stakeAmount + reward;
+        uint256 crepReward = v.stake + reward;
 
         votingEngine.transferReward(msg.sender, crepReward);
 
-        emit RewardClaimed(contentId, roundId, msg.sender, commit.stakeAmount, crepReward);
+        emit RewardClaimed(contentId, roundId, msg.sender, v.stake, crepReward);
     }
 
     // --- Submitter Reward Claiming ---
@@ -133,23 +131,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
 
         emit SubmitterRewardClaimed(contentId, roundId, submitter, crepAmount);
-    }
-
-    // --- Internal ---
-
-    /// @dev Find a voter's commit using the O(1) voter-to-commitHash mapping.
-    function _findVoterCommit(uint256 contentId, uint256 roundId, address voter)
-        internal
-        view
-        returns (RoundLib.Commit memory)
-    {
-        bytes32 commitHash = votingEngine.getVoterCommitHash(contentId, roundId, voter);
-        if (commitHash == bytes32(0)) {
-            // Return empty commit (voter check will fail)
-            return RoundLib.Commit(address(0), 0, "", address(0), 0, false, false);
-        }
-        bytes32 commitKey = keccak256(abi.encodePacked(voter, commitHash));
-        return votingEngine.getCommit(contentId, roundId, commitKey);
     }
 
     // --- Admin ---

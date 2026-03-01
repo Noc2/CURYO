@@ -44,48 +44,92 @@ contract MockVoterIdNFT_CR is IVoterIdNFT {
         return id;
     }
 
-    function hasVoterId(address holder) external view returns (bool) { return holders[holder]; }
-    function getTokenId(address holder) external view returns (uint256) { return tokenIds[holder]; }
-    function getHolder(uint256 tokenId) external view returns (address) { return tokenHolders[tokenId]; }
+    function hasVoterId(address holder) external view returns (bool) {
+        return holders[holder];
+    }
+
+    function getTokenId(address holder) external view returns (uint256) {
+        return tokenIds[holder];
+    }
+
+    function getHolder(uint256 tokenId) external view returns (address) {
+        return tokenHolders[tokenId];
+    }
+
     function recordStake(uint256 contentId, uint256 epochId, uint256 tokenId, uint256 amount) external {
         stakes[keccak256(abi.encodePacked(contentId, epochId, tokenId))] += amount;
     }
+
     function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
         return stakes[keccak256(abi.encodePacked(contentId, epochId, tokenId))];
     }
-    function isNullifierUsed(uint256 nullifier) external view returns (bool) { return usedNullifiers[nullifier]; }
+
+    function isNullifierUsed(uint256 nullifier) external view returns (bool) {
+        return usedNullifiers[nullifier];
+    }
     function revokeVoterId(address) external { }
+
     function setDelegate(address delegate) external {
         holderToDelegate[msg.sender] = delegate;
         delegateToHolder[delegate] = msg.sender;
     }
+
     function removeDelegate() external {
         delete delegateToHolder[holderToDelegate[msg.sender]];
         delete holderToDelegate[msg.sender];
     }
+
     function resolveHolder(address addr) external view returns (address) {
         if (holders[addr]) return addr;
         address h = delegateToHolder[addr];
         if (holders[h]) return h;
         return address(0);
     }
-    function delegateTo(address holder) external view returns (address) { return holderToDelegate[holder]; }
-    function delegateOf(address delegate) external view returns (address) { return delegateToHolder[delegate]; }
+
+    function delegateTo(address holder) external view returns (address) {
+        return holderToDelegate[holder];
+    }
+
+    function delegateOf(address delegate) external view returns (address) {
+        return delegateToHolder[delegate];
+    }
 }
 
 contract MockCategoryRegistry is ICategoryRegistry {
     mapping(uint256 => bool) public approved;
     mapping(uint256 => address) public submitters;
 
-    function setApproved(uint256 id, bool val) external { approved[id] = val; }
-    function setSubmitter(uint256 id, address s) external { submitters[id] = s; }
+    function setApproved(uint256 id, bool val) external {
+        approved[id] = val;
+    }
 
-    function isApprovedCategory(uint256 categoryId) external view override returns (bool) { return approved[categoryId]; }
-    function getCategory(uint256) external pure override returns (Category memory) { revert("not impl"); }
-    function getCategoryByDomain(string calldata) external pure override returns (Category memory) { revert("not impl"); }
-    function getApprovedCategoryIds() external pure override returns (uint256[] memory) { return new uint256[](0); }
-    function isDomainRegistered(string calldata) external pure override returns (bool) { return false; }
-    function getSubmitter(uint256 categoryId) external view override returns (address) { return submitters[categoryId]; }
+    function setSubmitter(uint256 id, address s) external {
+        submitters[id] = s;
+    }
+
+    function isApprovedCategory(uint256 categoryId) external view override returns (bool) {
+        return approved[categoryId];
+    }
+
+    function getCategory(uint256) external pure override returns (Category memory) {
+        revert("not impl");
+    }
+
+    function getCategoryByDomain(string calldata) external pure override returns (Category memory) {
+        revert("not impl");
+    }
+
+    function getApprovedCategoryIds() external pure override returns (uint256[] memory) {
+        return new uint256[](0);
+    }
+
+    function isDomainRegistered(string calldata) external pure override returns (bool) {
+        return false;
+    }
+
+    function getSubmitter(uint256 categoryId) external view override returns (address) {
+        return submitters[categoryId];
+    }
 }
 
 // =========================================================================
@@ -125,13 +169,33 @@ contract ContentRegistryBranchesTest is Test {
         RoundRewardDistributor distImpl = new RoundRewardDistributor();
 
         registry = ContentRegistry(
-            address(new ERC1967Proxy(address(registryImpl), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))))
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                )
+            )
         );
         votingEngine = RoundVotingEngine(
-            address(new ERC1967Proxy(address(engineImpl), abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true))))
+            address(
+                new ERC1967Proxy(
+                    address(engineImpl),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
+                    )
+                )
+            )
         );
         rewardDistributor = RoundRewardDistributor(
-            address(new ERC1967Proxy(address(distImpl), abi.encodeCall(RoundRewardDistributor.initialize, (owner, address(crepToken), address(votingEngine), address(registry)))))
+            address(
+                new ERC1967Proxy(
+                    address(distImpl),
+                    abi.encodeCall(
+                        RoundRewardDistributor.initialize,
+                        (owner, address(crepToken), address(votingEngine), address(registry))
+                    )
+                )
+            )
         );
 
         registry.setVotingEngine(address(votingEngine));
@@ -139,7 +203,7 @@ contract ContentRegistryBranchesTest is Test {
         registry.setTreasury(treasury);
         votingEngine.setRewardDistributor(address(rewardDistributor));
         votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(15 minutes, 7 days, 2, 200);
+        votingEngine.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
 
         mockVoterIdNFT = new MockVoterIdNFT_CR();
         mockCategoryRegistry = new MockCategoryRegistry();
@@ -162,8 +226,11 @@ contract ContentRegistryBranchesTest is Test {
         vm.stopPrank();
     }
 
-    function _mockCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
-        return abi.encodePacked(isUp ? bytes1(uint8(1)) : bytes1(uint8(0)), salt, bytes32(contentId));
+    function _vote(address voter, uint256 contentId, bool isUp) internal {
+        vm.startPrank(voter);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.vote(contentId, isUp, STAKE, address(0));
+        vm.stopPrank();
     }
 
     // =========================================================================
@@ -261,7 +328,9 @@ contract ContentRegistryBranchesTest is Test {
 
     function test_SubmitContent_UrlTooLong_Reverts() public {
         bytes memory longUrl = new bytes(2049);
-        for (uint256 i = 0; i < longUrl.length; i++) longUrl[i] = "a";
+        for (uint256 i = 0; i < longUrl.length; i++) {
+            longUrl[i] = "a";
+        }
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
@@ -272,7 +341,9 @@ contract ContentRegistryBranchesTest is Test {
 
     function test_SubmitContent_GoalTooLong_Reverts() public {
         bytes memory longGoal = new bytes(501);
-        for (uint256 i = 0; i < longGoal.length; i++) longGoal[i] = "a";
+        for (uint256 i = 0; i < longGoal.length; i++) {
+            longGoal[i] = "a";
+        }
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
@@ -283,7 +354,9 @@ contract ContentRegistryBranchesTest is Test {
 
     function test_SubmitContent_TagsTooLong_Reverts() public {
         bytes memory longTags = new bytes(257);
-        for (uint256 i = 0; i < longTags.length; i++) longTags[i] = "a";
+        for (uint256 i = 0; i < longTags.length; i++) {
+            longTags[i] = "a";
+        }
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
@@ -358,12 +431,7 @@ contract ContentRegistryBranchesTest is Test {
         vm.stopPrank();
 
         // Add a vote
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, uint256(1)));
-        vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(1, commitHash, _mockCiphertext(true, salt, 1), STAKE, address(0));
-        vm.stopPrank();
+        _vote(voter1, 1, true);
 
         vm.prank(submitter);
         vm.expectRevert("Content has votes");
@@ -375,7 +443,12 @@ contract ContentRegistryBranchesTest is Test {
         vm.startPrank(owner);
         ContentRegistry registryImpl2 = new ContentRegistry();
         ContentRegistry reg2 = ContentRegistry(
-            address(new ERC1967Proxy(address(registryImpl2), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))))
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl2),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                )
+            )
         );
         reg2.setBonusPool(bonusPool);
         // DON'T set votingEngine
@@ -422,7 +495,12 @@ contract ContentRegistryBranchesTest is Test {
         vm.startPrank(owner);
         ContentRegistry registryImpl2 = new ContentRegistry();
         ContentRegistry reg2 = ContentRegistry(
-            address(new ERC1967Proxy(address(registryImpl2), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))))
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl2),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                )
+            )
         );
         // DON'T set votingEngine
         vm.stopPrank();
@@ -460,7 +538,12 @@ contract ContentRegistryBranchesTest is Test {
         vm.startPrank(owner);
         ContentRegistry registryImpl2 = new ContentRegistry();
         ContentRegistry reg2 = ContentRegistry(
-            address(new ERC1967Proxy(address(registryImpl2), abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))))
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl2),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                )
+            )
         );
         reg2.setVotingEngine(address(votingEngine));
         // DON'T set treasury
@@ -480,40 +563,41 @@ contract ContentRegistryBranchesTest is Test {
     // updateRating BRANCHES
     // =========================================================================
 
-    function test_UpdateRating_CappedAt100() public {
+    function test_UpdateRatingDirect_CappedAt100() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/1", "goal", "tags", 0);
         vm.stopPrank();
 
-        // Rating starts at 50. Add delta of 60 → should cap at 100
+        // Set rating to 110 → should clamp to 100
         vm.prank(address(votingEngine));
-        registry.updateRating(1, true, 60);
+        registry.updateRatingDirect(1, 110);
 
         assertEq(registry.getRating(1), 100);
     }
 
-    function test_UpdateRating_FlooredAt0() public {
+    function test_UpdateRatingDirect_FlooredAt0() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/1", "goal", "tags", 0);
         vm.stopPrank();
 
-        // Rating starts at 50. Subtract delta of 60 → should floor at 0
+        // Set rating to 0
         vm.prank(address(votingEngine));
-        registry.updateRating(1, false, 60);
+        registry.updateRatingDirect(1, 0);
 
         assertEq(registry.getRating(1), 0);
     }
 
-    function test_UpdateRating_ZeroDelta_NoChange() public {
+    function test_UpdateRatingDirect_SameValue_NoChange() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/1", "goal", "tags", 0);
         vm.stopPrank();
 
+        // Set same rating (50) → no change, no event
         vm.prank(address(votingEngine));
-        registry.updateRating(1, true, 0);
+        registry.updateRatingDirect(1, 50);
 
         assertEq(registry.getRating(1), 50); // unchanged
     }

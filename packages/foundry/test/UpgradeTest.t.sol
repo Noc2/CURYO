@@ -18,11 +18,11 @@ import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.s
 contract MockVotingEngineForUpgrade is IRoundVotingEngine {
     function addToConsensusReserve(uint256) external override { }
 
-    function getContentCommitCount(uint256) external pure override returns (uint256) {
+    function getContentVoteCount(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function hasUnrevealedVotes(uint256) external pure override returns (bool) {
+    function hasActiveVotes(uint256) external pure override returns (bool) {
         return false;
     }
     function transferReward(address, uint256) external override { }
@@ -74,7 +74,7 @@ contract UpgradeTest is Test {
                     address(veImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (admin, governance, address(crepToken), address(contentRegistry), true)
+                        (admin, governance, address(crepToken), address(contentRegistry))
                     )
                 )
             )
@@ -171,12 +171,11 @@ contract UpgradeTest is Test {
     function test_VotingEngine_CannotReinitialize() public {
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        votingEngine.initialize(admin, governance, address(crepToken), address(contentRegistry), true);
+        votingEngine.initialize(admin, governance, address(crepToken), address(contentRegistry));
     }
 
     function test_VotingEngine_StatePreservedAfterUpgrade() public {
         assertTrue(votingEngine.hasRole(UPGRADER_ROLE, governance));
-        assertTrue(votingEngine.mockMode());
         assertEq(address(votingEngine.registry()), address(contentRegistry));
 
         RoundVotingEngine newImpl = new RoundVotingEngine();
@@ -184,7 +183,6 @@ contract UpgradeTest is Test {
         UUPSUpgradeable(address(votingEngine)).upgradeToAndCall(address(newImpl), "");
 
         assertTrue(votingEngine.hasRole(UPGRADER_ROLE, governance));
-        assertTrue(votingEngine.mockMode());
         assertEq(address(votingEngine.registry()), address(contentRegistry));
     }
 
@@ -310,7 +308,7 @@ contract UpgradeTest is Test {
 
         RoundVotingEngine veImpl = new RoundVotingEngine();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        veImpl.initialize(admin, governance, address(crepToken), address(contentRegistry), true);
+        veImpl.initialize(admin, governance, address(crepToken), address(contentRegistry));
 
         RoundRewardDistributor rdImpl = new RoundRewardDistributor();
         vm.expectRevert(Initializable.InvalidInitialization.selector);

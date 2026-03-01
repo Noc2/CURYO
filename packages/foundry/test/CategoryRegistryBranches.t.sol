@@ -41,33 +41,56 @@ contract MockVoterIdNFT_Cat is IVoterIdNFT {
         tokenHolders[id] = to;
         return id;
     }
-    function hasVoterId(address holder) external view returns (bool) { return holders[holder]; }
-    function getTokenId(address holder) external view returns (uint256) { return tokenIds[holder]; }
-    function getHolder(uint256 tokenId) external view returns (address) { return tokenHolders[tokenId]; }
+
+    function hasVoterId(address holder) external view returns (bool) {
+        return holders[holder];
+    }
+
+    function getTokenId(address holder) external view returns (uint256) {
+        return tokenIds[holder];
+    }
+
+    function getHolder(uint256 tokenId) external view returns (address) {
+        return tokenHolders[tokenId];
+    }
+
     function recordStake(uint256 contentId, uint256 epochId, uint256 tokenId, uint256 amount) external {
         stakes[keccak256(abi.encodePacked(contentId, epochId, tokenId))] += amount;
     }
+
     function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
         return stakes[keccak256(abi.encodePacked(contentId, epochId, tokenId))];
     }
-    function isNullifierUsed(uint256 nullifier) external view returns (bool) { return usedNullifiers[nullifier]; }
+
+    function isNullifierUsed(uint256 nullifier) external view returns (bool) {
+        return usedNullifiers[nullifier];
+    }
     function revokeVoterId(address) external { }
+
     function setDelegate(address delegate) external {
         holderToDelegate[msg.sender] = delegate;
         delegateToHolder[delegate] = msg.sender;
     }
+
     function removeDelegate() external {
         delete delegateToHolder[holderToDelegate[msg.sender]];
         delete holderToDelegate[msg.sender];
     }
+
     function resolveHolder(address addr) external view returns (address) {
         if (holders[addr]) return addr;
         address h = delegateToHolder[addr];
         if (holders[h]) return h;
         return address(0);
     }
-    function delegateTo(address holder) external view returns (address) { return holderToDelegate[holder]; }
-    function delegateOf(address delegate) external view returns (address) { return delegateToHolder[delegate]; }
+
+    function delegateTo(address holder) external view returns (address) {
+        return holderToDelegate[holder];
+    }
+
+    function delegateOf(address delegate) external view returns (address) {
+        return delegateToHolder[delegate];
+    }
 }
 
 // =========================================================================
@@ -100,14 +123,26 @@ contract CategoryRegistryBranchesTest is Test {
         // Deploy voting engine
         ContentRegistry registryImpl = new ContentRegistry();
         ContentRegistry registry = ContentRegistry(
-            address(new ERC1967Proxy(address(registryImpl), abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(crepToken)))))
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initialize, (admin, admin, address(crepToken)))
+                )
+            )
         );
         RoundVotingEngine engineImpl = new RoundVotingEngine();
         votingEngine = RoundVotingEngine(
-            address(new ERC1967Proxy(address(engineImpl), abi.encodeCall(RoundVotingEngine.initialize, (admin, admin, address(crepToken), address(registry), true))))
+            address(
+                new ERC1967Proxy(
+                    address(engineImpl),
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (admin, admin, address(crepToken), address(registry))
+                    )
+                )
+            )
         );
         votingEngine.setTreasury(address(100));
-        votingEngine.setConfig(15 minutes, 7 days, 2, 200);
+        votingEngine.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
 
         mockVoterIdNFT = new MockVoterIdNFT_Cat();
 
