@@ -9,9 +9,9 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 
-/// @title Formal Verification: Round Lifecycle Edge Cases
-/// @notice 12 scenarios verifying epoch boundary timing, expiry, concurrent rounds,
-///         threshold timing, and round transitions.
+/// @title Formal Verification: Round Lifecycle Edge Cases (Public Vote + Random Settlement)
+/// @notice 12 scenarios verifying block-based epoch boundaries, expiry, concurrent rounds,
+///         settlement probability, consensus timeout, round transitions, and refund flows.
 contract FormalVerification_RoundLifecycleTest is Test {
     CuryoReputation crepToken;
     ContentRegistry registry;
@@ -23,8 +23,12 @@ contract FormalVerification_RoundLifecycleTest is Test {
     address treasuryAddr = address(3);
     address[10] v; // voter addresses
 
-    uint256 constant EPOCH = 15 minutes;
+    // Config values matching setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6)
+    uint64 constant MIN_EPOCH_BLOCKS = 10;
+    uint64 constant MAX_EPOCH_BLOCKS = 50;
     uint256 constant MAX_DURATION = 7 days;
+    uint256 constant MIN_VOTERS = 2;
+
     uint256 contentNonce;
 
     function setUp() public {
@@ -53,7 +57,7 @@ contract FormalVerification_RoundLifecycleTest is Test {
                 new ERC1967Proxy(
                     address(engImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true)
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
                     )
                 )
             )
@@ -74,6 +78,10 @@ contract FormalVerification_RoundLifecycleTest is Test {
         registry.setTreasury(treasuryAddr);
         engine.setRewardDistributor(address(distributor));
         engine.setTreasury(treasuryAddr);
+
+        // Test config: minEpochBlocks=10, maxEpochBlocks=50, maxDuration=7d,
+        // minVoters=2, maxVoters=200, baseRate=30bps, growth=3bps, maxProb=500bps, liquidity=1000e6
+        engine.setConfig(MIN_EPOCH_BLOCKS, MAX_EPOCH_BLOCKS, MAX_DURATION, MIN_VOTERS, 200, 30, 3, 500, 1000e6);
 
         // Fund consensus reserve
         crepToken.mint(owner, 100_000e6);
@@ -104,186 +112,135 @@ contract FormalVerification_RoundLifecycleTest is Test {
         return id;
     }
 
-    function _commit(address voter, uint256 cid, bool up, bytes32 salt, uint256 stake) internal {
+    function _vote(address voter, uint256 cid, bool up, uint256 stake) internal {
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
-        bytes memory ciphertext = abi.encodePacked(up ? bytes1(uint8(1)) : bytes1(uint8(0)), salt, bytes32(cid));
-        engine.commitVote(cid, keccak256(abi.encodePacked(up, salt, cid)), ciphertext, stake, address(0));
+        engine.vote(cid, up, stake, address(0));
         vm.stopPrank();
     }
 
-    function _reveal(address voter, uint256 cid, uint256 rid, bool up, bytes32 salt) internal {
-        bytes32 commitHash = keccak256(abi.encodePacked(up, salt, cid));
-        bytes32 commitKey = keccak256(abi.encodePacked(voter, commitHash));
-        engine.revealVoteByCommitKey(cid, rid, commitKey, up, salt);
+    function _forceSettle(uint256 cid) internal {
+        vm.roll(block.number + MAX_EPOCH_BLOCKS + 1);
+        engine.trySettle(cid);
     }
 
-    // ==================== Test 1: Commit at Exact Epoch End Lands in Next Epoch ====================
+    // ==================== Test 1: Vote at Exact minEpochBlocks Boundary ====================
 
-    /// @notice Commit at T=epochDuration should land in epoch 1 (revealable after 2*epochDuration).
-    function test_EpochBoundary_CommitAtExactEnd_LandsInNextEpoch() public {
+    /// @notice A vote placed exactly at startBlock + minEpochBlocks should be accepted.
+    ///         The epoch is eligible for settlement starting at this block.
+    function test_EpochBoundary_VoteAtExactMinEpoch() public {
         uint256 cid = _submit();
 
-        // First commit starts the round at current block.timestamp
-        _commit(v[0], cid, true, "a", 10e6);
+        // First vote starts the round at current block
+        _vote(v[0], cid, true, 10e6);
 
         uint256 rid = engine.currentRoundId(cid);
         RoundLib.Round memory round = engine.getRound(cid, rid);
-        uint256 rStart = round.startTime;
+        uint64 startBlock = round.startBlock;
 
-        // Commit exactly at T = startTime + epochDuration (epoch boundary)
-        vm.warp(rStart + EPOCH);
-        _commit(v[1], cid, true, "b", 10e6);
+        // Roll to exactly minEpochBlocks after start
+        vm.roll(startBlock + MIN_EPOCH_BLOCKS);
 
-        // v[1]'s commit should have revealableAfter = startTime + 2*EPOCH
-        bytes32 commitHash = keccak256(abi.encodePacked(true, bytes32("b"), cid));
-        bytes32 commitKey = keccak256(abi.encodePacked(v[1], commitHash));
-        (,,,, uint256 revealableAfter,,) = engine.commits(cid, rid, commitKey);
+        // Vote should still be accepted (round still Open)
+        _vote(v[1], cid, false, 10e6);
 
-        assertEq(revealableAfter, rStart + 2 * EPOCH, "Commit at epoch boundary lands in epoch 1");
+        assertTrue(engine.hasVoted(cid, rid, v[1]), "Vote accepted at minEpochBlocks boundary");
     }
 
-    // ==================== Test 2: Commit One Second Before Epoch End ====================
+    // ==================== Test 2: Vote One Block Before minEpochBlocks ====================
 
-    /// @notice Commit at T=epochDuration-1 stays in epoch 0.
-    function test_EpochBoundary_CommitOneSecondBefore() public {
+    /// @notice A vote placed one block before minEpochBlocks should be accepted.
+    ///         Settlement should not yet be possible.
+    function test_EpochBoundary_VoteOneBlockBeforeMinEpoch() public {
         uint256 cid = _submit();
 
-        _commit(v[0], cid, true, "a", 10e6);
+        _vote(v[0], cid, true, 10e6);
 
         uint256 rid = engine.currentRoundId(cid);
         RoundLib.Round memory round = engine.getRound(cid, rid);
-        uint256 rStart = round.startTime;
+        uint64 startBlock = round.startBlock;
 
-        vm.warp(rStart + EPOCH - 1);
-        _commit(v[1], cid, true, "b", 10e6);
+        // Roll to one block before minEpochBlocks
+        vm.roll(startBlock + MIN_EPOCH_BLOCKS - 1);
 
-        bytes32 commitHash = keccak256(abi.encodePacked(true, bytes32("b"), cid));
-        bytes32 commitKey = keccak256(abi.encodePacked(v[1], commitHash));
-        (,,,, uint256 revealableAfter,,) = engine.commits(cid, rid, commitKey);
+        // Vote should be accepted
+        _vote(v[1], cid, false, 10e6);
+        assertTrue(engine.hasVoted(cid, rid, v[1]), "Vote accepted before minEpochBlocks");
 
-        assertEq(revealableAfter, rStart + EPOCH, "Commit 1s before boundary stays in epoch 0");
+        // trySettle should not settle (before min epoch)
+        engine.trySettle(cid);
+        RoundLib.Round memory afterSettle = engine.getRound(cid, rid);
+        assertEq(uint256(afterSettle.state), uint256(RoundLib.RoundState.Open), "Round still Open before minEpoch");
     }
 
-    // ==================== Test 3: Commit at Round Start ====================
+    // ==================== Test 3: Round Expiry at Exact maxDuration Boundary ====================
 
-    /// @notice First commit at T=0 has revealableAfter = roundStart + epochDuration.
-    function test_EpochBoundary_CommitAtRoundStart() public {
-        uint256 cid = _submit();
-
-        _commit(v[0], cid, true, "a", 10e6);
-
-        uint256 rid = engine.currentRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
-        bytes32 commitHash = keccak256(abi.encodePacked(true, bytes32("a"), cid));
-        bytes32 commitKey = keccak256(abi.encodePacked(v[0], commitHash));
-        (,,,, uint256 revealableAfter,,) = engine.commits(cid, rid, commitKey);
-
-        assertEq(revealableAfter, round.startTime + EPOCH, "First commit revealable after first epoch");
-    }
-
-    // ==================== Test 4: Expiry at Exact Max Duration ====================
-
-    /// @notice Round can be cancelled at exactly T + maxDuration.
+    /// @notice Round can be cancelled at exactly startTime + maxDuration.
     function test_Expiry_AtExactMaxDuration() public {
         uint256 cid = _submit();
-        uint256 ts = 1000;
 
-        // 3 commits (enough to settle at minVoters=3)
-        _commit(v[0], cid, true, "a", 10e6);
-        _commit(v[1], cid, true, "b", 10e6);
-        _commit(v[2], cid, true, "c", 10e6);
+        // 2 votes (enough to meet minVoters but we expire instead of settling)
+        _vote(v[0], cid, true, 10e6);
+        _vote(v[1], cid, true, 10e6);
 
         uint256 rid = engine.currentRoundId(cid);
+        RoundLib.Round memory round = engine.getRound(cid, rid);
 
         // At exactly maxDuration, round is expired
-        vm.warp(ts + MAX_DURATION);
+        vm.warp(round.startTime + MAX_DURATION);
         engine.cancelExpiredRound(cid, rid);
 
-        RoundLib.Round memory round = engine.getRound(cid, rid);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled at max duration");
+        RoundLib.Round memory cancelled = engine.getRound(cid, rid);
+        assertEq(uint256(cancelled.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled at max duration");
     }
 
-    // ==================== Test 5: Not Expired One Second Before ====================
+    // ==================== Test 4: Not Expired One Second Before maxDuration ====================
 
-    /// @notice Round still accepts votes at T + maxDuration - 1.
+    /// @notice Round still accepts votes at startTime + maxDuration - 1.
     function test_Expiry_OneSecondBefore() public {
         uint256 cid = _submit();
-        uint256 ts = 1000;
 
-        _commit(v[0], cid, true, "a", 10e6);
+        _vote(v[0], cid, true, 10e6);
         uint256 rid = engine.currentRoundId(cid);
+        RoundLib.Round memory round = engine.getRound(cid, rid);
 
-        // One second before expiry - round still accepts votes
-        vm.warp(ts + MAX_DURATION - 1);
-        _commit(v[1], cid, true, "b", 10e6);
+        // One second before expiry: round still accepts votes
+        vm.warp(round.startTime + MAX_DURATION - 1);
+        _vote(v[1], cid, true, 10e6);
 
-        // Cannot cancel - not expired yet
+        assertTrue(engine.hasVoted(cid, rid, v[1]), "Vote accepted 1s before expiry");
+
+        // Cannot cancel yet
         vm.expectRevert(RoundVotingEngine.RoundNotExpired.selector);
         engine.cancelExpiredRound(cid, rid);
     }
 
-    // ==================== Test 6: Late Vote Refunded on Expiry ====================
+    // ==================== Test 5: Concurrent Rounds - Independent Settlement ====================
 
-    /// @notice Vote placed near expiry is refunded when round cancels.
-    function test_Expiry_LateVoteRefunded() public {
-        uint256 cid = _submit();
-        uint256 ts = 1000;
-
-        _commit(v[0], cid, true, "a", 50e6);
-        _commit(v[1], cid, false, "b", 50e6);
-        _commit(v[2], cid, true, "c", 50e6);
-
-        // Late vote near expiry
-        vm.warp(ts + MAX_DURATION - 1);
-        uint256 lateBalBefore = crepToken.balanceOf(v[3]);
-        _commit(v[3], cid, true, "d", 50e6);
-
-        uint256 rid = engine.currentRoundId(cid);
-
-        // Expire
-        vm.warp(ts + MAX_DURATION);
-        engine.cancelExpiredRound(cid, rid);
-
-        // Late voter claims refund
-        vm.prank(v[3]);
-        engine.claimCancelledRoundRefund(cid, rid);
-        assertEq(crepToken.balanceOf(v[3]), lateBalBefore, "Late voter gets full refund");
-    }
-
-    // ==================== Test 7: Concurrent Rounds - Independent Settlement ====================
-
-    /// @notice 3 content items with independent rounds. Settling one doesn't affect others.
+    /// @notice 3 content items with independent rounds. Force-settling one does not affect others.
     function test_ConcurrentRounds_IndependentSettlement() public {
         uint256 cid1 = _submit();
         uint256 cid2 = _submit();
         uint256 cid3 = _submit();
-        uint256 ts = 1000;
 
-        // Commit 5 votes on each content
-        for (uint256 i = 0; i < 5; i++) {
-            _commit(v[i], cid1, true, bytes32(uint256(100 + i)), 50e6);
-            _commit(v[i], cid2, true, bytes32(uint256(200 + i)), 50e6);
-            _commit(v[i], cid3, i < 3, bytes32(uint256(300 + i)), 50e6); // 3 UP, 2 DOWN
-        }
+        // Vote on all 3 content items with 2-sided votes
+        _vote(v[0], cid1, true, 10e6);
+        _vote(v[1], cid1, false, 10e6);
 
-        // Reveal all
-        ts += EPOCH + 1;
-        vm.warp(ts);
+        _vote(v[0], cid2, true, 10e6);
+        _vote(v[1], cid2, false, 10e6);
+
+        _vote(v[0], cid3, true, 10e6);
+        _vote(v[1], cid3, false, 10e6);
+        _vote(v[2], cid3, true, 10e6);
+
         uint256 rid1 = engine.currentRoundId(cid1);
         uint256 rid2 = engine.currentRoundId(cid2);
         uint256 rid3 = engine.currentRoundId(cid3);
 
-        for (uint256 i = 0; i < 5; i++) {
-            _reveal(v[i], cid1, rid1, true, bytes32(uint256(100 + i)));
-            _reveal(v[i], cid2, rid2, true, bytes32(uint256(200 + i)));
-            _reveal(v[i], cid3, rid3, i < 3, bytes32(uint256(300 + i)));
-        }
-
-        // Settle only cid3
-        ts += EPOCH + 1;
-        vm.warp(ts);
-        engine.settleRound(cid3, rid3);
+        // Force settle only cid3 (roll past maxEpochBlocks)
+        vm.roll(block.number + MAX_EPOCH_BLOCKS + 1);
+        engine.trySettle(cid3);
 
         // cid3 settled, cid1 and cid2 still open
         RoundLib.Round memory r1 = engine.getRound(cid1, rid1);
@@ -292,180 +249,211 @@ contract FormalVerification_RoundLifecycleTest is Test {
 
         assertEq(uint256(r1.state), uint256(RoundLib.RoundState.Open), "cid1 still Open");
         assertEq(uint256(r2.state), uint256(RoundLib.RoundState.Open), "cid2 still Open");
+        // cid3 should be Settled (UP wins 2 vs 1 by stake: 20e6 up vs 10e6 down)
         assertEq(uint256(r3.state), uint256(RoundLib.RoundState.Settled), "cid3 Settled");
     }
 
-    // ==================== Test 8: Same Voter Votes on Multiple Content ====================
+    // ==================== Test 6: Same Voter Votes on Multiple Content ====================
 
-    /// @notice One voter votes on 3 different content items in the same epoch.
+    /// @notice One voter votes on 3 different content items in the same block.
     function test_ConcurrentRounds_SameVoterDifferentContent() public {
         uint256 cid1 = _submit();
         uint256 cid2 = _submit();
         uint256 cid3 = _submit();
 
         // Same voter votes on all 3 content items
-        _commit(v[0], cid1, true, "a1", 10e6);
-        _commit(v[0], cid2, false, "a2", 20e6);
-        _commit(v[0], cid3, true, "a3", 30e6);
+        _vote(v[0], cid1, true, 10e6);
+        _vote(v[0], cid2, false, 20e6);
+        _vote(v[0], cid3, true, 30e6);
 
         uint256 rid1 = engine.currentRoundId(cid1);
         uint256 rid2 = engine.currentRoundId(cid2);
         uint256 rid3 = engine.currentRoundId(cid3);
 
-        // All commits accepted
-        assertTrue(engine.hasCommitted(cid1, rid1, v[0]), "v[0] committed on cid1");
-        assertTrue(engine.hasCommitted(cid2, rid2, v[0]), "v[0] committed on cid2");
-        assertTrue(engine.hasCommitted(cid3, rid3, v[0]), "v[0] committed on cid3");
+        // All votes accepted
+        assertTrue(engine.hasVoted(cid1, rid1, v[0]), "v[0] voted on cid1");
+        assertTrue(engine.hasVoted(cid2, rid2, v[0]), "v[0] voted on cid2");
+        assertTrue(engine.hasVoted(cid3, rid3, v[0]), "v[0] voted on cid3");
     }
 
-    // ==================== Test 9: Threshold Set at 3rd Reveal ====================
+    // ==================== Test 7: Settlement Probability Increases With Blocks ====================
 
-    /// @notice thresholdReachedAt is 0 after 2 reveals, set on the 3rd.
-    function test_ThresholdTiming_SetAt5thReveal() public {
+    /// @notice Before minEpochBlocks, settlement never triggers. After maxEpochBlocks, it always settles.
+    ///         We verify the deterministic boundaries.
+    function test_SettlementProbability_BlockBoundaries() public {
         uint256 cid = _submit();
-        uint256 ts = 1000;
 
-        for (uint256 i = 0; i < 4; i++) {
-            _commit(v[i], cid, true, bytes32(uint256(i)), 10e6);
-        }
-
-        ts += EPOCH + 1;
-        vm.warp(ts);
-        uint256 rid = engine.currentRoundId(cid);
-
-        // Reveal 1-2: threshold not yet reached
-        for (uint256 i = 0; i < 2; i++) {
-            _reveal(v[i], cid, rid, true, bytes32(uint256(i)));
-        }
-        RoundLib.Round memory r2 = engine.getRound(cid, rid);
-        assertEq(r2.thresholdReachedAt, 0, "2 reveals: threshold not yet reached");
-
-        // Reveal 3: threshold reached
-        _reveal(v[2], cid, rid, true, bytes32(uint256(2)));
-        RoundLib.Round memory r3 = engine.getRound(cid, rid);
-        assertEq(r3.thresholdReachedAt, ts, "3rd reveal sets thresholdReachedAt");
-        assertEq(r3.revealedCount, 3, "3 votes revealed");
-    }
-
-    // ==================== Test 10: Multi-Epoch Reveals - Threshold in Epoch 0 ====================
-
-    /// @notice 2 reveals in epoch 0, 3 in epoch 1. Threshold reached at 3rd reveal (in epoch 0).
-    function test_ThresholdTiming_MultiEpochReveals() public {
-        uint256 cid = _submit();
-        uint256 ts = 1000; // known start time from setUp
-
-        // Epoch 0: 3 commits
-        _commit(v[0], cid, true, "a", 10e6);
-        _commit(v[1], cid, true, "b", 10e6);
-        _commit(v[2], cid, false, "c", 10e6);
-
-        // Epoch 1: 3 more commits
-        vm.warp(ts + EPOCH);
-        _commit(v[3], cid, true, "d", 10e6);
-        _commit(v[4], cid, true, "e", 10e6);
-        _commit(v[5], cid, false, "f", 10e6);
+        // Two-sided votes to make settlement possible
+        _vote(v[0], cid, true, 50e6);
+        _vote(v[1], cid, false, 10e6);
 
         uint256 rid = engine.currentRoundId(cid);
+        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint64 startBlock = round.startBlock;
 
-        // Reveal epoch 0 votes (after epoch 0 ends)
-        uint256 epoch0End = ts + EPOCH + 1;
-        vm.warp(epoch0End);
-        _reveal(v[0], cid, rid, true, "a");
-        _reveal(v[1], cid, rid, true, "b");
-        _reveal(v[2], cid, rid, false, "c"); // This is the 3rd reveal
+        // Before minEpochBlocks: trySettle should not settle
+        vm.roll(startBlock + MIN_EPOCH_BLOCKS - 1);
+        engine.trySettle(cid);
+        RoundLib.Round memory beforeMin = engine.getRound(cid, rid);
+        assertEq(uint256(beforeMin.state), uint256(RoundLib.RoundState.Open), "Not settled before minEpochBlocks");
 
-        RoundLib.Round memory rAfter3 = engine.getRound(cid, rid);
-        assertEq(rAfter3.thresholdReachedAt, epoch0End, "3 reveals: threshold reached in epoch 0");
-
-        // Reveal epoch 1 votes (after epoch 1 ends)
-        uint256 epoch1End = ts + 2 * EPOCH + 1;
-        vm.warp(epoch1End);
-        _reveal(v[3], cid, rid, true, "d");
-        _reveal(v[4], cid, rid, true, "e");
-
-        RoundLib.Round memory rAfter5 = engine.getRound(cid, rid);
-        assertEq(rAfter5.thresholdReachedAt, epoch0End, "Threshold unchanged (still epoch 0)");
-
-        // Reveal 6th
-        _reveal(v[5], cid, rid, false, "f");
-
-        // Settle after delay (thresholdReachedAt + EPOCH)
-        vm.warp(epoch0End + EPOCH);
-        engine.settleRound(cid, rid);
-
-        RoundLib.Round memory settled = engine.getRound(cid, rid);
-        assertEq(settled.revealedCount, 6, "All 6 votes included");
-        assertTrue(settled.upWins, "UP wins (4 vs 2 count, 40 vs 20 stake)");
+        // After maxEpochBlocks: trySettle must settle (deterministic)
+        vm.roll(startBlock + MAX_EPOCH_BLOCKS);
+        engine.trySettle(cid);
+        RoundLib.Round memory afterMax = engine.getRound(cid, rid);
+        assertEq(uint256(afterMax.state), uint256(RoundLib.RoundState.Settled), "Settled at maxEpochBlocks");
     }
 
-    // ==================== Test 11: New Round After Settlement ====================
+    // ==================== Test 8: Consensus Settlement After maxEpochBlocks (One-Sided) ====================
 
-    /// @notice After settling round 1, a new vote creates round 2.
+    /// @notice When only UP votes exist, consensus settlement triggers after maxEpochBlocks.
+    function test_ConsensusSettlement_OneSidedAfterMaxEpoch() public {
+        uint256 cid = _submit();
+
+        // Only UP votes (one-sided)
+        _vote(v[0], cid, true, 10e6);
+        _vote(v[1], cid, true, 20e6);
+        _vote(v[2], cid, true, 30e6);
+
+        uint256 rid = engine.currentRoundId(cid);
+        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint64 startBlock = round.startBlock;
+
+        // Before maxEpochBlocks: consensus settlement should not trigger
+        vm.roll(startBlock + MAX_EPOCH_BLOCKS - 1);
+        engine.trySettle(cid);
+        RoundLib.Round memory beforeMax = engine.getRound(cid, rid);
+        assertEq(uint256(beforeMax.state), uint256(RoundLib.RoundState.Open), "Not settled before maxEpochBlocks");
+
+        // At maxEpochBlocks: consensus settlement triggers
+        vm.roll(startBlock + MAX_EPOCH_BLOCKS);
+        engine.trySettle(cid);
+        RoundLib.Round memory afterMax = engine.getRound(cid, rid);
+        assertEq(uint256(afterMax.state), uint256(RoundLib.RoundState.Settled), "Consensus settled at maxEpochBlocks");
+        assertTrue(afterMax.upWins, "UP wins in one-sided consensus");
+    }
+
+    // ==================== Test 9: Round Transitions - Open to Tied ====================
+
+    /// @notice When UP and DOWN stakes are exactly equal, settlement produces a Tied round.
+    function test_RoundTransition_OpenToTied() public {
+        uint256 cid = _submit();
+
+        // Equal stakes on both sides
+        _vote(v[0], cid, true, 50e6);
+        _vote(v[1], cid, false, 50e6);
+
+        uint256 rid = engine.currentRoundId(cid);
+
+        // Force settle past maxEpochBlocks
+        RoundLib.Round memory round = engine.getRound(cid, rid);
+        vm.roll(round.startBlock + MAX_EPOCH_BLOCKS);
+        engine.trySettle(cid);
+
+        RoundLib.Round memory tied = engine.getRound(cid, rid);
+        assertEq(uint256(tied.state), uint256(RoundLib.RoundState.Tied), "Equal stakes produce Tied state");
+    }
+
+    // ==================== Test 10: Late Vote Placement and Round Expiry ====================
+
+    /// @notice Vote placed near expiry is included in the round; after expiry the round can be cancelled.
+    function test_LateVotePlacement_AndExpiry() public {
+        uint256 cid = _submit();
+
+        _vote(v[0], cid, true, 50e6);
+        _vote(v[1], cid, false, 50e6);
+
+        uint256 rid = engine.currentRoundId(cid);
+        RoundLib.Round memory round = engine.getRound(cid, rid);
+
+        // Late vote 1 second before expiry
+        vm.warp(round.startTime + MAX_DURATION - 1);
+        _vote(v[2], cid, true, 50e6);
+
+        RoundLib.Round memory afterLate = engine.getRound(cid, rid);
+        assertEq(afterLate.voteCount, 3, "Late vote counted");
+
+        // Now expire
+        vm.warp(round.startTime + MAX_DURATION);
+        engine.cancelExpiredRound(cid, rid);
+
+        RoundLib.Round memory cancelled = engine.getRound(cid, rid);
+        assertEq(uint256(cancelled.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled after expiry");
+    }
+
+    // ==================== Test 11: Post-Settlement Round Creation ====================
+
+    /// @notice After settling round 1, a new vote (after cooldown) creates round 2.
     function test_RoundTransition_NewRoundAfterSettlement() public {
         uint256 cid = _submit();
-        uint256 ts = 1000;
 
-        // Round 1: 5 votes
-        for (uint256 i = 0; i < 5; i++) {
-            _commit(v[i], cid, true, bytes32(uint256(i)), 10e6);
-        }
-        ts += EPOCH + 1;
-        vm.warp(ts);
+        // Round 1: two-sided votes
+        _vote(v[0], cid, true, 50e6);
+        _vote(v[1], cid, false, 10e6);
+
         uint256 rid1 = engine.currentRoundId(cid);
-        for (uint256 i = 0; i < 5; i++) {
-            _reveal(v[i], cid, rid1, true, bytes32(uint256(i)));
-        }
-        ts += EPOCH + 1;
-        vm.warp(ts);
-        engine.settleRound(cid, rid1);
         assertEq(rid1, 1, "First round has ID 1");
 
-        // Wait for cooldown (24 hours)
-        ts += 24 hours;
-        vm.warp(ts);
+        // Force settle
+        _forceSettle(cid);
+        RoundLib.Round memory settled = engine.getRound(cid, rid1);
+        assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round 1 settled");
+
+        // Wait for cooldown (24 hours) so same voters can vote again
+        vm.warp(block.timestamp + 24 hours);
 
         // New vote on same content creates round 2
-        _commit(v[0], cid, true, bytes32(uint256(100)), 10e6);
+        _vote(v[2], cid, true, 10e6);
         uint256 rid2 = engine.currentRoundId(cid);
         assertEq(rid2, 2, "New round created after settlement");
         assertGt(rid2, rid1, "Round ID incremented");
-    }
-
-    // ==================== Test 12: New Round After Cancellation ====================
-
-    /// @notice After cancelling an expired round, a new vote creates the next round.
-    function test_RoundTransition_NewRoundAfterCancellation() public {
-        uint256 cid = _submit();
-        uint256 ts = 1000;
-
-        // Round 1: only 2 commits (not enough to settle)
-        _commit(v[0], cid, true, "a", 10e6);
-        _commit(v[1], cid, false, "b", 10e6);
-        uint256 rid1 = engine.currentRoundId(cid);
-
-        // Expire after maxDuration
-        vm.warp(ts + MAX_DURATION);
-        engine.cancelExpiredRound(cid, rid1);
-
-        RoundLib.Round memory cancelled = engine.getRound(cid, rid1);
-        assertEq(uint256(cancelled.state), uint256(RoundLib.RoundState.Cancelled), "Round 1 cancelled");
-
-        // Claim refunds
-        vm.prank(v[0]);
-        engine.claimCancelledRoundRefund(cid, rid1);
-        vm.prank(v[1]);
-        engine.claimCancelledRoundRefund(cid, rid1);
-
-        // Wait for cooldown
-        vm.warp(ts + MAX_DURATION + 24 hours);
-
-        // New vote creates round 2
-        _commit(v[0], cid, true, bytes32(uint256(200)), 10e6);
-        uint256 rid2 = engine.currentRoundId(cid);
-        assertEq(rid2, 2, "New round created after cancellation");
 
         RoundLib.Round memory newRound = engine.getRound(cid, rid2);
         assertEq(uint256(newRound.state), uint256(RoundLib.RoundState.Open), "New round is Open");
         assertEq(newRound.voteCount, 1, "New round has 1 vote");
+    }
+
+    // ==================== Test 12: Refund Flow on Cancelled Round ====================
+
+    /// @notice After cancelling an expired round, all voters can claim full refunds.
+    function test_RefundFlow_CancelledRound() public {
+        uint256 cid = _submit();
+
+        uint256 bal0Before = crepToken.balanceOf(v[0]);
+        uint256 bal1Before = crepToken.balanceOf(v[1]);
+        uint256 bal2Before = crepToken.balanceOf(v[2]);
+
+        // 3 voters stake different amounts
+        _vote(v[0], cid, true, 10e6);
+        _vote(v[1], cid, false, 20e6);
+        _vote(v[2], cid, true, 30e6);
+
+        uint256 rid = engine.currentRoundId(cid);
+        RoundLib.Round memory round = engine.getRound(cid, rid);
+
+        // Expire after maxDuration
+        vm.warp(round.startTime + MAX_DURATION);
+        engine.cancelExpiredRound(cid, rid);
+
+        RoundLib.Round memory cancelled = engine.getRound(cid, rid);
+        assertEq(uint256(cancelled.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled");
+
+        // Each voter claims refund and gets full stake back
+        vm.prank(v[0]);
+        engine.claimCancelledRoundRefund(cid, rid);
+        assertEq(crepToken.balanceOf(v[0]), bal0Before, "v[0] refunded 10e6");
+
+        vm.prank(v[1]);
+        engine.claimCancelledRoundRefund(cid, rid);
+        assertEq(crepToken.balanceOf(v[1]), bal1Before, "v[1] refunded 20e6");
+
+        vm.prank(v[2]);
+        engine.claimCancelledRoundRefund(cid, rid);
+        assertEq(crepToken.balanceOf(v[2]), bal2Before, "v[2] refunded 30e6");
+
+        // Double claim should revert
+        vm.prank(v[0]);
+        vm.expectRevert(RoundVotingEngine.AlreadyClaimed.selector);
+        engine.claimCancelledRoundRefund(cid, rid);
     }
 }
