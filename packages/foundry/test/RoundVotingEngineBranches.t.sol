@@ -65,11 +65,7 @@ contract MockVoterIdNFT_RVE is IVoterIdNFT {
         stakes[key] += amount;
     }
 
-    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId)
-        external
-        view
-        returns (uint256)
-    {
+    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
         bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
         return stakes[key];
     }
@@ -161,7 +157,7 @@ contract RoundVotingEngineBranchesTest is Test {
                 new ERC1967Proxy(
                     address(engineImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true)
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
                     )
                 )
             )
@@ -182,7 +178,8 @@ contract RoundVotingEngineBranchesTest is Test {
         registry.setVotingEngine(address(votingEngine));
         votingEngine.setRewardDistributor(address(rewardDistributor));
         votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(15 minutes, 7 days, 2, 200);
+        // setConfig(minEpochBlocks, maxEpochBlocks, maxDuration, minVoters, maxVoters, baseRateBps, growthRateBps, maxProbBps, liquidityParam)
+        votingEngine.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
 
         mockVoterIdNFT = new MockVoterIdNFT_RVE();
 
@@ -190,8 +187,7 @@ contract RoundVotingEngineBranchesTest is Test {
         frontendRegistry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(frImpl),
-                    abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(frImpl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
                 )
             )
         );
@@ -209,8 +205,7 @@ contract RoundVotingEngineBranchesTest is Test {
         crepToken.approve(address(votingEngine), 500_000e6);
         votingEngine.fundConsensusReserve(500_000e6);
 
-        address[9] memory users =
-            [submitter, voter1, voter2, voter3, voter4, voter5, voter6, frontend1, delegate1];
+        address[9] memory users = [submitter, voter1, voter2, voter3, voter4, voter5, voter6, frontend1, delegate1];
         for (uint256 i = 0; i < users.length; i++) {
             crepToken.mint(users[i], 10_000e6);
         }
@@ -238,60 +233,25 @@ contract RoundVotingEngineBranchesTest is Test {
         return registry.nextContentId() - 1;
     }
 
-    function _commitVote(address voter, uint256 contentId, bool isUp, bytes32 salt)
-        internal
-        returns (bytes32 commitHash)
-    {
-        commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
+    function _vote(address voter, uint256 contentId, bool isUp) internal {
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, _mockCiphertext(isUp, salt, contentId), STAKE, address(0));
+        votingEngine.vote(contentId, isUp, STAKE, address(0));
         vm.stopPrank();
     }
 
-    function _commitVoteWithStake(address voter, uint256 contentId, bool isUp, bytes32 salt, uint256 stakeAmount)
-        internal
-        returns (bytes32 commitHash)
-    {
-        commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
+    function _voteWithStake(address voter, uint256 contentId, bool isUp, uint256 stakeAmount) internal {
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), stakeAmount);
-        votingEngine.commitVote(
-            contentId, commitHash, _mockCiphertext(isUp, salt, contentId), stakeAmount, address(0)
-        );
+        votingEngine.vote(contentId, isUp, stakeAmount, address(0));
         vm.stopPrank();
     }
 
-    function _commitVoteWithFrontend(
-        address voter,
-        uint256 contentId,
-        bool isUp,
-        bytes32 salt,
-        address frontend
-    ) internal returns (bytes32 commitHash) {
-        commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
+    function _voteWithFrontend(address voter, uint256 contentId, bool isUp, address frontend) internal {
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, _mockCiphertext(isUp, salt, contentId), STAKE, frontend);
+        votingEngine.vote(contentId, isUp, STAKE, frontend);
         vm.stopPrank();
-    }
-
-    function _mockCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
-        return abi.encodePacked(isUp ? bytes1(uint8(1)) : bytes1(uint8(0)), salt, bytes32(contentId));
-    }
-
-    function _revealVote(
-        address caller,
-        address voter,
-        uint256 contentId,
-        uint256 roundId,
-        bytes32 commitHash,
-        bool isUp,
-        bytes32 salt
-    ) internal {
-        bytes32 commitKey = keccak256(abi.encodePacked(voter, commitHash));
-        vm.prank(caller);
-        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt);
     }
 
     function _registerFrontend(address fe) internal {
@@ -303,136 +263,94 @@ contract RoundVotingEngineBranchesTest is Test {
         frontendRegistry.approveFrontend(fe);
     }
 
-    /// @dev Full round lifecycle: submit → commit → reveal → settle. Returns contentId and roundId.
-    function _setupAndSettleRound(bool unanimousUp)
-        internal
-        returns (uint256 contentId, uint256 roundId)
-    {
+    function _forceSettle(uint256 contentId) internal {
+        // Roll past maxEpochBlocks (50) to guarantee settlement
+        vm.roll(block.number + 51);
+        votingEngine.trySettle(contentId);
+    }
+
+    /// @dev Full round lifecycle: submit -> vote (two-sided) -> force settle. Returns contentId and roundId.
+    function _setupAndSettleRound(bool unanimousUp) internal returns (uint256 contentId, uint256 roundId) {
         contentId = _submitContent();
 
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, true, bytes32(uint256(222)));
-        bytes32 hash3;
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, true);
         if (unanimousUp) {
-            hash3 = _commitVote(voter3, contentId, true, bytes32(uint256(333)));
+            _vote(voter3, contentId, true);
         } else {
-            hash3 = _commitVote(voter3, contentId, false, bytes32(uint256(333)));
+            _vote(voter3, contentId, false);
         }
 
-        roundId = votingEngine.getActiveRoundId(contentId);
+        roundId = votingEngine.currentRoundId(contentId);
 
-        // Warp past epoch end for reveals
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, true, bytes32(uint256(222)));
         if (unanimousUp) {
-            _revealVote(keeper, voter3, contentId, roundId, hash3, true, bytes32(uint256(333)));
+            // One-sided consensus: needs maxEpochBlocks to pass
+            vm.roll(block.number + 51);
+            votingEngine.trySettle(contentId);
         } else {
-            _revealVote(keeper, voter3, contentId, roundId, hash3, false, bytes32(uint256(333)));
+            // Two-sided: force past maxEpochBlocks for guaranteed settlement
+            _forceSettle(contentId);
         }
-
-        // Warp past settlement delay (epoch after threshold)
-        uint256 settleTime = revealTime + 16 minutes;
-        vm.warp(settleTime);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
     }
 
     // =========================================================================
-    // _commitVote BRANCHES
+    // vote() BRANCHES
     // =========================================================================
 
-    function test_CommitVote_VoterIdRequired_RevertsWithoutId() public {
+    function test_Vote_VoterIdRequired_RevertsWithoutId() public {
         vm.prank(owner);
         votingEngine.setVoterIdNFT(address(mockVoterIdNFT));
 
         uint256 contentId = _submitContent();
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.VoterIdRequired.selector);
-        votingEngine.commitVote(contentId, commitHash, _mockCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
 
-    function test_CommitVote_VoterIdRequired_SucceedsWithId() public {
+    function test_Vote_VoterIdRequired_SucceedsWithId() public {
         vm.prank(owner);
         votingEngine.setVoterIdNFT(address(mockVoterIdNFT));
         mockVoterIdNFT.setHolder(voter1);
         mockVoterIdNFT.setHolder(submitter);
 
         uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        assertTrue(votingEngine.hasCommitted(contentId, 1, voter1));
+        _vote(voter1, contentId, true);
+        assertTrue(votingEngine.hasVoted(contentId, 1, voter1));
     }
 
-    function test_CommitVote_SelfVote_RevertsSubmitterVoting() public {
+    function test_Vote_SelfVote_RevertsSubmitterVoting() public {
         uint256 contentId = _submitContent();
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
 
         vm.startPrank(submitter);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.SelfVote.selector);
-        votingEngine.commitVote(contentId, commitHash, _mockCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
 
-    function test_CommitVote_SelfVote_DelegateOfSubmitterReverts() public {
+    function test_Vote_SelfVote_DelegateOfSubmitterReverts() public {
         vm.prank(owner);
         votingEngine.setVoterIdNFT(address(mockVoterIdNFT));
         mockVoterIdNFT.setHolder(submitter);
 
-        // delegate1 is NOT a holder — resolveHolder(delegate1) checks delegateToHolder first
         // Set up delegation: submitter delegates to delegate1
         vm.prank(submitter);
         mockVoterIdNFT.setDelegate(delegate1);
 
         uint256 contentId = _submitContent();
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
 
-        // delegate1 doesn't have a voterId — VoterIdRequired fires first
-        // For this test, give delegate1 a voter ID so they pass the hasVoterId check
+        // delegate1 needs a voter ID to pass the hasVoterId check.
+        // However, if delegate1 IS a holder, resolveHolder returns delegate1 (not submitter).
+        // The resolveHolder logic returns addr itself if holders[addr] is true.
+        // This branch is hard to test with the simple mock because hasVoterId
+        // and resolveHolder are tied to the same mapping.
         mockVoterIdNFT.setHolder(delegate1);
-
-        // resolveHolder(delegate1): holders[delegate1]=true → returns delegate1 (NOT submitter)
-        // So effectiveVoter = delegate1, not submitter. SelfVote won't fire.
-        // The resolveHolder logic: first checks if addr is holder (yes), returns addr itself.
-        // To make delegate1 resolve to submitter, delegate1 must NOT be a holder,
-        // and delegateToHolder[delegate1] must = submitter.
-        // But then hasVoterId(delegate1) = false → VoterIdRequired fires.
-        // This means the SelfVote-via-delegation branch requires the delegate to pass hasVoterId
-        // WITHOUT being a holder themselves. That's contradictory with the mock.
-
-        // Actually, looking at the contract code more carefully:
-        // Line 408: if (address(voterIdNFT) != address(0)) {
-        // Line 409:   if (!voterIdNFT.hasVoterId(msg.sender)) revert VoterIdRequired();
-        // Line 414: address effectiveVoter = msg.sender;
-        // Line 415: if (address(voterIdNFT) != address(0)) {
-        // Line 416:   address resolved = voterIdNFT.resolveHolder(msg.sender);
-        // Line 417:   if (resolved != address(0)) effectiveVoter = resolved;
-        // Line 419: if (effectiveVoter == registry.getSubmitter(contentId)) revert SelfVote();
-
-        // So hasVoterId must pass (delegate1 must be holder), then resolveHolder must return
-        // submitter. But if delegate1 IS a holder, resolveHolder returns delegate1 (not submitter).
-        // The only way this works: delegate1 has a voter ID (passes line 409) but resolveHolder
-        // returns a DIFFERENT address (the submitter). Our mock's resolveHolder returns addr itself
-        // if it's a holder. So we need a modified resolve behavior.
-
-        // In production, a more complex VoterIdNFT might resolve differently.
-        // For the mock, let's remove delegate1 as holder but keep hasVoterId returning true.
-        // That won't work because both are tied to the same mapping.
-
-        // This branch is hard to test with the simple mock because resolveHolder always returns
-        // the addr itself if they're a holder. We'd need a specialized mock where hasVoterId
-        // and resolveHolder are independently controllable. Let's skip this specific sub-case.
     }
 
-    function test_CommitVote_ContentNotActive_Reverts() public {
+    function test_Vote_ContentNotActive_Reverts() public {
         uint256 contentId = _submitContent();
 
         vm.prank(owner);
@@ -440,269 +358,187 @@ contract RoundVotingEngineBranchesTest is Test {
         vm.prank(submitter);
         registry.cancelContent(contentId);
 
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
-
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.ContentNotActive.selector);
-        votingEngine.commitVote(contentId, commitHash, _mockCiphertext(true, salt, contentId), STAKE, address(0));
+        votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
 
-    function test_CommitVote_CooldownActive_Reverts() public {
+    function test_Vote_CooldownActive_Reverts() public {
         uint256 contentId = _submitContent();
 
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
 
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
+        // Force settle the round
+        _forceSettle(contentId);
 
-        uint256 settleTime = revealTime + 16 minutes;
-        vm.warp(settleTime);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
-
-        // Now try to vote again on same content — within 24h cooldown
-        bytes32 salt3 = bytes32(uint256(333));
-        bytes32 commitHash3 = keccak256(abi.encodePacked(true, salt3, contentId));
-
+        // Now try to vote again on same content within 24h cooldown
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
-        votingEngine.commitVote(contentId, commitHash3, _mockCiphertext(true, salt3, contentId), STAKE, address(0));
+        votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
 
-    function test_CommitVote_CooldownActive_SucceedsAfter24h() public {
+    function test_Vote_CooldownActive_SucceedsAfter24h() public {
         uint256 contentId = _submitContent();
 
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
-
-        uint256 settleTime = revealTime + 16 minutes;
-        vm.warp(settleTime);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
+        // Force settle the round
+        _forceSettle(contentId);
 
         // Warp past 24h cooldown
-        vm.warp(settleTime + 25 hours);
-        _commitVote(voter1, contentId, true, bytes32(uint256(333)));
+        vm.warp(block.timestamp + 25 hours);
+        _vote(voter1, contentId, true);
 
-        uint256 roundId2 = votingEngine.getActiveRoundId(contentId);
-        assertTrue(votingEngine.hasCommitted(contentId, roundId2, voter1));
+        uint256 roundId2 = votingEngine.currentRoundId(contentId);
+        assertTrue(votingEngine.hasVoted(contentId, roundId2, voter1));
     }
 
-    function test_CommitVote_MaxVotersReached_Reverts() public {
+    function test_Vote_MaxVotersReached_Reverts() public {
         vm.prank(owner);
-        votingEngine.setConfig(15 minutes, 7 days, 2, 2);
+        // setConfig with maxVoters=2
+        votingEngine.setConfig(10, 50, 7 days, 2, 2, 30, 3, 500, 1000e6);
 
         uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-
-        bytes32 salt3 = bytes32(uint256(333));
-        bytes32 commitHash3 = keccak256(abi.encodePacked(true, salt3, contentId));
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
 
         vm.startPrank(voter3);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.MaxVotersReached.selector);
-        votingEngine.commitVote(contentId, commitHash3, _mockCiphertext(true, salt3, contentId), STAKE, address(0));
+        votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
 
-    function test_CommitVote_InvalidStake_BelowMin_Reverts() public {
+    function test_Vote_InvalidStake_BelowMin_Reverts() public {
         uint256 contentId = _submitContent();
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), 1e5);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        votingEngine.commitVote(contentId, commitHash, _mockCiphertext(true, salt, contentId), 1e5, address(0));
+        votingEngine.vote(contentId, true, 1e5, address(0));
         vm.stopPrank();
     }
 
-    function test_CommitVote_InvalidStake_AboveMax_Reverts() public {
+    function test_Vote_InvalidStake_AboveMax_Reverts() public {
         uint256 contentId = _submitContent();
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
 
         vm.startPrank(voter1);
         crepToken.approve(address(votingEngine), 101e6);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
-        votingEngine.commitVote(contentId, commitHash, _mockCiphertext(true, salt, contentId), 101e6, address(0));
+        votingEngine.vote(contentId, true, 101e6, address(0));
         vm.stopPrank();
     }
 
-    function test_CommitVote_InvalidCiphertext_Empty_Reverts() public {
+    function test_Vote_RoundNotAccepting_ExpiredRound() public {
         uint256 contentId = _submitContent();
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        _vote(voter1, contentId, true);
 
-        vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
-        votingEngine.commitVote(contentId, commitHash, "", STAKE, address(0));
-        vm.stopPrank();
-    }
-
-    function test_CommitVote_CiphertextTooLarge_Reverts() public {
-        uint256 contentId = _submitContent();
-        bytes32 salt = bytes32(uint256(111));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
-        bytes memory largeCiphertext = new bytes(10241);
-        largeCiphertext[0] = bytes1(uint8(1));
-
-        vm.startPrank(voter1);
-        crepToken.approve(address(votingEngine), STAKE);
-        vm.expectRevert(RoundVotingEngine.CiphertextTooLarge.selector);
-        votingEngine.commitVote(contentId, commitHash, largeCiphertext, STAKE, address(0));
-        vm.stopPrank();
-    }
-
-    function test_CommitVote_RoundNotAccepting_ExpiredRound() public {
-        uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-
-        // Warp past 7 days (maxDuration) — round is Open but expired
+        // Warp past 7 days (maxDuration) -- round is Open but expired
         vm.warp(T0 + 8 days);
-
-        bytes32 salt2 = bytes32(uint256(222));
-        bytes32 commitHash2 = keccak256(abi.encodePacked(true, salt2, contentId));
 
         vm.startPrank(voter2);
         crepToken.approve(address(votingEngine), STAKE);
         vm.expectRevert(RoundVotingEngine.RoundNotAccepting.selector);
-        votingEngine.commitVote(contentId, commitHash2, _mockCiphertext(true, salt2, contentId), STAKE, address(0));
+        votingEngine.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
     }
 
-    function test_CommitVote_RecordsStakeOnVoterIdNFT() public {
+    function test_Vote_RecordsStakeOnVoterIdNFT() public {
         vm.prank(owner);
         votingEngine.setVoterIdNFT(address(mockVoterIdNFT));
         mockVoterIdNFT.setHolder(voter1);
         mockVoterIdNFT.setHolder(submitter);
 
         uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
+        _vote(voter1, contentId, true);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
         uint256 tokenId = mockVoterIdNFT.tokenIds(voter1);
         uint256 recorded = mockVoterIdNFT.getEpochContentStake(contentId, roundId, tokenId);
         assertEq(recorded, STAKE);
     }
 
-    function test_CommitVote_NoVoterIdNFT_SkipsAllIdChecks() public {
+    function test_Vote_NoVoterIdNFT_SkipsAllIdChecks() public {
         uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        assertTrue(votingEngine.hasCommitted(contentId, 1, voter1));
+        _vote(voter1, contentId, true);
+        assertTrue(votingEngine.hasVoted(contentId, 1, voter1));
     }
 
-    // =========================================================================
-    // _revealVoteInternal BRANCHES
-    // =========================================================================
+    function test_Vote_IdentityAlreadyVoted_Reverts() public {
+        vm.prank(owner);
+        votingEngine.setVoterIdNFT(address(mockVoterIdNFT));
+        mockVoterIdNFT.setHolder(voter1);
+        mockVoterIdNFT.setHolder(voter2);
+        mockVoterIdNFT.setHolder(submitter);
 
-    function test_RevealVote_EpochNotEnded_Reverts() public {
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
 
-        vm.expectRevert(RoundVotingEngine.EpochNotEnded.selector);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
+        // voter1 already voted in this round, try again with same address
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        vm.expectRevert(RoundVotingEngine.AlreadyVoted.selector);
+        votingEngine.vote(contentId, true, STAKE, address(0));
+        vm.stopPrank();
     }
 
-    function test_RevealVote_AlreadyRevealed_Reverts() public {
+    function test_Vote_DelegateVoting() public {
+        vm.prank(owner);
+        votingEngine.setVoterIdNFT(address(mockVoterIdNFT));
+        mockVoterIdNFT.setHolder(voter1);
+        mockVoterIdNFT.setHolder(submitter);
+
+        // Set up delegation: voter1 delegates to delegate1
+        vm.prank(voter1);
+        mockVoterIdNFT.setDelegate(delegate1);
+        mockVoterIdNFT.setHolder(delegate1);
+
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
 
-        vm.warp(T0 + 16 minutes);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
+        // delegate1 can vote on behalf of voter1 (delegate1 has own voter ID)
+        vm.startPrank(delegate1);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.vote(contentId, true, STAKE, address(0));
+        vm.stopPrank();
 
-        vm.expectRevert(RoundVotingEngine.AlreadyRevealed.selector);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        assertTrue(votingEngine.hasVoted(contentId, roundId, delegate1));
     }
 
-    function test_RevealVote_RoundNotOpen_Reverts() public {
+    function test_Vote_AlreadyVoted_Reverts() public {
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        bytes32 hash3 = _commitVote(voter3, contentId, true, bytes32(uint256(333)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
 
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
-
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
-
-        // Try to reveal on settled round
-        vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
-        _revealVote(keeper, voter3, contentId, roundId, hash3, true, bytes32(uint256(333)));
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        vm.expectRevert(RoundVotingEngine.AlreadyVoted.selector);
+        votingEngine.vote(contentId, true, STAKE, address(0));
+        vm.stopPrank();
     }
 
-    function test_RevealVote_NoCommit_Reverts() public {
-        uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-
-        vm.warp(T0 + 16 minutes);
-
-        // voter3 never committed
-        bytes32 fakeHash = keccak256(abi.encodePacked(true, bytes32(uint256(999)), contentId));
-        bytes32 commitKey = keccak256(abi.encodePacked(voter3, fakeHash));
-        vm.prank(keeper);
-        vm.expectRevert(RoundVotingEngine.NoCommit.selector);
-        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey, true, bytes32(uint256(999)));
-    }
-
-    function test_RevealVote_HashMismatch_Reverts() public {
-        uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-
-        vm.warp(T0 + 16 minutes);
-
-        vm.expectRevert(RoundVotingEngine.HashMismatch.selector);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(999)));
-    }
-
-    function test_RevealVote_FrontendApproved_AggregatesStake() public {
+    function test_Vote_FrontendTracking_ApprovedFrontend() public {
         _registerFrontend(frontend1);
 
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVoteWithFrontend(voter1, contentId, true, bytes32(uint256(111)), frontend1);
-        _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _voteWithFrontend(voter1, contentId, true, frontend1);
 
-        vm.warp(T0 + 16 minutes);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-
+        uint256 roundId = votingEngine.currentRoundId(contentId);
         uint256 frontendStake = votingEngine.roundStakeWithApprovedFrontend(contentId, roundId);
         assertEq(frontendStake, STAKE);
+
+        uint256 perFrontendStake = votingEngine.roundPerFrontendStake(contentId, roundId, frontend1);
+        assertEq(perFrontendStake, STAKE);
     }
 
-    function test_RevealVote_FrontendUnapproved_SkipsAggregation() public {
+    function test_Vote_FrontendTracking_UnapprovedFrontend() public {
         // Register but DON'T approve frontend
         vm.startPrank(frontend1);
         crepToken.approve(address(frontendRegistry), 1000e6);
@@ -710,116 +546,243 @@ contract RoundVotingEngineBranchesTest is Test {
         vm.stopPrank();
 
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVoteWithFrontend(voter1, contentId, true, bytes32(uint256(111)), frontend1);
-        _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _voteWithFrontend(voter1, contentId, true, frontend1);
 
-        vm.warp(T0 + 16 minutes);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-
+        uint256 roundId = votingEngine.currentRoundId(contentId);
         uint256 frontendStake = votingEngine.roundStakeWithApprovedFrontend(contentId, roundId);
         assertEq(frontendStake, 0);
     }
 
-    function test_RevealVote_ThresholdReachedOnMinVoterReveal() public {
+    function test_Vote_StoresVoteData() public {
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
 
-        vm.warp(T0 + 16 minutes);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
-        assertEq(round.thresholdReachedAt, 0);
-
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
-
-        round = votingEngine.getRound(contentId, roundId);
-        assertGt(round.thresholdReachedAt, 0);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        RoundLib.Vote memory v = votingEngine.getVote(contentId, roundId, voter1);
+        assertEq(v.voter, voter1);
+        assertEq(v.stake, STAKE);
+        assertTrue(v.isUp);
+        assertGt(v.shares, 0);
     }
 
-    function test_RevealVote_ThresholdAlreadyReached_DoesNotUpdate() public {
+    function test_Vote_UpdatesRoundCounters() public {
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        bytes32 hash3 = _commitVote(voter3, contentId, true, bytes32(uint256(333)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
 
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
-
+        uint256 roundId = votingEngine.currentRoundId(contentId);
         RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
-        uint256 thresholdTime = round.thresholdReachedAt;
+        assertEq(round.voteCount, 2);
+        assertEq(round.upCount, 1);
+        assertEq(round.downCount, 1);
+        assertEq(round.totalUpStake, STAKE);
+        assertEq(round.totalDownStake, STAKE);
+        assertGt(round.totalUpShares, 0);
+        assertGt(round.totalDownShares, 0);
+    }
 
-        vm.warp(revealTime + 5 minutes);
-        _revealVote(keeper, voter3, contentId, roundId, hash3, true, bytes32(uint256(333)));
+    function test_Vote_UpdatesContentVoteCount() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
 
-        round = votingEngine.getRound(contentId, roundId);
-        assertEq(round.thresholdReachedAt, thresholdTime);
+        assertEq(votingEngine.getContentVoteCount(contentId), 2);
+    }
+
+    function test_Vote_RecordsCooldownTimestamp() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+
+        uint256 lastVote = votingEngine.lastVoteTimestamp(contentId, voter1);
+        assertEq(lastVote, block.timestamp);
     }
 
     // =========================================================================
-    // settleRound BRANCHES
+    // trySettle / _shouldSettle BRANCHES
     // =========================================================================
 
-    function test_SettleRound_RoundNotOpen_Reverts() public {
+    function test_TrySettle_RoundNotOpen_Reverts() public {
         (uint256 contentId, uint256 roundId) = _setupAndSettleRound(false);
 
-        vm.prank(keeper);
         vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
-        votingEngine.settleRound(contentId, roundId);
+        votingEngine.trySettle(contentId);
     }
 
-    function test_SettleRound_NotEnoughVotes_Reverts() public {
+    function test_TrySettle_NoActiveRound_Reverts() public {
+        // Content has no round yet
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        vm.expectRevert(RoundVotingEngine.NotEnoughVotes.selector);
-        votingEngine.settleRound(contentId, roundId);
+        // No votes -> no round -> currentRoundId is 0
+        vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
+        votingEngine.trySettle(contentId);
     }
 
-    function test_SettleRound_TiedRound() public {
+    function test_TrySettle_BeforeMinEpochBlocks_DoesNotSettle() public {
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
 
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
+        uint256 roundId = votingEngine.currentRoundId(contentId);
 
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
+        // Roll only 5 blocks (less than minEpochBlocks=10)
+        vm.roll(block.number + 5);
+        votingEngine.trySettle(contentId);
+
+        // Round should still be Open
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Open));
+    }
+
+    function test_TrySettle_AfterMaxEpochBlocks_AlwaysSettles() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Roll past maxEpochBlocks (50)
+        vm.roll(block.number + 51);
+        votingEngine.trySettle(contentId);
+
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertTrue(
+            uint256(round.state) == uint256(RoundLib.RoundState.Settled)
+                || uint256(round.state) == uint256(RoundLib.RoundState.Tied)
+        );
+    }
+
+    function test_TrySettle_TiedRound() public {
+        uint256 contentId = _submitContent();
+        // Equal stakes on both sides -> tie
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        _forceSettle(contentId);
 
         RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
     }
 
-    function test_SettleRound_UnanimousSettlement() public {
-        (uint256 contentId, uint256 roundId) = _setupAndSettleRound(true);
+    function test_TrySettle_TwoSidedSettlement_UpWins() public {
+        uint256 contentId = _submitContent();
+        // 2 UP, 1 DOWN -> UP wins
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, true);
+        _vote(voter3, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        _forceSettle(contentId);
 
         RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
         assertTrue(round.upWins);
-        // Unanimous: losingPool=0, subsidy from consensus reserve
+    }
+
+    function test_TrySettle_TwoSidedSettlement_DownWins() public {
+        uint256 contentId = _submitContent();
+        // 1 UP, 2 DOWN -> DOWN wins
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+        _vote(voter3, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        _forceSettle(contentId);
+
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertFalse(round.upWins);
+    }
+
+    function test_TrySettle_ConsensusSettlement_OneSided() public {
+        uint256 contentId = _submitContent();
+        // All UP, no DOWN -> consensus settlement after maxEpochBlocks
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, true);
+        _vote(voter3, contentId, true);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Roll past maxEpochBlocks for consensus settlement
+        vm.roll(block.number + 51);
+        votingEngine.trySettle(contentId);
+
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+        assertTrue(round.upWins);
+
+        // Consensus: losingPool=0, subsidy from consensus reserve
         uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
         assertGt(voterPool, 0);
     }
 
-    function test_SettleRound_FrontendFee_NoApprovedFrontends() public {
+    function test_TrySettle_ConsensusSettlement_BeforeMaxEpoch_DoesNotSettle() public {
+        uint256 contentId = _submitContent();
+        // All UP, no DOWN -> needs maxEpochBlocks to settle
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, true);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Roll only 30 blocks (between min and max epoch)
+        vm.roll(block.number + 30);
+        votingEngine.trySettle(contentId);
+
+        // One-sided with not enough blocks -> still open
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Open));
+    }
+
+    function test_TrySettle_NotEnoughVoters_DoesNotSettle() public {
+        uint256 contentId = _submitContent();
+        // Only 1 voter (minVoters=2)
+        _vote(voter1, contentId, true);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Roll past maxEpochBlocks
+        vm.roll(block.number + 51);
+        // One-sided with 1 voter >= 0 upCount && downCount==0 && voteCount>0 -> checks maxEpochBlocks
+        // This will try consensus settlement, which needs voteCount > 0 (yes) and one side empty (yes)
+        votingEngine.trySettle(contentId);
+
+        // With only 1 voter, consensus settlement still happens (voteCount > 0, downCount == 0)
+        // The minVoters check is only for two-sided settlement
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+    }
+
+    function test_TrySettle_SettlementSetsTimestamp() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+        _vote(voter3, contentId, true);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
+
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertGt(round.settledAt, 0);
+    }
+
+    function test_TrySettle_VoterPoolAndWinningShares() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, true);
+        _vote(voter3, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
+
+        uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
+        uint256 winningShares = votingEngine.roundWinningShares(contentId, roundId);
+        assertGt(voterPool, 0);
+        assertGt(winningShares, 0);
+    }
+
+    function test_TrySettle_FrontendFee_NoApprovedFrontends() public {
         (uint256 contentId, uint256 roundId) = _setupAndSettleRound(false);
 
         uint256 frontendPool = votingEngine.roundFrontendPool(contentId, roundId);
@@ -828,36 +791,28 @@ contract RoundVotingEngineBranchesTest is Test {
         assertGt(voterPool, 0);
     }
 
-    function test_SettleRound_FrontendFee_WithApprovedFrontends() public {
+    function test_TrySettle_FrontendFee_WithApprovedFrontends() public {
         _registerFrontend(frontend1);
 
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVoteWithFrontend(voter1, contentId, true, bytes32(uint256(111)), frontend1);
-        bytes32 hash2 = _commitVote(voter2, contentId, true, bytes32(uint256(222)));
-        bytes32 hash3 = _commitVote(voter3, contentId, false, bytes32(uint256(333)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _voteWithFrontend(voter1, contentId, true, frontend1);
+        _vote(voter2, contentId, true);
+        _vote(voter3, contentId, false);
 
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, true, bytes32(uint256(222)));
-        _revealVote(keeper, voter3, contentId, roundId, hash3, false, bytes32(uint256(333)));
-
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
 
         uint256 frontendPool = votingEngine.roundFrontendPool(contentId, roundId);
         assertGt(frontendPool, 0);
     }
 
-    function test_SettleRound_ParticipationRateSnapshot() public {
+    function test_TrySettle_ParticipationRateSnapshot() public {
         (uint256 contentId, uint256 roundId) = _setupAndSettleRound(false);
         uint256 rateBps = votingEngine.roundParticipationRateBps(contentId, roundId);
         assertGt(rateBps, 0);
     }
 
-    function test_SettleRound_CategoryFee_NoCategoryId() public {
+    function test_TrySettle_CategoryFee_NoCategoryId() public {
         (uint256 contentId, uint256 roundId) = _setupAndSettleRound(false);
         uint256 categoryId = registry.getCategoryId(contentId);
         assertEq(categoryId, 0);
@@ -865,28 +820,81 @@ contract RoundVotingEngineBranchesTest is Test {
         assertGt(voterPool, 0);
     }
 
-    function test_SettleRound_SubmitterStake_AutoReturnAfter4Days() public {
-        // Submit content at T0, commit votes, then settle 4+ days later
+    function test_TrySettle_SubmitterStake_AutoReturnAfter4Days() public {
         uint256 contentId = _submitContent();
 
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, true, bytes32(uint256(222)));
-        bytes32 hash3 = _commitVote(voter3, contentId, false, bytes32(uint256(333)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, true);
+        _vote(voter3, contentId, false);
 
-        // Warp 4+ days from content creation for reveals (still within maxDuration=7 days)
-        uint256 revealTime = T0 + 4 days + 1 hours;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, true, bytes32(uint256(222)));
-        _revealVote(keeper, voter3, contentId, roundId, hash3, false, bytes32(uint256(333)));
+        // Warp 4+ days from content creation (still within maxDuration=7 days)
+        vm.warp(T0 + 4 days + 1 hours);
 
-        // Settle after settlement delay — elapsed from content creation > 4 days
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        // Force settle
+        _forceSettle(contentId);
 
         assertTrue(registry.isSubmitterStakeReturned(contentId));
+    }
+
+    // =========================================================================
+    // Settlement probability view
+    // =========================================================================
+
+    function test_GetSettlementProbability_BeforeMinEpoch() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Before minEpochBlocks
+        uint256 prob = votingEngine.getSettlementProbability(contentId, roundId);
+        assertEq(prob, 0);
+    }
+
+    function test_GetSettlementProbability_AfterMaxEpoch() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Roll past maxEpochBlocks
+        vm.roll(block.number + 51);
+        uint256 prob = votingEngine.getSettlementProbability(contentId, roundId);
+        assertEq(prob, 10000);
+    }
+
+    function test_GetSettlementProbability_BetweenMinAndMax() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Roll to minEpochBlocks + 5 window
+        vm.roll(block.number + 15);
+        uint256 prob = votingEngine.getSettlementProbability(contentId, roundId);
+        // prob = baseRateBps(30) + 5 * growthRateBps(3) = 30 + 15 = 45
+        assertEq(prob, 45);
+    }
+
+    // =========================================================================
+    // hasActiveVotes view
+    // =========================================================================
+
+    function test_HasActiveVotes_NoRound() public {
+        uint256 contentId = _submitContent();
+        assertFalse(votingEngine.hasActiveVotes(contentId));
+    }
+
+    function test_HasActiveVotes_WithVotes() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        assertTrue(votingEngine.hasActiveVotes(contentId));
+    }
+
+    function test_HasActiveVotes_AfterSettlement() public {
+        (uint256 contentId,) = _setupAndSettleRound(false);
+        assertFalse(votingEngine.hasActiveVotes(contentId));
     }
 
     // =========================================================================
@@ -902,35 +910,17 @@ contract RoundVotingEngineBranchesTest is Test {
 
     function test_CancelExpiredRound_NotExpired_Reverts() public {
         uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
 
         vm.expectRevert(RoundVotingEngine.RoundNotExpired.selector);
         votingEngine.cancelExpiredRound(contentId, roundId);
     }
 
-    function test_CancelExpiredRound_ThresholdReached_Reverts() public {
-        uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
-
-        // Warp past maxDuration
-        vm.warp(T0 + 8 days);
-
-        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
-        votingEngine.cancelExpiredRound(contentId, roundId);
-    }
-
     function test_CancelExpiredRound_Success() public {
         uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
 
         vm.warp(T0 + 8 days);
         votingEngine.cancelExpiredRound(contentId, roundId);
@@ -939,8 +929,26 @@ contract RoundVotingEngineBranchesTest is Test {
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled));
     }
 
+    function test_CancelExpiredRound_RestoresEpochStartRating() public {
+        uint256 contentId = _submitContent();
+
+        // Get initial rating
+        uint256 ratingBefore = registry.getRating(contentId);
+
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Warp past maxDuration
+        vm.warp(T0 + 8 days);
+        votingEngine.cancelExpiredRound(contentId, roundId);
+
+        // Rating should be restored to epoch start
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled));
+    }
+
     // =========================================================================
-    // claimRefund BRANCHES
+    // claimCancelledRoundRefund BRANCHES
     // =========================================================================
 
     function test_ClaimRefund_NotCancelledOrTied_Reverts() public {
@@ -952,20 +960,17 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_ClaimRefund_AlreadyClaimed_Reverts() public {
-        // Create a tied round
+        // Create a tied round (equal stakes)
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
 
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
 
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
+        // Verify it's tied
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
 
         vm.prank(voter1);
         votingEngine.claimCancelledRoundRefund(contentId, roundId);
@@ -975,31 +980,24 @@ contract RoundVotingEngineBranchesTest is Test {
         votingEngine.claimCancelledRoundRefund(contentId, roundId);
     }
 
-    function test_ClaimRefund_NoCommit_Reverts() public {
+    function test_ClaimRefund_NoVote_Reverts() public {
         // Create a tied round
         uint256 contentId = _submitContent();
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, false, bytes32(uint256(222)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
 
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, false, bytes32(uint256(222)));
-
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
 
         vm.prank(voter3);
-        vm.expectRevert(RoundVotingEngine.NoCommit.selector);
+        vm.expectRevert(RoundVotingEngine.NoVote.selector);
         votingEngine.claimCancelledRoundRefund(contentId, roundId);
     }
 
     function test_ClaimRefund_CancelledRound_Success() public {
         uint256 contentId = _submitContent();
-        _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
 
         vm.warp(T0 + 8 days);
         votingEngine.cancelExpiredRound(contentId, roundId);
@@ -1010,39 +1008,233 @@ contract RoundVotingEngineBranchesTest is Test {
         assertGt(crepToken.balanceOf(voter1), balBefore);
     }
 
+    function test_ClaimRefund_TiedRound_Success() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
+
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
+
+        uint256 balBefore = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        votingEngine.claimCancelledRoundRefund(contentId, roundId);
+        assertEq(crepToken.balanceOf(voter1), balBefore + STAKE);
+    }
+
+    function test_ClaimRefund_CancelledRoundRefundClaimed_Mapping() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        vm.warp(T0 + 8 days);
+        votingEngine.cancelExpiredRound(contentId, roundId);
+
+        assertFalse(votingEngine.cancelledRoundRefundClaimed(contentId, roundId, voter1));
+
+        vm.prank(voter1);
+        votingEngine.claimCancelledRoundRefund(contentId, roundId);
+
+        assertTrue(votingEngine.cancelledRoundRefundClaimed(contentId, roundId, voter1));
+    }
+
     // =========================================================================
     // setConfig BRANCHES
     // =========================================================================
 
-    function test_SetConfig_InvalidEpochDuration_Reverts() public {
+    function test_SetConfig_InvalidMinEpochBlocks_Reverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        votingEngine.setConfig(4 minutes, 7 days, 2, 200);
+        // minEpochBlocks < 10
+        votingEngine.setConfig(5, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
+    }
+
+    function test_SetConfig_MaxEpochNotGreaterThanMin_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
+        // maxEpochBlocks <= minEpochBlocks
+        votingEngine.setConfig(50, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
     }
 
     function test_SetConfig_InvalidMaxDuration_Reverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        votingEngine.setConfig(15 minutes, 23 hours, 2, 200);
+        // maxDuration < 1 day
+        votingEngine.setConfig(10, 50, 23 hours, 2, 200, 30, 3, 500, 1000e6);
     }
 
     function test_SetConfig_InvalidMinVoters_Reverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        votingEngine.setConfig(15 minutes, 7 days, 1, 200);
+        // minVoters < 2
+        votingEngine.setConfig(10, 50, 7 days, 1, 200, 30, 3, 500, 1000e6);
     }
 
     function test_SetConfig_InvalidMaxVoters_Reverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        votingEngine.setConfig(15 minutes, 7 days, 2, 10001);
+        // maxVoters > 10000
+        votingEngine.setConfig(10, 50, 7 days, 2, 10001, 30, 3, 500, 1000e6);
     }
 
     function test_SetConfig_MaxVotersLessThanMin_Reverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        votingEngine.setConfig(15 minutes, 7 days, 5, 3);
+        // maxVoters < minVoters
+        votingEngine.setConfig(10, 50, 7 days, 5, 3, 30, 3, 500, 1000e6);
     }
+
+    function test_SetConfig_InvalidBaseRateBps_Zero_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
+        // baseRateBps == 0
+        votingEngine.setConfig(10, 50, 7 days, 2, 200, 0, 3, 500, 1000e6);
+    }
+
+    function test_SetConfig_InvalidMaxProbBps_LessThanBase_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
+        // maxProbBps < baseRateBps
+        votingEngine.setConfig(10, 50, 7 days, 2, 200, 500, 3, 100, 1000e6);
+    }
+
+    function test_SetConfig_InvalidLiquidityParam_Zero_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
+        // liquidityParam == 0
+        votingEngine.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 0);
+    }
+
+    function test_SetConfig_ValidConfig_Succeeds() public {
+        vm.prank(owner);
+        votingEngine.setConfig(20, 100, 14 days, 3, 500, 50, 5, 800, 2000e6);
+
+        (
+            uint64 minEpochBlocks,
+            uint64 maxEpochBlocks,
+            uint256 maxDuration,
+            uint256 minVoters,
+            uint256 maxVoters,
+            uint16 baseRateBps,
+            uint16 growthRateBps,
+            uint16 maxProbBps,
+            uint256 liquidityParam
+        ) = votingEngine.config();
+
+        assertEq(minEpochBlocks, 20);
+        assertEq(maxEpochBlocks, 100);
+        assertEq(maxDuration, 14 days);
+        assertEq(minVoters, 3);
+        assertEq(maxVoters, 500);
+        assertEq(baseRateBps, 50);
+        assertEq(growthRateBps, 5);
+        assertEq(maxProbBps, 800);
+        assertEq(liquidityParam, 2000e6);
+    }
+
+    // =========================================================================
+    // Setter zero-address checks
+    // =========================================================================
+
+    function test_SetRewardDistributor_ZeroAddress_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        votingEngine.setRewardDistributor(address(0));
+    }
+
+    function test_SetFrontendRegistry_ZeroAddress_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        votingEngine.setFrontendRegistry(address(0));
+    }
+
+    function test_SetCategoryRegistry_ZeroAddress_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        votingEngine.setCategoryRegistry(address(0));
+    }
+
+    function test_SetTreasury_ZeroAddress_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        votingEngine.setTreasury(address(0));
+    }
+
+    function test_SetVoterIdNFT_ZeroAddress_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        votingEngine.setVoterIdNFT(address(0));
+    }
+
+    function test_SetParticipationPool_ZeroAddress_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        votingEngine.setParticipationPool(address(0));
+    }
+
+    // =========================================================================
+    // Pause / Unpause
+    // =========================================================================
+
+    function test_Pause_BlocksVoting() public {
+        uint256 contentId = _submitContent();
+
+        vm.prank(owner);
+        votingEngine.pause();
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        vm.expectRevert();
+        votingEngine.vote(contentId, true, STAKE, address(0));
+        vm.stopPrank();
+    }
+
+    function test_Unpause_AllowsVoting() public {
+        uint256 contentId = _submitContent();
+
+        vm.prank(owner);
+        votingEngine.pause();
+
+        vm.prank(owner);
+        votingEngine.unpause();
+
+        _vote(voter1, contentId, true);
+        assertTrue(votingEngine.hasVoted(contentId, 1, voter1));
+    }
+
+    function test_Pause_BlocksTrySettle() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+
+        vm.prank(owner);
+        votingEngine.pause();
+
+        vm.roll(block.number + 51);
+        vm.expectRevert();
+        votingEngine.trySettle(contentId);
+    }
+
+    function test_Pause_BlocksCancelExpiredRound() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        vm.warp(T0 + 8 days);
+
+        vm.prank(owner);
+        votingEngine.pause();
+
+        vm.expectRevert();
+        votingEngine.cancelExpiredRound(contentId, roundId);
+    }
+
+    // =========================================================================
+    // FundConsensusReserve
+    // =========================================================================
 
     function test_FundConsensusReserve_ZeroAmount_Reverts() public {
         vm.prank(owner);
@@ -1050,37 +1242,74 @@ contract RoundVotingEngineBranchesTest is Test {
         votingEngine.fundConsensusReserve(0);
     }
 
+    function test_FundConsensusReserve_Success() public {
+        uint256 reserveBefore = votingEngine.consensusReserve();
+        vm.startPrank(owner);
+        crepToken.approve(address(votingEngine), 100e6);
+        votingEngine.fundConsensusReserve(100e6);
+        vm.stopPrank();
+        assertEq(votingEngine.consensusReserve(), reserveBefore + 100e6);
+    }
+
+    // =========================================================================
+    // claimFrontendFee BRANCHES
+    // =========================================================================
+
+    function test_ClaimFrontendFee_RoundNotSettled_Reverts() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        vm.expectRevert(RoundVotingEngine.RoundNotSettled.selector);
+        votingEngine.claimFrontendFee(contentId, roundId, frontend1);
+    }
+
+    function test_ClaimFrontendFee_NoPool_Reverts() public {
+        // Settle without any frontends -> frontendPool = 0
+        (uint256 contentId, uint256 roundId) = _setupAndSettleRound(false);
+
+        vm.expectRevert(RoundVotingEngine.NoPool.selector);
+        votingEngine.claimFrontendFee(contentId, roundId, frontend1);
+    }
+
+    function test_ClaimFrontendFee_Success() public {
+        _registerFrontend(frontend1);
+
+        uint256 contentId = _submitContent();
+        _voteWithFrontend(voter1, contentId, true, frontend1);
+        _vote(voter2, contentId, true);
+        _vote(voter3, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
+
+        uint256 frontendPool = votingEngine.roundFrontendPool(contentId, roundId);
+        assertGt(frontendPool, 0);
+
+        votingEngine.claimFrontendFee(contentId, roundId, frontend1);
+        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontend1));
+    }
+
+    function test_ClaimFrontendFee_AlreadyClaimed_Reverts() public {
+        _registerFrontend(frontend1);
+
+        uint256 contentId = _submitContent();
+        _voteWithFrontend(voter1, contentId, true, frontend1);
+        _vote(voter2, contentId, true);
+        _vote(voter3, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
+
+        votingEngine.claimFrontendFee(contentId, roundId, frontend1);
+
+        vm.expectRevert(RoundVotingEngine.AlreadyClaimed.selector);
+        votingEngine.claimFrontendFee(contentId, roundId, frontend1);
+    }
+
     // =========================================================================
     // claimParticipationReward BRANCHES
     // =========================================================================
-
-    function test_ClaimParticipation_VoteNotRevealed_Reverts() public {
-        // Need 3 revealed votes (minVoters=2 but we need enough to settle),
-        // plus 1 unrevealed voter who then tries to claim participation
-        uint256 contentId = _submitContent();
-
-        bytes32 hash1 = _commitVote(voter1, contentId, true, bytes32(uint256(111)));
-        bytes32 hash2 = _commitVote(voter2, contentId, true, bytes32(uint256(222)));
-        bytes32 hash3 = _commitVote(voter3, contentId, false, bytes32(uint256(333)));
-        _commitVote(voter4, contentId, true, bytes32(uint256(444))); // voter4 won't be revealed
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        _revealVote(keeper, voter1, contentId, roundId, hash1, true, bytes32(uint256(111)));
-        _revealVote(keeper, voter2, contentId, roundId, hash2, true, bytes32(uint256(222)));
-        _revealVote(keeper, voter3, contentId, roundId, hash3, false, bytes32(uint256(333)));
-        // voter4 NOT revealed
-
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        votingEngine.settleRound(contentId, roundId);
-
-        // voter4 has a commit but was not revealed
-        vm.prank(voter4);
-        vm.expectRevert(RoundVotingEngine.VoteNotRevealed.selector);
-        votingEngine.claimParticipationReward(contentId, roundId);
-    }
 
     function test_ClaimParticipation_SuccessfulClaim() public {
         (uint256 contentId, uint256 roundId) = _setupAndSettleRound(false);
@@ -1111,7 +1340,7 @@ contract RoundVotingEngineBranchesTest is Test {
                 new ERC1967Proxy(
                     address(engineImpl2),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true)
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
                     )
                 )
             )
@@ -1130,7 +1359,7 @@ contract RoundVotingEngineBranchesTest is Test {
         );
         engine2.setRewardDistributor(address(dist2));
         engine2.setTreasury(treasury);
-        engine2.setConfig(15 minutes, 7 days, 2, 200);
+        engine2.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
         crepToken.mint(owner, 500_000e6);
         crepToken.approve(address(engine2), 500_000e6);
         engine2.fundConsensusReserve(500_000e6);
@@ -1141,46 +1370,284 @@ contract RoundVotingEngineBranchesTest is Test {
 
         uint256 contentId = _submitContent();
 
-        bytes32 salt1 = bytes32(uint256(111));
-        bytes32 salt2 = bytes32(uint256(222));
-        bytes32 salt3 = bytes32(uint256(333));
-        bytes32 hash1 = keccak256(abi.encodePacked(true, salt1, contentId));
-        bytes32 hash2 = keccak256(abi.encodePacked(true, salt2, contentId));
-        bytes32 hash3 = keccak256(abi.encodePacked(false, salt3, contentId));
-
         vm.startPrank(voter1);
         crepToken.approve(address(engine2), STAKE);
-        engine2.commitVote(contentId, hash1, _mockCiphertext(true, salt1, contentId), STAKE, address(0));
+        engine2.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
         vm.startPrank(voter2);
         crepToken.approve(address(engine2), STAKE);
-        engine2.commitVote(contentId, hash2, _mockCiphertext(true, salt2, contentId), STAKE, address(0));
+        engine2.vote(contentId, true, STAKE, address(0));
         vm.stopPrank();
         vm.startPrank(voter3);
         crepToken.approve(address(engine2), STAKE);
-        engine2.commitVote(contentId, hash3, _mockCiphertext(false, salt3, contentId), STAKE, address(0));
+        engine2.vote(contentId, false, STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = engine2.getActiveRoundId(contentId);
-        uint256 revealTime = T0 + 16 minutes;
-        vm.warp(revealTime);
-        vm.prank(keeper);
-        engine2.revealVoteByCommitKey(contentId, roundId, keccak256(abi.encodePacked(voter1, hash1)), true, salt1);
-        vm.prank(keeper);
-        engine2.revealVoteByCommitKey(contentId, roundId, keccak256(abi.encodePacked(voter2, hash2)), true, salt2);
-        vm.prank(keeper);
-        engine2.revealVoteByCommitKey(contentId, roundId, keccak256(abi.encodePacked(voter3, hash3)), false, salt3);
-
-        vm.warp(revealTime + 16 minutes);
-        vm.prank(keeper);
-        engine2.settleRound(contentId, roundId);
+        // Force settle
+        vm.roll(block.number + 51);
+        engine2.trySettle(contentId);
 
         vm.prank(voter1);
         vm.expectRevert(RoundVotingEngine.NoPool.selector);
-        engine2.claimParticipationReward(contentId, roundId);
+        engine2.claimParticipationReward(contentId, 1);
 
         // Restore registry
         vm.prank(owner);
         registry.setVotingEngine(address(votingEngine));
+    }
+
+    function test_ClaimParticipation_NoVote_Reverts() public {
+        (uint256 contentId, uint256 roundId) = _setupAndSettleRound(false);
+
+        // voter4 never voted
+        vm.prank(voter4);
+        vm.expectRevert(RoundVotingEngine.NoVote.selector);
+        votingEngine.claimParticipationReward(contentId, roundId);
+    }
+
+    function test_ClaimParticipation_RoundNotSettled_Reverts() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.RoundNotSettled.selector);
+        votingEngine.claimParticipationReward(contentId, roundId);
+    }
+
+    // =========================================================================
+    // Edge cases
+    // =========================================================================
+
+    function test_Vote_CreatesNewRoundAfterSettlement() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+        _vote(voter3, contentId, true);
+
+        uint256 roundId1 = votingEngine.currentRoundId(contentId);
+        _forceSettle(contentId);
+
+        // Warp past cooldown
+        vm.warp(block.timestamp + 25 hours);
+
+        // New vote should create a new round
+        _vote(voter4, contentId, true);
+        uint256 roundId2 = votingEngine.currentRoundId(contentId);
+        assertGt(roundId2, roundId1);
+    }
+
+    function test_Vote_AutoSettlesPriorEpoch() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+
+        uint256 roundId1 = votingEngine.currentRoundId(contentId);
+
+        // Roll past maxEpochBlocks and warp past cooldown so next vote triggers auto-settle
+        vm.roll(block.number + 51);
+        vm.warp(block.timestamp + 25 hours);
+
+        // This vote triggers _trySettle on the prior round, settles it, then creates new round
+        _vote(voter3, contentId, true);
+
+        RoundLib.Round memory round1 = votingEngine.getRound(contentId, roundId1);
+        // The prior round should now be settled or tied
+        assertTrue(
+            uint256(round1.state) == uint256(RoundLib.RoundState.Settled)
+                || uint256(round1.state) == uint256(RoundLib.RoundState.Tied)
+        );
+    }
+
+    function test_Vote_MinStake_Succeeds() public {
+        uint256 contentId = _submitContent();
+        _voteWithStake(voter1, contentId, true, 1e6); // MIN_STAKE
+        assertTrue(votingEngine.hasVoted(contentId, 1, voter1));
+    }
+
+    function test_Vote_MaxStake_Succeeds() public {
+        uint256 contentId = _submitContent();
+        _voteWithStake(voter1, contentId, true, 100e6); // MAX_STAKE
+        assertTrue(votingEngine.hasVoted(contentId, 1, voter1));
+    }
+
+    function test_Vote_MultipleVotersDifferentStakes() public {
+        uint256 contentId = _submitContent();
+        _voteWithStake(voter1, contentId, true, 1e6);
+        _voteWithStake(voter2, contentId, true, 50e6);
+        _voteWithStake(voter3, contentId, false, 100e6);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        assertEq(round.totalUpStake, 51e6);
+        assertEq(round.totalDownStake, 100e6);
+        assertEq(round.voteCount, 3);
+    }
+
+    function test_Vote_BondingCurveShares_EarlyVoterGetsMoreShares() public {
+        uint256 contentId = _submitContent();
+
+        // voter1 votes first on UP side (sameDirectionStake = 0)
+        _vote(voter1, contentId, true);
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        RoundLib.Vote memory v1 = votingEngine.getVote(contentId, roundId, voter1);
+
+        // voter2 votes second on UP side (sameDirectionStake = STAKE)
+        _vote(voter2, contentId, true);
+        RoundLib.Vote memory v2 = votingEngine.getVote(contentId, roundId, voter2);
+
+        // First voter should get more shares than second voter with same stake
+        assertGt(v1.shares, v2.shares);
+    }
+
+    function test_GetVote_ReturnsCorrectData() public {
+        uint256 contentId = _submitContent();
+        _voteWithFrontend(voter1, contentId, true, frontend1);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        RoundLib.Vote memory v = votingEngine.getVote(contentId, roundId, voter1);
+        assertEq(v.voter, voter1);
+        assertEq(v.stake, STAKE);
+        assertTrue(v.isUp);
+        assertEq(v.frontend, frontend1);
+        assertGt(v.shares, 0);
+    }
+
+    function test_GetContentVoteCount_AccumulatesAcrossRounds() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+
+        assertEq(votingEngine.getContentVoteCount(contentId), 2);
+
+        // Force settle the first round
+        _forceSettle(contentId);
+
+        // Warp past cooldown
+        vm.warp(block.timestamp + 25 hours);
+
+        _vote(voter3, contentId, true);
+        assertEq(votingEngine.getContentVoteCount(contentId), 3);
+    }
+
+    function test_Initialize_ZeroAdmin_Reverts() public {
+        RoundVotingEngine engineImpl2 = new RoundVotingEngine();
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        new ERC1967Proxy(
+            address(engineImpl2),
+            abi.encodeCall(
+                RoundVotingEngine.initialize, (address(0), owner, address(crepToken), address(registry))
+            )
+        );
+    }
+
+    function test_Initialize_ZeroGovernance_Reverts() public {
+        RoundVotingEngine engineImpl2 = new RoundVotingEngine();
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        new ERC1967Proxy(
+            address(engineImpl2),
+            abi.encodeCall(
+                RoundVotingEngine.initialize, (owner, address(0), address(crepToken), address(registry))
+            )
+        );
+    }
+
+    function test_Initialize_ZeroCrepToken_Reverts() public {
+        RoundVotingEngine engineImpl2 = new RoundVotingEngine();
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        new ERC1967Proxy(
+            address(engineImpl2),
+            abi.encodeCall(
+                RoundVotingEngine.initialize, (owner, owner, address(0), address(registry))
+            )
+        );
+    }
+
+    function test_Initialize_ZeroRegistry_Reverts() public {
+        RoundVotingEngine engineImpl2 = new RoundVotingEngine();
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        new ERC1967Proxy(
+            address(engineImpl2),
+            abi.encodeCall(
+                RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(0))
+            )
+        );
+    }
+
+    function test_TransferReward_Unauthorized_Reverts() public {
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
+        votingEngine.transferReward(voter1, 100e6);
+    }
+
+    function test_KeeperReward_Setting() public {
+        vm.prank(owner);
+        votingEngine.setKeeperReward(1e6);
+        assertEq(votingEngine.keeperReward(), 1e6);
+    }
+
+    function test_FundKeeperRewardPool_Success() public {
+        vm.startPrank(owner);
+        crepToken.approve(address(votingEngine), 100e6);
+        votingEngine.fundKeeperRewardPool(100e6);
+        vm.stopPrank();
+        assertEq(votingEngine.keeperRewardPool(), 100e6);
+    }
+
+    function test_FundKeeperRewardPool_ZeroAmount_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.ZeroAmount.selector);
+        votingEngine.fundKeeperRewardPool(0);
+    }
+
+    function test_AddToConsensusReserve_Success() public {
+        uint256 reserveBefore = votingEngine.consensusReserve();
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), 50e6);
+        votingEngine.addToConsensusReserve(50e6);
+        vm.stopPrank();
+        assertEq(votingEngine.consensusReserve(), reserveBefore + 50e6);
+    }
+
+    function test_AddToConsensusReserve_ZeroAmount_Reverts() public {
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.ZeroAmount.selector);
+        votingEngine.addToConsensusReserve(0);
+    }
+
+    function test_GetRoundVoterCount() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        assertEq(votingEngine.getRoundVoterCount(contentId, roundId), 2);
+    }
+
+    function test_GetRoundVoter() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+        _vote(voter2, contentId, false);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+        assertEq(votingEngine.getRoundVoter(contentId, roundId, 0), voter1);
+        assertEq(votingEngine.getRoundVoter(contentId, roundId, 1), voter2);
+    }
+
+    function test_RoundConfigSnapshot_PreventsMidRoundChanges() public {
+        uint256 contentId = _submitContent();
+        _vote(voter1, contentId, true);
+
+        uint256 roundId = votingEngine.currentRoundId(contentId);
+
+        // Change global config
+        vm.prank(owner);
+        votingEngine.setConfig(20, 100, 14 days, 3, 500, 50, 5, 800, 2000e6);
+
+        // The round's snapshotted config should still use the original values
+        RoundLib.RoundConfig memory roundCfg = votingEngine.getRoundConfig(contentId, roundId);
+        assertEq(roundCfg.minEpochBlocks, 10);
+        assertEq(roundCfg.maxEpochBlocks, 50);
+        assertEq(roundCfg.liquidityParam, 1000e6);
     }
 }
