@@ -46,7 +46,7 @@ cast wallet import keeper --private-key <PRIVATE_KEY>
 # Set a password
 ```
 
-Fund with a small amount of CELO for gas (~0.1 CELO, the keeper only sends reveal/settle txns).
+Fund with a small amount of CELO for gas (~0.1 CELO, the keeper only sends settle/cancel/dormancy txns).
 
 ### 1c. Create the Bot keys
 
@@ -159,7 +159,6 @@ NEXT_PUBLIC_TMDB_API_KEY=<tmdb-api-key>
 NEXT_PUBLIC_PONDER_URL=https://<your-ponder-domain>
 NEXT_PUBLIC_FRONTEND_CODE=<your-frontend-address>   # Set after Step 4
 NEXT_PUBLIC_DEV_FAUCET=false                         # true only on testnet
-NEXT_PUBLIC_TLOCK_MOCK=false                         # Must be false for production
 
 # Server-side only
 NEXTAUTH_URL=https://<your-domain>
@@ -250,7 +249,7 @@ Set `NEXT_PUBLIC_FRONTEND_CODE=<server-address>` in your Vercel environment vari
 
 ## 5. Deploy the Keeper
 
-The Keeper is a stateless service that reveals tlock-encrypted votes and settles rounds. It needs only a funded wallet for gas — all vote data is public.
+The Keeper is a stateless service that settles rounds, cancels stale content, and marks dormant items. It needs only a funded wallet for gas.
 
 ### 5a. Configure
 
@@ -264,7 +263,6 @@ KEYSTORE_ACCOUNT=keeper
 KEYSTORE_PASSWORD=<keeper-keystore-password>
 KEEPER_INTERVAL_MS=30000
 KEEPER_STARTUP_JITTER_MS=0
-TLOCK_MOCK=false
 METRICS_ENABLED=true
 METRICS_PORT=9090
 LOG_FORMAT=json
@@ -288,7 +286,6 @@ railway variables set VOTING_ENGINE_ADDRESS=<RoundVotingEngine-address>
 railway variables set CONTENT_REGISTRY_ADDRESS=<ContentRegistry-address>
 railway variables set KEEPER_PRIVATE_KEY=<keeper-private-key>
 railway variables set KEEPER_INTERVAL_MS=30000
-railway variables set TLOCK_MOCK=false
 railway variables set METRICS_ENABLED=true
 railway variables set METRICS_PORT=9090
 railway variables set LOG_FORMAT=json
@@ -311,7 +308,7 @@ curl https://<keeper>.up.railway.app/health
 # Should return healthy status
 
 curl https://<keeper>.up.railway.app/metrics
-# Should show Prometheus metrics (votesRevealed, roundsSettled, etc.)
+# Should show Prometheus metrics (roundsSettled, roundsCancelled, etc.)
 ```
 
 ### 5d. Redundancy (recommended)
@@ -340,7 +337,7 @@ Cloud providers (Railway encrypted variables, AWS Secrets Manager, etc.) still s
 
 **Why multisig (Safe) doesn't work:**
 
-The VoterIdNFT is soulbound and non-transferable. All contract interactions (`commitVote`, `submitContent`) require `msg.sender` to hold a Voter ID. A Safe multisig address cannot receive a soulbound NFT in a useful way, and there is no delegation or session key mechanism in the current contracts. The signing key **must** be the same EOA that holds the Voter ID.
+The VoterIdNFT is soulbound and non-transferable. All contract interactions (`vote`, `submitContent`) require `msg.sender` to hold a Voter ID. A Safe multisig address cannot receive a soulbound NFT in a useful way, and there is no delegation or session key mechanism in the current contracts. The signing key **must** be the same EOA that holds the Voter ID.
 
 **Recommended approaches (best → acceptable):**
 
@@ -433,7 +430,7 @@ VoterIdNFT now supports delegation: the SBT holder (cold wallet) calls `setDeleg
 The bot package contains two specialized bots that work together:
 
 - **Submission Bot** (`yarn submit`) — discovers trending content from 9 platforms (YouTube, TMDB, Steam, Wikipedia, Twitch, OpenLibrary, HuggingFace, Scryfall, CoinGecko) and submits it on-chain
-- **Rating Bot** (`yarn vote`) — fetches active content from Ponder, rates it using external APIs (like ratio, review scores, market data), and commits tlock-encrypted votes on-chain
+- **Rating Bot** (`yarn vote`) — fetches active content from Ponder, rates it using external APIs (like ratio, review scores, market data), and places votes on-chain
 
 Each bot uses a **separate wallet** for isolation and reputation tracking.
 
@@ -471,7 +468,6 @@ RATE_KEYSTORE_PASSWORD=<rate-bot-keystore-password>
 # --- Voting ---
 VOTE_STAKE=1000000            # 1 cREP per vote (6 decimals)
 VOTE_THRESHOLD=5.0            # Score >= 5.0 → UP, < 5.0 → DOWN
-TLOCK_MOCK=false              # Must be false for production
 
 # --- Rate Limits ---
 MAX_VOTES_PER_RUN=10
@@ -503,28 +499,25 @@ The submission bot will:
 ### 7d. Vote on content
 
 ```bash
-# Rate content via external APIs and commit tlock-encrypted votes
+# Rate content via external APIs and place votes
 yarn vote
 ```
 
 The rating bot will:
-1. Check that the rate-bot wallet has a Voter ID and sufficient cREP (1 cREP per vote)
+1. Check that the rate-bot wallet has a Voter ID and sufficient cREP
 2. Fetch active content from the Ponder indexer
 3. For each item, call the matching rating strategy (YouTube like ratio, TMDB score, Steam reviews, etc.)
 4. Determine vote direction: score >= `VOTE_THRESHOLD` → UP, otherwise → DOWN
-5. Tlock-encrypt the vote to the current epoch end time
-6. Commit the encrypted vote on-chain (up to `MAX_VOTES_PER_RUN`)
+5. Place the vote on-chain via `vote(contentId, isUp, stakeAmount, frontendAddress)` (up to `MAX_VOTES_PER_RUN`)
 
 Each content item is voted on only once (the bot tracks previous votes).
 
 ### 7e. Verify the full loop
 
 1. Submission bot submits content → visible on frontend
-2. Rating bot commits votes → encrypted on-chain
-3. 15-minute epoch ends → drand beacon publishes decryption key
-4. Keeper reveals votes → decrypted on-chain
-5. Keeper settles rounds (once >= 3 revealed votes) → rewards distributed, ratings updated
-6. Content ratings visible on frontend
+2. Rating bot places votes → immediately public on-chain
+3. Keeper calls `trySettle(contentId)` → random settlement determines round outcome, rewards distributed, ratings updated
+4. Content ratings visible on frontend
 
 ### 7f. Ongoing operation
 
@@ -542,7 +535,6 @@ railway service create curyo-bot
 railway variables set RPC_URL=https://forno.celo-sepolia.celo-testnet.org
 railway variables set CHAIN_ID=11142220
 railway variables set PONDER_URL=https://<ponder>.up.railway.app
-railway variables set TLOCK_MOCK=false
 railway variables set TMDB_API_KEY=<tmdb-api-key>
 railway variables set YOUTUBE_API_KEY=<youtube-api-key>
 railway variables set BOT_MODE=prepare  # Prepare transactions only, don't sign
@@ -586,7 +578,6 @@ railway service create curyo-bot
 railway variables set RPC_URL=https://forno.celo-sepolia.celo-testnet.org
 railway variables set CHAIN_ID=11142220
 railway variables set PONDER_URL=https://<ponder>.up.railway.app
-railway variables set TLOCK_MOCK=false
 railway variables set TMDB_API_KEY=<tmdb-api-key>
 railway variables set YOUTUBE_API_KEY=<youtube-api-key>
 
@@ -655,6 +646,6 @@ curl https://<ponder>.up.railway.app/content
 8.  Deploy Keeper to Railway (point at RoundVotingEngine + ContentRegistry)
 9.  Set up bot accounts (Voter ID + cREP via HumanFaucet for both submit-bot and rate-bot)
 10. Run bots locally with encrypted keystores, or deploy to Railway (testnet only — see 7f)
-11. Verify full loop: submit → vote → reveal → settle → display
+11. Verify full loop: submit → vote → settle → display
 12. Set up monitoring and alerts
 ```

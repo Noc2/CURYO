@@ -43,7 +43,7 @@ Create a `.env` file (see `.env.example`):
 ```
 contracts/
 ├── ContentRegistry.sol          # Content submission & lifecycle management
-├── RoundVotingEngine.sol        # Core voting logic (commit-reveal with tlock)
+├── RoundVotingEngine.sol        # Core voting logic (public votes, random settlement)
 ├── RoundRewardDistributor.sol   # Reward distribution to winning voters
 ├── CategoryRegistry.sol         # Content category management
 ├── ProfileRegistry.sol          # User reputation & metadata

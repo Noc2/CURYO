@@ -4,31 +4,23 @@ import { useEffect, useState } from "react";
 import { usePublicClient } from "wagmi";
 import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
-export type RoundPhase = "open" | "settled" | "cancelled" | "tied" | "none";
+export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "none";
 
 export interface RoundPhaseInfo {
   /** Current phase of the round for this content */
   phase: RoundPhase;
   /** Active round ID for this content (0 if none) */
   roundId: bigint;
-  /** Number of votes committed so far */
+  /** Number of votes cast so far */
   voteCount: number;
-  /** Number of votes revealed so far */
-  revealedCount: number;
-  /** Total stake committed in this round (raw, 6 decimals) */
+  /** Total stake in this round (raw, 6 decimals) */
   totalStake: bigint;
-  /** How many more revealed voters needed to reach minVoters (0 if already met) */
+  /** How many more voters needed to reach minVoters (0 if already met) */
   votersNeeded: number;
-  /** Seconds remaining in the current epoch (15-min window) */
-  epochTimeRemaining: number;
-  /** Seconds remaining before the round expires (1-week lifetime) */
+  /** Seconds remaining before the round expires (maxDuration lifetime) */
   roundTimeRemaining: number;
-  /** Unix timestamp when the current epoch ends */
-  epochEnd: number;
   /** Unix timestamp when the round started */
   startTime: number;
-  /** Epoch duration in seconds (from contract config) */
-  epochDuration: number;
   /** Minimum voters required for settlement */
   minVoters: number;
   /** Maximum voters allowed per round */
@@ -38,9 +30,8 @@ export interface RoundPhaseInfo {
 }
 
 /**
- * Per-content round state tracking for tlock-primary voting.
+ * Per-content round state tracking for public voting with random settlement.
  * Reads from RoundVotingEngine: getActiveRoundId(contentId) and getRound(contentId, roundId).
- * Computes epoch timing locally from round startTime and config epochDuration.
  * Polls every 5 seconds for updates and ticks locally every second for countdowns.
  */
 export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
@@ -70,8 +61,7 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     },
   } as any);
 
-  // Read config for epochDuration and minVoters
-  const [configEpochDuration, setConfigEpochDuration] = useState(900); // default 15 min
+  // Read config for minVoters, maxVoters, maxDuration
   const [configMinVoters, setConfigMinVoters] = useState(3);
   const [configMaxVoters, setConfigMaxVoters] = useState(1000);
   const [configMaxDuration, setConfigMaxDuration] = useState(7 * 24 * 60 * 60); // default 1 week
@@ -90,11 +80,19 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
       })
       .then((data: any) => {
         if (cancelled) return;
-        const config = data as [bigint, bigint, bigint, bigint];
-        setConfigEpochDuration(Number(config[0])); // epochDuration
-        setConfigMaxDuration(Number(config[1])); // maxDuration
-        setConfigMinVoters(Number(config[2])); // minVoters
-        setConfigMaxVoters(Number(config[3])); // maxVoters
+        // RoundConfig struct fields: minEpochBlocks, maxEpochBlocks, maxDuration, minVoters, maxVoters, ...
+        // The public getter returns a tuple. We need maxDuration, minVoters, maxVoters.
+        if (data.maxDuration != null) {
+          setConfigMaxDuration(Number(data.maxDuration));
+          setConfigMinVoters(Number(data.minVoters));
+          setConfigMaxVoters(Number(data.maxVoters));
+        } else {
+          // Positional tuple fallback
+          const config = data as any[];
+          setConfigMaxDuration(Number(config[2])); // maxDuration
+          setConfigMinVoters(Number(config[3])); // minVoters
+          setConfigMaxVoters(Number(config[4])); // maxVoters
+        }
       })
       .catch(() => {
         // Fall back to defaults
@@ -121,14 +119,10 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     phase: "none",
     roundId: 0n,
     voteCount: 0,
-    revealedCount: 0,
     totalStake: 0n,
     votersNeeded: 0,
-    epochTimeRemaining: 0,
     roundTimeRemaining: 0,
-    epochEnd: 0,
     startTime: 0,
-    epochDuration: configEpochDuration,
     minVoters: configMinVoters,
     maxVoters: configMaxVoters,
     isReady,
@@ -140,25 +134,17 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
   }
 
   // Parse round data from contract
-  // New struct: { startTime, state, voteCount, revealedCount, totalStake, upPool, downPool, upCount, downCount, upWins }
   const round = rawRoundData as unknown as {
     startTime: bigint;
     state: number;
     voteCount: bigint;
-    revealedCount: bigint;
     totalStake: bigint;
   };
 
   const voteCount = Number(round.voteCount);
-  const revealedCount = Number(round.revealedCount);
   const totalStake = round.totalStake;
   const startTime = Number(round.startTime);
-  const votersNeeded = Math.max(0, configMinVoters - revealedCount);
-
-  // Compute epoch timing
-  const epochIndex = startTime > 0 ? Math.floor((now - startTime) / configEpochDuration) : 0;
-  const epochEnd = startTime > 0 ? startTime + (epochIndex + 1) * configEpochDuration : 0;
-  const epochTimeRemaining = Math.max(0, epochEnd - now);
+  const votersNeeded = Math.max(0, configMinVoters - voteCount);
 
   // Round lifetime: expires after maxDuration from startTime
   const roundExpiry = startTime + configMaxDuration;
@@ -170,7 +156,7 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
 
   switch (round.state) {
     case 0: // Open
-      phase = "open";
+      phase = "voting";
       break;
     case 1: // Settled
       phase = "settled";
@@ -189,14 +175,10 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     phase,
     roundId,
     voteCount,
-    revealedCount,
     totalStake,
     votersNeeded,
-    epochTimeRemaining,
     roundTimeRemaining,
-    epochEnd,
     startTime,
-    epochDuration: configEpochDuration,
     minVoters: configMinVoters,
     maxVoters: configMaxVoters,
     isReady,

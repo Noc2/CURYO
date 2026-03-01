@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { ClaimableItem } from "~~/hooks/useAllClaimableRewards";
-import { removeRoundSalt } from "~~/utils/tlock";
 
 /**
  * Hook for claiming all outstanding rewards in sequence.
@@ -48,8 +47,6 @@ export function useClaimAll() {
               args: [contentId, epochId],
             });
           }
-          // Clean up localStorage salt after successful claim
-          removeRoundSalt(contentId, epochId);
         } catch (e: any) {
           console.error(`Claim failed for content #${contentId} epoch ${epochId}:`, e?.shortMessage || e?.message);
         }

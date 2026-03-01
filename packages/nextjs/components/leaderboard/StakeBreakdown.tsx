@@ -12,7 +12,7 @@ import { useVotingStakes } from "~~/hooks/useVotingStakes";
 export function StakeBreakdown() {
   const { address } = useAccount();
   const { totalSubmissionStake } = useSubmissionStakes(address);
-  const { currentStaked, revealingStaked } = useVotingStakes(address);
+  const { activeStaked } = useVotingStakes(address);
 
   // Frontend operator stake
   const { data: frontendInfo } = useScaffoldReadContract({
@@ -27,8 +27,7 @@ export function StakeBreakdown() {
   // Build stake entries (same logic as navbar)
   const entries: { label: string; amount: number }[] = [];
   if (totalSubmissionStake > 0) entries.push({ label: "Submissions", amount: totalSubmissionStake });
-  if (currentStaked > 0) entries.push({ label: "Voting", amount: currentStaked });
-  if (revealingStaked > 0) entries.push({ label: "In Rounds", amount: revealingStaked });
+  if (activeStaked > 0) entries.push({ label: "Voting", amount: activeStaked });
   if (frontendStake > 0) entries.push({ label: "Frontend", amount: frontendStake });
 
   if (entries.length === 0) return null;

@@ -2,10 +2,10 @@
 
 import { useAccount } from "wagmi";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
 import { useRoundPhase } from "~~/hooks/useRoundPhase";
-import { getRoundSalt } from "~~/utils/tlock";
 
 interface RoundStatsProps {
   contentId: bigint;
@@ -14,17 +14,23 @@ interface RoundStatsProps {
 
 /**
  * Displays stake and vote statistics for the current round on a specific content.
- * During current epoch: blind stats (commit count + total stake, no direction shown).
- * Past epochs: revealed breakdown (upPool, downPool, upCount, downCount) — cumulative.
+ * All votes are public — shows UP/DOWN pools and share counts in real-time.
  * Shows settlement status ("Awaiting X more votes" or "Ready to settle").
- * Shows user's own vote if they've committed in this round.
+ * Shows user's own vote if they've voted in this round.
  */
 export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   const { address } = useAccount();
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, hasReveals, roundId, minVoters, maxVoters, isRoundFull, readyToSettle } =
-    useRoundInfo(contentId);
+  const { round, isLoading, roundId, minVoters, maxVoters, isRoundFull, readyToSettle } = useRoundInfo(contentId);
   const { phase } = useRoundPhase(contentId);
+
+  // Read user's vote from the contract
+  const { data: myVoteData } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "getVote" as any,
+    args: [contentId, roundId, address] as any,
+    query: { enabled: roundId > 0n && !!address },
+  } as any);
 
   if (isLoading) {
     return (
@@ -41,20 +47,21 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   // Format stake values from 6 decimals to whole tokens
   const totalStakeFormatted = Number(round.totalStake) / 1e6;
   const voteCount = Number(round.voteCount);
-  const revealedCount = round.revealedCount;
 
-  // Revealed pool breakdown (cumulative across epochs)
-  const upPoolFormatted = Number(round.upPool) / 1e6;
-  const downPoolFormatted = Number(round.downPool) / 1e6;
+  // Pool breakdown (all public in real-time)
+  const upPoolFormatted = Number(round.upStake) / 1e6;
+  const downPoolFormatted = Number(round.downStake) / 1e6;
   const upCount = Number(round.upCount);
   const downCount = Number(round.downCount);
 
-  // Current user's vote in this round (if any)
-  const myVote = roundId > 0n ? getRoundSalt(contentId, roundId, address) : null;
+  // Parse user's vote from contract data
+  const myVoteStake = myVoteData ? Number((myVoteData as any).stake ?? (myVoteData as any)[1] ?? 0n) : 0;
+  const myVoteIsUp = myVoteData ? ((myVoteData as any).isUp ?? (myVoteData as any)[2]) : false;
+  const hasMyVote = myVoteStake > 0;
 
   return (
     <div className="flex flex-col gap-1.5 text-base text-base-content/60">
-      {/* Blind stats (always shown during open round) */}
+      {/* Stats line */}
       <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
@@ -66,34 +73,20 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
         <div className="w-px h-4 bg-base-content/10" />
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            Commits
-            <InfoTooltip
-              text={`Number of votes committed on this ${contentLabel} in the current round.`}
-              position="bottom"
-            />
+            Votes
+            <InfoTooltip text={`Number of votes on this ${contentLabel} in the current round.`} position="bottom" />
           </span>
           <span className="font-semibold tabular-nums">{voteCount}</span>
         </div>
-        <div className="w-px h-4 bg-base-content/10" />
-        <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1">
-            Revealed
-            <InfoTooltip
-              text="Number of votes that have been decrypted and revealed from past epochs."
-              position="bottom"
-            />
-          </span>
-          <span className="font-semibold tabular-nums">{revealedCount}</span>
-        </div>
       </div>
 
-      {/* Revealed pool breakdown (cumulative across past epochs) */}
-      {hasReveals && (upCount > 0 || downCount > 0) && (
+      {/* UP/DOWN pool breakdown */}
+      {(upCount > 0 || downCount > 0) && (
         <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-success">
               UP
-              <InfoTooltip text="Cumulative votes and stake in the UP pool from revealed epochs." position="bottom" />
+              <InfoTooltip text="Votes and stake in the UP pool." position="bottom" />
             </span>
             <span className="font-semibold tabular-nums text-success">
               {upCount} ({upPoolFormatted.toFixed(0)} cREP)
@@ -103,7 +96,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-error">
               DOWN
-              <InfoTooltip text="Cumulative votes and stake in the DOWN pool from revealed epochs." position="bottom" />
+              <InfoTooltip text="Votes and stake in the DOWN pool." position="bottom" />
             </span>
             <span className="font-semibold tabular-nums text-error">
               {downCount} ({downPoolFormatted.toFixed(0)} cREP)
@@ -113,18 +106,17 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
       )}
 
       {/* User's own vote in this round */}
-      {myVote && (
+      {hasMyVote && (
         <div className="flex items-center gap-2">
           <span>Your vote</span>
           <span className="font-semibold tabular-nums">
-            {myVote.isUp ? "Up" : "Down"}
-            {myVote.stakeAmount != null ? ` · ${myVote.stakeAmount} cREP` : ""}
+            {myVoteIsUp ? "Up" : "Down"} · {(myVoteStake / 1e6).toFixed(0)} cREP
           </span>
         </div>
       )}
 
       {/* Settlement status */}
-      {phase === "open" && (
+      {phase === "voting" && (
         <div className="flex items-center gap-2">
           {isRoundFull ? (
             <span className="flex items-center gap-1 text-warning/80">
@@ -138,7 +130,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
             <span className="flex items-center gap-1 text-success/80">
               Ready to settle
               <InfoTooltip
-                text={`At least ${minVoters} votes have been revealed. Anyone can call settle.`}
+                text={`At least ${minVoters} votes have been cast. Settlement can happen at any time.`}
                 position="bottom"
               />
             </span>
@@ -150,7 +142,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
         <div className="flex items-center gap-1 text-success/80">
           <span>Rewards distributed at settlement</span>
           <InfoTooltip
-            text="Participation rewards are distributed when the round settles. Winners receive stake from the losing pool proportional to their contribution."
+            text="Participation rewards are distributed when the round settles. Winners receive stake from the losing pool proportional to their shares."
             position="bottom"
           />
         </div>
@@ -160,7 +152,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
         <div className="flex items-center gap-1 text-warning/80">
           <span>Round expired — full refund available</span>
           <InfoTooltip
-            text="The round expired before enough votes were revealed. All stakes are refunded."
+            text="The round expired before enough votes were cast. All stakes are refunded."
             position="bottom"
           />
         </div>

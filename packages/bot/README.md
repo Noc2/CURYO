@@ -7,7 +7,7 @@ Command-line tool for automated content submission and voting. Discovers trendin
 ```bash
 # From the monorepo root:
 yarn bot:submit   # Discover and submit trending content
-yarn bot:vote     # Rate content and commit encrypted votes
+yarn bot:vote     # Rate content and place votes on-chain
 yarn bot:status   # Check bot account balances and Voter ID status
 ```
 
@@ -18,7 +18,7 @@ Requires a running Ponder indexer (`yarn ponder:dev`) and configured environment
 | Command | Description |
 |---|---|
 | `yarn bot:submit` | Discover trending content from platforms and submit to registry |
-| `yarn bot:vote` | Rate content using external APIs and commit tlock-encrypted votes |
+| `yarn bot:vote` | Rate content using external APIs and place votes on-chain |
 | `yarn bot:status` | Check wallet balances and Voter ID ownership |
 
 ## Configuration
@@ -41,7 +41,6 @@ Create a `.env` file in the package directory:
 | `RPC_URL` | — | Blockchain RPC endpoint |
 | `CHAIN_ID` | — | Network chain ID |
 | `PONDER_URL` | `localhost:42069` | Ponder indexer URL |
-| `TLOCK_MOCK` | `false` | Use mock tlock encryption (local dev only) |
 
 **External API Keys:**
 
@@ -70,11 +69,10 @@ src/
 ├── config.ts        # Configuration from environment
 ├── client.ts        # viem public & wallet clients
 ├── keystore.ts      # Foundry keystore handling
-├── tlock.ts         # Tlock encryption for vote commits
 ├── contracts.ts     # Contract ABI imports
 ├── commands/
 │   ├── submit.ts    # Discover trending content, submit to ContentRegistry
-│   ├── vote.ts      # Rate content, commit encrypted votes
+│   ├── vote.ts      # Rate content, place votes on-chain
 │   └── status.ts    # Check balances and Voter ID
 ├── sources/         # Content platform adapters (TMDB, YouTube, Twitch, RAWG)
 └── strategies/      # Rating strategies for different content types

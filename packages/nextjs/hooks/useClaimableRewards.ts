@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { ROUND_SALTS_UPDATED_EVENT, getRoundSalts } from "~~/utils/tlock";
 
 // RoundState enum (matching Solidity)
 const RoundState = { Open: 0, Settled: 1, Cancelled: 2, Tied: 3 } as const;
@@ -19,43 +17,37 @@ interface ClaimableReward {
 }
 
 /**
- * Hook to check if user has claimable rewards for a specific content from any round.
- * Uses localStorage salts to find the user's most recent vote, then checks round state.
+ * Hook to check if user has claimable rewards for a specific content from the active round.
+ * Queries the contract directly for vote data (no localStorage needed -- votes are public).
  * Returns reward amount if won, or lost amount if lost.
  */
 export function useClaimableRewards(contentId: bigint): ClaimableReward {
   const { address } = useAccount();
-  const [saltVersion, setSaltVersion] = useState(0);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  // Get active round ID
+  const { data: rawActiveRoundId } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "getActiveRoundId" as any,
+    args: [contentId] as any,
+    query: { enabled: contentId !== undefined },
+  } as any);
+  const roundId = (rawActiveRoundId as unknown as bigint) ?? 0n;
 
-    const bumpVersion = () => setSaltVersion(v => v + 1);
-    const handleStorage = () => bumpVersion();
+  // Check if user voted in this round
+  const { data: hasVoted } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "hasVoted" as any,
+    args: [contentId, roundId, address] as any,
+    query: { enabled: !!address && roundId > 0n },
+  } as any);
 
-    window.addEventListener(ROUND_SALTS_UPDATED_EVENT, bumpVersion);
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      window.removeEventListener(ROUND_SALTS_UPDATED_EVENT, bumpVersion);
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
-
-  // Find the most recent round salt for this content from localStorage
-  const { roundId, stakeAmount, isUp } = useMemo(() => {
-    const salts = getRoundSalts(address);
-    const matching = salts
-      .filter(s => s.contentId === contentId.toString())
-      .sort((a, b) => Number(b.roundId) - Number(a.roundId));
-    if (matching.length === 0) return { roundId: 0n, stakeAmount: 0, isUp: false };
-    const latest = matching[0];
-    return {
-      roundId: BigInt(latest.roundId),
-      stakeAmount: latest.stakeAmount ?? 0,
-      isUp: latest.isUp ?? false,
-    };
-  }, [contentId, address, saltVersion]);
+  // Get the user's vote data
+  const { data: rawVoteData } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "getVote" as any,
+    args: [contentId, roundId, address] as any,
+    query: { enabled: !!address && roundId > 0n && (hasVoted as unknown as boolean) === true },
+  } as any);
 
   // Get round state
   const { data: roundData, isLoading: roundLoading } = useScaffoldReadContract({
@@ -89,10 +81,16 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
   } as any);
 
   const isLoading = roundLoading || claimedLoading;
-  const stakeWei = BigInt(stakeAmount) * 1000000n;
+
+  // Parse vote data
+  const voteData = rawVoteData as unknown as
+    | { voter: string; stake: bigint; shares: bigint; isUp: boolean; frontend: string }
+    | undefined;
+  const stakeWei = voteData?.stake ?? 0n;
+  const isUp = voteData?.isUp ?? false;
 
   // No vote or not applicable
-  if (roundId === 0n || !roundData || alreadyClaimed || isLoading || stakeAmount === 0) {
+  if (roundId === 0n || !roundData || !hasVoted || alreadyClaimed || isLoading || stakeWei === 0n) {
     return {
       hasClaimable: false,
       epochId: roundId,
@@ -106,8 +104,8 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
 
   // roundData may be returned as a named struct or positional tuple depending on ABI encoding
   const round = roundData as any;
-  const state = Number(round.state ?? round[1] ?? 0);
-  const upWins = round.upWins ?? round[9] ?? false;
+  const state = Number(round.state ?? round[2] ?? 0);
+  const upWins = round.upWins ?? round[11] ?? false;
 
   // Tied: full refund of stake
   if (state === RoundState.Tied) {
@@ -163,7 +161,7 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     };
   }
 
-  // User won — calculate reward (stake returned + proportional pool share)
+  // User won -- calculate reward (stake returned + proportional pool share)
   let reward = stakeWei;
 
   if (voterPool != null && winningStake != null) {

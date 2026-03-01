@@ -7,9 +7,7 @@ import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaff
 
 /**
  * Hook to read round state for a content item.
- * During open round: shows voteCount, revealedCount, totalStake (blind stats).
- * After reveals: shows upPool, downPool, upCount, downCount (cumulative across epochs).
- * Shows "X of 3 voters needed" progress based on revealedCount.
+ * All vote stats (direction, pools) are public in real-time.
  * Returns optimistic vote deltas for instant UI updates.
  */
 export function useRoundInfo(contentId?: bigint) {
@@ -38,9 +36,14 @@ export function useRoundInfo(contentId?: bigint) {
       })
       .then((data: any) => {
         if (cancelled) return;
-        const config = data as [bigint, bigint, bigint, bigint];
-        setMinVoters(Number(config[2])); // minVoters
-        setMaxVoters(Number(config[3])); // maxVoters
+        if (data.minVoters != null) {
+          setMinVoters(Number(data.minVoters));
+          setMaxVoters(Number(data.maxVoters));
+        } else {
+          const config = data as any[];
+          setMinVoters(Number(config[3])); // minVoters
+          setMaxVoters(Number(config[4])); // maxVoters
+        }
       })
       .catch(() => {
         // Fall back to default
@@ -50,13 +53,6 @@ export function useRoundInfo(contentId?: bigint) {
       cancelled = true;
     };
   }, [publicClient, votingEngineInfo]);
-
-  // Local clock kept for potential future use (countdown, freshness checks)
-  const [, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Active round ID for this content
   const { data: rawActiveRoundId } = useScaffoldReadContract({
@@ -85,16 +81,16 @@ export function useRoundInfo(contentId?: bigint) {
   const isLoading = contentId !== undefined && isRoundLoading;
 
   // Parse round data from contract
-  // New struct: { startTime, state, voteCount, revealedCount, totalStake, upPool, downPool, upCount, downCount, upWins }
+  // Round struct: { startTime, startBlock, state, voteCount, totalStake, totalUpStake, totalDownStake,
+  //                 totalUpShares, totalDownShares, upCount, downCount, upWins, settledAt, epochStartRating }
   const round = rawRoundData as unknown as
     | {
         startTime: bigint;
         state: number;
         voteCount: bigint;
-        revealedCount: bigint;
         totalStake: bigint;
-        upPool: bigint;
-        downPool: bigint;
+        totalUpStake: bigint;
+        totalDownStake: bigint;
         upCount: bigint;
         downCount: bigint;
         upWins: boolean;
@@ -109,40 +105,36 @@ export function useRoundInfo(contentId?: bigint) {
   const baseVoteCount = round?.voteCount ?? 0n;
   const baseTotalStake = round?.totalStake ?? 0n;
   const state = round?.state ?? 0;
-  const revealedCount = round ? Number(round.revealedCount) : 0;
 
-  // Revealed data (available after any reveals have occurred)
-  const hasReveals = revealedCount > 0;
-  const upPool = hasReveals ? (round?.upPool ?? 0n) : 0n;
-  const downPool = hasReveals ? (round?.downPool ?? 0n) : 0n;
-  const upCount = hasReveals ? (round?.upCount ?? 0n) : 0n;
-  const downCount = hasReveals ? (round?.downCount ?? 0n) : 0n;
+  // Pool data (all public in real-time)
+  const upStake = round?.totalUpStake ?? 0n;
+  const downStake = round?.totalDownStake ?? 0n;
+  const upCount = round?.upCount ?? 0n;
+  const downCount = round?.downCount ?? 0n;
 
-  // Settlement readiness: need at least minVoters revealed votes
-  const votersNeeded = Math.max(0, minVoters - revealedCount);
-  const readyToSettle = state === 0 && revealedCount >= minVoters;
+  // Settlement readiness: need at least minVoters votes
+  const totalVoterCount = Number(baseVoteCount + optimisticVoteCount);
+  const votersNeeded = Math.max(0, minVoters - totalVoterCount);
+  const readyToSettle = state === 0 && totalVoterCount >= minVoters;
 
   // Round capacity: is the round full?
-  const isRoundFull = Number(baseVoteCount + optimisticVoteCount) >= maxVoters;
+  const isRoundFull = totalVoterCount >= maxVoters;
 
   return {
     roundId,
     round: {
       state,
       startTime: round ? Number(round.startTime) : 0,
-      // During open round: blind stats (with optimistic overlay)
       voteCount: baseVoteCount + optimisticVoteCount,
-      revealedCount,
       totalStake: baseTotalStake + optimisticStake,
-      // After reveal: full pool breakdown (cumulative across epochs)
-      upPool,
-      downPool,
+      // Public pool breakdown (visible in real-time)
+      upStake,
+      downStake,
       upCount,
       downCount,
       upWins: round?.upWins ?? false,
     },
     isLoading,
-    hasReveals,
     votersNeeded,
     minVoters,
     maxVoters,

@@ -10,7 +10,6 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
 import { useRoundPhase } from "~~/hooks/useRoundPhase";
-import { getRoundSalt } from "~~/utils/tlock";
 
 interface VotingQuestionCardProps {
   contentId: bigint;
@@ -64,7 +63,7 @@ export function VotingQuestionCard({
 
   // Check if user already voted on this content in the current round
   const { roundId, isRoundFull } = useRoundInfo(contentId);
-  const { epochTimeRemaining, phase, voteCount, minVoters } = useRoundPhase(contentId);
+  const { phase, voteCount, minVoters } = useRoundPhase(contentId);
 
   const { data: tokenSymbol } = useScaffoldReadContract({
     contractName: "CuryoReputation",
@@ -72,12 +71,17 @@ export function VotingQuestionCard({
   });
   const symbol = tokenSymbol ?? "cREP";
 
-  const myVote = useMemo(() => {
-    if (roundId === 0n || !address) return null;
-    const storedVote = getRoundSalt(contentId, roundId, address);
-    if (!storedVote) return null;
-    return storedVote;
-  }, [contentId, roundId, address]);
+  // Read user's vote from the contract
+  const { data: myVoteData } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "getVote" as any,
+    args: [contentId, roundId, address] as any,
+    query: { enabled: roundId > 0n && !!address },
+  } as any);
+
+  const myVoteStake = myVoteData ? Number((myVoteData as any).stake ?? (myVoteData as any)[1] ?? 0n) : 0;
+  const myVoteIsUp = myVoteData ? ((myVoteData as any).isUp ?? (myVoteData as any)[2]) : false;
+  const hasMyVote = myVoteStake > 0;
 
   // Vote cooldown: read last vote timestamp from contract (time-based, 24 hours)
   const { data: lastVoteTimeRaw } = useScaffoldReadContract({
@@ -157,7 +161,7 @@ export function VotingQuestionCard({
         </p>
 
         {/* Voter count icons */}
-        {phase === "open" && (
+        {phase === "voting" && (
           <div className="flex justify-center mb-2">
             <span className="inline-flex items-center gap-1.5">
               <span className="flex -space-x-1">
@@ -195,7 +199,7 @@ export function VotingQuestionCard({
                 )}
               </span>
               <InfoTooltip
-                text={`${voteCount} of ${minVoters} voters. ${Math.max(0, minVoters - voteCount) > 0 ? `${Math.max(0, minVoters - voteCount)} more vote${Math.max(0, minVoters - voteCount) === 1 ? "" : "s"} needed.` : "Ready to settle."} Votes are revealed after each epoch ends.`}
+                text={`${voteCount} of ${minVoters} voters. ${Math.max(0, minVoters - voteCount) > 0 ? `${Math.max(0, minVoters - voteCount)} more vote${Math.max(0, minVoters - voteCount) === 1 ? "" : "s"} needed.` : "Ready to settle."} Votes are public and price-moving.`}
                 position="bottom"
               />
             </span>
@@ -208,24 +212,17 @@ export function VotingQuestionCard({
         {/* Voting arrows - centered below question */}
         <div className="flex items-center justify-center gap-2 lg:gap-3 mb-3">
           {address ? (
-            myVote ? (
+            hasMyVote ? (
               <div
                 className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
                 data-tip={`Your stake is locked until the round settles. After settlement, there is a 24-hour cooldown before you can vote on this ${contentLabel} again.`}
               >
-                <span className={`text-base font-semibold ${myVote.isUp ? "text-success" : "text-error"}`}>
-                  Voted {myVote.isUp ? "Up" : "Down"}
+                <span className={`text-base font-semibold ${myVoteIsUp ? "text-success" : "text-error"}`}>
+                  Voted {myVoteIsUp ? "Up" : "Down"}
                 </span>
-                {myVote.stakeAmount != null && (
-                  <span className="text-base text-base-content/50">
-                    {myVote.stakeAmount} {symbol}
-                  </span>
-                )}
-                {epochTimeRemaining > 0 && (
-                  <span className="text-base text-base-content/30">
-                    · {Math.floor(epochTimeRemaining / 60)}:{String(epochTimeRemaining % 60).padStart(2, "0")}
-                  </span>
-                )}
+                <span className="text-base text-base-content/50">
+                  {(myVoteStake / 1e6).toFixed(0)} {symbol}
+                </span>
               </div>
             ) : isOwnContent ? (
               <div

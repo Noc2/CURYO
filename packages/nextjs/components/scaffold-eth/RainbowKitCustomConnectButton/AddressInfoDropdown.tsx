@@ -126,7 +126,7 @@ export const AddressInfoDropdown = ({
 
   const { claimableItems, totalClaimable, pendingStake, refetch: refetchClaimable } = useAllClaimableRewards();
   const { totalSubmissionStake } = useSubmissionStakes(address);
-  const { currentStaked, revealingStaked } = useVotingStakes(address);
+  const { activeStaked: votingStaked } = useVotingStakes(address);
   const { claimAll, isClaiming, progress } = useClaimAll();
 
   const claimableFormatted =
@@ -156,14 +156,13 @@ export const AddressInfoDropdown = ({
   const frontendStake = frontendInfo ? Number(frontendInfo[1]) / 1e6 : 0;
 
   // Combine all staked amounts (voting + submissions + frontend)
-  const activeStaked = currentStaked + revealingStaked + totalSubmissionStake + frontendStake;
-  const stakedFormatted = activeStaked.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const totalStaked = votingStaked + totalSubmissionStake + frontendStake;
+  const stakedFormatted = totalStaked.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   // Build tooltip showing stake breakdown
   const stakeParts: string[] = [];
   if (totalSubmissionStake > 0) stakeParts.push(`${totalSubmissionStake} cREP submissions`);
-  if (currentStaked > 0) stakeParts.push(`${currentStaked} cREP voting`);
-  if (revealingStaked > 0) stakeParts.push(`${revealingStaked} cREP in rounds`);
+  if (votingStaked > 0) stakeParts.push(`${votingStaked} cREP voting`);
   if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
   const stakeTooltip = stakeParts.join(" · ");
 
@@ -191,7 +190,7 @@ export const AddressInfoDropdown = ({
         </span>
       </div>
       <div className="text-base text-base-content text-left px-4 pl-12">{crepFormatted} cREP</div>
-      {activeStaked > 0 && (
+      {totalStaked > 0 && (
         <div className="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12">
           {stakedFormatted} Staked
           <InfoTooltip text={stakeTooltip} position="bottom" />
@@ -242,7 +241,7 @@ export const AddressInfoDropdown = ({
         </span>
       </div>
       <span className="text-base text-base-content hidden xl:inline xl:px-2">{crepFormatted} cREP</span>
-      {activeStaked > 0 && (
+      {totalStaked > 0 && (
         <span className="text-base text-base-content hidden xl:inline xl:px-2 items-center gap-1">
           {stakedFormatted} Staked
           <InfoTooltip text={stakeTooltip} position="top" />

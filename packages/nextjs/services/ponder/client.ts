@@ -103,10 +103,8 @@ export interface PonderSubmissionStakes {
 }
 
 export interface PonderVotingStakes {
-  pendingStake: string;
-  pendingCount: number;
-  revealingStake: string;
-  revealingCount: number;
+  activeStake: string;
+  activeCount: number;
   voter: string;
 }
 

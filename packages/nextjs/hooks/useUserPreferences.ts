@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { getContentClicks } from "~~/utils/clickTracker";
-import { getSalts } from "~~/utils/tlock";
 
 export interface UserPreferences {
   categoryScores: Map<string, number>;
@@ -14,30 +13,9 @@ export function useUserPreferences(feed: ContentItem[], address?: string): UserP
       return { categoryScores: new Map<string, number>(), hasPreferences: false };
     }
 
-    // Build contentId -> categoryId lookup from feed
-    const contentToCategory = new Map<string, string>();
-    for (const item of feed) {
-      contentToCategory.set(item.id.toString(), item.categoryId.toString());
-    }
-
     const rawWeights = new Map<string, number>();
 
-    // Vote salts (strongest signal)
-    if (address) {
-      const salts = getSalts(address);
-      for (const salt of salts) {
-        const categoryId = contentToCategory.get(salt.contentId);
-        if (!categoryId || categoryId === "0") continue;
-
-        const upBonus = salt.isUp ? 0.5 : 0;
-        const stakeBonus = Math.min((salt.stakeAmount ?? 0) / 100, 1.0);
-        const weight = 1.0 + upBonus + stakeBonus;
-
-        rawWeights.set(categoryId, (rawWeights.get(categoryId) ?? 0) + weight);
-      }
-    }
-
-    // Click history (weaker signal)
+    // Click history (primary signal now that vote data is on-chain)
     const clicks = getContentClicks();
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     for (const click of clicks) {
@@ -58,5 +36,6 @@ export function useUserPreferences(feed: ContentItem[], address?: string): UserP
     }
 
     return { categoryScores, hasPreferences: true };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feed, address]);
 }

@@ -9,17 +9,13 @@ interface RoundProgressProps {
 
 /**
  * Displays compact round progress for a content item.
- * - Open: epoch countdown (15-min timer) + vote accumulation progress + round lifetime
+ * - Open: round lifetime countdown
  * - Settled: "Settled" badge
  * - Cancelled: "Cancelled — full refund" badge
  * - Tied: "Tied — stakes returned" badge
  */
 export function RoundProgress({ contentId }: RoundProgressProps) {
-  const { phase, epochTimeRemaining, roundTimeRemaining, isReady } = useRoundPhase(contentId);
-
-  const epochMinutes = Math.floor(epochTimeRemaining / 60);
-  const epochSeconds = epochTimeRemaining % 60;
-  const formattedEpochTime = `${epochMinutes}:${epochSeconds.toString().padStart(2, "0")}`;
+  const { phase, roundTimeRemaining, isReady } = useRoundPhase(contentId);
 
   // Round lifetime in days/hours
   const roundDays = Math.floor(roundTimeRemaining / 86400);
@@ -94,30 +90,17 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
 
   return (
     <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap text-base text-base-content/60">
-      <div className="flex items-center gap-2">
-        <span className="flex items-center gap-1">
-          Epoch
-          <InfoTooltip
-            text="Votes are tlock-encrypted to each 15-minute epoch. After the epoch ends, anyone can decrypt and reveal."
-            position="bottom"
-          />
-        </span>
-        <span className="font-semibold tabular-nums">{formattedEpochTime}</span>
-      </div>
       {formattedExpiry && (
-        <>
-          <div className="w-px h-4 bg-base-content/10" />
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1">
-              Expires
-              <InfoTooltip
-                text="If the round doesn't reach enough voters before expiry, it is cancelled and all stakes are refunded."
-                position="bottom"
-              />
-            </span>
-            <span className="font-semibold tabular-nums">{formattedExpiry}</span>
-          </div>
-        </>
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1">
+            Expires
+            <InfoTooltip
+              text="If the round doesn't reach enough voters before expiry, it is cancelled and all stakes are refunded."
+              position="bottom"
+            />
+          </span>
+          <span className="font-semibold tabular-nums">{formattedExpiry}</span>
+        </div>
       )}
     </div>
   );

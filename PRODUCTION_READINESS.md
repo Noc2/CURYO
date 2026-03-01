@@ -12,7 +12,7 @@ Audit all Solidity contracts in packages/foundry/contracts/ for security vulnera
 - Access control issues (role escalation, missing checks, leftover admin roles post-deploy)
 - Reentrancy vulnerabilities (even with nonReentrant, check cross-contract calls)
 - Integer overflow/underflow in reward calculations
-- Front-running risks in commit-reveal voting
+- Front-running risks in public voting with random settlement
 - UUPS upgrade safety (storage layout collisions, initializer gaps)
 - Flash loan attack vectors on staking/voting
 - Griefing attacks (can someone block rounds, drain gas, spam categories?)

@@ -38,7 +38,6 @@ Key environment variables (see `.env.example` for the full list):
 | `DATABASE_URL`                          | SQLite/Turso database URL (default: `file:local.db`) |
 | `DATABASE_AUTH_TOKEN`                   | Turso auth token (production only)                   |
 | `NEXT_PUBLIC_PONDER_URL`                | Ponder indexer URL (default: `localhost:42069`)      |
-| `NEXT_PUBLIC_TLOCK_MOCK`                | Use mock tlock encryption (local dev only)           |
 | `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                 |
 | `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                        |
 
@@ -66,7 +65,7 @@ components/                   # React components
 hooks/                        # Custom React hooks
 ├── scaffold-eth/             # useScaffoldReadContract, useScaffoldWriteContract, etc.
 ├── useRoundInfo.ts           # Fetch round data from Ponder
-└── useRoundPhase.ts          # Calculate current voting phase
+└── useRoundPhase.ts          # Calculate current round phase
 
 services/ponder/client.ts     # REST client for the Ponder indexer API
 utils/platforms/handlers/     # Platform detection & URL parsing
