@@ -150,12 +150,14 @@ The common objection is "this is a Keynesian beauty contest — voters predict w
 ### Edge Cases
 
 **Unanimous votes (all UP, no DOWN):**
-There's no losing pool to distribute. Settlement requires at least 1 voter on each side. If the settlement trigger fires but only one side has voters, the epoch extends. This incentivizes contrarian participation — if you see a one-sided epoch, there's an opportunity.
+There's no losing pool to distribute. During the normal settlement window, one-sided epochs keep extending — this incentivizes contrarian participation, since a one-sided epoch is a visible opportunity for cheap contrarian shares.
 
-**However:** one-sided epochs can't stay open forever. If `MAX_EPOCH_BLOCKS` is reached with only one side voting, the epoch settles as a **draw** — all stakes returned, no rewards. This prevents indefinite capital lockup. The content retains its current rating and a new epoch begins.
+If `MAX_EPOCH_BLOCKS` is reached with only one side voting, the epoch settles as a **unanimous consensus**. All stakes are returned, and voters receive a small reward from the **consensus subsidy reserve** — the same mechanism the current system uses. This rewards voters for providing a clear quality signal (content is obviously good or obviously bad) and compensates them for the capital lockup, even though there's no losing pool.
+
+The consensus subsidy payout follows the current formula: 5% of total epoch stake, capped by the reserve balance, split between voters (89.1%) and the content submitter (10.9%). The reserve is replenished by 5% of each normal (two-sided) settlement's losing pool — identical to today.
 
 **Single voter:**
-Same rule — at least 2 voters with at least 1 on each side. A single voter's epoch stays open until someone takes the other side, or until `MAX_EPOCH_BLOCKS` triggers a draw.
+Same rule — the epoch stays open, hoping for a second voter on either side. If `MAX_EPOCH_BLOCKS` is reached with only one voter, it settles as a unanimous consensus (single-voter subsidy payout). The voter took a risk by locking capital and providing a signal; the subsidy compensates that.
 
 **Very low participation (2 voters, opposite sides):**
 This works fine. It's a direct heads-up bet. Both voters get a clear risk/reward picture. The random settlement means neither can time their exit.
@@ -495,23 +497,30 @@ No contracts are deployed on mainnet yet, so this is a clean-slate build — not
 
 ### What Changes
 
-**1. Consensus Subsidy (4,000,000 cREP) — removed.**
+**1. Consensus Subsidy (4,000,000 cREP) — kept, role clarified.**
 
-The consensus subsidy exists for unanimous rounds (losingPool = 0). Under the new design, epochs require voters on both sides to settle. One-sided epochs settle as draws (stakes returned). There's never a case where `losingPool = 0` at a normal settlement.
+The consensus subsidy still serves its original purpose: rewarding voters when there's no losing pool. The trigger changes slightly:
 
-This 4M cREP can be reallocated to the participation pool (extending bootstrap incentives) or kept as governance reserve.
+| | Current system | Proposed system |
+|---|---|---|
+| **When it activates** | All revealed voters voted the same direction | One-sided epoch reaches `MAX_EPOCH_BLOCKS` |
+| **Payout** | 5% of total stake from reserve | Same: 5% of total stake from reserve |
+| **Split** | 89.1% voters / 10.9% submitter | Same |
+| **Replenishment** | 5% of each normal round's losing pool | Same: 5% of each two-sided settlement's losing pool |
 
-**2. Losing Pool Split — adjusted.**
+The subsidy serves the same economic function in both systems: compensating voters who provided a clear signal (unanimous agreement) and locked capital, even when there's no losing side to fund rewards. Without it, there's no incentive to vote on content where the outcome seems obvious — and a lot of content quality is obvious.
+
+**2. Losing Pool Split — unchanged.**
 
 | Recipient | Current | Proposed |
 |-----------|---------|----------|
-| Winning voters | 82% | **87%** |
+| Winning voters | 82% | 82% |
 | Content submitter | 10% | 10% |
+| Consensus subsidy reserve | 5% | 5% |
 | Platform fees (frontend + category) | 2% | 2% |
 | Treasury | 1% | 1% |
-| Consensus subsidy | 5% | **0% (removed)** |
 
-The 5% that went to consensus subsidy is redistributed to winning voters.
+The split percentages stay exactly the same. The consensus subsidy reserve continues to be replenished by 5% of each two-sided settlement.
 
 **3. Winning Voter Reward Formula — share-weighted instead of stake-weighted.**
 
@@ -532,7 +541,7 @@ Currently pays "all revealed voters" at settlement. Becomes "all voters" since t
 
 The token economics are structurally the same. The changes are:
 - Share-weighted reward distribution (early voters earn more) instead of stake-weighted (all winners equal)
-- 5% from consensus subsidy → winning voters (82% becomes 87%)
+- Consensus subsidy trigger changes from "all revealed same direction" to "one-sided epoch timeout" — same pool, same math, different trigger
 - Elimination of unrevealed vote processing (pure simplification)
 
 No new pools, no new emission schedules, no changes to the 100M cap.
