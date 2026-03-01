@@ -20,12 +20,9 @@ export const config = {
   // Keeper behavior
   intervalMs: parseInt(process.env.KEEPER_INTERVAL_MS || "30000"),
   startupJitterMs: parseInt(process.env.KEEPER_STARTUP_JITTER_MS || "0"),
-  tlockMock: process.env.TLOCK_MOCK === "true",
 
   // Tuning
-  unrevealedBatchSize: BigInt(process.env.UNREVEALED_BATCH_SIZE || "50"),
   dormancyPeriod: BigInt(process.env.DORMANCY_PERIOD || String(30 * 24 * 60 * 60)),
-  roundLookback: BigInt(process.env.ROUND_LOOKBACK || "5"),
 
   // Monitoring
   metricsPort: parseInt(process.env.METRICS_PORT || "9090"),

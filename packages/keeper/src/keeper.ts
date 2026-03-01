@@ -1,18 +1,20 @@
 /**
- * Core keeper logic: process all round lifecycle transitions.
+ * Core keeper logic: settle rounds and sweep dormant content.
  *
- * Extracted from packages/nextjs/app/api/keeper/route.ts.
- * Stateless and trustless — reads only public on-chain data + drand beacons.
+ * With public voting + random settlement, the keeper no longer needs to
+ * reveal votes.  Its only jobs are:
+ *   1. Call `trySettle(contentId)` for every content with an active round.
+ *   2. Call `cancelExpiredRound(contentId, roundId)` for rounds past maxDuration.
+ *   3. Call `markDormant(contentId)` for stale content.
  */
 import type { PublicClient, WalletClient, Chain, Account } from "viem";
 import { BaseError, ContractFunctionRevertedError, decodeErrorResult } from "viem";
 import { RoundVotingEngineAbi } from "./abis/RoundVotingEngineAbi.js";
 import { ContentRegistryAbi } from "./abis/ContentRegistryAbi.js";
-import { decryptVote } from "./tlock.js";
 import { config } from "./config.js";
 import type { Logger } from "./logger.js";
 
-// --- Round states (mirrors RoundVotingEngine.RoundState enum) ---
+// --- Round states (mirrors RoundLib.RoundState enum) ---
 const RoundState = {
   Open: 0,
   Settled: 1,
@@ -22,29 +24,15 @@ const RoundState = {
 
 // --- Types ---
 export interface KeeperResult {
-  votesRevealed: number;
   roundsSettled: number;
   roundsCancelled: number;
-  unrevealedProcessed: number;
   contentMarkedDormant: number;
-}
-
-interface CommitData {
-  voter: string;
-  stakeAmount: bigint;
-  ciphertext: `0x${string}`;
-  frontend: string;
-  revealableAfter: bigint;
-  revealed: boolean;
-  isUp: boolean;
 }
 
 function emptyResult(): KeeperResult {
   return {
-    votesRevealed: 0,
     roundsSettled: 0,
     roundsCancelled: 0,
-    unrevealedProcessed: 0,
     contentMarkedDormant: 0,
   };
 }
@@ -52,12 +40,10 @@ function emptyResult(): KeeperResult {
 /** Extract the human-readable revert reason from a viem error. */
 function getRevertReason(err: unknown): string {
   if (err instanceof BaseError) {
-    // Walk the cause chain to find a ContractFunctionRevertedError
     const revertError = err.walk(e => e instanceof ContractFunctionRevertedError);
     if (revertError instanceof ContractFunctionRevertedError) {
       return revertError.data?.errorName ?? revertError.shortMessage;
     }
-    // Try decoding raw revert data from the cause chain
     const cause = err.walk() as any;
     if (cause?.data && typeof cause.data === "string" && cause.data.startsWith("0x")) {
       try {
@@ -79,22 +65,18 @@ function getRevertReason(err: unknown): string {
 function isExpectedRevert(msg: string): boolean {
   const benign = [
     "already settled",
-    "already revealed",
-    "AlreadyRevealed",
-    "round not open",
     "RoundNotOpen",
-    "not in reveal phase",
-    "already processed",
-    "no unrevealed",
-    "NoCommit",
     "EpochNotEnded",
+    "NotSettleable",
+    "NoActiveRound",
+    "AlreadyCancelled",
   ];
   const lower = msg.toLowerCase();
-  return benign.some(phrase => lower.toLowerCase().includes(phrase.toLowerCase()));
+  return benign.some(phrase => lower.includes(phrase.toLowerCase()));
 }
 
 /**
- * Main keeper loop: iterate all content, process round lifecycle.
+ * Main keeper loop: iterate all content, settle rounds, sweep dormant content.
  */
 export async function resolveRounds(
   publicClient: PublicClient,
@@ -106,14 +88,12 @@ export async function resolveRounds(
   const engineAddr = config.contracts.votingEngine;
   const registryAddr = config.contracts.contentRegistry;
 
-  // Use on-chain block.timestamp — this is what the contract uses for epoch checks.
-  // Using Date.now() can cause EpochNotEnded reverts when wall-clock is ahead of block time.
+  // Use on-chain block.timestamp — this is what the contract uses for checks.
   let now: bigint;
   try {
     const block = await publicClient.getBlock({ blockTag: "latest" });
     now = block.timestamp;
   } catch {
-    // Fallback to wall-clock with a safety buffer if block fetch fails
     now = BigInt(Math.floor(Date.now() / 1000)) - 30n;
   }
 
@@ -133,17 +113,17 @@ export async function resolveRounds(
     return emptyResult();
   }
 
-  // --- Read engine config ---
-  // config() returns individual outputs: [epochDuration, maxDuration, minVoters, maxVoters]
-  let epochDuration: bigint, maxDuration: bigint, minVoters: bigint;
+  // --- Read engine config (for maxDuration / cancel check) ---
+  let maxDuration: bigint;
   try {
     const configResult = (await publicClient.readContract({
       address: engineAddr,
       abi: RoundVotingEngineAbi,
       functionName: "config",
       args: [],
-    })) as readonly [bigint, bigint, bigint, bigint];
-    [epochDuration, maxDuration, minVoters] = configResult;
+    })) as readonly [bigint, bigint, bigint, bigint, bigint, number, number, number];
+    // config() returns: [minEpochBlocks, maxEpochBlocks, maxDuration, minVoters, maxVoters, ...]
+    maxDuration = configResult[2];
   } catch {
     logger.error("Could not read config from RoundVotingEngine");
     return emptyResult();
@@ -165,301 +145,77 @@ export async function resolveRounds(
         activeRoundId = 0n;
       }
 
-      // Check active round + lookback window
-      const roundsToCheck: bigint[] = [];
+      // --- 1. TRY SETTLE: Call trySettle for content with an active round ---
       if (activeRoundId > 0n) {
-        roundsToCheck.push(activeRoundId);
-      }
-      const startRound = activeRoundId > config.roundLookback ? activeRoundId - config.roundLookback : 1n;
-      for (let roundId = startRound; roundId <= activeRoundId; roundId++) {
-        if (!roundsToCheck.includes(roundId)) {
-          roundsToCheck.push(roundId);
-        }
-      }
-
-      for (const roundId of roundsToCheck) {
-        // getRound returns a tuple struct
-        let round: {
-          startTime: bigint;
-          state: number;
-          voteCount: bigint;
-          revealedCount: bigint;
-          totalStake: bigint;
-          upPool: bigint;
-          downPool: bigint;
-          upCount: bigint;
-          downCount: bigint;
-          upWins: boolean;
-          settledAt: bigint;
-          thresholdReachedAt: bigint;
-        };
         try {
-          round = (await publicClient.readContract({
+          await walletClient.writeContract({
+            chain,
+            account,
+            address: engineAddr,
+            abi: RoundVotingEngineAbi,
+            functionName: "trySettle",
+            args: [contentId],
+          });
+          logger.info("Settled round", {
+            contentId: Number(contentId),
+            roundId: Number(activeRoundId),
+          });
+          result.roundsSettled++;
+        } catch (err: unknown) {
+          const reason = getRevertReason(err);
+          if (!isExpectedRevert(reason)) {
+            logger.warn("Failed to settle round", {
+              contentId: Number(contentId),
+              roundId: Number(activeRoundId),
+              error: reason,
+            });
+          }
+        }
+
+        // --- 2. CANCEL: Open rounds past maxDuration deadline ---
+        // Only attempt cancel if trySettle didn't succeed (round still open)
+        try {
+          const round = (await publicClient.readContract({
             address: engineAddr,
             abi: RoundVotingEngineAbi,
             functionName: "getRound",
-            args: [contentId, roundId],
-          })) as typeof round;
-        } catch {
-          continue;
-        }
+            args: [contentId, activeRoundId],
+          })) as { startTime: bigint; state: number };
 
-        const { state } = round;
-
-        // --- 1. REVEAL: Decrypt tlock ciphertexts whose epoch has ended ---
-        if (state === RoundState.Open) {
-          let commitCount: bigint;
-          try {
-            commitCount = (await publicClient.readContract({
-              address: engineAddr,
-              abi: RoundVotingEngineAbi,
-              functionName: "getRoundCommitCount",
-              args: [contentId, roundId],
-            })) as bigint;
-          } catch {
-            commitCount = 0n;
-          }
-
-          for (let i = 0n; i < commitCount; i++) {
-            let commitKey: `0x${string}`;
-            try {
-              commitKey = (await publicClient.readContract({
-                address: engineAddr,
-                abi: RoundVotingEngineAbi,
-                functionName: "getRoundCommitHash",
-                args: [contentId, roundId, i],
-              })) as `0x${string}`;
-            } catch {
-              continue;
-            }
-
-            let commit: CommitData;
-            try {
-              commit = (await publicClient.readContract({
-                address: engineAddr,
-                abi: RoundVotingEngineAbi,
-                functionName: "getCommit",
-                args: [contentId, roundId, commitKey],
-              })) as CommitData;
-            } catch {
-              continue;
-            }
-
-            // Skip already revealed or empty commits
-            if (commit.revealed || commit.voter === "0x0000000000000000000000000000000000000000") {
-              continue;
-            }
-
-            // Skip if epoch hasn't ended yet
-            if (now < commit.revealableAfter) {
-              continue;
-            }
-
-            // Decrypt the on-chain ciphertext using tlock/drand
-            let decrypted: { isUp: boolean; salt: `0x${string}`; contentId: bigint };
-            try {
-              decrypted = await decryptVote(commit.ciphertext as `0x${string}`);
-            } catch (err: any) {
-              logger.warn("Failed to decrypt vote", {
-                contentId: Number(contentId),
-                roundId: Number(roundId),
-                error: err.message,
-              });
-              continue;
-            }
-
-            // Validate: decrypted contentId must match the round's contentId
-            if (decrypted.contentId !== contentId) {
-              logger.warn("Decrypted contentId mismatch — skipping reveal", {
-                expected: Number(contentId),
-                got: Number(decrypted.contentId),
-                roundId: Number(roundId),
-                voter: commit.voter,
-              });
-              continue;
-            }
-
-            // Submit the reveal on-chain
-            try {
-              await walletClient.writeContract({
-                chain,
-                account,
-                address: engineAddr,
-                abi: RoundVotingEngineAbi,
-                functionName: "revealVoteByCommitKey",
-                args: [contentId, roundId, commitKey, decrypted.isUp, decrypted.salt],
-              });
-              result.votesRevealed++;
-              logger.info("Revealed vote", {
-                voter: commit.voter,
-                contentId: Number(contentId),
-                roundId: Number(roundId),
-              });
-            } catch (err: unknown) {
-              const reason = getRevertReason(err);
-              if (isExpectedRevert(reason)) {
-                logger.debug("Reveal skipped (already done)", {
-                  contentId: Number(contentId),
-                  roundId: Number(roundId),
-                });
-              } else {
-                logger.warn("Failed to reveal vote", {
-                  error: reason,
-                  contentId: Number(contentId),
-                  roundId: Number(roundId),
-                  voter: commit.voter,
-                  revealableAfter: Number(commit.revealableAfter),
-                  blockTimestamp: Number(now),
-                  isUp: decrypted.isUp,
-                });
-              }
-            }
-          }
-        }
-
-        // --- 2. SETTLE: If enough votes have been revealed ---
-        let currentRevealedCount = round.revealedCount;
-        if (result.votesRevealed > 0) {
-          try {
-            const freshRound = (await publicClient.readContract({
-              address: engineAddr,
-              abi: RoundVotingEngineAbi,
-              functionName: "getRound",
-              args: [contentId, roundId],
-            })) as typeof round;
-            currentRevealedCount = freshRound.revealedCount;
-          } catch {
-            // Fall back to stale count
-          }
-        }
-        if (state === RoundState.Open && currentRevealedCount >= minVoters) {
-          try {
-            await walletClient.writeContract({
-              chain,
-              account,
-              address: engineAddr,
-              abi: RoundVotingEngineAbi,
-              functionName: "settleRound",
-              args: [contentId, roundId],
-            });
-            logger.info("Settled round", {
-              contentId: Number(contentId),
-              roundId: Number(roundId),
-            });
-            result.roundsSettled++;
-            continue;
-          } catch (err: unknown) {
-            const reason = getRevertReason(err);
-            if (!isExpectedRevert(reason)) {
-              logger.warn("Failed to settle round", {
-                contentId: Number(contentId),
-                roundId: Number(roundId),
-                error: reason,
-              });
-            }
-          }
-        }
-
-        // --- 3. PROCESS: Forfeit/refund unrevealed votes after settlement ---
-        if (state === RoundState.Settled || state === RoundState.Tied) {
-          let commitCount: bigint;
-          try {
-            commitCount = (await publicClient.readContract({
-              address: engineAddr,
-              abi: RoundVotingEngineAbi,
-              functionName: "getRoundCommitCount",
-              args: [contentId, roundId],
-            })) as bigint;
-          } catch {
-            commitCount = 0n;
-          }
-
-          if (commitCount > 0n) {
-            let hasUnrevealed = false;
-            for (let i = 0n; i < commitCount; i++) {
-              try {
-                const commitKey = (await publicClient.readContract({
-                  address: engineAddr,
-                  abi: RoundVotingEngineAbi,
-                  functionName: "getRoundCommitHash",
-                  args: [contentId, roundId, i],
-                })) as `0x${string}`;
-                const commit = (await publicClient.readContract({
-                  address: engineAddr,
-                  abi: RoundVotingEngineAbi,
-                  functionName: "getCommit",
-                  args: [contentId, roundId, commitKey],
-                })) as CommitData;
-                if (!commit.revealed && commit.stakeAmount > 0n) {
-                  hasUnrevealed = true;
-                  break;
-                }
-              } catch {
-                continue;
-              }
-            }
-
-            if (hasUnrevealed) {
+          if (round.state === RoundState.Open && round.startTime > 0n) {
+            if (now > round.startTime + maxDuration) {
               try {
                 await walletClient.writeContract({
                   chain,
                   account,
                   address: engineAddr,
                   abi: RoundVotingEngineAbi,
-                  functionName: "processUnrevealedVotes",
-                  args: [contentId, roundId, 0n, config.unrevealedBatchSize],
+                  functionName: "cancelExpiredRound",
+                  args: [contentId, activeRoundId],
                 });
-                logger.info("Processed unrevealed votes", {
+                logger.info("Cancelled expired round", {
                   contentId: Number(contentId),
-                  roundId: Number(roundId),
+                  roundId: Number(activeRoundId),
                 });
-                result.unrevealedProcessed++;
+                result.roundsCancelled++;
               } catch (err: unknown) {
                 const reason = getRevertReason(err);
                 if (!isExpectedRevert(reason)) {
-                  logger.warn("Could not process unrevealed votes", {
+                  logger.warn("Failed to cancel expired round", {
                     contentId: Number(contentId),
-                    roundId: Number(roundId),
+                    roundId: Number(activeRoundId),
                     error: reason,
                   });
                 }
               }
             }
           }
-        }
-
-        // --- 4. CANCEL: Open rounds past maxDuration deadline ---
-        if (state === RoundState.Open && round.startTime > 0n) {
-          if (now > round.startTime + maxDuration) {
-            try {
-              await walletClient.writeContract({
-                chain,
-                account,
-                address: engineAddr,
-                abi: RoundVotingEngineAbi,
-                functionName: "cancelExpiredRound",
-                args: [contentId, roundId],
-              });
-              logger.info("Cancelled expired round", {
-                contentId: Number(contentId),
-                roundId: Number(roundId),
-              });
-              result.roundsCancelled++;
-            } catch (err: unknown) {
-              const reason = getRevertReason(err);
-              if (!isExpectedRevert(reason)) {
-                logger.warn("Failed to cancel expired round", {
-                  contentId: Number(contentId),
-                  roundId: Number(roundId),
-                  error: reason,
-                });
-              }
-            }
-          }
+        } catch {
+          // Could not read round — skip cancel check
         }
       }
 
-      // --- 5. Dormancy sweep ---
+      // --- 3. Dormancy sweep ---
       try {
         const content = (await publicClient.readContract({
           address: registryAddr,

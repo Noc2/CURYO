@@ -1,6 +1,6 @@
 # Curyo — Keeper (Round Resolution Service)
 
-Stateless service that continuously reveals tlock-encrypted votes using public drand beacons, settles rounds, processes unrevealed stakes, cancels expired rounds, and marks dormant content. Designed for horizontal scaling — multiple instances run independently for redundancy.
+Stateless service that continuously settles rounds via `trySettle()`, cancels expired rounds, and marks dormant content. Designed for horizontal scaling — multiple instances run independently for redundancy.
 
 ## Quick Start
 
@@ -35,7 +35,6 @@ Copy `.env.example` to `.env.local` and configure:
 | `KEYSTORE_PASSWORD` | — | Keystore decryption password |
 | `KEEPER_INTERVAL_MS` | `30000` | Resolution loop frequency (ms) |
 | `KEEPER_STARTUP_JITTER_MS` | `0` | Random startup delay for multi-instance staggering |
-| `TLOCK_MOCK` | `false` | Use mock tlock decryption (local dev only) |
 | `METRICS_ENABLED` | `true` | Enable Prometheus metrics server |
 | `METRICS_PORT` | `9090` | Metrics server port |
 | `LOG_FORMAT` | `json` | Log format: `json` (production) or `text` (development) |
@@ -53,17 +52,16 @@ docker run --env-file .env curyo-keeper
 - **Prometheus metrics:** `http://localhost:9090/metrics`
 - **Health check:** `http://localhost:9090/health`
 
-Key metrics: `keeper_is_running` (gauge), `keeper_votes_revealed` (counter), `keeper_rounds_settled` (counter).
+Key metrics: `keeper_is_running` (gauge), `keeper_rounds_settled_total` (counter), `keeper_rounds_cancelled_total` (counter).
 
 ## Project Structure
 
 ```
 src/
 ├── index.ts      # Main entry point & event loop
-├── keeper.ts     # Core resolution logic (reveal, settle, dormancy)
+├── keeper.ts     # Core settlement logic (trySettle, cancel, dormancy)
 ├── config.ts     # Configuration from environment
 ├── client.ts     # viem public & wallet clients
-├── tlock.ts      # Tlock decryption + drand beacon fetching
 ├── keystore.ts   # Foundry keystore decryption
 ├── logger.ts     # Structured logging
 ├── metrics.ts    # Prometheus metrics server
@@ -74,4 +72,4 @@ Dockerfile        # Production container image
 
 ## Redundancy
 
-Run 2+ instances with different wallet addresses and set `KEEPER_STARTUP_JITTER_MS=15000` to stagger execution cycles. Duplicate reveal/settle transactions revert harmlessly — already-processed votes fail silently on-chain.
+Run 2+ instances with different wallet addresses and set `KEEPER_STARTUP_JITTER_MS=15000` to stagger execution cycles. Duplicate settle transactions revert harmlessly — already-settled rounds fail silently on-chain.

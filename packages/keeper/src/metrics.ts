@@ -7,10 +7,8 @@ import type { KeeperResult } from "./keeper.js";
 
 // --- Counters ---
 const counters: Record<string, number> = {
-  keeper_votes_revealed_total: 0,
   keeper_rounds_settled_total: 0,
   keeper_rounds_cancelled_total: 0,
-  keeper_unrevealed_processed_total: 0,
   keeper_content_marked_dormant_total: 0,
   keeper_runs_total: 0,
   keeper_errors_total: 0,
@@ -51,10 +49,8 @@ export function getConsecutiveErrors(): number {
 /** Record the result of a keeper run. */
 export function recordRun(result: KeeperResult, durationMs: number) {
   counters.keeper_runs_total++;
-  counters.keeper_votes_revealed_total += result.votesRevealed;
   counters.keeper_rounds_settled_total += result.roundsSettled;
   counters.keeper_rounds_cancelled_total += result.roundsCancelled;
-  counters.keeper_unrevealed_processed_total += result.unrevealedProcessed;
   counters.keeper_content_marked_dormant_total += result.contentMarkedDormant;
   gauges.keeper_last_run_duration_seconds = durationMs / 1000;
   gauges.keeper_last_successful_run_timestamp = Date.now() / 1000;
@@ -73,10 +69,8 @@ function renderMetrics(): string {
   const lines: string[] = [];
 
   const counterHelp: Record<string, string> = {
-    keeper_votes_revealed_total: "Total votes revealed by keeper",
     keeper_rounds_settled_total: "Total rounds settled by keeper",
     keeper_rounds_cancelled_total: "Total rounds cancelled by keeper",
-    keeper_unrevealed_processed_total: "Total unrevealed vote batches processed",
     keeper_content_marked_dormant_total: "Total content items marked dormant",
     keeper_runs_total: "Total keeper run cycles",
     keeper_errors_total: "Total keeper run errors",

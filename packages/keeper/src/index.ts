@@ -1,8 +1,8 @@
 /**
- * Curyo Keeper — standalone stateless round resolution service.
+ * Curyo Keeper — standalone stateless round settlement service.
  *
- * Reads on-chain tlock ciphertexts, decrypts via public drand beacons,
- * and submits reveals / settlements / cleanup transactions.
+ * Iterates on-chain content, calls trySettle() for active rounds,
+ * cancels expired rounds, and sweeps dormant content.
  *
  * Usage:
  *   npx tsx src/index.ts        # one-shot start
@@ -45,7 +45,6 @@ async function main() {
     account: account.address,
     intervalMs: config.intervalMs,
     metricsEnabled: config.metricsEnabled,
-    tlockMock: config.tlockMock,
   });
 
   const walletClient = getWalletClient();
@@ -84,10 +83,8 @@ async function main() {
 
       // Log summary only when something happened
       const total =
-        result.votesRevealed +
         result.roundsSettled +
         result.roundsCancelled +
-        result.unrevealedProcessed +
         result.contentMarkedDormant;
       if (total > 0) {
         logger.info("Run complete", { ...result, durationMs: duration });
