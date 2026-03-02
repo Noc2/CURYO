@@ -11,8 +11,8 @@ const GovernanceDocs: NextPage = () => {
         Curyo is fully decentralized from day one. There is no team, company, foundation, or central authority making
         decisions &mdash; every aspect of the platform is shaped by its community through community voting. Built on
         OpenZeppelin&apos;s Governor contracts, token holders create proposals, vote, and execute approved changes
-        directly through the system. After deployment finalization (role renounce ceremony), no privileged admin keys or multisigs
-        remain.
+        directly through the system. After deployment finalization (role renounce ceremony), no privileged admin keys or
+        multisigs remain.
       </p>
       <p>
         Curyo is a <strong>reputation token with no monetary value</strong>. It is not sold, has no treasury backing,
@@ -123,25 +123,22 @@ const GovernanceDocs: NextPage = () => {
               <td className="font-mono">Minimum voters</td>
               <td>5</td>
               <td>
-                Minimum votes required before a round can settle. Prevents thin-market exploitation by coordinated
-                minorities. Rounds that don&apos;t reach this threshold within the maximum round duration are cancelled with
-                full refunds.
+                Minimum votes required before a round can resolve. Prevents thin-market exploitation by coordinated
+                minorities. Rounds that don&apos;t reach this threshold within the maximum round duration are cancelled
+                with full refunds.
               </td>
             </tr>
             <tr>
               <td className="font-mono">Minimum voting window</td>
               <td>~30 minutes</td>
-              <td>
-                Minimum number of blocks before a round becomes eligible for settlement. Ensures a meaningful voting
-                window.
-              </td>
+              <td>Minimum time before a round becomes eligible for resolution. Ensures a meaningful voting window.</td>
             </tr>
             <tr>
               <td className="font-mono">Maximum round length</td>
               <td>~6 hours</td>
               <td>
-                Maximum blocks before a round must resolve or expire. Two-sided rounds resolve randomly; one-sided rounds
-                trigger agreement bonus at this limit.
+                Maximum blocks before a round must resolve or expire. Two-sided rounds resolve randomly; one-sided
+                rounds trigger agreement bonus at this limit.
               </td>
             </tr>
             <tr>
@@ -155,7 +152,7 @@ const GovernanceDocs: NextPage = () => {
             <tr>
               <td className="font-mono">Max voters</td>
               <td>1,000</td>
-              <td>Per-round cap. O(1) settlement enables higher limits without cost concerns.</td>
+              <td>Per-round cap. O(1) resolution enables higher limits without cost concerns.</td>
             </tr>
             <tr>
               <td className="font-mono">Vote stake</td>
@@ -183,21 +180,22 @@ const GovernanceDocs: NextPage = () => {
       </p>
       <ul>
         <li>
-          <strong>1% resolution fee</strong> &mdash; 1% of every losing pool is sent to the treasury when rounds settle.
+          <strong>1% resolution fee</strong> &mdash; 1% of every losing pool is sent to the treasury when rounds are
+          resolved.
         </li>
         <li>
-          <strong>Forfeited submitter deposits</strong> &mdash; when content is flagged for policy violations or receives
-          unfavorable ratings, the submitter&apos;s 10 cREP stake is forfeited to the treasury.
+          <strong>Forfeited submitter deposits</strong> &mdash; when content is flagged for policy violations or
+          receives unfavorable ratings, the submitter&apos;s 10 cREP stake is forfeited to the treasury.
         </li>
         <li>
-          <strong>Agreement bonus</strong> &mdash; when one-sided rounds settle at the maximum round length, a small
+          <strong>Agreement bonus</strong> &mdash; when one-sided rounds reach the maximum round length, a small
           agreement bonus from the treasury rewards voters who identified uncontroversial content.
         </li>
       </ul>
       <p>
         Treasury tokens can only be distributed through governance proposals. Token holders propose allocations, the
-        community votes, and after the timelock delay, the transaction is executed automatically. This ensures transparent,
-        community-controlled distribution of community tokens.
+        community votes, and after the timelock delay, the transaction is executed automatically. This ensures
+        transparent, community-controlled distribution of community tokens.
       </p>
 
       <h2>Collusion Prevention</h2>
@@ -206,9 +204,9 @@ const GovernanceDocs: NextPage = () => {
         artificially upvote or downvote content undermine the prediction pool system and harm fair curation.
       </p>
       <p>
-        <strong>Detection:</strong> Community members can monitor voting patterns publicly visible. Suspicious activity &mdash;
-        such as coordinated voting from related wallets, vote timing patterns, or unusual stake distributions &mdash;
-        can be flagged and analyzed using public data.
+        <strong>Detection:</strong> Community members can monitor voting patterns publicly visible. Suspicious activity
+        &mdash; such as coordinated voting from related wallets, vote timing patterns, or unusual stake distributions
+        &mdash; can be flagged and analyzed using public data.
       </p>
       <p>
         <strong>Enforcement via governance proposals:</strong> When hard evidence of collusion is found, the community

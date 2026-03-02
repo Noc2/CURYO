@@ -5,14 +5,14 @@ const DelegationDocs: NextPage = () => {
     <article className="prose max-w-none">
       <h1>Delegation &amp; Security</h1>
       <p className="lead text-base-content/60 text-lg">
-        Protect your soulbound Voter ID by delegating actions to a separate hot wallet.
+        Protect your non-transferable Voter ID by delegating actions to a separate hot wallet.
       </p>
 
       <h2>What is Delegation?</h2>
       <p>
-        Your Voter ID is a soulbound NFT tied to your verified identity via Self.xyz. If the private key holding this
-        NFT is compromised, the attacker gains a verified identity that cannot be re-issued to the same passport. This
-        makes the Voter ID key uniquely high-value.
+        Your Voter ID is a non-transferable digital ID tied to your verified identity via Self.xyz. If the private key
+        holding this NFT is compromised, the attacker gains a verified identity that cannot be re-issued to the same
+        passport. This makes the Voter ID key uniquely high-value.
       </p>
       <p>
         Delegation solves this by separating <strong>identity</strong> from <strong>execution</strong>:
@@ -39,8 +39,8 @@ const DelegationDocs: NextPage = () => {
 
       <h3>What the delegate cannot do</h3>
       <ul>
-        <li>Transfer or burn the Voter ID (soulbound)</li>
-        <li>Set sub-delegates (only the SBT holder can delegate)</li>
+        <li>Transfer or burn the Voter ID (non-transferable)</li>
+        <li>Set sub-delegates (only the Voter ID holder can delegate)</li>
         <li>Revoke the Voter ID (governance-only action)</li>
         <li>Exceed the holder&apos;s stake caps (shared 100 cREP per content per round)</li>
       </ul>
@@ -167,8 +167,8 @@ const DelegationDocs: NextPage = () => {
           <strong>One delegate per holder</strong> &mdash; setting a new delegate automatically removes the old one.
         </li>
         <li>
-          <strong>Delegates cannot hold SBTs</strong> &mdash; an address that already has its own Voter ID cannot be a
-          delegate (and vice versa). This prevents identity amplification.
+          <strong>Delegates cannot hold their own Voter IDs</strong> &mdash; an address that already has its own Voter
+          ID cannot be a delegate (and vice versa). This prevents identity amplification.
         </li>
       </ul>
 
@@ -193,7 +193,7 @@ const DelegationDocs: NextPage = () => {
               <td>Each delegate represents exactly one identity</td>
             </tr>
             <tr>
-              <td>Delegate cannot be an SBT holder</td>
+              <td>Delegate cannot be a Voter ID holder</td>
               <td>Prevents dual-identity (would allow bypassing per-identity caps)</td>
             </tr>
             <tr>
@@ -201,11 +201,11 @@ const DelegationDocs: NextPage = () => {
               <td>Redundant operation with no effect</td>
             </tr>
             <tr>
-              <td>Cannot mint SBT to active delegate</td>
+              <td>Cannot create Voter ID for active delegate</td>
               <td>Prevents address from being both holder and delegate simultaneously</td>
             </tr>
             <tr>
-              <td>Only SBT holder can set/remove delegate</td>
+              <td>Only Voter ID holder can set/remove delegate</td>
               <td>Delegate cannot modify delegation; control stays with cold wallet</td>
             </tr>
           </tbody>
@@ -238,7 +238,7 @@ const DelegationDocs: NextPage = () => {
               <td>
                 <code>resolveHolder(address)</code>
               </td>
-              <td>Returns the effective SBT holder for an address (self or delegator)</td>
+              <td>Returns the effective Voter ID holder for an address (self or delegator)</td>
             </tr>
             <tr>
               <td>

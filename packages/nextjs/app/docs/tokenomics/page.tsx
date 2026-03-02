@@ -16,7 +16,7 @@ const Tokenomics = () => {
         cREP has no monetary value and is not designed as an investment or financial instrument. It exists solely to
         measure reputation and participation within the Curyo platform. It cannot be purchased &mdash; it is only earned
         through verified identity claims and active participation. There is no team, no company, and no central entity
-        behind the token. Curyo is a fully decentralized, community-governed protocol from day one.
+        behind the token. Curyo is a fully decentralized, community-governed system from day one.
       </p>
 
       <h2>Token Overview</h2>
@@ -44,7 +44,7 @@ const Tokenomics = () => {
       </div>
       <p>
         Fixed supply of <strong>100 million tokens</strong>. Fair launch &mdash; no pre-mine, no VC allocation, no team
-        tokens, and no token sale of any kind. All tokens are distributed exclusively through four on-chain pools:
+        tokens, and no token sale of any kind. All tokens are distributed exclusively through four distribution pools:
       </p>
 
       <h3>Design Principles</h3>
@@ -55,11 +55,11 @@ const Tokenomics = () => {
         </li>
         <li>
           <strong>No issuer, no sale.</strong> There is no company, foundation, or team that issues, sells, or controls
-          cREP. Distribution is handled entirely by on-chain protocol contracts.
+          cREP. Distribution is handled entirely by automated system contracts.
         </li>
         <li>
-          <strong>Decentralized from genesis.</strong> All protocol parameters are governed on-chain by token holders.
-          After deployment finalization (role renounce ceremony), no privileged admin keys remain.
+          <strong>Decentralized from genesis.</strong> All protocol parameters are governed by the community. After
+          deployment finalization (role renounce ceremony), no privileged admin keys remain.
         </li>
         <li>
           <strong>Sybil-resistant distribution.</strong> Tokens are claimed once per verified human via passport
@@ -96,13 +96,13 @@ const Tokenomics = () => {
               <td className="font-mono">34,000,000 cREP</td>
               <td>
                 Bootstraps early adoption &mdash; immediate submitter bonuses + voter rewards claimable after round
-                settlement (rate halving schedule)
+                resolution (rate halving schedule)
               </td>
             </tr>
             <tr>
-              <td className="font-medium">Consensus Subsidy</td>
+              <td className="font-medium">Agreement Bonus</td>
               <td className="font-mono">4,000,000 cREP</td>
-              <td>Pre-funded reserve for unanimous round rewards, replenished by 5% of each losing pool</td>
+              <td>Pre-funded reserve for unanimous agreement rewards, replenished by 5% of each losing pool</td>
             </tr>
             <tr>
               <td className="font-medium">Treasury</td>
@@ -188,7 +188,7 @@ const Tokenomics = () => {
         The participation pool solves the <strong>cold start problem</strong>. When the platform is new and vote stakes
         are small, round rewards alone may not be enough to attract voters and submitters. The participation pool pays a{" "}
         <strong>proportional bonus on stake</strong>: submitters are rewarded immediately on submission, while voters
-        can claim their participation rewards after round settlement (regardless of vote outcome). The voter reward rate
+        can claim their participation rewards after round resolution (regardless of vote outcome). The voter reward rate
         is snapshotted at settlement time for fairness. Early participants receive the most thanks to a halving
         schedule: as cumulative rewards grow, the reward rate decreases. This creates a strong incentive to participate
         early and helps bootstrap the network.
@@ -248,7 +248,7 @@ const Tokenomics = () => {
         </table>
       </div>
       <p>
-        Voter participation rewards are distributed only after a round settles &mdash; deferred from vote time to
+        Voter participation rewards are distributed only after a round is resolved &mdash; deferred from vote time to
         prevent exploitation where attackers could vote, collect immediate rewards, and then have rounds cancel without
         risk. Submitter participation rewards are paid at submission time to bootstrap content supply. The pool is
         funded with <strong>34M cREP</strong> and governed by the same timelock as all other protocol contracts.
@@ -260,16 +260,17 @@ const Tokenomics = () => {
       <h3>Treasury</h3>
       <p>
         The governance treasury starts with <strong>10M cREP</strong> and grows over time through two inflow sources: a
-        1% fee from every round settlement and slashed submitter stakes (when content rating drops below 10%). Treasury
-        tokens are distributed exclusively via governance proposals &mdash; for grants, whistleblower rewards, and
-        protocol development.
+        1% fee from every round resolution and forfeited submitter deposits (when content rating drops below 10%).
+        Treasury tokens are distributed exclusively via governance proposals &mdash; for grants, whistleblower rewards,
+        and protocol development.
       </p>
 
       <hr />
 
       <h2>Point Distribution</h2>
       <p>
-        When a round settles, the losing side&apos;s stakes are distributed. Winners also get their original stake back.
+        When a round is resolved, the losing side&apos;s stakes are distributed. Winners also get their original stake
+        back.
       </p>
 
       <h3>Pool Split</h3>
@@ -290,7 +291,7 @@ const Tokenomics = () => {
               <td className="font-mono">82%</td>
             </tr>
             <tr>
-              <td>Consensus subsidy reserve</td>
+              <td>Agreement bonus reserve</td>
               <td className="font-mono">5%</td>
             </tr>
             <tr>
@@ -315,10 +316,10 @@ const Tokenomics = () => {
 
       <p>
         The 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
-        <strong>shares</strong> to winning voters on that content. Shares are determined by a bonding curve, so early
-        voters on the winning side receive a larger reward per cREP staked. An additional 5% goes to a consensus subsidy
-        reserve. Because each content item has independent rounds that settle on their own timeline, rewards are
-        claimable immediately after settlement. The 1% treasury fee goes to the governance timelock.
+        <strong>reward points</strong> to winning voters on that content. Reward points are determined by early-mover
+        pricing, so early voters on the winning side receive a larger reward per cREP staked. An additional 5% goes to
+        an agreement bonus reserve. Because each content item has independent rounds that resolve on their own timeline,
+        rewards are claimable immediately after resolution. The 1% treasury fee goes to the governance timelock.
       </p>
 
       <hr />
@@ -353,7 +354,8 @@ const Tokenomics = () => {
         </table>
       </div>
       <p>
-        Submitter stakes are slashed (100% to treasury) if content rating drops below 10% after a 24-hour grace period.
+        Submitter deposits are forfeited (100% to treasury) if content rating drops below 10% after a 24-hour grace
+        period.
       </p>
     </article>
   );

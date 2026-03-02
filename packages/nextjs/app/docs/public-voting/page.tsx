@@ -6,13 +6,23 @@ const PHASES = [
     label: "Vote",
     duration: "Instant",
     icon: "\u{1F4CA}",
-    steps: ["Choose UP or DOWN", "Select stake amount", "Get reward points (early voters get more)", "Rating updates live"],
+    steps: [
+      "Choose UP or DOWN",
+      "Select stake amount",
+      "Get reward points (early voters get more)",
+      "Rating updates live",
+    ],
   },
   {
     label: "Resolution",
     duration: "Random",
     icon: "\u{1F3B2}",
-    steps: ["Chance of resolution increases over time", "Round resolved automatically", "Majority side wins", "Rating finalized"],
+    steps: [
+      "Chance of resolution increases over time",
+      "Round resolved automatically",
+      "Majority side wins",
+      "Rating finalized",
+    ],
   },
   {
     label: "Claim",
@@ -61,8 +71,9 @@ const PublicVoting: NextPage = () => {
       <h2>Why Public Voting?</h2>
       <p>
         Curyo uses <strong>public voting with early-mover reward pricing</strong>. Every vote is immediately visible
-        publicly and instantly updates the content&apos;s rating. Early and contrarian voters get more shares per cREP
-        staked, creating natural incentives for honest independent judgment without needing cryptographic vote privacy.
+        publicly and instantly updates the content&apos;s rating. Early and contrarian voters get more reward points per
+        cREP staked, creating natural incentives for honest independent judgment without needing cryptographic vote
+        privacy.
       </p>
       <p>
         Rather than hiding votes to prevent herding, the pricing system makes it{" "}
@@ -95,23 +106,25 @@ const PublicVoting: NextPage = () => {
       <h3>Why This Matters</h3>
       <ul>
         <li>
-          <strong>Early voters</strong> get more reward points per cREP because sameDirectionStake is low when they vote.
+          <strong>Early voters</strong> get more reward points per cREP because sameDirectionStake is low when they
+          vote.
         </li>
         <li>
-          <strong>Contrarian voters</strong> (voting against the majority) also get more reward points since their side has
-          less total stake.
+          <strong>Contrarian voters</strong> (voting against the majority) also get more reward points since their side
+          has less total stake.
         </li>
         <li>
-          <strong>Late followers</strong> get fewer reward points per cREP, making bandwagoning unprofitable relative to honest
-          early assessment.
+          <strong>Late followers</strong> get fewer reward points per cREP, making bandwagoning unprofitable relative to
+          honest early assessment.
         </li>
       </ul>
 
       <h3>Reward Distribution</h3>
       <p>
-        When a round is resolved, rewards are distributed <strong>proportional to reward points</strong>, not stakes. If you
-        contributed 10% of the winning side&apos;s reward points, you receive 10% of the voter reward pool. This means early
-        voters who took on more uncertainty are rewarded more generously than late voters who had more information.
+        When a round is resolved, rewards are distributed <strong>proportional to reward points</strong>, not stakes. If
+        you contributed 10% of the winning side&apos;s reward points, you receive 10% of the voter reward pool. This
+        means early voters who took on more uncertainty are rewarded more generously than late voters who had more
+        information.
       </p>
 
       <h2>Live Rating Updates</h2>
@@ -151,7 +164,9 @@ const PublicVoting: NextPage = () => {
             <tr>
               <td className="font-mono">Maximum round length</td>
               <td>~6 hours</td>
-              <td>Resolution guaranteed by this point. Two-sided rounds resolve; one-sided rounds trigger agreement.</td>
+              <td>
+                Resolution guaranteed by this point. Two-sided rounds resolve; one-sided rounds trigger agreement.
+              </td>
             </tr>
             <tr>
               <td className="font-mono">baseRateBps</td>
@@ -173,9 +188,7 @@ const PublicVoting: NextPage = () => {
       </div>
 
       <h3>Resolution Probability</h3>
-      <p>
-        After the minimum voting window, each check has a chance of triggering resolution:
-      </p>
+      <p>After the minimum voting window, each check has a chance of triggering resolution:</p>
       <div className="not-prose my-4 p-4 rounded-xl bg-base-200 font-mono text-sm">
         <p>probability = base rate + (time elapsed beyond minimum) &times; growth rate</p>
         <p>probability = min(probability, maximum cap)</p>
@@ -204,7 +217,8 @@ const PublicVoting: NextPage = () => {
       <ul>
         <li>
           <strong>Anti-herding:</strong> The pricing system makes following the crowd expensive. Late voters get fewer
-          reward points per cREP, so copying the majority is suboptimal compared to voting early based on genuine assessment.
+          reward points per cREP, so copying the majority is suboptimal compared to voting early based on genuine
+          assessment.
         </li>
         <li>
           <strong>Unpredictable resolution:</strong> Using on-chain randomness with content-specific seeds makes
@@ -224,8 +238,8 @@ const PublicVoting: NextPage = () => {
           and farming by coordinated groups.
         </li>
         <li>
-          <strong>Permissionless resolution:</strong> The automated service is fully stateless and holds no secrets.
-          If the primary service goes down, any participant can trigger resolution.
+          <strong>Permissionless resolution:</strong> The automated service is fully stateless and holds no secrets. If
+          the primary service goes down, any participant can trigger resolution.
         </li>
       </ul>
 
@@ -268,7 +282,7 @@ const PublicVoting: NextPage = () => {
             <tr>
               <td>Resolution timing</td>
               <td>Random with increasing probability</td>
-              <td>Fixed epoch boundaries</td>
+              <td>Fixed round boundaries</td>
             </tr>
           </tbody>
         </table>

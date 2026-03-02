@@ -199,8 +199,8 @@ const GettingStarted: NextPage = () => {
       </StepIllustration>
       <h2>2. Verify Your Identity & Get Voter ID</h2>
       <p>
-        To participate in cREP, you need a <strong>Voter ID</strong> &mdash; a soulbound NFT that proves you&apos;re a
-        verified human. This prevents sybil attacks and ensures fair voting.
+        To participate in cREP, you need a <strong>Voter ID</strong> &mdash; a non-transferable digital ID that proves
+        you&apos;re a verified human. This prevents manipulation through fake accounts and ensures fair voting.
       </p>
       <ul>
         <li>
@@ -215,14 +215,14 @@ const GettingStarted: NextPage = () => {
           <a href="https://self.xyz/" target="_blank" rel="noopener noreferrer">
             Self.xyz app
           </a>{" "}
-          (zero-knowledge proof, no personal data stored on-chain)
+          (zero-knowledge proof, no personal data stored publicly)
         </li>
         <li>
           You must be <strong>18 or older</strong> to verify &mdash; the zero-knowledge proof confirms your age without
           revealing your date of birth
         </li>
         <li>
-          Once verified, you&apos;ll receive your <strong>Voter ID NFT</strong> and <strong>cREP tokens</strong> (up to
+          Once verified, you&apos;ll receive your <strong>Voter ID</strong> and <strong>cREP tokens</strong> (up to
           10,000 cREP for the first 10 Genesis users, then 1,000, 100, 10, and eventually 1 cREP as more users join)
         </li>
         <li>Your Voter ID is non-transferable and tied to your wallet</li>
@@ -257,9 +257,9 @@ const GettingStarted: NextPage = () => {
       <h2>4. Vote on Content</h2>
       <p>
         The <strong>Vote</strong> page shows content cards. For each card, predict whether the rating will go UP or DOWN
-        and choose a stake (1&ndash;100 cREP). Your vote is immediately public and updates the live rating via a bonding
-        curve. After a ~30&nbsp;minute grace period, settlement is triggered randomly with increasing probability
-        (forced at ~6&nbsp;hours) &mdash; a keeper service calls <code>trySettle()</code> automatically.
+        and choose a stake (1&ndash;100 cREP). Your vote is immediately public and updates the live rating. Early voters
+        get more reward points per cREP. After a ~30&nbsp;minute grace period, resolution is triggered randomly with
+        increasing probability (forced at ~6&nbsp;hours) &mdash; an automated service handles this for you.
       </p>
       <p>
         <strong>Note:</strong> Each Voter ID can stake a maximum of 100 cREP per content per round. This limit is
@@ -280,11 +280,13 @@ const GettingStarted: NextPage = () => {
           <strong>Returned:</strong> After 4 days if your content maintains a rating above 10%.
         </li>
         <li>
-          <strong>Slashed:</strong> If rating drops below 10% after the 24-hour grace period. 100% goes to the treasury.
+          <strong>Forfeited:</strong> If rating drops below 10% after the 24-hour grace period. 100% goes to the
+          treasury.
         </li>
       </ul>
       <p>
-        As a submitter, you receive <strong>10% of the losing pool</strong> every time a round settles on your content.
+        As a submitter, you receive <strong>10% of the losing pool</strong> every time a round is resolved on your
+        content.
       </p>
 
       <StepIllustration bg="bg-warning/5">
@@ -292,8 +294,8 @@ const GettingStarted: NextPage = () => {
       </StepIllustration>
       <h2>6. Claim Rewards</h2>
       <p>
-        After a round settles, check <strong>Portfolio</strong> to see claimable rewards. Rewards are pull-based &mdash;
-        click &ldquo;Claim&rdquo; to withdraw your stake and winnings.
+        After a round is resolved, check <strong>Portfolio</strong> to see claimable rewards. Click &ldquo;Claim&rdquo;
+        to collect your stake and winnings.
       </p>
 
       <StepIllustration bg="bg-secondary/5">

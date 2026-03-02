@@ -48,15 +48,15 @@ const CuryoAndAI: NextPage = () => {
         </a>{" "}
         &mdash; as articulated by a16z &mdash; proposes that content quality can be assessed through economic commitment
         rather than algorithmic engagement. Curyo implements this thesis directly: voters stake cREP tokens on their
-        quality predictions, and the parimutuel mechanism ensures that accurate assessments are rewarded while
+        quality predictions, and the prediction pool system ensures that accurate assessments are rewarded while
         inaccurate ones are penalized.
       </p>
       <p>
-        Because votes use a <Link href="/docs/how-it-works">bonding curve share model</Link>, early voters who take a
+        Because votes use a <Link href="/docs/how-it-works">early-mover reward model</Link>, early voters who take a
         position before the crowd receive more shares per cREP staked. This creates an economic incentive for{" "}
         <strong>independent assessment</strong> &mdash; voters who do their own research and vote early are rewarded
-        more than those who simply follow the herd. The bonding curve naturally discourages herding behavior through
-        diminishing share returns for late voters on the same side.
+        more than those who simply follow the herd. The pricing system naturally discourages herding behavior through
+        diminishing reward-point returns for late voters on the same side.
       </p>
       <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
         <FeatureCard
@@ -65,7 +65,7 @@ const CuryoAndAI: NextPage = () => {
         />
         <FeatureCard
           title="Early Conviction Rewarded"
-          description="Bonding curve shares reward voters who assess quality independently and early, before the crowd forms a consensus."
+          description="Early-mover pricing rewards voters who assess quality independently and early, before the crowd forms a consensus."
         />
         <FeatureCard
           title="Sybil Resistance"
@@ -73,15 +73,15 @@ const CuryoAndAI: NextPage = () => {
         />
         <FeatureCard
           title="Verifiable Provenance"
-          description="All votes are on-chain with timestamps, stake amounts, and outcomes — fully auditable by anyone."
+          description="All votes are permanently recorded with timestamps, stake amounts, and outcomes — fully auditable by anyone."
         />
       </div>
 
-      <h2>On-Chain Ratings as a Public Good</h2>
+      <h2>Public Ratings as a Public Good</h2>
       <p>
         A core design reason for building Curyo on a blockchain is that{" "}
         <strong>all rating data is inherently public and exportable</strong>. Every vote, every stake amount, every
-        round outcome, and every resulting content rating lives on-chain as a permanent, permissionless data layer.
+        round outcome, and every resulting content rating is stored permanently and publicly, accessible by anyone.
         There is no API rate limit, no terms-of-service restriction, and no company that can revoke access.
       </p>
       <p>This makes Curyo&apos;s ratings available as a public good for the entire ecosystem:</p>
@@ -91,7 +91,7 @@ const CuryoAndAI: NextPage = () => {
           human-verified quality, helping mitigate model collapse.
         </li>
         <li>
-          <strong>Search engines and recommendation systems</strong> can use on-chain ratings as an independent quality
+          <strong>Search engines and recommendation systems</strong> can use public ratings as an independent quality
           signal, reducing dependence on engagement-based proxies.
         </li>
         <li>
@@ -117,14 +117,14 @@ const CuryoAndAI: NextPage = () => {
       </p>
       <p>
         Bot votes use the same public <Link href="/docs/how-it-works">voting mechanism</Link> as human votes &mdash;
-        they are indistinguishable on-chain.
+        they are indistinguishable in the public record.
       </p>
 
       <h3>Human Oversight</h3>
       <p>
         The system is deliberately designed so that human voters always have the final say. Bots stake the minimum
         amount of cREP per vote, while human voters can stake significantly more. In contentious rounds, the aggregate
-        human stake dominates bot contributions. The parimutuel mechanism provides natural selection pressure: bot
+        human stake dominates bot contributions. The prediction pool system provides natural selection pressure: bot
         strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation
         over time.
       </p>
@@ -161,7 +161,7 @@ const CuryoAndAI: NextPage = () => {
         </li>
         <li>
           <strong>Advanced AI strategies</strong> &mdash; The pluggable strategy interface supports increasingly
-          sophisticated approaches, from API-based lookups to LLM-driven content analysis. The parimutuel mechanism
+          sophisticated approaches, from API-based lookups to LLM-driven content analysis. The prediction pool system
           ensures that only strategies producing accurate ratings survive long-term.
         </li>
       </ul>
