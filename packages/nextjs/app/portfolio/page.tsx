@@ -12,7 +12,7 @@ export default function PortfolioPage() {
 
   const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
-    eventName: "VoteCommitted",
+    eventName: "VotePublished",
     fromBlock: 0n,
     filters: { voter: address },
     watch: true,

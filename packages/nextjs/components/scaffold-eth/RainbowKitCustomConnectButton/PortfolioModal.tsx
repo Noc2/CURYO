@@ -15,7 +15,7 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
 
   const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
-    eventName: "VoteCommitted",
+    eventName: "VotePublished",
     fromBlock: 0n,
     filters: { voter: address },
     watch: true,
