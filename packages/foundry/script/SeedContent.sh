@@ -27,7 +27,7 @@ fi
 # Read contract addresses from deployment file
 TOKEN=$(grep -o '"0x[^"]*": "CuryoReputation"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 REGISTRY=$(grep -o '"0x[^"]*": "ContentRegistry"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
-VOTING_ENGINE=$(grep -o '"0x[^"]*": "EpochVotingEngine"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
+VOTING_ENGINE=$(grep -o '"0x[^"]*": "RoundVotingEngine"' "$DEPLOY_JSON" | grep -o '0x[^"]*' || true)
 
 if [ -z "$TOKEN" ] || [ -z "$REGISTRY" ]; then
   echo "ERROR: Could not read contract addresses from $DEPLOY_JSON"
@@ -36,7 +36,7 @@ fi
 
 echo "CuryoReputation:         $TOKEN"
 echo "ContentRegistry:   $REGISTRY"
-echo "EpochVotingEngine: $VOTING_ENGINE"
+echo "RoundVotingEngine: $VOTING_ENGINE"
 echo ""
 
 # Anvil/hardhat default private keys
@@ -173,9 +173,11 @@ echo ""
 
 # --- Voting Section ---
 if [ -z "$VOTING_ENGINE" ]; then
-  echo "Skipping voting: EpochVotingEngine not found"
+  echo "Skipping voting: RoundVotingEngine not found"
   exit 0
 fi
+
+ZERO_ADDR="0x0000000000000000000000000000000000000000"
 
 echo "=== Adding votes from two accounts ==="
 echo ""
@@ -205,69 +207,33 @@ for _ in {1..5}; do
   cast rpc anvil_mine --rpc-url "$RPC" > /dev/null 2>&1
 done
 
-# Function to compute commit hash: keccak256(abi.encodePacked(isUp, salt, contentId))
-compute_commit_hash() {
-  local is_up=$1      # "true" or "false"
-  local salt=$2       # bytes32 hex string
-  local content_id=$3 # uint256
-
-  # Convert isUp to single byte (0x01 for true, 0x00 for false)
-  local is_up_byte
-  if [ "$is_up" = "true" ]; then
-    is_up_byte="01"
-  else
-    is_up_byte="00"
-  fi
-
-  # Remove 0x prefix from salt if present
-  salt="${salt#0x}"
-
-  # Convert contentId to 32-byte hex (pad to 64 hex chars)
-  local content_id_hex
-  content_id_hex=$(printf "%064x" "$content_id")
-
-  # Concatenate: isUp (1 byte) + salt (32 bytes) + contentId (32 bytes)
-  local packed="0x${is_up_byte}${salt}${content_id_hex}"
-
-  # Compute keccak256
-  cast keccak "$packed"
-}
-
-# Vote on content items 1, 2, and 3
+# Vote on content items 1, 2, and 3 using public vote() function
+# vote(uint256 contentId, bool isUp, uint256 stakeAmount, address frontend)
 # Voter 1 votes UP on content 1 and 2
 # Voter 2 votes DOWN on content 1, UP on content 3
 
 echo "Voter 1 voting UP on content 1..."
-SALT1="0x$(openssl rand -hex 32)"
-COMMIT_HASH1=$(compute_commit_hash "true" "$SALT1" 1)
 cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1
-# commitVote(uint256 contentId, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)
-cast send "$VOTING_ENGINE" "commitVote(uint256,bytes32,bytes,uint256,address)" 1 "$COMMIT_HASH1" "0x" "$VOTE_STAKE" "0x0000000000000000000000000000000000000000" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed - epoch might not be active)"
+cast send "$VOTING_ENGINE" "vote(uint256,bool,uint256,address)" 1 true "$VOTE_STAKE" "$ZERO_ADDR" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed)"
 echo "  Done!"
 
 echo "Voter 1 voting UP on content 2..."
-SALT2="0x$(openssl rand -hex 32)"
-COMMIT_HASH2=$(compute_commit_hash "true" "$SALT2" 2)
 cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1
-cast send "$VOTING_ENGINE" "commitVote(uint256,bytes32,bytes,uint256,address)" 2 "$COMMIT_HASH2" "0x" "$VOTE_STAKE" "0x0000000000000000000000000000000000000000" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed - epoch might not be active)"
+cast send "$VOTING_ENGINE" "vote(uint256,bool,uint256,address)" 2 true "$VOTE_STAKE" "$ZERO_ADDR" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed)"
 echo "  Done!"
 
 echo "Voter 2 voting DOWN on content 1..."
-SALT3="0x$(openssl rand -hex 32)"
-COMMIT_HASH3=$(compute_commit_hash "false" "$SALT3" 1)
 cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1
-cast send "$VOTING_ENGINE" "commitVote(uint256,bytes32,bytes,uint256,address)" 1 "$COMMIT_HASH3" "0x" "$VOTE_STAKE" "0x0000000000000000000000000000000000000000" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed - epoch might not be active)"
+cast send "$VOTING_ENGINE" "vote(uint256,bool,uint256,address)" 1 false "$VOTE_STAKE" "$ZERO_ADDR" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed)"
 echo "  Done!"
 
 echo "Voter 2 voting UP on content 3..."
-SALT4="0x$(openssl rand -hex 32)"
-COMMIT_HASH4=$(compute_commit_hash "true" "$SALT4" 3)
 cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1
-cast send "$VOTING_ENGINE" "commitVote(uint256,bytes32,bytes,uint256,address)" 3 "$COMMIT_HASH4" "0x" "$VOTE_STAKE" "0x0000000000000000000000000000000000000000" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed - epoch might not be active)"
+cast send "$VOTING_ENGINE" "vote(uint256,bool,uint256,address)" 3 true "$VOTE_STAKE" "$ZERO_ADDR" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed)"
 echo "  Done!"
 
 echo ""
-echo "=== Voting complete: 4 votes committed ==="
+echo "=== Voting complete: 4 public votes cast ==="
 echo "  Content 1: 2 votes (1 up, 1 down)"
 echo "  Content 2: 1 vote (1 up)"
 echo "  Content 3: 1 vote (1 up)"
