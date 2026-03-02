@@ -114,11 +114,6 @@ function Sparkline({ data }: { data: number[] }) {
   // Build the area path (filled below the line)
   const areaPath = `${linePath} L ${points[n - 1].x} ${CHART_H} L ${points[0].x} ${CHART_H} Z`;
 
-  // Current value for fill opacity
-  const currentVal = data[data.length - 1];
-  const strokeColor = "#fff";
-  const fillOpacity = currentVal >= 55 ? 0.08 : currentVal <= 45 ? 0.08 : 0.04;
-
   // 50% baseline
   const baselineY = PADDING_Y + (1 - (50 - minVal) / range) * (CHART_H - 2 * PADDING_Y);
 
@@ -128,6 +123,18 @@ function Sparkline({ data }: { data: number[] }) {
       className="w-full h-16 rounded-lg bg-base-content/[0.02]"
       preserveAspectRatio="none"
     >
+      <defs>
+        {/* Orange gradient matching the Curyo logo palette */}
+        <linearGradient id={`line-grad-${n}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#FFC43D" />
+          <stop offset="100%" stopColor="#EF476F" />
+        </linearGradient>
+        <linearGradient id={`area-grad-${n}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#FFC43D" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#EF476F" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
       {/* 50% baseline */}
       <line
         x1={PADDING_X}
@@ -140,21 +147,20 @@ function Sparkline({ data }: { data: number[] }) {
       />
 
       {/* Area fill */}
-      <path d={areaPath} fill={strokeColor} fillOpacity={fillOpacity} />
+      <path d={areaPath} fill={`url(#area-grad-${n})`} />
 
       {/* Line */}
       <path
         d={linePath}
         fill="none"
-        stroke={strokeColor}
+        stroke={`url(#line-grad-${n})`}
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeOpacity={0.6}
       />
 
       {/* End dot */}
-      <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill={strokeColor} fillOpacity={0.8} />
+      <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="#EF476F" />
     </svg>
   );
 }
