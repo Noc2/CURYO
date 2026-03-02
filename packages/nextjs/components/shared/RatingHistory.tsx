@@ -123,18 +123,6 @@ function Sparkline({ data }: { data: number[] }) {
       className="w-full h-16 rounded-lg bg-base-content/[0.02]"
       preserveAspectRatio="none"
     >
-      <defs>
-        {/* Orange gradient matching the Curyo logo palette */}
-        <linearGradient id={`line-grad-${n}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#FFC43D" />
-          <stop offset="100%" stopColor="#EF476F" />
-        </linearGradient>
-        <linearGradient id={`area-grad-${n}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#FFC43D" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#EF476F" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
       {/* 50% baseline */}
       <line
         x1={PADDING_X}
@@ -147,20 +135,21 @@ function Sparkline({ data }: { data: number[] }) {
       />
 
       {/* Area fill */}
-      <path d={areaPath} fill={`url(#area-grad-${n})`} />
+      <path d={areaPath} fill="#FFC43D" fillOpacity={0.1} />
 
       {/* Line */}
       <path
         d={linePath}
         fill="none"
-        stroke={`url(#line-grad-${n})`}
+        stroke="#FFC43D"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
+        strokeOpacity={0.8}
       />
 
       {/* End dot */}
-      <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="#EF476F" />
+      <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="#FFC43D" />
     </svg>
   );
 }
