@@ -49,16 +49,16 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
   const settledRoundKeys = new Set(
     settledEvents
       ?.map(e => {
-        const args = e.args as { contentId?: bigint; roundId?: bigint };
-        if (args.contentId === undefined || args.roundId === undefined) return null;
+        const args = e.args as { contentId?: bigint; roundId?: bigint } | undefined;
+        if (!args || args.contentId === undefined || args.roundId === undefined) return null;
         return `${args.contentId.toString()}-${args.roundId.toString()}`;
       })
       .filter((key): key is string => Boolean(key)) ?? [],
   );
   const settledVoteCount =
     commitEvents?.filter(e => {
-      const args = e.args as { contentId?: bigint; roundId?: bigint };
-      if (args.contentId === undefined || args.roundId === undefined) return false;
+      const args = e.args as { contentId?: bigint; roundId?: bigint } | undefined;
+      if (!args || args.contentId === undefined || args.roundId === undefined) return false;
       return settledRoundKeys.has(`${args.contentId.toString()}-${args.roundId.toString()}`);
     }).length ?? 0;
 
@@ -105,10 +105,10 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
             ) : commitEvents && commitEvents.length > 0 ? (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {commitEvents.map((event, idx) => {
-                  const args = event.args as { contentId?: bigint; roundId?: bigint; stake?: bigint };
-                  const contentId = args.contentId;
-                  const roundId = args.roundId;
-                  const stake = args.stake ? (Number(args.stake) / 1e6).toFixed(0) : "?";
+                  const args = event.args as { contentId?: bigint; roundId?: bigint; stake?: bigint } | undefined;
+                  const contentId = args?.contentId;
+                  const roundId = args?.roundId;
+                  const stake = args?.stake ? (Number(args.stake) / 1e6).toFixed(0) : "?";
 
                   const isSettled =
                     contentId !== undefined &&
