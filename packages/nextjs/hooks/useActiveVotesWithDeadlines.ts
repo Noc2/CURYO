@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useBlockNumber, usePublicClient } from "wagmi";
+import { useBlockNumber } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
