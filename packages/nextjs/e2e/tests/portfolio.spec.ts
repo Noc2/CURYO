@@ -15,8 +15,8 @@ test.describe("Portfolio page", () => {
     const totalVotesLabel = main.getByText("Total Votes");
     await expect(totalVotesLabel).toBeVisible({ timeout: 10_000 });
 
-    const settledLabel = main.getByText("Settled");
-    await expect(settledLabel).toBeVisible({ timeout: 10_000 });
+    const resolvedLabel = main.getByText("Resolved");
+    await expect(resolvedLabel).toBeVisible({ timeout: 10_000 });
   });
 
   test("shows vote history section", async ({ connectedPage: page }) => {
