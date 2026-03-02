@@ -144,7 +144,7 @@ export default function PortfolioPage() {
                     ) : (
                       <span
                         className="tooltip tooltip-left text-base font-medium px-4 py-2 rounded-full bg-warning/10 text-warning"
-                        data-tip="Round expires soon. If not resolved by then, stakes are refunded."
+                        data-tip="Max time until round expiry. Rounds usually settle sooner. Stakes refunded if unsettled."
                       >
                         Active
                         {contentId !== undefined &&

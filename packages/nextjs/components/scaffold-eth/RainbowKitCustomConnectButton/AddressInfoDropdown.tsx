@@ -203,8 +203,8 @@ export const AddressInfoDropdown = ({
           className="tooltip tooltip-top text-sm text-base-content/40 text-left px-4 pl-12 cursor-help"
           data-tip={
             earliestDeadline
-              ? `Staked in active rounds (earliest resolves in ${earliestDeadline}). Your claim will appear once each round resolves.`
-              : "Staked in active rounds. Your claim will appear once each round resolves."
+              ? `Staked in active rounds (max ${earliestDeadline} until earliest expiry). Rounds usually settle sooner.`
+              : "Staked in active rounds. Rounds usually settle well before the max duration."
           }
         >
           {activeFormatted} cREP in active votes
@@ -258,8 +258,8 @@ export const AddressInfoDropdown = ({
           className="tooltip tooltip-right text-sm text-base-content/40 hidden xl:inline xl:px-2 cursor-help"
           data-tip={
             earliestDeadline
-              ? `Staked in active rounds (earliest resolves in ${earliestDeadline}). Your claim will appear once each round resolves.`
-              : "Staked in active rounds. Your claim will appear once each round resolves."
+              ? `Staked in active rounds (max ${earliestDeadline} until earliest expiry). Rounds usually settle sooner.`
+              : "Staked in active rounds. Rounds usually settle well before the max duration."
           }
         >
           {activeFormatted} cREP in active votes
