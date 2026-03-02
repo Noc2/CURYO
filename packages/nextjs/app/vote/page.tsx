@@ -529,7 +529,11 @@ const ThumbnailCard = memo(function ThumbnailCard({
 }) {
   const onClick = useCallback(() => onSelect(item.id, item.categoryId), [onSelect, item.id, item.categoryId]);
   const platformInfo = detectPlatform(item.url);
-  const staticThumbnail = getThumbnailUrl(item.url);
+  const rawStaticThumbnail = getThumbnailUrl(item.url);
+  const staticThumbnail =
+    rawStaticThumbnail && (rawStaticThumbnail.startsWith("http://") || rawStaticThumbnail.startsWith("https://"))
+      ? `/api/image-proxy?url=${encodeURIComponent(rawStaticThumbnail)}`
+      : rawStaticThumbnail;
   const [asyncThumbnail, setAsyncThumbnail] = useState<string | null>(null);
   const thumbnail = staticThumbnail || asyncThumbnail;
 
