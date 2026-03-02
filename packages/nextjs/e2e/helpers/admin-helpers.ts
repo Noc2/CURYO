@@ -548,6 +548,37 @@ export async function claimSubmitterReward(
 }
 
 /**
+ * Claim participation reward after round settlement.
+ * Calls RoundVotingEngine.claimParticipationReward(uint256 contentId, uint256 roundId).
+ * Any voter in the round can call — reverts with AlreadyClaimed on double claim.
+ */
+export async function claimParticipationReward(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "claimParticipationReward",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "claimParticipationReward",
+    args: [BigInt(contentId), BigInt(roundId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
  * Check if an address has a VoterID on-chain (not Ponder).
  * Calls holderToTokenId(address) — returns true if tokenId > 0.
  */

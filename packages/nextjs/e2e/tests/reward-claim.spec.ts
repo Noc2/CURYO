@@ -1,5 +1,6 @@
 import {
   approveCREP,
+  claimParticipationReward,
   claimSubmitterReward,
   getActiveRoundId,
   mineBlocks,
@@ -259,5 +260,29 @@ test.describe("Reward claim lifecycle", () => {
       );
       expect(loserReward).toBeFalsy();
     }
+  });
+
+  test("winning voter claims participation reward, double claim reverts", async () => {
+    test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
+    test.setTimeout(60_000);
+
+    // Account #3 voted UP (winning side) — claim participation reward
+    const voter = ANVIL_ACCOUNTS.account3;
+    const success = await claimParticipationReward(
+      BigInt(settledContentId!),
+      roundId,
+      voter.address,
+      VOTING_ENGINE,
+    );
+    expect(success, "Participation reward claim should succeed").toBe(true);
+
+    // Double claim should revert (AlreadyClaimed)
+    const doubleClaim = await claimParticipationReward(
+      BigInt(settledContentId!),
+      roundId,
+      voter.address,
+      VOTING_ENGINE,
+    );
+    expect(doubleClaim, "Double participation reward claim should revert").toBe(false);
   });
 });
