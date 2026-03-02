@@ -3,13 +3,14 @@ import {
   getActiveRoundId,
   mineBlocks,
   readUint256,
+  setTestEpochBlocks,
   submitContentDirect,
   trySettleDirect,
   voteDirect,
   waitForPonderIndexed,
   waitForPonderSync,
 } from "../helpers/admin-helpers";
-import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { getContentById } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
@@ -39,6 +40,11 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const STAKE = BigInt(10e6); // 10 cREP each (above MIN_STAKE_FOR_RATING threshold)
+
+  test.beforeAll(async () => {
+    const ok = await setTestEpochBlocks(10, 50, VOTING_ENGINE, DEPLOYER.address);
+    if (!ok) throw new Error("Failed to set test epoch blocks");
+  });
 
   let contentId: string | null = null;
   let roundId: bigint = 0n;
@@ -110,8 +116,8 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     roundId = await getActiveRoundId(BigInt(contentId!), VOTING_ENGINE);
     expect(roundId).toBeGreaterThan(0n);
 
-    // Advance past maxEpochBlocks for guaranteed settlement
-    await mineBlocks(1801);
+    // Advance past maxEpochBlocks (50) for guaranteed settlement
+    await mineBlocks(51);
     await waitForPonderSync();
 
     // Settle the round

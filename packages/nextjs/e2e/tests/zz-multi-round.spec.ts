@@ -2,13 +2,14 @@ import {
   approveCREP,
   getActiveRoundId,
   mineBlocks,
+  setTestEpochBlocks,
   submitContentDirect,
   trySettleDirect,
   voteDirect,
   waitForPonderIndexed,
   waitForPonderSync,
 } from "../helpers/admin-helpers";
-import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { fastForwardTime } from "../helpers/keeper";
 import { getContentById } from "../helpers/ponder-api";
@@ -35,6 +36,11 @@ test.describe("Multi-round succession", () => {
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const STAKE = BigInt(10e6); // 10 cREP (must be >= MIN_STAKE_FOR_RATING for rating delta > 0)
+
+  test.beforeAll(async () => {
+    const ok = await setTestEpochBlocks(10, 50, VOTING_ENGINE, DEPLOYER.address);
+    if (!ok) throw new Error("Failed to set test epoch blocks");
+  });
 
   let contentId: string | null = null;
   let round1Id: bigint = 0n;
@@ -103,8 +109,8 @@ test.describe("Multi-round succession", () => {
     round1Id = await getActiveRoundId(BigInt(contentId!), VOTING_ENGINE);
     expect(round1Id).toBeGreaterThan(0n);
 
-    // Advance past maxEpochBlocks for guaranteed settlement
-    await mineBlocks(1801);
+    // Advance past maxEpochBlocks (50) for guaranteed settlement
+    await mineBlocks(51);
     await waitForPonderSync();
 
     // Settle round 1
@@ -151,8 +157,8 @@ test.describe("Multi-round succession", () => {
     round2Id = await getActiveRoundId(BigInt(contentId!), VOTING_ENGINE);
     expect(round2Id).toBeGreaterThan(round1Id);
 
-    // Advance past maxEpochBlocks for guaranteed settlement
-    await mineBlocks(1801);
+    // Advance past maxEpochBlocks (50) for guaranteed settlement
+    await mineBlocks(51);
     await waitForPonderSync();
 
     // Settle round 2

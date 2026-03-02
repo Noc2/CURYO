@@ -1,5 +1,11 @@
-import { mineBlocks, trySettleDirect, waitForPonderIndexed, waitForPonderSync } from "../helpers/admin-helpers";
-import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import {
+  mineBlocks,
+  setTestEpochBlocks,
+  trySettleDirect,
+  waitForPonderIndexed,
+  waitForPonderSync,
+} from "../helpers/admin-helpers";
+import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { fastForwardTime, waitForSettlementIndexed } from "../helpers/keeper";
 import { setupWallet } from "../helpers/local-storage";
@@ -28,6 +34,11 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("Tied round lifecycle", () => {
   test.describe.configure({ mode: "serial" });
+
+  test.beforeAll(async () => {
+    const ok = await setTestEpochBlocks(10, 50, CONTRACT_ADDRESSES.RoundVotingEngine, DEPLOYER.address);
+    if (!ok) throw new Error("Failed to set test epoch blocks");
+  });
 
   let newContentId: string | null = null;
 
@@ -140,8 +151,8 @@ test.describe("Tied round lifecycle", () => {
     const preData = await getContentById(newContentId!);
     const preRating = preData.content.rating;
 
-    // Mine past maxEpochBlocks for guaranteed settlement
-    await mineBlocks(1801);
+    // Mine past maxEpochBlocks (50) for guaranteed settlement
+    await mineBlocks(51);
     await waitForPonderSync();
 
     // Try to settle
