@@ -816,6 +816,118 @@ export async function waitForPonderIndexed(
 }
 
 /**
+ * Read the current RoundVotingEngine config tuple.
+ * Returns all 9 fields from the config() public getter.
+ */
+export async function readRoundConfig(contractAddress: string): Promise<{
+  minEpochBlocks: bigint;
+  maxEpochBlocks: bigint;
+  maxDuration: bigint;
+  minVoters: bigint;
+  maxVoters: bigint;
+  baseRateBps: number;
+  growthRateBps: number;
+  maxProbBps: number;
+  liquidityParam: bigint;
+}> {
+  const { encodeFunctionData, decodeFunctionResult } = await import("viem");
+  const abi = [
+    {
+      name: "config",
+      type: "function",
+      inputs: [],
+      outputs: [
+        { name: "minEpochBlocks", type: "uint64" },
+        { name: "maxEpochBlocks", type: "uint64" },
+        { name: "maxDuration", type: "uint256" },
+        { name: "minVoters", type: "uint256" },
+        { name: "maxVoters", type: "uint256" },
+        { name: "baseRateBps", type: "uint16" },
+        { name: "growthRateBps", type: "uint16" },
+        { name: "maxProbBps", type: "uint16" },
+        { name: "liquidityParam", type: "uint256" },
+      ],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({ abi, functionName: "config" });
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: contractAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) throw new Error(`readRoundConfig failed: ${JSON.stringify(json.error)}`);
+  const [minEpochBlocks, maxEpochBlocks, maxDuration, minVoters, maxVoters, baseRateBps, growthRateBps, maxProbBps, liquidityParam] =
+    decodeFunctionResult({ abi, functionName: "config", data: json.result });
+  return {
+    minEpochBlocks,
+    maxEpochBlocks,
+    maxDuration,
+    minVoters,
+    maxVoters,
+    baseRateBps,
+    growthRateBps,
+    maxProbBps,
+    liquidityParam,
+  };
+}
+
+/**
+ * Set test-friendly epoch blocks on the RoundVotingEngine.
+ * Reads current config, replaces minEpochBlocks/maxEpochBlocks, preserves all other params.
+ * Requires CONFIG_ROLE (account #9 / DEPLOYER in mock mode).
+ */
+export async function setTestEpochBlocks(
+  minEpoch = 10,
+  maxEpoch = 50,
+  contractAddress: string,
+  fromAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const cfg = await readRoundConfig(contractAddress);
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "setConfig",
+        type: "function",
+        inputs: [
+          { name: "_minEpochBlocks", type: "uint64" },
+          { name: "_maxEpochBlocks", type: "uint64" },
+          { name: "_maxDuration", type: "uint256" },
+          { name: "_minVoters", type: "uint256" },
+          { name: "_maxVoters", type: "uint256" },
+          { name: "_baseRateBps", type: "uint16" },
+          { name: "_growthRateBps", type: "uint16" },
+          { name: "_maxProbBps", type: "uint16" },
+          { name: "_liquidityParam", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "setConfig",
+    args: [
+      BigInt(minEpoch),
+      BigInt(maxEpoch),
+      cfg.maxDuration,
+      cfg.minVoters,
+      cfg.maxVoters,
+      cfg.baseRateBps,
+      cfg.growthRateBps,
+      cfg.maxProbBps,
+      cfg.liquidityParam,
+    ],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
  * Wait for Ponder to catch up to the current chain block number.
  * Call this after mineBlocks() to ensure Ponder has processed all new blocks
  * before polling for specific indexed data.
