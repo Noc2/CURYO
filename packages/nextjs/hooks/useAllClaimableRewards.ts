@@ -26,9 +26,8 @@ export function useAllClaimableRewards() {
     queryKey: ["allClaimableVotes", address],
     ponderFn: async () => {
       if (!address) return [];
-      const profile = await ponderApi.getProfile(address);
-      // recentVotes from Ponder contains { contentId, roundId, isUp, stake, ... }
-      return (profile.recentVotes ?? []) as Array<{
+      const res = await ponderApi.getVotes({ voter: address, limit: "50" });
+      return (res.items ?? []) as Array<{
         contentId: string;
         roundId: string;
         isUp: boolean;

@@ -282,4 +282,8 @@ export const ponderApi = {
       voters: voters.join(","),
     });
   },
+
+  getVotes(params?: { voter?: string; contentId?: string; roundId?: string; limit?: string; offset?: string }) {
+    return ponderGet<{ items: any[] }>("/votes", params);
+  },
 };
