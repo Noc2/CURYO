@@ -612,6 +612,7 @@ app.get("/votes", async (c) => {
       shares: vote.shares,
       votedAt: vote.votedAt,
       roundStartTime: round.startTime,
+      roundStartBlock: round.startBlock,
       roundState: round.state,
     })
     .from(vote)

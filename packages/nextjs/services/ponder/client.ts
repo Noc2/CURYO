@@ -187,6 +187,7 @@ export interface PonderVoteItem {
   shares: string;
   votedAt: string;
   roundStartTime: string | null;
+  roundStartBlock: string | null;
   roundState: number | null;
 }
 

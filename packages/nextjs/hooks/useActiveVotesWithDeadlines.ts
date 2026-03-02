@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useBlockNumber, usePublicClient } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
@@ -42,20 +43,26 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
     return () => clearInterval(interval);
   }, []);
 
-  // Read config.maxDuration from contract
+  // Current block number for epoch deadline calculation
+  const { data: currentBlock } = useBlockNumber({ watch: true });
+
+  // Read config from contract (maxEpochBlocks for settlement, maxDuration for cancellation)
   const { data: rawConfig } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "config" as any,
     query: { refetchInterval: 60_000 },
   } as any);
 
+  let maxEpochBlocks = 7200; // default ~24h at 12s blocks
   let maxDuration = 7 * 24 * 60 * 60; // default 7 days
   if (rawConfig) {
     const config = rawConfig as any;
-    if (config.maxDuration != null) {
+    if (config.maxEpochBlocks != null) {
+      maxEpochBlocks = Number(config.maxEpochBlocks);
       maxDuration = Number(config.maxDuration);
     } else if (Array.isArray(config)) {
-      maxDuration = Number(config[2]);
+      maxEpochBlocks = Number(config[1]); // maxEpochBlocks is index 1
+      maxDuration = Number(config[2]); // maxDuration is index 2
     }
   }
 
@@ -73,13 +80,33 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
   });
 
   const items = ponderResult?.data?.items ?? [];
+  const curBlock = currentBlock ? Number(currentBlock) : 0;
 
   const votes: ActiveVoteWithDeadline[] = items
     .filter(v => v.roundStartTime != null)
     .map(v => {
       const startTime = Number(v.roundStartTime);
-      const deadline = startTime + maxDuration;
-      const timeRemaining = Math.max(0, deadline - now);
+      const startBlock = v.roundStartBlock ? Number(v.roundStartBlock) : 0;
+
+      // Compute settlement deadline from epoch blocks (the actual settlement window)
+      let epochTimeRemaining = Infinity;
+      if (startBlock > 0 && curBlock > 0) {
+        const epochDeadlineBlock = startBlock + maxEpochBlocks;
+        const blocksRemaining = Math.max(0, epochDeadlineBlock - curBlock);
+        // Estimate block time from this round's data
+        const blocksElapsed = curBlock - startBlock;
+        const timeElapsed = now - startTime;
+        const avgBlockTime = blocksElapsed > 0 && timeElapsed > 0 ? timeElapsed / blocksElapsed : 12;
+        epochTimeRemaining = blocksRemaining * avgBlockTime;
+      }
+
+      // Compute cancellation deadline from maxDuration (worst-case safety net)
+      const durationTimeRemaining = Math.max(0, startTime + maxDuration - now);
+
+      // Use the tighter of the two deadlines
+      const timeRemaining = Math.max(0, Math.floor(Math.min(epochTimeRemaining, durationTimeRemaining)));
+      const deadline = now + timeRemaining;
+
       return {
         contentId: v.contentId,
         roundId: v.roundId,
