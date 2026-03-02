@@ -30,7 +30,7 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
       const thumb = thumbnails.nth(i);
       if (await thumb.isVisible().catch(() => false)) {
         await thumb.click();
-        await page.waitForTimeout(2_000);
+        await page.waitForTimeout(1_000);
         canVote = await voteBtn
           .waitFor({ state: "visible", timeout: 3_000 })
           .then(() => true)

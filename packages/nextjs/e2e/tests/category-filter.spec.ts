@@ -49,7 +49,7 @@ test.describe("Category filter", () => {
     await expect(page).toHaveURL(expectedHash);
 
     // Wait for feed to re-render after category change
-    await page.waitForTimeout(1_000);
+    await waitForFeedLoaded(page, 5_000);
 
     // Feed should show content cards or empty state — not an error page
     const feedContent = page.getByRole("button", { name: /Vote up|Vote down/i });
@@ -133,7 +133,7 @@ test.describe("Category filter", () => {
     // Type part of the category name to filter
     const searchTerm = trimmed!.slice(0, 3).toLowerCase();
     await searchInput.fill(searchTerm);
-    await page.waitForTimeout(500);
+    await waitForFeedLoaded(page, 5_000);
 
     // Should still show the matching category
     const matchingOption = dropdown.locator("button").filter({ hasText: trimmed! });
@@ -157,7 +157,7 @@ test.describe("Category filter", () => {
     await page.waitForURL(expectedHash, { timeout: 5_000 });
 
     // Wait for feed to re-render after category change
-    await page.waitForTimeout(1_000);
+    await waitForFeedLoaded(page, 5_000);
 
     // Should show content cards, vote buttons, loading state, or the empty state
     const thumbnailCards = page.locator(".grid button").filter({ has: page.locator("img") });
