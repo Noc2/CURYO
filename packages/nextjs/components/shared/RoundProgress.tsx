@@ -93,9 +93,9 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
       {formattedExpiry && (
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            Expires
+            Settles within
             <InfoTooltip
-              text="If the round doesn't reach enough voters before expiry, it is cancelled and all stakes are refunded."
+              text="Maximum time until the round settles or expires. Settlement usually happens sooner via the keeper."
               position="bottom"
             />
           </span>
