@@ -64,6 +64,9 @@ contract CuryoGovernor is
     /// @notice One-time initialization of pool addresses for dynamic quorum calculation.
     /// @dev Can only be called once by the deployment initializer.
     ///      After initialization, pool addresses cannot be changed — the quorum formula is fixed.
+    // AUDIT NOTE (L-1): Pool addresses are immutable after initialization. If wrong
+    // addresses are passed, dynamic quorum is permanently broken. This is intentional
+    // to prevent governance manipulation of the quorum formula.
     function initializePools(address _humanFaucet, address _participationPool, address _rewardDistributor) external {
         require(!poolsInitialized, "Pools already initialized");
         require(msg.sender == poolsInitializer, "Only pools initializer");

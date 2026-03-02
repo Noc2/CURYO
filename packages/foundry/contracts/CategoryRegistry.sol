@@ -385,8 +385,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
             bool hasMoreDots = false;
             for (uint256 j = startIndex + 2; j < b.length; j++) {
                 if (b[j] == "/" || b[j] == ":" || b[j] == "?" || b[j] == "#") break;
-                if (b[j] == ".") hasMoreDots = true;
-                break;
+                if (b[j] == ".") { hasMoreDots = true; break; }
             }
             if (hasMoreDots) {
                 startIndex += 2;

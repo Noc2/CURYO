@@ -369,6 +369,10 @@ contract RoundVotingEngine is
     // PUBLIC VOTING
     // =========================================================================
 
+    // AUDIT NOTE (M-3): Votes are public and price-moving. MEV searchers can front-run
+    // to get cheaper bonding curve shares. Mitigated by VoterIdNFT (one per human),
+    // MAX_STAKE (100 cREP), and 24h cooldown. Consider private mempool for frontends.
+
     /// @notice Cast a public vote on content. Direction is immediately visible and price-moving.
     /// @dev Each vote shifts the content rating in real-time. Early/contrarian voters get more
     ///      shares per cREP staked via bonding curve dynamics (shares = stake * b / (sameDirectionStake + b)).
@@ -646,7 +650,10 @@ contract RoundVotingEngine is
         uint256 prob = uint256(roundCfg.baseRateBps) + window * uint256(roundCfg.growthRateBps);
         if (prob > roundCfg.maxProbBps) prob = roundCfg.maxProbBps;
 
-        // Random check using prevrandao
+        // AUDIT NOTE (H-1): block.prevrandao is known to the block proposer before tx inclusion.
+        // A validator-voter could withhold trySettle txs to delay unfavorable settlement.
+        // Mitigations: forced settlement at maxEpochBlocks, small MAX_STAKE (100 cREP),
+        // permissionless trySettle (anyone can trigger it).
         uint256 rand = uint256(keccak256(abi.encodePacked(block.prevrandao, contentId, roundId, block.number)));
         return (rand % 10000) < prob;
     }

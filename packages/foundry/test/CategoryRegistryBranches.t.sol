@@ -226,8 +226,7 @@ contract NormalizeDomainHarness {
             bool hasMoreDots = false;
             for (uint256 j = startIndex + 2; j < b.length; j++) {
                 if (b[j] == "/" || b[j] == ":" || b[j] == "?" || b[j] == "#") break;
-                if (b[j] == ".") hasMoreDots = true;
-                break;
+                if (b[j] == ".") { hasMoreDots = true; break; }
             }
             if (hasMoreDots) {
                 startIndex += 2;
@@ -283,15 +282,9 @@ contract NormalizeDomainTest is Test {
     }
 
     function test_NormalizeDomain_MobileSubdomain_m() public view {
-        // "m.youtube.com" — single-char subdomain should be stripped if valid domain follows
-        // The logic checks if the char after "m." has a dot → "youtube.com" has one
-        // But the loop breaks after first char check. If b[startIndex+2] == "y" (not a dot),
-        // hasMoreDots stays false. So "m.youtube.com" actually does NOT strip "m."
-        // because the loop checks b[j] and if it's not a dot, it breaks immediately.
-        // This is actually a known limitation. Let's verify the behavior:
+        // "m.youtube.com" — single-char subdomain should be stripped to "youtube.com"
         string memory result = harness.normalizeDomain("m.youtube.com");
-        // Due to the break in the loop, hasMoreDots is false when the next char is not "."
-        assertEq(result, "m.youtube.com");
+        assertEq(result, "youtube.com");
     }
 
     function test_NormalizeDomain_MobileSubdomain_WithDotNext() public view {

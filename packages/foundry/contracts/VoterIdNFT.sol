@@ -16,6 +16,9 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @notice Maximum stake per Voter ID per content per epoch (100 cREP with 6 decimals)
     uint256 public constant MAX_STAKE_PER_VOTER = 100e6;
 
+    /// @notice Maximum supply of Voter IDs (defense-in-depth against compromised identity provider)
+    uint256 public constant MAX_SUPPLY = 10_000_000;
+
     // ====================================================
     // Storage Variables
     // ====================================================
@@ -77,6 +80,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     error CannotDelegateSelf();
     error CallerNotHolder();
     error CallerIsDelegate();
+    error MaxSupplyReached();
 
     // ====================================================
     // Constructor
@@ -163,9 +167,8 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     // ====================================================
 
     /// @notice Mint a new Voter ID NFT
-    /// @dev AUDIT NOTE (M-5): No on-chain maxSupply cap exists. Supply is bounded by unique
-    ///      passport nullifiers from Self.xyz (one per real human). An on-chain cap can be
-    ///      added later if defense-in-depth is desired.
+    /// @dev Supply is bounded by unique passport nullifiers from Self.xyz (one per real human)
+    ///      plus an on-chain MAX_SUPPLY cap (10M) as defense-in-depth.
     /// @param to The address to mint to
     /// @param nullifier The passport nullifier from Self.xyz
     /// @return tokenId The minted token ID
@@ -176,6 +179,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (delegateOf[to] != address(0)) revert DelegateAlreadyAssigned();
 
         tokenId = _tokenIdCounter++;
+        if (tokenId > MAX_SUPPLY) revert MaxSupplyReached();
 
         // Mark nullifier as used
         nullifierUsed[nullifier] = true;

@@ -72,6 +72,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Track actual referral earnings per address
     mapping(address => uint256) public referralEarnings;
 
+    /// @notice Reentrancy lock for customVerificationHook (defense-in-depth)
+    bool private _claiming;
+
     /// @notice The Voter ID NFT contract (soulbound token for verified humans)
     IVoterIdNFT public voterIdNFT;
 
@@ -329,6 +332,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         internal
         override
     {
+        require(!_claiming, "Reentrant");
+        _claiming = true;
+
         _requireNotPaused();
 
         // Validate user identifier
@@ -411,12 +417,16 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             uint256 tokenId = voterIdNFT.mint(user, output.nullifier);
             emit VoterIdMinted(user, tokenId, output.nullifier);
         }
+
+        _claiming = false;
     }
 
     /// @notice Decode referrer address from userData
     /// @param userData The user data bytes containing referrer address
     /// @return The referrer address (or zero address if invalid)
     function _decodeReferrer(bytes memory userData) internal pure returns (address) {
+        if (userData.length == 0) return address(0);
+        if (userData.length == 32) return abi.decode(userData, (address));
         if (userData.length < 20) return address(0);
 
         address referrer;
