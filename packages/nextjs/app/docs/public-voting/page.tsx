@@ -6,19 +6,19 @@ const PHASES = [
     label: "Vote",
     duration: "Instant",
     icon: "\u{1F4CA}",
-    steps: ["Choose UP or DOWN", "Select stake amount", "Get shares via bonding curve", "Rating updates live"],
+    steps: ["Choose UP or DOWN", "Select stake amount", "Get reward points (early voters get more)", "Rating updates live"],
   },
   {
-    label: "Settlement",
+    label: "Resolution",
     duration: "Random",
     icon: "\u{1F3B2}",
-    steps: ["Probability increases per block", "Anyone can call trySettle()", "Majority side wins", "Rating finalized"],
+    steps: ["Chance of resolution increases over time", "Round resolved automatically", "Majority side wins", "Rating finalized"],
   },
   {
     label: "Claim",
     duration: "Anytime",
     icon: "\u{1F3C6}",
-    steps: ["Winners claim rewards", "Share-proportional payout", "Submitter fee credited", "New round can begin"],
+    steps: ["Winners claim rewards", "Payout based on reward points", "Submitter fee credited", "New round can begin"],
   },
 ];
 
@@ -52,20 +52,20 @@ function VotingFlowDiagram() {
 const PublicVoting: NextPage = () => {
   return (
     <article className="prose max-w-none">
-      <h1>Public Voting &amp; Random Settlement</h1>
+      <h1>Public Voting &amp; Random Resolution</h1>
       <p className="lead text-base-content/60 text-lg">
-        How Curyo makes votes immediately visible and price-moving, with settlement triggered randomly to prevent timing
+        How Curyo makes votes immediately visible and price-moving, with resolution triggered randomly to prevent timing
         games.
       </p>
 
       <h2>Why Public Voting?</h2>
       <p>
-        Curyo uses <strong>public voting with bonding curve share pricing</strong>. Every vote is immediately visible
-        on-chain and instantly updates the content&apos;s rating. Early and contrarian voters get more shares per cREP
+        Curyo uses <strong>public voting with early-mover reward pricing</strong>. Every vote is immediately visible
+        publicly and instantly updates the content&apos;s rating. Early and contrarian voters get more shares per cREP
         staked, creating natural incentives for honest independent judgment without needing cryptographic vote privacy.
       </p>
       <p>
-        Rather than hiding votes to prevent herding, the bonding curve makes it{" "}
+        Rather than hiding votes to prevent herding, the pricing system makes it{" "}
         <strong>expensive to follow the crowd</strong> and <strong>rewarding to be early or contrarian</strong>. This
         achieves the same anti-manipulation goal with better UX: one-click voting, instant feedback, and no waiting for
         reveals.
@@ -76,41 +76,41 @@ const PublicVoting: NextPage = () => {
         <VotingFlowDiagram />
       </div>
 
-      <h2>Share Pricing (Bonding Curve)</h2>
+      <h2>Reward Points (Early-Mover Pricing)</h2>
 
-      <h3>How Shares Work</h3>
+      <h3>How Reward Points Work</h3>
       <p>
-        When you vote, your cREP stake is converted into <strong>shares</strong> using a bonding curve formula. The
-        number of shares you receive depends on how much stake is already on your side:
+        When you vote, your cREP stake is converted into <strong>reward points</strong> using a pricing formula. The
+        number of reward points you receive depends on how much stake is already on your side:
       </p>
       <div className="not-prose my-4 p-4 rounded-xl bg-base-200 font-mono text-center text-lg">
-        shares = stake &times; b / (sameDirectionStake + b)
+        reward points = stake &times; b / (sameDirectionStake + b)
       </div>
       <p>
         Here <code>b</code> is the <strong>liquidity parameter</strong> (default: 1,000 cREP). When your side has little
-        stake, you get nearly 1 share per cREP. As more stake piles on your side, each additional cREP buys fewer
-        shares.
+        stake, you get nearly 1 reward point per cREP. As more stake piles on your side, each additional cREP buys fewer
+        reward points.
       </p>
 
       <h3>Why This Matters</h3>
       <ul>
         <li>
-          <strong>Early voters</strong> get more shares per cREP because sameDirectionStake is low when they vote.
+          <strong>Early voters</strong> get more reward points per cREP because sameDirectionStake is low when they vote.
         </li>
         <li>
-          <strong>Contrarian voters</strong> (voting against the majority) also get more shares since their side has
+          <strong>Contrarian voters</strong> (voting against the majority) also get more reward points since their side has
           less total stake.
         </li>
         <li>
-          <strong>Late followers</strong> get fewer shares per cREP, making bandwagoning unprofitable relative to honest
+          <strong>Late followers</strong> get fewer reward points per cREP, making bandwagoning unprofitable relative to honest
           early assessment.
         </li>
       </ul>
 
       <h3>Reward Distribution</h3>
       <p>
-        When a round settles, rewards are distributed <strong>proportional to shares</strong>, not stakes. If you
-        contributed 10% of the winning side&apos;s shares, you receive 10% of the voter reward pool. This means early
+        When a round is resolved, rewards are distributed <strong>proportional to reward points</strong>, not stakes. If you
+        contributed 10% of the winning side&apos;s reward points, you receive 10% of the voter reward pool. This means early
         voters who took on more uncertainty are rewarded more generously than late voters who had more information.
       </p>
 
@@ -125,13 +125,12 @@ const PublicVoting: NextPage = () => {
         more votes come in, the rating reflects the aggregate weighted sentiment.
       </p>
 
-      <h2>Random Settlement</h2>
+      <h2>Random Resolution</h2>
 
-      <h3>How Settlement Works</h3>
+      <h3>How Resolution Works</h3>
       <p>
-        Settlement is triggered <strong>randomly with increasing probability</strong> per block, preventing voters from
-        timing their entry to avoid risk. The settlement check uses <code>block.prevrandao</code> as the randomness
-        source.
+        Resolution is triggered <strong>randomly with increasing probability</strong>, preventing voters from timing
+        their entry to avoid risk. The resolution check uses on-chain randomness as the source.
       </p>
 
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -145,77 +144,76 @@ const PublicVoting: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono">minEpochBlocks</td>
-              <td>150 (~30 min)</td>
-              <td>Settlement impossible before this many blocks. Guarantees a minimum voting window.</td>
+              <td className="font-mono">Minimum voting window</td>
+              <td>~30 minutes</td>
+              <td>Resolution impossible before this time. Guarantees a minimum voting window.</td>
             </tr>
             <tr>
-              <td className="font-mono">maxEpochBlocks</td>
-              <td>1,800 (~6 hrs)</td>
-              <td>Settlement guaranteed by this point. Two-sided rounds settle; one-sided rounds trigger consensus.</td>
+              <td className="font-mono">Maximum round length</td>
+              <td>~6 hours</td>
+              <td>Resolution guaranteed by this point. Two-sided rounds resolve; one-sided rounds trigger agreement.</td>
             </tr>
             <tr>
               <td className="font-mono">baseRateBps</td>
               <td>30 (0.3%)</td>
-              <td>Initial settlement probability per block after minEpochBlocks.</td>
+              <td>Initial resolution probability per check.</td>
             </tr>
             <tr>
               <td className="font-mono">growthRateBps</td>
               <td>3 (0.03%)</td>
-              <td>Additional probability per block beyond minEpochBlocks.</td>
+              <td>Additional probability increase over time.</td>
             </tr>
             <tr>
               <td className="font-mono">maxProbBps</td>
               <td>500 (5%)</td>
-              <td>Maximum probability per block cap.</td>
+              <td>Maximum probability cap.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h3>Settlement Probability</h3>
+      <h3>Resolution Probability</h3>
       <p>
-        After <code>minEpochBlocks</code>, each block has a chance of triggering settlement:
+        After the minimum voting window, each check has a chance of triggering resolution:
       </p>
       <div className="not-prose my-4 p-4 rounded-xl bg-base-200 font-mono text-sm">
-        <p>prob = baseRateBps + (block - startBlock - minEpochBlocks) &times; growthRateBps</p>
-        <p>prob = min(prob, maxProbBps)</p>
-        <p>settle if: keccak256(prevrandao, contentId, roundId, blockNumber) mod 10000 &lt; prob</p>
+        <p>probability = base rate + (time elapsed beyond minimum) &times; growth rate</p>
+        <p>probability = min(probability, maximum cap)</p>
       </div>
       <p>
-        This creates a <strong>hazard rate</strong> that makes settlement increasingly likely over time but
-        unpredictable at any specific block. Voters cannot reliably time their votes to avoid settlement risk.
+        This creates a <strong>hazard rate</strong> that makes resolution increasingly likely over time but
+        unpredictable at any specific moment. Voters cannot reliably time their votes to avoid resolution risk.
       </p>
 
-      <h3>Self-Settling</h3>
+      <h3>Self-Resolving</h3>
       <p>
-        The <code>vote()</code> function internally checks whether the current round should settle before processing the
-        new vote. This means every vote doubles as a potential settlement trigger. Additionally, anyone can call{" "}
-        <code>trySettle(contentId)</code> directly &mdash; the keeper service does this periodically for active rounds.
+        The voting function internally checks whether the current round should resolve before processing the new vote.
+        This means every vote doubles as a potential resolution trigger. Additionally, an automated service checks
+        periodically for active rounds that are ready to resolve.
       </p>
 
-      <h3>One-Sided Rounds (Consensus)</h3>
+      <h3>One-Sided Rounds (Agreement)</h3>
       <p>
-        If all voters agree (only UP or only DOWN votes) and the round reaches <code>maxEpochBlocks</code>, a{" "}
-        <strong>consensus settlement</strong> triggers. The contract pays a small subsidy from the treasury to reward
-        unanimous agreement, since there is no losing pool to redistribute. This incentivizes voting on uncontroversial
-        content where the &ldquo;correct&rdquo; answer is obvious.
+        If all voters agree (only UP or only DOWN votes) and the round reaches the maximum length, an{" "}
+        <strong>agreement bonus</strong> triggers. The system pays a small subsidy from the treasury to reward unanimous
+        agreement, since there is no losing pool to redistribute. This incentivizes voting on uncontroversial content
+        where the &ldquo;correct&rdquo; answer is obvious.
       </p>
 
       <h2>Security Properties</h2>
       <ul>
         <li>
-          <strong>Anti-herding:</strong> The bonding curve makes following the crowd expensive. Late voters get fewer
-          shares per cREP, so copying the majority is suboptimal compared to voting early based on genuine assessment.
+          <strong>Anti-herding:</strong> The pricing system makes following the crowd expensive. Late voters get fewer
+          reward points per cREP, so copying the majority is suboptimal compared to voting early based on genuine assessment.
         </li>
         <li>
-          <strong>Unpredictable settlement:</strong> Using <code>block.prevrandao</code> with content-specific seeds
-          makes settlement timing unpredictable. Validators cannot profitably manipulate settlement for specific content
+          <strong>Unpredictable resolution:</strong> Using on-chain randomness with content-specific seeds makes
+          resolution timing unpredictable. Validators cannot profitably manipulate resolution for specific content
           without controlling block production.
         </li>
         <li>
           <strong>No timing games:</strong> The increasing probability curve ensures that delaying a vote does not
-          reduce settlement risk &mdash; if anything, it increases the chance of settling before you can vote.
+          reduce resolution risk &mdash; if anything, it increases the chance of resolving before you can vote.
         </li>
         <li>
           <strong>Sybil resistance:</strong> Voter ID NFTs cap each verified person at 100 cREP per content per round,
@@ -226,8 +224,8 @@ const PublicVoting: NextPage = () => {
           and farming by coordinated groups.
         </li>
         <li>
-          <strong>Permissionless settlement:</strong> Anyone can call <code>trySettle()</code>. The keeper is fully
-          stateless and holds no secrets. If the primary keeper goes down, any participant can trigger settlement.
+          <strong>Permissionless resolution:</strong> The automated service is fully stateless and holds no secrets.
+          If the primary service goes down, any participant can trigger resolution.
         </li>
       </ul>
 
@@ -249,7 +247,7 @@ const PublicVoting: NextPage = () => {
             </tr>
             <tr>
               <td>Anti-herding mechanism</td>
-              <td>Bonding curve pricing</td>
+              <td>Early-mover pricing</td>
               <td>Cryptographic privacy</td>
             </tr>
             <tr>
@@ -265,10 +263,10 @@ const PublicVoting: NextPage = () => {
             <tr>
               <td>Real-time feedback</td>
               <td>Yes (live rating updates)</td>
-              <td>No (hidden until epoch end)</td>
+              <td>No (hidden until round end)</td>
             </tr>
             <tr>
-              <td>Settlement timing</td>
+              <td>Resolution timing</td>
               <td>Random with increasing probability</td>
               <td>Fixed epoch boundaries</td>
             </tr>

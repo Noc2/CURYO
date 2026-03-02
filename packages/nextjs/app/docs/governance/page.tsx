@@ -4,14 +4,14 @@ const GovernanceDocs: NextPage = () => {
   return (
     <article className="prose max-w-none">
       <h1>Governance</h1>
-      <p className="lead text-base-content/60 text-lg">On-chain governance for shaping the platform&apos;s future.</p>
+      <p className="lead text-base-content/60 text-lg">Community governance for shaping the platform&apos;s future.</p>
 
       <h2>Overview</h2>
       <p>
         Curyo is fully decentralized from day one. There is no team, company, foundation, or central authority making
-        decisions &mdash; every aspect of the platform is shaped by its community through on-chain governance. Built on
+        decisions &mdash; every aspect of the platform is shaped by its community through community voting. Built on
         OpenZeppelin&apos;s Governor contracts, token holders create proposals, vote, and execute approved changes
-        directly on-chain. After deployment finalization (role renounce ceremony), no privileged admin keys or multisigs
+        directly through the system. After deployment finalization (role renounce ceremony), no privileged admin keys or multisigs
         remain.
       </p>
       <p>
@@ -124,24 +124,24 @@ const GovernanceDocs: NextPage = () => {
               <td>5</td>
               <td>
                 Minimum votes required before a round can settle. Prevents thin-market exploitation by coordinated
-                minorities. Rounds that don&apos;t reach this threshold within the max epoch window are cancelled with
+                minorities. Rounds that don&apos;t reach this threshold within the maximum round duration are cancelled with
                 full refunds.
               </td>
             </tr>
             <tr>
-              <td className="font-mono">Min epoch blocks</td>
-              <td>150 (~30 min)</td>
+              <td className="font-mono">Minimum voting window</td>
+              <td>~30 minutes</td>
               <td>
                 Minimum number of blocks before a round becomes eligible for settlement. Ensures a meaningful voting
                 window.
               </td>
             </tr>
             <tr>
-              <td className="font-mono">Max epoch blocks</td>
-              <td>1,800 (~6 hrs)</td>
+              <td className="font-mono">Maximum round length</td>
+              <td>~6 hours</td>
               <td>
-                Maximum blocks before a round must settle or expire. Two-sided rounds settle randomly; one-sided rounds
-                trigger consensus settlement at this limit.
+                Maximum blocks before a round must resolve or expire. Two-sided rounds resolve randomly; one-sided rounds
+                trigger agreement bonus at this limit.
               </td>
             </tr>
             <tr>
@@ -155,7 +155,7 @@ const GovernanceDocs: NextPage = () => {
             <tr>
               <td className="font-mono">Max voters</td>
               <td>1,000</td>
-              <td>Per-round cap. O(1) settlement enables higher limits without gas concerns.</td>
+              <td>Per-round cap. O(1) settlement enables higher limits without cost concerns.</td>
             </tr>
             <tr>
               <td className="font-mono">Vote stake</td>
@@ -165,7 +165,7 @@ const GovernanceDocs: NextPage = () => {
             <tr>
               <td className="font-mono">Vote cooldown</td>
               <td>24 hours</td>
-              <td>Time a voter must wait before voting on the same content again after a round settles.</td>
+              <td>Time a voter must wait before voting on the same content again after a round is resolved.</td>
             </tr>
           </tbody>
         </table>
@@ -173,7 +173,7 @@ const GovernanceDocs: NextPage = () => {
       <p>
         The 3-voter minimum is a deliberate balance between manipulation resistance and early-stage practicality. With
         fewer than 3 voters, a single actor could control round outcomes. As the platform grows and rounds naturally
-        attract more voters, governance can increase this threshold to further strengthen consensus quality.
+        attract more voters, governance can increase this threshold to further strengthen agreement quality.
       </p>
 
       <h2>Treasury</h2>
@@ -183,32 +183,32 @@ const GovernanceDocs: NextPage = () => {
       </p>
       <ul>
         <li>
-          <strong>1% settlement fee</strong> &mdash; 1% of every losing pool is sent to the treasury when rounds settle.
+          <strong>1% resolution fee</strong> &mdash; 1% of every losing pool is sent to the treasury when rounds settle.
         </li>
         <li>
-          <strong>Slashed submitter stakes</strong> &mdash; when content is flagged for policy violations or receives
-          unfavorable ratings, the submitter&apos;s 10 cREP stake is slashed to the treasury.
+          <strong>Forfeited submitter deposits</strong> &mdash; when content is flagged for policy violations or receives
+          unfavorable ratings, the submitter&apos;s 10 cREP stake is forfeited to the treasury.
         </li>
         <li>
-          <strong>Consensus subsidy</strong> &mdash; when one-sided rounds settle at the maximum epoch limit, a small
-          consensus subsidy from the treasury rewards voters who identified uncontroversial content.
+          <strong>Agreement bonus</strong> &mdash; when one-sided rounds settle at the maximum round length, a small
+          agreement bonus from the treasury rewards voters who identified uncontroversial content.
         </li>
       </ul>
       <p>
         Treasury tokens can only be distributed through governance proposals. Token holders propose allocations, the
-        community votes, and after the timelock delay, the transaction is executed on-chain. This ensures transparent,
-        community-controlled distribution of protocol tokens.
+        community votes, and after the timelock delay, the transaction is executed automatically. This ensures transparent,
+        community-controlled distribution of community tokens.
       </p>
 
       <h2>Collusion Prevention</h2>
       <p>
         The integrity of Curyo&apos;s content curation depends on honest, independent voting. Groups that coordinate to
-        artificially upvote or downvote content undermine the parimutuel system and harm fair curation.
+        artificially upvote or downvote content undermine the prediction pool system and harm fair curation.
       </p>
       <p>
-        <strong>Detection:</strong> Community members can monitor voting patterns on-chain. Suspicious activity &mdash;
+        <strong>Detection:</strong> Community members can monitor voting patterns publicly visible. Suspicious activity &mdash;
         such as coordinated voting from related wallets, vote timing patterns, or unusual stake distributions &mdash;
-        can be flagged and analyzed using on-chain data.
+        can be flagged and analyzed using public data.
       </p>
       <p>
         <strong>Enforcement via governance proposals:</strong> When hard evidence of collusion is found, the community
