@@ -201,22 +201,16 @@ function _shouldSettle(uint256 contentId) internal view returns (bool) {
 
 | Parameter | Value | Effect |
 |-----------|-------|--------|
-| `MIN_EPOCH_BLOCKS` | 150 | ~30 min grace period. Votes accumulate before settlement can trigger. |
-| `MAX_EPOCH_BLOCKS` | 1800 | ~6 hours hard cap. Prevents indefinite epochs. |
-| `BASE_RATE_BPS` | 30 | 0.3% chance per block initially. Low — settlement is unlikely right after grace period. |
-| `GROWTH_RATE_BPS` | 3 | +0.03% per block. Probability grows steadily. |
-| `MAX_PROB_BPS` | 500 | 5% cap per block. Prevents near-certainty before forced settlement. |
+| `MIN_EPOCH_BLOCKS` | 300 | ~1 hour grace period. Votes accumulate before settlement can trigger. |
+| `MAX_EPOCH_BLOCKS` | 7200 | ~24 hours hard cap. Prevents indefinite epochs. |
+| `BASE_RATE_BPS` | 1 | 0.01% flat chance per block. Low, constant probability spreads settlement evenly. |
+| `GROWTH_RATE_BPS` | 0 | No growth — flat probability throughout the window. |
+| `MAX_PROB_BPS` | 10 | 0.1% cap per block (not reached with flat base). |
 
-**Expected epoch length with these parameters:** ~300-600 blocks (~1-2 hours), with a guaranteed minimum of 30 minutes and maximum of 6 hours.
+**Expected epoch length with these parameters:** With a flat 0.01%/block over ~6,900 eligible blocks, roughly 50% of rounds reach the 24-hour forced settlement. The rest settle randomly, spread evenly across the ~1–24 hour range.
 
-**Why increasing hazard rate (not memoryless):**
-A pure geometric distribution (constant probability per block) can produce very short epochs (settling at block 151, just after the grace period). The increasing hazard rate means:
-- Right after the grace period: settlement is very unlikely (0.3%)
-- After 1 hour: probability has climbed to ~1.5% per block
-- After 3 hours: ~3% per block, settlement is imminent
-- At 6 hours: forced
-
-This gives content enough time to attract voters while maintaining unpredictability.
+**Why flat probability (memoryless):**
+A flat 0.01% per block probability creates a simple, uniform distribution of settlement times. There is no advantage to timing votes early or late within the window — the hazard rate is constant. This eliminates strategic delay while giving content a full ~24-hour lifecycle to attract voters.
 
 ### Who Triggers Settlement
 

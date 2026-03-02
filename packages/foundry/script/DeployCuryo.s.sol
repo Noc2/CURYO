@@ -176,14 +176,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
         registry.setTreasury(governance);
         votingEngine.setTreasury(governance);
         votingEngine.setConfig(
-            150, // minEpochBlocks (~30 min)
-            1800, // maxEpochBlocks (~6 hrs)
+            300, // minEpochBlocks (~1 hour)
+            7200, // maxEpochBlocks (~24 hrs)
             7 days, // maxDuration
             3, // minVoters
             1000, // maxVoters
-            30, // baseRateBps (0.3%)
-            3, // growthRateBps (0.03%)
-            500, // maxProbBps (5%)
+            1, // baseRateBps (0.01% — flat)
+            0, // growthRateBps (no growth)
+            10, // maxProbBps (0.1% cap)
             1000e6 // liquidityParam (1000 cREP)
         );
         votingEngine.setKeeperReward(0.1e6); // 0.1 cREP per keeper operation

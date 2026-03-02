@@ -57,12 +57,12 @@ const HowItWorks: NextPage = () => {
           all times, creating a live prediction market for content quality.
         </li>
         <li>
-          <strong>Resolution:</strong> After a ~30&nbsp;minute grace period and enough votes (minimum 3 voters), the
-          round becomes eligible for resolution. Resolution is <strong>probabilistic</strong>
-          &mdash; the probability starts low and increases over time until the round is forced to resolve at
-          ~6&nbsp;hours. Once resolved, the majority side wins. The losing side&apos;s stakes become the reward pool.
-          Content rating is updated by 1&ndash;5 points based on winning stake size. Winners can then click Claim to
-          collect their rewards.
+          <strong>Resolution:</strong> After a ~1&nbsp;hour grace period and enough votes (minimum 3 voters), the round
+          becomes eligible for resolution. Resolution is <strong>probabilistic</strong>
+          &mdash; each block has a flat 0.01% chance of triggering settlement, spreading resolution evenly across the
+          ~1&ndash;24&nbsp;hour range. The round is forced to resolve at ~24&nbsp;hours. Once resolved, the majority
+          side wins. The losing side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points
+          based on winning stake size. Winners can then click Claim to collect their rewards.
         </li>
       </ol>
 
@@ -99,15 +99,15 @@ const HowItWorks: NextPage = () => {
                 <span className="badge badge-secondary badge-sm">Open</span>
               </td>
               <td>Vote recorded, live tallies visible, resolution window approaching</td>
-              <td className="font-mono">~30 min&ndash;6 hrs</td>
+              <td className="font-mono">~1&ndash;24 hrs</td>
               <td>None</td>
             </tr>
             <tr>
               <td>
                 <span className="badge badge-secondary badge-sm">Resolution</span>
               </td>
-              <td>Round eligible for random resolution &mdash; probability increases over time</td>
-              <td className="font-mono">Variable (probability increases over time)</td>
+              <td>Round eligible for random resolution &mdash; flat 0.01% probability per block</td>
+              <td className="font-mono">Variable (flat probability per block)</td>
               <td>None</td>
             </tr>
             <tr>
@@ -122,12 +122,51 @@ const HowItWorks: NextPage = () => {
         </table>
       </div>
       <p>
-        Once the ~30&nbsp;minute grace period has passed and at least 3 voters have participated, the round becomes
-        eligible for resolution. Resolution uses randomness &mdash; the probability of resolution increases over time
-        (0.3%&nbsp;&rarr;&nbsp;5% cap), and the round is forced to resolve at ~6&nbsp;hours. An automated service checks
-        rounds periodically. This is fully trustless &mdash; anyone can trigger resolution. Winners receive their
-        original stake plus a reward-point-proportional portion of the losing pool.
+        Once the ~1&nbsp;hour grace period has passed and at least 3 voters have participated, the round becomes
+        eligible for resolution. Resolution uses randomness &mdash; each block has a flat 0.01% probability of
+        triggering settlement, spreading resolution evenly across the ~1&ndash;24&nbsp;hour range. The round is forced
+        to resolve at ~24&nbsp;hours. An automated service checks rounds periodically. This is fully trustless &mdash;
+        anyone can trigger resolution. Winners receive their original stake plus a reward-point-proportional portion of
+        the losing pool.
       </p>
+      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
+        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
+          <thead>
+            <tr>
+              <th>Parameter</th>
+              <th>Value</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="font-mono">Minimum voting window</td>
+              <td>~1 hour</td>
+              <td>Resolution impossible before this time. Guarantees a minimum voting window.</td>
+            </tr>
+            <tr>
+              <td className="font-mono">Maximum round length</td>
+              <td>~24 hours</td>
+              <td>Resolution guaranteed by this point.</td>
+            </tr>
+            <tr>
+              <td className="font-mono">baseRateBps</td>
+              <td>1 (0.01%)</td>
+              <td>Flat resolution probability per block.</td>
+            </tr>
+            <tr>
+              <td className="font-mono">growthRateBps</td>
+              <td>0</td>
+              <td>No growth &mdash; constant probability.</td>
+            </tr>
+            <tr>
+              <td className="font-mono">maxProbBps</td>
+              <td>10 (0.1%)</td>
+              <td>Maximum probability cap (not reached with flat base).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <h2>Reward Distribution</h2>
       <p>The losing pool is split:</p>
@@ -187,7 +226,7 @@ const HowItWorks: NextPage = () => {
         points, etc.), preventing a single actor from making large rating swings.
       </p>
       <p>
-        If a round <strong>expires</strong> (~6&nbsp;hours pass without reaching the minimum 3 voters) or ends in a{" "}
+        If a round <strong>expires</strong> (~24&nbsp;hours pass without reaching the minimum 3 voters) or ends in a{" "}
         <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive resolution with a
         clear majority updates the rating.
       </p>

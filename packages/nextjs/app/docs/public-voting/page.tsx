@@ -142,8 +142,9 @@ const PublicVoting: NextPage = () => {
 
       <h3>How Resolution Works</h3>
       <p>
-        Resolution is triggered <strong>randomly with increasing probability</strong>, preventing voters from timing
-        their entry to avoid risk. The resolution check uses on-chain randomness as the source.
+        Resolution is triggered <strong>randomly with a flat probability per block</strong>, preventing voters from
+        timing their entry to avoid risk. Both one-sided and two-sided rounds follow the same ~24-hour lifecycle. The
+        resolution check uses on-chain randomness as the source.
       </p>
 
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -158,44 +159,44 @@ const PublicVoting: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">Minimum voting window</td>
-              <td>~30 minutes</td>
+              <td>~1 hour</td>
               <td>Resolution impossible before this time. Guarantees a minimum voting window.</td>
             </tr>
             <tr>
               <td className="font-mono">Maximum round length</td>
-              <td>~6 hours</td>
+              <td>~24 hours</td>
               <td>
-                Resolution guaranteed by this point. Two-sided rounds resolve; one-sided rounds trigger agreement.
+                Resolution guaranteed by this point. Both one-sided and two-sided rounds follow the same lifecycle.
               </td>
             </tr>
             <tr>
               <td className="font-mono">baseRateBps</td>
-              <td>30 (0.3%)</td>
-              <td>Initial resolution probability per check.</td>
+              <td>1 (0.01%)</td>
+              <td>Flat resolution probability per block.</td>
             </tr>
             <tr>
               <td className="font-mono">growthRateBps</td>
-              <td>3 (0.03%)</td>
-              <td>Additional probability increase over time.</td>
+              <td>0</td>
+              <td>No growth &mdash; constant probability.</td>
             </tr>
             <tr>
               <td className="font-mono">maxProbBps</td>
-              <td>500 (5%)</td>
-              <td>Maximum probability cap.</td>
+              <td>10 (0.1%)</td>
+              <td>Maximum probability cap (not reached with flat base).</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <h3>Resolution Probability</h3>
-      <p>After the minimum voting window, each check has a chance of triggering resolution:</p>
+      <p>After the minimum voting window, each block has a flat chance of triggering resolution:</p>
       <div className="not-prose my-4 p-4 rounded-xl bg-base-200 font-mono text-sm">
-        <p>probability = base rate + (time elapsed beyond minimum) &times; growth rate</p>
-        <p>probability = min(probability, maximum cap)</p>
+        <p>probability = 0.01% per block (flat)</p>
       </div>
       <p>
-        This creates a <strong>hazard rate</strong> that makes resolution increasingly likely over time but
-        unpredictable at any specific moment. Voters cannot reliably time their votes to avoid resolution risk.
+        This flat probability spreads resolution evenly across the ~1&ndash;24&nbsp;hour range. Roughly half of all
+        rounds reach the 24-hour forced settlement; the rest resolve randomly throughout the window. Voters cannot
+        reliably time their votes to avoid resolution risk.
       </p>
 
       <h3>Self-Resolving</h3>
@@ -226,8 +227,8 @@ const PublicVoting: NextPage = () => {
           without controlling block production.
         </li>
         <li>
-          <strong>No timing games:</strong> The increasing probability curve ensures that delaying a vote does not
-          reduce resolution risk &mdash; if anything, it increases the chance of resolving before you can vote.
+          <strong>No timing games:</strong> The flat probability per block ensures that delaying a vote does not reduce
+          resolution risk &mdash; the round could resolve at any time after the grace period.
         </li>
         <li>
           <strong>Sybil resistance:</strong> Voter ID NFTs cap each verified person at 100 cREP per content per round,

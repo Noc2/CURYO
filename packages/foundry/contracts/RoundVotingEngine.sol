@@ -236,14 +236,14 @@ contract RoundVotingEngine is
 
         // Default config
         config = RoundLib.RoundConfig({
-            minEpochBlocks: 150, // ~30 minutes at 12s blocks
-            maxEpochBlocks: 1800, // ~6 hours at 12s blocks
+            minEpochBlocks: 300, // ~1 hour at 12s blocks
+            maxEpochBlocks: 7200, // ~24 hours at 12s blocks
             maxDuration: 7 days,
             minVoters: 3,
             maxVoters: 1000,
-            baseRateBps: 30, // 0.3% base settlement probability per block
-            growthRateBps: 3, // 0.03% additional probability per block
-            maxProbBps: 500, // 5% max per-block settlement probability
+            baseRateBps: 1, // 0.01% flat settlement probability per block
+            growthRateBps: 0, // No growth (flat probability)
+            maxProbBps: 10, // 0.1% max per-block settlement probability
             liquidityParam: 1000e6 // 1000 cREP bonding curve liquidity
         });
     }

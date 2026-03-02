@@ -20,14 +20,14 @@ library RoundLib {
     // --- Structs ---
 
     struct RoundConfig {
-        uint64 minEpochBlocks; // Minimum blocks before settlement possible (default: 150 ~30min)
-        uint64 maxEpochBlocks; // Maximum blocks before forced settlement (default: 1800 ~6hrs)
+        uint64 minEpochBlocks; // Minimum blocks before settlement possible (default: 300 ~1hr)
+        uint64 maxEpochBlocks; // Maximum blocks before forced settlement (default: 7200 ~24hrs)
         uint256 maxDuration; // Max wall-clock time before round expires (default: 7 days)
         uint256 minVoters; // Minimum voters for settlement (default: 3)
         uint256 maxVoters; // Gas safety cap (default: 1000)
-        uint16 baseRateBps; // Base settlement probability per block in BPS (default: 30)
-        uint16 growthRateBps; // Probability growth per block in BPS (default: 3)
-        uint16 maxProbBps; // Maximum per-block settlement probability in BPS (default: 500)
+        uint16 baseRateBps; // Base settlement probability per block in BPS (default: 1)
+        uint16 growthRateBps; // Probability growth per block in BPS (default: 0)
+        uint16 maxProbBps; // Maximum per-block settlement probability in BPS (default: 10)
         uint256 liquidityParam; // Bonding curve liquidity parameter b (default: 1000e6)
     }
 

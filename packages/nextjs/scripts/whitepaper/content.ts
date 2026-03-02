@@ -91,7 +91,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
-              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are immediately public and move the live rating via a bonding curve. Settlement occurs randomly after a minimum grace period (~30 minutes), with probability increasing over time up to a hard cap (~6 hours).",
+              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are immediately public and move the live rating via a bonding curve. Settlement occurs randomly after a minimum grace period (~1 hour), with a flat 0.01% probability per block up to a hard cap (~24 hours).",
               "Contributor Rewards  -- Content submitters receive 10%, category submitters 1%, and frontend operators 1% of the losing pool.",
             ],
           },
@@ -109,7 +109,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Vote: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call vote(contentId, isUp, stakeAmount, frontendAddress). The vote is immediately recorded on-chain and the content's live rating updates.",
               "Accumulate: More voters join the round. Each vote purchases shares via the bonding curve -- early and contrarian votes get more shares per cREP. The live rating reflects the current balance of UP and DOWN stakes.",
-              "Random Settlement: After a minimum grace period (~30 minutes), settlement can trigger probabilistically on any block. The probability increases over time, with a hard cap at ~6 hours. Anyone can call trySettle(contentId) to check.",
+              "Random Settlement: After a minimum grace period (~1 hour), settlement can trigger probabilistically on any block. Each block has a flat 0.01% probability, with a hard cap at ~24 hours. Anyone can call trySettle(contentId) to check.",
               "Claim: The side with the larger total stake wins. The losing side's stakes become the reward pool, distributed proportionally by shares to winners. One-sided rounds receive a consensus subsidy.",
             ],
           },
@@ -178,7 +178,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Vote: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call vote(contentId, isUp, stakeAmount, frontendAddress). The vote is immediately recorded on-chain, shares are allocated via the bonding curve, and the content's live rating updates.",
               "Accumulate: More voters join the round. Each vote purchases shares -- early and contrarian votes get more shares per cREP. The live rating reflects the current balance of UP and DOWN stakes.",
-              "Random Settlement: After a minimum grace period (minEpochBlocks, ~30 minutes), settlement can trigger probabilistically. The probability increases per block until a hard cap (maxEpochBlocks, ~6 hours). Settlement is checked on every vote() call and can also be triggered by anyone calling trySettle(contentId).",
+              "Random Settlement: After a minimum grace period (minEpochBlocks, ~1 hour), settlement can trigger probabilistically. Each block has a flat 0.01% probability until a hard cap (maxEpochBlocks, ~24 hours). Settlement is checked on every vote() call and can also be triggered by anyone calling trySettle(contentId).",
               "Claim: The side with the larger total stake wins. The losing side's stakes become the reward pool, distributed proportionally by shares to winners. Content rating carries over to the next round.",
             ],
           },
@@ -212,7 +212,7 @@ export const SECTIONS: Section[] = [
                 [
                   "Accumulating",
                   "Round is open, more voters can join",
-                  "~30 min to ~6 hours",
+                  "~1 to ~24 hours",
                   "None  -- settlement triggers randomly",
                 ],
                 ["Settled", "Rewards calculated and claimable", " --", "Winners claim rewards"],
@@ -227,7 +227,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement is triggered probabilistically. After a minimum grace period (~30 minutes), each block has an increasing probability of triggering settlement, up to a hard cap (~6 hours). Settlement is checked on every vote() call and can also be triggered by anyone calling trySettle(contentId). A lightweight keeper service calls trySettle() for active rounds, but since settlement is permissionless, anyone can trigger it. Winners receive their original stake plus a share-proportional portion of the losing pool. Participation rewards are distributed at settlement time.",
+            text: "Settlement is triggered probabilistically. After a minimum grace period (~1 hour), each block has a flat 0.01% probability of triggering settlement, up to a hard cap (~24 hours). Settlement is checked on every vote() call and can also be triggered by anyone calling trySettle(contentId). A lightweight keeper service calls trySettle() for active rounds, but since settlement is permissionless, anyone can trigger it. Winners receive their original stake plus a share-proportional portion of the losing pool. Participation rewards are distributed at settlement time.",
           },
         ],
       },
@@ -412,11 +412,11 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Each content item has independent voting rounds. A round begins when the first vote is cast. All votes are immediately public and move the content's live rating through the bonding curve. Settlement timing is probabilistic: after a minimum grace period (minEpochBlocks, ~30 minutes), each block has an increasing probability of triggering settlement, up to a hard cap (maxEpochBlocks, ~6 hours).",
+            text: "Each content item has independent voting rounds. A round begins when the first vote is cast. All votes are immediately public and move the content's live rating through the bonding curve. Settlement timing is probabilistic: after a minimum grace period (minEpochBlocks, ~1 hour), each block has a flat 0.01% probability of triggering settlement, up to a hard cap (maxEpochBlocks, ~24 hours).",
           },
           {
             type: "paragraph",
-            text: "The random settlement timing eliminates strategic delay. In systems with known deadlines, sophisticated voters wait until the last moment to minimize information disadvantage. With random settlement, waiting is risky  -- the round could settle at any time after the grace period. The increasing hazard rate means settlement is unlikely right after the grace period (0.3% per block) but becomes near-certain as time progresses. This gives content enough time to attract voters while maintaining unpredictability.",
+            text: "The random settlement timing eliminates strategic delay. In systems with known deadlines, sophisticated voters wait until the last moment to minimize information disadvantage. With random settlement, waiting is risky  -- the round could settle at any time after the grace period. The flat 0.01% per block probability spreads resolution evenly across the ~1-24 hour range, with roughly half of all rounds reaching the 24-hour forced settlement. This gives content enough time to attract voters while maintaining unpredictability.",
           },
           {
             type: "paragraph",
@@ -549,9 +549,9 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Grace period (0 to minEpochBlocks, ~30 minutes): No settlement possible. Votes accumulate freely.",
-              "Increasing probability (minEpochBlocks to maxEpochBlocks): Probability starts at a base rate (0.3% per block) and increases linearly per block. Settlement becomes increasingly likely but remains unpredictable.",
-              "Forced settlement (maxEpochBlocks, ~6 hours): The round must settle. This prevents indefinite rounds.",
+              "Grace period (0 to minEpochBlocks, ~1 hour): No settlement possible. Votes accumulate freely.",
+              "Flat probability (minEpochBlocks to maxEpochBlocks): Each block has a flat 0.01% probability of triggering settlement. Resolution is spread evenly across the window.",
+              "Forced settlement (maxEpochBlocks, ~24 hours): The round must settle. This prevents indefinite rounds.",
             ],
           },
           {
@@ -563,11 +563,11 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Parameter", "Value", "Effect"],
               rows: [
-                ["minEpochBlocks", "~150 blocks (~30 min)", "Grace period before settlement can trigger"],
-                ["maxEpochBlocks", "~1800 blocks (~6 hours)", "Hard cap -- round must settle"],
-                ["Base rate", "0.3% per block", "Initial settlement probability after grace period"],
-                ["Growth rate", "+0.03% per block", "Probability increases steadily"],
-                ["Max probability", "5% per block", "Cap before forced settlement"],
+                ["minEpochBlocks", "~300 blocks (~1 hour)", "Grace period before settlement can trigger"],
+                ["maxEpochBlocks", "~7200 blocks (~24 hours)", "Hard cap -- round must settle"],
+                ["Base rate", "0.01% per block", "Flat settlement probability after grace period"],
+                ["Growth rate", "0 (flat)", "No growth -- constant probability"],
+                ["Max probability", "0.1% per block", "Cap (not reached with flat base)"],
               ],
             },
           },
@@ -1048,8 +1048,8 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Parameter", "Default", "Description"],
               rows: [
-                ["minEpochBlocks", "~150 blocks (~30 min)", "Grace period before settlement can trigger"],
-                ["maxEpochBlocks", "~1800 blocks (~6 hours)", "Hard cap -- forced settlement"],
+                ["minEpochBlocks", "~300 blocks (~1 hour)", "Grace period before settlement can trigger"],
+                ["maxEpochBlocks", "~7200 blocks (~24 hours)", "Hard cap -- forced settlement"],
                 ["Liquidity parameter (b)", "50", "Controls bonding curve sensitivity and share pricing"],
                 ["Max voters", "1,000", "Per-round cap (O(1) settlement enables higher limits)"],
                 ["Vote stake", "1-100 cREP", "Stake range per vote, capped per Voter ID"],

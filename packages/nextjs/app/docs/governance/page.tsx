@@ -130,15 +130,15 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Minimum voting window</td>
-              <td>~30 minutes</td>
+              <td>~1 hour</td>
               <td>Minimum time before a round becomes eligible for resolution. Ensures a meaningful voting window.</td>
             </tr>
             <tr>
               <td className="font-mono">Maximum round length</td>
-              <td>~6 hours</td>
+              <td>~24 hours</td>
               <td>
-                Maximum blocks before a round must resolve or expire. Two-sided rounds resolve randomly; one-sided
-                rounds trigger agreement bonus at this limit.
+                Maximum blocks before a round must resolve or expire. All round types follow the same ~24-hour
+                lifecycle.
               </td>
             </tr>
             <tr>
