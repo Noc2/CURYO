@@ -186,7 +186,7 @@ export async function voteOnSpecificContent(
   await confirmBtn.click();
 
   // Wait for outcome — avoid /success/i which matches the approve tx toast
-  const successIndicator = page.getByText(/committed/i).or(page.getByText(/voted/i));
+  const successIndicator = page.getByText(/voted/i);
 
   const errorIndicator = page
     .getByText(/reverted/i)

@@ -49,9 +49,8 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
  */
 export async function waitForTxConfirmation(page: Page, timeout = 30_000): Promise<void> {
   const confirmation = page
-    .getByText(/committed/i)
+    .getByText(/voted/i)
     .or(page.getByText(/success/i))
-    .or(page.getByText(/voted/i))
     .or(page.getByText(/submitted/i))
     .or(page.getByText(/claimed/i));
 
