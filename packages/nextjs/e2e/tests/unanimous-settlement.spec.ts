@@ -7,6 +7,7 @@ import {
   trySettleDirect,
   voteDirect,
   waitForPonderIndexed,
+  waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
@@ -111,6 +112,7 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
 
     // Advance past maxEpochBlocks for guaranteed settlement
     await mineBlocks(1801);
+    await waitForPonderSync();
 
     // Settle the round
     const keeper = ANVIL_ACCOUNTS.account1;

@@ -1,4 +1,4 @@
-import { mineBlocks, trySettleDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
+import { mineBlocks, trySettleDirect, waitForPonderIndexed, waitForPonderSync } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { fastForwardTime, waitForSettlementIndexed } from "../helpers/keeper";
@@ -142,6 +142,7 @@ test.describe("Tied round lifecycle", () => {
 
     // Mine past maxEpochBlocks for guaranteed settlement
     await mineBlocks(1801);
+    await waitForPonderSync();
 
     // Try to settle
     await trySettleDirect(BigInt(newContentId!), ANVIL_ACCOUNTS.account1.address, CONTRACT_ADDRESSES.RoundVotingEngine);

@@ -814,3 +814,39 @@ export async function waitForPonderIndexed(
   }
   return false;
 }
+
+/**
+ * Wait for Ponder to catch up to the current chain block number.
+ * Call this after mineBlocks() to ensure Ponder has processed all new blocks
+ * before polling for specific indexed data.
+ */
+export async function waitForPonderSync(
+  maxWaitMs = 120_000,
+  pollInterval = 2_000,
+  ponderURL = "http://localhost:42069",
+): Promise<boolean> {
+  // Get current chain block number
+  const blockRes = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: Date.now() }),
+  });
+  const blockJson = await blockRes.json();
+  const chainBlock = parseInt(blockJson.result, 16);
+
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    try {
+      const statusRes = await fetch(`${ponderURL}/status`);
+      if (statusRes.ok) {
+        const status = await statusRes.json();
+        const ponderBlock = status?.hardhat?.block?.number ?? 0;
+        if (ponderBlock >= chainBlock) return true;
+      }
+    } catch {
+      // Ponder may not be ready yet
+    }
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+  }
+  return false;
+}

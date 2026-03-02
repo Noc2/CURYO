@@ -7,6 +7,7 @@ import {
   trySettleDirect,
   voteDirect,
   waitForPonderIndexed,
+  waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
@@ -105,6 +106,7 @@ test.describe("Reward claim lifecycle", () => {
 
     // Step 3: Mine blocks past maxEpochBlocks for guaranteed settlement
     await mineBlocks(1801);
+    await waitForPonderSync();
 
     // Step 4: Settle the round
     const keeper = ANVIL_ACCOUNTS.account1;

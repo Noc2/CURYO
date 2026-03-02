@@ -6,6 +6,7 @@ import {
   trySettleDirect,
   voteDirect,
   waitForPonderIndexed,
+  waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
@@ -104,6 +105,7 @@ test.describe("Multi-round succession", () => {
 
     // Advance past maxEpochBlocks for guaranteed settlement
     await mineBlocks(1801);
+    await waitForPonderSync();
 
     // Settle round 1
     const keeper = ANVIL_ACCOUNTS.account1;
@@ -151,6 +153,7 @@ test.describe("Multi-round succession", () => {
 
     // Advance past maxEpochBlocks for guaranteed settlement
     await mineBlocks(1801);
+    await waitForPonderSync();
 
     // Settle round 2
     const keeper = ANVIL_ACCOUNTS.account1;
