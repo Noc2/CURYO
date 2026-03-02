@@ -2,6 +2,7 @@
 
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 
@@ -13,6 +14,7 @@ export function StakeBreakdown() {
   const { address } = useAccount();
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked } = useVotingStakes(address);
+  const { earliestDeadline } = useActiveVotesWithDeadlines(address);
 
   // Frontend operator stake
   const { data: frontendInfo } = useScaffoldReadContract({
@@ -25,9 +27,9 @@ export function StakeBreakdown() {
   if (!address) return null;
 
   // Build stake entries (same logic as navbar)
-  const entries: { label: string; amount: number }[] = [];
+  const entries: { label: string; amount: number; deadline?: string | null }[] = [];
   if (totalSubmissionStake > 0) entries.push({ label: "Submissions", amount: totalSubmissionStake });
-  if (activeStaked > 0) entries.push({ label: "Voting", amount: activeStaked });
+  if (activeStaked > 0) entries.push({ label: "Voting", amount: activeStaked, deadline: earliestDeadline });
   if (frontendStake > 0) entries.push({ label: "Frontend", amount: frontendStake });
 
   if (entries.length === 0) return null;
@@ -43,15 +45,27 @@ export function StakeBreakdown() {
         <span className="text-base tabular-nums text-base-content/60">{format(totalStaked)} cREP</span>
       </div>
       <div className="flex flex-wrap gap-2">
-        {entries.map(e => (
-          <div
-            key={e.label}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm"
-          >
-            <span className="text-base-content/50">{e.label}</span>
-            <span className="font-mono tabular-nums">{format(e.amount)}</span>
-          </div>
-        ))}
+        {entries.map(e =>
+          e.deadline ? (
+            <div
+              key={e.label}
+              className="tooltip tooltip-top flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm cursor-help"
+              data-tip={`Earliest resolves in ${e.deadline}`}
+            >
+              <span className="text-base-content/50">{e.label}</span>
+              <span className="font-mono tabular-nums">{format(e.amount)}</span>
+              <span className="text-base-content/40 font-mono tabular-nums">· {e.deadline}</span>
+            </div>
+          ) : (
+            <div
+              key={e.label}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm"
+            >
+              <span className="text-base-content/50">{e.label}</span>
+              <span className="font-mono tabular-nums">{format(e.amount)}</span>
+            </div>
+          ),
+        )}
       </div>
     </div>
   );
