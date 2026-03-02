@@ -63,9 +63,10 @@ const DocsIntro: NextPage = () => {
           <strong>Accumulate:</strong> Votes accumulate within the round. Live tallies are visible at all times.
         </li>
         <li>
-          <strong>Resolution:</strong> After the minimum voting window has passed and enough votes have been cast, the
-          round becomes eligible for resolution. Resolution is probabilistic, using on-chain randomness. The majority
-          side wins and the losing side&apos;s stakes become the reward pool.
+          <strong>Resolution:</strong> After a ~1&nbsp;hour grace period and enough votes (minimum 3 voters), the round
+          becomes eligible for resolution. Each block has a flat 0.01% chance of triggering settlement, spreading
+          resolution evenly across ~1&ndash;24&nbsp;hours. The majority side wins and the losing side&apos;s stakes
+          become the reward pool.
         </li>
       </ol>
       <p>The losing pool is split:</p>
