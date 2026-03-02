@@ -66,7 +66,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
             Staked
-            <InfoTooltip text="Total amount staked in the current round." position="bottom" />
+            <InfoTooltip text="Total cREP committed in the current round." position="bottom" />
           </span>
           <span className="font-semibold tabular-nums">{totalStakeFormatted.toFixed(0)}</span>
         </div>
@@ -86,7 +86,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-success">
               UP
-              <InfoTooltip text="Votes and stake in the UP pool." position="bottom" />
+              <InfoTooltip text="Votes and cREP in the UP pool." position="bottom" />
             </span>
             <span className="font-semibold tabular-nums text-success">
               {upCount} ({upStakeFormatted.toFixed(0)} cREP)
@@ -96,7 +96,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-error">
               DOWN
-              <InfoTooltip text="Votes and stake in the DOWN pool." position="bottom" />
+              <InfoTooltip text="Votes and cREP in the DOWN pool." position="bottom" />
             </span>
             <span className="font-semibold tabular-nums text-error">
               {downCount} ({downStakeFormatted.toFixed(0)} cREP)
@@ -128,9 +128,9 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
             </span>
           ) : readyToSettle ? (
             <span className="flex items-center gap-1 text-success/80">
-              Ready to settle
+              Ready to resolve
               <InfoTooltip
-                text={`At least ${minVoters} votes have been cast. Settlement can happen at any time.`}
+                text={`At least ${minVoters} votes have been cast. Resolution can happen at any time.`}
                 position="bottom"
               />
             </span>
@@ -140,9 +140,9 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
 
       {phase === "settled" && (
         <div className="flex items-center gap-1 text-success/80">
-          <span>Rewards distributed at settlement</span>
+          <span>Rewards distributed</span>
           <InfoTooltip
-            text="Participation rewards are distributed when the round settles. Winners receive stake from the losing pool proportional to their shares."
+            text="Participation rewards are distributed when the round is resolved. Winners receive cREP from the losing pool based on their reward points."
             position="bottom"
           />
         </div>

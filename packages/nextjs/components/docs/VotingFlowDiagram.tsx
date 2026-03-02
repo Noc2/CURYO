@@ -7,10 +7,10 @@ const STEPS = [
     icon: "🗳️",
   },
   {
-    label: "Settle",
+    label: "Resolve",
     badge: "badge-secondary",
     duration: "random",
-    description: "Probability increases each block until round settles",
+    description: "Chance of resolution increases over time",
     icon: "⚖️",
   },
   {

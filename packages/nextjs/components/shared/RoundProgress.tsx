@@ -45,7 +45,7 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
               clipRule="evenodd"
             />
           </svg>
-          Settled
+          Resolved
         </span>
       </div>
     );
