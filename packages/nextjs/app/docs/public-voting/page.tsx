@@ -171,7 +171,7 @@ const PublicVoting: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">baseRateBps</td>
-              <td>1 (0.01%)</td>
+              <td>3 (0.03%)</td>
               <td>Flat resolution probability per block.</td>
             </tr>
             <tr>
@@ -191,12 +191,12 @@ const PublicVoting: NextPage = () => {
       <h3>Resolution Probability</h3>
       <p>After the minimum voting window, each block has a flat chance of triggering resolution:</p>
       <div className="not-prose my-4 p-4 rounded-xl bg-base-200 font-mono text-sm">
-        <p>probability = 0.01% per block (flat)</p>
+        <p>probability = 0.03% per block (flat)</p>
       </div>
       <p>
-        This flat probability spreads resolution evenly across the ~1&ndash;24&nbsp;hour range. Roughly half of all
-        rounds reach the 24-hour forced settlement; the rest resolve randomly throughout the window. Voters cannot
-        reliably time their votes to avoid resolution risk.
+        This flat probability spreads resolution evenly across the ~1&ndash;24&nbsp;hour range. Most rounds resolve
+        randomly before the 24-hour cap; the rest resolve randomly throughout the window. Voters cannot reliably time
+        their votes to avoid resolution risk.
       </p>
 
       <h3>Self-Resolving</h3>

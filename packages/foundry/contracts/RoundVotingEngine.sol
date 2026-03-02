@@ -239,9 +239,9 @@ contract RoundVotingEngine is
             minEpochBlocks: 300, // ~1 hour at 12s blocks
             maxEpochBlocks: 7200, // ~24 hours at 12s blocks
             maxDuration: 7 days,
-            minVoters: 3,
+            minVoters: 5,
             maxVoters: 1000,
-            baseRateBps: 1, // 0.01% flat settlement probability per block
+            baseRateBps: 3, // 0.03% flat settlement probability per block
             growthRateBps: 0, // No growth (flat probability)
             maxProbBps: 10, // 0.1% max per-block settlement probability
             liquidityParam: 1000e6 // 1000 cREP bonding curve liquidity

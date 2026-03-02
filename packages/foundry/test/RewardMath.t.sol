@@ -350,6 +350,12 @@ contract RewardMathTest is Test {
         assertEq(subsidy, 0, "Zero stake must return zero");
     }
 
+    function test_ConsensusSubsidy_CappedByMaxSubsidy() public view {
+        // 2000 cREP total stake, 5% = 100 cREP desired, but cap is 50 cREP
+        uint256 subsidy = harness.calculateConsensusSubsidy(2000e6, 1_000_000e6);
+        assertEq(subsidy, 50e6, "Subsidy capped at 50 cREP (MAX_CONSENSUS_SUBSIDY)");
+    }
+
     // ====================================================
     // splitConsensusSubsidy — Unit & Fuzz Tests
     // ====================================================

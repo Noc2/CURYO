@@ -277,10 +277,10 @@ const GettingStarted: NextPage = () => {
       </p>
       <ul>
         <li>
-          <strong>Returned:</strong> After 4 days if your content maintains a rating above 10%.
+          <strong>Returned:</strong> After 4 days if your content maintains a rating above 25.
         </li>
         <li>
-          <strong>Forfeited:</strong> If rating drops below 10% after the 24-hour grace period. 100% goes to the
+          <strong>Forfeited:</strong> If rating drops below 25 after the 24-hour grace period. 100% goes to the
           treasury.
         </li>
       </ul>

@@ -42,7 +42,7 @@ contract ContentRegistry is
     // Submitter stake rules
     uint256 public constant STAKE_GRACE_EPOCHS = 96; // Grace period before slash possible (~24 hours at 15-min epochs)
     uint256 public constant STAKE_RETURN_EPOCHS = 384; // Auto-return after this many epochs (~4 days at 15-min epochs)
-    uint256 public constant SLASH_RATING_THRESHOLD = 10; // Rating below this triggers slash
+    uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
 
     // String length limits (prevent storage bloat)
     uint256 public constant MAX_URL_LENGTH = 2048;

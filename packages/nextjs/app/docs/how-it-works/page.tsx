@@ -57,9 +57,9 @@ const HowItWorks: NextPage = () => {
           all times, creating a live prediction market for content quality.
         </li>
         <li>
-          <strong>Resolution:</strong> After a ~1&nbsp;hour grace period and enough votes (minimum 3 voters), the round
+          <strong>Resolution:</strong> After a ~1&nbsp;hour grace period and enough votes (minimum 5 voters), the round
           becomes eligible for resolution. Resolution is <strong>probabilistic</strong>
-          &mdash; each block has a flat 0.01% chance of triggering settlement, spreading resolution evenly across the
+          &mdash; each block has a flat 0.03% chance of triggering settlement, spreading resolution evenly across the
           ~1&ndash;24&nbsp;hour range. The round is forced to resolve at ~24&nbsp;hours. Once resolved, the majority
           side wins. The losing side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points
           based on winning stake size. Winners can then click Claim to collect their rewards.
@@ -106,7 +106,7 @@ const HowItWorks: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Resolution</span>
               </td>
-              <td>Round eligible for random resolution &mdash; flat 0.01% probability per block</td>
+              <td>Round eligible for random resolution &mdash; flat 0.03% probability per block</td>
               <td className="font-mono">Variable (flat probability per block)</td>
               <td>None</td>
             </tr>
@@ -122,8 +122,8 @@ const HowItWorks: NextPage = () => {
         </table>
       </div>
       <p>
-        Once the ~1&nbsp;hour grace period has passed and at least 3 voters have participated, the round becomes
-        eligible for resolution. Resolution uses randomness &mdash; each block has a flat 0.01% probability of
+        Once the ~1&nbsp;hour grace period has passed and at least 5 voters have participated, the round becomes
+        eligible for resolution. Resolution uses randomness &mdash; each block has a flat 0.03% probability of
         triggering settlement, spreading resolution evenly across the ~1&ndash;24&nbsp;hour range. The round is forced
         to resolve at ~24&nbsp;hours. An automated service checks rounds periodically. This is fully trustless &mdash;
         anyone can trigger resolution. Winners receive their original stake plus a reward-point-proportional portion of
@@ -151,7 +151,7 @@ const HowItWorks: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">baseRateBps</td>
-              <td>1 (0.01%)</td>
+              <td>3 (0.03%)</td>
               <td>Flat resolution probability per block.</td>
             </tr>
             <tr>
@@ -226,7 +226,7 @@ const HowItWorks: NextPage = () => {
         points, etc.), preventing a single actor from making large rating swings.
       </p>
       <p>
-        If a round <strong>expires</strong> (~24&nbsp;hours pass without reaching the minimum 3 voters) or ends in a{" "}
+        If a round <strong>expires</strong> (~24&nbsp;hours pass without reaching the minimum 5 voters) or ends in a{" "}
         <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive resolution with a
         clear majority updates the rating.
       </p>

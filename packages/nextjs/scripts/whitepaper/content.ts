@@ -91,7 +91,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
-              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are immediately public and move the live rating via a bonding curve. Settlement occurs randomly after a minimum grace period (~1 hour), with a flat 0.01% probability per block up to a hard cap (~24 hours).",
+              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are immediately public and move the live rating via a bonding curve. Settlement occurs randomly after a minimum grace period (~1 hour), with a flat 0.03% probability per block up to a hard cap (~24 hours).",
               "Contributor Rewards  -- Content submitters receive 10%, category submitters 1%, and frontend operators 1% of the losing pool.",
             ],
           },
@@ -109,7 +109,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Vote: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call vote(contentId, isUp, stakeAmount, frontendAddress). The vote is immediately recorded on-chain and the content's live rating updates.",
               "Accumulate: More voters join the round. Each vote purchases shares via the bonding curve -- early and contrarian votes get more shares per cREP. The live rating reflects the current balance of UP and DOWN stakes.",
-              "Random Settlement: After a minimum grace period (~1 hour), settlement can trigger probabilistically on any block. Each block has a flat 0.01% probability, with a hard cap at ~24 hours. Anyone can call trySettle(contentId) to check.",
+              "Random Settlement: After a minimum grace period (~1 hour), settlement can trigger probabilistically on any block. Each block has a flat 0.03% probability, with a hard cap at ~24 hours. Anyone can call trySettle(contentId) to check.",
               "Claim: The side with the larger total stake wins. The losing side's stakes become the reward pool, distributed proportionally by shares to winners. One-sided rounds receive a consensus subsidy.",
             ],
           },
@@ -132,7 +132,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Illegal content, content that doesn't load, or content with an incorrect description should always be downvoted, regardless of the ranking question. Content that falls below a rating of 10 after its grace period results in the submitter's stake being slashed.",
+            text: "Illegal content, content that doesn't load, or content with an incorrect description should always be downvoted, regardless of the ranking question. Content that falls below a rating of 25 after its grace period results in the submitter's stake being slashed.",
           },
         ],
       },
@@ -178,7 +178,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Vote: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call vote(contentId, isUp, stakeAmount, frontendAddress). The vote is immediately recorded on-chain, shares are allocated via the bonding curve, and the content's live rating updates.",
               "Accumulate: More voters join the round. Each vote purchases shares -- early and contrarian votes get more shares per cREP. The live rating reflects the current balance of UP and DOWN stakes.",
-              "Random Settlement: After a minimum grace period (minEpochBlocks, ~1 hour), settlement can trigger probabilistically. Each block has a flat 0.01% probability until a hard cap (maxEpochBlocks, ~24 hours). Settlement is checked on every vote() call and can also be triggered by anyone calling trySettle(contentId).",
+              "Random Settlement: After a minimum grace period (minEpochBlocks, ~1 hour), settlement can trigger probabilistically. Each block has a flat 0.03% probability until a hard cap (maxEpochBlocks, ~24 hours). Settlement is checked on every vote() call and can also be triggered by anyone calling trySettle(contentId).",
               "Claim: The side with the larger total stake wins. The losing side's stakes become the reward pool, distributed proportionally by shares to winners. Content rating carries over to the next round.",
             ],
           },
@@ -227,7 +227,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement is triggered probabilistically. After a minimum grace period (~1 hour), each block has a flat 0.01% probability of triggering settlement, up to a hard cap (~24 hours). Settlement is checked on every vote() call and can also be triggered by anyone calling trySettle(contentId). A lightweight keeper service calls trySettle() for active rounds, but since settlement is permissionless, anyone can trigger it. Winners receive their original stake plus a share-proportional portion of the losing pool. Participation rewards are distributed at settlement time.",
+            text: "Settlement is triggered probabilistically. After a minimum grace period (~1 hour), each block has a flat 0.03% probability of triggering settlement, up to a hard cap (~24 hours). Settlement is checked on every vote() call and can also be triggered by anyone calling trySettle(contentId). A lightweight keeper service calls trySettle() for active rounds, but since settlement is permissionless, anyone can trigger it. Winners receive their original stake plus a share-proportional portion of the losing pool. Participation rewards are distributed at settlement time.",
           },
         ],
       },
@@ -416,11 +416,11 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Each content item has independent voting rounds. A round begins when the first vote is cast. All votes are immediately public and move the content's live rating through the bonding curve. Settlement timing is probabilistic: after a minimum grace period (minEpochBlocks, ~1 hour), each block has a flat 0.01% probability of triggering settlement, up to a hard cap (maxEpochBlocks, ~24 hours).",
+            text: "Each content item has independent voting rounds. A round begins when the first vote is cast. All votes are immediately public and move the content's live rating through the bonding curve. Settlement timing is probabilistic: after a minimum grace period (minEpochBlocks, ~1 hour), each block has a flat 0.03% probability of triggering settlement, up to a hard cap (maxEpochBlocks, ~24 hours).",
           },
           {
             type: "paragraph",
-            text: "The random settlement timing eliminates strategic delay. In systems with known deadlines, sophisticated voters wait until the last moment to minimize information disadvantage. With random settlement, waiting is risky  -- the round could settle at any time after the grace period. The flat 0.01% per block probability spreads resolution evenly across the ~1-24 hour range, with roughly half of all rounds reaching the 24-hour forced settlement. This gives content enough time to attract voters while maintaining unpredictability.",
+            text: "The random settlement timing eliminates strategic delay. In systems with known deadlines, sophisticated voters wait until the last moment to minimize information disadvantage. With random settlement, waiting is risky  -- the round could settle at any time after the grace period. The flat 0.03% per block probability spreads resolution evenly across the ~1-24 hour range, with most rounds resolving randomly before the 24-hour cap. This gives content enough time to attract voters while maintaining unpredictability.",
           },
           {
             type: "paragraph",
@@ -554,7 +554,7 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Grace period (0 to minEpochBlocks, ~1 hour): No settlement possible. Votes accumulate freely.",
-              "Flat probability (minEpochBlocks to maxEpochBlocks): Each block has a flat 0.01% probability of triggering settlement. Resolution is spread evenly across the window.",
+              "Flat probability (minEpochBlocks to maxEpochBlocks): Each block has a flat 0.03% probability of triggering settlement. Resolution is spread evenly across the window.",
               "Forced settlement (maxEpochBlocks, ~24 hours): The round must settle. This prevents indefinite rounds. An additional wall-clock safety cap (maxDuration, 7 days) ensures rounds cannot persist beyond a fixed real-time limit regardless of block production rate.",
             ],
           },
@@ -569,7 +569,7 @@ export const SECTIONS: Section[] = [
               rows: [
                 ["minEpochBlocks", "~300 blocks (~1 hour)", "Grace period before settlement can trigger"],
                 ["maxEpochBlocks", "~7200 blocks (~24 hours)", "Hard cap -- round must settle"],
-                ["Base rate", "0.01% per block", "Flat settlement probability after grace period"],
+                ["Base rate", "0.03% per block", "Flat settlement probability after grace period"],
                 ["Growth rate", "0 (flat)", "No growth -- constant probability"],
                 ["Max probability", "0.1% per block", "Cap (not reached with flat base)"],
               ],
@@ -590,7 +590,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "One-sided rounds (only UP or only DOWN votes) keep extending past the normal settlement window, creating a visible opportunity for contrarian participation. If maxEpochBlocks is reached with only one side voting, the round settles as a unanimous consensus. All stakes are returned, and voters receive a small reward from the consensus subsidy reserve  -- 5% of the total stake, split between voters (~89%) and the content submitter (~11%).",
+            text: "One-sided rounds (only UP or only DOWN votes) keep extending past the normal settlement window, creating a visible opportunity for contrarian participation. If maxEpochBlocks is reached with only one side voting, the round settles as a unanimous consensus. All stakes are returned, and voters receive a small reward from the consensus subsidy reserve  -- 5% of the total stake (capped at 50 cREP per round), split between voters (~89%) and the content submitter (~11%).",
           },
           {
             type: "paragraph",
@@ -654,7 +654,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Rounds require a minimum of 3 voters (minVoters) to settle as contested. With fewer than minVoters at maxEpochBlocks, the round is cancelled and all stakes are refunded. With exactly 3 voters on opposite sides (e.g. 2-vs-1), the round functions as the minimum viable contested round. Random settlement means no voter can time their exit. If only one side votes and maxEpochBlocks is reached, it settles as a unanimous consensus with a subsidy payout.",
+            text: "Rounds require a minimum of 5 voters (minVoters) to settle as contested. With fewer than minVoters at maxEpochBlocks, the round is cancelled and all stakes are refunded. With exactly 5 voters on opposite sides (e.g. 3-vs-2), the round functions as the minimum viable contested round. Random settlement means no voter can time their exit. If only one side votes and maxEpochBlocks is reached, it settles as a unanimous consensus with a subsidy payout.",
           },
           {
             type: "sub_heading",
@@ -906,14 +906,14 @@ export const SECTIONS: Section[] = [
               headers: ["Action", "Stake", "Notes"],
               rows: [
                 ["Vote on content", "1-100 cREP", "Per vote, per round"],
-                ["Submit content", "10 cREP", "Returned after 4 days if rating stays above 10%"],
+                ["Submit content", "10 cREP", "Returned after 4 days if rating stays above 25"],
                 ["Register as frontend", "1,000 cREP", "Requires governance approval"],
               ],
             },
           },
           {
             type: "paragraph",
-            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 10% after a 24-hour grace period. Stakes are automatically returned after 4 days if not slashed.",
+            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period. Stakes are automatically returned after 4 days if not slashed.",
           },
         ],
       },
@@ -1057,7 +1057,7 @@ export const SECTIONS: Section[] = [
                 ["maxDuration", "7 days", "Wall-clock safety cap on round length"],
                 ["Liquidity parameter (b)", "1,000 cREP", "Controls bonding curve sensitivity and share pricing"],
                 ["Rating smoothing (b_r)", "50 cREP (hardcoded)", "Controls rating sensitivity to individual votes"],
-                ["Min voters", "3", "Minimum voters required for contested settlement"],
+                ["Min voters", "5", "Minimum voters required for contested settlement"],
                 ["Max voters", "1,000", "Per-round cap (O(1) settlement enables higher limits)"],
                 ["Vote stake", "1-100 cREP", "Stake range per vote, capped per Voter ID"],
                 ["Vote cooldown", "24 hours", "Wait time before voting on the same content again"],
@@ -1379,7 +1379,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The consensus subsidy pool solves this. It is pre-funded with 4,000,000 cREP from the treasury allocation and continuously replenished by 5% of every losing pool from two-sided rounds. When a one-sided round reaches maxEpochBlocks, the contract distributes a subsidy from this reserve equal to 5% of the round's total stake, capped by the reserve balance.",
+            text: "The consensus subsidy pool solves this. It is pre-funded with 4,000,000 cREP from the treasury allocation and continuously replenished by 5% of every losing pool from two-sided rounds. When a one-sided round reaches maxEpochBlocks, the contract distributes a subsidy from this reserve equal to 5% of the round's total stake, capped at 50 cREP per round and by the reserve balance.",
           },
           {
             type: "paragraph",

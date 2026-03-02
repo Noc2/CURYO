@@ -1258,7 +1258,7 @@ const SecurityAudit: NextPage = () => {
             </tr>
             <tr>
               <td>
-                <strong>Coordinated rating floor attack</strong> &mdash; 41+ voters push rating below 10 to trigger
+                <strong>Coordinated rating floor attack</strong> &mdash; 41+ voters push rating below 25 to trigger
                 submitter stake slash. 24-hour cooldown per voter per content limits repeats.
               </td>
               <td>41 voters &times; 1&ndash;100 cREP (returned if unopposed)</td>

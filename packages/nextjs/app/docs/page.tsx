@@ -63,8 +63,8 @@ const DocsIntro: NextPage = () => {
           <strong>Accumulate:</strong> Votes accumulate within the round. Live tallies are visible at all times.
         </li>
         <li>
-          <strong>Resolution:</strong> After a ~1&nbsp;hour grace period and enough votes (minimum 3 voters), the round
-          becomes eligible for resolution. Each block has a flat 0.01% chance of triggering settlement, spreading
+          <strong>Resolution:</strong> After a ~1&nbsp;hour grace period and enough votes (minimum 5 voters), the round
+          becomes eligible for resolution. Each block has a flat 0.03% chance of triggering settlement, spreading
           resolution evenly across ~1&ndash;24&nbsp;hours. The majority side wins and the losing side&apos;s stakes
           become the reward pool.
         </li>

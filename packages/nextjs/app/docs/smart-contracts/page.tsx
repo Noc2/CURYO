@@ -242,7 +242,7 @@ const SmartContracts: NextPage = () => {
           <strong>Grace period:</strong> 24 hours. No slash possible during this time.
         </li>
         <li>
-          <strong>Slash:</strong> If rating drops below 10% after grace period, 100% of stake goes to the treasury.
+          <strong>Slash:</strong> If rating drops below 25 after grace period, 100% of stake goes to the treasury.
         </li>
         <li>
           <strong>Auto-return:</strong> After ~4 days if not slashed.

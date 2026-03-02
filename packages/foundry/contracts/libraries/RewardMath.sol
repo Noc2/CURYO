@@ -19,6 +19,7 @@ library RewardMath {
 
     // Consensus subsidy: payout rate when losingPool == 0 (5% of total round stake)
     uint256 internal constant CONSENSUS_SUBSIDY_RATE = 500; // 5% of totalStake
+    uint256 internal constant MAX_CONSENSUS_SUBSIDY = 50e6; // 50 cREP cap per round (6 decimals)
 
     // Rating calculation parameter (fixed, not configurable)
     uint256 internal constant RATING_B = 50e6; // Smoothing parameter for rating formula (50 cREP in 6 decimals)
@@ -106,6 +107,7 @@ library RewardMath {
     /// @return subsidy Amount to distribute from the reserve (capped by balance).
     function calculateConsensusSubsidy(uint256 totalStake, uint256 reserveBalance) internal pure returns (uint256) {
         uint256 desired = (totalStake * CONSENSUS_SUBSIDY_RATE) / BPS_TOTAL;
+        if (desired > MAX_CONSENSUS_SUBSIDY) desired = MAX_CONSENSUS_SUBSIDY;
         return desired > reserveBalance ? reserveBalance : desired;
     }
 

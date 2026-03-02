@@ -179,9 +179,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             300, // minEpochBlocks (~1 hour)
             7200, // maxEpochBlocks (~24 hrs)
             7 days, // maxDuration
-            3, // minVoters
+            5, // minVoters
             1000, // maxVoters
-            1, // baseRateBps (0.01% — flat)
+            3, // baseRateBps (0.03% — flat)
             0, // growthRateBps (no growth)
             10, // maxProbBps (0.1% cap)
             1000e6 // liquidityParam (1000 cREP)

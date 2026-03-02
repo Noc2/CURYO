@@ -260,7 +260,7 @@ const Tokenomics = () => {
       <h3>Treasury</h3>
       <p>
         The governance treasury starts with <strong>10M cREP</strong> and grows over time through two inflow sources: a
-        1% fee from every round resolution and forfeited submitter deposits (when content rating drops below 10%).
+        1% fee from every round resolution and forfeited submitter deposits (when content rating drops below 25).
         Treasury tokens are distributed exclusively via governance proposals &mdash; for grants, whistleblower rewards,
         and protocol development.
       </p>
@@ -343,7 +343,7 @@ const Tokenomics = () => {
             <tr>
               <td>Submit content</td>
               <td className="font-mono">10 cREP</td>
-              <td>Returned after grace period if rating stays above 10%</td>
+              <td>Returned after grace period if rating stays above 25</td>
             </tr>
             <tr>
               <td>Register as frontend</td>
@@ -354,7 +354,7 @@ const Tokenomics = () => {
         </table>
       </div>
       <p>
-        Submitter deposits are forfeited (100% to treasury) if content rating drops below 10% after a 24-hour grace
+        Submitter deposits are forfeited (100% to treasury) if content rating drops below 25 after a 24-hour grace
         period.
       </p>
     </article>
