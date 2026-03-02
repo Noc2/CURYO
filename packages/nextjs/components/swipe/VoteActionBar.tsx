@@ -126,7 +126,7 @@ export function VoteActionBar({ contentId, categoryId, onVote, isCommitting, isO
           /* Already voted — show indicator */
           <div
             className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
-            data-tip={`Your stake is locked until the round settles. After settlement, there is a 24-hour cooldown before you can vote on this ${contentLabel} again.`}
+            data-tip={`Your cREP is locked until the round is resolved. After resolution, there is a 24-hour cooldown before you can vote on this ${contentLabel} again.`}
           >
             <span className={`text-base font-semibold ${myVoteIsUp ? "text-success" : "text-error"}`}>
               Voted {myVoteIsUp ? "Up" : "Down"}

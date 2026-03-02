@@ -31,16 +31,16 @@ const WhitepaperPage: NextPage = () => {
           <strong>How It Works</strong> &mdash; Round mechanics, voter ID, reward distribution, content rating
         </li>
         <li>
-          <strong>Public Voting</strong> &mdash; Bonding curve shares and random settlement
+          <strong>Public Voting</strong> &mdash; Early-mover reward points and random resolution
         </li>
         <li>
           <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards
         </li>
         <li>
-          <strong>Governance</strong> &mdash; On-chain governance, treasury, and collusion prevention
+          <strong>Governance</strong> &mdash; Community governance, treasury, and collusion prevention
         </li>
         <li>
-          <strong>Curyo &amp; AI</strong> &mdash; Model collapse, stake-weighted curation as AI infrastructure, on-chain
+          <strong>Curyo &amp; AI</strong> &mdash; Model collapse, stake-weighted curation as AI infrastructure, public
           ratings as a public good, AI-assisted voting with human oversight
         </li>
         <li>

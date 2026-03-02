@@ -70,15 +70,15 @@ export function SettlementNotifier() {
 
         // In-app toast (always fires)
         notification.success(
-          `Round settled! Content #${args.contentId.toString()} round #${args.roundId.toString()}. Check your portfolio to claim rewards.`,
+          `Round resolved! Content #${args.contentId.toString()} round #${args.roundId.toString()}. Check your portfolio to claim rewards.`,
           { duration: 8000 },
         );
 
         // Browser notification (only if permitted)
         if (permissionRef.current === "granted") {
           try {
-            new Notification("Round Settled!", {
-              body: `Content #${args.contentId.toString()} round settled. Check your portfolio to claim rewards.`,
+            new Notification("Round Resolved!", {
+              body: `Content #${args.contentId.toString()} round resolved. Check your portfolio to claim rewards.`,
               icon: "/logo.svg",
             });
           } catch {

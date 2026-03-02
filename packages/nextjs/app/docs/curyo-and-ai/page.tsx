@@ -146,7 +146,7 @@ const CuryoAndAI: NextPage = () => {
       <p>Curyo&apos;s architecture enables several extensions at the intersection of AI and decentralized curation:</p>
       <ul>
         <li>
-          <strong>Cross-platform quality oracle</strong> &mdash; On-chain content ratings can serve as an oracle that
+          <strong>Cross-platform quality oracle</strong> &mdash; Public content ratings can serve as an oracle that
           other protocols and platforms query, creating a shared quality layer across the decentralized web.
         </li>
         <li>

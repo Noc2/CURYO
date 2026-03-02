@@ -90,7 +90,7 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
               </div>
               <div>
                 <p className="text-xl font-bold tabular-nums">{settledVoteCount}</p>
-                <p className="text-base text-base-content/50">Settled</p>
+                <p className="text-base text-base-content/50">Resolved</p>
               </div>
             </div>
           </div>

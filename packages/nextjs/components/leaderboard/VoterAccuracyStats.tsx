@@ -11,7 +11,7 @@ export function VoterAccuracyStats() {
   if (!stats) {
     return (
       <div className="text-center py-8 text-base-content/50">
-        <p>No settled votes yet</p>
+        <p>No resolved votes yet</p>
       </div>
     );
   }
@@ -38,7 +38,7 @@ export function VoterAccuracyStats() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-base font-medium text-base-content/60">Your voting accuracy</span>
-        <span className="text-base tabular-nums text-base-content/60">{stats.totalSettledVotes} settled votes</span>
+        <span className="text-base tabular-nums text-base-content/60">{stats.totalSettledVotes} resolved votes</span>
       </div>
       <div className="flex flex-wrap gap-2">
         {entries.map(e => (

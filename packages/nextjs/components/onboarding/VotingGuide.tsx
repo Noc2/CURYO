@@ -12,7 +12,7 @@ const STEPS = [
   { label: "Browse", desc: "explore submitted content in the feed", hex: "#359EEE" },
   { label: "Vote", desc: "predict whether the content rating will go up or down", hex: "#03CEA4" },
   { label: "Stake", desc: "back your prediction with cREP tokens", hex: "#FFC43D" },
-  { label: "Settle", desc: "rounds resolve automatically after the voting period", hex: "#EF476F" },
+  { label: "Resolve", desc: "rounds resolve automatically after the voting period", hex: "#EF476F" },
   { label: "Claim", desc: "collect your rewards if your prediction was correct", hex: "#359EEE" },
 ];
 

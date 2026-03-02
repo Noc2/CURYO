@@ -112,7 +112,7 @@ export function PlatformProposals() {
           <li>A governance proposal is automatically created</li>
           <li>Community votes for 1 week (4% circulating supply quorum required)</li>
           <li>If approved, stake is returned and platform is added</li>
-          <li>If rejected, stake is slashed to treasury</li>
+          <li>If rejected, stake is forfeited to treasury</li>
         </ol>
       </div>
     </div>

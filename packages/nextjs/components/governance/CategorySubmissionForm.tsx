@@ -301,7 +301,7 @@ export const CategorySubmissionForm = () => {
               <div>
                 <p className="flex items-center gap-1.5 text-base font-medium text-white">
                   Platform Stake
-                  <InfoTooltip text="Returned if approved by governance, slashed if rejected. Receive 1% of the losing pool from the platform" />
+                  <InfoTooltip text="Returned if approved by governance, forfeited if rejected. Receive 1% of the losing pool from the platform" />
                 </p>
               </div>
               <div className="text-right">

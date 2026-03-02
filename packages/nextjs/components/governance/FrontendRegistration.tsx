@@ -144,7 +144,7 @@ export function FrontendRegistration() {
   // Status badge
   const getStatusBadge = () => {
     if (isSlashed) {
-      return <span className="px-2 py-0.5 rounded-full text-base font-medium bg-error/20 text-error">Slashed</span>;
+      return <span className="px-2 py-0.5 rounded-full text-base font-medium bg-error/20 text-error">Penalized</span>;
     }
     if (isApproved) {
       return (
@@ -193,7 +193,7 @@ export function FrontendRegistration() {
               <div>
                 <p className="flex items-center gap-1.5 text-base font-medium text-white">
                   Frontend Stake
-                  <InfoTooltip text="Returned when you withdraw, slashed if you act maliciously. Receive 1% of the losing pool from votes via your interface" />
+                  <InfoTooltip text="Returned when you withdraw, forfeited if you act maliciously. Receive 1% of the losing pool from votes via your interface" />
                 </p>
               </div>
               <div className="text-right">

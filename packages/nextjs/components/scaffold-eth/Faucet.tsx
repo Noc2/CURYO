@@ -416,7 +416,7 @@ export const Faucet = () => {
             <div className="bg-secondary/10 rounded-xl p-4 space-y-3">
               <h4 className="font-semibold text-secondary">Claim Voter ID</h4>
               <p className="text-base text-base-content/60">
-                Mint a soulbound Voter ID NFT for sybil resistance. Required for voting and submitting content.
+                Create a non-transferable Voter ID. Required for voting and submitting content.
               </p>
               {hasVoterId === true && voterIdTokenId !== null ? (
                 <div className="flex items-center gap-2 text-success">

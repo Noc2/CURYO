@@ -218,9 +218,9 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <div className="flex flex-col items-center gap-4 py-4">
             <ArrowPathIcon className="w-12 h-12 text-primary animate-spin" />
             <div className="text-center space-y-2">
-              <p className="text-lg font-semibold">Verifying on-chain...</p>
+              <p className="text-lg font-semibold">Verifying...</p>
               <p className="text-base-content/60 text-base">
-                Your proof has been submitted. The on-chain verification may take a moment.
+                Your proof has been submitted. Verification may take a moment.
               </p>
             </div>
             <div className="flex gap-2 mt-2">
@@ -278,7 +278,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <li>Install the Self app and scan your passport&apos;s NFC chip</li>
           <li>Scan the QR code above with the Self app</li>
           <li>Self generates a zero-knowledge proof — no personal data is shared</li>
-          <li>The proof is verified on-chain and you receive your cREP + Voter ID</li>
+          <li>The proof is verified on the blockchain and you receive your cREP + Voter ID</li>
           {isValidReferrer && <li className="text-success">Referral bonus is applied automatically!</li>}
         </ol>
       </div>

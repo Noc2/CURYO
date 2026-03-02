@@ -48,30 +48,29 @@ const FrontendCodes: NextPage = () => {
         it automatically.
       </p>
 
-      <h2>Running a Keeper</h2>
+      <h2>Running a Resolution Service</h2>
       <p>
-        Every frontend operator should also run a <strong>Keeper</strong> &mdash; a background service that keeps the
-        protocol moving. The Keeper performs one critical task:
+        Every frontend operator should also run a <strong>resolution service</strong> &mdash; a background service that
+        keeps the protocol moving. It performs one critical task:
       </p>
       <ol>
         <li>
-          <strong>Settling rounds:</strong> After the minimum epoch length has passed and enough votes have been cast,
-          the Keeper calls <code>trySettle(contentId)</code> to attempt settlement. Settlement is probabilistic &mdash;
-          the probability increases each block using <code>block.prevrandao</code> randomness. The Keeper retries until
-          settlement succeeds.
+          <strong>Resolving rounds:</strong> After the minimum voting window has passed and enough votes have been cast,
+          the service calls <code>trySettle(contentId)</code> to attempt resolution. Resolution is probabilistic &mdash;
+          the probability increases over time using on-chain randomness. The service retries until resolution succeeds.
         </li>
       </ol>
       <p>
-        Without Keepers, rounds would never settle. Running a Keeper alongside your frontend ensures a smooth experience
-        for your users and contributes to the health of the network. Since <code>trySettle()</code> is permissionless
-        and uses only public on-chain data, anyone can run a Keeper &mdash; no secret data needed. The more independent
-        Keepers running, the more resilient the protocol becomes.
+        Without resolution services, rounds would never resolve. Running one alongside your frontend ensures a smooth
+        experience for your users and contributes to the health of the network. Since <code>trySettle()</code> is
+        permissionless and uses only public blockchain data, anyone can run a resolution service &mdash; no secret data
+        needed. The more independent services running, the more resilient the network becomes.
       </p>
 
       <h2>Running an Indexer / Back-End</h2>
       <p>
         For the best user experience, frontend operators should run their own <strong>indexer</strong> and/or{" "}
-        <strong>back-end service</strong>. Reading on-chain data directly from an RPC node for every page load is slow
+        <strong>back-end service</strong>. Reading blockchain data directly from an RPC node for every page load is slow
         and expensive. An indexer listens to contract events and stores the data in a database so your frontend can
         query it instantly.
       </p>
@@ -85,7 +84,7 @@ const FrontendCodes: NextPage = () => {
         </li>
         <li>
           <strong>Richer queries:</strong> An indexed database lets you filter, sort, and aggregate data in ways that
-          on-chain reads alone cannot support efficiently.
+          direct blockchain reads alone cannot support efficiently.
         </li>
       </ul>
       <p>
@@ -97,8 +96,8 @@ const FrontendCodes: NextPage = () => {
       <p>
         Frontend operators are allowed and encouraged to implement <strong>client-side content moderation</strong> to
         comply with local regulations and their own platform policies. Because Curyo is a decentralized protocol, there
-        is no protocol-level censorship &mdash; content submitted on-chain is permanent. However, each frontend is free
-        to decide what it displays to its users.
+        is no protocol-level censorship &mdash; content submitted to the blockchain is permanent. However, each frontend
+        is free to decide what it displays to its users.
       </p>
       <p>The reference implementation includes a keyword-based blocklist that:</p>
       <ul>

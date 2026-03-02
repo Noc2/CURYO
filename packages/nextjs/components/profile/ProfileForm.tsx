@@ -215,8 +215,8 @@ export function ProfileForm() {
         }}
       >
         <p className="text-base text-white/80">
-          Your profile is stored on-chain. A small gas fee is required to {hasProfile ? "update" : "create"} your
-          profile.
+          Your profile is stored publicly on the blockchain. A small gas fee is required to{" "}
+          {hasProfile ? "update" : "create"} your profile.
         </p>
       </div>
 

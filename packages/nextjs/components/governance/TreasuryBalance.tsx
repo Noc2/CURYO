@@ -32,7 +32,7 @@ export const TreasuryBalance = () => {
         <BuildingLibraryIcon className="w-5 h-5 text-primary" />
         <h2 className="text-lg font-semibold">Treasury</h2>
         <InfoTooltip
-          text="Governance-controlled treasury funded by 1% settlement fee, slashed stakes, and forfeited votes. Spent via governance proposals."
+          text="Governance-controlled treasury funded by 1% resolution fee, forfeited stakes, and forfeited votes. Spent via governance proposals."
           className="[&>svg]:opacity-60"
         />
       </div>

@@ -104,7 +104,7 @@ export function AccuracyLeaderboard() {
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 text-base-content/50">
-          <p>No voters with enough settled votes yet</p>
+          <p>No voters with enough resolved votes yet</p>
         </div>
       ) : (
         <div className="overflow-x-auto">

@@ -189,7 +189,7 @@ const Tokenomics = () => {
         are small, round rewards alone may not be enough to attract voters and submitters. The participation pool pays a{" "}
         <strong>proportional bonus on stake</strong>: submitters are rewarded immediately on submission, while voters
         can claim their participation rewards after round resolution (regardless of vote outcome). The voter reward rate
-        is snapshotted at settlement time for fairness. Early participants receive the most thanks to a halving
+        is snapshotted at resolution time for fairness. Early participants receive the most thanks to a halving
         schedule: as cumulative rewards grow, the reward rate decreases. This creates a strong incentive to participate
         early and helps bootstrap the network.
       </p>

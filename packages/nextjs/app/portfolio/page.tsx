@@ -100,7 +100,7 @@ export default function PortfolioPage() {
             </div>
             <div>
               <p className="text-3xl font-bold tabular-nums">{settledVoteCount}</p>
-              <p className="text-base text-base-content/50">Settled</p>
+              <p className="text-base text-base-content/50">Resolved</p>
             </div>
           </div>
         </div>
@@ -144,7 +144,7 @@ export default function PortfolioPage() {
                     ) : (
                       <span
                         className="tooltip tooltip-left text-base font-medium px-4 py-2 rounded-full bg-warning/10 text-warning"
-                        data-tip="Round expires soon. If not settled by then, stakes are refunded."
+                        data-tip="Round expires soon. If not resolved by then, stakes are refunded."
                       >
                         Active
                         {contentId !== undefined &&
