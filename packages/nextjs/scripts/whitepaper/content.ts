@@ -124,7 +124,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Every content item has a rating from 0 to 100, starting at 50. The rating updates live as votes arrive, computed as: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b), where b is the liquidity parameter. After settlement, the rating carries over to the next round.",
+            text: "Every content item has a rating from 0 to 100, starting at 50. The rating updates live as votes arrive, computed as: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b_r), where b_r = 50 cREP is a smoothing parameter that ensures individual votes have diminishing impact as total stake grows. After settlement, the rating carries over to the next round.",
           },
           {
             type: "paragraph",
@@ -263,7 +263,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo's parimutuel voting mechanism can be modeled as a game. Let N voters each choose a direction d_i in {UP, DOWN} and a stake s_i in [1, 100]. Each vote purchases shares via the bonding curve: shares_i = s_i * b / (sameDirectionStake + b), where sameDirectionStake is the cumulative stake on that side before this vote. Let W denote the total stake on the winning side and L the total stake on the losing side. The voter pool receives 82% of the losing stake, distributed proportionally by shares to the winning side.",
+            text: "Curyo's parimutuel voting mechanism can be modeled as a game. Let N voters each choose a direction d_i in {UP, DOWN} and a stake s_i in [1, 100]. Each vote purchases shares via the bonding curve: shares_i = s_i * b / (sameDirectionStake + b), where b = 1,000 cREP is the bonding curve liquidity parameter and sameDirectionStake is the cumulative stake on that side before this vote. Let W denote the total stake on the winning side and L the total stake on the losing side. The voter pool receives 82% of the losing stake, distributed proportionally by shares to the winning side.",
           },
           {
             type: "sub_heading",
@@ -276,6 +276,10 @@ export const SECTIONS: Section[] = [
           {
             type: "formula",
             latex: "P_i^{\\mathrm{win}} = s_i + \\frac{s_i}{W} \\times 0.82 \\, L",
+          },
+          {
+            type: "paragraph",
+            text: "This uses the simultaneous-voting simplification where shares are proportional to raw stake. The full bonding-curve-weighted formula (Section 3, Bonding Curve Share Pricing) distributes by voterShares/totalWinningShares, which reduces to s_i/W when all voters enter at the same sameDirectionStake. The equilibrium results (BNE, break-even thresholds) hold under both models.",
           },
           {
             type: "paragraph",
@@ -336,7 +340,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The rating is derived from the bonding curve formula: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b). The liquidity parameter b ensures that individual votes have diminishing impact as total stake grows. In equilibrium, content ratings converge to the community's aggregate quality assessment as the number of rounds grows.",
+            text: "The rating is derived from the formula: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b_r), where b_r = 50 cREP is the rating smoothing parameter (distinct from the bonding curve liquidity parameter b = 1,000 cREP used for share pricing). The smoothing parameter b_r ensures that individual votes have diminishing impact as total stake grows. In equilibrium, content ratings converge to the community's aggregate quality assessment as the number of rounds grows.",
           },
         ],
       },
@@ -420,7 +424,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The bonding curve pricing replaces cryptographic vote privacy as the anti-herding mechanism. Each additional vote in the same direction receives fewer shares per cREP (shares = stake * b / (sameDirectionStake + b)). This makes herding economically self-defeating: the more voters pile onto one side, the less profitable that side becomes. Contrarian positions are cheap and potentially very rewarding, creating organic mean reversion without hidden votes.",
+            text: "The bonding curve pricing replaces cryptographic vote privacy as the anti-herding mechanism. Each additional vote in the same direction receives fewer shares per cREP (shares = stake * b / (sameDirectionStake + b), where b = 1,000 cREP is the bonding curve liquidity parameter). This makes herding economically self-defeating: the more voters pile onto one side, the less profitable that side becomes. Contrarian positions are cheap and potentially very rewarding, creating organic mean reversion without hidden votes.",
           },
         ],
       },
@@ -429,7 +433,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Each content item has a rating from 0 to 100 (starting at 50). The rating updates live as votes arrive, computed as: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b), where b is a liquidity parameter that controls sensitivity. When a round settles, the final rating carries over to the next round. The rating converges over many rounds to the community's aggregate quality assessment. Winners receive their original stake back plus a share-proportional portion of the losing pool.",
+            text: "Each content item has a rating from 0 to 100 (starting at 50). The rating updates live as votes arrive, computed as: rating = 50 + 50 * (upStake - downStake) / (upStake + downStake + b_r), where b_r = 50 cREP is the rating smoothing parameter. When a round settles, the final rating carries over to the next round. The rating converges over many rounds to the community's aggregate quality assessment. Winners receive their original stake back plus a share-proportional portion of the losing pool.",
           },
         ],
       },
@@ -484,7 +488,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "where sameDirectionStake is the cumulative stake on that side before this vote, and b is the liquidity parameter that controls sensitivity. Early voters (when sameDirectionStake is low) receive nearly their full stake as shares. Late followers (when sameDirectionStake is high) receive far fewer shares per cREP.",
+            text: "where sameDirectionStake is the cumulative stake on that side before this vote, and b = 1,000 cREP is the bonding curve liquidity parameter that controls sensitivity (distinct from the rating smoothing parameter b_r = 50 cREP). Early voters (when sameDirectionStake is low) receive nearly their full stake as shares. Late followers (when sameDirectionStake is high) receive far fewer shares per cREP.",
           },
           {
             type: "paragraph",
@@ -527,11 +531,11 @@ export const SECTIONS: Section[] = [
           {
             type: "formula",
             latex:
-              "\\mathrm{rating} = 50 + 50 \\times \\frac{q_{\\mathrm{up}} - q_{\\mathrm{down}}}{q_{\\mathrm{up}} + q_{\\mathrm{down}} + b}",
+              "\\mathrm{rating} = 50 + 50 \\times \\frac{q_{\\mathrm{up}} - q_{\\mathrm{down}}}{q_{\\mathrm{up}} + q_{\\mathrm{down}} + b_r}",
           },
           {
             type: "paragraph",
-            text: "where q_up and q_down are the cumulative stakes on each side and b is the liquidity parameter. When no votes exist (q_up = q_down = 0), the rating stays at its starting value. The rating provides a continuous, real-time quality signal that reflects the community's current assessment.",
+            text: "where q_up and q_down are the cumulative stakes on each side and b_r = 50 cREP is the rating smoothing parameter. When no votes exist (q_up = q_down = 0), the rating stays at its starting value. The rating provides a continuous, real-time quality signal that reflects the community's current assessment.",
           },
           {
             type: "paragraph",
@@ -544,14 +548,14 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Settlement is triggered probabilistically. Each time the contract is called (via a vote or a dedicated trySettle call), it checks whether settlement should occur. The probability follows an increasing hazard rate:",
+            text: "Settlement is triggered probabilistically. Each time the contract is called (via a vote or a dedicated trySettle call), it checks whether settlement should occur. The probability follows a flat hazard rate:",
           },
           {
             type: "bullets",
             items: [
               "Grace period (0 to minEpochBlocks, ~1 hour): No settlement possible. Votes accumulate freely.",
               "Flat probability (minEpochBlocks to maxEpochBlocks): Each block has a flat 0.01% probability of triggering settlement. Resolution is spread evenly across the window.",
-              "Forced settlement (maxEpochBlocks, ~24 hours): The round must settle. This prevents indefinite rounds.",
+              "Forced settlement (maxEpochBlocks, ~24 hours): The round must settle. This prevents indefinite rounds. An additional wall-clock safety cap (maxDuration, 7 days) ensures rounds cannot persist beyond a fixed real-time limit regardless of block production rate.",
             ],
           },
           {
@@ -629,7 +633,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "In systems with known settlement deadlines, sophisticated voters wait until the last moment to minimize information disadvantage (Ottaviani & Sorensen, 2006). Random settlement eliminates this strategy. The increasing hazard rate creates a discount on information: waiting provides more information but risks missing the round entirely. The optimal strategy is to vote when you have a genuine opinion, not to wait for maximum information.",
+            text: "In systems with known settlement deadlines, sophisticated voters wait until the last moment to minimize information disadvantage (Ottaviani & Sorensen, 2006). Random settlement eliminates this strategy. The flat per-block probability creates a constant hazard rate: any block after the grace period could end the round, so waiting provides more information but carries a constant risk of missing the round entirely. The optimal strategy is to vote when you have a genuine opinion, not to wait for maximum information.",
           },
           {
             type: "sub_heading",
@@ -650,7 +654,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "With only two voters on opposite sides, the round functions as a direct heads-up bet. Both voters get a clear risk/reward picture. Random settlement means neither can time their exit. If only one voter participates and maxEpochBlocks is reached, it settles as a unanimous consensus with a subsidy payout.",
+            text: "Rounds require a minimum of 3 voters (minVoters) to settle as contested. With fewer than minVoters at maxEpochBlocks, the round is cancelled and all stakes are refunded. With exactly 3 voters on opposite sides (e.g. 2-vs-1), the round functions as the minimum viable contested round. Random settlement means no voter can time their exit. If only one side votes and maxEpochBlocks is reached, it settles as a unanimous consensus with a subsidy payout.",
           },
           {
             type: "sub_heading",
@@ -1049,8 +1053,11 @@ export const SECTIONS: Section[] = [
               headers: ["Parameter", "Default", "Description"],
               rows: [
                 ["minEpochBlocks", "~300 blocks (~1 hour)", "Grace period before settlement can trigger"],
-                ["maxEpochBlocks", "~7200 blocks (~24 hours)", "Hard cap -- forced settlement"],
-                ["Liquidity parameter (b)", "50", "Controls bonding curve sensitivity and share pricing"],
+                ["maxEpochBlocks", "~7200 blocks (~24 hours)", "Hard cap -- forced settlement by block count"],
+                ["maxDuration", "7 days", "Wall-clock safety cap on round length"],
+                ["Liquidity parameter (b)", "1,000 cREP", "Controls bonding curve sensitivity and share pricing"],
+                ["Rating smoothing (b_r)", "50 cREP (hardcoded)", "Controls rating sensitivity to individual votes"],
+                ["Min voters", "3", "Minimum voters required for contested settlement"],
                 ["Max voters", "1,000", "Per-round cap (O(1) settlement enables higher limits)"],
                 ["Vote stake", "1-100 cREP", "Stake range per vote, capped per Voter ID"],
                 ["Vote cooldown", "24 hours", "Wait time before voting on the same content again"],
@@ -1059,7 +1066,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The random settlement mechanism ensures rounds complete within a bounded timeframe. The minEpochBlocks grace period gives content time to attract voters, while the maxEpochBlocks hard cap prevents indefinite rounds. The liquidity parameter b controls how responsive the rating is to individual votes -- lower values make ratings more sensitive, higher values make them more stable. As the platform grows, governance can adjust these parameters to optimize for the observed voter population.",
+            text: "The random settlement mechanism ensures rounds complete within a bounded timeframe. The minEpochBlocks grace period gives content time to attract voters, while the maxEpochBlocks hard cap prevents indefinite rounds. The liquidity parameter b controls bonding curve share pricing -- lower values make early-mover advantage stronger, higher values make share pricing more uniform. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.",
           },
         ],
       },
