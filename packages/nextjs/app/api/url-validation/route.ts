@@ -7,6 +7,41 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 import { resolveEmbed } from "~~/utils/resolveEmbed";
 
 const RATE_LIMIT_GET = { limit: 100, windowMs: 60_000 };
+
+/**
+ * Block URLs that could be used for SSRF (internal network probing).
+ * Rejects: non-HTTPS, IP-address hostnames, localhost, *.local, *.internal,
+ * and single-label hostnames (no dots).
+ */
+function isSafeUrl(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+
+  if (parsed.protocol !== "https:") return false;
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  // Reject localhost
+  if (hostname === "localhost") return false;
+
+  // Reject single-label hostnames (no dots — e.g. "internal-service")
+  if (!hostname.includes(".")) return false;
+
+  // Reject *.local and *.internal TLDs
+  if (hostname.endsWith(".local") || hostname.endsWith(".internal")) return false;
+
+  // Reject IPv4 addresses (e.g. 169.254.169.254)
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return false;
+
+  // Reject IPv6 addresses (bracketed in URLs, parsed hostname strips brackets)
+  if (hostname.startsWith("[") || hostname.includes(":")) return false;
+
+  return true;
+}
 const RATE_LIMIT_POST = { limit: 20, windowMs: 60_000 };
 const MAX_URLS_PER_REQUEST = 50;
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24h
@@ -168,6 +203,7 @@ async function validateUrl(url: string): Promise<boolean> {
       }
 
       case "generic": {
+        if (!isSafeUrl(url)) return false;
         // HEAD request with timeout for unknown platforms
         const res = await fetch(url, {
           method: "HEAD",

@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid url" }, { status: 400 });
   }
 
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-    return NextResponse.json({ error: "Only HTTP(S) URLs allowed" }, { status: 400 });
+  if (parsed.protocol !== "https:") {
+    return NextResponse.json({ error: "Only HTTPS URLs allowed" }, { status: 400 });
   }
 
   if (!ALLOWED_HOSTS.has(parsed.hostname)) {

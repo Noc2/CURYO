@@ -1,19 +1,25 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "~~/lib/db";
 import { userProfiles } from "~~/lib/db/schema";
 import { isPonderAvailable, ponderApi } from "~~/services/ponder/client";
+import { checkRateLimit } from "~~/utils/rateLimit";
 
+const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 const ALLOWED_TYPES = ["voters", "content", "rewards"];
 const MAX_LIMIT = 100;
 
 // GET: Fetch leaderboard data
 // Uses Ponder when available for richer data (vote counts, rewards), falls back to local DB
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const limited = checkRateLimit(request, RATE_LIMIT);
+  if (limited) return limited;
+
   try {
-    const { searchParams } = new URL(request.url);
-    const rawType = searchParams.get("type") ?? "voters";
+    const rawType = request.nextUrl.searchParams.get("type") ?? "voters";
     const type = ALLOWED_TYPES.includes(rawType) ? rawType : "voters";
-    const limit = String(Math.min(Math.max(parseInt(searchParams.get("limit") ?? "20") || 20, 1), MAX_LIMIT));
+    const limit = String(
+      Math.min(Math.max(parseInt(request.nextUrl.searchParams.get("limit") ?? "20") || 20, 1), MAX_LIMIT),
+    );
 
     // Try Ponder first for enriched leaderboard data
     const ponderAvailable = await isPonderAvailable();

@@ -19,6 +19,7 @@ export interface EmbedResult {
 const CACHE_OPTIONS = { next: { revalidate: 86400 } }; // 24h cache
 const MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB cap on external API responses
 const MAX_AUTHORS = 10; // Cap author lookups per book
+const MAX_DESCRIPTION_LENGTH = 500;
 
 /** Fetch JSON with a response-size guard to prevent memory abuse. */
 async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
@@ -29,6 +30,17 @@ async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
   const text = await res.text();
   if (text.length > MAX_RESPONSE_BYTES) return null;
   return JSON.parse(text);
+}
+
+/** Fetch text with a response-size guard to prevent memory abuse. */
+async function safeFetchText(url: string, options?: RequestInit): Promise<string | null> {
+  const res = await fetch(url, { ...CACHE_OPTIONS, ...options });
+  if (!res.ok) return null;
+  const contentLength = Number(res.headers.get("content-length") || 0);
+  if (contentLength > MAX_RESPONSE_BYTES) return null;
+  const text = await res.text();
+  if (text.length > MAX_RESPONSE_BYTES) return null;
+  return text;
 }
 
 export async function resolveEmbed(
@@ -72,7 +84,7 @@ async function resolveWikipedia(title: string): Promise<EmbedResult> {
     thumbnailUrl: data?.thumbnail?.source ?? null,
     imageUrl: data?.thumbnail?.source ?? undefined,
     title: data?.title,
-    description: data?.description ?? data?.extract,
+    description: (data?.description ?? data?.extract)?.slice(0, MAX_DESCRIPTION_LENGTH),
   };
 }
 
@@ -91,7 +103,7 @@ async function resolveTmdb(movieId: string): Promise<EmbedResult> {
     thumbnailUrl: posterPath ? `https://image.tmdb.org/t/p/w300${posterPath}` : null,
     imageUrl: posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : undefined,
     title: data?.title,
-    description: data?.overview,
+    description: data?.overview?.slice(0, MAX_DESCRIPTION_LENGTH),
     releaseYear: data?.release_date ? data.release_date.split("-")[0] : undefined,
   };
 }
@@ -158,7 +170,7 @@ async function resolveOpenLibrary(id: string, metadata?: Record<string, unknown>
     thumbnailUrl,
     imageUrl,
     title: data.title,
-    description,
+    description: description?.slice(0, MAX_DESCRIPTION_LENGTH),
     authors,
   };
 }
@@ -205,9 +217,8 @@ async function resolveHuggingFace(modelId: string, metadata?: Record<string, unk
   // Fetch org avatar by scraping the org page HTML
   let avatarUrl: string | null = null;
   try {
-    const orgRes = await fetch(`https://huggingface.co/${encodeURIComponent(author)}`, CACHE_OPTIONS);
-    if (orgRes.ok) {
-      const html = await orgRes.text();
+    const html = await safeFetchText(`https://huggingface.co/${encodeURIComponent(author)}`);
+    if (html) {
       const avatarMatch = html.match(/https:\/\/cdn-avatars\.huggingface\.co\/[^"'\s]+/);
       if (avatarMatch) {
         avatarUrl = avatarMatch[0];

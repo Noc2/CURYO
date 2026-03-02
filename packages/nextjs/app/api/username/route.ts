@@ -3,10 +3,17 @@ import { eq, inArray } from "drizzle-orm";
 import { verifyMessage } from "viem";
 import { db } from "~~/lib/db";
 import { userProfiles } from "~~/lib/db/schema";
+import { checkRateLimit } from "~~/utils/rateLimit";
+
+const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
+const WRITE_RATE_LIMIT = { limit: 10, windowMs: 60_000 };
 
 // GET: Fetch username(s) for address(es)
 // Query params: ?address=0x... or ?addresses=0x...,0x...
 export async function GET(request: NextRequest) {
+  const limited = checkRateLimit(request, READ_RATE_LIMIT);
+  if (limited) return limited;
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const singleAddress = searchParams.get("address");
@@ -66,6 +73,9 @@ function isValidImageUrl(url: string): boolean {
 
 // POST: Set/update profile (username and/or profile image) with wallet signature
 export async function POST(request: NextRequest) {
+  const limited = checkRateLimit(request, WRITE_RATE_LIMIT);
+  if (limited) return limited;
+
   try {
     const { address, username, profileImageUrl, signature } = await request.json();
 
