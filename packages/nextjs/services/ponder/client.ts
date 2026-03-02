@@ -177,6 +177,19 @@ export interface PonderAccuracyLeaderboardItem {
   winRate: number;
 }
 
+export interface PonderVoteItem {
+  id: string;
+  contentId: string;
+  roundId: string;
+  voter: string;
+  isUp: boolean;
+  stake: string;
+  shares: string;
+  votedAt: string;
+  roundStartTime: string | null;
+  roundState: number | null;
+}
+
 export type PonderVoterStatsBatch = Record<string, PonderVoterStats>;
 
 export const ponderApi = {
@@ -283,7 +296,14 @@ export const ponderApi = {
     });
   },
 
-  getVotes(params?: { voter?: string; contentId?: string; roundId?: string; limit?: string; offset?: string }) {
-    return ponderGet<{ items: any[] }>("/votes", params);
+  getVotes(params?: {
+    voter?: string;
+    contentId?: string;
+    roundId?: string;
+    state?: string;
+    limit?: string;
+    offset?: string;
+  }) {
+    return ponderGet<{ items: PonderVoteItem[] }>("/votes", params);
   },
 };

@@ -3,6 +3,7 @@
 import { useAccount } from "wagmi";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { formatTimeRemaining, useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useClaimReward } from "~~/hooks/useClaimReward";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -59,6 +60,14 @@ export default function PortfolioPage() {
       if (args.contentId === undefined || args.roundId === undefined) return false;
       return settledRoundKeys.has(`${args.contentId.toString()}-${args.roundId.toString()}`);
     }).length ?? 0;
+
+  const { votes: activeVotesWithDeadlines } = useActiveVotesWithDeadlines(address);
+
+  // Build a lookup map for countdown display: "contentId-roundId" -> timeRemaining
+  const deadlineMap = new Map<string, number>();
+  for (const v of activeVotesWithDeadlines) {
+    deadlineMap.set(`${v.contentId}-${v.roundId}`, v.timeRemaining);
+  }
 
   const isLoading = commitsLoading || settledLoading;
 
@@ -133,8 +142,17 @@ export default function PortfolioPage() {
                         {isClaiming ? <span className="loading loading-spinner loading-xs"></span> : "Claim Reward"}
                       </button>
                     ) : (
-                      <span className="text-base font-medium px-4 py-2 rounded-full bg-warning/10 text-warning">
+                      <span
+                        className="tooltip tooltip-left text-base font-medium px-4 py-2 rounded-full bg-warning/10 text-warning"
+                        data-tip="Round expires soon. If not settled by then, stakes are refunded."
+                      >
                         Active
+                        {contentId !== undefined &&
+                          roundId !== undefined &&
+                          (() => {
+                            const remaining = deadlineMap.get(`${contentId.toString()}-${roundId.toString()}`);
+                            return remaining !== undefined ? ` · ${formatTimeRemaining(remaining)}` : "";
+                          })()}
                       </span>
                     )}
                   </div>

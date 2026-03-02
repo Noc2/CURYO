@@ -10,6 +10,7 @@ import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RewardNotifier } from "~~/components/RewardNotifier";
+import { SettlementNotifier } from "~~/components/SettlementNotifier";
 import { TermsAcceptanceModal } from "~~/components/legal/TermsAcceptanceModal";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
@@ -30,6 +31,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
       </div>
       <Toaster />
       <RewardNotifier />
+      <SettlementNotifier />
     </>
   );
 };

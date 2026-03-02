@@ -15,6 +15,7 @@ import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
@@ -128,6 +129,7 @@ export const AddressInfoDropdown = ({
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked: votingStaked } = useVotingStakes(address);
   const { claimAll, isClaiming, progress } = useClaimAll();
+  const { earliestDeadline } = useActiveVotesWithDeadlines(address);
 
   const claimableFormatted =
     totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
@@ -199,7 +201,11 @@ export const AddressInfoDropdown = ({
       {activeStake > 0n && (
         <div
           className="tooltip tooltip-top text-sm text-base-content/40 text-left px-4 pl-12 cursor-help"
-          data-tip="Staked in active rounds. Your claim will appear once each round settles."
+          data-tip={
+            earliestDeadline
+              ? `Staked in active rounds (earliest settles in ${earliestDeadline}). Your claim will appear once each round settles.`
+              : "Staked in active rounds. Your claim will appear once each round settles."
+          }
         >
           {activeFormatted} cREP in active votes
         </div>
@@ -250,7 +256,11 @@ export const AddressInfoDropdown = ({
       {activeStake > 0n && (
         <span
           className="tooltip tooltip-right text-sm text-base-content/40 hidden xl:inline xl:px-2 cursor-help"
-          data-tip="Staked in active rounds. Your claim will appear once each round settles."
+          data-tip={
+            earliestDeadline
+              ? `Staked in active rounds (earliest settles in ${earliestDeadline}). Your claim will appear once each round settles.`
+              : "Staked in active rounds. Your claim will appear once each round settles."
+          }
         >
           {activeFormatted} cREP in active votes
         </span>

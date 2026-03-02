@@ -574,6 +574,7 @@ app.get("/votes", async (c) => {
   const voterRaw = c.req.query("voter");
   const contentId = c.req.query("contentId");
   const roundId = c.req.query("roundId");
+  const stateFilter = c.req.query("state");
   const limit = safeLimit(c.req.query("limit"), 50, 200);
   const offset = safeOffset(c.req.query("offset"));
 
@@ -592,12 +593,32 @@ app.get("/votes", async (c) => {
     if (parsed === null) return c.json({ error: "Invalid roundId" }, 400);
     conditions.push(eq(vote.roundId, parsed));
   }
+  if (stateFilter !== undefined) {
+    const parsed = parseInt(stateFilter);
+    if (isNaN(parsed)) return c.json({ error: "Invalid state filter" }, 400);
+    conditions.push(eq(round.state, parsed));
+  }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
 
   const items = await db
-    .select()
+    .select({
+      id: vote.id,
+      contentId: vote.contentId,
+      roundId: vote.roundId,
+      voter: vote.voter,
+      isUp: vote.isUp,
+      stake: vote.stake,
+      shares: vote.shares,
+      votedAt: vote.votedAt,
+      roundStartTime: round.startTime,
+      roundState: round.state,
+    })
     .from(vote)
+    .leftJoin(
+      round,
+      and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+    )
     .where(where)
     .orderBy(desc(vote.votedAt))
     .limit(limit)
