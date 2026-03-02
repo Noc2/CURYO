@@ -1,23 +1,16 @@
 const STEPS = [
   {
-    label: "Commit",
+    label: "Vote",
     badge: "badge-secondary",
-    duration: "15 min",
-    description: "Vote encrypted & staked on-chain",
-    icon: "🔒",
-  },
-  {
-    label: "Reveal",
-    badge: "badge-secondary",
-    duration: "15 min",
-    description: "Keeper decrypts & publishes votes",
-    icon: "🔓",
+    duration: "1–100 cREP",
+    description: "Choose UP or DOWN, stake is public & price-moving",
+    icon: "🗳️",
   },
   {
     label: "Settle",
     badge: "badge-secondary",
-    duration: "< 30 sec",
-    description: "After 5+ votes, winner determined",
+    duration: "random",
+    description: "Probability increases each block until round settles",
     icon: "⚖️",
   },
   {
