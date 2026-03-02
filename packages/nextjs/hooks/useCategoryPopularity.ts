@@ -29,7 +29,7 @@ export function useCategoryPopularity(feed: ContentItem[]): Map<string, number> 
     }
 
     for (const event of voteEvents) {
-      const contentId = (event.args as { contentId?: bigint }).contentId?.toString();
+      const contentId = (event.args as { contentId?: bigint } | undefined)?.contentId?.toString();
       if (!contentId) continue;
       const categoryId = contentToCategory.get(contentId);
       if (categoryId && categoryId !== "0") {
