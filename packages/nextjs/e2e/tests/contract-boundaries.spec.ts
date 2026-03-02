@@ -1,0 +1,121 @@
+import { approveCREP, submitContentDirect, voteDirect, waitForPonderIndexed } from "../helpers/admin-helpers";
+import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { CONTRACT_ADDRESSES } from "../helpers/contracts";
+import { getContentList } from "../helpers/ponder-api";
+import { expect, test } from "@playwright/test";
+
+/**
+ * Contract boundary tests — verifies on-chain reverts for invalid operations.
+ *
+ * Uses direct contract calls (no browser/UI) to test edge cases:
+ * 1. Vote with stake below MIN_STAKE (1 cREP) → InvalidStake
+ * 2. Vote with stake above MAX_STAKE (100 cREP) → ExceedsMaxStake
+ * 3. Self-vote (submitter votes on own content) → SelfVote
+ * 4. Double vote in same round → AlreadyVoted
+ *
+ * Account allocation:
+ * - Account #2 — submitter of seeded content #1 (self-vote test)
+ * - Account #3 — voter for boundary tests
+ * - Account #4 — voter for double-vote test
+ * - Account #10 — submits fresh content for double-vote test
+ */
+test.describe("Contract boundary conditions", () => {
+  const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
+  const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
+  const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+  test("vote with stake below MIN_STAKE (1 cREP) reverts", async () => {
+    const voter = ANVIL_ACCOUNTS.account3;
+    const belowMinStake = BigInt(500_000); // 0.5 cREP (MIN_STAKE = 1 cREP = 1e6)
+
+    // Approve the tiny amount
+    await approveCREP(VOTING_ENGINE, belowMinStake, voter.address, CREP_TOKEN);
+
+    // Use seeded content #1 (submitted by account #2)
+    const success = await voteDirect(BigInt(1), true, belowMinStake, ZERO_ADDRESS, voter.address, VOTING_ENGINE);
+    expect(success, "Vote with below-MIN_STAKE should revert").toBe(false);
+  });
+
+  test("vote with stake above MAX_STAKE (100 cREP) reverts", async () => {
+    const voter = ANVIL_ACCOUNTS.account3;
+    const aboveMaxStake = BigInt(101e6); // 101 cREP (MAX_STAKE = 100 cREP)
+
+    // Approve the large amount
+    await approveCREP(VOTING_ENGINE, aboveMaxStake, voter.address, CREP_TOKEN);
+
+    // Use seeded content #1
+    const success = await voteDirect(BigInt(1), true, aboveMaxStake, ZERO_ADDRESS, voter.address, VOTING_ENGINE);
+    expect(success, "Vote with above-MAX_STAKE should revert").toBe(false);
+  });
+
+  test("self-vote (submitter votes on own content) reverts", async () => {
+    // Content #1 was submitted by account #2
+    const submitter = ANVIL_ACCOUNTS.account2;
+    const stake = BigInt(1e6); // 1 cREP
+
+    await approveCREP(VOTING_ENGINE, stake, submitter.address, CREP_TOKEN);
+
+    const success = await voteDirect(BigInt(1), true, stake, ZERO_ADDRESS, submitter.address, VOTING_ENGINE);
+    expect(success, "Self-vote should revert with SelfVote").toBe(false);
+  });
+
+  test("double vote in same round reverts", async () => {
+    test.setTimeout(60_000);
+
+    // Submit fresh content so we get a clean round with no existing votes
+    const submitter = ANVIL_ACCOUNTS.account10;
+    await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
+
+    const uniqueId = Date.now();
+    const submitted = await submitContentDirect(
+      `https://www.youtube.com/watch?v=double_vote_test_${uniqueId}`,
+      `Double Vote Test ${uniqueId}`,
+      "test",
+      1,
+      submitter.address,
+      CONTENT_REGISTRY,
+    );
+    expect(submitted, "Content submission failed").toBe(true);
+
+    // Wait for Ponder to index
+    let freshContentId: string | null = null;
+    const indexed = await waitForPonderIndexed(async () => {
+      const { items } = await getContentList({ status: "all", sortBy: "newest", limit: 5 });
+      const match = items.find(item => item.url.includes(`double_vote_test_${uniqueId}`));
+      if (match) {
+        freshContentId = match.id;
+        return true;
+      }
+      return false;
+    }, 30_000);
+    expect(indexed).toBe(true);
+    expect(freshContentId).toBeTruthy();
+
+    // First vote should succeed
+    const voter = ANVIL_ACCOUNTS.account4;
+    const stake = BigInt(1e6); // 1 cREP
+    await approveCREP(VOTING_ENGINE, stake * 2n, voter.address, CREP_TOKEN);
+
+    const firstVote = await voteDirect(
+      BigInt(freshContentId!),
+      true,
+      stake,
+      ZERO_ADDRESS,
+      voter.address,
+      VOTING_ENGINE,
+    );
+    expect(firstVote, "First vote should succeed").toBe(true);
+
+    // Second vote on same content in same round should revert
+    const secondVote = await voteDirect(
+      BigInt(freshContentId!),
+      false,
+      stake,
+      ZERO_ADDRESS,
+      voter.address,
+      VOTING_ENGINE,
+    );
+    expect(secondVote, "Double vote should revert with AlreadyVoted").toBe(false);
+  });
+});
