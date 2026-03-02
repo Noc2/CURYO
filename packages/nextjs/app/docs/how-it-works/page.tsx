@@ -59,13 +59,13 @@ const HowItWorks: NextPage = () => {
           all times, creating a live prediction market for content quality.
         </li>
         <li>
-          <strong>Settlement:</strong> After the minimum epoch length (in blocks) has passed and enough votes have been
-          cast, anyone can call <code>trySettle(contentId)</code>. Settlement is <strong>probabilistic</strong> &mdash;
-          the probability starts at a base rate after <code>minEpochBlocks</code> and increases each block until it
-          reaches a cap at <code>maxEpochBlocks</code>. Randomness comes from <code>block.prevrandao</code>. Once
-          settled, the majority side wins. The losing side&apos;s stakes become the reward pool. Content rating is
-          updated by 1&ndash;5 points based on winning stake size. Winners claim rewards, frontends claim fees, and all
-          voters claim participation rewards individually (pull-based).
+          <strong>Settlement:</strong> After a ~30&nbsp;minute grace period (150 blocks) and enough votes (minimum 3
+          voters), anyone can call <code>trySettle(contentId)</code>. Settlement is <strong>probabilistic</strong>
+          &mdash; the probability starts at 0.3% per block and increases each block until the round is forced to settle
+          at ~6&nbsp;hours (1,800 blocks). Randomness comes from <code>block.prevrandao</code>. Once settled, the
+          majority side wins. The losing side&apos;s stakes become the reward pool. Content rating is updated by
+          1&ndash;5 points based on winning stake size. Winners claim rewards, frontends claim fees, and all voters
+          claim participation rewards individually (pull-based).
         </li>
       </ol>
 
@@ -102,12 +102,12 @@ const HowItWorks: NextPage = () => {
                 <span className="badge badge-secondary badge-sm">Open</span>
               </td>
               <td>Vote recorded, live tallies visible, settlement window approaching</td>
-              <td className="font-mono">minEpochBlocks&ndash;maxEpochBlocks</td>
+              <td className="font-mono">~30 min&ndash;6 hrs</td>
               <td>None</td>
             </tr>
             <tr>
               <td>
-                <span className="badge badge-secondary badge-sm">Settlement window</span>
+                <span className="badge badge-secondary badge-sm">Settlement</span>
               </td>
               <td>Round eligible for probabilistic settlement via trySettle()</td>
               <td className="font-mono">Variable (probability increases per block)</td>
@@ -125,12 +125,12 @@ const HowItWorks: NextPage = () => {
         </table>
       </div>
       <p>
-        Once the minimum epoch length has passed and enough votes have been cast, anyone can call{" "}
+        Once the ~30&nbsp;minute grace period has passed and at least 3 voters have participated, anyone can call{" "}
         <code>trySettle(contentId)</code>. Settlement uses <code>block.prevrandao</code> for randomness &mdash; the
-        probability of settlement increases each block, preventing manipulation of exact settlement timing. A keeper
-        service calls <code>trySettle()</code> automatically. This is fully trustless &mdash; the keeper holds no
-        secrets and anyone can run one. Winners receive their original stake plus a share-proportional portion of the
-        losing pool.
+        probability of settlement increases each block (0.3%&nbsp;&rarr;&nbsp;5% cap), and the round is forced to settle
+        at ~6&nbsp;hours. A keeper service calls <code>trySettle()</code> automatically. This is fully trustless &mdash;
+        the keeper holds no secrets and anyone can run one. Winners receive their original stake plus a
+        share-proportional portion of the losing pool.
       </p>
 
       <h2>Reward Distribution</h2>
@@ -191,9 +191,9 @@ const HowItWorks: NextPage = () => {
         points, etc.), preventing a single actor from making large rating swings.
       </p>
       <p>
-        If a round <strong>expires</strong> (maxEpochBlocks pass without reaching the minimum voter threshold) or ends
-        in a <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive settlement
-        with a clear majority updates the rating.
+        If a round <strong>expires</strong> (~6&nbsp;hours pass without reaching the minimum 3 voters) or ends in a{" "}
+        <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive settlement with a
+        clear majority updates the rating.
       </p>
 
       <h2>Content Dormancy &amp; Revival</h2>
