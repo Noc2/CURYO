@@ -33,11 +33,11 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Voter ID (Sybil Resistance)"
-          description="Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round."
+          description="Each verified human gets one non-transferable Voter ID, limiting stake to 100 cREP per content per round."
         />
         <FeatureCard
           title="Per-Content Rounds"
-          description="Each content item accumulates public votes within a round. A bonding curve rewards early conviction with more shares. Settlement is probabilistic, triggered after a minimum block count."
+          description="Each content item accumulates public votes within a round. Early voters earn more reward points per cREP. Results are resolved randomly after a minimum voting window."
         />
         <FeatureCard
           title="Contributor Rewards"
@@ -48,8 +48,8 @@ const DocsIntro: NextPage = () => {
       <h2>Voting Flow</h2>
       <p>
         Voters predict whether content&apos;s rating will go <strong>UP</strong> or <strong>DOWN</strong> and back their
-        prediction with a cREP stake. Votes are immediately public and price-moving &mdash; a bonding curve determines
-        how many shares each voter receives, rewarding early conviction.
+        prediction with a cREP stake. Votes are immediately public and price-moving &mdash; an early-mover pricing
+        determines how many reward points each voter receives, rewarding early conviction.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
@@ -57,16 +57,15 @@ const DocsIntro: NextPage = () => {
       <ol>
         <li>
           <strong>Vote:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote is public
-          and immediately recorded on-chain.
+          and immediately recorded publicly.
         </li>
         <li>
           <strong>Accumulate:</strong> Votes accumulate within the round. Live tallies are visible at all times.
         </li>
         <li>
-          <strong>Settlement:</strong> After the minimum epoch length has passed and enough votes have been cast, anyone
-          can trigger settlement via <code>trySettle()</code>. Settlement is probabilistic, using{" "}
-          <code>block.prevrandao</code> randomness. The majority side wins and the losing side&apos;s stakes become the
-          reward pool.
+          <strong>Resolution:</strong> After the minimum voting window has passed and enough votes have been cast, the
+          round becomes eligible for resolution. Resolution is probabilistic, using on-chain randomness. The majority
+          side wins and the losing side&apos;s stakes become the reward pool.
         </li>
       </ol>
       <p>The losing pool is split:</p>
@@ -80,8 +79,9 @@ const DocsIntro: NextPage = () => {
 
       <h2>Content Rating</h2>
       <p>
-        Every content item has a <strong>rating from 0 to 100</strong>, starting at 50. After each round settles, the
-        winning side moves the rating UP or DOWN by 1&ndash;5 points depending on the total stake and number of voters.
+        Every content item has a <strong>rating from 0 to 100</strong>, starting at 50. After each round is resolved,
+        the winning side moves the rating UP or DOWN by 1&ndash;5 points depending on the total stake and number of
+        voters.
       </p>
       <p>
         Each category (platform) has a <strong>ranking question</strong> set by its creator &mdash; for example,
@@ -91,7 +91,7 @@ const DocsIntro: NextPage = () => {
       <p>
         <strong>When to downvote:</strong> Illegal content, content that doesn&apos;t load, or content with an incorrect
         description should always be downvoted, regardless of the ranking question. Content that falls below a rating of
-        10 after its grace period results in the submitter&apos;s stake being slashed.
+        10 after its grace period results in the submitter&apos;s deposit being forfeited.
       </p>
     </article>
   );
