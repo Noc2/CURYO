@@ -42,7 +42,7 @@ Curyo is a monorepo with five packages:
 | `packages/foundry` | Solidity smart contracts, tests, and deployment scripts |
 | `packages/nextjs` | Next.js frontend with in-app documentation at `/docs` |
 | `packages/ponder` | Ponder indexer for on-chain event processing and API |
-| `packages/keeper` | Standalone keeper service for trustless vote reveals and round settlement |
+| `packages/keeper` | Standalone keeper service for trustless round settlement |
 | `packages/bot` | CLI voting bot with pluggable rating strategies |
 
 ```
@@ -142,7 +142,6 @@ docker run --env-file .env curyo-keeper
 yarn foundry:test
 
 # E2E browser tests (requires all services running — see "Run Locally" above)
-# Ensure NEXT_PUBLIC_TLOCK_MOCK=true in packages/nextjs/.env.local
 yarn e2e
 
 # Interactive Playwright UI mode

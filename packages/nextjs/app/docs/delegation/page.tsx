@@ -30,7 +30,7 @@ const DelegationDocs: NextPage = () => {
 
       <h3>What the delegate can do</h3>
       <ul>
-        <li>Vote on content (commit encrypted votes)</li>
+        <li>Vote on content</li>
         <li>Submit content</li>
         <li>Create/update a profile</li>
         <li>Register a frontend</li>
@@ -152,7 +152,7 @@ const DelegationDocs: NextPage = () => {
           The 100 cREP per content per round cap is enforced against the token, not the address.
         </li>
         <li>
-          <strong>Rewards go to the transactor</strong> &mdash; if the delegate commits a vote, rewards for that vote go
+          <strong>Rewards go to the transactor</strong> &mdash; if the delegate casts a vote, rewards for that vote go
           to the delegate address. If the holder votes directly, rewards go to the holder.
         </li>
         <li>

@@ -257,9 +257,9 @@ const GettingStarted: NextPage = () => {
       <h2>4. Vote on Content</h2>
       <p>
         The <strong>Vote</strong> page shows content cards. For each card, predict whether the rating will go UP or DOWN
-        and choose a stake (1&ndash;100 cREP). Your vote is encrypted and committed on-chain. After the epoch ends, a
-        reveal phase follows where votes are decrypted, then anyone can settle the round once threshold conditions are
-        met.
+        and choose a stake (1&ndash;100 cREP). Your vote is immediately public and updates the live rating via a bonding
+        curve. After a minimum voting window, settlement is triggered randomly with increasing probability &mdash;
+        anyone can call <code>trySettle()</code> and a keeper service does so automatically.
       </p>
       <p>
         <strong>Note:</strong> Each Voter ID can stake a maximum of 100 cREP per content per round. This limit is
