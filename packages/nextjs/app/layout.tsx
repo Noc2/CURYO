@@ -30,7 +30,7 @@ export const metadata = getMetadata({
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
     <html suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body>
+      <body suppressHydrationWarning>
         <ThemeProvider defaultTheme="dark" forcedTheme="dark">
           <ScaffoldEthAppWithProviders>
             <KeeperInit />
