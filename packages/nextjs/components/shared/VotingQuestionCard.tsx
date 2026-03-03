@@ -5,6 +5,7 @@ import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
+import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
@@ -59,7 +60,7 @@ export function VotingQuestionCard({
 
   // Check if user already voted on this content in the current round
   const { roundId, isRoundFull } = useRoundInfo(contentId);
-  const { phase, voteCount } = useRoundPhase(contentId);
+  const { phase, voteCount, minVoters } = useRoundPhase(contentId);
 
   // Check if user has committed to this round (tlock: direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
@@ -127,11 +128,50 @@ export function VotingQuestionCard({
           </span>
         </p>
 
-        {/* Vote count */}
-        {phase === "voting" && voteCount > 0 && (
-          <p className="text-sm text-center text-base-content/40 mb-2">
-            {voteCount} vote{voteCount === 1 ? "" : "s"}
-          </p>
+        {/* Voter count icons */}
+        {phase === "voting" && (
+          <div className="flex justify-center mb-2">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="flex -space-x-1">
+                {Array.from({ length: Math.min(voteCount, 7) }).map((_, i) => (
+                  <svg
+                    key={`filled-${i}`}
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-3.5 w-3.5 text-primary"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                ))}
+                {Array.from({
+                  length: Math.min(Math.max(0, minVoters - voteCount), 7 - Math.min(voteCount, 7)),
+                }).map((_, i) => (
+                  <svg
+                    key={`empty-${i}`}
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-3.5 w-3.5 text-base-content/20"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                ))}
+              </span>
+              <InfoTooltip
+                text={`${voteCount} of ${minVoters} voters. ${Math.max(0, minVoters - voteCount) > 0 ? `${Math.max(0, minVoters - voteCount)} more vote${Math.max(0, minVoters - voteCount) === 1 ? "" : "s"} needed.` : "Ready to settle."} Votes are revealed after each epoch ends.`}
+                position="bottom"
+              />
+            </span>
+          </div>
         )}
 
         {/* Vote error message */}
