@@ -49,7 +49,8 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
     if (!containerRef.current || pillWidths.length === 0) return;
 
     const calculate = () => {
-      const containerWidth = containerRef.current!.offsetWidth;
+      if (!containerRef.current) return;
+      const containerWidth = containerRef.current.offsetWidth;
       let used = 0;
       let count = 0;
 
