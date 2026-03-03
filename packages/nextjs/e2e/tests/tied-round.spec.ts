@@ -102,16 +102,24 @@ test.describe("Tied round lifecycle", () => {
 
     await context.close();
 
+    // Ensure Ponder has caught up to the chain tip before polling for specific content
+    await waitForPonderSync(60_000);
+
     // Find the newly submitted content via Ponder
-    const indexed = await waitForPonderIndexed(async () => {
-      const { items } = await getContentList({ status: "all", sortBy: "newest", limit: 5 });
-      const match = items.find(item => item.url.includes(`tie_test_${uniqueId}`));
-      if (match) {
-        newContentId = match.id;
-        return true;
-      }
-      return false;
-    }, 30_000);
+    const indexed = await waitForPonderIndexed(
+      async () => {
+        const { items } = await getContentList({ status: "all", sortBy: "newest", limit: 5 });
+        const match = items.find(item => item.url.includes(`tie_test_${uniqueId}`));
+        if (match) {
+          newContentId = match.id;
+          return true;
+        }
+        return false;
+      },
+      30_000,
+      2_000,
+      "tied-round:findContent",
+    );
 
     if (!indexed) {
       test.skip(true, "Ponder not indexing new content — skipping tie test");
