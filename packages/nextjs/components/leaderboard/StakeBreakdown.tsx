@@ -50,7 +50,7 @@ export function StakeBreakdown() {
             <div
               key={e.label}
               className="tooltip tooltip-top flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm cursor-help"
-              data-tip={`Rounds can settle at any time. Earliest expiry in ${e.deadline} (stakes refunded if unsettled).`}
+              data-tip={`Rounds settle after enough votes are revealed. Expires in ${e.deadline} max (stakes refunded if unsettled).`}
             >
               <span className="text-base-content/50">{e.label}</span>
               <span className="font-mono tabular-nums">{format(e.amount)}</span>
