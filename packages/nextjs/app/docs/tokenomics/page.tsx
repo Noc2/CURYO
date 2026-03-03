@@ -316,10 +316,10 @@ const Tokenomics = () => {
 
       <p>
         The 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
-        <strong>reward points</strong> to winning voters on that content. Reward points are determined by early-mover
-        pricing, so early voters on the winning side receive a larger reward per cREP staked. An additional 5% goes to
-        an agreement bonus reserve. Because each content item has independent rounds that resolve on their own timeline,
-        rewards are claimable immediately after resolution. The 1% treasury fee goes to the governance timelock.
+        <strong>epoch-weighted effective stake</strong> to winning voters on that content. Tier 1 (blind) voters earn 4x
+        more per cREP than Tier 2+ (informed) voters. An additional 5% goes to an agreement bonus reserve. Because each
+        content item has independent rounds that settle on their own timeline, rewards are claimable immediately after
+        settlement. The 1% treasury fee goes to the governance timelock.
       </p>
 
       <hr />

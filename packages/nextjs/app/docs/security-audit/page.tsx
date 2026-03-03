@@ -76,7 +76,9 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">UUPS</span>
               </td>
-              <td>Core voting: public votes, bonding curve shares, probabilistic settlement, consensus subsidy</td>
+              <td>
+                Core voting: tlock commit-reveal, epoch-weighted rewards, deterministic settlement, consensus subsidy
+              </td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
@@ -190,8 +192,8 @@ const SecurityAudit: NextPage = () => {
         </li>
       </ul>
       <p className="text-base-content/60 text-sm">
-        Iterative review across 5 rounds (V1&ndash;V5) plus final consolidation. Updated for the public voting + random
-        settlement architecture. New round-based findings from inline audit notes incorporated.
+        Iterative review across 5 rounds (V1&ndash;V5) plus final consolidation. Updated for the tlock commit-reveal +
+        epoch-weighted settlement architecture. New round-based findings from inline audit notes incorporated.
       </p>
 
       <hr />
@@ -997,10 +999,10 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>I-09</td>
               <td>
-                <strong>Vote direction visible at vote time.</strong> Both contentId and vote direction (UP/DOWN) are
-                public when a vote is cast. By design: the public voting model relies on bonding curve economics rather
-                than cryptographic privacy to incentivize independent assessment. Required for double-vote prevention,
-                self-vote prevention, cooldown periods, and sybil stake limits.
+                <strong>Vote direction encrypted at commit time.</strong> Vote direction (UP/DOWN) is encrypted via
+                tlock at commit time and only revealed after the epoch ends. By design: the commit-reveal model uses
+                tlock encryption and epoch-weighted rewards to incentivize independent assessment. Commit hashes enable
+                double-vote prevention, self-vote prevention, cooldown periods, and sybil stake limits.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>

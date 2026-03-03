@@ -31,7 +31,7 @@ const WhitepaperPage: NextPage = () => {
           <strong>How It Works</strong> &mdash; Round mechanics, voter ID, reward distribution, content rating
         </li>
         <li>
-          <strong>Public Voting</strong> &mdash; Early-mover reward points and random resolution
+          <strong>Commit-Reveal Voting</strong> &mdash; Tlock encryption, epoch-weighted rewards, and settlement
         </li>
         <li>
           <strong>Tokenomics</strong> &mdash; Token distribution, faucet tiers, participation rewards

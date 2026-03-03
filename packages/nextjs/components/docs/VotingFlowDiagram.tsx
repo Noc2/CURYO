@@ -1,16 +1,23 @@
 const STEPS = [
   {
-    label: "Vote",
+    label: "Commit",
     badge: "badge-secondary",
     duration: "1–100 cREP",
-    description: "Choose UP or DOWN, stake is public & price-moving",
-    icon: "🗳️",
+    description: "Choose UP or DOWN, stake is locked, direction is hidden (tlock)",
+    icon: "🔒",
   },
   {
-    label: "Resolve",
+    label: "Reveal",
     badge: "badge-secondary",
-    duration: "random",
-    description: "Chance of resolution increases over time",
+    duration: "~1 hour",
+    description: "Keeper reveals votes after epoch ends via drand",
+    icon: "🔓",
+  },
+  {
+    label: "Settle",
+    badge: "badge-secondary",
+    duration: "~1 hour delay",
+    description: "Majority wins after min 3 voters + settlement delay",
     icon: "⚖️",
   },
   {

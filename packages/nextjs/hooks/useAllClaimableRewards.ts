@@ -15,7 +15,7 @@ export interface ClaimableItem {
  * Hook that identifies all claimable rewards across all rounds and content.
  * Uses Ponder API to find the user's recent votes, then checks on-chain state.
  *
- * In the public voting model, vote data is on-chain so no localStorage is needed.
+ * In the commit-reveal model, vote data is on-chain so no localStorage is needed.
  * We rely on Ponder to enumerate which rounds the user participated in.
  */
 export function useAllClaimableRewards() {

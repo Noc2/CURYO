@@ -257,9 +257,9 @@ const GettingStarted: NextPage = () => {
       <h2>4. Vote on Content</h2>
       <p>
         The <strong>Vote</strong> page shows content cards. For each card, predict whether the rating will go UP or DOWN
-        and choose a stake (1&ndash;100 cREP). Your vote is immediately public and updates the live rating. Early voters
-        get more reward points per cREP. After a ~1&nbsp;hour grace period, resolution is triggered randomly with a flat
-        probability per block (forced at ~24&nbsp;hours) &mdash; an automated service handles this for you.
+        and choose a stake (1&ndash;100 cREP). Your vote direction is encrypted and hidden until the epoch ends
+        (~1&nbsp;hour). Early (blind) voters earn 4x more reward weight. The keeper reveals votes automatically, and
+        settlement occurs after enough votes are revealed.
       </p>
       <p>
         <strong>Note:</strong> Each Voter ID can stake a maximum of 100 cREP per content per round. This limit is

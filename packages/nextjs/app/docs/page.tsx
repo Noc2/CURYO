@@ -37,7 +37,7 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Per-Content Rounds"
-          description="Each content item accumulates public votes within a round. Early voters earn more reward points per cREP. Results are resolved randomly after a minimum voting window."
+          description="Each content item has independent rounds with tlock commit-reveal voting. Tier 1 (blind) voters earn 4x more reward weight per cREP than Tier 2+ (informed) voters."
         />
         <FeatureCard
           title="Contributor Rewards"
@@ -48,25 +48,25 @@ const DocsIntro: NextPage = () => {
       <h2>Voting Flow</h2>
       <p>
         Voters predict whether content&apos;s rating will go <strong>UP</strong> or <strong>DOWN</strong> and back their
-        prediction with a cREP stake. Votes are immediately public and price-moving &mdash; an early-mover pricing
-        determines how many reward points each voter receives, rewarding early conviction.
+        prediction with a cREP stake. Vote directions are encrypted via tlock and hidden until the epoch ends &mdash;
+        epoch-weighted rewards give early (blind) voters 4x more reward per cREP than later voters.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
       </div>
       <ol>
         <li>
-          <strong>Vote:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote is public
-          and immediately recorded publicly.
+          <strong>Commit:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote direction
+          is committed on-chain with your direction encrypted via tlock.
         </li>
         <li>
-          <strong>Accumulate:</strong> Votes accumulate within the round. Live tallies are visible at all times.
+          <strong>Accumulate:</strong> Votes accumulate during the epoch. Directions are hidden until the keeper reveals
+          them after the epoch ends.
         </li>
         <li>
-          <strong>Resolution:</strong> After a ~1&nbsp;hour grace period and enough votes (minimum 5 voters), the round
-          becomes eligible for resolution. Each block has a flat 0.03% chance of triggering settlement, spreading
-          resolution evenly across ~1&ndash;24&nbsp;hours. The majority side wins and the losing side&apos;s stakes
-          become the reward pool.
+          <strong>Settle:</strong> After the epoch ends, the keeper reveals all votes. Once at least 3 votes are
+          revealed and the settlement delay passes, the round settles. The majority side wins and the losing side&apos;s
+          stakes become the reward pool.
         </li>
       </ol>
       <p>The losing pool is split:</p>
@@ -80,9 +80,8 @@ const DocsIntro: NextPage = () => {
 
       <h2>Content Rating</h2>
       <p>
-        Every content item has a <strong>rating from 0 to 100</strong>, starting at 50. After each round is resolved,
-        the winning side moves the rating UP or DOWN by 1&ndash;5 points depending on the total stake and number of
-        voters.
+        Every content item has a <strong>rating from 0 to 100</strong>, starting at 50. After each round is settled, the
+        winning side moves the rating UP or DOWN by 1&ndash;5 points depending on the total stake and number of voters.
       </p>
       <p>
         Each category (platform) has a <strong>ranking question</strong> set by its creator &mdash; for example,
@@ -92,7 +91,7 @@ const DocsIntro: NextPage = () => {
       <p>
         <strong>When to downvote:</strong> Illegal content, content that doesn&apos;t load, or content with an incorrect
         description should always be downvoted, regardless of the ranking question. Content that falls below a rating of
-        10 after its grace period results in the submitter&apos;s deposit being forfeited.
+        25 after its grace period results in the submitter&apos;s deposit being forfeited.
       </p>
     </article>
   );

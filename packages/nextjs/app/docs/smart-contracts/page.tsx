@@ -40,7 +40,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
-              <td>Core voting: public votes, bonding curve shares, probabilistic settlement</td>
+              <td>Core voting: tlock commit-reveal voting, epoch-weighted rewards, deterministic settlement</td>
               <td>UUPS</td>
             </tr>
             <tr>
@@ -253,8 +253,8 @@ const SmartContracts: NextPage = () => {
 
       <h2>RoundVotingEngine</h2>
       <p>
-        Manages per-content voting rounds with public votes, bonding curve share allocation, and probabilistic
-        settlement. One-sided rounds (consensus) receive a subsidy from the consensus reserve.
+        Manages per-content voting rounds with tlock commit-reveal voting, epoch-weighted rewards, and deterministic
+        settlement. One-sided rounds (consensus) receive a subsidy from the agreement bonus reserve.
       </p>
       <h3>Configuration</h3>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">

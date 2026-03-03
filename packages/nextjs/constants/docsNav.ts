@@ -11,7 +11,7 @@ export const DOCS_NAV = [
     section: "Concepts",
     links: [
       { label: "How It Works", href: "/docs/how-it-works" },
-      { label: "Public Voting", href: "/docs/public-voting" },
+      { label: "Commit-Reveal Voting", href: "/docs/commit-reveal" },
       { label: "Tokenomics", href: "/docs/tokenomics" },
       { label: "Governance", href: "/docs/governance" },
       { label: "Curyo & AI", href: "/docs/curyo-and-ai" },

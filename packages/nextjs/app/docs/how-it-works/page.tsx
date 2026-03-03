@@ -7,7 +7,7 @@ const HowItWorks: NextPage = () => {
     <article className="prose max-w-none">
       <h1>How It Works</h1>
       <p className="lead text-base-content/60 text-lg">
-        Per-content round voting with public stakes and random resolution.
+        Per-content round voting with tlock commit-reveal and epoch-weighted rewards.
       </p>
 
       <h2>Voter ID &amp; Sybil Resistance</h2>
@@ -39,30 +39,32 @@ const HowItWorks: NextPage = () => {
       <h2>Voting Flow</h2>
       <p>
         Each content item has independent <strong>rounds</strong>. Voters predict whether content&apos;s rating will go{" "}
-        <strong>UP</strong> or <strong>DOWN</strong> and back their prediction with a cREP stake. Votes are{" "}
-        <strong>immediately public and price-moving</strong> &mdash; each vote shifts the round&apos;s tally in real
-        time. Early-mover pricing determines how many <strong>reward points</strong> each voter receives: early voters
-        on a given side get more reward points per cREP staked than later voters on the same side.
+        <strong>UP</strong> or <strong>DOWN</strong> and back their prediction with a cREP stake. Vote directions are{" "}
+        <strong>encrypted via tlock</strong> and hidden until the epoch ends &mdash; epoch-weighted rewards give early
+        (blind) voters <strong>4x more reward weight</strong> per cREP than later voters who saw prior results.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
       </div>
       <ol>
         <li>
-          <strong>Vote:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote is recorded
-          publicly. The system calculates your reward points &mdash; early voters get more points per cREP.
+          <strong>Commit:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote direction
+          is encrypted via tlock and hidden on-chain. Your stake amount is visible, but no one knows which side you
+          chose.
         </li>
         <li>
-          <strong>Accumulate:</strong> Votes accumulate within the round. The current tallies are publicly visible at
-          all times, creating a live prediction market for content quality.
+          <strong>Accumulate:</strong> Votes accumulate within the round. Directions are hidden during the first epoch
+          (~1&nbsp;hour). After the epoch ends, the keeper reveals all committed votes using the drand beacon.
         </li>
         <li>
-          <strong>Resolution:</strong> After a ~1&nbsp;hour grace period and enough votes (minimum 5 voters), the round
-          becomes eligible for resolution. Resolution is <strong>probabilistic</strong>
-          &mdash; each block has a flat 0.03% chance of triggering settlement, spreading resolution evenly across the
-          ~1&ndash;24&nbsp;hour range. The round is forced to resolve at ~24&nbsp;hours. Once resolved, the majority
-          side wins. The losing side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points
-          based on winning stake size. Winners can then click Claim to collect their rewards.
+          <strong>Reveal:</strong> The keeper automatically reveals votes after each epoch using the drand beacon
+          decryption key. Revealing is also permissionless &mdash; anyone can reveal any vote after its epoch ends.
+        </li>
+        <li>
+          <strong>Settle:</strong> Once at least 3 votes are revealed and one full epoch has elapsed since the threshold
+          was reached, the round can be settled. The majority side wins. The losing side&apos;s stakes become the reward
+          pool. Content rating is updated by 1&ndash;5 points based on winning stake size. Winners can then click Claim
+          to collect their rewards.
         </li>
       </ol>
 
@@ -96,38 +98,36 @@ const HowItWorks: NextPage = () => {
           <tbody>
             <tr>
               <td>
-                <span className="badge badge-secondary badge-sm">Open</span>
+                <span className="badge badge-secondary badge-sm">Committed</span>
               </td>
-              <td>Vote recorded, live tallies visible, resolution window approaching</td>
-              <td className="font-mono">~1&ndash;24 hrs</td>
+              <td>Vote recorded, direction hidden (tlock encrypted). Tier 1 = 100% reward weight, Tier 2+ = 25%</td>
+              <td className="font-mono">~1 hour per epoch</td>
               <td>None</td>
             </tr>
             <tr>
               <td>
-                <span className="badge badge-secondary badge-sm">Resolution</span>
+                <span className="badge badge-secondary badge-sm">Revealed</span>
               </td>
-              <td>Round eligible for random resolution &mdash; flat 0.03% probability per block</td>
-              <td className="font-mono">Variable (flat probability per block)</td>
+              <td>Keeper reveals votes after epoch ends via drand beacon &mdash; directions now visible</td>
+              <td className="font-mono">Automatic</td>
               <td>None</td>
             </tr>
             <tr>
               <td>
-                <span className="badge badge-secondary badge-sm">Resolved</span>
+                <span className="badge badge-secondary badge-sm">Settled</span>
               </td>
               <td>&ldquo;Claim X cREP&rdquo; (winners) or &ldquo;Lost X cREP&rdquo; (losers)</td>
-              <td>&mdash;</td>
+              <td className="font-mono">~1 hour after threshold</td>
               <td>Winners click Claim</td>
             </tr>
           </tbody>
         </table>
       </div>
       <p>
-        Once the ~1&nbsp;hour grace period has passed and at least 5 voters have participated, the round becomes
-        eligible for resolution. Resolution uses randomness &mdash; each block has a flat 0.03% probability of
-        triggering settlement, spreading resolution evenly across the ~1&ndash;24&nbsp;hour range. The round is forced
-        to resolve at ~24&nbsp;hours. An automated service checks rounds periodically. This is fully trustless &mdash;
-        anyone can trigger resolution. Winners receive their original stake plus a reward-point-proportional portion of
-        the losing pool.
+        After the epoch ends, the keeper reveals all committed votes using the drand beacon. Once at least 3 votes are
+        revealed and one full epoch (~1&nbsp;hour) has elapsed since the threshold was reached, settlement can be
+        triggered. Settlement is fully permissionless &mdash; anyone can call it. An automated keeper service handles
+        this automatically. Winners receive their original stake plus an epoch-weighted share of the losing pool.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
@@ -140,16 +140,6 @@ const HowItWorks: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono">Minimum voting window</td>
-              <td>~1 hour</td>
-              <td>Resolution impossible before this time. Guarantees a minimum voting window.</td>
-            </tr>
-            <tr>
-              <td className="font-mono">Maximum round length</td>
-              <td>~24 hours</td>
-              <td>Resolution guaranteed by this point.</td>
-            </tr>
-            <tr>
               <td className="font-mono">epochDuration</td>
               <td>1 hour</td>
               <td>Tier window for reward weighting; also the settlement delay after minVoters revealed.</td>
@@ -158,6 +148,11 @@ const HowItWorks: NextPage = () => {
               <td className="font-mono">minVoters</td>
               <td>3</td>
               <td>Minimum revealed votes required before settlement is allowed.</td>
+            </tr>
+            <tr>
+              <td className="font-mono">maxDuration</td>
+              <td>7 days</td>
+              <td>Maximum round lifetime. Expired rounds are cancelled and all stakes refunded.</td>
             </tr>
           </tbody>
         </table>
@@ -206,24 +201,25 @@ const HowItWorks: NextPage = () => {
       </div>
       <p>
         The <strong>82%</strong> voter share goes entirely to a <strong>content-specific pool</strong> distributed
-        proportionally by <strong>reward points</strong> to winning voters on that content. Because reward points are
-        determined by early-mover pricing, early voters on the winning side receive a larger reward per cREP staked than
-        later voters. An additional <strong>5%</strong> goes to an agreement bonus reserve. Rewards become claimable
-        immediately after the round is resolved. There is no global pool &mdash; each content round is self-contained.
+        proportionally by <strong>epoch-weighted effective stake</strong> to winning voters on that content. Tier 1
+        (blind) voters receive 100% reward weight, while Tier 2+ (informed) voters receive 25% &mdash; giving early
+        voters a 4x advantage per cREP staked. An additional <strong>5%</strong> goes to an agreement bonus reserve.
+        Rewards become claimable immediately after the round is settled. There is no global pool &mdash; each content
+        round is self-contained.
       </p>
 
       <h2>Content Rating</h2>
       <p>
         Each content item has a rating from 0 to 100 (starting at 50). The rating{" "}
-        <strong>only changes when a round is resolved</strong> &mdash; it stays unchanged while voting is ongoing. Once
-        resolution is triggered, the rating moves by 1&ndash;5 points toward the winning side based on the total winning
+        <strong>only changes when a round is settled</strong> &mdash; it stays unchanged while voting is ongoing. Once
+        settlement is triggered, the rating moves by 1&ndash;5 points toward the winning side based on the total winning
         stake. The delta is also capped by the number of unique winning voters (1 voter = max 1 point, 2 voters = max 2
         points, etc.), preventing a single actor from making large rating swings.
       </p>
       <p>
-        If a round <strong>expires</strong> (~24&nbsp;hours pass without reaching the minimum 5 voters) or ends in a{" "}
-        <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive resolution with a
-        clear majority updates the rating.
+        If a round <strong>expires</strong> (7&nbsp;days pass without reaching the minimum 3 revealed voters) or ends in
+        a <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive settlement with
+        a clear majority updates the rating.
       </p>
 
       <h2>Content Dormancy &amp; Revival</h2>

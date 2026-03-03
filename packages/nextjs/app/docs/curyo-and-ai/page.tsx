@@ -52,11 +52,11 @@ const CuryoAndAI: NextPage = () => {
         inaccurate ones are penalized.
       </p>
       <p>
-        Because votes use a <Link href="/docs/how-it-works">early-mover reward model</Link>, early voters who take a
-        position before the crowd receive more shares per cREP staked. This creates an economic incentive for{" "}
-        <strong>independent assessment</strong> &mdash; voters who do their own research and vote early are rewarded
-        more than those who simply follow the herd. The pricing system naturally discourages herding behavior through
-        diminishing reward-point returns for late voters on the same side.
+        Because votes use an <Link href="/docs/how-it-works">epoch-weighted reward model</Link>, Tier 1 voters who
+        commit during the blind epoch earn 4x more reward weight than Tier 2+ voters who saw prior results. This creates
+        an economic incentive for <strong>independent assessment</strong> &mdash; voters who commit early while
+        directions are hidden take on more risk and are compensated accordingly. The tlock encryption naturally prevents
+        herding by making vote directions invisible during the first epoch.
       </p>
       <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
         <FeatureCard
@@ -65,7 +65,7 @@ const CuryoAndAI: NextPage = () => {
         />
         <FeatureCard
           title="Early Conviction Rewarded"
-          description="Early-mover pricing rewards voters who assess quality independently and early, before the crowd forms a consensus."
+          description="Epoch-weighted rewards give Tier 1 (blind) voters 4x more reward per cREP, rewarding those who assess quality independently before directions are revealed."
         />
         <FeatureCard
           title="Sybil Resistance"

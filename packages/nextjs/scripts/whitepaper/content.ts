@@ -999,8 +999,16 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Parameter", "Default", "Description"],
               rows: [
-                ["epochDuration", "1 hour", "Duration of each reward tier; commits in epoch 1 earn 100% weight, later epochs 25%"],
-                ["maxDuration", "7 days", "Maximum round lifetime  -- expired rounds are cancelled and stakes refunded"],
+                [
+                  "epochDuration",
+                  "1 hour",
+                  "Duration of each reward tier; commits in epoch 1 earn 100% weight, later epochs 25%",
+                ],
+                [
+                  "maxDuration",
+                  "7 days",
+                  "Maximum round lifetime  -- expired rounds are cancelled and stakes refunded",
+                ],
                 ["minVoters", "3", "Minimum revealed votes required before settlement is allowed"],
                 ["maxVoters", "1,000", "Per-round cap on total commits"],
                 ["Rating smoothing (b_r)", "50 cREP (hardcoded)", "Controls rating sensitivity to individual votes"],
