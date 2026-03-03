@@ -1013,16 +1013,21 @@ export async function waitForPonderIndexed(
   pollFn: () => Promise<boolean>,
   maxWaitMs = 30_000,
   pollInterval = 2_000,
+  label = "waitForPonderIndexed",
 ): Promise<boolean> {
   const start = Date.now();
+  let attempts = 0;
   while (Date.now() - start < maxWaitMs) {
+    attempts++;
     try {
       if (await pollFn()) return true;
-    } catch {
-      // Ponder may not have indexed yet
+    } catch (err) {
+      console.warn(`[${label}] attempt ${attempts} error: ${err instanceof Error ? err.message : String(err)}`);
     }
     await new Promise(resolve => setTimeout(resolve, pollInterval));
   }
+  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+  console.warn(`[${label}] timed out after ${elapsed}s (${attempts} attempts)`);
   return false;
 }
 
@@ -1127,12 +1132,14 @@ export async function waitForPonderSync(
   const chainBlock = parseInt(blockJson.result, 16);
 
   const start = Date.now();
+  let lastPonderBlock = 0;
   while (Date.now() - start < maxWaitMs) {
     try {
       const statusRes = await fetch(`${ponderURL}/status`);
       if (statusRes.ok) {
         const status = await statusRes.json();
         const ponderBlock = status?.hardhat?.block?.number ?? 0;
+        lastPonderBlock = ponderBlock;
         if (ponderBlock >= chainBlock) return true;
       }
     } catch {
@@ -1140,5 +1147,9 @@ export async function waitForPonderSync(
     }
     await new Promise(resolve => setTimeout(resolve, pollInterval));
   }
+  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+  console.warn(
+    `[waitForPonderSync] timed out after ${elapsed}s — chain block: ${chainBlock}, ponder block: ${lastPonderBlock}`,
+  );
   return false;
 }

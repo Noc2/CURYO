@@ -21,11 +21,10 @@ test.describe("Governance page", () => {
     const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
     await expect(leaderboardTab).toBeVisible({ timeout: 15_000 });
     await leaderboardTab.click();
-    await page.waitForTimeout(2_000);
 
     // Leaderboard renders a table with Rank, User, cREP Balance columns
     const table = page.locator("table");
-    await expect(table).toBeVisible({ timeout: 10_000 });
+    await expect(table).toBeVisible({ timeout: 15_000 });
 
     // Should have column headers
     const rankHeader = page.getByRole("columnheader", { name: "Rank" });
@@ -39,11 +38,10 @@ test.describe("Governance page", () => {
     const profileTab = page.getByRole("button", { name: "Profile" });
     await expect(profileTab).toBeVisible({ timeout: 15_000 });
     await profileTab.click();
-    await page.waitForTimeout(3_000);
 
     // Profile tab should show input fields or profile content
     const profileContent = page.locator("main").getByText(/display name|delegation|referral|profile/i);
-    await expect(profileContent.first()).toBeVisible({ timeout: 10_000 });
+    await expect(profileContent.first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("vote tab shows governance content", async ({ connectedPage: page }) => {
@@ -53,10 +51,9 @@ test.describe("Governance page", () => {
     const voteTabBtn = page.getByRole("button", { name: "Vote" });
     await expect(voteTabBtn).toBeVisible({ timeout: 15_000 });
     await voteTabBtn.click();
-    await page.waitForTimeout(3_000);
 
     // Vote tab shows TokenManagement, TreasuryBalance, PlatformProposals, etc.
     const voteContent = page.locator("main").getByText(/treasury|proposal|platform|delegate|token/i);
-    await expect(voteContent.first()).toBeVisible({ timeout: 10_000 });
+    await expect(voteContent.first()).toBeVisible({ timeout: 15_000 });
   });
 });

@@ -105,6 +105,18 @@ async function globalSetup() {
   // Top up keeper balance to prevent gas exhaustion during settlements
   await topUpKeeperBalance();
 
+  // Non-fatal keeper check — settlement tests need the keeper but chromium tests don't
+  try {
+    const keeperRes = await fetch("http://localhost:3001/health", { signal: AbortSignal.timeout(5_000) });
+    if (keeperRes.ok) {
+      console.log("  ✓ Keeper (settlement service) running");
+    } else {
+      console.warn("  ⚠ Keeper not running — settlement tests may fail (start with: yarn keeper:dev)");
+    }
+  } catch {
+    console.warn("  ⚠ Keeper not running — settlement tests may fail (start with: yarn keeper:dev)");
+  }
+
   console.log("  ✓ All services ready\n");
 }
 

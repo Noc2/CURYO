@@ -82,16 +82,15 @@ test.describe("Negative cases", () => {
       .catch(() => false);
 
     if (!canVote) {
-      const thumbnails = page.locator(".grid button").filter({ has: page.locator("img") });
+      const thumbnails = page.locator("[data-testid='content-thumbnail']");
       const thumbCount = await thumbnails.count();
 
       for (let i = 0; i < Math.min(thumbCount, 20); i++) {
         const thumb = thumbnails.nth(i);
         if (await thumb.isVisible().catch(() => false)) {
           await thumb.click();
-          await page.waitForTimeout(1_000);
           canVote = await voteUp
-            .waitFor({ state: "visible", timeout: 3_000 })
+            .waitFor({ state: "visible", timeout: 5_000 })
             .then(() => true)
             .catch(() => false);
           if (canVote) break;
@@ -141,8 +140,6 @@ test.describe("Negative cases", () => {
     // The page may auto-advance to the next content after voting.
     // Also accept "vote reverted" as evidence: the contract rejects
     // duplicate votes, so a revert when revisiting means the prior vote stuck.
-    await page.waitForTimeout(1_500);
-
     const votedOrCooldown = page
       .getByText("Voted Up")
       .or(page.getByText("Voted Down"))
@@ -158,14 +155,13 @@ test.describe("Negative cases", () => {
     if (!foundVotedState) {
       // Page may have auto-advanced to next content. Cycle through thumbnails
       // to re-select the voted content and verify its voted/cooldown state.
-      const thumbnails = page.locator(".grid button").filter({ has: page.locator("img") });
+      const thumbnails = page.locator("[data-testid='content-thumbnail']");
       const thumbCount = await thumbnails.count();
 
       for (let i = 0; i < Math.min(thumbCount, 20); i++) {
         const thumb = thumbnails.nth(i);
         if (await thumb.isVisible().catch(() => false)) {
           await thumb.click();
-          await page.waitForTimeout(1_000);
           foundVotedState = await votedOrCooldown
             .first()
             .waitFor({ state: "visible", timeout: 3_000 })

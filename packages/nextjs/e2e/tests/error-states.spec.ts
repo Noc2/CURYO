@@ -47,7 +47,7 @@ test.describe("Error states and edge cases", () => {
 
     // If not, cycle through thumbnail grid to find own content
     if (!found) {
-      const thumbnails = page.locator(".grid button").filter({ has: page.locator("img") });
+      const thumbnails = page.locator("[data-testid='content-thumbnail']");
       const thumbCount = await thumbnails.count();
 
       for (let i = 0; i < Math.min(thumbCount, 20); i++) {

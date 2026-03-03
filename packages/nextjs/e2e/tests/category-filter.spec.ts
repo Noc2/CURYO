@@ -104,8 +104,8 @@ test.describe("Category filter", () => {
 
     // Narrow viewport to force category overflow
     await page.setViewportSize({ width: 800, height: 900 });
-    await page.waitForTimeout(500);
 
+    // Wait for the category bar to re-render after viewport change
     const moreButton = page.getByRole("button", { name: /^\+\d+ more$/i });
     const hasOverflow = await moreButton.isVisible({ timeout: 3_000 }).catch(() => false);
     test.skip(!hasOverflow, "All categories fit at 800px — no overflow");
@@ -160,7 +160,7 @@ test.describe("Category filter", () => {
     await waitForFeedLoaded(page, 5_000);
 
     // Should show content cards, vote buttons, loading state, or the empty state
-    const thumbnailCards = page.locator(".grid button").filter({ has: page.locator("img") });
+    const thumbnailCards = page.locator("[data-testid='content-thumbnail']");
     const featuredCard = page.getByRole("button", { name: /Vote up|Vote down/i });
     const emptyState = page.getByText(/No content found/i);
     const sortDropdown = page.locator("select").first();

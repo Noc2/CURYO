@@ -184,21 +184,16 @@ test.describe("Tied round lifecycle", () => {
     const settled = await waitForSettlementIndexed(newContentId!, "http://localhost:42069", 30_000);
     expect(settled).toBe(true);
 
-    // Verify round state
+    // Verify round state — must be Tied (state=3) since pools are equal
     const postData = await getContentById(newContentId!);
     const tiedRound = postData.rounds.find(r => r.state === 3);
-    const settledRound = postData.rounds.find(r => r.state === 1);
 
-    // With equal pools, the round should be tied (state=3)
-    // Accept either Tied (3) or Settled (1) — the important thing is the round resolved
-    expect(tiedRound || settledRound).toBeTruthy();
+    expect(tiedRound, "Round should be Tied (state=3) when upPool === downPool").toBeTruthy();
 
-    if (tiedRound) {
-      // Perfect tie — verify rating did NOT change
-      expect(postData.content.rating).toBe(preRating);
+    // Rating must NOT change on a tied round
+    expect(postData.content.rating).toBe(preRating);
 
-      // Verify equal pools
-      expect(tiedRound.upPool).toBe(tiedRound.downPool);
-    }
+    // Verify equal pools
+    expect(tiedRound!.upPool).toBe(tiedRound!.downPool);
   });
 });

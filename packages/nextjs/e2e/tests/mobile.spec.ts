@@ -25,7 +25,6 @@ test.describe("Mobile viewport", () => {
 
     // Open the hamburger menu (DaisyUI <details> dropdown)
     await page.getByLabel("Open menu").click();
-    await page.waitForTimeout(300);
 
     // Nav links should be visible inside the dropdown-content
     const dropdown = page.locator(".dropdown-content");
@@ -41,7 +40,10 @@ test.describe("Mobile viewport", () => {
 
     // Open hamburger and navigate to Submit via the dropdown menu
     await page.getByLabel("Open menu").click();
-    await page.waitForTimeout(300);
+    await page
+      .locator(".dropdown-content")
+      .getByRole("link", { name: /Submit/i })
+      .waitFor({ state: "visible", timeout: 3_000 });
     await page
       .locator(".dropdown-content")
       .getByRole("link", { name: /Submit/i })
@@ -82,16 +84,15 @@ test.describe("Mobile viewport", () => {
       .catch(() => false);
 
     if (!canVote) {
-      const thumbnails = page.locator(".grid button").filter({ has: page.locator("img") });
+      const thumbnails = page.locator("[data-testid='content-thumbnail']");
       const thumbCount = await thumbnails.count();
 
       for (let i = 0; i < Math.min(thumbCount, 20); i++) {
         const thumb = thumbnails.nth(i);
         if (await thumb.isVisible().catch(() => false)) {
           await thumb.click();
-          await page.waitForTimeout(2_000);
           canVote = await voteBtn
-            .waitFor({ state: "visible", timeout: 3_000 })
+            .waitFor({ state: "visible", timeout: 5_000 })
             .then(() => true)
             .catch(() => false);
           if (canVote) break;

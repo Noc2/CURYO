@@ -90,24 +90,33 @@ export async function waitForSettlementIndexed(
   contentId: string | number,
   ponderURL = "http://localhost:42069",
   maxWaitMs = 30_000,
+  label = "waitForSettlementIndexed",
 ): Promise<boolean> {
   const start = Date.now();
   const pollInterval = 2_000;
+  let lastRoundStates: number[] = [];
 
   while (Date.now() - start < maxWaitMs) {
     try {
       const res = await fetch(`${ponderURL}/content/${contentId}`);
       if (res.ok) {
         const data = await res.json();
+        lastRoundStates = data.rounds?.map((r: { state: number }) => r.state) ?? [];
         // Check if any round has state=1 (Settled) or state=3 (Tied)
-        const hasSettledRound = data.rounds?.some((r: { state: number }) => r.state === 1 || r.state === 3);
+        const hasSettledRound = lastRoundStates.some(s => s === 1 || s === 3);
         if (hasSettledRound) return true;
       }
-    } catch {
-      // Ponder may not be ready yet, keep polling
+    } catch (err) {
+      console.warn(
+        `[${label}] content ${contentId} poll error: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
     await new Promise(resolve => setTimeout(resolve, pollInterval));
   }
 
+  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+  console.warn(
+    `[${label}] timed out after ${elapsed}s for content ${contentId} — round states: [${lastRoundStates.join(", ")}]`,
+  );
   return false;
 }

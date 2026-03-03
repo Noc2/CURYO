@@ -23,16 +23,15 @@ export async function voteOnContent(page: Page, direction: "up" | "down"): Promi
 
   // If not visible (cooldown, own content, round full), try clicking thumbnails
   if (!canVote) {
-    const thumbnails = page.locator(".grid button").filter({ has: page.locator("img") });
+    const thumbnails = page.locator("[data-testid='content-thumbnail']");
     const thumbCount = await thumbnails.count();
 
     for (let i = 0; i < Math.min(thumbCount, 6); i++) {
       const thumb = thumbnails.nth(i);
       if (await thumb.isVisible().catch(() => false)) {
         await thumb.click();
-        await page.waitForTimeout(1_000);
         canVote = await voteBtn
-          .waitFor({ state: "visible", timeout: 3_000 })
+          .waitFor({ state: "visible", timeout: 5_000 })
           .then(() => true)
           .catch(() => false);
         if (canVote) break;

@@ -626,6 +626,7 @@ const ThumbnailCard = memo(function ThumbnailCard({
   return (
     <button
       onClick={onClick}
+      data-testid="content-thumbnail"
       className="group text-left rounded-xl overflow-hidden transition-all surface-card hover:scale-[1.02] cursor-pointer"
     >
       {/* Thumbnail */}
