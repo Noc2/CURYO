@@ -543,7 +543,107 @@ The `epochIndex` field is added to the `Commit` struct inside a mapping (not a s
 
 ---
 
-## 10. Open Design Questions
+## 10. Comprehensive Design Evaluation
+
+### 10.1 Does the design make sense overall?
+
+Yes — the tlock + binary two-tier epoch-weight mechanism is one of the most principled anti-herding designs available to a decentralized curation protocol. The core insight is that it applies two orthogonal cascade-prevention layers targeting different threat models:
+
+**Layer 1 (tlock — cryptographic, within-epoch):** Within any epoch, all vote directions are invisible until the epoch ends. The Bikhchandani-Hirshleifer-Welch (1992) result on information cascades requires sequential observability — an observer must see others' choices before committing their own. tlock makes this cryptographically impossible within each epoch. No economic deterrent can match this guarantee.
+
+**Layer 2 (epoch-weighting — economic, inter-epoch):** Between epochs, voters can see epoch-1 results. The 75% weight penalty taxes the value of that public information. This damps but does not eliminate herding — which is the correct target. Economic deterrence is appropriate for economic behavior.
+
+The combination is stronger than either alone. tlock without weighting leaves inter-epoch herding free. Weighting without tlock allows within-epoch front-running (the last voter to submit could observe others' stakes in a transparent mempool).
+
+**Connection to voting theory (swing voter's curse):** Feddersen and Pesendorfer (1996) showed that uninformed voters rationally abstain in standard voting mechanisms, because their vote may swing the outcome in the wrong direction. In the Curyo mechanism, epoch-weighting converts rational abstention into productive behavior: weakly-informed voters can participate as epoch-2 fillers at 25% weight, closing the quorum gap without distorting the epoch-1 curation signal. This is a genuine design advantage over mechanisms where uninformed voters either abstain entirely (quorum hard to reach) or participate at full weight (signal diluted).
+
+### 10.2 Epoch duration analysis
+
+The original 15-minute epoch appears to have been chosen for rapid development iteration, not based on content consumption dynamics. The optimal epoch duration is determined by one question: **how long does a genuine assessor need to consume the content and form an independent opinion?**
+
+Content consumption time by type:
+
+| Content type | Consumption time | Recommended epoch-1 window |
+|---|---|---|
+| Memes, tweets, short clips (<2 min) | 1–3 min | 5–15 min |
+| Articles, YouTube videos (5–20 min) | 10–25 min | 30 min |
+| Long articles, talks (30–60 min) | 35–70 min | 1 hour |
+| Podcasts, films (2+ hours) | 2–4+ hours | 2–4 hours |
+
+A 15-minute epoch only captures genuine assessors for short-form content. For most curated content — articles, videos — 15 minutes is insufficient for independent evaluation before the epoch-1 window closes.
+
+**Comparison with financial batch auctions:** Dark pool batch auctions (Turquoise, Posit Match) run at 10–45 second intervals to eliminate HFT latency arbitrage. This analogy is inapt — the binding constraint there is trading speed (microseconds), not information processing time. Content curation requires the equivalent of a sealed-bid procurement auction, where bidders need time to evaluate the opportunity before submitting.
+
+**Recommendation — configurable per content category:**
+
+The cleanest solution is to store `epochDuration` in `CategoryRegistry` alongside other per-category parameters. A tweet category uses 10 minutes; a film review category uses 2 hours. This allows the mechanism to serve the full content spectrum without compromising epoch-1 capture rates.
+
+If a single platform-wide duration is required: **30 minutes** is a better default than 15. It captures most medium-form content in epoch 1, and settlement timing remains acceptable:
+- Popular content (5+ epoch-1 voters): 60 min total
+- Niche content (3+2 split): 90 min total
+
+### 10.3 minVoters analysis
+
+**minVoters=5 is the right balance.** The full cost-benefit analysis:
+
+Increasing to 7 gains:
+- Marginally stronger hedge-attack deterrence
+- Higher social-proof threshold
+
+Increasing to 7 costs:
+- Niche content needs 3 epoch-2 fillers (vs 2) to close the quorum gap
+- Coordinated filler participation becomes harder to achieve — rational uninformed voters abstain (swing voter's curse), and the quorum gap is now 3 positions rather than 2
+- Risk of threshold deadlock: epoch-1 yields 4 genuine votes; epoch-2 yields 1-2 fillers; round drifts across multiple epochs before settling
+- Epoch-1 pool share with 4 ep1 curators + 3 ep2 fillers: 400/475 = 84.2% — still dominant, but the bar is genuinely higher for niche content
+
+The soft quorum property works best when the gap between epoch-1 natural participation and minVoters is 1–2 voters. minVoters=5 with a typical epoch-1 natural participation of 3–4 is the sweet spot.
+
+**For high-security content categories** (governance proposals, parameter changes), a per-category `minVoters` override via `CategoryRegistry` would allow 7–10 where warranted.
+
+### 10.4 Game-theoretic equilibrium
+
+**Epoch-1 dominance condition:**
+
+Let p = voter's private probability that UP is correct. Let E = voter pool per unit of effective stake.
+
+- Epoch-1 EV: `(2p - 1) × stake × E`
+- Epoch-2 EV (after observing epoch-1 results, posterior p'): `(2p' - 1) × 0.25 × stake × E`
+
+Epoch 1 dominates when: `(2p - 1) > 0.25 × (2p' - 1)`
+
+Since p' ≥ p (Bayesian update), epoch 1 is dominant for any voter whose original private signal is strong enough that the information gain from watching epoch-1 results isn't worth 4× the weight cost. For a voter with genuine content expertise (p ≈ 0.65–0.80), the marginal update from epoch-1 results (p' ≈ 0.70–0.85) doesn't come close to compensating for the 75% weight penalty. **The dominant strategy for informed voters is to commit in epoch 1.**
+
+**The separating equilibrium:**
+
+The mechanism creates a natural separating equilibrium:
+- High-confidence voters (p > ~0.6) → epoch 1, full weight — highest risk, highest reward
+- Low-confidence voters (p ≈ 0.5) who gain information from epoch 1 → epoch 2+, 25% weight — positive EV, appropriate discount
+- Pure herders (no independent view) → epoch 2+, 25% weight — correctly discounted
+
+This is the desired information aggregation property. Epoch-1 curators dominate the reward pool; uncertain and herding voters earn positive but reduced returns.
+
+**The win condition vulnerability:**
+
+The most significant remaining game-theoretic concern: the **win condition uses raw stake** while **reward distribution uses effective stake**. A coordinated epoch-2 flood can flip which side wins, even if epoch-1 clearly favored the other direction.
+
+Example: epoch 1 yields 300 UP vs 200 DOWN. Attacker floods 600 DOWN in epoch 2. Raw stake: DOWN wins (800 vs 300). The attackers receive only 25% reward weight (150 effective stake), but they determine the outcome. The honest epoch-1 UP voters lose their stake.
+
+This attack requires 3+ additional Voter IDs, 600+ cREP capital, and coordination. At current economics it is not freely profitable. But it is a genuine attack surface.
+
+**Possible fix:** Apply epoch-weighting to the win condition as well (i.e., UP wins if `weighted_up_stake > weighted_down_stake`). This makes the epoch-1 signal nearly decisive and makes late-flooding expensive. The cost: the win condition is harder for users to reason about (they see raw stakes in the UI but outcomes are determined by weighted stakes). Whether to apply epoch-weighting to the win condition is an explicit design choice that should be made consciously.
+
+### 10.5 Summary: recommended parameter set
+
+| Parameter | Value | Rationale |
+|---|---|---|
+| `epochDuration` | 30 min (configurable per category) | Captures medium-form content in epoch 1 |
+| `minVoters` | 5 | Sweet spot for soft quorum; matches live contract |
+| Epoch-1 weight | 100% (10000 bps) | Full weight for blind assessment |
+| Epoch-2+ weight | 25% (2500 bps) | 4:1 deterrent; productive filler EV |
+| `maxDuration` | 7 days | Round expiry without quorum |
+| Win condition | Raw stake (current) | Simpler; consider weighted win as upgrade path |
+
+## 11. Open Design Questions
 
 1. **minVoters=5 in the bootstrap phase.** During early platform growth with few active voters per content, minVoters=5 may cause many rounds to expire without settling (7 days, full refunds). Options: start with minVoters=3 during bootstrap and raise to 5 via governance once average round participation exceeds 5, or accept the higher bar from launch as it creates a quality filter. The soft-quorum mechanism (epoch-2 fillers) makes 5 more achievable than raw numbers suggest.
 
@@ -551,11 +651,13 @@ The `epochIndex` field is added to the `Commit` struct inside a mapping (not a s
 
 3. **Epoch-weighting for the participation pool.** Currently, losing voters receive up to 90% of their stake back from the participation pool regardless of epoch. Should epoch-2+ losers get a reduced participation rate (e.g., 70% instead of 90%)? This would more strongly discourage wrong-direction herding, but adds complexity and may feel punitive to voters who had genuine late information.
 
-4. **UI for the epoch deadline.** The first 15 minutes are the highest-reward window. A clear countdown ("Full reward weight available for 8 more minutes") creates urgency that matches the mechanism's intent. However, displaying this as a countdown could create a last-minute rush at the end of epoch 1 as voters scramble to commit before the weight drops. An alternative: show it as a reward tier label ("Committing now: Tier 1 reward (full weight) · After 8 min: Tier 2 reward (25%)").
+4. **UI for the epoch deadline.** The first epoch is the highest-reward window. A clear countdown ("Full reward weight available for 8 more minutes") creates urgency that matches the mechanism's intent. However, displaying this as a countdown could create a last-minute rush at the end of epoch 1 as voters scramble to commit before the weight drops. An alternative: show it as a reward tier label ("Committing now: Tier 1 reward (full weight) · After 8 min: Tier 2 reward (25%)").
 
-5. **The win condition vs reward distribution split.** The current design uses raw stake for the win condition (which side wins) but epoch-weighted effective stake for reward distribution (how much each winner gets). This means a large epoch-2+ wave can flip the outcome even if epoch-1 clearly favored the other direction. Is this the right design, or should epoch-weighting also apply to the win condition? If it applied to the win condition, epoch-1 voters' signal would be nearly impossible to override, which might be too strong a protection against genuine late-information corrections.
+5. **The win condition vs reward distribution split.** The current design uses raw stake for the win condition (which side wins) but epoch-weighted effective stake for reward distribution (how much each winner gets). This means a large epoch-2+ wave can flip the outcome even if epoch-1 clearly favored the other direction (see Section 10.4). Applying epoch-weighting to the win condition would make the epoch-1 signal nearly decisive but complicates the UI.
 
-6. **Settlement timing edge case.** With minVoters=5 and exactly 5 epoch-1 voters, settlement fires at T+30min. Epoch-2 commits between T+15min and T+30min have their epoch end at exactly T+30min — same block the settlement could fire. The strict `block.timestamp > thresholdReachedAt + epochDuration` check (note `>` not `>=`) ensures epoch-2 voters have at minimum one extra second to be revealed. Worth verifying this in tests when implementing.
+6. **Settlement timing edge case.** With minVoters=5 and exactly 5 epoch-1 voters, settlement fires at T+2×epochDuration. Epoch-2 commits have their epoch end at T+2×epochDuration — same block the settlement could fire. The strict `block.timestamp > thresholdReachedAt + epochDuration` check (note `>` not `>=`) ensures epoch-2 voters have at minimum one extra second to be revealed. Worth verifying this in tests when implementing.
+
+7. **Per-category epoch configuration.** Storing `epochDuration` in `CategoryRegistry` would allow 10-minute epochs for meme/tweet categories and 2-hour epochs for film/podcast categories. This is the cleanest long-term solution but requires a CategoryRegistry schema change and governance process for setting per-category parameters.
 
 ---
 
