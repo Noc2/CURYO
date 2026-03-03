@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import { Test } from "forge-std/Test.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 
 /// @title Harness to expose RewardMath internal functions for testing
 contract RewardMathHarness {
@@ -14,16 +15,12 @@ contract RewardMathHarness {
         return RewardMath.calculateConsensusSubsidy(totalStake, reserveBalance);
     }
 
-    function calculateVoterReward(uint256 voterShares, uint256 totalWinningShares, uint256 voterPool)
+    function calculateVoterReward(uint256 effectiveStake, uint256 totalWeightedWinningStake, uint256 voterPool)
         external
         pure
         returns (uint256)
     {
-        return RewardMath.calculateVoterReward(voterShares, totalWinningShares, voterPool);
-    }
-
-    function calculateShares(uint256 stake, uint256 sameDirectionStake, uint256 b) external pure returns (uint256) {
-        return RewardMath.calculateShares(stake, sameDirectionStake, b);
+        return RewardMath.calculateVoterReward(effectiveStake, totalWeightedWinningStake, voterPool);
     }
 
     function calculateRating(uint256 totalUpStake, uint256 totalDownStake) external pure returns (uint16) {
@@ -32,6 +29,10 @@ contract RewardMathHarness {
 
     function splitConsensusSubsidy(uint256 subsidy) external pure returns (uint256, uint256) {
         return RewardMath.splitConsensusSubsidy(subsidy);
+    }
+
+    function epochWeightBps(uint32 epochIndex) external pure returns (uint256) {
+        return RoundLib.epochWeightBps(epochIndex);
     }
 }
 
@@ -105,75 +106,6 @@ contract RewardMathTest is Test {
     }
 
     // ====================================================
-    // calculateShares — Fuzz Tests
-    // ====================================================
-
-    function testFuzz_CalculateShares_DecreasesWithPool(uint256 stake, uint256 pool1, uint256 pool2, uint256 b)
-        public
-        view
-    {
-        stake = bound(stake, 1, type(uint64).max);
-        b = bound(b, 1, type(uint64).max);
-        pool1 = bound(pool1, 0, type(uint64).max - 1);
-        pool2 = bound(pool2, pool1 + 1, type(uint64).max);
-
-        uint256 shares1 = harness.calculateShares(stake, pool1, b);
-        uint256 shares2 = harness.calculateShares(stake, pool2, b);
-
-        assertGe(shares1, shares2, "Shares must decrease as sameDirectionStake increases");
-    }
-
-    function testFuzz_CalculateShares_IncreasesWithStake(uint256 stake1, uint256 stake2, uint256 pool, uint256 b)
-        public
-        view
-    {
-        stake1 = bound(stake1, 1, type(uint64).max);
-        stake2 = bound(stake2, stake1, type(uint64).max);
-        b = bound(b, 1, type(uint64).max);
-        pool = bound(pool, 0, type(uint64).max);
-
-        uint256 shares1 = harness.calculateShares(stake1, pool, b);
-        uint256 shares2 = harness.calculateShares(stake2, pool, b);
-
-        assertLe(shares1, shares2, "Higher stake must yield >= shares");
-    }
-
-    function testFuzz_CalculateShares_NeverExceedsStake(uint256 stake, uint256 pool, uint256 b) public view {
-        stake = bound(stake, 0, type(uint64).max);
-        b = bound(b, 1, type(uint64).max);
-        pool = bound(pool, 0, type(uint64).max);
-
-        uint256 shares = harness.calculateShares(stake, pool, b);
-
-        assertLe(shares, stake, "Shares must never exceed stake");
-    }
-
-    function test_CalculateShares_ZeroPool() public view {
-        // First voter: shares = stake * b / (0 + b) = stake
-        uint256 shares = harness.calculateShares(100e6, 0, 1000e6);
-        assertEq(shares, 100e6, "First voter gets full shares when pool is empty");
-    }
-
-    function test_CalculateShares_ZeroB() public view {
-        // Degenerate case: b=0 returns stake directly
-        uint256 shares = harness.calculateShares(100e6, 500e6, 0);
-        assertEq(shares, 100e6, "b=0 gives flat pricing (shares = stake)");
-    }
-
-    function test_CalculateShares_LateVoterGetsLess() public view {
-        uint256 b = 1000e6;
-        // First voter: pool=0 → shares = 50e6 * 1000e6 / 1000e6 = 50e6
-        uint256 shares1 = harness.calculateShares(50e6, 0, b);
-        // Second voter: pool=50e6 → shares = 50e6 * 1000e6 / 1050e6 ≈ 47.6e6
-        uint256 shares2 = harness.calculateShares(50e6, 50e6, b);
-        // Third voter: pool=100e6 → shares = 50e6 * 1000e6 / 1100e6 ≈ 45.5e6
-        uint256 shares3 = harness.calculateShares(50e6, 100e6, b);
-
-        assertGt(shares1, shares2, "First voter gets more shares than second");
-        assertGt(shares2, shares3, "Second voter gets more shares than third");
-    }
-
-    // ====================================================
     // calculateRating — Fuzz Tests
     // ====================================================
 
@@ -231,43 +163,43 @@ contract RewardMathTest is Test {
     // ====================================================
 
     function testFuzz_CalculateVoterReward_NeverExceedsPool(
-        uint256 voterShares,
-        uint256 totalWinningShares,
+        uint256 effectiveStake,
+        uint256 totalWeightedWinningStake,
         uint256 voterPool
     ) public view {
-        voterShares = bound(voterShares, 1, type(uint128).max);
-        totalWinningShares = bound(totalWinningShares, voterShares, type(uint128).max);
+        effectiveStake = bound(effectiveStake, 1, type(uint128).max);
+        totalWeightedWinningStake = bound(totalWeightedWinningStake, effectiveStake, type(uint128).max);
         voterPool = bound(voterPool, 0, type(uint128).max);
 
-        uint256 reward = harness.calculateVoterReward(voterShares, totalWinningShares, voterPool);
+        uint256 reward = harness.calculateVoterReward(effectiveStake, totalWeightedWinningStake, voterPool);
 
         assertLe(reward, voterPool, "Individual reward must never exceed pool");
     }
 
     function testFuzz_CalculateVoterReward_Proportional(
-        uint256 shares1,
-        uint256 shares2,
-        uint256 totalWinningShares,
+        uint256 effectiveStake1,
+        uint256 effectiveStake2,
+        uint256 totalWeightedWinningStake,
         uint256 voterPool
     ) public view {
-        shares1 = bound(shares1, 1, type(uint64).max);
-        shares2 = bound(shares2, shares1, type(uint64).max);
-        totalWinningShares = bound(totalWinningShares, shares2, type(uint128).max);
+        effectiveStake1 = bound(effectiveStake1, 1, type(uint64).max);
+        effectiveStake2 = bound(effectiveStake2, effectiveStake1, type(uint64).max);
+        totalWeightedWinningStake = bound(totalWeightedWinningStake, effectiveStake2, type(uint128).max);
         voterPool = bound(voterPool, 1, type(uint128).max);
 
-        uint256 reward1 = harness.calculateVoterReward(shares1, totalWinningShares, voterPool);
-        uint256 reward2 = harness.calculateVoterReward(shares2, totalWinningShares, voterPool);
+        uint256 reward1 = harness.calculateVoterReward(effectiveStake1, totalWeightedWinningStake, voterPool);
+        uint256 reward2 = harness.calculateVoterReward(effectiveStake2, totalWeightedWinningStake, voterPool);
 
-        assertLe(reward1, reward2, "Higher shares must get >= reward");
+        assertLe(reward1, reward2, "Higher effective stake must get >= reward");
     }
 
-    function testFuzz_CalculateVoterReward_ZeroTotal(uint256 voterShares, uint256 voterPool) public view {
-        voterShares = bound(voterShares, 0, type(uint128).max);
+    function testFuzz_CalculateVoterReward_ZeroTotal(uint256 effectiveStake, uint256 voterPool) public view {
+        effectiveStake = bound(effectiveStake, 0, type(uint128).max);
         voterPool = bound(voterPool, 0, type(uint128).max);
 
-        uint256 reward = harness.calculateVoterReward(voterShares, 0, voterPool);
+        uint256 reward = harness.calculateVoterReward(effectiveStake, 0, voterPool);
 
-        assertEq(reward, 0, "Zero total winning shares must return zero reward");
+        assertEq(reward, 0, "Zero totalWeightedWinningStake must return zero reward");
     }
 
     // ====================================================
@@ -398,5 +330,34 @@ contract RewardMathTest is Test {
 
         assertEq(submitterShare, 0);
         assertEq(voterShare, 1);
+    }
+
+    // ====================================================
+    // epochWeightBps — Unit Tests
+    // ====================================================
+
+    function test_EpochWeightBps_Epoch0_Returns10000() public view {
+        uint256 weight = harness.epochWeightBps(0);
+        assertEq(weight, 10000, "Epoch 0 (blind epoch-1) must return 10000 bps (100%)");
+    }
+
+    function test_EpochWeightBps_Epoch1_Returns2500() public view {
+        uint256 weight = harness.epochWeightBps(1);
+        assertEq(weight, 2500, "Epoch 1 (informed epoch-2+) must return 2500 bps (25%)");
+    }
+
+    function test_EpochWeightBps_HighEpoch_Returns2500() public view {
+        // All epochs >= 1 (informed) return the same 25% weight
+        uint256 weight2 = harness.epochWeightBps(2);
+        uint256 weight100 = harness.epochWeightBps(100);
+        assertEq(weight2, 2500, "Epoch 2 must also return 2500 bps");
+        assertEq(weight100, 2500, "Epoch 100 must also return 2500 bps");
+    }
+
+    function test_EpochWeightBps_EarlyVoterAdvantage() public view {
+        // Epoch-1 voter gets 4x the reward weight of an epoch-2+ voter
+        uint256 blindWeight = harness.epochWeightBps(0);
+        uint256 informedWeight = harness.epochWeightBps(1);
+        assertEq(blindWeight / informedWeight, 4, "Blind voter must have 4x weight vs informed voter");
     }
 }
