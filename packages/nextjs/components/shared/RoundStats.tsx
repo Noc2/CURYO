@@ -1,8 +1,6 @@
 "use client";
 
-import { useAccount } from "wagmi";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
 import { useRoundPhase } from "~~/hooks/useRoundPhase";
@@ -18,26 +16,11 @@ interface RoundStatsProps {
  * tlock commit-reveal model:
  * - During epoch 1: votes are hidden (commit phase). Only totalStake and voteCount are shown.
  * - After epoch 1: keeper reveals votes. Revealed UP/DOWN pool breakdown is shown.
- * - User's own commit is checked via voterCommitHash mapping.
  */
 export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
-  const { address } = useAccount();
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, roundId, minVoters, maxVoters, isRoundFull, readyToSettle } = useRoundInfo(contentId);
+  const { round, isLoading, minVoters, maxVoters, isRoundFull, readyToSettle } = useRoundInfo(contentId);
   const { phase, isEpoch1 } = useRoundPhase(contentId);
-
-  // Check if the current user has committed to this round
-  // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit, non-zero = committed)
-  const { data: myCommitHash } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine" as any,
-    functionName: "voterCommitHash" as any,
-    args: [contentId, roundId, address] as any,
-    query: { enabled: roundId > 0n && !!address },
-  } as any);
-
-  const hasMyCommit =
-    myCommitHash != null &&
-    (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
 
   if (isLoading) {
     return (
@@ -134,16 +117,6 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
               {downCount} ({downPoolFormatted.toFixed(0)} cREP)
             </span>
           </div>
-        </div>
-      )}
-
-      {/* User's own commit status */}
-      {hasMyCommit && (
-        <div className="flex items-center gap-2">
-          <span>Your vote</span>
-          <span className="font-semibold tabular-nums">
-            Committed{isEpoch1 ? " — hidden until epoch ends" : " — awaiting reveal"}
-          </span>
         </div>
       )}
 
