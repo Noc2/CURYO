@@ -1,12 +1,13 @@
 import {
   approveCREP,
+  commitVoteDirect,
+  evmIncreaseTime,
   getActiveRoundId,
-  mineBlocks,
   readUint256,
-  setTestEpochBlocks,
+  revealVoteDirect,
+  setTestConfig,
+  settleRoundDirect,
   submitContentDirect,
-  trySettleDirect,
-  voteDirect,
   waitForPonderIndexed,
   waitForPonderSync,
 } from "../helpers/admin-helpers";
@@ -16,7 +17,7 @@ import { getContentById } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
 
 /**
- * Unanimous settlement — consensus reserve subsidy.
+ * Unanimous settlement — consensus reserve subsidy (tlock commit-reveal).
  *
  * When all voters agree (losingPool == 0), there's no losing pool to
  * redistribute. Instead, the consensus reserve subsidizes the round:
@@ -40,10 +41,12 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const STAKE = BigInt(10e6); // 10 cREP each (above MIN_STAKE_FOR_RATING threshold)
+  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+  const EPOCH_DURATION = 60; // seconds — set via setTestConfig
 
   test.beforeAll(async () => {
-    const ok = await setTestEpochBlocks(10, 50, VOTING_ENGINE, DEPLOYER.address);
-    if (!ok) throw new Error("Failed to set test epoch blocks");
+    const ok = await setTestConfig(VOTING_ENGINE, DEPLOYER.address, EPOCH_DURATION);
+    if (!ok) throw new Error("Failed to set test config");
   });
 
   let contentId: string | null = null;
@@ -89,7 +92,7 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     expect(contentId).toBeTruthy();
   });
 
-  test("vote 3 unanimous UP votes, then settle", async () => {
+  test("commit, reveal, and settle 3 unanimous UP votes", async () => {
     test.setTimeout(120_000);
     test.skip(!contentId, "No content from previous test");
 
@@ -99,30 +102,50 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
 
     const voters = [ANVIL_ACCOUNTS.account3, ANVIL_ACCOUNTS.account4, ANVIL_ACCOUNTS.account5];
 
-    // All vote UP — unanimous (public voting, no commit-reveal)
+    // Step 1: All commit UP (unanimous) via tlock commit-reveal
+    const commits: { commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] = [];
+
     for (let i = 0; i < voters.length; i++) {
       await approveCREP(VOTING_ENGINE, STAKE, voters[i].address, CREP_TOKEN);
-      const success = await voteDirect(
+      const result = await commitVoteDirect(
         BigInt(contentId!),
         true, // UP
         STAKE,
-        "0x0000000000000000000000000000000000000000",
+        ZERO_ADDRESS,
         voters[i].address,
         VOTING_ENGINE,
       );
-      expect(success, `Vote failed for voter ${i}`).toBe(true);
+      expect(result.success, `Commit failed for voter ${i}`).toBe(true);
+      commits.push({ commitKey: result.commitKey, isUp: result.isUp, salt: result.salt });
     }
 
     roundId = await getActiveRoundId(BigInt(contentId!), VOTING_ENGINE);
     expect(roundId).toBeGreaterThan(0n);
 
-    // Advance past maxEpochBlocks (50) for guaranteed settlement
-    await mineBlocks(51);
+    // Step 2: Fast-forward past epoch so votes become revealable
+    await evmIncreaseTime(EPOCH_DURATION + 1);
+
+    // Step 3: Reveal all votes
+    const keeper = ANVIL_ACCOUNTS.account1;
+    for (let i = 0; i < commits.length; i++) {
+      const revealed = await revealVoteDirect(
+        BigInt(contentId!),
+        roundId,
+        commits[i].commitKey,
+        commits[i].isUp,
+        commits[i].salt,
+        keeper.address,
+        VOTING_ENGINE,
+      );
+      expect(revealed, `Reveal failed for voter ${i}`).toBe(true);
+    }
+
+    // Step 4: Fast-forward past settlement delay (one more epoch)
+    await evmIncreaseTime(EPOCH_DURATION + 1);
     await waitForPonderSync();
 
-    // Settle the round
-    const keeper = ANVIL_ACCOUNTS.account1;
-    const settled = await trySettleDirect(BigInt(contentId!), keeper.address, VOTING_ENGINE);
+    // Step 5: Settle the round
+    const settled = await settleRoundDirect(BigInt(contentId!), roundId, keeper.address, VOTING_ENGINE);
     expect(settled, "Settlement failed").toBe(true);
 
     // Wait for Ponder to index

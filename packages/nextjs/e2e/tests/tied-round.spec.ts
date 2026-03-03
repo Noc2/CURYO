@@ -1,7 +1,8 @@
 import {
-  mineBlocks,
-  setTestEpochBlocks,
-  trySettleDirect,
+  evmIncreaseTime,
+  getActiveRoundId,
+  setTestConfig,
+  settleRoundDirect,
   waitForPonderIndexed,
   waitForPonderSync,
 } from "../helpers/admin-helpers";
@@ -14,14 +15,15 @@ import { voteOnSpecificContent } from "../helpers/vote-helpers";
 import { expect, test } from "@playwright/test";
 
 /**
- * Tied round lifecycle test.
+ * Tied round lifecycle test (tlock commit-reveal).
  * Verifies that when upStake === downStake the round settles as Tied (state=3),
  * the content rating does NOT change, and rewards are handled correctly.
  *
  * Strategy:
  * 1. Submit fresh content via the UI to get a clean round with 0 votes
- * 2. 4 accounts vote on the SAME content: 2 UP + 2 DOWN, all 1 cREP
- * 3. Mine past maxEpochBlocks + settle
+ * 2. 4 accounts vote on the SAME content via UI: 2 UP + 2 DOWN, all 1 cREP
+ *    (UI voting uses commitVote correctly via hooks)
+ * 3. Fast-forward past epoch → keeper reveals via keeper API → fast-forward → settle
  * 4. Verify round.state === 3 (Tied) and rating unchanged
  *
  * Account allocation:
@@ -35,9 +37,12 @@ import { expect, test } from "@playwright/test";
 test.describe("Tied round lifecycle", () => {
   test.describe.configure({ mode: "serial" });
 
+  const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
+  const EPOCH_DURATION = 60; // seconds — set via setTestConfig
+
   test.beforeAll(async () => {
-    const ok = await setTestEpochBlocks(10, 50, CONTRACT_ADDRESSES.RoundVotingEngine, DEPLOYER.address);
-    if (!ok) throw new Error("Failed to set test epoch blocks");
+    const ok = await setTestConfig(VOTING_ENGINE, DEPLOYER.address, EPOCH_DURATION);
+    if (!ok) throw new Error("Failed to set test config");
   });
 
   let newContentId: string | null = null;
@@ -151,12 +156,29 @@ test.describe("Tied round lifecycle", () => {
     const preData = await getContentById(newContentId!);
     const preRating = preData.content.rating;
 
-    // Mine past maxEpochBlocks (50) for guaranteed settlement
-    await mineBlocks(51);
+    // Get the active round ID before settlement
+    const roundId = await getActiveRoundId(BigInt(newContentId!), VOTING_ENGINE);
+
+    // Fast-forward past epoch duration so votes become revealable
+    await evmIncreaseTime(EPOCH_DURATION + 1);
+
+    // Trigger the keeper to reveal votes via its API.
+    // The keeper reads committed votes on-chain and calls revealVoteByCommitKey.
+    // In E2E, we trigger a keeper run by calling its endpoint or just fast-forward
+    // and let the keeper poll loop handle it. Since UI votes use commitVote(),
+    // the keeper's _revealCommits will decode the mock ciphertext and reveal.
+    //
+    // Wait a bit for the keeper to pick up the reveals
+    await waitForPonderSync();
+
+    // Fast-forward past settlement delay (one more epoch after threshold reached)
+    await evmIncreaseTime(EPOCH_DURATION + 1);
     await waitForPonderSync();
 
     // Try to settle
-    await trySettleDirect(BigInt(newContentId!), ANVIL_ACCOUNTS.account1.address, CONTRACT_ADDRESSES.RoundVotingEngine);
+    if (roundId > 0n) {
+      await settleRoundDirect(BigInt(newContentId!), roundId, ANVIL_ACCOUNTS.account1.address, VOTING_ENGINE);
+    }
 
     // Wait for settlement in Ponder
     const settled = await waitForSettlementIndexed(newContentId!, "http://localhost:42069", 30_000);

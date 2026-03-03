@@ -2,12 +2,14 @@ import {
   approveCREP,
   claimParticipationReward,
   claimSubmitterReward,
+  claimVoterReward,
+  commitVoteDirect,
+  evmIncreaseTime,
   getActiveRoundId,
-  mineBlocks,
-  setTestEpochBlocks,
+  revealVoteDirect,
+  setTestConfig,
+  settleRoundDirect,
   submitContentDirect,
-  trySettleDirect,
-  voteDirect,
   waitForPonderIndexed,
   waitForPonderSync,
 } from "../helpers/admin-helpers";
@@ -18,19 +20,19 @@ import { getContentById, getContentList, getSubmitterRewards, ponderGet } from "
 import { expect, test } from "@playwright/test";
 
 /**
- * Reward claiming after settlement.
+ * Reward claiming after settlement (tlock commit-reveal flow).
  * Triggers Ponder events: RewardClaimed, SubmitterRewardClaimed, RatingUpdated.
  *
- * Uses direct contract calls for the entire flow (vote, settle)
- * with public voting (no commit-reveal).
+ * Uses direct contract calls for the entire flow:
+ *   commitVote → (epoch ends) → revealVoteByCommitKey → (settlement delay) → settleRound → claim
  *
  * Account allocation (exclusive to this file for voting):
  * - Account #2 — submits fresh content (also used for submitter reward tests)
  * - Accounts #3, #4 — vote UP (winning side)
  * - Account #7 — votes DOWN (losing side, tests reward absence)
- * - Account #1 (keeper) — settles
+ * - Account #1 (keeper) — reveals votes and settles
  *
- * Tests run serially: submit → vote+settle → verify → claim → submitter claim.
+ * Tests run serially: submit → commit+reveal+settle → verify → claim → submitter claim.
  */
 test.describe("Reward claim lifecycle", () => {
   test.describe.configure({ mode: "serial" });
@@ -40,10 +42,11 @@ test.describe("Reward claim lifecycle", () => {
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const STAKE = BigInt(10e6); // 10 cREP (above MIN_STAKE_FOR_RATING threshold)
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+  const EPOCH_DURATION = 60; // seconds — set via setTestConfig
 
   test.beforeAll(async () => {
-    const ok = await setTestEpochBlocks(10, 50, VOTING_ENGINE, DEPLOYER.address);
-    if (!ok) throw new Error("Failed to set test epoch blocks");
+    const ok = await setTestConfig(VOTING_ENGINE, DEPLOYER.address, EPOCH_DURATION);
+    if (!ok) throw new Error("Failed to set test config");
   });
 
   let newContentId: string | null = null;
@@ -83,20 +86,22 @@ test.describe("Reward claim lifecycle", () => {
     expect(newContentId).toBeTruthy();
   });
 
-  test("vote with 3 accounts and settle a round", async () => {
+  test("commit, reveal, and settle a round with 3 voters", async () => {
     test.setTimeout(120_000);
     test.skip(!newContentId, "No content from previous test");
 
-    // Step 1: Vote via direct contract calls — #3 UP, #4 UP, #7 DOWN
+    // Step 1: Commit votes — #3 UP, #4 UP, #7 DOWN
     const voters = [
       { account: ANVIL_ACCOUNTS.account3, isUp: true },
       { account: ANVIL_ACCOUNTS.account4, isUp: true },
       { account: ANVIL_ACCOUNTS.account7, isUp: false },
     ];
 
+    const commits: { commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] = [];
+
     for (let i = 0; i < voters.length; i++) {
       await approveCREP(VOTING_ENGINE, STAKE, voters[i].account.address, CREP_TOKEN);
-      const success = await voteDirect(
+      const result = await commitVoteDirect(
         BigInt(newContentId!),
         voters[i].isUp,
         STAKE,
@@ -104,23 +109,41 @@ test.describe("Reward claim lifecycle", () => {
         voters[i].account.address,
         VOTING_ENGINE,
       );
-      expect(success, `Vote failed for voter ${i}`).toBe(true);
+      expect(result.success, `Commit failed for voter ${i}`).toBe(true);
+      commits.push({ commitKey: result.commitKey, isUp: result.isUp, salt: result.salt });
     }
 
     // Step 2: Get active round ID
     roundId = await getActiveRoundId(BigInt(newContentId!), VOTING_ENGINE);
     expect(roundId).toBeGreaterThan(0n);
 
-    // Step 3: Mine blocks past maxEpochBlocks (50) for guaranteed settlement
-    await mineBlocks(51);
+    // Step 3: Fast-forward past epoch duration so votes become revealable
+    await evmIncreaseTime(EPOCH_DURATION + 1);
+
+    // Step 4: Reveal all votes (keeper does this)
+    const keeper = ANVIL_ACCOUNTS.account1;
+    for (let i = 0; i < commits.length; i++) {
+      const revealed = await revealVoteDirect(
+        BigInt(newContentId!),
+        roundId,
+        commits[i].commitKey,
+        commits[i].isUp,
+        commits[i].salt,
+        keeper.address,
+        VOTING_ENGINE,
+      );
+      expect(revealed, `Reveal failed for voter ${i}`).toBe(true);
+    }
+
+    // Step 5: Fast-forward past settlement delay (one more epoch)
+    await evmIncreaseTime(EPOCH_DURATION + 1);
     await waitForPonderSync();
 
-    // Step 4: Settle the round
-    const keeper = ANVIL_ACCOUNTS.account1;
-    const settled = await trySettleDirect(BigInt(newContentId!), keeper.address, VOTING_ENGINE);
+    // Step 6: Settle the round
+    const settled = await settleRoundDirect(BigInt(newContentId!), roundId, keeper.address, VOTING_ENGINE);
     expect(settled, "Settlement failed").toBe(true);
 
-    // Step 5: Wait for Ponder to index
+    // Step 7: Wait for Ponder to index
     const settledIndexed = await waitForPonderIndexed(async () => {
       const data = await getContentById(newContentId!);
       return data.rounds.some(r => String(r.roundId) === String(roundId) && (r.state === 1 || r.state === 3));
@@ -144,6 +167,18 @@ test.describe("Reward claim lifecycle", () => {
     expect(data.content).toHaveProperty("totalVotes");
   });
 
+  test("winning voter claims reward via direct call", async () => {
+    test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
+    test.setTimeout(60_000);
+
+    const REWARD_DISTRIBUTOR = CONTRACT_ADDRESSES.RoundRewardDistributor;
+
+    // Account #3 voted UP (winning side) — claim voter reward
+    const winner = ANVIL_ACCOUNTS.account3;
+    const success = await claimVoterReward(BigInt(settledContentId!), roundId, winner.address, REWARD_DISTRIBUTOR);
+    expect(success, "Voter reward claim should succeed for winning voter").toBe(true);
+  });
+
   test("portfolio shows claim button after settlement", async ({ browser }) => {
     test.setTimeout(120_000);
     test.skip(!settledContentId, "No settled content from previous test");
@@ -162,25 +197,9 @@ test.describe("Reward claim lifecycle", () => {
 
     const claimBtn = page.getByRole("button", { name: "Claim Reward" });
     const activeBadge = page.getByText("Active");
-    const anyState = claimBtn.or(activeBadge);
+    const claimedBadge = page.getByText("Claimed");
+    const anyState = claimBtn.or(activeBadge).or(claimedBadge);
     await expect(anyState.first()).toBeVisible({ timeout: 15_000 });
-
-    const canClaim = await claimBtn
-      .first()
-      .waitFor({ state: "visible", timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (canClaim) {
-      await claimBtn.first().click();
-
-      const success = page.getByText(/Reward claimed/i).or(page.getByText(/success/i));
-      const errorMsg = page
-        .getByText(/failed/i)
-        .or(page.getByText(/error/i))
-        .or(page.getByText(/reverted/i));
-      const outcome = success.or(errorMsg);
-      await expect(outcome.first()).toBeVisible({ timeout: 30_000 });
-    }
 
     await context.close();
   });

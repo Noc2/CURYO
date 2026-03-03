@@ -677,31 +677,49 @@ export async function getFrontendInfoOnChain(
 }
 
 // ============================================================
-// ROUND VOTING ENGINE — Direct contract calls
+// ROUND VOTING ENGINE — tlock commit-reveal direct contract calls
 // ============================================================
 
 /**
- * Vote directly via contract call (bypasses UI).
- * Calls vote(contentId, isUp, stakeAmount, frontend).
+ * Commit a vote directly via contract call (tlock commit-reveal).
+ * Generates mock ciphertext and computes commitHash/commitKey.
  * Caller must have approved stakeAmount of cREP to the RoundVotingEngine.
+ *
+ * Returns { success, commitKey, isUp, salt } for later reveal.
  */
-export async function voteDirect(
+export async function commitVoteDirect(
   contentId: number | bigint,
   isUp: boolean,
   stakeAmount: bigint,
   frontend: string,
   fromAddress: string,
   contractAddress: string,
-): Promise<boolean> {
-  const { encodeFunctionData } = await import("viem");
+): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
+  const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
+
+  // Generate deterministic salt from voter + contentId + timestamp
+  const salt = keccak256(
+    encodePacked(["address", "uint256", "uint256"], [fromAddress as `0x${string}`, BigInt(contentId), BigInt(Date.now())]),
+  );
+
+  // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
+  const chash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, BigInt(contentId)]));
+
+  // commitKey = keccak256(abi.encodePacked(voter, commitHash))
+  const ckey = keccak256(encodePacked(["address", "bytes32"], [fromAddress as `0x${string}`, chash]));
+
+  // MockMode ciphertext: abi.encodePacked(uint8(isUp ? 1 : 0), bytes32 salt, uint256 contentId) = 65 bytes
+  const ciphertext = encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, BigInt(contentId)]);
+
   const data = encodeFunctionData({
     abi: [
       {
-        name: "vote",
+        name: "commitVote",
         type: "function",
         inputs: [
           { name: "contentId", type: "uint256" },
-          { name: "isUp", type: "bool" },
+          { name: "commitHash", type: "bytes32" },
+          { name: "ciphertext", type: "bytes" },
           { name: "stakeAmount", type: "uint256" },
           { name: "frontend", type: "address" },
         ],
@@ -709,19 +727,25 @@ export async function voteDirect(
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "vote",
-    args: [BigInt(contentId), isUp, stakeAmount, frontend as `0x${string}`],
+    functionName: "commitVote",
+    args: [BigInt(contentId), chash, ciphertext, stakeAmount, frontend as `0x${string}`],
   });
-  return sendTx(fromAddress, contractAddress, data);
+
+  const success = await sendTx(fromAddress, contractAddress, data);
+  return { success, commitKey: ckey, isUp, salt };
 }
 
 /**
- * Try to settle a round via contract call.
- * Calls trySettle(contentId). Settlement succeeds probabilistically after
- * minEpochBlocks, and is guaranteed after maxEpochBlocks.
+ * Reveal a committed vote via contract call.
+ * Calls revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt).
+ * Anyone can reveal — the keeper normally does this after epoch ends.
  */
-export async function trySettleDirect(
+export async function revealVoteDirect(
   contentId: number | bigint,
+  roundId: number | bigint,
+  commitKey: `0x${string}`,
+  isUp: boolean,
+  salt: `0x${string}`,
   fromAddress: string,
   contractAddress: string,
 ): Promise<boolean> {
@@ -729,22 +753,124 @@ export async function trySettleDirect(
   const data = encodeFunctionData({
     abi: [
       {
-        name: "trySettle",
+        name: "revealVoteByCommitKey",
         type: "function",
-        inputs: [{ name: "contentId", type: "uint256" }],
-        outputs: [{ name: "settled", type: "bool" }],
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+          { name: "commitKey", type: "bytes32" },
+          { name: "isUp", type: "bool" },
+          { name: "salt", type: "bytes32" },
+        ],
+        outputs: [],
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "trySettle",
-    args: [BigInt(contentId)],
+    functionName: "revealVoteByCommitKey",
+    args: [BigInt(contentId), BigInt(roundId), commitKey, isUp, salt],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Settle a round via contract call.
+ * Calls settleRound(contentId, roundId).
+ * Requires: ≥minVoters revealed + settlement delay elapsed.
+ */
+export async function settleRoundDirect(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "settleRound",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "settleRound",
+    args: [BigInt(contentId), BigInt(roundId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Process unrevealed votes after settlement.
+ * Calls processUnrevealedVotes(contentId, roundId, startIndex, count).
+ * Forfeits past-epoch stakes to treasury, refunds current-epoch stakes.
+ */
+export async function processUnrevealedVotes(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  startIndex: number,
+  count: number,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "processUnrevealedVotes",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+          { name: "startIndex", type: "uint256" },
+          { name: "count", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "processUnrevealedVotes",
+    args: [BigInt(contentId), BigInt(roundId), BigInt(startIndex), BigInt(count)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
+ * Claim refund from a cancelled round.
+ * Calls claimCancelledRoundRefund(contentId, roundId).
+ * Any voter who committed to the round can claim their full stake back.
+ */
+export async function claimCancelledRoundRefund(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "claimCancelledRoundRefund",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "claimCancelledRoundRefund",
+    args: [BigInt(contentId), BigInt(roundId)],
   });
   return sendTx(fromAddress, contractAddress, data);
 }
 
 /**
  * Mine multiple blocks on Anvil. Uses anvil_mine for fast block advancement.
- * Needed to advance past minEpochBlocks/maxEpochBlocks for settlement.
  */
 export async function mineBlocks(count: number): Promise<void> {
   await fetch(ANVIL_RPC, {
@@ -848,18 +974,13 @@ export async function waitForPonderIndexed(
 
 /**
  * Read the current RoundVotingEngine config tuple.
- * Returns all 9 fields from the config() public getter.
+ * Returns the 4 fields from the config() public getter.
  */
 export async function readRoundConfig(contractAddress: string): Promise<{
-  minEpochBlocks: bigint;
-  maxEpochBlocks: bigint;
+  epochDuration: bigint;
   maxDuration: bigint;
   minVoters: bigint;
   maxVoters: bigint;
-  baseRateBps: number;
-  growthRateBps: number;
-  maxProbBps: number;
-  liquidityParam: bigint;
 }> {
   const { encodeFunctionData, decodeFunctionResult } = await import("viem");
   const abi = [
@@ -868,15 +989,10 @@ export async function readRoundConfig(contractAddress: string): Promise<{
       type: "function",
       inputs: [],
       outputs: [
-        { name: "minEpochBlocks", type: "uint64" },
-        { name: "maxEpochBlocks", type: "uint64" },
+        { name: "epochDuration", type: "uint256" },
         { name: "maxDuration", type: "uint256" },
         { name: "minVoters", type: "uint256" },
         { name: "maxVoters", type: "uint256" },
-        { name: "baseRateBps", type: "uint16" },
-        { name: "growthRateBps", type: "uint16" },
-        { name: "maxProbBps", type: "uint16" },
-        { name: "liquidityParam", type: "uint256" },
       ],
       stateMutability: "view",
     },
@@ -894,66 +1010,45 @@ export async function readRoundConfig(contractAddress: string): Promise<{
   });
   const json = await res.json();
   if (json.error || !json.result) throw new Error(`readRoundConfig failed: ${JSON.stringify(json.error)}`);
-  const [minEpochBlocks, maxEpochBlocks, maxDuration, minVoters, maxVoters, baseRateBps, growthRateBps, maxProbBps, liquidityParam] =
-    decodeFunctionResult({ abi, functionName: "config", data: json.result });
-  return {
-    minEpochBlocks,
-    maxEpochBlocks,
-    maxDuration,
-    minVoters,
-    maxVoters,
-    baseRateBps,
-    growthRateBps,
-    maxProbBps,
-    liquidityParam,
-  };
+  const [epochDuration, maxDuration, minVoters, maxVoters] = decodeFunctionResult({
+    abi,
+    functionName: "config",
+    data: json.result,
+  });
+  return { epochDuration, maxDuration, minVoters, maxVoters };
 }
 
 /**
- * Set test-friendly epoch blocks on the RoundVotingEngine.
- * Reads current config, replaces minEpochBlocks/maxEpochBlocks, preserves all other params.
+ * Set test-friendly config on the RoundVotingEngine.
+ * Calls setConfig(epochDuration, maxDuration, minVoters, maxVoters).
  * Requires CONFIG_ROLE (account #9 / DEPLOYER in mock mode).
  */
-export async function setTestEpochBlocks(
-  minEpoch = 10,
-  maxEpoch = 50,
+export async function setTestConfig(
   contractAddress: string,
   fromAddress: string,
+  epochDuration = 60,
+  maxDuration = 86400,
+  minVoters = 3,
+  maxVoters = 100,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
-  const cfg = await readRoundConfig(contractAddress);
   const data = encodeFunctionData({
     abi: [
       {
         name: "setConfig",
         type: "function",
         inputs: [
-          { name: "_minEpochBlocks", type: "uint64" },
-          { name: "_maxEpochBlocks", type: "uint64" },
+          { name: "_epochDuration", type: "uint256" },
           { name: "_maxDuration", type: "uint256" },
           { name: "_minVoters", type: "uint256" },
           { name: "_maxVoters", type: "uint256" },
-          { name: "_baseRateBps", type: "uint16" },
-          { name: "_growthRateBps", type: "uint16" },
-          { name: "_maxProbBps", type: "uint16" },
-          { name: "_liquidityParam", type: "uint256" },
         ],
         outputs: [],
         stateMutability: "nonpayable",
       },
     ],
     functionName: "setConfig",
-    args: [
-      BigInt(minEpoch),
-      BigInt(maxEpoch),
-      cfg.maxDuration,
-      cfg.minVoters,
-      cfg.maxVoters,
-      cfg.baseRateBps,
-      cfg.growthRateBps,
-      cfg.maxProbBps,
-      cfg.liquidityParam,
-    ],
+    args: [BigInt(epochDuration), BigInt(maxDuration), BigInt(minVoters), BigInt(maxVoters)],
   });
   return sendTx(fromAddress, contractAddress, data);
 }
