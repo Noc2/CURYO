@@ -198,7 +198,7 @@ test.describe("Tied round lifecycle", () => {
       expect(postData.content.rating).toBe(preRating);
 
       // Verify equal pools
-      expect(tiedRound.upStake).toBe(tiedRound.downStake);
+      expect(tiedRound.upPool).toBe(tiedRound.downPool);
     }
   });
 });
