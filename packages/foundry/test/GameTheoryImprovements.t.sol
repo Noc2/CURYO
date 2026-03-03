@@ -8,14 +8,13 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 
-/// @title Game-Theory Improvement Tests
-/// @notice Integration tests verifying the four game-theory mitigations:
-///         1. baseRateBps 1→3 (higher random settlement rate)
-///         2. SLASH_RATING_THRESHOLD 10→25 (reachable slash)
-///         3. minVoters 3→5 (harder to seed)
-///         4. Consensus subsidy cap at 50 cREP
+/// @title Game-Theory Improvement Tests (tlock commit-reveal, epoch-weighted rewards)
+/// @notice Integration tests verifying the tlock commit-reveal flow with epoch weighting:
+///         1. Epoch-1 (blind) = 100% weight (10000 BPS), epoch-2+ (informed) = 25% weight (2500 BPS)
+///         2. minVoters = 3 required for settlement
+///         3. Expired rounds cancelled after maxDuration without enough voters
+///         4. Consensus subsidy paid from reserve when all voters unanimous
 contract GameTheoryImprovementsTest is Test {
     CuryoReputation crepToken;
     ContentRegistry registry;
@@ -25,15 +24,22 @@ contract GameTheoryImprovementsTest is Test {
     address owner = address(1);
     address submitter = address(2);
     address treasuryAddr = address(3);
-    address[20] v; // voter addresses
+    address alice = address(10);
+    address bob = address(11);
+    address carol = address(12);
+    address dave = address(13);
+
+    // epochDuration = 1 hour (default, matching contract default)
+    uint256 constant EPOCH_DURATION = 1 hours;
+    // maxDuration = 7 days (default)
+    uint256 constant MAX_DURATION = 7 days;
+    // minVoters = 3 (new default after tlock redesign)
+    uint256 constant MIN_VOTERS = 3;
 
     uint256 contentNonce;
 
     function setUp() public {
-        for (uint256 i = 0; i < 20; i++) {
-            v[i] = address(uint160(100 + i));
-        }
-
+        vm.warp(10_000); // predictable start time
         vm.startPrank(owner);
 
         crepToken = new CuryoReputation(owner, owner);
@@ -50,14 +56,19 @@ contract GameTheoryImprovementsTest is Test {
                 )
             )
         );
+
+        // Initialize engine with mockMode=true so ciphertext validation is relaxed
         engine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true)
+                    )
                 )
             )
         );
+
         distributor = RoundRewardDistributor(
             address(
                 new ERC1967Proxy(
@@ -75,19 +86,8 @@ contract GameTheoryImprovementsTest is Test {
         engine.setRewardDistributor(address(distributor));
         engine.setTreasury(treasuryAddr);
 
-        // Use default config (minVoters=5, baseRateBps=3 after contract changes)
-        // Override only minEpochBlocks and maxEpochBlocks for test speed
-        engine.setConfig(
-            10, // minEpochBlocks
-            50, // maxEpochBlocks
-            7 days, // maxDuration
-            5, // minVoters (new default)
-            1000, // maxVoters
-            3, // baseRateBps (new default: 0.03%)
-            0, // growthRateBps
-            10, // maxProbBps
-            1000e6 // liquidityParam
-        );
+        // Override config: 1-hour epochs, 7-day max, minVoters=3, maxVoters=1000
+        engine.setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000);
 
         // Fund consensus reserve
         crepToken.mint(owner, 200_000e6);
@@ -96,17 +96,19 @@ contract GameTheoryImprovementsTest is Test {
 
         // Fund submitter and voters
         crepToken.mint(submitter, 100_000e6);
-        for (uint256 i = 0; i < 20; i++) {
-            crepToken.mint(v[i], 100_000e6);
-        }
+        crepToken.mint(alice, 100_000e6);
+        crepToken.mint(bob, 100_000e6);
+        crepToken.mint(carol, 100_000e6);
+        crepToken.mint(dave, 100_000e6);
 
         vm.stopPrank();
-
-        vm.warp(1000);
     }
 
-    // ==================== Helpers ====================
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
 
+    /// @dev Submit a new content item with a unique URL to avoid duplicate-URL conflicts.
     function _submit() internal returns (uint256) {
         contentNonce++;
         vm.startPrank(submitter);
@@ -118,221 +120,338 @@ contract GameTheoryImprovementsTest is Test {
         return id;
     }
 
-    function _vote(address voter, uint256 cid, bool up, uint256 stake) internal {
+    /// @dev Build the 65-byte mock ciphertext: uint8(isUp) || salt || contentId
+    function _mockCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
+        return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+    }
+
+    /// @dev Build commitHash: keccak256(abi.encodePacked(isUp, salt, contentId))
+    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(isUp, salt, contentId));
+    }
+
+    /// @dev Build commitKey: keccak256(abi.encodePacked(voter, commitHash))
+    function _commitKey(address voter, bytes32 commitHash_) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(voter, commitHash_));
+    }
+
+    /// @dev Commit a vote for a voter in the current round. Approves and calls commitVote.
+    function _commit(address voter, uint256 contentId, bool isUp, uint256 stake) internal {
+        bytes32 salt = bytes32(uint256(uint160(voter)) ^ uint256(contentId));
+        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes memory ct = _mockCiphertext(isUp, salt, contentId);
+
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);
-        engine.vote(cid, up, stake, address(0));
+        engine.commitVote(contentId, ch, ct, stake, address(0));
         vm.stopPrank();
     }
 
-    function _forceSettle(uint256 cid) internal {
-        vm.roll(block.number + 51);
-        engine.trySettle(cid);
+    /// @dev Reveal a previously committed vote. Caller must warp past revealableAfter first.
+    function _reveal(address voter, uint256 contentId, uint256 roundId, bool isUp) internal {
+        bytes32 salt = bytes32(uint256(uint160(voter)) ^ uint256(contentId));
+        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes32 ck = _commitKey(voter, ch);
+
+        vm.prank(voter);
+        engine.revealVoteByCommitKey(contentId, roundId, ck, isUp, salt);
     }
 
-    // ==================== Test 1: Settlement Probability Higher with baseRateBps=3 ====================
-
-    /// @notice With baseRateBps=3, settlement triggers ~3x more often than baseRateBps=1
-    ///         over the same block window. We verify by running many rounds with baseRateBps=3
-    ///         vs baseRateBps=1 and comparing settlement counts before maxEpochBlocks.
-    function test_SettlementProbability_HigherWithBaseRate3() public {
-        // Count settlements in a window of blocks for baseRateBps=3
-        uint256 settledRate3 = _runSettlementTrials(3);
-
-        // Now test with baseRateBps=1
-        vm.prank(owner);
-        engine.setConfig(10, 50, 7 days, 5, 1000, 1, 0, 10, 1000e6);
-
-        uint256 settledRate1 = _runSettlementTrials(1);
-
-        // baseRateBps=3 should settle more often before maxEpochBlocks than baseRateBps=1
-        assertGt(settledRate3, settledRate1, "baseRateBps=3 settles more rounds randomly than baseRateBps=1");
+    /// @dev Settle the round. Caller must ensure block.timestamp >= thresholdReachedAt + epochDuration.
+    function _settle(uint256 contentId, uint256 roundId) internal {
+        engine.settleRound(contentId, roundId);
     }
 
-    function _runSettlementTrials(uint16 /* baseRate */) internal returns (uint256 settledCount) {
-        uint256 trials = 50;
+    // =========================================================================
+    // TEST 1: EpochWeightWinCondition
+    // =========================================================================
 
-        for (uint256 t = 0; t < trials; t++) {
-            uint256 cid = _submit();
-            _vote(v[0], cid, true, 10e6);
-            _vote(v[1], cid, true, 10e6);
-            _vote(v[2], cid, true, 10e6);
-            _vote(v[3], cid, false, 10e6);
-            _vote(v[4], cid, false, 10e6);
-
-            uint256 rid = engine.currentRoundId(cid);
-            RoundLib.Round memory round = engine.getRound(cid, rid);
-
-            // Try settling at each block in the eligible window (before maxEpochBlocks)
-            bool settled = false;
-            for (uint256 b = round.startBlock + 10; b < round.startBlock + 50; b++) {
-                vm.roll(b);
-                engine.trySettle(cid);
-                RoundLib.Round memory r = engine.getRound(cid, rid);
-                if (r.state != RoundLib.RoundState.Open) {
-                    settled = true;
-                    break;
-                }
-            }
-            if (settled) settledCount++;
-
-            // Force-settle if still open, then claim to free tokens for next iteration
-            RoundLib.Round memory current = engine.getRound(cid, rid);
-            if (current.state == RoundLib.RoundState.Open) {
-                vm.roll(block.number + 51);
-                engine.trySettle(cid);
-            }
-            RoundLib.Round memory finalRound = engine.getRound(cid, rid);
-            if (finalRound.state == RoundLib.RoundState.Settled) {
-                for (uint256 i = 0; i < 5; i++) {
-                    vm.prank(v[i]);
-                    distributor.claimReward(cid, rid);
-                }
-            } else if (
-                finalRound.state == RoundLib.RoundState.Tied
-                    || finalRound.state == RoundLib.RoundState.Cancelled
-            ) {
-                for (uint256 i = 0; i < 5; i++) {
-                    vm.prank(v[i]);
-                    engine.claimCancelledRoundRefund(cid, rid);
-                }
-            }
-            vm.warp(block.timestamp + 24 hours + 1);
-        }
-    }
-
-    // ==================== Test 2: Slash Threshold Triggers at Rating 20 ====================
-
-    /// @notice Rating driven to ~20 (above old threshold 10, below new 25) → slash triggers.
-    function test_SlashThreshold_TriggersAt20() public {
+    /// @notice DOWN wins despite raw UP majority (300 vs 100) because epoch weighting
+    ///         gives epoch-1 votes 100% weight and epoch-2+ votes only 25% weight.
+    ///
+    ///   Alice: DOWN, 100 cREP, epoch-1 → effectiveStake = 100 cREP (weight = 10000 BPS)
+    ///   Bob, Carol, Dave: UP, 100 cREP each, epoch-2 → effectiveStake = 25 cREP each
+    ///
+    ///   weightedDownPool = 100, weightedUpPool = 75 → DOWN wins.
+    function test_EpochWeightWinCondition() public {
         uint256 cid = _submit();
+        uint256 roundStart = block.timestamp;
 
-        // Drive rating down with heavy DOWN voting
-        // Need 5 voters minimum, mostly DOWN to push rating low
-        _vote(v[0], cid, true, 1e6); // tiny UP to avoid unanimous
-        _vote(v[1], cid, false, 50e6);
-        _vote(v[2], cid, false, 50e6);
-        _vote(v[3], cid, false, 50e6);
-        _vote(v[4], cid, false, 50e6);
+        // --- Epoch-1 commits (blind, at round start) ---
+        _commit(alice, cid, false, 100e6); // DOWN, epoch-1
 
-        // Check rating is below 25
-        uint256 rating = registry.getRating(cid);
-        assertLt(rating, 25, "Rating below new threshold of 25");
-        assertGt(rating, 0, "Rating above 0");
+        // --- Epoch-2 commits (informed, after epoch-1 ends) ---
+        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _commit(bob, cid, true, 100e6); // UP, epoch-2
+        _commit(carol, cid, true, 100e6); // UP, epoch-2
+        _commit(dave, cid, true, 100e6); // UP, epoch-2
 
-        // Record treasury balance before settlement
-        uint256 treasuryBefore = crepToken.balanceOf(treasuryAddr);
+        uint256 roundId = engine.currentRoundId(cid);
 
-        // Advance past grace period (24 hours) and settle
-        vm.warp(block.timestamp + 24 hours + 1);
-        _forceSettle(cid);
+        // Reveal all votes. Epoch-1 commits are revealable after roundStart + EPOCH_DURATION.
+        // Epoch-2 commits are revealable after roundStart + 2 * EPOCH_DURATION.
+        // Warp past epoch-2 end so all can be revealed.
+        vm.warp(roundStart + 2 * EPOCH_DURATION + 1);
 
-        // The submitter's stake should be slashed (sent to treasury)
-        assertTrue(registry.isSubmitterStakeReturned(cid), "Submitter stake processed");
-        uint256 treasuryAfter = crepToken.balanceOf(treasuryAddr);
-        assertGt(treasuryAfter, treasuryBefore, "Treasury received slashed stake (rating < 25)");
+        _reveal(alice, cid, roundId, false);
+        _reveal(bob, cid, roundId, true);
+        _reveal(carol, cid, roundId, true);
+        _reveal(dave, cid, roundId, true);
+
+        // Verify pools before settlement
+        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        assertEq(round.revealedCount, 4, "All 4 votes revealed");
+
+        // weightedDownPool = 100e6 * 10000 / 10000 = 100e6
+        // weightedUpPool = 3 * (100e6 * 2500 / 10000) = 3 * 25e6 = 75e6
+        assertEq(round.weightedDownPool, 100e6, "weighted DOWN pool = 100 cREP (epoch-1 full weight)");
+        assertEq(round.weightedUpPool, 75e6, "weighted UP pool = 75 cREP (3x epoch-2 at 25% each)");
+
+        // thresholdReachedAt was set when 3rd vote was revealed (minVoters = 3)
+        assertGt(round.thresholdReachedAt, 0, "threshold reached");
+
+        // Warp past thresholdReachedAt + epochDuration to allow settlement
+        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
+
+        _settle(cid, roundId);
+
+        RoundLib.Round memory settled = engine.getRound(cid, roundId);
+        assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled");
+        assertFalse(settled.upWins, "DOWN wins despite raw UP majority - epoch weighting prevails");
     }
 
-    // ==================== Test 3: No Slash at Rating 30 ====================
+    // =========================================================================
+    // TEST 2: EpochWeightRewards (4:1 ratio)
+    // =========================================================================
 
-    /// @notice Rating above 25 (above new threshold) → no slash.
-    function test_SlashThreshold_NoSlashAt30() public {
+    /// @notice Epoch-1 voters earn 4x rewards per cREP vs epoch-2 voters.
+    ///
+    ///   Alice: UP, 100 cREP, epoch-1 → effectiveStake = 100 cREP
+    ///   Bob:   DOWN, 100 cREP, epoch-1 → effectiveStake = 100 cREP
+    ///   Carol: UP, 100 cREP, epoch-2 → effectiveStake = 25 cREP
+    ///
+    ///   UP wins. weightedUpPool = 100 + 25 = 125 cREP.
+    ///   Alice share = 100/125 of voterPool, Carol share = 25/125 of voterPool.
+    ///   So Alice earns 4x the reward Carol earns (per cREP staked).
+    function test_EpochWeightRewards() public {
         uint256 cid = _submit();
+        uint256 roundStart = block.timestamp;
 
-        // Push rating down moderately — mix of UP and DOWN to land around 35-40
-        // rating = 50 + 50 * (qUp - qDown) / (qUp + qDown + b)
-        // With UP=30e6, DOWN=60e6, b=50e6: 50 + 50 * (-30) / 140 = 50 - 10.7 = 39
-        _vote(v[0], cid, true, 20e6);
-        _vote(v[1], cid, true, 10e6);
-        _vote(v[2], cid, false, 30e6);
-        _vote(v[3], cid, false, 20e6);
-        _vote(v[4], cid, false, 10e6);
+        // --- Epoch-1 commits ---
+        _commit(alice, cid, true, 100e6); // UP, epoch-1
+        _commit(bob, cid, false, 100e6); // DOWN, epoch-1
 
-        uint256 rating = registry.getRating(cid);
-        assertGe(rating, 25, "Rating at or above new threshold of 25");
+        // --- Epoch-2 commit ---
+        vm.warp(roundStart + EPOCH_DURATION + 1);
+        _commit(carol, cid, true, 100e6); // UP, epoch-2
 
-        // Record treasury balance before settlement
-        uint256 treasuryBefore = crepToken.balanceOf(treasuryAddr);
+        uint256 roundId = engine.currentRoundId(cid);
 
-        // Advance past grace period and settle
-        vm.warp(block.timestamp + 24 hours + 1);
-        _forceSettle(cid);
+        // Warp past epoch-2 end to allow all reveals
+        vm.warp(roundStart + 2 * EPOCH_DURATION + 1);
 
-        // Submitter stake should NOT be slashed — check treasury didn't receive slash funds
-        // (treasury may receive the 1% treasury fee from settlement, but NOT the 10 cREP submitter stake)
-        uint256 treasuryIncrease = crepToken.balanceOf(treasuryAddr) - treasuryBefore;
-        assertLt(treasuryIncrease, 10e6, "Treasury did not receive submitter stake (no slash at rating >= 25)");
+        _reveal(alice, cid, roundId, true);
+        _reveal(bob, cid, roundId, false);
+        _reveal(carol, cid, roundId, true);
+
+        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        assertGt(round.thresholdReachedAt, 0, "threshold reached after 3 reveals");
+
+        // weightedUpPool = 100e6 + 25e6 = 125e6
+        // weightedDownPool = 100e6
+        assertEq(round.weightedUpPool, 125e6, "weighted UP pool = 125 cREP");
+        assertEq(round.weightedDownPool, 100e6, "weighted DOWN pool = 100 cREP");
+
+        // Warp past settlement delay
+        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
+
+        // Record balances before settlement + claims
+        uint256 aliceBefore = crepToken.balanceOf(alice);
+        uint256 carolBefore = crepToken.balanceOf(carol);
+
+        _settle(cid, roundId);
+
+        RoundLib.Round memory settled = engine.getRound(cid, roundId);
+        assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled");
+        assertTrue(settled.upWins, "UP wins (weighted UP pool 125 > DOWN pool 100)");
+
+        // Retrieve voter pool (distribution of losing side minus fees)
+        uint256 voterPool = engine.roundVoterPool(cid, roundId);
+        uint256 weightedWinningStake = engine.roundWinningStake(cid, roundId);
+
+        // Claim rewards
+        vm.prank(alice);
+        distributor.claimReward(cid, roundId);
+        vm.prank(carol);
+        distributor.claimReward(cid, roundId);
+
+        uint256 aliceGain = crepToken.balanceOf(alice) - aliceBefore;
+        uint256 carolGain = crepToken.balanceOf(carol) - carolBefore;
+
+        // Alice received her stake back (100e6) + her share of voterPool
+        // Carol received her stake back (100e6) + her share of voterPool
+        // Net reward over returned stake:
+        //   Alice reward = (100e6 / weightedWinningStake) * voterPool
+        //   Carol reward = (25e6 / weightedWinningStake) * voterPool
+        // ratio = 4:1
+        assertGt(aliceGain, carolGain, "Alice earns more than Carol");
+
+        // Verify the 4:1 ratio by computing rewards excluding the returned stake
+        uint256 aliceReward = aliceGain - 100e6; // strip stake return
+        uint256 carolReward = carolGain - 100e6; // strip stake return
+
+        // Allow ±1 token rounding. Use voterPool and weightedWinningStake for exact check.
+        uint256 aliceExpected = (100e6 * voterPool) / weightedWinningStake;
+        uint256 carolExpected = (25e6 * voterPool) / weightedWinningStake;
+
+        assertApproxEqAbs(aliceReward, aliceExpected, 1, "Alice reward proportional to effective stake 100");
+        assertApproxEqAbs(carolReward, carolExpected, 1, "Carol reward proportional to effective stake 25");
+
+        // The 4:1 ratio check (within 1 token)
+        assertApproxEqAbs(aliceReward, 4 * carolReward, 4, "Alice reward ~4x Carol reward");
     }
 
-    // ==================== Test 4: minVoters=5, Four Voters Cancelled ====================
+    // =========================================================================
+    // TEST 3: MinVotersSettlement (exactly 3 voters in epoch-1, settles)
+    // =========================================================================
 
-    /// @notice 4 voters (2-vs-2) cannot settle because minVoters=5. Round expires and gets cancelled.
-    function test_MinVoters5_FourVotersCancelled() public {
+    /// @notice Exactly minVoters=3 all commit and reveal in epoch-1. Settlement succeeds
+    ///         after the settlement delay (thresholdReachedAt + epochDuration).
+    function test_MinVotersSettlement() public {
         uint256 cid = _submit();
+        uint256 roundStart = block.timestamp;
 
-        _vote(v[0], cid, true, 50e6);
-        _vote(v[1], cid, true, 50e6);
-        _vote(v[2], cid, false, 50e6);
-        _vote(v[3], cid, false, 50e6);
+        // 3 voters commit in epoch-1: 2 UP, 1 DOWN
+        _commit(alice, cid, true, 50e6);
+        _commit(bob, cid, true, 50e6);
+        _commit(carol, cid, false, 50e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 roundId = engine.currentRoundId(cid);
 
-        // Try to settle at maxEpochBlocks — should NOT settle (only 4 voters, need 5)
-        vm.roll(block.number + 51);
-        engine.trySettle(cid);
+        // Warp past epoch-1 end to make commits revealable
+        vm.warp(roundStart + EPOCH_DURATION + 1);
 
-        RoundLib.Round memory round = engine.getRound(cid, rid);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Open), "Round still open with only 4 voters");
+        _reveal(alice, cid, roundId, true);
+        _reveal(bob, cid, roundId, true);
+        _reveal(carol, cid, roundId, false);
 
-        // Advance past maxDuration to cancel
-        vm.warp(block.timestamp + 7 days + 1);
-        engine.cancelExpiredRound(cid, rid);
+        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        assertEq(round.revealedCount, 3, "3 votes revealed");
+        assertGt(round.thresholdReachedAt, 0, "threshold reached at 3rd reveal");
 
-        RoundLib.Round memory cancelled = engine.getRound(cid, rid);
-        assertEq(uint256(cancelled.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled with < minVoters");
+        // Attempt settlement before delay - should revert
+        vm.expectRevert(RoundVotingEngine.SettlementDelayNotElapsed.selector);
+        _settle(cid, roundId);
+
+        // Warp past thresholdReachedAt + epochDuration
+        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
+
+        _settle(cid, roundId);
+
+        RoundLib.Round memory settled = engine.getRound(cid, roundId);
+        assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled with exactly 3 voters");
+        assertTrue(settled.upWins, "UP wins (100 weighted vs 50 weighted, all epoch-1)");
     }
 
-    // ==================== Test 5: minVoters=5, Five Voters Settles ====================
+    // =========================================================================
+    // TEST 4: ExpiredRoundCancellation (only 2 voters over 7 days)
+    // =========================================================================
 
-    /// @notice 5 voters (3-vs-2) settles normally.
-    function test_MinVoters5_FiveVotersSettles() public {
+    /// @notice Only 2 voters commit over the full maxDuration window. Round cannot
+    ///         settle (minVoters=3) and is eligible for cancelExpiredRound.
+    function test_ExpiredRoundCancellation() public {
         uint256 cid = _submit();
+        uint256 roundStart = block.timestamp;
 
-        _vote(v[0], cid, true, 50e6);
-        _vote(v[1], cid, true, 50e6);
-        _vote(v[2], cid, true, 50e6);
-        _vote(v[3], cid, false, 50e6);
-        _vote(v[4], cid, false, 50e6);
+        // Only alice and bob commit - not enough to reach minVoters=3
+        _commit(alice, cid, true, 50e6);
+        _commit(bob, cid, false, 50e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 roundId = engine.currentRoundId(cid);
 
-        // Force settle at maxEpochBlocks — should succeed with 5 voters
-        _forceSettle(cid);
+        // Warp past maxDuration (7 days) without any more commits
+        vm.warp(roundStart + MAX_DURATION + 1);
 
-        RoundLib.Round memory round = engine.getRound(cid, rid);
-        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled), "Round settled with 5 voters");
-        assertTrue(round.upWins, "UP side wins (150 vs 100)");
+        // cancelExpiredRound should succeed
+        engine.cancelExpiredRound(cid, roundId);
+
+        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled after expiry");
+
+        // Voters should be able to claim refunds
+        uint256 aliceBefore = crepToken.balanceOf(alice);
+        uint256 bobBefore = crepToken.balanceOf(bob);
+
+        // claimCancelledRoundRefund looks up the voter's commit from internal mapping
+        vm.prank(alice);
+        engine.claimCancelledRoundRefund(cid, roundId);
+
+        vm.prank(bob);
+        engine.claimCancelledRoundRefund(cid, roundId);
+
+        assertEq(crepToken.balanceOf(alice) - aliceBefore, 50e6, "Alice refunded full stake");
+        assertEq(crepToken.balanceOf(bob) - bobBefore, 50e6, "Bob refunded full stake");
     }
 
-    // ==================== Test 6: Consensus Subsidy Capped at 50 cREP ====================
+    // =========================================================================
+    // TEST 5: ConsensusSubsidy (all voters unanimous UP, losingPool = 0)
+    // =========================================================================
 
-    /// @notice 20 voters × 100 cREP unanimous → subsidy = 50 cREP (not 100 cREP).
-    function test_ConsensusSubsidy_CappedAt50cREP() public {
+    /// @notice All 3 voters vote UP (unanimous). losingPool = 0, so subsidy is paid
+    ///         from the consensus reserve instead of from losers' stakes.
+    ///         The reserve decreases by the subsidy amount, and winners receive stake + subsidy share.
+    function test_ConsensusSubsidy() public {
         uint256 cid = _submit();
+        uint256 roundStart = block.timestamp;
+
         uint256 reserveBefore = engine.consensusReserve();
 
-        // 20 voters × 100 cREP = 2000 cREP total stake
-        // 5% of 2000 = 100 cREP desired, but MAX_CONSENSUS_SUBSIDY = 50 cREP
-        for (uint256 i = 0; i < 20; i++) {
-            _vote(v[i], cid, true, 100e6);
-        }
+        // 3 unanimous UP voters (epoch-1)
+        _commit(alice, cid, true, 100e6);
+        _commit(bob, cid, true, 100e6);
+        _commit(carol, cid, true, 100e6);
 
-        // Consensus settlement (unanimous round, only UP voters)
-        _forceSettle(cid);
+        uint256 roundId = engine.currentRoundId(cid);
 
+        // Warp past epoch-1 end
+        vm.warp(roundStart + EPOCH_DURATION + 1);
+
+        _reveal(alice, cid, roundId, true);
+        _reveal(bob, cid, roundId, true);
+        _reveal(carol, cid, roundId, true);
+
+        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        assertEq(round.revealedCount, 3, "3 votes revealed");
+        assertEq(round.downPool, 0, "No DOWN votes - unanimous");
+        assertGt(round.thresholdReachedAt, 0, "threshold reached");
+
+        // Warp past settlement delay
+        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
+
+        _settle(cid, roundId);
+
+        RoundLib.Round memory settled = engine.getRound(cid, roundId);
+        assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled");
+        assertTrue(settled.upWins, "UP wins (unanimous)");
+
+        // Consensus reserve should have decreased (subsidy paid out)
         uint256 reserveAfter = engine.consensusReserve();
-        uint256 subsidyPaid = reserveBefore - reserveAfter;
+        assertLt(reserveAfter, reserveBefore, "Consensus reserve decreased - subsidy paid");
 
-        assertEq(subsidyPaid, 50e6, "Consensus subsidy capped at 50 cREP, not 100 cREP");
+        uint256 subsidyPaid = reserveBefore - reserveAfter;
+        assertGt(subsidyPaid, 0, "Non-zero subsidy distributed to winners");
+
+        // Voter pool should be non-zero (funded by consensus subsidy)
+        uint256 voterPool = engine.roundVoterPool(cid, roundId);
+        assertGt(voterPool, 0, "Voter pool non-zero - subsidy distributed");
+
+        // Alice can claim her stake + subsidy share
+        uint256 aliceBefore = crepToken.balanceOf(alice);
+        vm.prank(alice);
+        distributor.claimReward(cid, roundId);
+        uint256 aliceAfter = crepToken.balanceOf(alice);
+        assertGt(aliceAfter, aliceBefore, "Alice received tokens back");
+        // Alice gets her 100 cREP stake returned at minimum
+        assertGe(aliceAfter - aliceBefore, 100e6, "Alice gets at least her full stake back");
     }
 }
