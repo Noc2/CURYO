@@ -1,8 +1,12 @@
 # tlock Commit-Reveal with Epoch-Weighted Rewards
 
-Research date: 2026-03-03
+Research date: 2026-03-03 (updated 2026-03-03)
 
 Recovery and extension of the original tlock+drand voting design (last seen at git commit `331844e~1`), combined with epoch-level reward weighting to address the niche content problem and create a strong incentive for first-epoch participation.
+
+**Recommended parameters (updated after analysis):**
+- `minVoters = 5` (matches live contract; see Section 2.4 for why this is viable with two-tier weighting)
+- Epoch-1 weight: **100%**, all subsequent epochs: **25%** flat (binary two-tier; see Section 3.2 for why gradual decay is inferior)
 
 ---
 
@@ -77,15 +81,34 @@ Despite the security rationale, `minVoters=3` creates a real problem for content
 
 The result: the 3-voter threshold unintentionally creates a **platform-wide curation dead zone** for niche and long-tail content.
 
-### 2.3 What changes if minVoters is reduced
+### 2.3 What changes if minVoters is adjusted
 
-| minVoters | New vulnerability | Existing protection |
+| minVoters | Security properties | Niche content impact |
 |-----------|---|---|
-| **3 (current)** | None above current baseline | Requires honest minority even against 2-identity attacker |
-| **2** | 2-identity attacker can force tie in epoch 1 (refund, no profit) | VoterID per person; tie = no gain for attacker |
-| **1** | 1-identity attacker settles unanimous round, drains consensus subsidy | VoterID + 24h cooldown limits to 1 drain per person per content per day; subsidy cap limits damage |
+| **2** | 2-identity same-direction attacker can drain consensus subsidy alone | Any 2-voter content settles; very accessible |
+| **3 (original code)** | 2 controlled identities + 1 honest voter needed | Needs 3 voters; moderate dead zone |
+| **5 (live contract)** | 4 identities needed to dominate; 2-identity epoch-1 attack bounded by subsidy cap | Needs 5 participants; significant dead zone without two-tier weighting |
+| **7+** | Extreme attack resistance | Large dead zone; discourages niche curation |
 
-The critical observation for `minVoters=2`: a 2-identity attacker voting opposite directions in epoch 1 produces `upPool == downPool` — a tie — which triggers full refunds. They cannot extract value. The only risk with `minVoters=2` is an attacker controlling 2 same-direction identities to manufacture a unanimous round and drain consensus subsidy — identical to the `minVoters=1` risk but requiring 2 identities instead of 1.
+The critical observation for same-direction epoch-1 attacks at any `minVoters` level: the maximum consensus subsidy drain from a 2-identity attack is `min(totalStake × 5%, 50 cREP)`. With MAX_STAKE=100 cREP per identity, 2 identities stake 200 cREP max, yielding at most 10 cREP subsidy. At the cost of 2 verified Voter IDs plus 200 cREP capital lock-up per content per day, this is not a credible sustained attack at current economics.
+
+**The binding protection is VoterID cost and subsidy cap, not minVoters.**
+
+### 2.4 Why minVoters=5 becomes viable with two-tier weighting
+
+The classic concern with high `minVoters`: niche content with only 2-3 genuine viewers never settles. This concern is substantially mitigated by the **two-tier epoch weight** (epoch 1 = 100%, epoch 2+ = 25%).
+
+Here is why: epoch-2+ voters who fill the quorum gap between "genuine epoch-1 assessors" and "the threshold" receive only 25% reward weight. Their stakes still count fully for the win condition (which side wins), but their share of the winner pool is one-quarter of an equal-stake epoch-1 voter.
+
+This creates a **soft quorum property**: niche content with 2 genuine epoch-1 curators can reach `minVoters=5` via 3 epoch-2 followers, while the reward pool remains 72.7% controlled by the 2 blind epoch-1 assessors:
+
+```
+2 epoch-1 voters (100 cREP each):  effective stake = 200
+3 epoch-2 voters (100 cREP each):  effective stake = 75
+Epoch-1 share of pool: 200/275 = 72.7%
+```
+
+The content gets a quorum of 5 social-proof participants, but the curation signal in the reward distribution is dominated by those who voted blind. Higher minVoters simultaneously improves attack resistance AND, combined with 25% flat epoch-2+ weight, keeps niche content viable by keeping late-filler participation economically rational.
 
 ---
 
@@ -99,51 +122,57 @@ Epoch-weighting makes this economically unattractive: **each successive epoch re
 
 ### 3.2 How this interacts with the tlock structure
 
-Within each epoch, all votes are still effectively simultaneous — tlock hides every direction until the epoch ends. The epoch-weighting only penalizes the *inter-epoch* information asymmetry: the fact that epoch 2 voters can see epoch 1 results before committing.
+Within each epoch, all votes are still effectively simultaneous — tlock hides every direction until the epoch ends. The epoch-weighting only penalizes the *inter-epoch* information asymmetry: the fact that epoch-2+ voters can see epoch-1 results before committing.
 
-This creates a clean two-tier system:
+There is **one major information event** in this mechanism: epoch-1 reveals. After that event, all subsequent epochs are in the same "informed" category — whether you vote in epoch 2 or epoch 10, you have seen epoch-1 results. The additional information from epochs 2–9 that an epoch-10 voter has is marginal.
+
+This yields a natural **binary two-tier** design rather than a gradual decay:
 
 ```
 Epoch 1: Pure curation — votes are fully blind, no information from others.
           Reward weight: 100%
 
-Epoch 2+: Informed following — voter can see epoch 1 results.
-           Reward weight: halved per epoch.
+Epoch 2+: Informed following — voter can see epoch-1 results.
+           Reward weight: 25% (flat for all subsequent epochs)
            Still protected from within-epoch gaming by tlock.
 ```
 
-Epoch 1 is the ideal voting window. Epoch 2+ voting is supported but financially penalized. The platform's displayed UI should communicate this clearly.
+**Why flat 25% rather than gradual decay (100%/50%/25%/10%):**
+
+The gradual decay design has a conceptual problem: it treats the information gap between epoch 2 and epoch 3 as equivalent to the gap between epoch 1 and epoch 2. But these gaps are completely different in magnitude. Epoch 1 → epoch 2 is the difference between knowing nothing about others' votes vs seeing the full epoch-1 result. Epoch 2 → epoch 3 is marginal — you already know epoch-1 results; seeing epoch-2 results adds little.
+
+Flat 25% captures the only asymmetry that matters: "did you vote blind or not?"
+
+Additional benefits of flat over gradual:
+- **No rush at epoch boundaries**: with gradual decay, a voter at the end of epoch 2 (50%) has incentive to delay past the boundary to see if they can vote in epoch 2 vs epoch 3. With flat 25%, there is no incentive to time the boundary — every epoch beyond epoch 1 has the same weight.
+- **Simpler on-chain logic**: just check `epochIndex == 0`. No table lookup.
+- **Stronger deterrent**: epoch-2 herders face a 75% penalty instead of 50%.
 
 ### 3.3 Weight formula
 
-**Discrete geometric decay (recommended):**
+**Binary two-tier (recommended):**
 
 ```
-epochWeight(n) = { 100%   n = 0 (epoch 1)
-                 {  50%   n = 1 (epoch 2)
-                 {  25%   n = 2 (epoch 3)
-                 {  10%   n ≥ 3 (epoch 4+, minimum floor)
+epochWeight(n) = { 100%   n = 0  (epoch 1: fully blind)
+                 {  25%   n ≥ 1  (epoch 2+: saw epoch-1 results)
 ```
-
-The floor at 10% (rather than continuing to halve) ensures that even very late voters have some incentive to participate rather than abstaining. It also prevents a degenerate case where epoch 5+ votes have near-zero weight and are functionally useless.
 
 **In basis points (Solidity-friendly):**
 
 ```solidity
 function epochWeightBps(uint32 epochIndex) internal pure returns (uint256) {
-    if (epochIndex == 0) return 10000; // 100%
-    if (epochIndex == 1) return  5000; // 50%
-    if (epochIndex == 2) return  2500; // 25%
-    return                        1000; // 10% floor for epoch 3+
+    return epochIndex == 0 ? 10000 : 2500;
 }
 ```
 
-**Why 50% per epoch rather than other decay rates:**
+**Why 25% specifically:**
 
-- **50%** is cognitively clean: "each epoch you wait, your pool share halves." Easy to explain in the UI.
-- A milder decay (e.g., 80% per epoch) still incentivizes epoch 1 participation but less forcefully; epoch 4 voters would still get 51% of epoch 1 weight.
-- A steeper decay (e.g., 25% per epoch) makes epoch 2+ participation feel pointless, potentially discouraging legitimate late voters with genuine information.
-- The 10% floor is the key moderating element — it ensures some reward is always available for late discovery, preventing complete participation collapse on slow-moving content.
+The 25% value establishes a 4:1 reward ratio between epoch-1 and epoch-2+ voters. Given MAX_STAKE = 100 cREP per voter, an epoch-2+ voter staking their maximum has exactly one-quarter the reward influence of an epoch-1 voter staking their maximum. No epoch-2+ voter can ever outweigh an equal-stake epoch-1 voter through position alone.
+
+This calibration is appropriate because:
+- **Too low (e.g. 10%)**: epoch-2+ participation becomes economically irrational for many voters, making quorum harder to reach for content with few epoch-1 voters
+- **Too high (e.g. 50%)**: deterrent is weak; a herder in epoch 2 captures half an epoch-1 voter's reward — barely discouraging
+- **25%**: the filler voter has positive EV (worthwhile to participate), but the signal quality of the round is still dominated 4:1 by epoch-1 voters in the reward pool
 
 ### 3.4 Reward distribution mechanics
 
@@ -188,74 +217,74 @@ UP wins (150 > 80). Loser pool = 80. Voter pool = 0.82 × 80 = 65.6 cREP.
 
 Identical to flat-shares parimutuel — epoch-weighting has no effect when everyone votes in the same epoch.
 
-### 4.2 Multi-epoch round, honest epoch-1 voter vs epoch-2 herder
+### 4.2 Multi-epoch round, honest epoch-1 voters vs epoch-2 filler (minVoters=5)
 
-Niche content attracts 2 votes. Epoch 1: Alice votes UP (hidden). Epoch 1 ends — Alice's UP vote is revealed. Bob sees this and votes UP in epoch 2. Round now has 2 voters.
-
-With `minVoters=2` (proposed), settlement is now eligible after the epoch-2 delay.
+Niche content. Epoch 1: Alice, Bob, Carol all vote UP (hidden). Epoch 1 ends — all three UP votes revealed. 3 of 5 needed. Dave and Eve see the results and vote UP in epoch 2 to fill quorum.
 
 | Voter | Side | Stake | Epoch | Weight | Effective stake |
 |-------|------|-------|-------|--------|-----------------|
 | Alice | UP | 100 | 0 | 100% | 100 |
-| Bob (herder) | UP | 100 | 1 | 50% | 50 |
+| Bob | UP | 100 | 0 | 100% | 100 |
+| Carol | UP | 100 | 0 | 100% | 100 |
+| Dave (filler) | UP | 100 | 1 | 25% | 25 |
+| Eve (filler) | UP | 100 | 1 | 25% | 25 |
 
-No DOWN votes — unanimous UP, consensus subsidy applies.
+Unanimous UP — consensus subsidy applies. Voter subsidy = e.g. 50 cREP (max cap).
 
-Voter subsidy = e.g. 40 cREP (consensus pool).
+Total effective stake: 300 + 50 = 350.
 
-- Alice: (100/150) × 40 = **26.7 cREP** (67% of subsidy)
-- Bob: (50/150) × 40 = **13.3 cREP** (33% of subsidy)
+- Alice, Bob, Carol: (100/350) × 50 = **14.3 cREP each** (combined: 85.7% of subsidy)
+- Dave, Eve: (25/350) × 50 = **3.6 cREP each** (combined: 14.3% of subsidy)
 
-Bob sees Alice's vote and copies it. He wins, but Alice earns 2× more per cREP than Bob despite equal stakes — a meaningful reward differential that reflects Alice's genuine curation effort.
+The 3 epoch-1 curators receive **72.7% of the reward** despite being only 3 of 5 voters. The 2 epoch-2 filler voters receive **27.3%** despite equal stakes. The signal quality of the round is dominated by blind assessment — which is exactly the desired outcome for niche content that filled quorum via late participants.
 
-### 4.3 Multi-epoch contested round
+### 4.3 Multi-epoch contested round with two-tier weighting
 
-Epoch 1: Alice UP (100 cREP), Dave DOWN (80 cREP). Both hidden. Epoch 1 ends — results revealed: 100 vs 80, UP leading. Epoch 2: Bob sees the results and votes UP (100 cREP), Carol votes DOWN (60 cREP, genuine contrarian).
+Epoch 1: Alice UP (100 cREP), Dave DOWN (80 cREP). Both hidden. Epoch 1 ends — results revealed: 100 vs 80, UP leading. Epoch 2: Bob sees the results and votes UP (100 cREP, herder), Carol votes DOWN (60 cREP, genuine contrarian).
 
 | Voter | Side | Stake | Epoch | Weight | Effective stake |
 |-------|------|-------|-------|--------|-----------------|
 | Alice | UP | 100 | 0 | 100% | 100 |
-| Bob (herder) | UP | 100 | 1 | 50% | 50 |
+| Bob (herder) | UP | 100 | 1 | **25%** | **25** |
 | Dave | DOWN | 80 | 0 | 100% | 80 |
-| Carol | DOWN | 60 | 1 | 50% | 30 |
+| Carol | DOWN | 60 | 1 | **25%** | **15** |
 
-UP side: 200 stake, 150 effective. DOWN side: 140 stake, 110 effective. UP wins.
+UP side: 200 raw stake, **125 effective**. DOWN side: 140 raw stake, **95 effective**. UP wins (raw stake: 200 > 140).
 
 Loser pool = 140. Voter pool = 0.82 × 140 = 114.8 cREP.
 
 Winners (UP side):
-- Alice: (100/150) × 114.8 = **76.5 cREP** reward (+76.5)
-- Bob: (50/150) × 114.8 = **38.3 cREP** reward (+38.3)
+- Alice: (100/125) × 114.8 = **91.8 cREP** reward (+91.8)
+- Bob: (25/125) × 114.8 = **23.0 cREP** reward (+23.0)
 
-Alice earns 2× Bob's reward despite equal stakes. Bob copied Alice's public vote and is proportionally penalized. Alice's epoch-1 curation is rewarded at twice the rate.
+Alice earns **4× Bob's reward** despite equal stakes. With the old 50% gradual decay Alice would earn 2×; with the flat 25% she earns 4×. The stronger penalty makes copying Alice's public epoch-1 vote much less financially attractive.
 
-### 4.4 Attack: 2-identity attacker waiting for epoch-2 information
+**Why the stronger ratio matters:** Bob stakes 100 cREP and earns 23 cREP — a 23% return on capital at risk. Alice stakes 100 cREP and earns 91.8 cREP — a 91.8% return. The mechanism correctly creates a large differential between blind curation and informed following.
 
-An attacker with 2 Voter IDs watches epoch 1 results. Epoch 1: Alice UP (100 cREP) — only 1 vote, not enough to settle. Epoch 1 reveals: UP is ahead with 100 cREP. Epoch 2: Attacker votes A=UP (100) and B=DOWN (100).
+### 4.4 Attack: 2-identity attacker with epoch-2 hedge (minVoters=5, two-tier)
+
+A more realistic attack scenario with `minVoters=5`. Epoch 1: Alice UP (100), Bob UP (100), Carol UP (100), Dave DOWN (100) — 4 epoch-1 voters, 1 short of quorum. Epoch 1 reveals: UP leads 300 vs 100. Epoch 2: Attacker sees UP is clearly winning and hedges: Attacker_A=UP (100), Attacker_B=DOWN (100).
 
 | Voter | Side | Stake | Epoch | Weight | Effective stake |
 |-------|------|-------|-------|--------|-----------------|
 | Alice | UP | 100 | 0 | 100% | 100 |
-| Attacker A | UP | 100 | 1 | 50% | 50 |
-| Attacker B | DOWN | 100 | 1 | 50% | 50 |
+| Bob | UP | 100 | 0 | 100% | 100 |
+| Carol | UP | 100 | 0 | 100% | 100 |
+| Dave | DOWN | 100 | 0 | 100% | 100 |
+| Attacker A | UP | 100 | 1 | 25% | 25 |
+| Attacker B | DOWN | 100 | 1 | 25% | 25 |
 
-UP wins (200 > 100). Loser pool = 100. Voter pool = 82 cREP.
+UP wins (raw: 400 > 200). Loser pool = 200. Voter pool = 0.82 × 200 = 164 cREP.
 
-- Alice: (100/150) × 82 = **54.7 cREP** (+54.7)
-- Attacker A: (50/150) × 82 = **27.3 cREP** (+27.3)
-- Attacker B: loses 100 cREP. Gets participation pool back (up to 90 cREP at tier 0, so net loss ≈ 10 cREP).
+UP effective total: 100+100+100+25 = 325.
+- Alice, Bob, Carol: (100/325) × 164 = **50.5 cREP each** (+50.5)
+- Attacker A: (25/325) × 164 = **12.6 cREP** (+12.6)
+- Dave: loses 100 cREP (participation pool: net loss ≈ 10 cREP)
+- Attacker B: loses 100 cREP (participation pool: net loss ≈ 10 cREP)
 
-Attacker net: +27.3 - 10 = **+17.3 cREP** from Alice's honest curation.
+Attacker net: +12.6 - 10 = **+2.6 cREP**
 
-**Is this attack profitable?** Marginally, at the cost of:
-1. Two separate Voter IDs (non-trivial identity requirement)
-2. The epoch-weight penalty cuts the attacker's take to 50% of what a full-weight epoch-1 position would have earned
-3. The direction of epoch-1 votes was public before the attacker committed, so this is the best-case scenario for the attacker (they know to put more weight on UP)
-
-Compare to an honest epoch-2 voter:
-- Same position, same reward (+27.3 cREP), but they genuinely believed the content was good
-
-The attacker is essentially an opportunistic epoch-2 voter with a DOWN hedge. The hedge costs them ~10 cREP and reduces Alice's reward from ~82 to ~54.7 — a harm, but bounded and not catastrophically profitable. With `minVoters=1` (allowing Alice to settle alone), this attack doesn't work at all — Alice's epoch-1 vote settles the round unanimously before the attacker can participate.
+This is barely above break-even. The combination of `minVoters=5` (forcing the attacker to use an epoch-2 position instead of epoch-1) and the 25% weight (cutting their reward to one-quarter) reduces the attack from **+17.3 cREP** (under the old minVoters=2 + 50% weighting) to **+2.6 cREP** — a 85% reduction in attack profitability. At this level, transaction gas costs and identity overhead likely make the attack net-negative.
 
 ---
 
@@ -308,56 +337,48 @@ Tlock epochs are structurally superior to random settlement for preventing gamin
 
 ## 6. The minVoters Question
 
-### 6.1 minVoters=3 with epoch-weighting
+### 6.1 minVoters=5 with two-tier weighting (recommended)
 
-Epoch-weighting does **not** directly solve the niche content problem if `minVoters=3` is retained. A round still needs 3 revealed votes to settle. If only 2 voters exist for a piece of niche content, the round accumulates across epochs until expiry (7 days), then cancels with refunds.
+The live contract already has `minVoters=5`. With the two-tier epoch weight, this becomes not just viable but the recommended setting. The key mechanism is the **soft quorum property**:
 
-**What epoch-weighting adds in this scenario:** The 2 genuine voters (epoch 1) know they're in the "full weight" bracket. They vote knowing that if the round eventually accumulates a 3rd voter in a later epoch, that voter gets discounted weight. This is a minor improvement in expected return for early genuine voters, but doesn't change the fundamental "round never settles" problem.
+- Epoch-1 voters provide the genuine curation signal (100% weight)
+- Epoch-2+ voters fill any gap between epoch-1 participation and the 5-voter threshold (25% weight)
+- The reward pool remains dominated by epoch-1 assessors regardless of how many epoch-2 fillers appear
 
-### 6.2 minVoters=2 with epoch-weighting (recommended)
+As demonstrated in Section 4.2, even with only 3 epoch-1 voters and 2 epoch-2 fillers, epoch-1 voters control 72.7% of the reward pool. The quorum requirement creates a "5 people cared about this content" social proof bar without requiring all 5 to have voted blind.
 
-Reducing `minVoters` to 2 allows niche content to settle after 2 voters commit in epoch 1 (with results visible at the start of epoch 2, and settlement available in epoch 2). The 2-identity attack risk becomes:
+**Security benefit of minVoters=5:** The hedge attack profitability (Section 4.4) drops from +17.3 cREP to +2.6 cREP — near break-even after gas and identity costs. Epoch-2 flooder attacks require substantially more Voter IDs to flip outcomes.
 
-- **2-identity same-direction:** Unanimous round → consensus subsidy. Limited by VoterID and subsidy cap.
-- **2-identity opposite-direction:** Tie → refunds. Attacker gains nothing.
-- **1 honest + 1 attacker:** Attacker either matches direction (profits modestly from consensus or pool, epoch-weight-discounted if epoch 2) or opposes direction (loses).
+### 6.2 Settlement timing with minVoters=5
 
-The critical protection: within epoch 1, the attacker doesn't know the honest voter's direction (tlock). They can't hedge adaptively. If they commit both sides in epoch 1, it's a tie and they get refunds. If they commit one side, they're gambling blind — not meaningfully different from honest participation.
-
-**Epoch 1 is a genuinely safe window even with `minVoters=2`.**
-
-### 6.3 Settlement timing with minVoters=2
-
-With `minVoters=2`, the earliest settlement scenario:
-
+**Best case (5+ epoch-1 voters):**
 ```
-T=0:          Epoch 1 opens. Alice commits (UP, hidden). Bob commits (UP, hidden).
-T=15min:      Epoch 1 ends. drand beacon produced.
-              Keeper decrypts both ciphertexts, calls revealVote(Alice), revealVote(Bob).
-              revealedCount = 2 ≥ minVoters=2. thresholdReachedAt = T+15min.
-T=30min:      Earliest settlement: thresholdReachedAt + epochDuration = T+30min.
-              Any new epoch-2 commits from T+15min to T+30min are now revealed.
-              settleRound() becomes callable. Keeper calls it.
+T=0:       Epoch 1 opens. 5 voters commit (hidden).
+T=15min:   Epoch 1 ends. All 5 revealed. revealedCount=5 ≥ 5. thresholdReachedAt = T+15min.
+T=30min:   Earliest settlement: thresholdReachedAt + epochDuration.
+           settleRound() callable. Keeper calls it.
 ```
+Total: **30 minutes** from first commit to settled rating.
 
-Total time from first commit to settlement: **30 minutes** (best case, assuming both votes in epoch 1).
-
-For comparison, the current system's median settlement time is several hours (random settlement probability 0.01% per block).
-
-### 6.4 What if epoch 1 has only 1 voter?
-
-With `minVoters=2`:
-
+**Typical niche case (3 epoch-1 voters, 2 epoch-2 fillers):**
 ```
-T=0:          Epoch 1. Alice commits (UP).
-T=15min:      Epoch 1 ends. Alice's vote revealed: UP public. revealedCount=1 < 2.
-T=15–30min:   Epoch 2. Bob sees Alice's UP vote. Bob commits (UP or DOWN).
-T=30min:      Epoch 2 ends. Bob's vote revealed. revealedCount=2.
-              Settlement eligible at T=45min (thresholdReachedAt + epochDuration).
-T=45min:      settleRound() called. Settlement includes epoch-weighted distribution.
+T=0:       Epoch 1. 3 voters commit (hidden).
+T=15min:   Epoch 1 ends. 3 votes revealed (UP, UP, DOWN or similar). revealedCount=3 < 5.
+T=15–30m:  Epoch 2. 2 more voters see epoch-1 results and commit.
+T=30min:   Epoch 2 ends. 2 more votes revealed. revealedCount=5 ≥ 5.
+           thresholdReachedAt = T+30min.
+T=45min:   settleRound() callable.
 ```
+Total: **45 minutes**. Epoch-2 fillers get 25% weight; epoch-1 assessors dominate the reward pool.
 
-Bob gets 50% weight (epoch 2). This is the correct outcome: Bob saw Alice's public vote before committing — his curation contribution is informationally dependent on Alice's, so he earns less from the pool.
+### 6.3 What if epoch 1 has very few voters?
+
+With `minVoters=5` and only 1 epoch-1 voter:
+- 4 epoch-2+ fillers needed to reach quorum
+- Round settles at T+45min with the 1 epoch-1 voter holding 100/(100 + 4×25) = 100/200 = **50% of reward pool** despite being 1 of 5 voters
+- The lone epoch-1 curator earns the same from rewards as all 4 fillers combined
+
+This is the correct incentive: the first person to independently assess a piece of niche content earns the majority of the reward pool, while those who followed earn a smaller but still positive return for filling quorum.
 
 ---
 
@@ -463,11 +484,9 @@ Replace the existing stake-proportional distribution loop with a weighted versio
 
 ```solidity
 // Helper (can be a library function in RewardMath.sol)
+// Binary two-tier: epoch 1 is fully blind (100%), all later epochs saw epoch-1 results (25%).
 function epochWeightBps(uint32 epochIndex) internal pure returns (uint256) {
-    if (epochIndex == 0) return 10000;
-    if (epochIndex == 1) return  5000;
-    if (epochIndex == 2) return  2500;
-    return                        1000; // floor for epoch 3+
+    return epochIndex == 0 ? 10000 : 2500;
 }
 
 // In settleRound(), replace the reward loop:
@@ -486,20 +505,18 @@ roundWinningWeightedStake[contentId][roundId] = totalWeightedStake;
 
 The `claimReward()` in `RoundRewardDistributor.sol` similarly uses `effectiveStake = stakeAmount × epochWeight / 10000` for computing each winner's share.
 
-### 8.4 Config change (RoundLib.sol)
+### 8.4 Config (RoundLib.sol)
 
-Change `minVoters` default from 3 to 2:
+Keep `minVoters = 5` (matches live contract). The governance minimum in `setConfig()` can remain at 2 for emergency use.
 
 ```solidity
 config = RoundLib.RoundConfig({
     epochDuration: 15 minutes,
     maxDuration: 7 days,
-    minVoters: 2,   // Changed from 3
+    minVoters: 5,   // Social proof threshold; soft quorum via epoch-2 fillers
     maxVoters: 1000
 });
 ```
-
-The governance minimum for `minVoters` in `setConfig()` can remain at 2.
 
 ### 8.5 Storage layout for UUPS
 
@@ -509,35 +526,36 @@ The `epochIndex` field is added to the `Commit` struct inside a mapping (not a s
 
 ## 9. Summary of Design Properties
 
-| Property | Original tlock (pre-migration) | tlock + epoch-weight (proposed) |
+| Property | Original tlock (pre-migration) | tlock + two-tier epoch-weight |
 |---|---|---|
 | **Vote secrecy** | Cryptographic within each epoch | Same |
-| **Inter-epoch herding** | Not penalized | Economic penalty (50% weight per epoch) |
-| **MinVoters** | 3 | **2** |
-| **Niche content settlement** | Requires 3 voters (may never settle) | Requires 2 voters (settles in 30 min) |
-| **Settlement time (best case)** | 30 min (epoch 1 + delay) | Same |
+| **Inter-epoch herding** | Not penalized | 75% penalty (epoch 2+ gets 25% weight) |
+| **MinVoters** | 3 | **5** (matches live contract) |
+| **Niche content settlement** | Requires 3 voters (may never settle) | Requires 5 participants; epoch-2 fillers count at 25% weight |
+| **Settlement time (best case)** | 30 min (epoch 1 + delay) | 30 min (5 epoch-1 voters) / 45 min (3+2 split) |
+| **Epoch-2 hedge attack profit** | Not modeled (no weighting) | **+2.6 cREP** (near break-even, was +17.3 cREP before) |
 | **Permissionless reveals** | Yes — anyone with drand beacon | Same |
 | **Keeper complexity** | Low | Same (no changes) |
 | **Bracket attacks** | Prevented (group outcome) | Same |
 | **ciphertext on-chain cost** | ~100K gas per vote | Same |
-| **2-identity controlled seeding** | Difficult (hidden votes in epoch 1) | Same (within epoch); penalized cross-epoch |
-| **Rating signal quality** | Based on raw stake | **Based on epoch-weighted effective stake** |
+| **Epoch-1 pool dominance** | N/A | 3 ep1 voters + 2 ep2 fillers → ep1 holds **72.7%** of pool |
+| **Rating signal quality** | Based on raw stake | **Epoch-1 voters have 4× pool influence per cREP** |
 
 ---
 
 ## 10. Open Design Questions
 
-1. **Decay rate calibration.** Should the decay be steeper (25% per epoch instead of 50%) to more aggressively discourage epoch 2+ herding? Or gentler (70%) to be more lenient for voters with genuine late-arriving information? The 50% choice is somewhat arbitrary — numerical simulation against realistic participation patterns would improve confidence.
+1. **minVoters=5 in the bootstrap phase.** During early platform growth with few active voters per content, minVoters=5 may cause many rounds to expire without settling (7 days, full refunds). Options: start with minVoters=3 during bootstrap and raise to 5 via governance once average round participation exceeds 5, or accept the higher bar from launch as it creates a quality filter. The soft-quorum mechanism (epoch-2 fillers) makes 5 more achievable than raw numbers suggest.
 
-2. **minVoters=1 vs minVoters=2.** Setting `minVoters=1` would allow genuinely solitary content (only one person cares) to accumulate a rating via repeated unanimous rounds. The consensus subsidy drain risk is the main concern, but the 24h cooldown and VoterID requirement already limit this. Is the additional protection from `minVoters=2` worth the added friction for single-viewer niche content?
+2. **The 25% exact value.** The 4:1 ratio is not derived from a formal information-theoretic model. A 20% (5:1) or 33% (3:1) rate would also be defensible. The practical question is whether 25% creates enough incentive for epoch-2 filler participation (positive EV for the filler) while sufficiently penalizing herding. Empirical observation of epoch-1 vs epoch-2 participation rates would inform a governance adjustment.
 
-3. **Epoch-weighting for the participation pool.** Currently, the participation pool pays all losers back up to 90% of their stake based on participation rate. Should this also be epoch-weighted — penalizing epoch-2+ losers who were herding in the wrong direction? This would be a stronger signal that late herding is discouraged, but adds complexity and may feel punitive.
+3. **Epoch-weighting for the participation pool.** Currently, losing voters receive up to 90% of their stake back from the participation pool regardless of epoch. Should epoch-2+ losers get a reduced participation rate (e.g., 70% instead of 90%)? This would more strongly discourage wrong-direction herding, but adds complexity and may feel punitive to voters who had genuine late information.
 
-4. **Epoch index cap.** The implementation caps `epochIndex` at 3 (10% floor). At 15-minute epochs, epoch 3 starts at 30 minutes into the round. A 7-day round has 672 epochs. Should the floor be even lower for very late votes (e.g., epoch 48 = 12 hours in), or is 10% sufficient?
+4. **UI for the epoch deadline.** The first 15 minutes are the highest-reward window. A clear countdown ("Full reward weight available for 8 more minutes") creates urgency that matches the mechanism's intent. However, displaying this as a countdown could create a last-minute rush at the end of epoch 1 as voters scramble to commit before the weight drops. An alternative: show it as a reward tier label ("Committing now: Tier 1 reward (full weight) · After 8 min: Tier 2 reward (25%)").
 
-5. **UI for epoch weight.** How should the UI communicate to voters that voting now gives full weight versus later epochs give half? A countdown to epoch 1's end ("Commit in the next 8 minutes for full reward weight") is natural but could create a rush effect in the final minutes of epoch 1.
+5. **The win condition vs reward distribution split.** The current design uses raw stake for the win condition (which side wins) but epoch-weighted effective stake for reward distribution (how much each winner gets). This means a large epoch-2+ wave can flip the outcome even if epoch-1 clearly favored the other direction. Is this the right design, or should epoch-weighting also apply to the win condition? If it applied to the win condition, epoch-1 voters' signal would be nearly impossible to override, which might be too strong a protection against genuine late-information corrections.
 
-6. **What happens to epoch-2+ votes if settlement fires before they're revealed?** With `minVoters=2` and 2 epoch-1 votes, settlement fires at the start of epoch 3 (`thresholdReachedAt + epochDuration`). Epoch-2 commits are committed before T+30min but revealed at T+30min when their epoch ends. The settlement delay of `thresholdReachedAt + epochDuration` (T+15min + 15min = T+30min) should exactly cover epoch-2 reveals. However, edge cases exist if `settleRound()` is called in the same block as `revealVote()` for the last epoch-2 voter. The settlement delay already handles this correctly for the common case; a strict `>` check on the timestamp ensures epoch-2 commits have their full epoch to be revealed.
+6. **Settlement timing edge case.** With minVoters=5 and exactly 5 epoch-1 voters, settlement fires at T+30min. Epoch-2 commits between T+15min and T+30min have their epoch end at exactly T+30min — same block the settlement could fire. The strict `block.timestamp > thresholdReachedAt + epochDuration` check (note `>` not `>=`) ensures epoch-2 voters have at minimum one extra second to be revealed. Worth verifying this in tests when implementing.
 
 ---
 
