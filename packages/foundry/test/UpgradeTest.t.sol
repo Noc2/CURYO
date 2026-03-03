@@ -18,11 +18,11 @@ import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.s
 contract MockVotingEngineForUpgrade is IRoundVotingEngine {
     function addToConsensusReserve(uint256) external override { }
 
-    function getContentVoteCount(uint256) external pure override returns (uint256) {
+    function getContentCommitCount(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function hasActiveVotes(uint256) external pure override returns (bool) {
+    function hasUnrevealedVotes(uint256) external pure override returns (bool) {
         return false;
     }
     function transferReward(address, uint256) external override { }
@@ -73,7 +73,7 @@ contract UpgradeTest is Test {
                 new ERC1967Proxy(
                     address(veImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (admin, governance, address(crepToken), address(contentRegistry))
+                        RoundVotingEngine.initialize, (admin, governance, address(crepToken), address(contentRegistry), true)
                     )
                 )
             )
@@ -170,7 +170,7 @@ contract UpgradeTest is Test {
     function test_VotingEngine_CannotReinitialize() public {
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        votingEngine.initialize(admin, governance, address(crepToken), address(contentRegistry));
+        votingEngine.initialize(admin, governance, address(crepToken), address(contentRegistry), true);
     }
 
     function test_VotingEngine_StatePreservedAfterUpgrade() public {
@@ -307,7 +307,7 @@ contract UpgradeTest is Test {
 
         RoundVotingEngine veImpl = new RoundVotingEngine();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        veImpl.initialize(admin, governance, address(crepToken), address(contentRegistry));
+        veImpl.initialize(admin, governance, address(crepToken), address(contentRegistry), true);
 
         RoundRewardDistributor rdImpl = new RoundRewardDistributor();
         vm.expectRevert(Initializable.InvalidInitialization.selector);

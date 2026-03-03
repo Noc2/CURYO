@@ -9,7 +9,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 
 /// @notice Minimal deployment for TypeScript round integration tests.
-/// @dev Deploys CuryoReputation, ContentRegistry, RoundVotingEngine,
+/// @dev Deploys CuryoReputation, ContentRegistry, RoundVotingEngine (mockMode),
 ///      and RoundRewardDistributor. Writes addresses to a JSON file.
 ///
 /// Usage:
@@ -47,7 +47,7 @@ contract DeployRoundTest is Script {
                 new ERC1967Proxy(
                     address(engineImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (deployer, deployer, address(crepToken), address(registry))
+                        RoundVotingEngine.initialize, (deployer, deployer, address(crepToken), address(registry), true)
                     )
                 )
             )
@@ -71,18 +71,8 @@ contract DeployRoundTest is Script {
         votingEngine.setTreasury(deployer);
         crepToken.setContentVotingContracts(address(votingEngine), address(registry));
 
-        // 5. Low minVoters for testing, short epochs
-        votingEngine.setConfig(
-            10, // minEpochBlocks (short for testing)
-            50, // maxEpochBlocks
-            7 days, // maxDuration
-            2, // minVoters
-            200, // maxVoters
-            30, // baseRateBps
-            3, // growthRateBps
-            500, // maxProbBps
-            1000e6 // liquidityParam
-        );
+        // 5. Short epoch for testing (15 minutes), low minVoters
+        votingEngine.setConfig(15 minutes, 7 days, 2, 200);
 
         // 6. Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;

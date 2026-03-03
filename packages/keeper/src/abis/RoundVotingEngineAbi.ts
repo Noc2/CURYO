@@ -1,6 +1,6 @@
 /**
  * ABI for RoundVotingEngine — only the functions used by the keeper.
- * Regenerated from packages/ponder/abis/RoundVotingEngineAbi.ts
+ * Includes commitVote reveal functions and settleRound for tlock epoch-weighted voting.
  */
 export const RoundVotingEngineAbi = [
   {
@@ -8,15 +8,18 @@ export const RoundVotingEngineAbi = [
     name: "config",
     inputs: [],
     outputs: [
-      { name: "minEpochBlocks", type: "uint64" },
-      { name: "maxEpochBlocks", type: "uint64" },
+      { name: "epochDuration", type: "uint256" },
       { name: "maxDuration", type: "uint256" },
       { name: "minVoters", type: "uint256" },
       { name: "maxVoters", type: "uint256" },
-      { name: "baseRateBps", type: "uint16" },
-      { name: "growthRateBps", type: "uint16" },
-      { name: "maxProbBps", type: "uint16" },
     ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "mockMode",
+    inputs: [],
+    outputs: [{ name: "", type: "bool" }],
     stateMutability: "view",
   },
   {
@@ -39,19 +42,19 @@ export const RoundVotingEngineAbi = [
         type: "tuple",
         components: [
           { name: "startTime", type: "uint256" },
-          { name: "startBlock", type: "uint64" },
           { name: "state", type: "uint8" },
           { name: "voteCount", type: "uint256" },
+          { name: "revealedCount", type: "uint256" },
           { name: "totalStake", type: "uint256" },
-          { name: "totalUpStake", type: "uint256" },
-          { name: "totalDownStake", type: "uint256" },
-          { name: "totalUpShares", type: "uint256" },
-          { name: "totalDownShares", type: "uint256" },
+          { name: "upPool", type: "uint256" },
+          { name: "downPool", type: "uint256" },
           { name: "upCount", type: "uint256" },
           { name: "downCount", type: "uint256" },
           { name: "upWins", type: "bool" },
           { name: "settledAt", type: "uint256" },
           { name: "thresholdReachedAt", type: "uint256" },
+          { name: "weightedUpPool", type: "uint256" },
+          { name: "weightedDownPool", type: "uint256" },
         ],
       },
     ],
@@ -59,8 +62,60 @@ export const RoundVotingEngineAbi = [
   },
   {
     type: "function",
-    name: "trySettle",
-    inputs: [{ name: "contentId", type: "uint256" }],
+    name: "getRoundCommitHashes",
+    inputs: [
+      { name: "contentId", type: "uint256" },
+      { name: "roundId", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bytes32[]" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getCommit",
+    inputs: [
+      { name: "contentId", type: "uint256" },
+      { name: "roundId", type: "uint256" },
+      { name: "commitKey", type: "bytes32" },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "voter", type: "address" },
+          { name: "stakeAmount", type: "uint256" },
+          { name: "ciphertext", type: "bytes" },
+          { name: "frontend", type: "address" },
+          { name: "revealableAfter", type: "uint256" },
+          { name: "revealed", type: "bool" },
+          { name: "isUp", type: "bool" },
+          { name: "epochIndex", type: "uint32" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "revealVoteByCommitKey",
+    inputs: [
+      { name: "contentId", type: "uint256" },
+      { name: "roundId", type: "uint256" },
+      { name: "commitKey", type: "bytes32" },
+      { name: "isUp", type: "bool" },
+      { name: "salt", type: "bytes32" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "settleRound",
+    inputs: [
+      { name: "contentId", type: "uint256" },
+      { name: "roundId", type: "uint256" },
+    ],
     outputs: [],
     stateMutability: "nonpayable",
   },

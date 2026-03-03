@@ -180,7 +180,7 @@ contract ContentRegistryBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true))
                 )
             )
         );
@@ -201,7 +201,7 @@ contract ContentRegistryBranchesTest is Test {
         registry.setTreasury(treasury);
         votingEngine.setRewardDistributor(address(rewardDistributor));
         votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
+        votingEngine.setConfig(1 hours, 7 days, 3, 1000);
 
         mockVoterIdNFT = new MockVoterIdNFT_CR();
         mockCategoryRegistry = new MockCategoryRegistry();
@@ -226,8 +226,11 @@ contract ContentRegistryBranchesTest is Test {
 
     function _vote(address voter, uint256 contentId, bool isUp) internal {
         vm.startPrank(voter);
+        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp));
+        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
+        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
         crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.vote(contentId, isUp, STAKE, address(0));
+        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
     }
 

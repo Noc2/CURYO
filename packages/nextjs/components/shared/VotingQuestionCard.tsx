@@ -61,12 +61,6 @@ export function VotingQuestionCard({
   const { roundId, isRoundFull } = useRoundInfo(contentId);
   const { phase, voteCount } = useRoundPhase(contentId);
 
-  const { data: tokenSymbol } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
-    functionName: "symbol",
-  });
-  const symbol = tokenSymbol ?? "cREP";
-
   // Check if user has committed to this round (tlock: direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
   const { data: myCommitHash } = useScaffoldReadContract({

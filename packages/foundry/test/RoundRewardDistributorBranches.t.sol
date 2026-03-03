@@ -9,7 +9,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 
-/// @title RoundRewardDistributor branch coverage tests
+/// @title RoundRewardDistributor branch coverage tests (tlock commit-reveal)
 contract RoundRewardDistributorBranchesTest is Test {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
@@ -26,6 +26,7 @@ contract RoundRewardDistributorBranchesTest is Test {
 
     uint256 public constant T0 = 1000;
     uint256 public constant STAKE = 5e6;
+    uint256 public constant EPOCH_DURATION = 5 minutes;
 
     function setUp() public {
         vm.warp(T0);
@@ -50,7 +51,9 @@ contract RoundRewardDistributorBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true)
+                    )
                 )
             )
         );
@@ -69,7 +72,8 @@ contract RoundRewardDistributorBranchesTest is Test {
         registry.setVotingEngine(address(votingEngine));
         votingEngine.setRewardDistributor(address(rewardDistributor));
         votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
+        // 4 params: epochDuration, maxDuration, minVoters, maxVoters
+        votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);
@@ -83,20 +87,71 @@ contract RoundRewardDistributorBranchesTest is Test {
         vm.stopPrank();
     }
 
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
+
+    function _mockCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
+        return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+    }
+
+    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(isUp, salt, contentId));
+    }
+
+    function _commitKey(address voter, bytes32 ch) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(voter, ch));
+    }
+
+    function _commit(address voter, uint256 contentId, bool isUp, uint256 stake)
+        internal
+        returns (bytes32 ck, bytes32 salt)
+    {
+        salt = keccak256(abi.encodePacked(voter, contentId));
+        bytes32 ch = _commitHash(isUp, salt, contentId);
+        bytes memory ct = _mockCiphertext(isUp, salt, contentId);
+        vm.prank(voter);
+        crepToken.approve(address(votingEngine), stake);
+        vm.prank(voter);
+        votingEngine.commitVote(contentId, ch, ct, stake, address(0));
+        ck = _commitKey(voter, ch);
+    }
+
     function _vote(address voter, uint256 contentId, bool isUp) internal {
-        vm.startPrank(voter);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.vote(contentId, isUp, STAKE, address(0));
-        vm.stopPrank();
+        _commit(voter, contentId, isUp, STAKE);
     }
 
-    /// @dev Force settlement by rolling past maxEpochBlocks
+    function _revealAll(uint256 contentId, uint256 roundId) internal {
+        bytes32[] memory keys = votingEngine.getRoundCommitHashes(contentId, roundId);
+        for (uint256 i = 0; i < keys.length; i++) {
+            RoundLib.Commit memory c = votingEngine.getCommit(contentId, roundId, keys[i]);
+            if (!c.revealed && c.stakeAmount > 0) {
+                bytes memory ct = c.ciphertext;
+                bool isUp = uint8(ct[0]) == 1;
+                bytes32 salt;
+                assembly {
+                    salt := mload(add(ct, 33))
+                }
+                try votingEngine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }
+            }
+        }
+    }
+
     function _forceSettle(uint256 contentId) internal {
-        vm.roll(block.number + 51);
-        votingEngine.trySettle(contentId);
+        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        if (roundId == 0) return;
+
+        RoundLib.Round memory r = votingEngine.getRound(contentId, roundId);
+        vm.warp(r.startTime + EPOCH_DURATION + 1);
+        _revealAll(contentId, roundId);
+
+        RoundLib.Round memory r2 = votingEngine.getRound(contentId, roundId);
+        if (r2.thresholdReachedAt > 0) {
+            vm.warp(r2.thresholdReachedAt + EPOCH_DURATION + 1);
+            try votingEngine.settleRound(contentId, roundId) { } catch { }
+        }
     }
 
-    /// @dev Setup and settle a non-unanimous round (2 up, 1 down)
     function _setupSettledRound() internal returns (uint256 contentId, uint256 roundId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
@@ -145,7 +200,7 @@ contract RoundRewardDistributorBranchesTest is Test {
     function test_ClaimReward_NoVoteFound_Reverts() public {
         (uint256 contentId, uint256 roundId) = _setupSettledRound();
 
-        // keeper never voted
+        // keeper never committed
         vm.prank(keeper);
         vm.expectRevert("No vote found");
         rewardDistributor.claimReward(contentId, roundId);

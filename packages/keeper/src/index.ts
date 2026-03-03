@@ -85,6 +85,7 @@ async function main() {
       const total =
         result.roundsSettled +
         result.roundsCancelled +
+        result.votesRevealed +
         result.contentMarkedDormant;
       if (total > 0) {
         logger.info("Run complete", { ...result, durationMs: duration });

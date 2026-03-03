@@ -57,7 +57,7 @@ contract FormalVerification_GameTheoryTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true))
                 )
             )
         );
@@ -78,9 +78,8 @@ contract FormalVerification_GameTheoryTest is Test {
         engine.setRewardDistributor(address(distributor));
         engine.setTreasury(treasuryAddr);
 
-        // Test config: minEpochBlocks=10, maxEpochBlocks=50, maxDuration=7d,
-        // minVoters=2, maxVoters=200, baseRate=30bps, growth=3bps, maxProb=500bps, liquidity=1000e6
-        engine.setConfig(MIN_EPOCH_BLOCKS, MAX_EPOCH_BLOCKS, MAX_DURATION, MIN_VOTERS, 200, 30, 3, 500, 1000e6);
+        // Config: epochDuration=1h, maxDuration=7d, minVoters=2, maxVoters=200
+        engine.setConfig(1 hours, MAX_DURATION, MIN_VOTERS, 200);
 
         // Fund consensus reserve: 100K cREP
         crepToken.mint(owner, 100_000e6);
@@ -111,16 +110,38 @@ contract FormalVerification_GameTheoryTest is Test {
         return id;
     }
 
-    function _vote(address voter, uint256 cid, bool up, uint256 stake) internal {
-        vm.startPrank(voter);
+    function _vote(address voter, uint256 cid, bool up, uint256 stake) internal returns (bytes32 commitKey, bytes32 salt) {
+        salt = keccak256(abi.encodePacked(voter, block.timestamp, cid));
+        bytes32 commitHash = keccak256(abi.encodePacked(up, salt, cid));
+        bytes memory ciphertext = abi.encodePacked(uint8(up ? 1 : 0), salt, cid);
+        vm.prank(voter);
         crepToken.approve(address(engine), stake);
-        engine.vote(cid, up, stake, address(0));
-        vm.stopPrank();
+        vm.prank(voter);
+        engine.commitVote(cid, commitHash, ciphertext, stake, address(0));
+        commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
     function _forceSettle(uint256 cid) internal {
-        vm.roll(block.number + MAX_EPOCH_BLOCKS + 1);
-        engine.trySettle(cid);
+        uint256 roundId = engine.getActiveRoundId(cid);
+        if (roundId == 0) return;
+        RoundLib.Round memory r = engine.getRound(cid, roundId);
+        vm.warp(r.startTime + 1 hours + 1);
+        bytes32[] memory keys = engine.getRoundCommitHashes(cid, roundId);
+        for (uint256 i = 0; i < keys.length; i++) {
+            RoundLib.Commit memory c = engine.getCommit(cid, roundId, keys[i]);
+            if (!c.revealed && c.stakeAmount > 0) {
+                bool up = uint8(c.ciphertext[0]) == 1;
+                bytes32 s;
+                bytes memory ct = c.ciphertext;
+                assembly { s := mload(add(ct, 33)) }
+                try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
+            }
+        }
+        RoundLib.Round memory r2 = engine.getRound(cid, roundId);
+        if (r2.thresholdReachedAt > 0) {
+            vm.warp(r2.thresholdReachedAt + 1 hours + 1);
+            try engine.settleRound(cid, roundId) { } catch { }
+        }
     }
 
     // ==================== Test 1: Honest Voting Profitability ====================
@@ -135,7 +156,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[3], cid, false, 50e6);
         _vote(v[4], cid, false, 50e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         // Force settle past maxEpochBlocks
         _forceSettle(cid);
@@ -178,7 +199,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[8], cid, false, 90e6);
         _vote(v[9], cid, false, 100e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         _forceSettle(cid);
 
@@ -206,7 +227,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[3], cid, true, 10e6);
         _vote(v[4], cid, false, 100e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         _forceSettle(cid);
 
@@ -232,7 +253,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[3], cid, true, 100e6);
         _vote(v[4], cid, false, 1e6); // innocent victim
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         _forceSettle(cid);
 
@@ -262,7 +283,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[3], cid, true, 50e6);
         _vote(v[4], cid, true, 50e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         // Consensus settlement after maxEpochBlocks
         _forceSettle(cid);
@@ -290,15 +311,14 @@ contract FormalVerification_GameTheoryTest is Test {
     // ==================== Test 6: Share-Proportional ROI (Early Voter Advantage) ====================
 
     /// @notice 1 whale UP (100) + 4 minnows UP (1 each) vs 5 DOWN (10 each).
-    /// @dev With bonding curve shares, earlier voters get more shares per cREP. The whale votes
-    ///      first and gets the best share price. Later minnows get fewer shares per cREP.
-    ///      We verify that (a) all winners profit and (b) the whale's ROI% is higher than
-    ///      late minnows' ROI% due to the early-voter share advantage.
+    /// @dev In tlock epoch-weighted proportional rewards, all epoch-1 voters receive rewards
+    ///      proportional to their weighted stake. Whale's absolute reward is 100x minnow's
+    ///      because stake is 100x. ROI% is equal (same epoch weight, proportional distribution).
     function test_StakeAsymmetry_ShareProportionalROI() public {
         uint256 cid = _submit();
 
-        // UP side: whale first, then minnows
-        _vote(v[0], cid, true, 100e6); // whale (first -> best share price)
+        // UP side: whale first, then minnows (all in epoch-1)
+        _vote(v[0], cid, true, 100e6); // whale
         _vote(v[1], cid, true, 1e6); // minnow 1
         _vote(v[2], cid, true, 1e6); // minnow 2
         _vote(v[3], cid, true, 1e6); // minnow 3
@@ -310,7 +330,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[8], cid, false, 10e6);
         _vote(v[9], cid, false, 10e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         _forceSettle(cid);
 
@@ -321,7 +341,7 @@ contract FormalVerification_GameTheoryTest is Test {
         uint256 whalePayout = crepToken.balanceOf(v[0]) - wBal;
         uint256 whaleReward = whalePayout - 100e6; // reward only (excl. stake return)
 
-        // Minnow claim (v[4] = last minnow, worst share price)
+        // Minnow claim
         uint256 mBal = crepToken.balanceOf(v[4]);
         vm.prank(v[4]);
         distributor.claimReward(cid, rid);
@@ -332,11 +352,16 @@ contract FormalVerification_GameTheoryTest is Test {
         assertGt(whaleReward, 0, "Whale profits");
         assertGt(minnowReward, 0, "Minnow profits");
 
-        // Whale ROI% > minnow ROI% because whale voted first (early-voter advantage)
-        // whaleROI = whaleReward / 100, minnowROI = minnowReward / 1
+        // Whale absolute reward is proportional to stake (100x minnow's stake -> 100x absolute reward)
+        // Proportional: whaleReward / 100e6 == minnowReward / 1e6 (within rounding)
+        // We verify whale's absolute reward > minnow's absolute reward
+        assertGt(whaleReward, minnowReward, "Whale has higher absolute reward than minnow (100x stake)");
+
+        // Both get same ROI% (proportional system: reward/stake is constant within epoch)
         uint256 whaleROIPct = (whaleReward * 10000) / 100e6; // basis points
         uint256 minnowROIPct = (minnowReward * 10000) / 1e6; // basis points
-        assertGt(whaleROIPct, minnowROIPct, "Early voter (whale) gets higher ROI% than late voter (minnow)");
+        // In proportional reward system, ROI% is equal (within 1 bps rounding)
+        assertApproxEqAbs(whaleROIPct, minnowROIPct, 1, "Proportional reward: whale and minnow get same ROI%");
     }
 
     // ==================== Test 7: Whale in Thin Market ====================
@@ -351,7 +376,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[3], cid, false, 1e6);
         _vote(v[4], cid, false, 1e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         _forceSettle(cid);
 
@@ -384,7 +409,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[8], cid, true, 50e6);
         _vote(v[9], cid, true, 50e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         _forceSettle(cid);
 
@@ -414,7 +439,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[3], cid, true, 50e6); // honest
         _vote(v[4], cid, true, 50e6); // honest
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         _forceSettle(cid);
 
@@ -451,10 +476,12 @@ contract FormalVerification_GameTheoryTest is Test {
                 _vote(v[i], cid, true, 100e6);
             }
 
-            // Consensus settlement: wait for maxEpochBlocks, then settle
+            // Capture round ID before settlement (getActiveRoundId returns 0 after settling)
+            uint256 rid = engine.getActiveRoundId(cid);
+
+            // Consensus settlement: wait for epoch end, reveal all, settle
             _forceSettle(cid);
 
-            uint256 rid = engine.currentRoundId(cid);
             RoundLib.Round memory round = engine.getRound(cid, rid);
             assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled), "Round settled");
 
@@ -507,10 +534,10 @@ contract FormalVerification_GameTheoryTest is Test {
         assertEq(reserve, 100_000e6 - 20_000_000, "Net drain = 20 cREP");
     }
 
-    // ==================== Test 12: Settlement Delay - Cannot Settle Before minEpochBlocks ====================
+    // ==================== Test 12: Settlement Delay - Cannot Settle Before Epoch Ends ====================
 
-    /// @notice trySettle before minEpochBlocks is a no-op (round stays Open).
-    function test_SettlementDelay_CannotSettleBeforeMinEpoch() public {
+    /// @notice settleRound before epoch ends reverts (EpochNotEnded or SettlementDelayNotElapsed).
+    function test_SettlementDelay_CannotSettleBeforeEpochEnds() public {
         uint256 cid = _submit();
 
         _vote(v[0], cid, true, 50e6);
@@ -519,52 +546,53 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[3], cid, false, 50e6);
         _vote(v[4], cid, false, 50e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
         RoundLib.Round memory round = engine.getRound(cid, rid);
-        uint64 startBlock = round.startBlock;
 
-        // Roll to just before minEpochBlocks — trySettle should be a no-op
-        vm.roll(startBlock + MIN_EPOCH_BLOCKS - 1);
-        engine.trySettle(cid);
+        // Reveal all after epoch ends
+        vm.warp(round.startTime + 1 hours + 1);
+        bytes32[] memory keys = engine.getRoundCommitHashes(cid, rid);
+        for (uint256 i = 0; i < keys.length; i++) {
+            RoundLib.Commit memory c = engine.getCommit(cid, rid, keys[i]);
+            bool up = uint8(c.ciphertext[0]) == 1;
+            bytes32 s;
+            bytes memory ct = c.ciphertext;
+            assembly { s := mload(add(ct, 33)) }
+            engine.revealVoteByCommitKey(cid, rid, keys[i], up, s);
+        }
 
-        RoundLib.Round memory afterAttempt = engine.getRound(cid, rid);
-        assertEq(
-            uint256(afterAttempt.state), uint256(RoundLib.RoundState.Open), "Round still Open before minEpochBlocks"
-        );
+        // Immediately after reveal — settlement delay not elapsed yet
+        vm.expectRevert(RoundVotingEngine.SettlementDelayNotElapsed.selector);
+        engine.settleRound(cid, rid);
 
-        // After maxEpochBlocks, settlement is guaranteed
-        vm.roll(startBlock + MAX_EPOCH_BLOCKS);
-        engine.trySettle(cid);
+        // After settlement delay — settleRound succeeds
+        RoundLib.Round memory r2 = engine.getRound(cid, rid);
+        vm.warp(r2.thresholdReachedAt + 1 hours + 1);
+        engine.settleRound(cid, rid);
 
         RoundLib.Round memory afterForce = engine.getRound(cid, rid);
-        assertEq(uint256(afterForce.state), uint256(RoundLib.RoundState.Settled), "Round settled at maxEpochBlocks");
+        assertEq(uint256(afterForce.state), uint256(RoundLib.RoundState.Settled), "Round settled after delay");
     }
 
-    // ==================== Test 13: Settlement Probability Increases Over Blocks ====================
+    // ==================== Test 13: Settlement Only Possible After Enough Reveals ====================
 
-    /// @notice Verify that settlement probability increases: before minEpochBlocks it's impossible,
-    ///         after maxEpochBlocks it's certain. Between those bounds, probability grows linearly.
-    function test_SettlementProbability_IncreasesOverBlocks() public {
+    /// @notice settleRound reverts with NotEnoughVotes if fewer than minVoters revealed.
+    function test_SettlementRequiresMinVoterReveals() public {
         uint256 cid = _submit();
 
-        _vote(v[0], cid, true, 50e6);
-        _vote(v[1], cid, false, 10e6);
+        (bytes32 ck1, bytes32 s1) = _vote(v[0], cid, true, 50e6);
+        // Only 1 voter — minVoters=2 not reached
 
-        uint256 rid = engine.currentRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
-        uint64 startBlock = round.startBlock;
+        uint256 rid = engine.getActiveRoundId(cid);
+        RoundLib.Round memory r = engine.getRound(cid, rid);
 
-        // Before minEpochBlocks: trySettle should not settle
-        vm.roll(startBlock + MIN_EPOCH_BLOCKS - 1);
-        engine.trySettle(cid);
-        RoundLib.Round memory beforeMin = engine.getRound(cid, rid);
-        assertEq(uint256(beforeMin.state), uint256(RoundLib.RoundState.Open), "Not settled before minEpochBlocks");
+        vm.warp(r.startTime + 1 hours + 1);
+        engine.revealVoteByCommitKey(cid, rid, ck1, true, s1);
 
-        // After maxEpochBlocks: trySettle must settle (deterministic)
-        vm.roll(startBlock + MAX_EPOCH_BLOCKS);
-        engine.trySettle(cid);
-        RoundLib.Round memory afterMax = engine.getRound(cid, rid);
-        assertEq(uint256(afterMax.state), uint256(RoundLib.RoundState.Settled), "Settled at maxEpochBlocks");
+        vm.warp(block.timestamp + 1 hours + 1);
+
+        vm.expectRevert(RoundVotingEngine.NotEnoughVotes.selector);
+        engine.settleRound(cid, rid);
     }
 
     // ==================== Test 14: Tied Round - Full Refund ====================
@@ -590,7 +618,7 @@ contract FormalVerification_GameTheoryTest is Test {
         _vote(v[8], cid, false, 50e6);
         _vote(v[9], cid, false, 50e6);
 
-        uint256 rid = engine.currentRoundId(cid);
+        uint256 rid = engine.getActiveRoundId(cid);
 
         // Force settle past maxEpochBlocks
         _forceSettle(cid);

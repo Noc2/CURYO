@@ -253,7 +253,7 @@ contract ContentRegistry is
         require(c.submitter == msg.sender, "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
         if (votingEngine != address(0)) {
-            require(IRoundVotingEngine(votingEngine).getContentVoteCount(contentId) == 0, "Content has votes");
+            require(IRoundVotingEngine(votingEngine).getContentCommitCount(contentId) == 0, "Content has votes");
         }
 
         c.status = ContentStatus.Cancelled;
@@ -288,7 +288,7 @@ contract ContentRegistry is
         require(block.timestamp > c.lastActivityAt + DORMANCY_PERIOD, "Dormancy period not elapsed");
         // Prevent dormancy if content has active votes in an open round
         if (votingEngine != address(0)) {
-            require(!IRoundVotingEngine(votingEngine).hasActiveVotes(contentId), "Content has active votes");
+            require(!IRoundVotingEngine(votingEngine).hasUnrevealedVotes(contentId), "Content has active votes");
         }
 
         c.status = ContentStatus.Dormant;

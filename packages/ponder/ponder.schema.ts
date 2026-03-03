@@ -52,17 +52,15 @@ export const round = onchainTable(
     contentId: t.bigint().notNull(),
     roundId: t.bigint().notNull(),
     state: t.integer().notNull(), // 0=Open, 1=Settled, 2=Cancelled, 3=Tied
-    voteCount: t.integer().notNull(),
+    voteCount: t.integer().notNull(),   // total commits
+    revealedCount: t.integer().notNull().default(0), // revealed votes
     totalStake: t.bigint().notNull(),
-    upStake: t.bigint().notNull(),
-    downStake: t.bigint().notNull(),
-    totalUpShares: t.bigint().notNull().default(0n),
-    totalDownShares: t.bigint().notNull().default(0n),
+    upPool: t.bigint().notNull(),   // raw UP stake (from revealed votes)
+    downPool: t.bigint().notNull(), // raw DOWN stake (from revealed votes)
     upCount: t.integer().notNull(),
     downCount: t.integer().notNull(),
     upWins: t.boolean(),
-    totalPool: t.bigint(),
-    startBlock: t.bigint(), // block number when round started
+    losingPool: t.bigint(),
     startTime: t.bigint(),
     settledAt: t.bigint(),
   }),
@@ -82,7 +80,7 @@ export const roundRelations = relations(round, ({ many, one }) => ({
 }));
 
 // ============================================================
-// VOTE (public votes)
+// VOTE (tlock commit-reveal votes)
 // ============================================================
 
 export const vote = onchainTable(
@@ -92,10 +90,12 @@ export const vote = onchainTable(
     contentId: t.bigint().notNull(),
     roundId: t.bigint().notNull(),
     voter: t.hex().notNull(),
-    isUp: t.boolean().notNull(),
+    isUp: t.boolean(), // null until revealed
     stake: t.bigint().notNull(),
-    shares: t.bigint().notNull(),
-    votedAt: t.bigint().notNull(),
+    epochIndex: t.integer().notNull(), // 0=epoch-1 (100% weight), 1=epoch-2+ (25% weight)
+    revealed: t.boolean().notNull().default(false),
+    committedAt: t.bigint().notNull(),
+    revealedAt: t.bigint(), // null until revealed
   }),
   (table) => ({
     voterIdx: index().on(table.voter),

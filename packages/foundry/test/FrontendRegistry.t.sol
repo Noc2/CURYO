@@ -15,11 +15,11 @@ contract MockVotingEngine is IRoundVotingEngine {
         totalAddedToReserve += amount;
     }
 
-    function getContentVoteCount(uint256) external pure override returns (uint256) {
+    function getContentCommitCount(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function hasActiveVotes(uint256) external pure override returns (bool) {
+    function hasUnrevealedVotes(uint256) external pure override returns (bool) {
         return false;
     }
 

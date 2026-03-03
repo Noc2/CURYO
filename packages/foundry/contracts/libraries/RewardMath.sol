@@ -2,10 +2,11 @@
 pragma solidity ^0.8.20;
 
 /// @title RewardMath
-/// @notice Pure functions for parimutuel reward calculations with bonding curve share pricing.
+/// @notice Pure functions for parimutuel reward calculations with epoch-weighted stake.
 /// @dev Pool split: 82% voters, 10% submitter, 2% platform (1% frontend, 1% category), 1% treasury, 5% consensus subsidy.
-///      Voter rewards are distributed proportional to shares (not stakes). Early/contrarian voters
-///      get more shares per cREP staked, creating natural anti-herding incentives.
+///      Voter rewards are distributed proportional to epoch-weighted effective stake.
+///      Epoch 1 (blind) = 100% weight; Epoch 2+ (saw results) = 25% weight.
+///      This creates a 4:1 reward ratio for early blind voters vs late informed voters.
 library RewardMath {
     uint256 internal constant PRECISION = 1e18;
 
@@ -24,30 +25,17 @@ library RewardMath {
     // Rating calculation parameter (fixed, not configurable)
     uint256 internal constant RATING_B = 50e6; // Smoothing parameter for rating formula (50 cREP in 6 decimals)
 
-    /// @notice Calculate bonding curve shares for a vote.
-    /// @dev shares = stake * b / (sameDirectionStake + b)
-    ///      Early voters get more shares because sameDirectionStake is smaller.
-    ///      b (liquidityParam) controls the curve steepness.
-    /// @param stake The voter's stake amount.
-    /// @param sameDirectionStake Total stake already on the same side (before this vote).
-    /// @param b Liquidity parameter controlling curve steepness.
-    /// @return shares Number of shares awarded to this voter.
-    function calculateShares(uint256 stake, uint256 sameDirectionStake, uint256 b) internal pure returns (uint256) {
-        if (b == 0) return stake; // Degenerate case: flat pricing
-        return (stake * b) / (sameDirectionStake + b);
-    }
-
-    /// @notice Calculate live content rating based on stake pools.
+    /// @notice Calculate live content rating based on revealed stake pools.
     /// @dev rating = 50 + 50 * (qUp - qDown) / (qUp + qDown + b)
     ///      Clamped to [0, 100]. Uses fixed b=50 cREP for smoothing.
-    /// @param totalUpStake Total UP stake in the current round.
-    /// @param totalDownStake Total DOWN stake in the current round.
+    ///      Called at settlement with final revealed raw pools.
+    /// @param totalUpStake Total revealed UP stake in the current round.
+    /// @param totalDownStake Total revealed DOWN stake in the current round.
     /// @return rating New content rating [0, 100].
     function calculateRating(uint256 totalUpStake, uint256 totalDownStake) internal pure returns (uint16) {
         if (totalUpStake == 0 && totalDownStake == 0) return 50;
 
         // rating = 50 + 50 * (qUp - qDown) / (qUp + qDown + b)
-        // Using signed arithmetic internally for the difference
         uint256 sum = totalUpStake + totalDownStake + RATING_B;
 
         if (totalUpStake >= totalDownStake) {
@@ -62,18 +50,18 @@ library RewardMath {
         }
     }
 
-    /// @notice Calculate a voter's reward from the voter pool (share-proportional).
-    /// @param voterShares The voter's shares.
-    /// @param totalWinningShares Sum of all winning voters' shares.
+    /// @notice Calculate a voter's reward from the voter pool (epoch-weighted-stake-proportional).
+    /// @param effectiveStake The voter's epoch-weighted effective stake (stake × epochWeightBps / 10000).
+    /// @param totalWeightedWinningStake Sum of all winning voters' effective stakes.
     /// @param voterPool The portion of losing stakes allocated to voters (82%).
     /// @return reward Amount of tokens the voter earns (excludes original stake return).
-    function calculateVoterReward(uint256 voterShares, uint256 totalWinningShares, uint256 voterPool)
+    function calculateVoterReward(uint256 effectiveStake, uint256 totalWeightedWinningStake, uint256 voterPool)
         internal
         pure
         returns (uint256)
     {
-        if (totalWinningShares == 0) return 0;
-        return (voterPool * voterShares) / totalWinningShares;
+        if (totalWeightedWinningStake == 0) return 0;
+        return (voterPool * effectiveStake) / totalWeightedWinningStake;
     }
 
     /// @notice Split the losing pool into the 5 reward buckets.

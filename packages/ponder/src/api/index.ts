@@ -318,7 +318,7 @@ app.get("/profile/:address", async (c) => {
     .select()
     .from(vote)
     .where(eq(vote.voter, address))
-    .orderBy(desc(vote.votedAt))
+    .orderBy(desc(vote.committedAt))
     .limit(20);
 
   // Get recent rewards
@@ -609,10 +609,11 @@ app.get("/votes", async (c) => {
       voter: vote.voter,
       isUp: vote.isUp,
       stake: vote.stake,
-      shares: vote.shares,
-      votedAt: vote.votedAt,
+      epochIndex: vote.epochIndex,
+      revealed: vote.revealed,
+      committedAt: vote.committedAt,
+      revealedAt: vote.revealedAt,
       roundStartTime: round.startTime,
-      roundStartBlock: round.startBlock,
       roundState: round.state,
     })
     .from(vote)
@@ -621,7 +622,7 @@ app.get("/votes", async (c) => {
       and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
     )
     .where(where)
-    .orderBy(desc(vote.votedAt))
+    .orderBy(desc(vote.committedAt))
     .limit(limit)
     .offset(offset);
 

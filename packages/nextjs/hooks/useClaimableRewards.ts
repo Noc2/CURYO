@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { encodePacked, keccak256 } from "viem";
-import { useAccount, usePublicClient } from "wagmi";
-import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useAccount } from "wagmi";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 // RoundState enum (matching Solidity)
 const RoundState = { Open: 0, Settled: 1, Cancelled: 2, Tied: 3 } as const;
@@ -30,8 +29,6 @@ interface ClaimableReward {
  */
 export function useClaimableRewards(contentId: bigint): ClaimableReward {
   const { address } = useAccount();
-  const publicClient = usePublicClient();
-  const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
 
   // Get active round ID
   const { data: rawActiveRoundId } = useScaffoldReadContract({

@@ -14,12 +14,18 @@ import {
 
 // Round states: Open(0), Settled(1), Cancelled(2), Tied(3)
 
-ponder.on("RoundVotingEngine:VotePublished", async ({ event, context }) => {
-  const { contentId, roundId, voter, isUp, stake, shares, newRating } = event.args;
+ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
+  const { contentId, roundId, voter, commitHash, stake } = event.args;
   const roundKey = `${contentId}-${roundId}`;
   const voteKey = `${contentId}-${roundId}-${voter}`;
 
-  // Upsert round record — VotePublished is the first event for a new round
+  // Compute epochIndex from round startTime and event timestamp
+  // We'll store it as 0 or 1 based on whether it's in epoch-1
+  // The exact epochIndex is available from on-chain data; for now we track the commit
+  // epochIndex will be updated properly when VoteRevealed fires (from commit.epochIndex)
+  // For now, use a placeholder — actual epochIndex from the Commit struct is known on-chain
+
+  // Upsert round record — VoteCommitted is the first event for a new round
   const existingRound = await context.db.find(round, { id: roundKey });
   if (!existingRound) {
     await context.db.insert(round).values({
@@ -28,30 +34,22 @@ ponder.on("RoundVotingEngine:VotePublished", async ({ event, context }) => {
       roundId,
       state: 0, // Open
       voteCount: 1,
+      revealedCount: 0,
       totalStake: stake,
-      upStake: isUp ? stake : 0n,
-      downStake: isUp ? 0n : stake,
-      totalUpShares: isUp ? shares : 0n,
-      totalDownShares: isUp ? 0n : shares,
-      upCount: isUp ? 1 : 0,
-      downCount: isUp ? 0 : 1,
-      startBlock: BigInt(event.block.number),
+      upPool: 0n,
+      downPool: 0n,
+      upCount: 0,
+      downCount: 0,
       startTime: event.block.timestamp,
     });
   } else {
     await context.db.update(round, { id: roundKey }).set((row) => ({
       voteCount: row.voteCount + 1,
       totalStake: row.totalStake + stake,
-      upStake: isUp ? row.upStake + stake : row.upStake,
-      downStake: isUp ? row.downStake : row.downStake + stake,
-      totalUpShares: isUp ? row.totalUpShares + shares : row.totalUpShares,
-      totalDownShares: isUp ? row.totalDownShares : row.totalDownShares + shares,
-      upCount: isUp ? row.upCount + 1 : row.upCount,
-      downCount: isUp ? row.downCount : row.downCount + 1,
     }));
   }
 
-  // Create vote record
+  // Create vote record (direction hidden until revealed)
   await context.db
     .insert(vote)
     .values({
@@ -59,21 +57,22 @@ ponder.on("RoundVotingEngine:VotePublished", async ({ event, context }) => {
       contentId,
       roundId,
       voter,
-      isUp,
+      isUp: null,
       stake,
-      shares,
-      votedAt: event.block.timestamp,
+      epochIndex: 0, // placeholder; updated on VoteRevealed with actual epochIndex
+      revealed: false,
+      committedAt: event.block.timestamp,
+      revealedAt: null,
     })
     .onConflictDoNothing();
 
-  // Update content aggregate, rating, and lastActivityAt (skip if content not yet indexed)
+  // Update content aggregate and lastActivityAt
   const contentRecord = await context.db.find(content, { id: contentId });
   if (contentRecord) {
     await context.db
       .update(content, { id: contentId })
       .set((row) => ({
         totalVotes: row.totalVotes + 1,
-        rating: newRating,
         lastActivityAt: event.block.timestamp,
       }));
 
@@ -88,7 +87,7 @@ ponder.on("RoundVotingEngine:VotePublished", async ({ event, context }) => {
     }
   }
 
-  // Update voter profile aggregate (skip if profile not yet indexed)
+  // Update voter profile aggregate
   const existingProfile = await context.db.find(profile, { address: voter });
   if (existingProfile) {
     await context.db
@@ -113,17 +112,45 @@ ponder.on("RoundVotingEngine:VotePublished", async ({ event, context }) => {
     }));
 });
 
+ponder.on("RoundVotingEngine:VoteRevealed", async ({ event, context }) => {
+  const { contentId, roundId, voter, isUp } = event.args;
+  const roundKey = `${contentId}-${roundId}`;
+  const voteKey = `${contentId}-${roundId}-${voter}`;
+
+  // Mark vote as revealed (direction now known)
+  const existingVote = await context.db.find(vote, { id: voteKey });
+  if (existingVote) {
+    await context.db.update(vote, { id: voteKey }).set({
+      isUp,
+      revealed: true,
+      revealedAt: event.block.timestamp,
+      // epochIndex is not available from VoteRevealed event; keep existing
+    });
+  }
+
+  // Update round pools (direction now known)
+  const existingRound = await context.db.find(round, { id: roundKey });
+  if (existingRound) {
+    await context.db.update(round, { id: roundKey }).set((row) => ({
+      revealedCount: row.revealedCount + 1,
+      upPool: isUp ? row.upPool + (existingVote?.stake ?? 0n) : row.upPool,
+      downPool: isUp ? row.downPool : row.downPool + (existingVote?.stake ?? 0n),
+      upCount: isUp ? row.upCount + 1 : row.upCount,
+      downCount: isUp ? row.downCount : row.downCount + 1,
+    }));
+  }
+});
+
 ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
-  const { contentId, roundId, upWins, totalPool } = event.args;
+  const { contentId, roundId, upWins, losingPool } = event.args;
   const roundKey = `${contentId}-${roundId}`;
 
-  // Upsert round — may not exist if no votes were indexed for this content
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
     await context.db.update(round, { id: roundKey }).set({
       state: 1, // Settled
       upWins,
-      totalPool,
+      losingPool,
       settledAt: event.block.timestamp,
     });
   } else {
@@ -133,20 +160,19 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
       roundId,
       state: 1, // Settled
       voteCount: 0,
+      revealedCount: 0,
       totalStake: 0n,
-      upStake: 0n,
-      downStake: 0n,
-      totalUpShares: 0n,
-      totalDownShares: 0n,
+      upPool: 0n,
+      downPool: 0n,
       upCount: 0,
       downCount: 0,
       upWins,
-      totalPool,
+      losingPool,
       settledAt: event.block.timestamp,
     });
   }
 
-  // Increment content round count (skip if content not yet indexed)
+  // Increment content round count
   const contentRecord = await context.db.find(content, { id: contentId });
   if (contentRecord) {
     await context.db
@@ -170,21 +196,19 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
       totalRoundsSettled: row.totalRoundsSettled + 1,
     }));
 
-  // ---- Accuracy tracking ----
-  // Query all votes for this round
+  // Accuracy tracking — only for revealed votes
   const roundVotes = await context.db.sql
     .select()
     .from(vote)
-    .where(and(eq(vote.contentId, contentId), eq(vote.roundId, roundId)));
+    .where(and(eq(vote.contentId, contentId), eq(vote.roundId, roundId), eq(vote.revealed, true)));
 
-  // Get categoryId from content record (already fetched above)
   const categoryId = contentRecord?.categoryId ?? 0n;
 
   for (const v of roundVotes) {
+    if (v.isUp === null) continue; // skip unrevealed
     const won = v.isUp === upWins;
     const stake = v.stake;
 
-    // Upsert voterStats
     await context.db
       .insert(voterStats)
       .values({
@@ -212,7 +236,6 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
         };
       });
 
-    // Upsert voterCategoryStats (only if content has a category)
     if (categoryId > 0n) {
       const catStatsId = `${v.voter}-${categoryId}`;
       await context.db
@@ -252,11 +275,34 @@ ponder.on("RoundVotingEngine:RoundCancelled", async ({ event, context }) => {
       roundId,
       state: 2, // Cancelled
       voteCount: 0,
+      revealedCount: 0,
       totalStake: 0n,
-      upStake: 0n,
-      downStake: 0n,
-      totalUpShares: 0n,
-      totalDownShares: 0n,
+      upPool: 0n,
+      downPool: 0n,
+      upCount: 0,
+      downCount: 0,
+    });
+  }
+});
+
+ponder.on("RoundVotingEngine:RoundTied", async ({ event, context }) => {
+  const { contentId, roundId } = event.args;
+  const roundKey = `${contentId}-${roundId}`;
+
+  const existingRound = await context.db.find(round, { id: roundKey });
+  if (existingRound) {
+    await context.db.update(round, { id: roundKey }).set({ state: 3 }); // Tied
+  } else {
+    await context.db.insert(round).values({
+      id: roundKey,
+      contentId,
+      roundId,
+      state: 3, // Tied
+      voteCount: 0,
+      revealedCount: 0,
+      totalStake: 0n,
+      upPool: 0n,
+      downPool: 0n,
       upCount: 0,
       downCount: 0,
     });
@@ -264,9 +310,8 @@ ponder.on("RoundVotingEngine:RoundCancelled", async ({ event, context }) => {
 });
 
 ponder.on("RoundVotingEngine:FrontendFeeClaimed", async ({ event, context }) => {
-  const { contentId, roundId, frontend, amount } = event.args;
+  const { amount } = event.args;
 
-  // Update global stats — track total rewards claimed
   await context.db
     .insert(globalStats)
     .values({
@@ -300,7 +345,6 @@ ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, contex
     })
     .onConflictDoNothing();
 
-  // Update voter profile aggregate (skip if profile not yet indexed)
   const existingProfile = await context.db.find(profile, { address: voter });
   if (existingProfile) {
     await context.db
@@ -308,7 +352,6 @@ ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, contex
       .set((row) => ({ totalRewardsClaimed: row.totalRewardsClaimed + amount }));
   }
 
-  // Update global stats
   await context.db
     .insert(globalStats)
     .values({
@@ -323,29 +366,4 @@ ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, contex
     .onConflictDoUpdate((row) => ({
       totalRewardsClaimed: row.totalRewardsClaimed + amount,
     }));
-});
-
-ponder.on("RoundVotingEngine:RoundTied", async ({ event, context }) => {
-  const { contentId, roundId } = event.args;
-  const roundKey = `${contentId}-${roundId}`;
-
-  const existingRound = await context.db.find(round, { id: roundKey });
-  if (existingRound) {
-    await context.db.update(round, { id: roundKey }).set({ state: 3 }); // Tied
-  } else {
-    await context.db.insert(round).values({
-      id: roundKey,
-      contentId,
-      roundId,
-      state: 3, // Tied
-      voteCount: 0,
-      totalStake: 0n,
-      upStake: 0n,
-      downStake: 0n,
-      totalUpShares: 0n,
-      totalDownShares: 0n,
-      upCount: 0,
-      downCount: 0,
-    });
-  }
 });

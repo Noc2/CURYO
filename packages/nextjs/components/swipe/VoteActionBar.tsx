@@ -3,7 +3,6 @@
 import { useAccount } from "wagmi";
 import { TokenBalance } from "~~/components/shared/TokenBalance";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useClaimReward } from "~~/hooks/useClaimReward";
 import { useClaimableRewards } from "~~/hooks/useClaimableRewards";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
@@ -23,7 +22,6 @@ interface VoteActionBarProps {
  */
 export function VoteActionBar({ contentId, categoryId, onVote, isCommitting, isOwnContent }: VoteActionBarProps) {
   const { address } = useAccount();
-  const contentLabel = useContentLabel(categoryId);
   const { round, isLoading, roundId } = useRoundInfo(contentId);
   const {
     hasClaimable,

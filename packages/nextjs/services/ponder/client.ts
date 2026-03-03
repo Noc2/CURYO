@@ -182,12 +182,13 @@ export interface PonderVoteItem {
   contentId: string;
   roundId: string;
   voter: string;
-  isUp: boolean;
+  isUp: boolean | null; // null until revealed
   stake: string;
-  shares: string;
-  votedAt: string;
+  epochIndex: number; // 0=epoch-1 (100% weight), 1=epoch-2+ (25% weight)
+  revealed: boolean;
+  committedAt: string;
+  revealedAt: string | null;
   roundStartTime: string | null;
-  roundStartBlock: string | null;
   roundState: number | null;
 }
 
