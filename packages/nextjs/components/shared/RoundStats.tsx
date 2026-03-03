@@ -14,23 +14,30 @@ interface RoundStatsProps {
 
 /**
  * Displays stake and vote statistics for the current round on a specific content.
- * All votes are public — shows UP/DOWN pools and share counts in real-time.
- * Shows settlement status ("Awaiting X more votes" or "Ready to settle").
- * Shows user's own vote if they've voted in this round.
+ *
+ * tlock commit-reveal model:
+ * - During epoch 1: votes are hidden (commit phase). Only totalStake and voteCount are shown.
+ * - After epoch 1: keeper reveals votes. Revealed UP/DOWN pool breakdown is shown.
+ * - User's own commit is checked via voterCommitHash mapping.
  */
 export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   const { address } = useAccount();
   const contentLabel = useContentLabel(categoryId);
   const { round, isLoading, roundId, minVoters, maxVoters, isRoundFull, readyToSettle } = useRoundInfo(contentId);
-  const { phase } = useRoundPhase(contentId);
+  const { phase, isEpoch1 } = useRoundPhase(contentId);
 
-  // Read user's vote from the contract
-  const { data: myVoteData } = useScaffoldReadContract({
+  // Check if the current user has committed to this round
+  // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit, non-zero = committed)
+  const { data: myCommitHash } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
-    functionName: "getVote" as any,
+    functionName: "voterCommitHash" as any,
     args: [contentId, roundId, address] as any,
     query: { enabled: roundId > 0n && !!address },
   } as any);
+
+  const hasMyCommit =
+    myCommitHash != null &&
+    (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
 
   if (isLoading) {
     return (
@@ -44,20 +51,17 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
     );
   }
 
-  // Format stake values from 6 decimals to whole tokens
   const totalStakeFormatted = Number(round.totalStake) / 1e6;
   const voteCount = Number(round.voteCount);
+  const revealedCount = round.revealedCount;
+  const pendingCount = Math.max(0, voteCount - revealedCount);
 
-  // Pool breakdown (all public in real-time)
-  const upStakeFormatted = Number(round.upStake) / 1e6;
-  const downStakeFormatted = Number(round.downStake) / 1e6;
+  // Pool breakdown (only available after votes are revealed)
+  const upPoolFormatted = Number(round.upPool) / 1e6;
+  const downPoolFormatted = Number(round.downPool) / 1e6;
   const upCount = Number(round.upCount);
   const downCount = Number(round.downCount);
-
-  // Parse user's vote from contract data
-  const myVoteStake = myVoteData ? Number((myVoteData as any).stake ?? (myVoteData as any)[1] ?? 0n) : 0;
-  const myVoteIsUp = myVoteData ? ((myVoteData as any).isUp ?? (myVoteData as any)[2]) : false;
-  const hasMyVote = myVoteStake > 0;
+  const hasRevealedVotes = revealedCount > 0;
 
   return (
     <div className="flex flex-col gap-1.5 text-base text-base-content/60">
@@ -74,43 +78,71 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
             Votes
-            <InfoTooltip text={`Number of votes on this ${contentLabel} in the current round.`} position="bottom" />
+            <InfoTooltip
+              text={`Number of votes committed on this ${contentLabel} in the current round.`}
+              position="bottom"
+            />
           </span>
           <span className="font-semibold tabular-nums">{voteCount}</span>
         </div>
+        {/* Reveal progress */}
+        {voteCount > 0 && (
+          <>
+            <div className="w-px h-4 bg-base-content/10" />
+            <div className="flex items-center gap-2">
+              {pendingCount > 0 ? (
+                <span className="flex items-center gap-1">
+                  <span className="text-base-content/40">
+                    {revealedCount} revealed, {pendingCount} pending
+                  </span>
+                  <InfoTooltip
+                    text={
+                      isEpoch1
+                        ? "Votes are hidden until epoch 1 ends. The keeper reveals them automatically after the epoch."
+                        : "The keeper is revealing votes. Revealed votes are counted toward settlement."
+                    }
+                    position="bottom"
+                  />
+                </span>
+              ) : (
+                <span className="text-base-content/40">All {revealedCount} revealed</span>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* UP/DOWN pool breakdown */}
-      {(upCount > 0 || downCount > 0) && (
+      {/* UP/DOWN pool breakdown (only after reveals) */}
+      {hasRevealedVotes && (
         <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-success">
               UP
-              <InfoTooltip text="Votes and cREP in the UP pool." position="bottom" />
+              <InfoTooltip text="Revealed UP votes and committed cREP." position="bottom" />
             </span>
             <span className="font-semibold tabular-nums text-success">
-              {upCount} ({upStakeFormatted.toFixed(0)} cREP)
+              {upCount} ({upPoolFormatted.toFixed(0)} cREP)
             </span>
           </div>
           <div className="w-px h-4 bg-base-content/10" />
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-error">
               DOWN
-              <InfoTooltip text="Votes and cREP in the DOWN pool." position="bottom" />
+              <InfoTooltip text="Revealed DOWN votes and committed cREP." position="bottom" />
             </span>
             <span className="font-semibold tabular-nums text-error">
-              {downCount} ({downStakeFormatted.toFixed(0)} cREP)
+              {downCount} ({downPoolFormatted.toFixed(0)} cREP)
             </span>
           </div>
         </div>
       )}
 
-      {/* User's own vote in this round */}
-      {hasMyVote && (
+      {/* User's own commit status */}
+      {hasMyCommit && (
         <div className="flex items-center gap-2">
           <span>Your vote</span>
           <span className="font-semibold tabular-nums">
-            {myVoteIsUp ? "Up" : "Down"} · {(myVoteStake / 1e6).toFixed(0)} cREP
+            Committed{isEpoch1 ? " — hidden until epoch ends" : " — awaiting reveal"}
           </span>
         </div>
       )}
@@ -130,7 +162,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
             <span className="flex items-center gap-1 text-success/80">
               Ready to resolve
               <InfoTooltip
-                text={`At least ${minVoters} votes have been cast. Resolution can happen at any time.`}
+                text={`At least ${minVoters} votes committed. The keeper will settle after enough votes are revealed.`}
                 position="bottom"
               />
             </span>
@@ -142,7 +174,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
         <div className="flex items-center gap-1 text-success/80">
           <span>Rewards distributed</span>
           <InfoTooltip
-            text="Participation rewards are distributed when the round is resolved. Winners receive cREP from the losing pool based on their reward points."
+            text="Rewards are proportional to epoch-weighted stake. Epoch-1 voters earn 4× more per cREP than epoch-2+ voters."
             position="bottom"
           />
         </div>

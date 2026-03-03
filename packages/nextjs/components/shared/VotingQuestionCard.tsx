@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
@@ -21,9 +21,6 @@ interface VotingQuestionCardProps {
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
 }
-
-/** 24-hour cooldown in seconds */
-const VOTE_COOLDOWN_SECONDS = 24 * 60 * 60;
 
 /**
  * Displays the voting question and all voting controls in a separate card.
@@ -70,41 +67,18 @@ export function VotingQuestionCard({
   });
   const symbol = tokenSymbol ?? "cREP";
 
-  // Read user's vote from the contract
-  const { data: myVoteData } = useScaffoldReadContract({
+  // Check if user has committed to this round (tlock: direction hidden until reveal)
+  // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
+  const { data: myCommitHash } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
-    functionName: "getVote" as any,
+    functionName: "voterCommitHash" as any,
     args: [contentId, roundId, address] as any,
     query: { enabled: roundId > 0n && !!address },
   } as any);
 
-  const myVoteStake = myVoteData ? Number((myVoteData as any).stake ?? (myVoteData as any)[1] ?? 0n) : 0;
-  const myVoteIsUp = myVoteData ? ((myVoteData as any).isUp ?? (myVoteData as any)[2]) : false;
-  const hasMyVote = myVoteStake > 0;
-
-  // Vote cooldown: read last vote timestamp from contract (time-based, 24 hours)
-  const { data: lastVoteTimeRaw } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine" as any,
-    functionName: "lastVoteTimestamp" as any,
-    args: [contentId, address] as any,
-  } as any);
-
-  // Tick every 60s so the cooldown transitions from active→inactive without a page reload
-  const [nowSeconds, setNowSeconds] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const interval = setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 60_000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const cooldownInfo = useMemo(() => {
-    const lastVoteTime = lastVoteTimeRaw != null ? Number(BigInt(lastVoteTimeRaw as any)) : 0;
-    if (lastVoteTime === 0) return { active: false, remaining: 0, hoursSince: 0 };
-    const elapsed = nowSeconds - lastVoteTime;
-    const remaining = Math.max(0, VOTE_COOLDOWN_SECONDS - elapsed);
-    const hoursSince = Math.floor(elapsed / 3600);
-    const hoursRemaining = Math.ceil(remaining / 3600);
-    return { active: remaining > 0, remaining, hoursSince, hoursRemaining };
-  }, [lastVoteTimeRaw, nowSeconds]);
+  const hasMyVote =
+    myCommitHash != null &&
+    (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
 
   return (
     <div
@@ -173,16 +147,13 @@ export function VotingQuestionCard({
         <div className="flex items-center justify-center gap-2 lg:gap-3 mb-3">
           {address ? (
             hasMyVote ? (
+              /* Already committed — direction hidden until epoch ends (tlock) */
               <div
                 className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
-                data-tip={`Your cREP is locked until the round is resolved. After resolution, there is a 24-hour cooldown before you can vote on this ${contentLabel} again.`}
+                data-tip="Your vote is committed and encrypted until the epoch ends. The keeper reveals it automatically."
               >
-                <span className={`text-base font-semibold ${myVoteIsUp ? "text-success" : "text-error"}`}>
-                  Voted {myVoteIsUp ? "Up" : "Down"}
-                </span>
-                <span className="text-base text-base-content/50">
-                  {(myVoteStake / 1e6).toFixed(0)} {symbol}
-                </span>
+                <span className="text-base font-semibold text-primary">Committed</span>
+                <span className="text-base text-base-content/50">hidden</span>
               </div>
             ) : isOwnContent ? (
               <div
@@ -197,13 +168,6 @@ export function VotingQuestionCard({
                 data-tip="This round has reached the maximum number of voters. A new round will start after resolution."
               >
                 <span className="text-base text-base-content/40">Round full</span>
-              </div>
-            ) : cooldownInfo.active ? (
-              <div
-                className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
-                data-tip={`You voted on this ${contentLabel} ${cooldownInfo.hoursSince} hour${cooldownInfo.hoursSince !== 1 ? "s" : ""} ago. You can vote again in ${cooldownInfo.hoursRemaining} hour${cooldownInfo.hoursRemaining !== 1 ? "s" : ""}.`}
-              >
-                <span className="text-base text-base-content/40">Cooldown &middot; {cooldownInfo.hoursRemaining}h</span>
               </div>
             ) : (
               <>

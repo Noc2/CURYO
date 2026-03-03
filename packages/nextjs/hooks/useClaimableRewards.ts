@@ -1,10 +1,17 @@
 "use client";
 
-import { useAccount } from "wagmi";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useEffect, useState } from "react";
+import { encodePacked, keccak256 } from "viem";
+import { useAccount, usePublicClient } from "wagmi";
+import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 // RoundState enum (matching Solidity)
 const RoundState = { Open: 0, Settled: 1, Cancelled: 2, Tied: 3 } as const;
+
+// epochWeightBps: epoch-1 = 10000 (100%), epoch-2+ = 2500 (25%)
+function epochWeightBps(epochIndex: number): number {
+  return epochIndex === 0 ? 10000 : 2500;
+}
 
 interface ClaimableReward {
   hasClaimable: boolean;
@@ -18,11 +25,13 @@ interface ClaimableReward {
 
 /**
  * Hook to check if user has claimable rewards for a specific content from the active round.
- * Queries the contract directly for vote data (no localStorage needed -- votes are public).
- * Returns reward amount if won, or lost amount if lost.
+ * Uses voterCommitHash + getCommit for tlock commit-reveal (no getVote/hasVoted).
+ * Reward is epoch-weighted: effectiveStake * voterPool / weightedWinningStake.
  */
 export function useClaimableRewards(contentId: bigint): ClaimableReward {
   const { address } = useAccount();
+  const publicClient = usePublicClient();
+  const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
 
   // Get active round ID
   const { data: rawActiveRoundId } = useScaffoldReadContract({
@@ -33,20 +42,29 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
   } as any);
   const roundId = (rawActiveRoundId as unknown as bigint) ?? 0n;
 
-  // Check if user voted in this round
-  const { data: hasVoted } = useScaffoldReadContract({
+  // Get user's commitHash for this round (0 = not committed)
+  const { data: rawCommitHash } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
-    functionName: "hasVoted" as any,
+    functionName: "voterCommitHash" as any,
     args: [contentId, roundId, address] as any,
     query: { enabled: !!address && roundId > 0n },
   } as any);
+  const commitHash = rawCommitHash as unknown as `0x${string}` | undefined;
+  const hasCommitted =
+    commitHash != null && commitHash !== "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-  // Get the user's vote data
-  const { data: rawVoteData } = useScaffoldReadContract({
+  // Compute commitKey = keccak256(abi.encodePacked(voter, commitHash)) for getCommit lookup
+  const commitKey =
+    hasCommitted && address && commitHash
+      ? keccak256(encodePacked(["address", "bytes32"], [address as `0x${string}`, commitHash]))
+      : undefined;
+
+  // Get the full commit data (stake, epochIndex, isUp, revealed)
+  const { data: rawCommitData } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
-    functionName: "getVote" as any,
-    args: [contentId, roundId, address] as any,
-    query: { enabled: !!address && roundId > 0n && (hasVoted as unknown as boolean) === true },
+    functionName: "getCommit" as any,
+    args: [contentId, roundId, commitKey] as any,
+    query: { enabled: !!commitKey },
   } as any);
 
   // Get round state
@@ -57,7 +75,7 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     query: { enabled: roundId > 0n },
   } as any);
 
-  // Check if already claimed
+  // Check if already claimed (rewardClaimed mapping in RoundRewardDistributor)
   const { data: alreadyClaimed, isLoading: claimedLoading } = useScaffoldReadContract({
     contractName: "RoundRewardDistributor" as any,
     functionName: "rewardClaimed" as any,
@@ -65,7 +83,7 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     query: { enabled: !!address && roundId > 0n },
   } as any);
 
-  // Get reward pool data for calculating reward amount
+  // Get reward pool data
   const { data: voterPool } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "roundVoterPool" as any,
@@ -82,15 +100,17 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
 
   const isLoading = roundLoading || claimedLoading;
 
-  // Parse vote data
-  const voteData = rawVoteData as unknown as
-    | { voter: string; stake: bigint; shares: bigint; isUp: boolean; frontend: string }
+  // Parse commit data
+  const commitData = rawCommitData as unknown as
+    | { voter: string; stakeAmount: bigint; epochIndex: number; revealed: boolean; isUp: boolean }
     | undefined;
-  const stakeWei = voteData?.stake ?? 0n;
-  const isUp = voteData?.isUp ?? false;
 
-  // No vote or not applicable
-  if (roundId === 0n || !roundData || !hasVoted || alreadyClaimed || isLoading || stakeWei === 0n) {
+  const stakeWei = commitData?.stakeAmount ?? 0n;
+  const isUp = commitData?.isUp ?? false;
+  const epochIndex = commitData?.epochIndex ?? 0;
+
+  // No commit or not applicable
+  if (roundId === 0n || !roundData || !hasCommitted || alreadyClaimed || isLoading || stakeWei === 0n) {
     return {
       hasClaimable: false,
       epochId: roundId,
@@ -102,10 +122,9 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     };
   }
 
-  // roundData may be returned as a named struct or positional tuple depending on ABI encoding
   const round = roundData as any;
-  const state = Number(round.state ?? round[2] ?? 0);
-  const upWins = round.upWins ?? round[11] ?? false;
+  const state = Number(round.state ?? round[1] ?? 0);
+  const upWins = round.upWins ?? round[9] ?? false;
 
   // Tied: full refund of stake
   if (state === RoundState.Tied) {
@@ -161,14 +180,18 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     };
   }
 
-  // User won -- calculate reward (stake returned + proportional pool share)
+  // User won — calculate reward using epoch-weighted effective stake
+  // effectiveStake = stakeAmount * epochWeightBps / 10000
+  // reward = stakeAmount + (effectiveStake * voterPool / weightedWinningStake)
   let reward = stakeWei;
 
   if (voterPool != null && winningStake != null) {
     const pool = BigInt(voterPool as any);
-    const winning = BigInt(winningStake as any);
-    if (winning > 0n) {
-      const poolShare = (stakeWei * pool) / winning;
+    const weighted = BigInt(winningStake as any);
+    if (weighted > 0n) {
+      const w = BigInt(epochWeightBps(epochIndex));
+      const effectiveStake = (stakeWei * w) / 10000n;
+      const poolShare = (effectiveStake * pool) / weighted;
       reward += poolShare;
     }
   }

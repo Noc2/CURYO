@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 import { TokenBalance } from "~~/components/shared/TokenBalance";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -16,8 +15,6 @@ interface VoteActionBarProps {
   isCommitting: boolean;
   isOwnContent?: boolean;
 }
-
-const VOTE_COOLDOWN_SECONDS = 24 * 60 * 60; // 24 hours
 
 /**
  * Vote action bar with total staked stat and vote buttons.
@@ -48,40 +45,18 @@ export function VoteActionBar({ contentId, categoryId, onVote, isCommitting, isO
   const totalStake = round?.totalStake ?? 0n;
   const formattedStake = Number(totalStake) / 1e6;
 
-  // Read user's vote from the contract
-  const { data: myVoteData } = useScaffoldReadContract({
+  // Check if user has committed to this round (tlock: direction hidden until reveal)
+  // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
+  const { data: myCommitHash } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
-    functionName: "getVote" as any,
+    functionName: "voterCommitHash" as any,
     args: [contentId, roundId, address] as any,
     query: { enabled: roundId > 0n && !!address },
   } as any);
 
-  const myVoteStake = myVoteData ? Number((myVoteData as any).stake ?? (myVoteData as any)[1] ?? 0n) : 0;
-  const myVoteIsUp = myVoteData ? ((myVoteData as any).isUp ?? (myVoteData as any)[2]) : false;
-  const hasMyVote = myVoteStake > 0;
-
-  // Vote cooldown: read last vote timestamp from contract (time-based, 24 hours)
-  const { data: lastVoteTimeRaw } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine" as any,
-    functionName: "lastVoteTimestamp" as any,
-    args: [contentId, address] as any,
-  } as any);
-
-  // Tick every 60s so the cooldown transitions from active→inactive without a page reload
-  const [nowSeconds, setNowSeconds] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const interval = setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 60_000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const cooldownInfo = useMemo(() => {
-    const lastVoteTime = lastVoteTimeRaw != null ? Number(BigInt(lastVoteTimeRaw as any)) : 0;
-    if (lastVoteTime === 0) return { active: false, remaining: 0, hoursRemaining: 0 };
-    const elapsed = nowSeconds - lastVoteTime;
-    const remaining = Math.max(0, VOTE_COOLDOWN_SECONDS - elapsed);
-    const hoursRemaining = Math.ceil(remaining / 3600);
-    return { active: remaining > 0, remaining, hoursRemaining };
-  }, [lastVoteTimeRaw, nowSeconds]);
+  const hasMyVote =
+    myCommitHash != null &&
+    (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
 
   return (
     <div className="flex flex-col items-center gap-1 w-full">
@@ -123,17 +98,13 @@ export function VoteActionBar({ contentId, categoryId, onVote, isCommitting, isO
         </div>
 
         {hasMyVote ? (
-          /* Already voted — show indicator */
+          /* Already committed — direction hidden until epoch ends */
           <div
             className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
-            data-tip={`Your cREP is locked until the round is resolved. After resolution, there is a 24-hour cooldown before you can vote on this ${contentLabel} again.`}
+            data-tip={`Your vote is committed and hidden until the epoch ends. The keeper will reveal it automatically.`}
           >
-            <span className={`text-base font-semibold ${myVoteIsUp ? "text-success" : "text-error"}`}>
-              Voted {myVoteIsUp ? "Up" : "Down"}
-            </span>
-            <span className="text-base text-base-content/50">
-              {(myVoteStake / 1e6).toFixed(0)} {symbol}
-            </span>
+            <span className="text-base font-semibold text-primary">Committed</span>
+            <span className="text-base text-base-content/50">hidden</span>
           </div>
         ) : isOwnContent ? (
           <div
@@ -141,13 +112,6 @@ export function VoteActionBar({ contentId, categoryId, onVote, isCommitting, isO
             data-tip="Content submitters cannot vote on their own submissions."
           >
             <span className="text-base text-base-content/40">Your submission</span>
-          </div>
-        ) : cooldownInfo.active ? (
-          <div
-            className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
-            data-tip={`You voted on this ${contentLabel} recently. You can vote again in ~${cooldownInfo.hoursRemaining} hour${cooldownInfo.hoursRemaining !== 1 ? "s" : ""}.`}
-          >
-            <span className="text-base text-base-content/40">Cooldown &middot; ~{cooldownInfo.hoursRemaining}h</span>
           </div>
         ) : (
           /* No vote yet — show vote buttons */

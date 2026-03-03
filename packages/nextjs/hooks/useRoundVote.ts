@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { encodePacked, keccak256 } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
@@ -17,9 +18,13 @@ interface RoundVoteParams {
 }
 
 /**
- * Hook for public round-based voting using cREP tokens.
- * Handles: token approval -> vote() tx.
- * Votes are immediately public (no commit-reveal).
+ * Hook for tlock commit-reveal round voting using cREP tokens.
+ * Handles: token approval -> commitVote() tx.
+ *
+ * In mockMode (local dev): ciphertext = abi.encodePacked(uint8 isUp, bytes32 salt, uint256 contentId)
+ * In production: ciphertext would be tlock-encrypted via drand (TODO: integrate @drand/tlock-js)
+ *
+ * The keeper automatically reveals votes after each epoch ends.
  */
 export function useRoundVote() {
   const { address } = useAccount();
@@ -29,8 +34,8 @@ export function useRoundVote() {
   const [error, setError] = useState<string | null>(null);
   const { requireAcceptance } = useTermsAcceptance();
   const queryClient = useQueryClient();
+  const [isMockMode, setIsMockMode] = useState(true); // Default to true for safety
 
-  // Write contract for cREP token
   const { writeContractAsync: writeCRep } = useScaffoldWriteContract({
     contractName: "CuryoReputation",
   });
@@ -43,8 +48,32 @@ export function useRoundVote() {
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const publicClient = usePublicClient();
 
+  // Read mockMode from contract once on mount
+  useEffect(() => {
+    if (!publicClient || !votingEngineInfo) return;
+
+    let cancelled = false;
+
+    publicClient
+      .readContract({
+        address: votingEngineInfo.address,
+        abi: votingEngineInfo.abi,
+        functionName: "mockMode",
+        args: [],
+      })
+      .then((result: any) => {
+        if (!cancelled) setIsMockMode(Boolean(result));
+      })
+      .catch(() => {
+        // Default to mockMode=true (safe for local dev)
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [publicClient, votingEngineInfo]);
+
   const commitVote = async ({ contentId, isUp, stakeAmount, frontendCode, submitter }: RoundVoteParams) => {
-    // Require terms acceptance before voting
     const accepted = await requireAcceptance("vote");
     if (!accepted) return false;
 
@@ -82,11 +111,31 @@ export function useRoundVote() {
     try {
       // Convert to 6 decimals (cREP uses 6 decimals)
       const stakeWei = BigInt(stakeAmount * 1e6);
-
-      // Approve tokens if needed, then vote
       const frontend = frontendCode ?? scaffoldConfig.frontendCode ?? "0x0000000000000000000000000000000000000000";
 
-      // Check current allowance and only approve if insufficient
+      // Generate random 32-byte salt client-side
+      const saltBytes = crypto.getRandomValues(new Uint8Array(32));
+      const salt = `0x${Array.from(saltBytes)
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("")}` as `0x${string}`;
+
+      // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
+      // This matches: keccak256(abi.encodePacked(isUp, salt, contentId)) in RoundVotingEngine
+      const commitHash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentId]));
+
+      let ciphertext: `0x${string}`;
+      if (isMockMode) {
+        // MockMode: 65-byte plaintext = abi.encodePacked(uint8(isUp?1:0), bytes32 salt, uint256 contentId)
+        // The keeper decodes this directly without tlock decryption
+        ciphertext = encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, contentId]);
+      } else {
+        // Production: tlock-encrypt plaintext = abi.encodePacked(uint8 isUp, bytes32 salt) to epoch end
+        // TODO: integrate @drand/tlock-js for production tlock encryption
+        // For now, fall back to mock encoding (not secure — keeper can read direction before reveal)
+        ciphertext = encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, contentId]);
+      }
+
+      // Approve tokens if needed
       if (publicClient && crepInfo) {
         const currentAllowance = await publicClient.readContract({
           address: crepInfo.address,
@@ -125,16 +174,16 @@ export function useRoundVote() {
         });
       }
 
-      // Re-check wallet connection before submitting the vote
+      // Re-check wallet connection before submitting
       if (!address) {
         setError("Wallet disconnected after approval. Your allowance is set — please reconnect and retry.");
         return false;
       }
 
-      // Submit the public vote transaction
+      // Submit the encrypted vote commitment
       await (writeVoting as any)({
-        functionName: "vote",
-        args: [contentId, isUp, stakeWei, frontend],
+        functionName: "commitVote",
+        args: [contentId, commitHash, ciphertext, stakeWei, frontend],
       });
 
       // Immediately refetch voting stakes so the navbar staked amount updates
@@ -142,7 +191,7 @@ export function useRoundVote() {
 
       return true;
     } catch (e: any) {
-      console.error("Round vote failed:", e);
+      console.error("Round vote commit failed:", e);
       setError(e?.shortMessage || e?.message || "Failed to submit vote");
       return false;
     } finally {
