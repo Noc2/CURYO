@@ -135,12 +135,12 @@ contract CategoryRegistryBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (admin, admin, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (admin, admin, address(crepToken), address(registry), true))
                 )
             )
         );
         votingEngine.setTreasury(address(100));
-        votingEngine.setConfig(10, 50, 7 days, 2, 200, 30, 3, 500, 1000e6);
+        votingEngine.setConfig(1 hours, 7 days, 3, 1000);
 
         mockVoterIdNFT = new MockVoterIdNFT_Cat();
 

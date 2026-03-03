@@ -248,8 +248,10 @@ contract RoundIntegrationTest is Test {
     ) internal returns (uint256 roundId) {
         _commitAllThenReveal(voters, contentId, directions, stakeAmount);
         roundId = _getActiveOrLatestRoundId(contentId);
-        // Wait the full settlement delay (one epoch after threshold)
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Wait the full settlement delay: thresholdReachedAt + epochDuration
+        // (use absolute timestamp from contract state to avoid Foundry block.timestamp stale-read issue)
+        RoundLib.Round memory r = votingEngine.getRound(contentId, roundId);
+        vm.warp(r.thresholdReachedAt + EPOCH_DURATION + 1);
         _settle(contentId, roundId);
     }
 
@@ -309,8 +311,8 @@ contract RoundIntegrationTest is Test {
         assertEq(round.downCount, 1, "DOWN count should be 1");
         assertGt(round.thresholdReachedAt, 0, "Threshold should have been reached");
 
-        // Wait settlement delay (one full epoch after threshold)
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Wait settlement delay (one full epoch after threshold) — use absolute timestamp
+        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         round = votingEngine.getRound(contentId, roundId);
@@ -396,12 +398,14 @@ contract RoundIntegrationTest is Test {
 
         uint256 roundId = votingEngine.getActiveRoundId(contentId);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rMV0 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rMV0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, salt1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, salt2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, salt3);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rMV1 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rMV1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
@@ -470,13 +474,15 @@ contract RoundIntegrationTest is Test {
         assertEq(round2, 1, "Content 2 should have round 1");
 
         // Reveal and settle both rounds together
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rCC0 = votingEngine.getRound(contentId1, round1);
+        vm.warp(rCC0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId1, round1, _commitKey(voter1, ch1a), true, s1a);
         votingEngine.revealVoteByCommitKey(contentId1, round1, _commitKey(voter2, ch1b), false, s1b);
         votingEngine.revealVoteByCommitKey(contentId2, round2, _commitKey(voter3, ch2a), true, s2a);
         votingEngine.revealVoteByCommitKey(contentId2, round2, _commitKey(voter4, ch2b), false, s2b);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rCC1 = votingEngine.getRound(contentId1, round1);
+        vm.warp(rCC1.thresholdReachedAt + EPOCH_DURATION + 1);
 
         // Settle content 1
         votingEngine.settleRound(contentId1, round1);
@@ -534,26 +540,28 @@ contract RoundIntegrationTest is Test {
         votingEngine.commitVote(contentId2, ch2b, _mockCiphertext(false, s2b, contentId2), STAKE, address(0));
         vm.stopPrank();
 
-        // Reveal content 1 after its epoch ends
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Reveal both contents after their epochs end.
+        // content1 started at T0=1000, content2 started 5 minutes later at ~1300.
+        // To reveal both, warp to the LATER epoch end (content2's epoch end).
+        RoundLib.Round memory rCS0_2 = votingEngine.getRound(contentId2, 1);
+        vm.warp(rCS0_2.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter1, ch1a), true, s1a);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter2, ch1b), false, s1b);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter3, ch1c), true, s1c);
-        // Reveal content 2 as well (its epoch has also ended by now)
+        // content2's epoch has also ended by now
         votingEngine.revealVoteByCommitKey(contentId2, 1, _commitKey(voter4, ch2a), true, s2a);
         votingEngine.revealVoteByCommitKey(contentId2, 1, _commitKey(voter5, ch2b), false, s2b);
 
-        // Settle content 1 after settlement delay
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Settle content 1 after settlement delay — use absolute thresholdReachedAt
+        RoundLib.Round memory rCS1_1 = votingEngine.getRound(contentId1, 1);
+        vm.warp(rCS1_1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId1, 1);
 
         RoundLib.Round memory r1 = votingEngine.getRound(contentId1, 1);
         assertEq(uint256(r1.state), uint256(RoundLib.RoundState.Settled), "Content 1 should be settled");
         assertTrue(r1.upWins, "UP should win content 1");
 
-        // Content 2 threshold reached but settlement delay may not have elapsed yet
-        // The settlement delay is one epoch from thresholdReachedAt
-        // We already waited one more epoch above, so it should be settleable
+        // Content 2 threshold reached — settlement delay also elapsed since we warped past it above
         votingEngine.settleRound(contentId2, 1);
         RoundLib.Round memory r2 = votingEngine.getRound(contentId2, 1);
         assertEq(uint256(r2.state), uint256(RoundLib.RoundState.Tied), "Content 2 should be tied");
@@ -606,15 +614,17 @@ contract RoundIntegrationTest is Test {
         assertTrue(votingEngine.hasCommitted(contentId2, 1, voter1), "Voter1 should have committed on content 2");
         assertFalse(votingEngine.hasCommitted(contentId1, 1, voter3), "Voter3 should not have committed on content 1");
 
-        // Reveal all after epoch boundary
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Reveal all after epoch boundary (absolute)
+        RoundLib.Round memory rSV0 = votingEngine.getRound(contentId1, 1);
+        vm.warp(rSV0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter2, ch2), false, s2);
         votingEngine.revealVoteByCommitKey(contentId2, 1, _commitKey(voter1, ch3), false, s3);
         votingEngine.revealVoteByCommitKey(contentId2, 1, _commitKey(voter3, ch4), true, s4);
 
-        // Settle both after settlement delay
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Settle both after settlement delay (absolute)
+        RoundLib.Round memory rSV1 = votingEngine.getRound(contentId1, 1);
+        vm.warp(rSV1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId1, 1);
         votingEngine.settleRound(contentId2, 1);
 
@@ -845,14 +855,16 @@ contract RoundIntegrationTest is Test {
 
         uint256 roundId = votingEngine.getActiveRoundId(contentId);
 
-        // Advance past epoch boundary and reveal
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Advance past epoch boundary and reveal (absolute)
+        RoundLib.Round memory rCU0 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rCU0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 
-        // Wait settlement delay
+        // Wait settlement delay (absolute)
         uint256 reserveBefore = votingEngine.consensusReserve();
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rCU1 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rCU1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
@@ -889,11 +901,13 @@ contract RoundIntegrationTest is Test {
 
         uint256 roundId = votingEngine.getActiveRoundId(contentId);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rCD0 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rCD0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), false, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), false, s2);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rCD1 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rCD1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
@@ -949,7 +963,10 @@ contract RoundIntegrationTest is Test {
         votingEngine.commitVote(contentId, ch1, _mockCiphertext(true, salt1, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        // Same voter, same round — second commit reverts
+        // Warp past 24h cooldown so CooldownActive doesn't fire first
+        vm.warp(block.timestamp + 25 hours);
+
+        // Same voter, same round — second commit reverts with AlreadyCommitted (cooldown cleared)
         bytes32 salt2 = keccak256(abi.encodePacked(voter1, contentId, false, uint256(1)));
         bytes32 ch2 = _commitHash(false, salt2, contentId);
 
@@ -1022,11 +1039,13 @@ contract RoundIntegrationTest is Test {
         uint256 roundId = votingEngine.getActiveRoundId(contentId);
         uint256 reserveBefore = votingEngine.consensusReserve();
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rUR0 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rUR0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rUR1 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rUR1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         assertLt(votingEngine.consensusReserve(), reserveBefore, "Reserve should decrease for consensus subsidy");
@@ -1076,11 +1095,13 @@ contract RoundIntegrationTest is Test {
         assertEq(cfg.minVoters, 2, "Snapshot should still have minVoters=2");
 
         // Reveal and settle using snapshotted config (minVoters=2, we have 2 revealed votes)
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rCSN0 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rCSN0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rCSN1 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rCSN1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         assertEq(
@@ -1252,11 +1273,13 @@ contract RoundIntegrationTest is Test {
         votingEngine.commitVote(contentId, ch1, _mockCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        // Advance into epoch-2 — voter2 commits (saw epoch-1 results after reveal)
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Advance into epoch-2 — use absolute time from round.startTime
+        // voter2 commits after epoch-1 ends (epoch-2, epochIndex=1 → 25% weight)
+        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        RoundLib.Round memory rEW0 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rEW0.startTime + EPOCH_DURATION + 1);
 
         // Reveal voter1's vote to make results visible
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
 
         // voter2 commits in epoch-2 (informed, epochIndex=1 → 25% weight)
@@ -1272,8 +1295,9 @@ contract RoundIntegrationTest is Test {
         RoundLib.Commit memory commit2 = votingEngine.getCommit(contentId, roundId, ck2);
         assertEq(commit2.epochIndex, 1, "Second-epoch voter should have epochIndex=1");
 
-        // Reveal voter2's vote after another epoch boundary
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Reveal voter2's vote after another epoch boundary (absolute: startTime + 2 * EPOCH_DURATION + 2)
+        // voter2 committed at startTime+EPOCH_DURATION+1, so revealableAfter = startTime+2*EPOCH_DURATION+1
+        vm.warp(rEW0.startTime + 2 * EPOCH_DURATION + 2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, false, s2);
 
         // Verify weighted pools: UP = STAKE (100%), DOWN = STAKE * 2500 / 10000 = STAKE/4
@@ -1282,7 +1306,9 @@ contract RoundIntegrationTest is Test {
         assertEq(round.weightedDownPool, STAKE * 2500 / 10000, "Epoch-2 DOWN vote should have 25% weight");
 
         // UP wins despite equal raw stakes (epoch-weighting penalises late voter)
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Use thresholdReachedAt (set when 2nd reveal happened) + EPOCH_DURATION + 1
+        RoundLib.Round memory rEW1 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rEW1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         RoundLib.Round memory settled = votingEngine.getRound(contentId, roundId);
@@ -1314,8 +1340,9 @@ contract RoundIntegrationTest is Test {
 
         uint256 roundId = votingEngine.getActiveRoundId(contentId);
 
-        // Reveal after epoch boundary
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // Reveal after epoch boundary (absolute)
+        RoundLib.Round memory rSR0 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rSR0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), false, s2);
 
@@ -1323,8 +1350,9 @@ contract RoundIntegrationTest is Test {
         vm.expectRevert(RoundVotingEngine.SettlementDelayNotElapsed.selector);
         votingEngine.settleRound(contentId, roundId);
 
-        // After one more epoch — can settle
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        // After one more epoch — can settle (absolute: thresholdReachedAt + epochDuration)
+        RoundLib.Round memory rSR1 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rSR1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         assertEq(
@@ -1422,12 +1450,14 @@ contract RoundIntegrationTest is Test {
 
         roundId = votingEngine.getActiveRoundId(contentId);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rFW0 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rFW0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
 
-        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        RoundLib.Round memory rFW1 = votingEngine.getRound(contentId, roundId);
+        vm.warp(rFW1.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
     }
 
