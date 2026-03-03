@@ -22,6 +22,10 @@ export interface ActiveVoteWithDeadline {
 export interface ActiveVotesWithDeadlines {
   votes: ActiveVoteWithDeadline[];
   earliestDeadline: string | null;
+  /** Formatted time until the earliest unrevealed vote's epoch 1 ends (i.e. when it gets revealed). */
+  earliestReveal: string | null;
+  /** True when at least one unrevealed vote has already passed its epoch-1 window (keeper reveal pending). */
+  hasPendingReveals: boolean;
   isLoading: boolean;
 }
 
@@ -117,7 +121,20 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
     earliestDeadline = formatTimeRemaining(minRemaining);
   }
 
-  return { votes, earliestDeadline, isLoading };
+  // Reveal-specific countdown: epoch-1 end time for unrevealed votes
+  let earliestReveal: string | null = null;
+  let hasPendingReveals = false;
+  const unrevealedVotes = votes.filter(v => !v.revealed);
+  if (unrevealedVotes.length > 0) {
+    const stillInEpoch1 = unrevealedVotes.filter(v => v.epoch1Remaining > 0);
+    if (stillInEpoch1.length > 0) {
+      const minEpoch1Remaining = Math.min(...stillInEpoch1.map(v => v.epoch1Remaining));
+      earliestReveal = formatTimeRemaining(minEpoch1Remaining);
+    }
+    hasPendingReveals = unrevealedVotes.some(v => v.epoch1Remaining === 0);
+  }
+
+  return { votes, earliestDeadline, earliestReveal, hasPendingReveals, isLoading };
 }
 
 export { formatTimeRemaining };

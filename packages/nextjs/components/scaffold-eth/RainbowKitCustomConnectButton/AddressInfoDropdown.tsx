@@ -129,7 +129,7 @@ export const AddressInfoDropdown = ({
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked: votingStaked } = useVotingStakes(address);
   const { claimAll, isClaiming, progress } = useClaimAll();
-  const { earliestDeadline } = useActiveVotesWithDeadlines(address);
+  const { earliestDeadline, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
 
   const claimableFormatted =
     totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
@@ -164,7 +164,12 @@ export const AddressInfoDropdown = ({
   // Build tooltip showing stake breakdown
   const stakeParts: string[] = [];
   if (totalSubmissionStake > 0) stakeParts.push(`${totalSubmissionStake} cREP submissions`);
-  if (votingStaked > 0) stakeParts.push(`${votingStaked} cREP voting`);
+  if (votingStaked > 0) {
+    let votingLabel = `${votingStaked} cREP voting`;
+    if (earliestReveal) votingLabel += ` · reveals in ${earliestReveal}`;
+    else if (hasPendingReveals) votingLabel += ` · pending reveal`;
+    stakeParts.push(votingLabel);
+  }
   if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
   const stakeTooltip = stakeParts.join(" · ");
 
@@ -203,8 +208,8 @@ export const AddressInfoDropdown = ({
           className="tooltip tooltip-top text-sm text-base-content/40 text-left px-4 pl-12 cursor-help"
           data-tip={
             earliestDeadline
-              ? `Staked in active rounds (max ${earliestDeadline} until earliest expiry). Rounds usually settle sooner.`
-              : "Staked in active rounds. Rounds usually settle well before the max duration."
+              ? `Staked in active rounds. Votes revealed each epoch (~1h). If unsettled after 7 days, stakes are refunded.`
+              : "Staked in active rounds. If unsettled after 7 days, stakes are refunded."
           }
         >
           {activeFormatted} cREP in active votes
@@ -258,8 +263,8 @@ export const AddressInfoDropdown = ({
           className="tooltip tooltip-right text-sm text-base-content/40 hidden xl:inline xl:px-2 cursor-help"
           data-tip={
             earliestDeadline
-              ? `Staked in active rounds (max ${earliestDeadline} until earliest expiry). Rounds usually settle sooner.`
-              : "Staked in active rounds. Rounds usually settle well before the max duration."
+              ? `Staked in active rounds. Votes revealed each epoch (~1h). If unsettled after 7 days, stakes are refunded.`
+              : "Staked in active rounds. If unsettled after 7 days, stakes are refunded."
           }
         >
           {activeFormatted} cREP in active votes
