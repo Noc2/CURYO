@@ -10,10 +10,21 @@ test.describe("Portfolio page", () => {
     const heading = page.getByRole("heading", { name: "Portfolio" });
     await expect(heading).toBeVisible({ timeout: 15_000 });
 
-    // Stats are inside main — scope to avoid sidebar matches
+    // Wait for wallet connection to propagate — the page shows a connect prompt
+    // until wagmi's isConnected becomes true (can take a few seconds after localStorage injection)
     const main = page.locator("main");
     const totalVotesLabel = main.getByText("Total Votes");
-    await expect(totalVotesLabel).toBeVisible({ timeout: 10_000 });
+    const connectPrompt = main.getByText("Connect your wallet");
+
+    // If the connect prompt appears, reload to give wagmi time to reconnect
+    try {
+      await expect(totalVotesLabel).toBeVisible({ timeout: 10_000 });
+    } catch {
+      // Wallet not connected yet — reload and retry
+      await page.reload();
+      await expect(heading).toBeVisible({ timeout: 15_000 });
+      await expect(totalVotesLabel).toBeVisible({ timeout: 15_000 });
+    }
 
     const resolvedLabel = main.getByText("Resolved");
     await expect(resolvedLabel).toBeVisible({ timeout: 10_000 });
