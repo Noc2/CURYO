@@ -1,6 +1,6 @@
 # Curyo — Bot (CLI Voting & Content Submission)
 
-Command-line tool for automated content submission and voting. Discovers trending content from external platforms, submits it to the ContentRegistry, and rates content using pluggable strategies backed by external APIs.
+Command-line tool for automated content submission and voting. Discovers trending content from external platforms, submits it to the ContentRegistry, and rates content using pluggable strategies backed by external APIs. Votes use **tlock commit-reveal**: the bot encrypts vote directions with timelock encryption and commits them on-chain; the Keeper reveals and settles after each epoch.
 
 ## Quick Start
 
@@ -18,7 +18,7 @@ Requires a running Ponder indexer (`yarn ponder:dev`) and configured environment
 | Command | Description |
 |---|---|
 | `yarn bot:submit` | Discover trending content from platforms and submit to registry |
-| `yarn bot:vote` | Rate content using external APIs and place votes on-chain |
+| `yarn bot:vote` | Rate content and commit encrypted votes via tlock commit-reveal |
 | `yarn bot:status` | Check wallet balances and Voter ID ownership |
 
 ## Configuration

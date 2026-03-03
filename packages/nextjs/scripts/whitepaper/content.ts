@@ -583,7 +583,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Cryptographic anti-herding: tlock ensures votes are provably hidden until the epoch ends, enforced by the drand randomness beacon. No voter can see others' directions during epoch 1.",
               "Economic anti-herding: Tier 2 voters (who saw epoch-1 results) earn only 25% reward weight per cREP. Herding is economically unattractive regardless of information advantage.",
-              "Epoch-weighted win condition: A flood of late Tier-2 voters cannot flip a Tier-1 consensus  -- 4 Tier-2 voters at 100 cREP each (effective 100 total) cannot override 1 Tier-1 voter at 100 cREP (effective 100).",
+              "Epoch-weighted win condition: A flood of late Tier-2 voters cannot flip a Tier-1 consensus  -- 3 Tier-2 voters at 100 cREP each (effective stake 25 each = 75 total) cannot override 1 Tier-1 voter at 100 cREP (effective stake 100). Even 4 Tier-2 voters at 100 cREP each (effective 100 total) only produce a tie.",
               "Keeper is not trusted: The reveal step (decrypting and calling revealVoteByCommitKey) is permissionless  -- any party can call it. The keeper is a convenience, not a gatekeeper.",
               "Locked positions: Voters cannot exit before settlement. Unrevealed votes at settlement are treated as forfeited (losers) or refunded (current epoch), preventing selective reveal attacks.",
               "Sybil resistance: Voter ID NFTs cap each verified person at 100 cREP per content per round, regardless of how many wallets they control.",
@@ -783,11 +783,11 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and call trySettle(contentId) to trigger probabilistic settlement. Since all voting data is public on-chain and settlement is permissionless, no special keys or external dependencies are needed  -- the system is fully trustless.",
+            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform two tasks: (1) revealing tlock votes after each epoch ends by fetching the drand beacon and calling revealVoteByCommitKey(), and (2) calling settleRound() once the settlement conditions are met (minVoters revealed and one full epoch elapsed since the threshold). Both operations are permissionless  -- any account can call them.",
           },
           {
             type: "paragraph",
-            text: "Keepers also perform housekeeping: settling rounds that have reached maxEpochBlocks, cancelling expired rounds, and marking dormant content. All of these functions are permissionless  -- any account can call them.",
+            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters), and marking dormant content. Since the drand randomness beacon is a public decentralized network, no special keys or trusted dependencies are required  -- the system is fully trustless.",
           },
           {
             type: "paragraph",
@@ -827,7 +827,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The 82% voter share goes to a content-specific pool, distributed proportionally by shares to winning voters on that content. Early and contrarian voters hold more shares per cREP staked, so they receive a larger portion of the reward pool. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The 5% consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The 1% treasury fee goes to the governance timelock.",
+            text: "The 82% voter share goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (100% of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn 25% weight. This 4:1 ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The 5% consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The 1% treasury fee goes to the governance timelock.",
           },
         ],
       },
@@ -840,7 +840,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the random settlement timing (which prevents strategic timing of exits) and the bonding curve pricing (which penalizes late entrants), the deferred model ensures voter participation rewards flow only to genuine, successful curation activity while submitter bonuses still bootstrap supply at submission time.",
+            text: "By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with 25% weight vs 100% for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter participation rewards flow only to genuine, successful curation activity while submitter bonuses still bootstrap supply at submission time.",
           },
         ],
       },
@@ -999,13 +999,11 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Parameter", "Default", "Description"],
               rows: [
-                ["minEpochBlocks", "~300 blocks (~1 hour)", "Grace period before settlement can trigger"],
-                ["maxEpochBlocks", "~7200 blocks (~24 hours)", "Hard cap -- forced settlement by block count"],
-                ["maxDuration", "7 days", "Wall-clock safety cap on round length"],
-                ["Liquidity parameter (b)", "1,000 cREP", "Controls bonding curve sensitivity and share pricing"],
+                ["epochDuration", "1 hour", "Duration of each reward tier; commits in epoch 1 earn 100% weight, later epochs 25%"],
+                ["maxDuration", "7 days", "Maximum round lifetime  -- expired rounds are cancelled and stakes refunded"],
+                ["minVoters", "3", "Minimum revealed votes required before settlement is allowed"],
+                ["maxVoters", "1,000", "Per-round cap on total commits"],
                 ["Rating smoothing (b_r)", "50 cREP (hardcoded)", "Controls rating sensitivity to individual votes"],
-                ["Min voters", "5", "Minimum voters required for contested settlement"],
-                ["Max voters", "1,000", "Per-round cap (O(1) settlement enables higher limits)"],
                 ["Vote stake", "1-100 cREP", "Stake range per vote, capped per Voter ID"],
                 ["Vote cooldown", "24 hours", "Wait time before voting on the same content again"],
               ],
@@ -1013,7 +1011,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The random settlement mechanism ensures rounds complete within a bounded timeframe. The minEpochBlocks grace period gives content time to attract voters, while the maxEpochBlocks hard cap prevents indefinite rounds. The liquidity parameter b controls bonding curve share pricing -- lower values make early-mover advantage stronger, higher values make share pricing more uniform. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.",
+            text: "The epoch-based settlement mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (1 hour for full weight) and also the settlement delay after minVoters is reached, giving late voters time to reveal before the round closes. The maxDuration hard cap prevents indefinite rounds. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual revealed votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.",
           },
         ],
       },
@@ -1201,7 +1199,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The concept of 'staked media' (a16z, Big Ideas 2026, https://a16z.com/newsletter/big-ideas-2026-part-3/#the-rise-of-staked-media) -- where content quality is assessed through economic commitment rather than algorithmic engagement -- provides a manipulation-resistant alternative to traditional curation mechanisms. Curyo implements this approach through its parimutuel voting system: voters stake cREP tokens on their quality predictions, and the bonding curve pricing ensures economic independence by making herding progressively more expensive.",
+            text: "The concept of 'staked media' (a16z, Big Ideas 2026, https://a16z.com/newsletter/big-ideas-2026-part-3/#the-rise-of-staked-media) -- where content quality is assessed through economic commitment rather than algorithmic engagement -- provides a manipulation-resistant alternative to traditional curation mechanisms. Curyo implements this approach through its parimutuel voting system: voters stake cREP tokens on their quality predictions, and the tlock commit-reveal scheme combined with epoch-weighted rewards ensures economic independence by hiding votes during epoch 1 and penalizing late herders with 25% reward weight.",
           },
           {
             type: "paragraph",
@@ -1211,7 +1209,7 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Economic commitment  -- Each rating is backed by a token stake, making systematic manipulation expensive relative to the signal produced.",
-              "Economic independence  -- The bonding curve pricing makes same-direction voting progressively more expensive, incentivizing genuine assessment over herding. Early and contrarian voters are rewarded for providing independent signals.",
+              "Economic independence  -- tlock encryption hides votes during epoch 1, eliminating herd signals. Epoch-weighted rewards (4:1 ratio) further penalize late followers, incentivizing genuine early assessment over copying.",
               "Sybil resistance  -- Passport-verified Voter IDs limit each human to one identity with a capped stake per content, preventing bot farms from flooding the signal.",
               "Verifiability  -- All votes, stakes, and outcomes are recorded on-chain with cryptographic integrity, enabling third-party audit and reproducibility.",
             ],
@@ -1253,7 +1251,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Bots call the same vote() function as human voters and are transparent participants in the public voting market. Their votes are immediately visible on-chain like any other voter's. Bots stake the minimum amount of cREP per vote, ensuring their influence remains small relative to human voters who may stake significantly more. The parimutuel mechanism provides natural selection pressure: strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation.",
+            text: "Bots call the same commitVote() function as human voters and participate under the same tlock privacy constraints  -- their vote direction is hidden until the epoch ends, just like human votes. Bots stake the minimum amount of cREP per vote, ensuring their influence remains small relative to human voters who may stake significantly more. Voting in epoch 1 (before any results are visible) gives bots the same 100% reward weight as early human voters, rewarding accurate strategies. The parimutuel mechanism provides natural selection pressure: strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation.",
           },
           {
             type: "sub_heading",
@@ -1300,20 +1298,20 @@ export const SECTIONS: Section[] = [
     lead: "Transparency about design trade-offs, residual risks, and areas for improvement.",
     subsections: [
       {
-        heading: "Settlement Randomness Source",
+        heading: "drand Network Dependency",
         blocks: [
           {
             type: "paragraph",
-            text: "Settlement timing relies on block.prevrandao (RANDAO) as the randomness source. On post-merge L1 and most L2s, this provides sufficient unpredictability for content rating settlement. However, on L2s with a single sequencer (Optimism, Arbitrum, Base), the sequencer has theoretical influence over block.prevrandao values. The risk is bounded: the sequencer has no direct financial incentive to manipulate content ratings (they do not hold cREP positions), stake amounts per voter are capped at 100 cREP, and the round's outcome is determined by accumulated votes over 1-2 hours rather than a single block. If this becomes a concern in practice, the settlement mechanism can be upgraded to use Chainlink VRF for stronger randomness guarantees.",
+            text: "tlock encryption relies on the drand randomness beacon network to produce the decryption key after each epoch ends. If the drand network experiences downtime, newly committed votes cannot be revealed until drand resumes. In practice, drand operates across a globally distributed set of nodes (the League of Entropy) and has maintained high availability since 2019. Additionally, the reveal step is permissionless: any party who knows the voter's direction and salt (the voter's own client, a backup keeper, or a third party) can manually call revealVoteByCommitKey() once the epoch ends, bypassing drand entirely. Rounds are not cancelled due to drand downtime  -- they simply wait for reveals and settle once conditions are met.",
           },
         ],
       },
       {
-        heading: "Public Voting Trade-offs",
+        heading: "tlock Reveal Burden",
         blocks: [
           {
             type: "paragraph",
-            text: "All votes are immediately public, which creates trade-offs compared to cryptographic vote privacy. Social pressure is possible: if voters' identities are publicly linked to their addresses, they might face pressure to vote in certain ways. The bonding curve pricing mitigates this economically (following social pressure is expensive when it means buying expensive shares), but does not eliminate it entirely. For high-stakes or socially sensitive content, the economic anti-herding mechanism is a weaker guarantee than cryptographic privacy. Curyo's Voter IDs are pseudonymous (tied to a passport but not publicly linked to a real identity), which provides a degree of social insulation.",
+            text: "Although the keeper reveals votes automatically in the background, voters who want immediate control over their reveal must store their direction and salt client-side after committing. If a voter loses this data (e.g., cleared browser storage), they cannot self-reveal. The stake is not permanently lost  -- the keeper will reveal it automatically after the epoch ends using the on-chain ciphertext and the drand beacon  -- but if the keeper also fails and the voter has lost their salt, the vote cannot be revealed and will be forfeited at settlement. The frontend mitigates this by persisting the reveal data in localStorage and offering a manual reveal option.",
           },
         ],
       },
@@ -1326,7 +1324,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The consensus subsidy pool solves this. It is pre-funded with 4,000,000 cREP from the treasury allocation and continuously replenished by 5% of every losing pool from two-sided rounds. When a one-sided round reaches maxEpochBlocks, the contract distributes a subsidy from this reserve equal to 5% of the round's total stake, capped at 50 cREP per round and by the reserve balance.",
+            text: "The consensus subsidy pool solves this. It is pre-funded with 4,000,000 cREP from the treasury allocation and continuously replenished by 5% of every losing pool from two-sided rounds. When a one-sided round settles (all votes in the same direction), the contract distributes a subsidy from this reserve equal to 5% of the round's total stake, capped at 50 cREP per round and by the reserve balance.",
           },
           {
             type: "paragraph",
@@ -1339,7 +1337,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "This subsidy is split between voters (~89%) and the content submitter (~11%), using the same 82:10 ratio as normal round rewards, and distributed proportionally by shares within each group. Since all voters are on the winning side, every voter receives a share. The mechanism is self-sustaining: contentious rounds -- where parimutuel rewards function normally -- generate surplus that funds consensus rounds. Every two-sided round with L cREP in its losing pool contributes 0.05L to the reserve, which can fund approximately one one-sided round of equivalent total stake. The 4M initial pre-fund provides runway during early adoption when two-sided rounds may be infrequent.",
+            text: "This subsidy is split between voters (~89%) and the content submitter (~11%), using the same 82:10 ratio as normal round rewards, and distributed proportionally by epoch-weighted effective stake within each group. Since all voters are on the winning side, every voter receives a share. The mechanism is self-sustaining: contentious rounds -- where parimutuel rewards function normally -- generate surplus that funds consensus rounds. Every two-sided round with L cREP in its losing pool contributes 0.05L to the reserve, which can fund approximately one one-sided round of equivalent total stake. The 4M initial pre-fund provides runway during early adoption when two-sided rounds may be infrequent.",
           },
           {
             type: "paragraph",
@@ -1352,7 +1350,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Governance can change round parameters (minEpochBlocks, maxEpochBlocks, liquidity parameter b, settlement probability rates) at any time through the standard proposal process. Changes apply to new rounds only: each round snapshots configuration at creation time, so in-progress rounds keep the rules they started with.",
+            text: "Governance can change round parameters (epochDuration, maxDuration, minVoters) at any time through the standard proposal process. Changes apply to new rounds only: each round snapshots configuration at creation time, so in-progress rounds keep the rules they started with.",
           },
         ],
       },

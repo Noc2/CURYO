@@ -28,10 +28,10 @@ Curyo replaces passive likes with **prediction games**. Voters predict whether c
 - **Skin in the Game** — every vote requires a token stake
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
 - **Per-Content Rounds** — each content item accumulates votes; settlement triggers randomly with increasing probability
-- **Public Voting** — votes are immediately visible and price-moving via bonding curve share pricing; early/contrarian voters earn more shares
+- **tlock Commit-Reveal** — votes are encrypted with timelock encryption and revealed after each epoch; vote directions stay hidden until reveal, preventing front-running and copycat strategies
 - **Fully Decentralized** — no team, no foundation, no central authority
 
-Read the full [Game Theory Analysis](docs/GAME_THEORY_ANALYSIS.md) and [Security Audit](SECURITY_AUDIT.md).
+See the in-app documentation at `/docs` for detailed game theory analysis and security information.
 
 ## Architecture
 

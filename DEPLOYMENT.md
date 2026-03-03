@@ -508,16 +508,17 @@ The rating bot will:
 2. Fetch active content from the Ponder indexer
 3. For each item, call the matching rating strategy (YouTube like ratio, TMDB score, Steam reviews, etc.)
 4. Determine vote direction: score >= `VOTE_THRESHOLD` → UP, otherwise → DOWN
-5. Place the vote on-chain via `vote(contentId, isUp, stakeAmount, frontendAddress)` (up to `MAX_VOTES_PER_RUN`)
+5. Commit the vote on-chain via `commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend)` — the vote direction is encrypted with tlock timelock encryption and hidden until reveal (up to `MAX_VOTES_PER_RUN`)
 
-Each content item is voted on only once (the bot tracks previous votes).
+After each epoch ends, the Keeper service reveals committed votes using `revealVoteByCommitKey()` and then settles rounds. Each content item is voted on only once (the bot tracks previous votes).
 
 ### 7e. Verify the full loop
 
 1. Submission bot submits content → visible on frontend
-2. Rating bot places votes → immediately public on-chain
-3. Keeper calls `trySettle(contentId)` → random settlement determines round outcome, rewards distributed, ratings updated
-4. Content ratings visible on frontend
+2. Rating bot commits encrypted votes → vote directions hidden on-chain until reveal
+3. Epoch ends → Keeper reveals votes via `revealVoteByCommitKey()`
+4. Keeper calls `settleRound(contentId, roundId)` → round outcome determined, rewards distributed (epoch-weighted), ratings updated
+5. Content ratings visible on frontend
 
 ### 7f. Ongoing operation
 

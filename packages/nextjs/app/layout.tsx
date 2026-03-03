@@ -1,7 +1,6 @@
 import { Inter, Space_Grotesk } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@scaffold-ui/components/styles.css";
-import { KeeperInit } from "~~/components/KeeperInit";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import { ThemeProvider } from "~~/components/ThemeProvider";
 import "~~/styles/globals.css";
@@ -32,10 +31,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
     <html suppressHydrationWarning className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body suppressHydrationWarning>
         <ThemeProvider defaultTheme="dark" forcedTheme="dark">
-          <ScaffoldEthAppWithProviders>
-            <KeeperInit />
-            {children}
-          </ScaffoldEthAppWithProviders>
+          <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
         </ThemeProvider>
       </body>
     </html>

@@ -15,7 +15,6 @@ import { TermsAcceptanceModal } from "~~/components/legal/TermsAcceptanceModal";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
 import { TermsAcceptanceProvider } from "~~/contexts/TermsAcceptanceContext";
-import { useKeeperInit } from "~~/hooks/useKeeperInit";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
@@ -45,7 +44,6 @@ export const queryClient = new QueryClient({
 });
 
 export const ScaffoldEthAppWithProviders = ({ children }: { children: React.ReactNode }) => {
-  useKeeperInit();
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === "dark";
   const [mounted, setMounted] = useState(false);

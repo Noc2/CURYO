@@ -52,7 +52,7 @@ The one-epoch settlement delay (`thresholdReachedAt + epochDuration`) ensures al
 
 **Vote secrecy within each epoch.** tlock encrypts the vote direction to the epoch end timestamp. The keeper cannot see which way a voter voted until after the 15-minute window closes and the drand beacon produces the decryption key. This makes all votes within an epoch effectively simultaneous.
 
-**Permissionless reveals.** The drand beacon is a public value — anyone can decrypt ciphertexts and call `revealVote()`. The keeper has no privileged information; it only needs the on-chain ciphertext and the public drand output. This eliminates the "miss your reveal window" risk of the `FLAT-SHARES-COMMIT-REVEAL-SPEC.md` design — even if the voter goes offline, the keeper or any other party can reveal on their behalf.
+**Permissionless reveals.** The drand beacon is a public value — anyone can decrypt ciphertexts and call `revealVote()`. The keeper has no privileged information; it only needs the on-chain ciphertext and the public drand output. This eliminates the "miss your reveal window" risk of the earlier flat-shares commit-reveal design — even if the voter goes offline, the keeper or any other party can reveal on their behalf.
 
 **Multi-epoch accumulation.** A round stays open until `minVoters` votes are revealed. If epoch 1 doesn't produce 3 votes, epoch 2 begins immediately — new voters can commit, and epoch 1's revealed results are already visible to them.
 
@@ -64,7 +64,7 @@ The one-epoch settlement delay (`thresholdReachedAt + epochDuration`) ensures al
 
 ### 2.1 Why minVoters=3 was chosen
 
-The 3-voter minimum was a defense against the **controlled seeding attack** documented in `GAME-THEORY-ANALYSIS.md` Section B.1:
+The 3-voter minimum was a defense against the **controlled seeding attack** from the game theory analysis:
 
 > An attacker with 2 identities votes one direction, waits for exactly 1 honest contrarian. With 2-of-3 control, they win 82% of the honest voter's stake.
 
@@ -399,7 +399,7 @@ The `MAX_CIPHERTEXT_SIZE = 10_240` in the original code was a safety cap; real t
 
 The original design used tlock encryption where the decryption key is derived from the drand beacon at the epoch end timestamp. The keeper watches for new drand rounds and calls `revealVote()` with the decrypted plaintext.
 
-Per `SETTLEMENT-RANDOMNESS.md`, drand via the evmnet BN254 chain is available on Celo today with ~160K gas per BLS signature verification. The tlock approach doesn't require on-chain verification of drand signatures (the keeper decrypts off-chain and submits plaintext), so the gas cost is lower than the full drand settlement approach.
+Per the settlement randomness analysis, drand via the evmnet BN254 chain is available on Celo today with ~160K gas per BLS signature verification. The tlock approach doesn't require on-chain verification of drand signatures (the keeper decrypts off-chain and submits plaintext), so the gas cost is lower than the full drand settlement approach.
 
 **Two architectural options for reveal:**
 
@@ -674,8 +674,8 @@ This attack requires 3+ additional Voter IDs, 600+ cREP capital, and coordinatio
 - Koessler, Noussair & Ziegelmeyer (2008) — "Parimutuel Betting under Asymmetric Information" — simultaneous games preserve separating equilibria
 - Bikhchandani, Hirshleifer & Welch (1992) — "A Theory of Fads, Fashion, Custom, and Cultural Change as Informational Cascades"
 
-**Internal references:**
-- `GAME-THEORY-ANALYSIS.md` Section B.1 — controlled seeding attack, minVoters rationale
-- `SETTLEMENT-RANDOMNESS.md` Section 3 — drand integration for Celo
+**Internal references (removed — these design documents were deleted after the tlock system was implemented):**
+- `GAME-THEORY-ANALYSIS.md` — controlled seeding attack analysis, minVoters rationale
+- `SETTLEMENT-RANDOMNESS.md` — drand integration for Celo
 - `FLAT-SHARES-COMMIT-REVEAL-SPEC.md` — alternative commit-reveal design (full-round secrecy, no epoch structure)
 - `TIME-WEIGHT-PUBLIC-VOTING-RESEARCH.md` — time-weighting without commit-reveal (for comparison)

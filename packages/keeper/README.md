@@ -1,6 +1,6 @@
 # Curyo — Keeper (Round Resolution Service)
 
-Stateless service that continuously settles rounds via `trySettle()`, cancels expired rounds, and marks dormant content. Designed for horizontal scaling — multiple instances run independently for redundancy.
+Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles rounds via `settleRound()`, cancels expired rounds, and marks dormant content. The reveal-then-settle flow is the core of the tlock commit-reveal system. Designed for horizontal scaling — multiple instances run independently for redundancy.
 
 ## Quick Start
 
@@ -59,7 +59,7 @@ Key metrics: `keeper_is_running` (gauge), `keeper_rounds_settled_total` (counter
 ```
 src/
 ├── index.ts      # Main entry point & event loop
-├── keeper.ts     # Core settlement logic (trySettle, cancel, dormancy)
+├── keeper.ts     # Core logic (reveal votes, settle rounds, cancel, dormancy)
 ├── config.ts     # Configuration from environment
 ├── client.ts     # viem public & wallet clients
 ├── keystore.ts   # Foundry keystore decryption
