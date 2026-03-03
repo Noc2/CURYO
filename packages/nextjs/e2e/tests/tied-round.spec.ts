@@ -38,7 +38,7 @@ test.describe("Tied round lifecycle", () => {
   test.describe.configure({ mode: "serial" });
 
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
-  const EPOCH_DURATION = 60; // seconds — set via setTestConfig
+  const EPOCH_DURATION = 300; // 5 min — contract minimum is 5 minutes
 
   test.beforeAll(async () => {
     const ok = await setTestConfig(VOTING_ENGINE, DEPLOYER.address, EPOCH_DURATION);

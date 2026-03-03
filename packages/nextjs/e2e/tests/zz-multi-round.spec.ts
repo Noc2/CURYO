@@ -39,7 +39,7 @@ test.describe("Multi-round succession", () => {
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const STAKE = BigInt(10e6); // 10 cREP (must be >= MIN_STAKE_FOR_RATING for rating delta > 0)
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-  const EPOCH_DURATION = 60; // seconds — set via setTestConfig
+  const EPOCH_DURATION = 300; // 5 min — contract minimum is 5 minutes
 
   test.beforeAll(async () => {
     const ok = await setTestConfig(VOTING_ENGINE, DEPLOYER.address, EPOCH_DURATION);

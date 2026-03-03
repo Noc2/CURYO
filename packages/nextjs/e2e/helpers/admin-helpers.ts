@@ -1026,7 +1026,7 @@ export async function readRoundConfig(contractAddress: string): Promise<{
 export async function setTestConfig(
   contractAddress: string,
   fromAddress: string,
-  epochDuration = 60,
+  epochDuration = 300,
   maxDuration = 86400,
   minVoters = 3,
   maxVoters = 100,

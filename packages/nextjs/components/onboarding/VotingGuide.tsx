@@ -14,7 +14,7 @@ const STEPS = [
   { label: "Stake", desc: "back your prediction with cREP tokens", hex: "#FFC43D" },
   {
     label: "Reveal & Settle",
-    desc: "the keeper reveals votes after each epoch; rounds settle automatically",
+    desc: "the keeper reveals votes after each epoch (~1 hour); rounds settle automatically",
     hex: "#EF476F",
   },
   { label: "Claim", desc: "collect your rewards if your prediction was correct", hex: "#359EEE" },
