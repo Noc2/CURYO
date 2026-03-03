@@ -129,7 +129,7 @@ export function SwipeCard({
           )}
 
           {/* Wizards Fan Content Policy notice for MTG cards */}
-          {content.categoryId === 5n && (
+          {content.categoryId === 3n && (
             <p className="text-base text-base-content/50 mt-2 leading-tight">
               Magic: The Gathering content is unofficial Fan Content permitted under the{" "}
               <a

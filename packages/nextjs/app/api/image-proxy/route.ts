@@ -22,6 +22,8 @@ const ALLOWED_HOSTS = new Set([
   "avatars.githubusercontent.com",
   "api.scryfall.com",
   "cards.scryfall.io",
+  "img.youtube.com",
+  "i.ytimg.com",
 ]);
 
 const MAX_RESPONSE_SIZE = 10 * 1024 * 1024; // 10 MB

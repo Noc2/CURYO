@@ -104,8 +104,8 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
       {/* Epoch tier badge */}
       {isEpoch1 ? (
         <div className="flex items-center gap-1.5">
-          <span className="badge badge-success badge-sm gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+          <span className="badge badge-success badge-sm gap-1 text-base">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
                 d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
@@ -119,13 +119,13 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
             position="bottom"
           />
           {epoch1Remaining > 0 && (
-            <span className="text-success/80 tabular-nums text-xs">{formatDuration(epoch1Remaining)} left</span>
+            <span className="text-success/80 tabular-nums text-base">{formatDuration(epoch1Remaining)} left</span>
           )}
         </div>
       ) : (
         <div className="flex items-center gap-1.5">
-          <span className="badge badge-warning badge-sm gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+          <span className="badge badge-warning badge-sm gap-1 text-base">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
               <path
                 fillRule="evenodd"
