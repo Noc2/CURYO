@@ -1,5 +1,5 @@
 /**
- * TypeScript integration test for the public-vote round-based voting system.
+ * TypeScript integration test for the tlock commit-reveal voting system.
  *
  * Prerequisites:
  *   1. Start Anvil:  anvil
@@ -19,6 +19,8 @@ import {
   createWalletClient,
   http,
   parseAbi,
+  encodePacked,
+  keccak256,
   type Address,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -50,16 +52,17 @@ const registryAbi = parseAbi([
 ]);
 
 const votingEngineAbi = parseAbi([
-  "function config() view returns (uint64 minEpochBlocks, uint64 maxEpochBlocks, uint256 maxDuration, uint256 minVoters, uint256 maxVoters, uint16 baseRateBps, uint16 growthRateBps, uint16 maxProbBps, uint256 liquidityParam)",
-  "function vote(uint256 contentId, bool isUp, uint256 stakeAmount, address frontend)",
-  "function trySettle(uint256 contentId)",
+  "function config() view returns (uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters)",
+  "function commitVote(uint256 contentId, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)",
+  "function revealVoteByCommitKey(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)",
+  "function settleRound(uint256 contentId, uint256 roundId)",
   "function getActiveRoundId(uint256 contentId) view returns (uint256)",
-  "function getRound(uint256 contentId, uint256 roundId) view returns ((uint256 startTime, uint64 startBlock, uint8 state, uint256 voteCount, uint256 totalStake, uint256 totalUpStake, uint256 totalDownStake, uint256 totalUpShares, uint256 totalDownShares, uint256 upCount, uint256 downCount, bool upWins, uint256 settledAt, uint16 epochStartRating))",
-  "function hasVoted(uint256 contentId, uint256 roundId, address voter) view returns (bool)",
-  "function lastVoteTimestamp(uint256 contentId, address voter) view returns (uint256)",
+  "function getRound(uint256 contentId, uint256 roundId) view returns ((uint256 startTime, uint8 state, uint256 voteCount, uint256 revealedCount, uint256 totalStake, uint256 upPool, uint256 downPool, uint256 upCount, uint256 downCount, bool upWins, uint256 settledAt, uint256 thresholdReachedAt, uint256 weightedUpPool, uint256 weightedDownPool))",
+  "function getRoundCommitHashes(uint256 contentId, uint256 roundId) view returns (bytes32[])",
+  "function getCommit(uint256 contentId, uint256 roundId, bytes32 commitKey) view returns ((address voter, uint256 stakeAmount, bytes ciphertext, address frontend, uint256 revealableAfter, bool revealed, bool isUp, uint32 epochIndex))",
+  "function voterCommitHash(uint256 contentId, uint256 roundId, address voter) view returns (bytes32)",
   "function cancelExpiredRound(uint256 contentId, uint256 roundId)",
   "function claimCancelledRoundRefund(uint256 contentId, uint256 roundId)",
-  "function claimParticipationReward(uint256 contentId, uint256 roundId)",
 ]);
 
 const rewardDistributorAbi = parseAbi([
@@ -78,12 +81,6 @@ function walletClient(account: ReturnType<typeof privateKeyToAccount>) {
 }
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
-
-async function mineBlocks(count: number) {
-  for (let i = 0; i < count; i++) {
-    await publicClient.request({ method: "evm_mine", params: [] } as any);
-  }
-}
 
 async function advanceTime(seconds: number) {
   await publicClient.request({
@@ -106,6 +103,84 @@ function assert(condition: boolean, message: string) {
     console.log(`  PASS: ${message}`);
     passed++;
   }
+}
+
+// ---------------------------------------------------------------------------
+// tlock commit-reveal helpers (MockMode)
+// ---------------------------------------------------------------------------
+
+/**
+ * MockMode ciphertext: abi.encodePacked(uint8(isUp ? 1 : 0), bytes32 salt, uint256 contentId)
+ * 65 bytes total: 1 + 32 + 32
+ */
+function mockCiphertext(isUp: boolean, salt: `0x${string}`, contentId: bigint): `0x${string}` {
+  return encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, contentId]);
+}
+
+/**
+ * commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
+ */
+function commitHash(isUp: boolean, salt: `0x${string}`, contentId: bigint): `0x${string}` {
+  return keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentId]));
+}
+
+/**
+ * commitKey = keccak256(abi.encodePacked(voter, commitHash))
+ */
+function commitKey(voter: Address, ch: `0x${string}`): `0x${string}` {
+  return keccak256(encodePacked(["address", "bytes32"], [voter, ch]));
+}
+
+/**
+ * Commit a vote in MockMode.
+ */
+async function commitVote(
+  voter: ReturnType<typeof privateKeyToAccount>,
+  contentId: bigint,
+  isUp: boolean,
+  saltSeed: number,
+): Promise<{ salt: `0x${string}`; ck: `0x${string}` }> {
+  const salt = keccak256(encodePacked(["address", "uint256"], [voter.address, BigInt(saltSeed)]));
+  const ch = commitHash(isUp, salt, contentId);
+  const ct = mockCiphertext(isUp, salt, contentId);
+
+  const client = walletClient(voter);
+  await client.writeContract({
+    address: addresses.crepToken,
+    abi: crepAbi,
+    functionName: "approve",
+    args: [addresses.votingEngine, STAKE],
+  });
+  const hash = await client.writeContract({
+    address: addresses.votingEngine,
+    abi: votingEngineAbi,
+    functionName: "commitVote",
+    args: [contentId, ch, ct, STAKE, ZERO_ADDRESS],
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
+
+  return { salt, ck: commitKey(voter.address, ch) };
+}
+
+/**
+ * Reveal a vote.
+ */
+async function revealVote(
+  revealer: ReturnType<typeof privateKeyToAccount>,
+  contentId: bigint,
+  roundId: bigint,
+  ck: `0x${string}`,
+  isUp: boolean,
+  salt: `0x${string}`,
+) {
+  const client = walletClient(revealer);
+  const hash = await client.writeContract({
+    address: addresses.votingEngine,
+    abi: votingEngineAbi,
+    functionName: "revealVoteByCommitKey",
+    args: [contentId, roundId, ck, isUp, salt],
+  });
+  await publicClient.waitForTransactionReceipt({ hash });
 }
 
 // ---------------------------------------------------------------------------
@@ -134,63 +209,40 @@ try {
 }
 
 // ---------------------------------------------------------------------------
-// Test helpers
+// Tests
 // ---------------------------------------------------------------------------
 
-async function submitContent(url: string): Promise<bigint> {
+async function testFullRoundLifecycle() {
+  console.log("\n=== Test: Full Round Lifecycle (tlock commit-reveal) ===");
+
+  // Submit content
   const client = walletClient(ACCOUNTS.deployer);
-  // Approve submitter stake
   await client.writeContract({
     address: addresses.crepToken,
     abi: crepAbi,
     functionName: "approve",
     args: [addresses.contentRegistry, 10_000_000n],
   });
-  const hash = await client.writeContract({
+  const submitHash = await client.writeContract({
     address: addresses.contentRegistry,
     abi: registryAbi,
     functionName: "submitContent",
-    args: [url, "test goal", "test", 0n],
+    args: ["https://example.com/lifecycle", "test goal", "test", 0n],
   });
-  await publicClient.waitForTransactionReceipt({ hash });
-  // Assume contentId increments from 1
-  return 1n; // first content
-}
+  await publicClient.waitForTransactionReceipt({ hash: submitHash });
+  const contentId = 1n;
 
-async function castVote(
-  voter: ReturnType<typeof privateKeyToAccount>,
-  contentId: bigint,
-  isUp: boolean,
-) {
-  const client = walletClient(voter);
-
-  await client.writeContract({
-    address: addresses.crepToken,
-    abi: crepAbi,
-    functionName: "approve",
-    args: [addresses.votingEngine, STAKE],
-  });
-
-  const hash = await client.writeContract({
+  // Read epoch duration from config
+  const cfg = await publicClient.readContract({
     address: addresses.votingEngine,
     abi: votingEngineAbi,
-    functionName: "vote",
-    args: [contentId, isUp, STAKE, ZERO_ADDRESS],
+    functionName: "config",
   });
-  await publicClient.waitForTransactionReceipt({ hash });
-}
+  const epochDuration = Number(cfg[0]);
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-async function testFullRoundLifecycle() {
-  console.log("\n=== Test: Full Round Lifecycle (Public Vote + Random Settlement) ===");
-  const contentId = await submitContent("https://example.com/lifecycle");
-
-  // Vote — two voters, one UP and one DOWN
-  await castVote(ACCOUNTS.voter1, contentId, true);
-  await castVote(ACCOUNTS.voter2, contentId, false);
+  // Commit votes (all in epoch 1 — Tier 1, 100% weight)
+  const { salt: s1, ck: ck1 } = await commitVote(ACCOUNTS.voter1, contentId, true, 1);
+  const { salt: s2, ck: ck2 } = await commitVote(ACCOUNTS.voter2, contentId, false, 2);
 
   const roundId = await publicClient.readContract({
     address: addresses.votingEngine,
@@ -200,22 +252,17 @@ async function testFullRoundLifecycle() {
   });
   assert(roundId === 1n, `Active round should be 1 (got ${roundId})`);
 
-  // Verify votes were recorded
-  const hasVoted1 = await publicClient.readContract({
+  // Verify commits were recorded (voterCommitHash != zero)
+  const ch1 = await publicClient.readContract({
     address: addresses.votingEngine,
     abi: votingEngineAbi,
-    functionName: "hasVoted",
+    functionName: "voterCommitHash",
     args: [contentId, roundId, ACCOUNTS.voter1.address],
   });
-  assert(hasVoted1 === true, "Voter1 should have voted");
-
-  const hasVoted2 = await publicClient.readContract({
-    address: addresses.votingEngine,
-    abi: votingEngineAbi,
-    functionName: "hasVoted",
-    args: [contentId, roundId, ACCOUNTS.voter2.address],
-  });
-  assert(hasVoted2 === true, "Voter2 should have voted");
+  assert(
+    ch1 !== "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "Voter1 should have committed",
+  );
 
   const round = await publicClient.readContract({
     address: addresses.votingEngine,
@@ -224,49 +271,30 @@ async function testFullRoundLifecycle() {
     args: [contentId, roundId],
   });
   assert(round.voteCount === 2n, `Vote count should be 2 (got ${round.voteCount})`);
-  assert(round.totalUpStake === STAKE, `UP stake should equal stake`);
-  assert(round.totalDownStake === STAKE, `DOWN stake should equal stake`);
 
-  // Mine enough blocks to pass the epoch, then trySettle
-  // Read config to know minEpochBlocks
-  const cfg = await publicClient.readContract({
+  // Advance past epoch to allow reveals
+  await advanceTime(epochDuration + 1);
+
+  // Reveal votes
+  await revealVote(ACCOUNTS.deployer, contentId, roundId, ck1, true, s1);
+  await revealVote(ACCOUNTS.deployer, contentId, roundId, ck2, false, s2);
+
+  const roundAfterReveal = await publicClient.readContract({
     address: addresses.votingEngine,
     abi: votingEngineAbi,
-    functionName: "config",
+    functionName: "getRound",
+    args: [contentId, roundId],
   });
-  const minEpochBlocks = Number(cfg[0]);
-  await mineBlocks(minEpochBlocks + 1);
+  assert(roundAfterReveal.revealedCount === 2n, `Revealed count should be 2 (got ${roundAfterReveal.revealedCount})`);
 
-  // Try to settle — with equal pools this may result in a tie
-  const settleClient = walletClient(ACCOUNTS.voter1);
-  try {
-    const settleHash = await settleClient.writeContract({
-      address: addresses.votingEngine,
-      abi: votingEngineAbi,
-      functionName: "trySettle",
-      args: [contentId],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: settleHash });
+  // Note: 2 votes < minVoters (3), so round can't settle yet — just verify structure
+  assert(roundAfterReveal.state === 0, `Round should still be Open (state=0, got ${roundAfterReveal.state})`);
 
-    const settledRound = await publicClient.readContract({
-      address: addresses.votingEngine,
-      abi: votingEngineAbi,
-      functionName: "getRound",
-      args: [contentId, roundId],
-    });
-    // State 1 = Settled, State 3 = Tied — both are valid outcomes
-    assert(
-      settledRound.state === 1 || settledRound.state === 3,
-      `Round should be Settled or Tied (got state=${settledRound.state})`,
-    );
-  } catch (e: any) {
-    // trySettle may revert if not enough blocks or probability not met — that's ok in a tie scenario
-    console.log(`  INFO: trySettle reverted (expected for some scenarios): ${e.message.slice(0, 80)}`);
-  }
+  console.log("  INFO: Round lifecycle tested (commit + reveal verified, needs minVoters=3 to settle)");
 }
 
-async function testVoteAndSettle() {
-  console.log("\n=== Test: Vote + trySettle + Claim ===");
+async function testCommitRevealSettle() {
+  console.log("\n=== Test: Commit + Reveal + Settle (3 voters) ===");
 
   const client = walletClient(ACCOUNTS.deployer);
   await client.writeContract({
@@ -279,15 +307,22 @@ async function testVoteAndSettle() {
     address: addresses.contentRegistry,
     abi: registryAbi,
     functionName: "submitContent",
-    args: ["https://example.com/vote-settle", "test goal", "test", 0n],
+    args: ["https://example.com/settle", "test goal", "test", 0n],
   });
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   const contentId = 2n;
 
+  const cfg = await publicClient.readContract({
+    address: addresses.votingEngine,
+    abi: votingEngineAbi,
+    functionName: "config",
+  });
+  const epochDuration = Number(cfg[0]);
+
   // 2 UP, 1 DOWN — UP side should win
-  await castVote(ACCOUNTS.voter1, contentId, true);
-  await castVote(ACCOUNTS.voter2, contentId, true);
-  await castVote(ACCOUNTS.voter3, contentId, false);
+  const { salt: s1, ck: ck1 } = await commitVote(ACCOUNTS.voter1, contentId, true, 10);
+  const { salt: s2, ck: ck2 } = await commitVote(ACCOUNTS.voter2, contentId, true, 20);
+  const { salt: s3, ck: ck3 } = await commitVote(ACCOUNTS.voter3, contentId, false, 30);
 
   const roundId = await publicClient.readContract({
     address: addresses.votingEngine,
@@ -295,81 +330,79 @@ async function testVoteAndSettle() {
     functionName: "getActiveRoundId",
     args: [contentId],
   });
+  assert(roundId === 1n, `Round should be 1 (got ${roundId})`);
 
-  const round = await publicClient.readContract({
+  // Advance past epoch end
+  await advanceTime(epochDuration + 1);
+
+  // Reveal all votes
+  const revealer = ACCOUNTS.deployer;
+  await revealVote(revealer, contentId, roundId, ck1, true, s1);
+  await revealVote(revealer, contentId, roundId, ck2, true, s2);
+  await revealVote(revealer, contentId, roundId, ck3, false, s3);
+
+  const roundAfterReveal = await publicClient.readContract({
     address: addresses.votingEngine,
     abi: votingEngineAbi,
     functionName: "getRound",
     args: [contentId, roundId],
   });
-  assert(round.voteCount === 3n, `Vote count should be 3 (got ${round.voteCount})`);
-  assert(round.upCount === 2n, `UP count should be 2 (got ${round.upCount})`);
-  assert(round.downCount === 1n, `DOWN count should be 1 (got ${round.downCount})`);
+  assert(roundAfterReveal.revealedCount === 3n, `Should have 3 revealed votes`);
+  assert(roundAfterReveal.thresholdReachedAt > 0n, `thresholdReachedAt should be set`);
 
-  // Mine enough blocks for epoch to end
-  const cfg = await publicClient.readContract({
-    address: addresses.votingEngine,
-    abi: votingEngineAbi,
-    functionName: "config",
-  });
-  const maxEpochBlocks = Number(cfg[1]);
-  await mineBlocks(maxEpochBlocks + 1);
+  // Advance past settlement delay (one epoch after thresholdReachedAt)
+  await advanceTime(epochDuration + 1);
 
-  // Try settle
-  const settleClient = walletClient(ACCOUNTS.voter1);
+  // Settle
   try {
-    const settleHash2 = await settleClient.writeContract({
+    const settleClient = walletClient(ACCOUNTS.deployer);
+    const settleHash = await settleClient.writeContract({
       address: addresses.votingEngine,
       abi: votingEngineAbi,
-      functionName: "trySettle",
-      args: [contentId],
+      functionName: "settleRound",
+      args: [contentId, roundId],
     });
-    await publicClient.waitForTransactionReceipt({ hash: settleHash2 });
+    await publicClient.waitForTransactionReceipt({ hash: settleHash });
 
-    const settledRound = await publicClient.readContract({
+    const settled = await publicClient.readContract({
       address: addresses.votingEngine,
       abi: votingEngineAbi,
       functionName: "getRound",
       args: [contentId, roundId],
     });
+    // State 1 = Settled
+    assert(settled.state === 1, `Round should be Settled (state=1, got ${settled.state})`);
+    assert(settled.upWins === true, "UP should win (2 UP vs 1 DOWN)");
 
-    if (settledRound.state === 1) {
-      assert(settledRound.upWins === true, "UP should win");
-
-      // Winner claims reward
-      const balBefore = await publicClient.readContract({
-        address: addresses.crepToken,
-        abi: crepAbi,
-        functionName: "balanceOf",
-        args: [ACCOUNTS.voter1.address],
-      });
-
-      const claimClient = walletClient(ACCOUNTS.voter1);
-      const claimHash = await claimClient.writeContract({
-        address: addresses.rewardDistributor,
-        abi: rewardDistributorAbi,
-        functionName: "claimReward",
-        args: [contentId, roundId],
-      });
-      await publicClient.waitForTransactionReceipt({ hash: claimHash });
-
-      const balAfter = await publicClient.readContract({
-        address: addresses.crepToken,
-        abi: crepAbi,
-        functionName: "balanceOf",
-        args: [ACCOUNTS.voter1.address],
-      });
-      assert(balAfter > balBefore, `Winner should receive reward (before=${balBefore}, after=${balAfter})`);
-    } else {
-      console.log(`  INFO: Round ended in state ${settledRound.state} (random settlement may not have settled)`);
-    }
+    // Voter1 (winner) claims reward
+    const balBefore = await publicClient.readContract({
+      address: addresses.crepToken,
+      abi: crepAbi,
+      functionName: "balanceOf",
+      args: [ACCOUNTS.voter1.address],
+    });
+    const claimHash2 = await walletClient(ACCOUNTS.voter1).writeContract({
+      address: addresses.rewardDistributor,
+      abi: rewardDistributorAbi,
+      functionName: "claimReward",
+      args: [contentId, roundId],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: claimHash2 });
+    const balAfter = await publicClient.readContract({
+      address: addresses.crepToken,
+      abi: crepAbi,
+      functionName: "balanceOf",
+      args: [ACCOUNTS.voter1.address],
+    });
+    assert(balAfter > balBefore, `Winner should receive reward (before=${balBefore}, after=${balAfter})`);
   } catch (e: any) {
-    console.log(`  INFO: trySettle reverted: ${e.message.slice(0, 100)}`);
+    console.log(`  INFO: settleRound reverted: ${e.message.slice(0, 100)}`);
+    failed++;
   }
 }
 
-async function testDuplicateVotePrevention() {
-  console.log("\n=== Test: Duplicate Vote Prevention ===");
+async function testDuplicateCommitPrevention() {
+  console.log("\n=== Test: Duplicate Commit Prevention ===");
 
   const client = walletClient(ACCOUNTS.deployer);
   await client.writeContract({
@@ -387,15 +420,15 @@ async function testDuplicateVotePrevention() {
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   const contentId = 3n;
 
-  // First vote should succeed
-  await castVote(ACCOUNTS.voter1, contentId, true);
+  // First commit should succeed
+  await commitVote(ACCOUNTS.voter1, contentId, true, 100);
 
-  // Second vote by same voter should fail
+  // Second commit by same voter should fail (cooldown or AlreadyCommitted)
   try {
-    await castVote(ACCOUNTS.voter1, contentId, false);
-    assert(false, "Duplicate vote should fail");
-  } catch (e: any) {
-    assert(true, "Duplicate vote correctly rejected");
+    await commitVote(ACCOUNTS.voter1, contentId, false, 101);
+    assert(false, "Duplicate commit should fail");
+  } catch {
+    assert(true, "Duplicate commit correctly rejected");
   }
 }
 
@@ -418,12 +451,20 @@ async function testRoundAdvancementAfterSettlement() {
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   const contentId = 4n;
 
-  // Advance past cooldown from previous tests
+  const cfg = await publicClient.readContract({
+    address: addresses.votingEngine,
+    abi: votingEngineAbi,
+    functionName: "config",
+  });
+  const epochDuration = Number(cfg[0]);
+
+  // Advance past 24h cooldown from previous tests
   await advanceTime(25 * 60 * 60);
 
-  // Round 1: two UP votes
-  await castVote(ACCOUNTS.voter1, contentId, true);
-  await castVote(ACCOUNTS.voter2, contentId, true);
+  // Round 1: three voters
+  const { salt: s1, ck: ck1 } = await commitVote(ACCOUNTS.voter1, contentId, true, 200);
+  const { salt: s2, ck: ck2 } = await commitVote(ACCOUNTS.voter2, contentId, true, 201);
+  const { salt: s3, ck: ck3 } = await commitVote(ACCOUNTS.voter3, contentId, false, 202);
 
   const round1Id = await publicClient.readContract({
     address: addresses.votingEngine,
@@ -433,26 +474,25 @@ async function testRoundAdvancementAfterSettlement() {
   });
   assert(round1Id === 1n, `First round should be 1`);
 
-  // Mine blocks to pass epoch, then try to settle
-  const cfg = await publicClient.readContract({
-    address: addresses.votingEngine,
-    abi: votingEngineAbi,
-    functionName: "config",
-  });
-  const maxEpochBlocks = Number(cfg[1]);
-  await mineBlocks(maxEpochBlocks + 1);
+  // Advance past epoch + settlement delay
+  await advanceTime(epochDuration + 1);
+  const revealer = ACCOUNTS.deployer;
+  await revealVote(revealer, contentId, round1Id, ck1, true, s1);
+  await revealVote(revealer, contentId, round1Id, ck2, true, s2);
+  await revealVote(revealer, contentId, round1Id, ck3, false, s3);
 
-  const settleClient = walletClient(ACCOUNTS.voter1);
+  await advanceTime(epochDuration + 1);
+
   try {
-    const settleHash = await settleClient.writeContract({
+    const settleHash = await walletClient(ACCOUNTS.deployer).writeContract({
       address: addresses.votingEngine,
       abi: votingEngineAbi,
-      functionName: "trySettle",
-      args: [contentId],
+      functionName: "settleRound",
+      args: [contentId, round1Id],
     });
     await publicClient.waitForTransactionReceipt({ hash: settleHash });
-  } catch {
-    console.log("  INFO: trySettle for round 1 did not settle (probabilistic)");
+  } catch (e: any) {
+    console.log(`  INFO: settleRound for round 1 failed: ${e.message.slice(0, 80)}`);
     return;
   }
 
@@ -465,10 +505,9 @@ async function testRoundAdvancementAfterSettlement() {
   });
   assert(noActive === 0n, "No active round after settlement");
 
-  // Advance past 24h cooldown, then create round 2
+  // Advance past 24h cooldown, then start round 2
   await advanceTime(25 * 60 * 60);
-
-  await castVote(ACCOUNTS.voter3, contentId, false);
+  await commitVote(ACCOUNTS.voter3, contentId, false, 203);
 
   const round2Id = await publicClient.readContract({
     address: addresses.votingEngine,
@@ -484,8 +523,8 @@ async function testRoundAdvancementAfterSettlement() {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Public Vote + Random Settlement Integration Tests (TypeScript)");
-  console.log("===============================================================");
+  console.log("tlock Commit-Reveal Integration Tests (TypeScript)");
+  console.log("===================================================");
   console.log(`RPC: ${RPC_URL}`);
   console.log(`VotingEngine: ${addresses.votingEngine}`);
   console.log(`ContentRegistry: ${addresses.contentRegistry}`);
@@ -497,8 +536,8 @@ async function main() {
 
   try {
     await testFullRoundLifecycle();
-    await testVoteAndSettle();
-    await testDuplicateVotePrevention();
+    await testCommitRevealSettle();
+    await testDuplicateCommitPrevention();
     await testRoundAdvancementAfterSettlement();
   } catch (e) {
     console.error("\nUnexpected error:", e);
@@ -509,4 +548,7 @@ async function main() {
   process.exit(failed > 0 ? 1 : 0);
 }
 
-main();
+main().catch(err => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});

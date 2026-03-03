@@ -51,20 +51,27 @@ const FrontendCodes: NextPage = () => {
       <h2>Running a Resolution Service</h2>
       <p>
         Every frontend operator should also run a <strong>resolution service</strong> &mdash; a background service that
-        keeps the protocol moving. It performs one critical task:
+        keeps the protocol moving. It performs two critical tasks:
       </p>
       <ol>
         <li>
-          <strong>Resolving rounds:</strong> After the minimum voting window has passed and enough votes have been cast,
-          the service calls <code>trySettle(contentId)</code> to attempt resolution. Resolution is probabilistic &mdash;
-          the probability increases over time using on-chain randomness. The service retries until resolution succeeds.
+          <strong>Revealing votes:</strong> After each 1-hour epoch ends, the service decrypts tlock ciphertexts using
+          the drand randomness beacon and calls{" "}
+          <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> for each unrevealed commit.
+          Votes stay hidden until this step runs.
+        </li>
+        <li>
+          <strong>Settling rounds:</strong> Once at least 3 votes are revealed and the settlement delay (one epoch) has
+          elapsed, the service calls <code>settleRound(contentId, roundId)</code> to finalize the round, update the
+          content rating, and open rewards for claiming.
         </li>
       </ol>
       <p>
-        Without resolution services, rounds would never resolve. Running one alongside your frontend ensures a smooth
-        experience for your users and contributes to the health of the network. Since <code>trySettle()</code> is
-        permissionless and uses only public blockchain data, anyone can run a resolution service &mdash; no secret data
-        needed. The more independent services running, the more resilient the network becomes.
+        Without resolution services, votes would never be revealed and rounds would never resolve. Running one alongside
+        your frontend ensures a smooth experience for your users and contributes to the health of the network. Since
+        both <code>revealVoteByCommitKey()</code> and <code>settleRound()</code> are permissionless, anyone can run a
+        resolution service &mdash; no secret data needed (the drand beacon is public). The more independent services
+        running, the more resilient the network becomes.
       </p>
 
       <h2>Running an Indexer / Back-End</h2>

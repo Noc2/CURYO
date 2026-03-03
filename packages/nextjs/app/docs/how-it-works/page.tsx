@@ -150,19 +150,14 @@ const HowItWorks: NextPage = () => {
               <td>Resolution guaranteed by this point.</td>
             </tr>
             <tr>
-              <td className="font-mono">baseRateBps</td>
-              <td>3 (0.03%)</td>
-              <td>Flat resolution probability per block.</td>
+              <td className="font-mono">epochDuration</td>
+              <td>1 hour</td>
+              <td>Tier window for reward weighting; also the settlement delay after minVoters revealed.</td>
             </tr>
             <tr>
-              <td className="font-mono">growthRateBps</td>
-              <td>0</td>
-              <td>No growth &mdash; constant probability.</td>
-            </tr>
-            <tr>
-              <td className="font-mono">maxProbBps</td>
-              <td>10 (0.1%)</td>
-              <td>Maximum probability cap (not reached with flat base).</td>
+              <td className="font-mono">minVoters</td>
+              <td>3</td>
+              <td>Minimum revealed votes required before settlement is allowed.</td>
             </tr>
           </tbody>
         </table>

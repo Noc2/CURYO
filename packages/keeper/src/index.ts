@@ -1,7 +1,7 @@
 /**
  * Curyo Keeper — standalone stateless round settlement service.
  *
- * Iterates on-chain content, calls trySettle() for active rounds,
+ * Iterates on-chain content, reveals tlock votes and calls settleRound() for active rounds,
  * cancels expired rounds, and sweeps dormant content.
  *
  * Usage:

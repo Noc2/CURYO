@@ -4,7 +4,7 @@ import { globalStats, profile } from "ponder:schema";
 // Note: context.db in event handlers only supports find/insert/update/delete.
 // Drizzle query builder (select/from/where) is only available in API routes.
 // Aggregate counts start at 0 and are incremented by other event handlers
-// (ContentSubmitted, VotePublished, RewardClaimed) as new events arrive.
+// (ContentSubmitted, VoteCommitted, VoteRevealed, RewardClaimed) as new events arrive.
 
 ponder.on("ProfileRegistry:ProfileCreated", async ({ event, context }) => {
   const { user, name } = event.args;

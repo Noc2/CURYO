@@ -8,13 +8,13 @@ import { ponderApi } from "~~/services/ponder/client";
 
 /**
  * Hook that returns vote popularity per category.
- * Uses Ponder API when available, falls back to scanning VotePublished events.
+ * Uses Ponder API when available, falls back to scanning VoteCommitted events.
  */
 export function useCategoryPopularity(feed: ContentItem[]): Map<string, number> {
-  // --- RPC fallback: scan VotePublished events ---
+  // --- RPC fallback: scan VoteCommitted events ---
   const { data: voteEvents } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
-    eventName: "VotePublished",
+    eventName: "VoteCommitted",
     fromBlock: 0n,
     watch: true,
   } as any);

@@ -1,3 +1,4 @@
+import { encodePacked, keccak256 } from "viem";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
@@ -116,14 +117,18 @@ export async function runVote() {
       await publicClient.waitForTransactionReceipt({ hash: approveTx });
       log.debug(`Approved cREP: ${approveTx}`);
 
-      // Public vote — single-step, no commit/reveal
+      // tlock commit-reveal — MockMode: ciphertext = abi.encodePacked(uint8 isUp, bytes32 salt, uint256 contentId)
+      const salt = keccak256(encodePacked(["address", "uint256", "uint256"], [account.address, contentId, BigInt(Date.now())]));
+      const commitHash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentId]));
+      const ciphertext = encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, contentId]);
+
       const voteTx = await wallet.writeContract({
         ...contractConfig.votingEngine,
-        functionName: "vote",
-        args: [contentId, isUp, config.voteStake, ZERO_ADDRESS],
+        functionName: "commitVote",
+        args: [contentId, commitHash, ciphertext, config.voteStake, ZERO_ADDRESS],
       });
       await publicClient.waitForTransactionReceipt({ hash: voteTx });
-      log.info(`Voted on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"}): ${voteTx}`);
+      log.info(`Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`);
       votesPlaced++;
     } catch (err: any) {
       log.error(`Failed to vote on content #${item.id}: ${err.message}`);
