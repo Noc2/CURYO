@@ -98,10 +98,6 @@ const DelegationDocs: NextPage = () => {
               <td>Limits blast radius if the hot key is compromised</td>
             </tr>
             <tr>
-              <td>Fund the delegate with minimal cREP</td>
-              <td>Only send enough for the next few voting/submission rounds (50-100 cREP)</td>
-            </tr>
-            <tr>
               <td>Keep bulk cREP on the cold wallet</td>
               <td>Top up the delegate periodically rather than front-loading</td>
             </tr>
