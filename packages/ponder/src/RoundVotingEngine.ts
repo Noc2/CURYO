@@ -328,6 +328,26 @@ ponder.on("RoundVotingEngine:FrontendFeeClaimed", async ({ event, context }) => 
     }));
 });
 
+ponder.on("RoundVotingEngine:CancelledRoundRefundClaimed", async ({ event, context }) => {
+  const { contentId, roundId, voter, amount } = event.args;
+
+  // Record refund as a reward claim with source "refund"
+  await context.db
+    .insert(rewardClaim)
+    .values({
+      id: `refund-${contentId}-${roundId}-${voter}`,
+      contentId,
+      roundId,
+      epochId: null,
+      source: "refund",
+      voter,
+      stakeReturned: amount,
+      crepReward: 0n,
+      claimedAt: event.block.timestamp,
+    })
+    .onConflictDoNothing();
+});
+
 ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, context }) => {
   const { contentId, roundId, voter, amount } = event.args;
 

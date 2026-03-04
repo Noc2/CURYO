@@ -18,7 +18,7 @@ import {
   voterStats,
   voterCategoryStats,
 } from "ponder:schema";
-import { eq, desc, asc, and, or, inArray, sql, gte, replaceBigInts } from "ponder";
+import { eq, desc, asc, and, or, inArray, notInArray, sql, gte, replaceBigInts } from "ponder";
 
 const app = new Hono();
 
@@ -363,24 +363,26 @@ app.get("/leaderboard", async (c) => {
 
   // Fill remaining slots with token holders who haven't created a profile
   const remaining = limit - profileItems.length;
-  const profileAddresses = new Set(profileItems.map((p) => p.address));
+  const profileAddresses = profileItems.map((p) => p.address);
   let holderOnly: typeof profileItems = [];
 
   if (remaining > 0) {
-    const holders = await db.select().from(tokenHolder).limit(remaining + profileItems.length);
-    holderOnly = holders
-      .filter((h) => !profileAddresses.has(h.address))
-      .slice(0, remaining)
-      .map((h) => ({
-        address: h.address,
-        name: "",
-        imageUrl: "",
-        createdAt: h.firstSeenAt,
-        updatedAt: h.firstSeenAt,
-        totalVotes: 0,
-        totalContent: 0,
-        totalRewardsClaimed: 0n,
-      }));
+    const holders = profileAddresses.length > 0
+      ? await db.select().from(tokenHolder)
+          .where(notInArray(tokenHolder.address, profileAddresses))
+          .limit(remaining)
+      : await db.select().from(tokenHolder).limit(remaining);
+
+    holderOnly = holders.map((h) => ({
+      address: h.address,
+      name: "",
+      imageUrl: "",
+      createdAt: h.firstSeenAt,
+      updatedAt: h.firstSeenAt,
+      totalVotes: 0,
+      totalContent: 0,
+      totalRewardsClaimed: 0n,
+    }));
   }
 
   const items = [...profileItems, ...holderOnly];
