@@ -789,7 +789,7 @@ export async function revealVoteDirect(
 /**
  * Settle a round via contract call.
  * Calls settleRound(contentId, roundId).
- * Requires: ≥minVoters revealed + settlement delay elapsed.
+ * Requires: ≥minVoters revealed.
  */
 export async function settleRoundDirect(
   contentId: number | bigint,

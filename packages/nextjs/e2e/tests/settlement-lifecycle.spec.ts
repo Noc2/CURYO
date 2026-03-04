@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
  * Settlement lifecycle — full tlock commit-reveal cycle.
  *
  * Uses direct contract calls for the entire flow:
- *   commitVote → (epoch ends) → revealVoteByCommitKey → (settlement delay) → settleRound
+ *   commitVote → (epoch ends) → revealVoteByCommitKey → settleRound
  *
  * Account allocation (exclusive to this file):
  * - Account #10 — submits fresh content
@@ -127,7 +127,7 @@ test.describe("Settlement lifecycle", () => {
       expect(revealed, `Reveal failed for voter ${i}`).toBe(true);
     }
 
-    // Step 5: Fast-forward past settlement delay (one more epoch after threshold reached)
+    // Step 5: Fast-forward past epoch (settlement has no delay, but chain time must advance)
     await evmIncreaseTime(EPOCH_DURATION + 1);
     await waitForPonderSync();
 

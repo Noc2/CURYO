@@ -24,7 +24,7 @@ import { expect, test } from "@playwright/test";
  * Triggers Ponder events: RewardClaimed, SubmitterRewardClaimed, RatingUpdated.
  *
  * Uses direct contract calls for the entire flow:
- *   commitVote → (epoch ends) → revealVoteByCommitKey → (settlement delay) → settleRound → claim
+ *   commitVote → (epoch ends) → revealVoteByCommitKey → settleRound → claim
  *
  * Account allocation (exclusive to this file for voting):
  * - Account #2 — submits fresh content (also used for submitter reward tests)
@@ -135,7 +135,7 @@ test.describe("Reward claim lifecycle", () => {
       expect(revealed, `Reveal failed for voter ${i}`).toBe(true);
     }
 
-    // Step 5: Fast-forward past settlement delay (one more epoch)
+    // Step 5: Fast-forward past epoch (settlement has no delay, but chain time must advance)
     await evmIncreaseTime(EPOCH_DURATION + 1);
     await waitForPonderSync();
 
@@ -287,12 +287,7 @@ test.describe("Reward claim lifecycle", () => {
 
     // Account #3 voted UP (winning side) — claim participation reward
     const voter = ANVIL_ACCOUNTS.account3;
-    const success = await claimParticipationReward(
-      BigInt(settledContentId!),
-      roundId,
-      voter.address,
-      VOTING_ENGINE,
-    );
+    const success = await claimParticipationReward(BigInt(settledContentId!), roundId, voter.address, VOTING_ENGINE);
     expect(success, "Participation reward claim should succeed").toBe(true);
 
     // Double claim should revert (AlreadyClaimed)

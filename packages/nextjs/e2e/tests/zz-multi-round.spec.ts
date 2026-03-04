@@ -134,7 +134,7 @@ test.describe("Multi-round succession", () => {
       expect(revealed, `Round 1 reveal failed for voter ${i}`).toBe(true);
     }
 
-    // Step 4: Fast-forward past settlement delay
+    // Step 4: Fast-forward past epoch (no settlement delay, but chain time must advance)
     await evmIncreaseTime(EPOCH_DURATION + 1);
     await waitForPonderSync();
 
@@ -202,7 +202,7 @@ test.describe("Multi-round succession", () => {
       expect(revealed, `Round 2 reveal failed for voter ${i}`).toBe(true);
     }
 
-    // Step 4: Fast-forward past settlement delay
+    // Step 4: Fast-forward past epoch (no settlement delay, but chain time must advance)
     await evmIncreaseTime(EPOCH_DURATION + 1);
     await waitForPonderSync();
 

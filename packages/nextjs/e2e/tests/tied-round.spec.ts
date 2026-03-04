@@ -179,7 +179,7 @@ test.describe("Tied round lifecycle", () => {
     // Wait a bit for the keeper to pick up the reveals
     await waitForPonderSync();
 
-    // Fast-forward past settlement delay (one more epoch after threshold reached)
+    // Fast-forward past epoch (no settlement delay, but chain time must advance)
     await evmIncreaseTime(EPOCH_DURATION + 1);
     await waitForPonderSync();
 
