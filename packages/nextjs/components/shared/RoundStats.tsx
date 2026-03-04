@@ -83,7 +83,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
             <div className="w-px h-4 bg-base-content/10" />
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1">
-                <span className="text-base-content/40">{pendingCount} pending</span>
+                Pending
                 <InfoTooltip
                   text={
                     isEpoch1
@@ -93,6 +93,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
                   position="bottom"
                 />
               </span>
+              <span className="font-semibold tabular-nums">{pendingCount}</span>
             </div>
           </>
         )}
