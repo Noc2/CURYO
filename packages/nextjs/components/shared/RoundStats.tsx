@@ -5,15 +5,6 @@ import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
 import { useRoundPhase } from "~~/hooks/useRoundPhase";
 
-function formatSettlementCountdown(seconds: number): string {
-  if (seconds <= 0) return "now";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m ${s}s`;
-}
-
 interface RoundStatsProps {
   contentId: bigint;
   categoryId?: bigint;
@@ -28,8 +19,8 @@ interface RoundStatsProps {
  */
 export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, minVoters, maxVoters, isRoundFull, readyToSettle } = useRoundInfo(contentId);
-  const { phase, isEpoch1, settlementCountdown, thresholdReachedAt, currentEpochRemaining } = useRoundPhase(contentId);
+  const { round, isLoading, maxVoters, isRoundFull } = useRoundInfo(contentId);
+  const { phase, isEpoch1 } = useRoundPhase(contentId);
 
   if (isLoading) {
     return (
@@ -124,48 +115,16 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
         </div>
       )}
 
-      {/* Settlement status */}
-      {phase === "voting" && (
+      {/* Round full warning */}
+      {phase === "voting" && isRoundFull && (
         <div className="flex items-center gap-2">
-          {isRoundFull ? (
-            <span className="flex items-center gap-1 text-warning/80">
-              Round full ({voteCount} / {maxVoters} voters)
-              <InfoTooltip
-                text="This round has reached the maximum voter limit. New votes cannot be added until a new round starts."
-                position="bottom"
-              />
-            </span>
-          ) : readyToSettle ? (
-            <span className="flex items-center gap-1 text-success/80">
-              {thresholdReachedAt > 0 && settlementCountdown > 0 ? (
-                <>
-                  Settles in{" "}
-                  <span className="font-semibold tabular-nums">{formatSettlementCountdown(settlementCountdown)}</span>
-                  <InfoTooltip
-                    text="Votes revealed. The keeper will settle automatically after the settlement delay."
-                    position="bottom"
-                  />
-                </>
-              ) : thresholdReachedAt > 0 ? (
-                <>
-                  Ready to settle
-                  <InfoTooltip
-                    text="Settlement delay elapsed. The keeper will settle this round shortly."
-                    position="bottom"
-                  />
-                </>
-              ) : (
-                <>
-                  Reveals in{" "}
-                  <span className="font-semibold tabular-nums">{formatSettlementCountdown(currentEpochRemaining)}</span>
-                  <InfoTooltip
-                    text={`At least ${minVoters} votes committed. Votes are revealed when the current epoch ends, then settled after a one-epoch delay.`}
-                    position="bottom"
-                  />
-                </>
-              )}
-            </span>
-          ) : null}
+          <span className="flex items-center gap-1 text-warning/80">
+            Round full ({voteCount} / {maxVoters} voters)
+            <InfoTooltip
+              text="This round has reached the maximum voter limit. New votes cannot be added until a new round starts."
+              position="bottom"
+            />
+          </span>
         </div>
       )}
 

@@ -34,7 +34,19 @@ function formatDays(seconds: number): string {
  * Terminal states: Resolved / Cancelled / Tied
  */
 export function RoundProgress({ contentId }: RoundProgressProps) {
-  const { phase, roundTimeRemaining, isEpoch1, epoch1Remaining, isReady } = useRoundPhase(contentId);
+  const {
+    phase,
+    roundTimeRemaining,
+    isEpoch1,
+    epoch1Remaining,
+    isReady,
+    settlementCountdown,
+    thresholdReachedAt,
+    currentEpochRemaining,
+    epochDuration,
+    voteCount,
+    minVoters,
+  } = useRoundPhase(contentId);
 
   if (!isReady) {
     return (
@@ -142,18 +154,41 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
         </div>
       )}
 
-      {/* Round expiry */}
-      {formattedExpiry && (
+      {/* Round expiry or settlement countdown */}
+      {voteCount >= minVoters ? (
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            Expires in
+            Settles in
             <InfoTooltip
-              text="Maximum time until the round expires. Settlement happens sooner once enough votes are revealed."
+              text={
+                thresholdReachedAt > 0
+                  ? "Votes revealed. The keeper settles after the one-epoch settlement delay."
+                  : "Estimated time: votes revealed at epoch end, then one-epoch settlement delay."
+              }
               position="bottom"
             />
           </span>
-          <span className="font-semibold tabular-nums">{formattedExpiry}</span>
+          <span className="font-semibold tabular-nums">
+            {thresholdReachedAt > 0
+              ? settlementCountdown > 0
+                ? formatDuration(settlementCountdown)
+                : "now"
+              : formatDuration(currentEpochRemaining + epochDuration)}
+          </span>
         </div>
+      ) : (
+        formattedExpiry && (
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              Expires in
+              <InfoTooltip
+                text="Maximum time until the round expires. Settlement happens sooner once enough votes are revealed."
+                position="bottom"
+              />
+            </span>
+            <span className="font-semibold tabular-nums">{formattedExpiry}</span>
+          </div>
+        )
       )}
     </div>
   );
