@@ -6,6 +6,7 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 30, windowMs: 60_000 }; // 30 req/min per IP
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB cap on upstream response
 
 /**
  * Proxy for RAWG API to avoid exposing API key client-side.
@@ -52,7 +53,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "RAWG API error" }, { status: response.status });
     }
 
-    const data = await response.json();
+    const contentLength = Number(response.headers.get("content-length") || 0);
+    if (contentLength > MAX_RESPONSE_BYTES) {
+      return NextResponse.json({ error: "RAWG API response too large" }, { status: 502 });
+    }
+    const text = await response.text();
+    if (text.length > MAX_RESPONSE_BYTES) {
+      return NextResponse.json({ error: "RAWG API response too large" }, { status: 502 });
+    }
+    const data = JSON.parse(text);
     const result = {
       name: data.name,
       description_raw: data.description_raw?.slice(0, 500),
