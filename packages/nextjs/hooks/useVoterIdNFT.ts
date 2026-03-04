@@ -89,21 +89,3 @@ export function useVoterIdStake(contentId?: bigint, epochId?: bigint, tokenId?: 
     refetch: refetchAll,
   };
 }
-
-/**
- * Hook to get the MAX_STAKE constant (100 cREP).
- */
-export function useMaxStakePerVoter() {
-  const { data: maxStake, isLoading } = useScaffoldReadContract({
-    contractName: "VoterIdNFT" as any,
-    functionName: "MAX_STAKE_PER_VOTER",
-    query: {
-      enabled: true,
-    },
-  } as any);
-
-  return {
-    maxStake: maxStake ?? 100_000_000n, // 100 cREP with 6 decimals
-    isLoading,
-  };
-}

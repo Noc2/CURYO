@@ -10,6 +10,7 @@ import { useAccount, useReadContracts } from "wagmi";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
+import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { StakeSelector } from "~~/components/swipe/StakeSelector";
 import { SwipeCard } from "~~/components/swipe/SwipeCard";
@@ -385,6 +386,8 @@ const HomeInner = () => {
               </option>
             ))}
           </select>
+
+          <StreakCounter />
 
           <div className="w-px h-5 bg-base-content/10 shrink-0" />
 
