@@ -850,9 +850,9 @@ app.get("/voter-ids", async (c) => {
 // ============================================================
 
 const STREAK_MILESTONES = [
-  { days: 7, bonus: 50 },
-  { days: 30, bonus: 500 },
-  { days: 90, bonus: 5000 },
+  { days: 7, baseBonus: 10 },
+  { days: 30, baseBonus: 50 },
+  { days: 90, baseBonus: 200 },
 ];
 
 app.get("/voter-streak", async (c) => {
@@ -879,8 +879,9 @@ app.get("/voter-streak", async (c) => {
       totalActiveDays: 0,
       lastActiveDate: null,
       lastMilestoneDay: 0,
+      milestones: STREAK_MILESTONES,
       nextMilestone: STREAK_MILESTONES[0].days,
-      nextMilestoneBonus: STREAK_MILESTONES[0].bonus,
+      nextMilestoneBaseBonus: STREAK_MILESTONES[0].baseBonus,
     });
   }
 
@@ -895,8 +896,9 @@ app.get("/voter-streak", async (c) => {
     totalActiveDays: streak.totalActiveDays,
     lastActiveDate: streak.lastActiveDate,
     lastMilestoneDay: streak.lastMilestoneDay,
+    milestones: STREAK_MILESTONES,
     nextMilestone: nextMilestone?.days ?? null,
-    nextMilestoneBonus: nextMilestone?.bonus ?? null,
+    nextMilestoneBaseBonus: nextMilestone?.baseBonus ?? null,
   });
 });
 

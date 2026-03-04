@@ -166,11 +166,12 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       totalActiveDays: existingStreak.totalActiveDays + 1,
     });
   } else {
-    // Gap — reset streak to 1
+    // Gap — reset streak to 1 (also reset milestones to match on-chain)
     await context.db.update(voterStreak, { voter }).set({
       currentDailyStreak: 1,
       lastActiveDate: dateStr,
       totalActiveDays: existingStreak.totalActiveDays + 1,
+      lastMilestoneDay: 0,
     });
   }
 });
@@ -411,13 +412,6 @@ ponder.on("RoundVotingEngine:CancelledRoundRefundClaimed", async ({ event, conte
     .onConflictDoNothing();
 });
 
-// Streak milestone amounts (6 decimal cREP): used to detect streak bonus payments
-const STREAK_MILESTONE_AMOUNTS: Record<string, number> = {
-  "50000000": 7,    // 50 cREP → 7-day milestone
-  "500000000": 30,  // 500 cREP → 30-day milestone
-  "5000000000": 90, // 5,000 cREP → 90-day milestone
-};
-
 ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, context }) => {
   const { contentId, roundId, voter, amount } = event.args;
 
@@ -456,15 +450,4 @@ ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, contex
     .onConflictDoUpdate((row) => ({
       totalRewardsClaimed: row.totalRewardsClaimed + amount,
     }));
-
-  // Detect streak milestone bonus payments and update lastMilestoneDay
-  const milestoneDay = STREAK_MILESTONE_AMOUNTS[amount.toString()];
-  if (milestoneDay) {
-    const existingStreak = await context.db.find(voterStreak, { voter });
-    if (existingStreak && existingStreak.lastMilestoneDay < milestoneDay) {
-      await context.db.update(voterStreak, { voter }).set({
-        lastMilestoneDay: milestoneDay,
-      });
-    }
-  }
 });
