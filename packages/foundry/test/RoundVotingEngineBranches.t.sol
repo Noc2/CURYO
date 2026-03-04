@@ -158,9 +158,7 @@ contract RoundVotingEngineBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -315,9 +313,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck2, v2Up, s2);
         _reveal(contentId, roundId, ck3, v3Up, s3);
 
-        // Warp past settlement delay (thresholdReachedAt + epochDuration)
-        RoundLib.Round memory r1 = engine.getRound(contentId, roundId);
-        vm.warp(r1.thresholdReachedAt + EPOCH + 1);
     }
 
     // =========================================================================
@@ -612,10 +607,10 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     // =========================================================================
-    // 6. SETTLEMENT DELAY CHECK (SettlementDelayNotElapsed)
+    // 6. IMMEDIATE SETTLEMENT AFTER THRESHOLD
     // =========================================================================
 
-    function test_Settle_BeforeDelay_Reverts() public {
+    function test_Settle_ImmediatelyAfterThreshold_Succeeds() public {
         uint256 contentId = _submitContent();
 
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
@@ -630,15 +625,17 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
 
-        // Try to settle immediately after revealing — delay not elapsed
-        vm.expectRevert(RoundVotingEngine.SettlementDelayNotElapsed.selector);
+        // Settlement succeeds immediately after minVoters revealed — no delay required
         engine.settleRound(contentId, roundId);
+
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
     }
 
     function test_Settle_AfterDelay_Succeeds() public {
         (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
 
-        // Settlement delay has already been warped past in _setupThreeVoterRound
+        // Settlement succeeds immediately after reveals in _setupThreeVoterRound
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -706,9 +703,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck2, false, salt2);
         _reveal(contentId, roundId, ck3, true, salt3);
 
-        RoundLib.Round memory rAfterReveal = engine.getRound(contentId, roundId);
-        vm.warp(rAfterReveal.thresholdReachedAt + EPOCH + 1);
-
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -732,9 +726,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck1, true, salt1);
         _reveal(contentId, roundId, ck2, false, salt2);
         _reveal(contentId, roundId, ck3, false, salt3);
-
-        RoundLib.Round memory rAfterReveal2 = engine.getRound(contentId, roundId);
-        vm.warp(rAfterReveal2.thresholdReachedAt + EPOCH + 1);
 
         engine.settleRound(contentId, roundId);
 
@@ -855,9 +846,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(cid3, xRoundId, xck2, false, xs2);
         _reveal(cid3, xRoundId, xck3, true, xs3);
 
-        RoundLib.Round memory rTied = engine.getRound(cid3, xRoundId);
-        vm.warp(rTied.thresholdReachedAt + EPOCH + 1);
-
         engine.settleRound(cid3, xRoundId);
 
         RoundLib.Round memory round = engine.getRound(cid3, xRoundId);
@@ -897,8 +885,6 @@ contract RoundVotingEngineBranchesTest is Test {
         uint256 fStake = engine.roundStakeWithApprovedFrontend(contentId, roundId);
         assertEq(fStake, STAKE); // only voter1 used approved frontend
 
-        RoundLib.Round memory rFee1 = engine.getRound(contentId, roundId);
-        vm.warp(rFee1.thresholdReachedAt + EPOCH + 1);
         engine.settleRound(contentId, roundId);
 
         uint256 frontendPool = engine.roundFrontendPool(contentId, roundId);
@@ -921,8 +907,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
 
-        RoundLib.Round memory rFeeCS = engine.getRound(contentId, roundId);
-        vm.warp(rFeeCS.thresholdReachedAt + EPOCH + 1);
         engine.settleRound(contentId, roundId);
 
         uint256 feesBefore = frontendRegistry.getAccumulatedFees(frontend1);
@@ -949,8 +933,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
 
-        RoundLib.Round memory rFeeCC = engine.getRound(contentId, roundId);
-        vm.warp(rFeeCC.thresholdReachedAt + EPOCH + 1);
         engine.settleRound(contentId, roundId);
 
         engine.claimFrontendFee(contentId, roundId, frontend1);
@@ -1029,10 +1011,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck3, false, s3);
         _reveal(contentId, roundId, ck4, true, s4);
 
-        // Warp past settlement delay
-        RoundLib.Round memory rPU1 = engine.getRound(contentId, roundId);
-        vm.warp(rPU1.thresholdReachedAt + EPOCH + 1);
-
         // voter1's revealableAfter is in the past relative to settlement — forfeited
         engine.settleRound(contentId, roundId);
 
@@ -1066,13 +1044,8 @@ contract RoundVotingEngineBranchesTest is Test {
         vm.warp(rPU2start.startTime + 2 * EPOCH + 1);
         (bytes32 ck4,) = _commit(voter4, contentId, true, STAKE);
 
-        // Warp past settlement delay: thresholdReachedAt + EPOCH + 1
-        // thresholdReachedAt = rPU2start.startTime + EPOCH + 1
-        // settledAt = rPU2start.startTime + 2 * EPOCH + 2
+        // settledAt = rPU2start.startTime + 2 * EPOCH + 1 (current block.timestamp)
         // voter4 revealableAfter = rPU2start.startTime + 3 * EPOCH > settledAt => REFUNDED
-        RoundLib.Round memory rPU2 = engine.getRound(contentId, roundId);
-        vm.warp(rPU2.thresholdReachedAt + EPOCH + 1);
-
         engine.settleRound(contentId, roundId);
 
         uint256 voter4BalBefore = crepToken.balanceOf(voter4);
@@ -1133,8 +1106,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck3, true, s3);
         // voter4's vote is NOT revealed
 
-        RoundLib.Round memory rPU3 = engine.getRound(contentId, roundId);
-        vm.warp(rPU3.thresholdReachedAt + EPOCH + 1);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -1375,9 +1346,6 @@ contract RoundVotingEngineBranchesTest is Test {
         // DOWN gets 1 voter at 100% weight = STAKE weighted
         // => DOWN wins despite fewer voters due to epoch-1 weight advantage
 
-        RoundLib.Round memory rEW1 = engine.getRound(contentId, roundId);
-        vm.warp(rEW1.thresholdReachedAt + EPOCH + 1);
-
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -1401,9 +1369,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, true, s3);
-
-        RoundLib.Round memory rCSU = engine.getRound(contentId, roundId);
-        vm.warp(rCSU.thresholdReachedAt + EPOCH + 1);
 
         engine.settleRound(contentId, roundId);
 
