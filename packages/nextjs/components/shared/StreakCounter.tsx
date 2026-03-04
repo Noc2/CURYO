@@ -8,7 +8,7 @@ function getStreakColor(streak: number): string {
   if (streak >= 90) return "text-purple-400";
   if (streak >= 30) return "text-red-400";
   if (streak >= 7) return "text-orange-400";
-  return "text-base-content/40";
+  return "text-base-content/80";
 }
 
 const STREAK_INITIAL_RATE_BPS = 9000;
