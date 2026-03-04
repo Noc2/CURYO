@@ -35,22 +35,22 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>High</td>
               <td>16</td>
-              <td>12 resolved, 2 verified, 1 design, 1 fragile</td>
+              <td>11 resolved, 3 verified, 1 design, 1 fragile</td>
             </tr>
             <tr>
               <td>Medium</td>
               <td>21</td>
-              <td>14 resolved/verified, 3 design, 2 needs review, 2 accepted</td>
+              <td>13 resolved/verified, 3 design, 3 needs review, 2 accepted</td>
             </tr>
             <tr>
               <td>Low</td>
               <td>11</td>
-              <td>8 resolved, 2 accepted, 1 design</td>
+              <td>7 resolved, 2 accepted, 2 design</td>
             </tr>
             <tr>
               <td>Informational</td>
               <td>10</td>
-              <td>7 resolved, 1 accepted, 2 design</td>
+              <td>8 resolved, 2 design</td>
             </tr>
           </tbody>
         </table>
@@ -855,7 +855,7 @@ const SecurityAudit: NextPage = () => {
               <td>L-09</td>
               <td>
                 <strong>Self-referral possible with two passports.</strong> A user with two passport-verified identities
-                can refer themselves for a 20% bonus. Limited by the cost and difficulty of obtaining multiple
+                can refer themselves for a 50% bonus. Limited by the cost and difficulty of obtaining multiple
                 passports.
               </td>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
@@ -1124,7 +1124,7 @@ const SecurityAudit: NextPage = () => {
       <p>
         Game-theoretic attack scenarios against the round-based parimutuel voting mechanism. All scenarios assume
         VoterIdNFT is active (sybil resistance enabled, 100 cREP max stake per voter per content per round). No global
-        voter pool (100% content-specific). No bonus pool.
+        voter pool (100% content-specific). Consensus reserve subsidizes unanimous rounds.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -1249,7 +1249,7 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <strong>MAX_VOTERS cap griefing</strong> &mdash; Fill voter slots with minimum-stake sybil votes.
               </td>
-              <td>200 cREP (200 VoterIDs)</td>
+              <td>1000 cREP (1000 VoterIDs)</td>
               <td>
                 With VoterIdNFT: impractical (requires verified identities). Without: trivially sybilable. Cap enforced
                 at vote time.
@@ -1288,11 +1288,11 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>
                 <strong>Referral loop exploitation</strong> &mdash; Two colluding users claim with each other as
-                referrers, extracting ~25% more cREP per pair.
+                referrers, extracting ~100% more cREP per pair.
               </td>
               <td>0 (uses faucet claims)</td>
               <td>
-                Accelerates 78M faucet depletion by ~25%. Expected cost of referral incentives. Referrer must have
+                Accelerates 78M faucet depletion by up to 2x. Expected cost of referral incentives. Referrer must have
                 VoterIdNFT.
               </td>
               <td>
