@@ -78,7 +78,7 @@ async function isSafeUrl(url: string): Promise<boolean> {
   return true;
 }
 const RATE_LIMIT_POST = { limit: 20, windowMs: 60_000 };
-const MAX_URLS_PER_REQUEST = 50;
+const MAX_URLS_PER_REQUEST = 20;
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24h
 
 interface ValidationResult {
