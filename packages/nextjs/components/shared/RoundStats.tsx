@@ -77,28 +77,22 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
           </span>
           <span className="font-semibold tabular-nums">{voteCount}</span>
         </div>
-        {/* Reveal progress */}
-        {voteCount > 0 && (
+        {/* Pending reveal count */}
+        {pendingCount > 0 && (
           <>
             <div className="w-px h-4 bg-base-content/10" />
             <div className="flex items-center gap-2">
-              {pendingCount > 0 ? (
-                <span className="flex items-center gap-1">
-                  <span className="text-base-content/40">
-                    {revealedCount} revealed, {pendingCount} pending
-                  </span>
-                  <InfoTooltip
-                    text={
-                      isEpoch1
-                        ? "Votes are hidden until epoch 1 ends. The keeper reveals them automatically after the epoch."
-                        : "The keeper is revealing votes. Revealed votes are counted toward settlement."
-                    }
-                    position="bottom"
-                  />
-                </span>
-              ) : (
-                <span className="text-base-content/40">All {revealedCount} revealed</span>
-              )}
+              <span className="flex items-center gap-1">
+                <span className="text-base-content/40">{pendingCount} pending</span>
+                <InfoTooltip
+                  text={
+                    isEpoch1
+                      ? "Votes are hidden until epoch 1 ends. The keeper reveals them automatically after the epoch."
+                      : "The keeper is revealing votes. Revealed votes are counted toward settlement."
+                  }
+                  position="bottom"
+                />
+              </span>
             </div>
           </>
         )}
