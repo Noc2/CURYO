@@ -5,6 +5,7 @@ import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
+import { ExpectedPayoutBadge } from "~~/components/swipe/ExpectedPayoutBadge";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
@@ -176,6 +177,11 @@ export function VotingQuestionCard({
 
         {/* Vote error message */}
         {error && <p className="text-base text-center text-red-400 mb-2">{error}</p>}
+
+        {/* Expected payout badge */}
+        <div className="flex justify-center mb-2">
+          <ExpectedPayoutBadge contentId={contentId} />
+        </div>
 
         {/* Voting arrows - centered below question */}
         <div className="flex items-center justify-center gap-2 lg:gap-3 mb-3">
