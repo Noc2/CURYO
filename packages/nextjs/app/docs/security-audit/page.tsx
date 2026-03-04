@@ -7,7 +7,7 @@ const SecurityAudit: NextPage = () => {
       <p className="lead text-base-content/60 text-lg">
         Consolidated internal security audit of all Curyo smart contracts covering static analysis, manual review,
         storage layout verification, and economic attack analysis. Consolidated from 5 prior review rounds (V1&ndash;V5,
-        Feb 2025&ndash;Feb 2026). February 27, 2026.
+        Feb 2025&ndash;Feb 2026). March 4, 2026.
       </p>
 
       <h2>Executive Summary</h2>
@@ -74,7 +74,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-secondary badge-sm">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>
                 Core voting: tlock commit-reveal, epoch-weighted rewards, deterministic settlement, consensus subsidy
@@ -83,84 +83,84 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
               <td>
-                <span className="badge badge-secondary badge-sm">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>Pull-based reward claiming</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-secondary badge-sm">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>Content lifecycle, submitter stakes, ratings</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
               <td>
-                <span className="badge badge-secondary badge-sm">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>Frontend operator staking and fee distribution</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">ProfileRegistry</td>
               <td>
-                <span className="badge badge-secondary badge-sm">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>User profiles and name uniqueness</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Non-upgradeable</span>
+                <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Category governance and domain uniqueness</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">CuryoReputation</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Non-upgradeable</span>
+                <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>ERC-20 token with governance locking</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Non-upgradeable</span>
+                <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Soulbound sybil resistance, delegation, stake limits</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">ParticipationPool</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Non-upgradeable</span>
+                <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Halving-tier participation rewards</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Non-upgradeable</span>
+                <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Self.xyz verified claims, referrals, Pausable</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">CuryoGovernor</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Non-upgradeable</span>
+                <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>OpenZeppelin Governor with timelock</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">RewardMath</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Library</span>
+                <span className="badge badge-secondary whitespace-nowrap">Library</span>
               </td>
               <td>Pool split arithmetic and reward calculations</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">RoundLib</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Library</span>
+                <span className="badge badge-secondary whitespace-nowrap">Library</span>
               </td>
               <td>Round states, timing, settlement probability</td>
             </tr>
@@ -223,7 +223,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Testing</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Testing</span>
               </td>
             </tr>
             <tr>
@@ -235,7 +235,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Testing</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Testing</span>
               </td>
             </tr>
             <tr>
@@ -248,7 +248,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Testing</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Testing</span>
               </td>
             </tr>
           </tbody>
@@ -276,7 +276,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -288,7 +288,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -300,7 +300,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CuryoReputation</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -312,7 +312,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry, FrontendRegistry, ProfileRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -324,7 +324,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine, RewardMath</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -337,7 +337,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -348,7 +348,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -362,7 +362,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -376,7 +376,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -390,7 +390,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -402,7 +402,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -414,7 +414,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -426,7 +426,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -439,7 +439,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>
-                <span className="badge badge-info badge-sm">Fragile</span>
+                <span className="badge badge-info whitespace-nowrap">Fragile</span>
               </td>
             </tr>
             <tr>
@@ -452,7 +452,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">All UUPS contracts</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -466,7 +466,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CuryoReputation</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
           </tbody>
@@ -494,7 +494,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -506,7 +506,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -517,7 +517,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -529,7 +529,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-info badge-sm">Mitigated</span>
+                <span className="badge badge-info whitespace-nowrap">Mitigated</span>
               </td>
             </tr>
             <tr>
@@ -541,7 +541,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">All UUPS contracts</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -553,7 +553,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -564,7 +564,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Review</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Review</span>
               </td>
             </tr>
             <tr>
@@ -577,7 +577,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CuryoReputation</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -589,7 +589,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
             <tr>
@@ -602,7 +602,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -614,7 +614,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Review</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Review</span>
               </td>
             </tr>
             <tr>
@@ -626,7 +626,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -639,7 +639,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ParticipationPool</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -652,7 +652,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Verification</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Verification</span>
               </td>
             </tr>
             <tr>
@@ -664,7 +664,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CuryoGovernor</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -676,7 +676,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Accepted</span>
+                <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
             </tr>
             <tr>
@@ -689,7 +689,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -701,7 +701,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -713,7 +713,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
             <tr>
@@ -725,7 +725,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Accepted</span>
+                <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
             </tr>
             <tr>
@@ -738,7 +738,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
           </tbody>
@@ -766,7 +766,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -778,7 +778,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -790,7 +790,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -802,7 +802,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -814,7 +814,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -825,7 +825,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -836,7 +836,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RewardMath</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Accepted</span>
+                <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
             </tr>
             <tr>
@@ -848,7 +848,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CuryoReputation</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
             <tr>
@@ -860,7 +860,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Accepted</span>
+                <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
             </tr>
             <tr>
@@ -872,7 +872,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -884,7 +884,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ParticipationPool</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
           </tbody>
@@ -911,7 +911,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -922,7 +922,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RewardMath</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -934,7 +934,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">Integration tests</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -947,7 +947,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ProfileRegistry, CategoryRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -959,7 +959,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -971,7 +971,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CategoryRegistry, FrontendRegistry</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -982,7 +982,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">CuryoReputation</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -993,7 +993,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -1006,7 +1006,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
             <tr>
@@ -1019,7 +1019,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
           </tbody>
@@ -1048,7 +1048,7 @@ const SecurityAudit: NextPage = () => {
               <td>0&ndash;10 (11 slots)</td>
               <td>__gap[49]</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Pass</span>
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
             <tr>
@@ -1056,7 +1056,7 @@ const SecurityAudit: NextPage = () => {
               <td>0&ndash;43 (44 slots)</td>
               <td>__gap[25]</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Pass</span>
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
             <tr>
@@ -1064,7 +1064,7 @@ const SecurityAudit: NextPage = () => {
               <td>0&ndash;4 (5 slots)</td>
               <td>__gap[50]</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Pass</span>
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
             <tr>
@@ -1072,7 +1072,7 @@ const SecurityAudit: NextPage = () => {
               <td>0&ndash;5 (6 slots)</td>
               <td>__gap[50]</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Pass</span>
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
             <tr>
@@ -1080,7 +1080,7 @@ const SecurityAudit: NextPage = () => {
               <td>0&ndash;3 (4 slots)</td>
               <td>__gap[50]</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Pass</span>
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
           </tbody>
@@ -1098,20 +1098,20 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>_disableInitializers() in constructor</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Pass</span> &mdash; All 5 UUPS contracts
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; All 5 UUPS contracts
               </td>
             </tr>
             <tr>
               <td>_authorizeUpgrade requires UPGRADER_ROLE</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Pass</span> &mdash; All 5 UUPS contracts
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; All 5 UUPS contracts
               </td>
             </tr>
             <tr>
               <td>ReentrancyGuard under proxy</td>
               <td>
-                <span className="badge badge-secondary badge-sm">Pass</span> &mdash; OZ v5.5.0 uses ERC-7201 storage
-                slot with check == ENTERED (2). Uninitialized proxy storage (0) is safe.
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; OZ v5.5.0 uses ERC-7201
+                storage slot with check == ENTERED (2). Uninitialized proxy storage (0) is safe.
               </td>
             </tr>
           </tbody>
@@ -1146,7 +1146,7 @@ const SecurityAudit: NextPage = () => {
               <td>1&ndash;100 cREP (returned if unopposed)</td>
               <td>Reduced: 1 point/round per attacker</td>
               <td>
-                <span className="badge badge-success badge-sm">Mitigated</span>
+                <span className="badge badge-success whitespace-nowrap">Mitigated</span>
               </td>
             </tr>
             <tr>
@@ -1157,7 +1157,7 @@ const SecurityAudit: NextPage = () => {
               <td>10 cREP stake + 1 cREP cancel fee</td>
               <td>Reduced: 1 cREP cost per spam cycle</td>
               <td>
-                <span className="badge badge-success badge-sm">Mitigated</span>
+                <span className="badge badge-success whitespace-nowrap">Mitigated</span>
               </td>
             </tr>
             <tr>
@@ -1169,7 +1169,7 @@ const SecurityAudit: NextPage = () => {
               <td>Gas only</td>
               <td>No impact: any party can attempt settlement</td>
               <td>
-                <span className="badge badge-success badge-sm">Mitigated</span>
+                <span className="badge badge-success whitespace-nowrap">Mitigated</span>
               </td>
             </tr>
             <tr>
@@ -1181,7 +1181,7 @@ const SecurityAudit: NextPage = () => {
               <td>10 cREP submitter stake</td>
               <td>Blocked: cancel/dormancy checks vote state</td>
               <td>
-                <span className="badge badge-success badge-sm">Resolved</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -1192,7 +1192,7 @@ const SecurityAudit: NextPage = () => {
               <td>&mdash;</td>
               <td>All checks skip if voterIdNFT == address(0)</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Deployment</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Deployment</span>
               </td>
             </tr>
             <tr>
@@ -1203,7 +1203,7 @@ const SecurityAudit: NextPage = () => {
               <td>4% of circulating cREP (dynamic quorum, 10K floor)</td>
               <td>Timelock delay allows community response</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Deployment</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Deployment</span>
               </td>
             </tr>
             <tr>
@@ -1214,7 +1214,7 @@ const SecurityAudit: NextPage = () => {
               <td>Gas only</td>
               <td>No impact: round pools are 100% content-specific, no shared pool affected by ordering</td>
               <td>
-                <span className="badge badge-success badge-sm">No Issue</span>
+                <span className="badge badge-success whitespace-nowrap">No Issue</span>
               </td>
             </tr>
             <tr>
@@ -1228,7 +1228,7 @@ const SecurityAudit: NextPage = () => {
                 on losing side. At all tiers, participation reward is less than stake.
               </td>
               <td>
-                <span className="badge badge-success badge-sm">Not Profitable</span>
+                <span className="badge badge-success whitespace-nowrap">Not Profitable</span>
               </td>
             </tr>
             <tr>
@@ -1242,7 +1242,7 @@ const SecurityAudit: NextPage = () => {
                 profitable at tier 0 but becomes unprofitable at lower tiers.
               </td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Testing</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Testing</span>
               </td>
             </tr>
             <tr>
@@ -1255,7 +1255,7 @@ const SecurityAudit: NextPage = () => {
                 at vote time.
               </td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Deployment</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Deployment</span>
               </td>
             </tr>
             <tr>
@@ -1269,7 +1269,7 @@ const SecurityAudit: NextPage = () => {
                 profit.
               </td>
               <td>
-                <span className="badge badge-secondary badge-sm">Accepted</span>
+                <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
             </tr>
             <tr>
@@ -1282,7 +1282,7 @@ const SecurityAudit: NextPage = () => {
                 timing.
               </td>
               <td>
-                <span className="badge badge-success badge-sm">No Issue</span>
+                <span className="badge badge-success whitespace-nowrap">No Issue</span>
               </td>
             </tr>
             <tr>
@@ -1296,7 +1296,7 @@ const SecurityAudit: NextPage = () => {
                 VoterIdNFT.
               </td>
               <td>
-                <span className="badge badge-secondary badge-sm">Design</span>
+                <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
             </tr>
           </tbody>
@@ -1321,35 +1321,35 @@ const SecurityAudit: NextPage = () => {
               <td>Vote &rarr; settle &rarr; claim</td>
               <td>User &rarr; VotingEngine &rarr; (settlement splits) &rarr; RewardDistributor &rarr; User</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
               <td>Consensus subsidy</td>
               <td>ConsensusReserve &rarr; VotingEngine (one-sided round payouts)</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
               <td>Content submit &rarr; return/slash</td>
               <td>User &rarr; ContentRegistry &rarr; (return to User OR slash to Treasury)</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
               <td>Frontend slash &rarr; treasury</td>
               <td>FrontendRegistry &rarr; forceApprove &rarr; Treasury</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
               <td>Category rejection &rarr; treasury</td>
               <td>CategoryRegistry &rarr; forceApprove &rarr; Treasury</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -1359,7 +1359,8 @@ const SecurityAudit: NextPage = () => {
                 registry.returnSubmitterStake()/slashSubmitterStake()
               </td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span> &mdash; nonReentrant blocks re-entry
+                <span className="badge badge-success whitespace-nowrap">Verified</span> &mdash; nonReentrant blocks
+                re-entry
               </td>
             </tr>
           </tbody>
@@ -1475,7 +1476,7 @@ const SecurityAudit: NextPage = () => {
       <hr />
 
       <h2>Test Coverage</h2>
-      <p>645 tests across 27 test suites, all passing.</p>
+      <p>1032 tests across 41 test suites.</p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
           <thead>
@@ -1487,19 +1488,19 @@ const SecurityAudit: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT.t.sol</td>
+              <td className="font-mono text-[#EF476F]">RoundVotingEngineBranchesTest</td>
+              <td>71</td>
+              <td>Voting engine branch coverage</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">VoterIdNFTTest</td>
               <td>63</td>
               <td>Soulbound NFT, delegation, multi-minter, stake caps</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundIntegration.t.sol</td>
-              <td>53</td>
-              <td>Full vote/settle/claim cycles</td>
-            </tr>
-            <tr>
-              <td className="font-mono text-[#EF476F]">RoundSettlementEdgeCaseTest</td>
-              <td>48</td>
-              <td>Settlement edge cases, tied rounds, cancellations</td>
+              <td className="font-mono text-[#EF476F]">FrontendRegistryCoverageTest</td>
+              <td>49</td>
+              <td>Frontend registry coverage</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">ContentRegistryCoverageTest</td>
@@ -1507,22 +1508,57 @@ const SecurityAudit: NextPage = () => {
               <td>Content lifecycle, cancel, dormancy, rating</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ParticipationPool.t.sol</td>
+              <td className="font-mono text-[#EF476F]">ParticipationPoolTest</td>
               <td>47</td>
               <td>Participation rewards, halving tiers, pool depletion</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">HumanFaucet.t.sol</td>
+              <td className="font-mono text-[#EF476F]">HumanFaucetTest</td>
               <td>47</td>
               <td>Claims, halving, referrals, Pausable</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CategoryRegistry.t.sol</td>
+              <td className="font-mono text-[#EF476F]">RoundSettlementEdgeCaseTest</td>
+              <td>43</td>
+              <td>Settlement edge cases, tied rounds, cancellations</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">CategoryRegistryTest</td>
               <td>40</td>
               <td>Category lifecycle, governance, pagination</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistry.t.sol</td>
+              <td className="font-mono text-[#EF476F]">RoundIntegrationTest</td>
+              <td>36</td>
+              <td>Full vote/settle/claim cycles</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">HumanFaucetCoverageTest</td>
+              <td>35</td>
+              <td>Faucet branch and edge case coverage</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">SettlementEdgeCasesTest</td>
+              <td>31</td>
+              <td>Settlement edge cases</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">RoundSettlementEdgeCase3Test</td>
+              <td>30</td>
+              <td>Additional settlement edge cases</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">RewardMathTest</td>
+              <td>30</td>
+              <td>Pool splits, voter rewards, rating delta (fuzz)</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">ContentRegistryBranchesTest</td>
+              <td>28</td>
+              <td>Content registry branch coverage</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">FrontendRegistryTest</td>
               <td>28</td>
               <td>Frontend staking, fees, slashing</td>
             </tr>
@@ -1532,14 +1568,14 @@ const SecurityAudit: NextPage = () => {
               <td>Branch coverage for faucet edge cases</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ProfileRegistry.t.sol</td>
+              <td className="font-mono text-[#EF476F]">ProfileRegistryTest</td>
               <td>27</td>
               <td>Profile names, uniqueness, pagination</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RewardMath.t.sol</td>
+              <td className="font-mono text-[#EF476F]">HumanFaucetTierEdgeCaseTest</td>
               <td>26</td>
-              <td>Pool splits, voter rewards, rating delta (fuzz)</td>
+              <td>Faucet tier edge cases</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">SecurityAccessControlTest</td>
@@ -1552,18 +1588,33 @@ const SecurityAudit: NextPage = () => {
               <td>Governor, timelock, locking</td>
             </tr>
             <tr>
+              <td className="font-mono text-[#EF476F]">CuryoReputationBranchesTest</td>
+              <td>23</td>
+              <td>Token branch coverage</td>
+            </tr>
+            <tr>
               <td className="font-mono text-[#EF476F]">CuryoReputationCoverageTest</td>
               <td>22</td>
               <td>Token governance locks, delegation</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">UpgradeTest.t.sol</td>
+              <td className="font-mono text-[#EF476F]">ParticipationPoolBranchesTest</td>
+              <td>22</td>
+              <td>Participation pool branch coverage</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">UpgradeTest</td>
               <td>21</td>
               <td>UUPS upgrade auth, reinitialization, state preservation</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundSettlementBranchTest</td>
+              <td className="font-mono text-[#EF476F]">HumanFaucetCoverageTest (CoverageGaps)</td>
               <td>21</td>
+              <td>Additional faucet coverage</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">RoundSettlementBranchTest</td>
+              <td>20</td>
               <td>Settlement branch coverage</td>
             </tr>
             <tr>
@@ -1572,9 +1623,24 @@ const SecurityAudit: NextPage = () => {
               <td>Frontend registry branch coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistryCoverageTest</td>
+              <td className="font-mono text-[#EF476F]">FrontendRegistryEdgeCaseTest</td>
+              <td>20</td>
+              <td>Frontend registry edge cases</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">FrontendRegistryCoverageTest (CoverageGaps)</td>
               <td>16</td>
-              <td>Additional frontend edge cases</td>
+              <td>Additional frontend coverage</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">RoundRewardDistributorBranchesTest</td>
+              <td>14</td>
+              <td>Reward distributor branch coverage</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">NormalizeDomainTest</td>
+              <td>14</td>
+              <td>Category domain normalization</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">FormalVerification_GameTheory</td>
@@ -1597,6 +1663,11 @@ const SecurityAudit: NextPage = () => {
               <td>Governance quorum, locking properties</td>
             </tr>
             <tr>
+              <td className="font-mono text-[#EF476F]">GameTheoryImprovementsTest</td>
+              <td>5</td>
+              <td>Game theory improvements</td>
+            </tr>
+            <tr>
               <td className="font-mono text-[#EF476F]">SecurityPermitTest</td>
               <td>5</td>
               <td>ERC2612 permit security</td>
@@ -1607,14 +1678,19 @@ const SecurityAudit: NextPage = () => {
               <td>Reentrancy protection</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SecuritySettlementBoundaryTest</td>
+              <td className="font-mono text-[#EF476F]">SecuritySettlementTimingTest</td>
               <td>4</td>
-              <td>Settlement boundary conditions</td>
+              <td>Settlement timing conditions</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">GovernanceOwnableTest</td>
               <td>2</td>
               <td>Ownership restrictions</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">CategoryRegistryBranchesTest</td>
+              <td>2</td>
+              <td>Category registry branch coverage</td>
             </tr>
           </tbody>
         </table>
@@ -1645,7 +1721,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Critical</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Test</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Test</span>
               </td>
             </tr>
             <tr>
@@ -1656,7 +1732,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Critical</td>
               <td>
-                <span className="badge badge-warning badge-sm text-white">Needs Test</span>
+                <span className="badge badge-warning whitespace-nowrap text-white">Needs Test</span>
               </td>
             </tr>
             <tr>
@@ -1667,7 +1743,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Critical</td>
               <td>
-                <span className="badge badge-success badge-sm">Tested</span>
+                <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
             </tr>
             <tr>
@@ -1677,7 +1753,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>High</td>
               <td>
-                <span className="badge badge-success badge-sm">Tested</span>
+                <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
             </tr>
             <tr>
@@ -1687,7 +1763,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>High</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -1698,7 +1774,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>High</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -1709,7 +1785,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Medium</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
@@ -1719,7 +1795,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Medium</td>
               <td>
-                <span className="badge badge-success badge-sm">Verified</span>
+                <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
           </tbody>
@@ -1771,8 +1847,8 @@ const SecurityAudit: NextPage = () => {
 
       <p className="text-base-content/60 text-sm">
         This is an internal AI-assisted security review, not a professional third-party audit. Consolidated audit
-        &mdash; February 27, 2026. Covers 5 prior review rounds (V1&ndash;V5, Feb 2025&ndash;Feb 2026). Report generated
-        by Claude Code.
+        &mdash; March 4, 2026. Covers 5 prior review rounds (V1&ndash;V5, Feb 2025&ndash;Feb 2026). Report generated by
+        Claude Code.
       </p>
     </article>
   );
