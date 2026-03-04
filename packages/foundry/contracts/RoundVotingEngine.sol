@@ -209,7 +209,7 @@ contract RoundVotingEngine is
     );
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusSubsidyDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
-    event SettlementSideEffectFailed(uint256 indexed contentId, uint256 indexed roundId, string reason);
+    event SettlementSideEffectFailed(uint256 indexed contentId, uint256 indexed roundId, uint8 reason);
     event FrontendFeeClaimed(
         uint256 indexed contentId, uint256 indexed roundId, address indexed frontend, uint256 amount
     );
@@ -223,7 +223,21 @@ contract RoundVotingEngine is
     event TreasuryUpdated(address treasury);
     event KeeperRewardUpdated(uint256 keeperReward);
     event KeeperRewardPoolFunded(address indexed funder, uint256 amount);
-    event KeeperRewarded(address indexed keeper, uint256 amount, string operation);
+    event KeeperRewarded(address indexed keeper, uint256 amount, uint8 operation);
+
+    // Settlement side-effect failure reason codes
+    uint8 internal constant REASON_CATEGORY_FEE = 1;
+    uint8 internal constant REASON_TREASURY_FEE = 2;
+    uint8 internal constant REASON_UPDATE_RATING = 3;
+    uint8 internal constant REASON_UPDATE_ACTIVITY = 4;
+    uint8 internal constant REASON_PARTICIPATION_RATE = 5;
+    uint8 internal constant REASON_SUBMITTER_STAKE = 6;
+    uint8 internal constant REASON_FORFEITED_TRANSFER = 7;
+
+    // Keeper operation codes
+    uint8 internal constant OP_CANCEL = 1;
+    uint8 internal constant OP_SETTLE = 2;
+    uint8 internal constant OP_PROCESS_UNREVEALED = 3;
     event StreakBonusClaimed(address indexed voter, uint256 milestoneDays, uint256 amount);
 
     /// @dev Only callable by this contract itself (for try-catch external wrappers).
@@ -548,7 +562,7 @@ contract RoundVotingEngine is
         round.state = RoundLib.RoundState.Cancelled;
 
         emit RoundCancelled(contentId, roundId);
-        _rewardKeeper("cancel");
+        _rewardKeeper(OP_CANCEL);
     }
 
     // =========================================================================
@@ -647,7 +661,7 @@ contract RoundVotingEngine is
                     try this.distributeCategoryFeeExternal(contentId, roundId, categorySubmitterShare) { }
                     catch {
                         roundVoterPool[contentId][roundId] += categorySubmitterShare;
-                        emit SettlementSideEffectFailed(contentId, roundId, "categoryFee");
+                        emit SettlementSideEffectFailed(contentId, roundId, REASON_CATEGORY_FEE);
                     }
                 }
             }
@@ -659,7 +673,7 @@ contract RoundVotingEngine is
                         emit TreasuryFeeDistributed(contentId, roundId, treasuryShare);
                     } catch {
                         roundVoterPool[contentId][roundId] += treasuryShare;
-                        emit SettlementSideEffectFailed(contentId, roundId, "treasuryFee");
+                        emit SettlementSideEffectFailed(contentId, roundId, REASON_TREASURY_FEE);
                     }
                 } else {
                     roundVoterPool[contentId][roundId] += treasuryShare;
@@ -686,12 +700,12 @@ contract RoundVotingEngine is
         uint16 newRating = RewardMath.calculateRating(round.upPool, round.downPool);
         try registry.updateRatingDirect(contentId, newRating) { }
         catch {
-            emit SettlementSideEffectFailed(contentId, roundId, "updateRating");
+            emit SettlementSideEffectFailed(contentId, roundId, REASON_UPDATE_RATING);
         }
 
         try registry.updateActivity(contentId) { }
         catch {
-            emit SettlementSideEffectFailed(contentId, roundId, "updateActivity");
+            emit SettlementSideEffectFailed(contentId, roundId, REASON_UPDATE_ACTIVITY);
         }
 
         // Snapshot participation rate for pull-based claiming
@@ -699,18 +713,18 @@ contract RoundVotingEngine is
             try participationPool.getCurrentRateBps() returns (uint256 rate) {
                 roundParticipationRateBps[contentId][roundId] = rate;
             } catch {
-                emit SettlementSideEffectFailed(contentId, roundId, "participationRateSnapshot");
+                emit SettlementSideEffectFailed(contentId, roundId, REASON_PARTICIPATION_RATE);
             }
         }
 
         // Check submitter stake return/slash conditions
         try this.checkSubmitterStakeExternal(contentId) { }
         catch {
-            emit SettlementSideEffectFailed(contentId, roundId, "submitterStake");
+            emit SettlementSideEffectFailed(contentId, roundId, REASON_SUBMITTER_STAKE);
         }
 
         emit RoundSettled(contentId, roundId, upWins, losingPool);
-        _rewardKeeper("settle");
+        _rewardKeeper(OP_SETTLE);
     }
 
     // =========================================================================
@@ -952,7 +966,7 @@ contract RoundVotingEngine is
                 try this.transferTokenExternal(treasury, forfeitedCrep) {
                     emit ForfeitedFundsAddedToTreasury(contentId, roundId, forfeitedCrep);
                 } catch {
-                    emit SettlementSideEffectFailed(contentId, roundId, "forfeitedFundsTransfer");
+                    emit SettlementSideEffectFailed(contentId, roundId, REASON_FORFEITED_TRANSFER);
                 }
             }
         }
@@ -961,14 +975,14 @@ contract RoundVotingEngine is
             emit CurrentEpochRefunded(contentId, roundId, refundedCrep);
         }
 
-        _rewardKeeper("processUnrevealed");
+        _rewardKeeper(OP_PROCESS_UNREVEALED);
     }
 
     // =========================================================================
     // INTERNAL HELPERS
     // =========================================================================
 
-    function _rewardKeeper(string memory operation) internal {
+    function _rewardKeeper(uint8 operation) internal {
         uint256 reward = keeperReward;
         if (reward == 0) return;
         if (keeperRewardPool >= reward) {

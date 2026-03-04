@@ -281,6 +281,19 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "claimStreakBonus",
+    "inputs": [
+      {
+        "name": "milestoneIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "commitHashByKey",
     "inputs": [
       {
@@ -1163,6 +1176,43 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "getStreakMilestone",
+    "inputs": [
+      {
+        "name": "index",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "days_",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "baseBonus",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "getStreakMilestoneCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "getVoterCommitHash",
     "inputs": [
       {
@@ -1186,6 +1236,35 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getVoterStreakInfo",
+    "inputs": [
+      {
+        "name": "voter",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "currentStreak",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "lastActiveDay",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "lastMilestoneDay_",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -2315,6 +2394,25 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "voterCurrentStreak",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "voterIdNFT",
     "inputs": [],
     "outputs": [
@@ -2322,6 +2420,44 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IVoterIdNFT"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "voterLastActiveDay",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "voterLastMilestoneDay",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -2639,9 +2775,9 @@ export const RoundVotingEngineAbi = [
       },
       {
         "name": "operation",
-        "type": "string",
+        "type": "uint8",
         "indexed": false,
-        "internalType": "string"
+        "internalType": "uint8"
       }
     ],
     "anonymous": false
@@ -2852,9 +2988,34 @@ export const RoundVotingEngineAbi = [
       },
       {
         "name": "reason",
-        "type": "string",
+        "type": "uint8",
         "indexed": false,
-        "internalType": "string"
+        "internalType": "uint8"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "StreakBonusClaimed",
+    "inputs": [
+      {
+        "name": "voter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "milestoneDays",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -3149,12 +3310,22 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidMilestoneIndex",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidStake",
     "inputs": []
   },
   {
     "type": "error",
     "name": "MaxVotersReached",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MilestoneAlreadyClaimed",
     "inputs": []
   },
   {
@@ -3256,6 +3427,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "SettlementDelayNotElapsed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StreakTooShort",
     "inputs": []
   },
   {

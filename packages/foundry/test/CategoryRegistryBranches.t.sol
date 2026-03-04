@@ -135,9 +135,7 @@ contract CategoryRegistryBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (admin, admin, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (admin, admin, address(crepToken), address(registry)))
                 )
             )
         );
@@ -228,8 +226,7 @@ contract NormalizeDomainHarness {
             bool hasMoreDots = false;
             for (uint256 j = startIndex + 2; j < b.length; j++) {
                 if (b[j] == "/" || b[j] == ":" || b[j] == "?" || b[j] == "#") break;
-                if (b[j] == ".") hasMoreDots = true;
-                break;
+                if (b[j] == ".") { hasMoreDots = true; break; }
             }
             if (hasMoreDots) {
                 startIndex += 2;
