@@ -63,6 +63,8 @@ export function useRoundInfo(contentId?: bigint) {
   const readyToSettle = state === 0 && totalVoterCount >= minVoters;
   const isRoundFull = totalVoterCount >= maxVoters;
 
+  const thresholdReachedAt = round ? Number(round.thresholdReachedAt) : 0;
+
   return {
     roundId,
     round: {
@@ -76,6 +78,7 @@ export function useRoundInfo(contentId?: bigint) {
       upCount,
       downCount,
       upWins: round?.upWins ?? false,
+      thresholdReachedAt,
     },
     isLoading,
     votersNeeded,

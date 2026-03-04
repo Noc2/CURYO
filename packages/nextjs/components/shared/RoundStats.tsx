@@ -5,6 +5,15 @@ import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
 import { useRoundPhase } from "~~/hooks/useRoundPhase";
 
+function formatSettlementCountdown(seconds: number): string {
+  if (seconds <= 0) return "now";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m ${s}s`;
+}
+
 interface RoundStatsProps {
   contentId: bigint;
   categoryId?: bigint;
@@ -20,7 +29,7 @@ interface RoundStatsProps {
 export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
   const { round, isLoading, minVoters, maxVoters, isRoundFull, readyToSettle } = useRoundInfo(contentId);
-  const { phase, isEpoch1 } = useRoundPhase(contentId);
+  const { phase, isEpoch1, settlementCountdown, thresholdReachedAt } = useRoundPhase(contentId);
 
   if (isLoading) {
     return (
@@ -133,11 +142,32 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
             </span>
           ) : readyToSettle ? (
             <span className="flex items-center gap-1 text-success/80">
-              Ready to resolve
-              <InfoTooltip
-                text={`At least ${minVoters} votes committed. The keeper will settle after enough votes are revealed.`}
-                position="bottom"
-              />
+              {thresholdReachedAt > 0 && settlementCountdown > 0 ? (
+                <>
+                  Settles in{" "}
+                  <span className="font-semibold tabular-nums">{formatSettlementCountdown(settlementCountdown)}</span>
+                  <InfoTooltip
+                    text="Votes revealed. The keeper will settle automatically after the settlement delay."
+                    position="bottom"
+                  />
+                </>
+              ) : thresholdReachedAt > 0 ? (
+                <>
+                  Ready to settle
+                  <InfoTooltip
+                    text="Settlement delay elapsed. The keeper will settle this round shortly."
+                    position="bottom"
+                  />
+                </>
+              ) : (
+                <>
+                  Awaiting reveals
+                  <InfoTooltip
+                    text={`At least ${minVoters} votes committed. The keeper reveals votes after each epoch ends, then settles after a one-epoch delay.`}
+                    position="bottom"
+                  />
+                </>
+              )}
             </span>
           ) : null}
         </div>

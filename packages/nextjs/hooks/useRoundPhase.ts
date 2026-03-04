@@ -36,6 +36,12 @@ export interface RoundPhaseInfo {
   minVoters: number;
   /** Maximum voters allowed per round */
   maxVoters: number;
+  /** Timestamp when revealedCount first reached minVoters (0 = not yet) */
+  thresholdReachedAt: number;
+  /** Unix timestamp when settlement becomes possible (0 = not yet) */
+  settlementTime: number;
+  /** Seconds remaining until settlement is possible (0 = ready or not applicable) */
+  settlementCountdown: number;
   /** Whether contract data has loaded */
   isReady: boolean;
 }
@@ -106,6 +112,9 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     startTime: 0,
     minVoters: configMinVoters,
     maxVoters: configMaxVoters,
+    thresholdReachedAt: 0,
+    settlementTime: 0,
+    settlementCountdown: 0,
     isReady,
   };
 
@@ -150,6 +159,11 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
       phase = "none";
   }
 
+  // Settlement timing: thresholdReachedAt + epochDuration
+  const thresholdReachedAt = Number(round.thresholdReachedAt ?? 0n);
+  const settlementTime = thresholdReachedAt > 0 ? thresholdReachedAt + configEpochDuration : 0;
+  const settlementCountdown = settlementTime > 0 ? Math.max(0, settlementTime - now) : 0;
+
   return {
     phase,
     roundId,
@@ -165,6 +179,9 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     startTime,
     minVoters: configMinVoters,
     maxVoters: configMaxVoters,
+    thresholdReachedAt,
+    settlementTime,
+    settlementCountdown,
     isReady,
   };
 }
