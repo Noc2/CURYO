@@ -61,11 +61,7 @@ contract MockVoterIdNFT_SE is IVoterIdNFT {
         stakes[key] += amount;
     }
 
-    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId)
-        external
-        view
-        returns (uint256)
-    {
+    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
         bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
         return stakes[key];
     }
@@ -75,7 +71,10 @@ contract MockVoterIdNFT_SE is IVoterIdNFT {
     }
 
     function revokeVoterId(address) external { }
-    function removeHolder(address holder) external { holders[holder] = false; }
+
+    function removeHolder(address holder) external {
+        holders[holder] = false;
+    }
 
     function setDelegate(address delegate) external {
         holderToDelegate[msg.sender] = delegate;
@@ -160,7 +159,9 @@ contract SettlementEdgeCasesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
+                    )
                 )
             )
         );
@@ -257,7 +258,16 @@ contract SettlementEdgeCasesTest is Test {
     /// @dev Full 3-voter round: commit, warp past epoch, reveal, warp past settle delay.
     function _setupThreeVoterRound(bool v1Up, bool v2Up, bool v3Up)
         internal
-        returns (uint256 contentId, uint256 roundId, bytes32 ck1, bytes32 s1, bytes32 ck2, bytes32 s2, bytes32 ck3, bytes32 s3)
+        returns (
+            uint256 contentId,
+            uint256 roundId,
+            bytes32 ck1,
+            bytes32 s1,
+            bytes32 ck2,
+            bytes32 s2,
+            bytes32 ck3,
+            bytes32 s3
+        )
     {
         contentId = _submitContent();
 
@@ -579,7 +589,9 @@ contract SettlementEdgeCasesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl2),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken2), address(registry2), true))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken2), address(registry2))
+                    )
                 )
             )
         );

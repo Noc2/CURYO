@@ -4,6 +4,7 @@ import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
 import { ponder } from "../ponder.js";
 import { getStrategy } from "../strategies/index.js";
+import { tlockEncryptVote } from "../tlock.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
 
@@ -117,10 +118,18 @@ export async function runVote() {
       await publicClient.waitForTransactionReceipt({ hash: approveTx });
       log.debug(`Approved cREP: ${approveTx}`);
 
-      // tlock commit-reveal — MockMode: ciphertext = abi.encodePacked(uint8 isUp, bytes32 salt, uint256 contentId)
+      // tlock commit-reveal: encrypt vote direction to epoch's drand round
       const salt = keccak256(encodePacked(["address", "uint256", "uint256"], [account.address, contentId, BigInt(Date.now())]));
       const commitHash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentId]));
-      const ciphertext = encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, contentId]);
+
+      // Read epoch duration from contract config
+      const configResult = (await publicClient.readContract({
+        ...contractConfig.votingEngine,
+        functionName: "config",
+      })) as readonly [bigint, bigint, bigint, bigint];
+      const epochDuration = Number(configResult[0]);
+
+      const ciphertext = await tlockEncryptVote(isUp, salt, epochDuration);
 
       const voteTx = await wallet.writeContract({
         ...contractConfig.votingEngine,

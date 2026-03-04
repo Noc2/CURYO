@@ -23,8 +23,8 @@ import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.
 
 /// @notice Deploy script for all Curyo contracts with UUPS proxies.
 /// @dev All protocol operations use cREP token only (no stablecoins).
-///      In mock mode: deployer is governance (all roles go to deployer).
-///      In production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles.
+///      Local dev: deployer is governance (all roles go to deployer).
+///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles.
 contract DeployCuryo is ScaffoldETHDeploy {
     // Timelock delay: 2 days for standard operations
     uint256 public constant TIMELOCK_MIN_DELAY = 2 days;
@@ -35,18 +35,18 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
     function run() external ScaffoldEthDeployerRunner {
         // Detect local dev: anvil/hardhat chain IDs
-        bool isMockMode = block.chainid == 31337;
+        bool isLocalDev = block.chainid == 31337;
 
         // --- Determine governance address ---
-        // In mock mode: deployer serves as governance (same behavior as before)
-        // In production: deploy TimelockController + CuryoGovernor
+        // Local dev: deployer serves as governance
+        // Production: deploy TimelockController + CuryoGovernor
         address governance;
         address governorAddr;
 
-        if (isMockMode) {
+        if (isLocalDev) {
             governance = deployer;
             governorAddr = deployer;
-            console.log("Mock mode: deployer is governance");
+            console.log("Local dev: deployer is governance");
         } else {
             // 1. Deploy TimelockController
             address[] memory proposers = new address[](1);
@@ -70,7 +70,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         // 3. Deploy CuryoGovernor (production only)
         //    Pool addresses are set later via initializePools() after pools are deployed.
-        if (!isMockMode) {
+        if (!isLocalDev) {
             CuryoGovernor governor =
                 new CuryoGovernor(IVotes(address(crepToken)), TimelockController(payable(governance)));
             governorAddr = address(governor);
@@ -121,7 +121,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         ERC1967Proxy votingEngineProxy = new ERC1967Proxy(
             address(votingEngineImpl),
             abi.encodeCall(
-                RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry), false)
+                RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry))
             )
         );
         RoundVotingEngine votingEngine = RoundVotingEngine(address(votingEngineProxy));
@@ -182,9 +182,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         // 12. Fund consensus reserve (pre-funded reserve for unanimous round rewards)
         uint256 consensusPoolAmount = 4_000_000 * 1e6; // 4M cREP
-        // In mock mode, deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
-        // In production, deployer already has MINTER_ROLE from constructor
-        if (isMockMode) {
+        // Local dev: deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
+        // Production: deployer already has MINTER_ROLE from constructor
+        if (isLocalDev) {
             crepToken.grantRole(crepToken.MINTER_ROLE(), deployer);
         }
         crepToken.mint(deployer, consensusPoolAmount);
@@ -221,7 +221,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         participationPool.depositPool(participationAmount);
         votingEngine.setParticipationPool(address(participationPool));
         registry.setParticipationPool(address(participationPool));
-        if (!isMockMode) {
+        if (!isLocalDev) {
             participationPool.transferOwnership(governance);
         }
         console.log("ParticipationPool deployed and funded with 34M cREP");
@@ -232,7 +232,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             address hubAddress;
             bool isFaucetMock = false;
 
-            if (isMockMode) {
+            if (isLocalDev) {
                 MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
                 hubAddress = address(mockHub);
                 isFaucetMock = true;
@@ -276,7 +276,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 }
 
                 // Transfer ownership to governance (production only)
-                if (!isMockMode) {
+                if (!isLocalDev) {
                     humanFaucet.transferOwnership(governance);
                     console.log("HumanFaucet ownership transferred to governance");
                 }
@@ -286,14 +286,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
 
         // 12d. Initialize Governor pool addresses for dynamic quorum (production only)
-        if (!isMockMode) {
+        if (!isLocalDev) {
             CuryoGovernor(payable(governorAddr))
                 .initializePools(address(humanFaucet), address(participationPool), address(rewardDistributor));
             console.log("Governor pool addresses initialized for dynamic quorum");
         }
 
         // 12e. Mint test tokens and Voter IDs for localhost development
-        if (isMockMode) {
+        if (isLocalDev) {
             uint256 testAmount = 1000 * 1e6;
             address[9] memory testAccounts = [
                 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC,
@@ -323,8 +323,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
 
         // 13. Renounce deployer's temporary roles
-        // In mock mode: deployer IS governance, so don't renounce (need roles for dev)
-        if (!isMockMode) {
+        // Local dev: deployer IS governance, so don't renounce (need roles for dev)
+        if (!isLocalDev) {
             // Grant MINTER_ROLE to dev faucet account (whitelisted testnets only)
             address devFaucet = vm.envOr("DEV_FAUCET_ADDRESS", address(0));
             bool isTestnet = (block.chainid == 44787 || block.chainid == 11142220);
@@ -362,7 +362,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Renounced all deployer temporary roles (including Timelock)");
             console.log("VoterIdNFT ownership transferred to governance");
         } else {
-            // Mock mode: just revoke MINTER_ROLE as before
+            // Local dev: just revoke MINTER_ROLE as before
             crepToken.revokeRole(crepToken.MINTER_ROLE(), deployer);
         }
 
@@ -395,11 +395,11 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("HumanFaucet:", address(humanFaucet));
         }
         console.log("Governance:", governance);
-        if (!isMockMode) {
+        if (!isLocalDev) {
             console.log("CuryoGovernor:", governorAddr);
         }
         console.log("Seeded categories:", categoryRegistry.approvedCategoryCount());
-        console.log("Mock mode:", isMockMode);
+        console.log("Local dev:", isLocalDev);
     }
 
     function _seedCategories(CategoryRegistry registry) internal {

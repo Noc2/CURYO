@@ -7,15 +7,18 @@
  *   3. Call `cancelExpiredRound(contentId, roundId)` for rounds past maxDuration.
  *   4. Call `markDormant(contentId)` for stale content.
  *
- * In mockMode (local dev): ciphertext is plaintext `abi.encodePacked(uint8 isUp, bytes32 salt, uint256 contentId)`.
- * In production: use tlock-js to decrypt with drand beacon for `commit.revealableAfter`.
+ * Vote ciphertext is tlock-encrypted to a future drand round. After the epoch ends,
+ * the drand beacon makes the decryption key available and the keeper can decrypt.
  */
 import type { PublicClient, WalletClient, Chain, Account } from "viem";
 import { BaseError, ContractFunctionRevertedError, decodeErrorResult } from "viem";
+import { timelockDecrypt, mainnetClient } from "tlock-js";
 import { RoundVotingEngineAbi } from "./abis/RoundVotingEngineAbi.js";
 import { ContentRegistryAbi } from "./abis/ContentRegistryAbi.js";
 import { config } from "./config.js";
 import type { Logger } from "./logger.js";
+
+const tlockClient = mainnetClient();
 
 // --- Round states (mirrors RoundLib.RoundState enum) ---
 const RoundState = {
@@ -93,18 +96,22 @@ function isExpectedRevert(msg: string): boolean {
 }
 
 /**
- * Decode a mockMode ciphertext: abi.encodePacked(uint8 isUp, bytes32 salt, uint256 contentId) = 65 bytes.
- * Returns { isUp, salt } for use in revealVoteByCommitKey.
+ * Decrypt a tlock-encrypted ciphertext using the drand beacon.
+ * Ciphertext on-chain is hex-encoded UTF-8 armored AGE string.
+ * Plaintext is 33 bytes: [uint8 isUp (0|1), bytes32 salt].
  */
-function decodeMockCiphertext(
+async function decryptTlockCiphertext(
   ciphertext: `0x${string}`,
-): { isUp: boolean; salt: `0x${string}` } | null {
-  // ciphertext is hex string "0x" + 130 hex chars (65 bytes)
+): Promise<{ isUp: boolean; salt: `0x${string}` } | null> {
   const hex = ciphertext.startsWith("0x") ? ciphertext.slice(2) : ciphertext;
-  if (hex.length !== 130) return null;
+  // Convert hex bytes back to UTF-8 armored string
+  const armored = Buffer.from(hex, "hex").toString("utf-8");
 
-  const isUp = parseInt(hex.slice(0, 2), 16) === 1;
-  const salt = `0x${hex.slice(2, 66)}` as `0x${string}`;
+  const plaintext = await timelockDecrypt(armored, tlockClient);
+  if (plaintext.length !== 33) return null;
+
+  const isUp = plaintext[0] === 1;
+  const salt = `0x${plaintext.subarray(1, 33).toString("hex")}` as `0x${string}`;
   return { isUp, salt };
 }
 
@@ -132,20 +139,12 @@ export async function resolveRounds(
 
   const result: KeeperResult = emptyResult();
 
-  // --- Read mockMode and config ---
-  let isMockMode = false;
+  // --- Read config ---
   let epochDuration: bigint = 3600n; // default 1 hour
   let maxDuration: bigint = 604800n; // default 7 days
   let minVoters: bigint = 3n;
 
   try {
-    isMockMode = (await publicClient.readContract({
-      address: engineAddr,
-      abi: RoundVotingEngineAbi,
-      functionName: "mockMode",
-      args: [],
-    })) as boolean;
-
     const configResult = (await publicClient.readContract({
       address: engineAddr,
       abi: RoundVotingEngineAbi,
@@ -203,7 +202,6 @@ export async function resolveRounds(
           contentId,
           activeRoundId,
           now,
-          isMockMode,
         );
         result.votesRevealed += revealCount;
 
@@ -336,7 +334,6 @@ async function _revealCommits(
   contentId: bigint,
   roundId: bigint,
   now: bigint,
-  isMockMode: boolean,
 ): Promise<number> {
   let revealed = 0;
 
@@ -367,24 +364,23 @@ async function _revealCommits(
       if (commit.revealed) continue;
       if (now < commit.revealableAfter) continue;
 
-      // Decrypt the ciphertext
+      // Decrypt the tlock ciphertext using the drand beacon
       let decrypted: { isUp: boolean; salt: `0x${string}` } | null;
-
-      if (isMockMode) {
-        decrypted = decodeMockCiphertext(commit.ciphertext as `0x${string}`);
-      } else {
-        // Production: use tlock-js to decrypt with drand beacon
-        // TODO: integrate @drand/tlock-js when deploying to production
-        logger.warn("Production tlock decryption not yet implemented, skipping commit", {
+      try {
+        decrypted = await decryptTlockCiphertext(commit.ciphertext as `0x${string}`);
+      } catch (err: unknown) {
+        // Beacon not yet available — retry on next tick
+        logger.debug("tlock decryption not yet available", {
           contentId: Number(contentId),
           roundId: Number(roundId),
           commitKey,
+          error: (err as any)?.message || String(err),
         });
         continue;
       }
 
       if (!decrypted) {
-        logger.warn("Failed to decode ciphertext", {
+        logger.warn("Failed to decode tlock ciphertext", {
           contentId: Number(contentId),
           roundId: Number(roundId),
           commitKey,

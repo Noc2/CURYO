@@ -9,7 +9,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 
 /// @notice Minimal deployment for TypeScript round integration tests.
-/// @dev Deploys CuryoReputation, ContentRegistry, RoundVotingEngine (mockMode),
+/// @dev Deploys CuryoReputation, ContentRegistry, RoundVotingEngine,
 ///      and RoundRewardDistributor. Writes addresses to a JSON file.
 ///
 /// Usage:
@@ -47,7 +47,7 @@ contract DeployRoundTest is Script {
                 new ERC1967Proxy(
                     address(engineImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (deployer, deployer, address(crepToken), address(registry), true)
+                        RoundVotingEngine.initialize, (deployer, deployer, address(crepToken), address(registry))
                     )
                 )
             )

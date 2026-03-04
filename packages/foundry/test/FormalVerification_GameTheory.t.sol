@@ -57,7 +57,9 @@ contract FormalVerification_GameTheoryTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
+                    )
                 )
             )
         );
@@ -110,7 +112,10 @@ contract FormalVerification_GameTheoryTest is Test {
         return id;
     }
 
-    function _vote(address voter, uint256 cid, bool up, uint256 stake) internal returns (bytes32 commitKey, bytes32 salt) {
+    function _vote(address voter, uint256 cid, bool up, uint256 stake)
+        internal
+        returns (bytes32 commitKey, bytes32 salt)
+    {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, cid));
         bytes32 commitHash = keccak256(abi.encodePacked(up, salt, cid));
         bytes memory ciphertext = abi.encodePacked(uint8(up ? 1 : 0), salt, cid);

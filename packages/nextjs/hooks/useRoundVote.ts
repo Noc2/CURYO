@@ -8,6 +8,7 @@ import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import scaffoldConfig from "~~/scaffold.config";
+import { tlockEncryptVote } from "~~/utils/tlock";
 
 interface RoundVoteParams {
   contentId: bigint;
@@ -21,10 +22,9 @@ interface RoundVoteParams {
  * Hook for tlock commit-reveal round voting using cREP tokens.
  * Handles: token approval -> commitVote() tx.
  *
- * In mockMode (local dev): ciphertext = abi.encodePacked(uint8 isUp, bytes32 salt, uint256 contentId)
- * In production: ciphertext would be tlock-encrypted via drand (TODO: integrate @drand/tlock-js)
- *
- * The keeper automatically reveals votes after each epoch ends.
+ * Vote direction is tlock-encrypted to the current epoch's drand round,
+ * ensuring vote secrecy until the epoch ends. The keeper decrypts and
+ * reveals votes after each epoch.
  */
 export function useRoundVote() {
   const { address } = useAccount();
@@ -34,7 +34,7 @@ export function useRoundVote() {
   const [error, setError] = useState<string | null>(null);
   const { requireAcceptance } = useTermsAcceptance();
   const queryClient = useQueryClient();
-  const [isMockMode, setIsMockMode] = useState(true); // Default to true for safety
+  const [epochDuration, setEpochDuration] = useState(3600); // Default 1 hour
 
   const { writeContractAsync: writeCRep } = useScaffoldWriteContract({
     contractName: "CuryoReputation",
@@ -48,7 +48,7 @@ export function useRoundVote() {
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const publicClient = usePublicClient();
 
-  // Read mockMode from contract once on mount
+  // Read epochDuration from contract config once on mount
   useEffect(() => {
     if (!publicClient || !votingEngineInfo) return;
 
@@ -58,14 +58,18 @@ export function useRoundVote() {
       .readContract({
         address: votingEngineInfo.address,
         abi: votingEngineInfo.abi,
-        functionName: "mockMode",
+        functionName: "config",
         args: [],
       })
       .then((result: any) => {
-        if (!cancelled) setIsMockMode(Boolean(result));
+        if (!cancelled && result) {
+          // config() returns (epochDuration, maxDuration, minVoters, maxVoters)
+          const epoch = Number(result[0] ?? result.epochDuration);
+          if (epoch > 0) setEpochDuration(epoch);
+        }
       })
       .catch(() => {
-        // Default to mockMode=true (safe for local dev)
+        // Default to 1 hour
       });
 
     return () => {
@@ -123,17 +127,8 @@ export function useRoundVote() {
       // This matches: keccak256(abi.encodePacked(isUp, salt, contentId)) in RoundVotingEngine
       const commitHash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentId]));
 
-      let ciphertext: `0x${string}`;
-      if (isMockMode) {
-        // MockMode: 65-byte plaintext = abi.encodePacked(uint8(isUp?1:0), bytes32 salt, uint256 contentId)
-        // The keeper decodes this directly without tlock decryption
-        ciphertext = encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, contentId]);
-      } else {
-        // Production: tlock-encrypt plaintext = abi.encodePacked(uint8 isUp, bytes32 salt) to epoch end
-        // TODO: integrate @drand/tlock-js for production tlock encryption
-        // For now, fall back to mock encoding (not secure — keeper can read direction before reveal)
-        ciphertext = encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, contentId]);
-      }
+      // tlock-encrypt vote direction + salt to current epoch's drand round
+      const ciphertext = await tlockEncryptVote(isUp, salt, epochDuration);
 
       // Approve tokens if needed
       if (publicClient && crepInfo) {

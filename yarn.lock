@@ -329,7 +329,6 @@ __metadata:
   dependencies:
     "@types/node": ~18.19.50
     dotenv: ^16.4.5
-    drand-client: ^1.2.6
     tlock-js: ^0.9.0
     tsx: ^4.19.0
     typescript: ~5.8.2
@@ -360,7 +359,6 @@ __metadata:
   dependencies:
     "@types/node": ~18.19.50
     dotenv: ^16.4.5
-    drand-client: ^1.2.6
     tlock-js: ^0.9.0
     tsx: ^4.19.0
     typescript: ~5.8.2
@@ -396,7 +394,6 @@ __metadata:
     blo: ~1.2.0
     burner-connector: 0.0.20
     daisyui: 5.0.9
-    drand-client: ^1.2.6
     drizzle-kit: ^0.31.8
     drizzle-orm: ~0.45.1
     eslint: ~9.23.0

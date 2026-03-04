@@ -73,7 +73,8 @@ contract UpgradeTest is Test {
                 new ERC1967Proxy(
                     address(veImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (admin, governance, address(crepToken), address(contentRegistry), true)
+                        RoundVotingEngine.initialize,
+                        (admin, governance, address(crepToken), address(contentRegistry))
                     )
                 )
             )
@@ -170,7 +171,7 @@ contract UpgradeTest is Test {
     function test_VotingEngine_CannotReinitialize() public {
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        votingEngine.initialize(admin, governance, address(crepToken), address(contentRegistry), true);
+        votingEngine.initialize(admin, governance, address(crepToken), address(contentRegistry));
     }
 
     function test_VotingEngine_StatePreservedAfterUpgrade() public {
@@ -307,7 +308,7 @@ contract UpgradeTest is Test {
 
         RoundVotingEngine veImpl = new RoundVotingEngine();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        veImpl.initialize(admin, governance, address(crepToken), address(contentRegistry), true);
+        veImpl.initialize(admin, governance, address(crepToken), address(contentRegistry));
 
         RoundRewardDistributor rdImpl = new RoundRewardDistributor();
         vm.expectRevert(Initializable.InvalidInitialization.selector);

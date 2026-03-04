@@ -52,7 +52,7 @@ contract RoundRewardDistributorBranchesTest is Test {
                 new ERC1967Proxy(
                     address(engineImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true)
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
                     )
                 )
             )
@@ -91,7 +91,7 @@ contract RoundRewardDistributorBranchesTest is Test {
     // HELPERS
     // =========================================================================
 
-    function _mockCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
+    function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
         return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
     }
 
@@ -109,7 +109,7 @@ contract RoundRewardDistributorBranchesTest is Test {
     {
         salt = keccak256(abi.encodePacked(voter, contentId));
         bytes32 ch = _commitHash(isUp, salt, contentId);
-        bytes memory ct = _mockCiphertext(isUp, salt, contentId);
+        bytes memory ct = _testCiphertext(isUp, salt, contentId);
         vm.prank(voter);
         crepToken.approve(address(votingEngine), stake);
         vm.prank(voter);

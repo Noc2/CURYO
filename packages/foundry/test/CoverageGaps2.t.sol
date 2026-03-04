@@ -1550,7 +1550,7 @@ contract RoundSettlementBranchTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry), true))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry)))
                 )
             )
         );

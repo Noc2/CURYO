@@ -40,7 +40,6 @@ contract RoundVotingEngine is
     // --- Custom Errors ---
     error InvalidAddress();
     error InvalidConfig();
-    error MockModeNotAllowed();
     error InvalidStake();
     error ZeroAmount();
     error Unauthorized();
@@ -97,8 +96,6 @@ contract RoundVotingEngine is
     ICategoryRegistry public categoryRegistry;
     IFrontendRegistry public frontendRegistry;
     address public treasury;
-    bool public mockMode; // Skip ciphertext verification for local dev
-
     // Round configuration (governance-tunable)
     RoundLib.RoundConfig public config;
 
@@ -226,7 +223,7 @@ contract RoundVotingEngine is
         _disableInitializers();
     }
 
-    function initialize(address _admin, address _governance, address _crepToken, address _registry, bool _mockMode)
+    function initialize(address _admin, address _governance, address _crepToken, address _registry)
         public
         initializer
     {
@@ -248,12 +245,8 @@ contract RoundVotingEngine is
             _grantRole(CONFIG_ROLE, _admin);
         }
 
-        // Prevent mock mode on non-local chains
-        if (_mockMode && block.chainid != 31337) revert MockModeNotAllowed();
-
         crepToken = IERC20(_crepToken);
         registry = ContentRegistry(_registry);
-        mockMode = _mockMode;
 
         // Default config: 1-hour epochs, 7-day max, 3 min voters
         config = RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
@@ -385,7 +378,7 @@ contract RoundVotingEngine is
         address frontend
     ) external nonReentrant whenNotPaused {
         try IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s) { }
-        catch { }
+            catch { }
         _commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend);
     }
 
@@ -399,9 +392,6 @@ contract RoundVotingEngine is
         if (stakeAmount < MIN_STAKE || stakeAmount > MAX_STAKE) revert InvalidStake();
         if (ciphertext.length == 0) revert InvalidCiphertext();
         if (ciphertext.length > MAX_CIPHERTEXT_SIZE) revert CiphertextTooLarge();
-        if (mockMode) {
-            _validateMockCiphertext(ciphertext, contentId, commitHash);
-        }
 
         // Voter ID check (if configured)
         uint256 voterId;
@@ -996,26 +986,6 @@ contract RoundVotingEngine is
         emit VoteRevealed(contentId, roundId, commit.voter, isUp);
     }
 
-    /// @dev In mock mode, ciphertext is expected to be packed plaintext:
-    ///      1 byte isUp (0/1), 32 bytes salt, 32 bytes contentId = 65 bytes total.
-    function _validateMockCiphertext(bytes calldata ciphertext, uint256 contentId, bytes32 commitHash) internal pure {
-        if (ciphertext.length != 65) revert InvalidCiphertext();
-
-        uint8 direction = uint8(ciphertext[0]);
-        if (direction > 1) revert InvalidCiphertext();
-        bool isUp = direction == 1;
-
-        bytes32 salt;
-        uint256 decodedContentId;
-        assembly {
-            salt := calldataload(add(ciphertext.offset, 1))
-            decodedContentId := calldataload(add(ciphertext.offset, 33))
-        }
-        if (decodedContentId != contentId) revert InvalidCiphertext();
-
-        bytes32 expectedHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        if (expectedHash != commitHash) revert HashMismatch();
-    }
 
     function _distributeCategoryFee(uint256 contentId, uint256 roundId, uint256 categorySubmitterShare) internal {
         uint256 categoryId = registry.getCategoryId(contentId);
@@ -1188,11 +1158,6 @@ contract RoundVotingEngine is
 
     function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
-    }
-
-    function setMockMode(bool _mockMode) external onlyRole(ADMIN_ROLE) {
-        if (_mockMode && block.chainid != 31337) revert MockModeNotAllowed();
-        mockMode = _mockMode;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }

@@ -1332,11 +1332,6 @@ export const RoundVotingEngineAbi = [
         "name": "_registry",
         "type": "address",
         "internalType": "address"
-      },
-      {
-        "name": "_mockMode",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "outputs": [],
@@ -1446,19 +1441,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "mockMode",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -2105,19 +2087,6 @@ export const RoundVotingEngineAbi = [
         "name": "_keeperReward",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setMockMode",
-    "inputs": [
-      {
-        "name": "_mockMode",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "outputs": [],
@@ -3186,11 +3155,6 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "MaxVotersReached",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "MockModeNotAllowed",
     "inputs": []
   },
   {

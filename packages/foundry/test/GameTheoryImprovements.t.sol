@@ -57,13 +57,13 @@ contract GameTheoryImprovementsTest is Test {
             )
         );
 
-        // Initialize engine with mockMode=true so ciphertext validation is relaxed
+        // Initialize engine (ciphertext validation is relaxed on chainid 31337)
         engine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(
                     address(engImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true)
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
                     )
                 )
             )
@@ -121,7 +121,7 @@ contract GameTheoryImprovementsTest is Test {
     }
 
     /// @dev Build the 65-byte mock ciphertext: uint8(isUp) || salt || contentId
-    function _mockCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
+    function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
         return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
     }
 
@@ -139,7 +139,7 @@ contract GameTheoryImprovementsTest is Test {
     function _commit(address voter, uint256 contentId, bool isUp, uint256 stake) internal {
         bytes32 salt = bytes32(uint256(uint160(voter)) ^ uint256(contentId));
         bytes32 ch = _commitHash(isUp, salt, contentId);
-        bytes memory ct = _mockCiphertext(isUp, salt, contentId);
+        bytes memory ct = _testCiphertext(isUp, salt, contentId);
 
         vm.startPrank(voter);
         crepToken.approve(address(engine), stake);

@@ -624,7 +624,7 @@ contract RoundSettlementEdgeCaseTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry), true))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry)))
                 )
             )
         );
@@ -721,7 +721,7 @@ contract RoundSettlementEdgeCaseTest is Test {
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
             address(impl),
-            abi.encodeCall(RoundVotingEngine.initialize, (address(0), owner, address(crep), address(registry), true))
+            abi.encodeCall(RoundVotingEngine.initialize, (address(0), owner, address(crep), address(registry)))
         );
     }
 
@@ -730,7 +730,7 @@ contract RoundSettlementEdgeCaseTest is Test {
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
             address(impl),
-            abi.encodeCall(RoundVotingEngine.initialize, (owner, address(0), address(crep), address(registry), true))
+            abi.encodeCall(RoundVotingEngine.initialize, (owner, address(0), address(crep), address(registry)))
         );
     }
 
@@ -739,7 +739,7 @@ contract RoundSettlementEdgeCaseTest is Test {
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
             address(impl),
-            abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(0), address(registry), true))
+            abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(0), address(registry)))
         );
     }
 
@@ -747,7 +747,7 @@ contract RoundSettlementEdgeCaseTest is Test {
         RoundVotingEngine impl = new RoundVotingEngine();
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
-            address(impl), abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(0), true))
+            address(impl), abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(0)))
         );
     }
 
@@ -846,7 +846,7 @@ contract RoundSettlementEdgeCaseTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl2),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry), true))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry)))
                 )
             )
         );

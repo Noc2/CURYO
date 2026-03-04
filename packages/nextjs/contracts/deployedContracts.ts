@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     CuryoReputation: {
-      address: "0x13f6928e5B43913B358CFB40C3ab111DC1ac213c",
+      address: "0x700b6A60ce7EaaEA56F065753d8dcB9653dbAD35",
       abi: [
         {
           type: "constructor",
@@ -1431,7 +1431,7 @@ const deployedContracts = {
       },
     },
     ContentRegistry: {
-      address: "0x5268dcE6Def0b42d3C315dE18F2eb43fea782835",
+      address: "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
       abi: [
         {
           type: "constructor",
@@ -2912,7 +2912,7 @@ const deployedContracts = {
       },
     },
     RoundVotingEngine: {
-      address: "0xEc12943948293Be030811514e0B374D040F60F56",
+      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
       abi: [
         {
           type: "constructor",
@@ -4248,11 +4248,6 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
-            {
-              name: "_mockMode",
-              type: "bool",
-              internalType: "bool",
-            },
           ],
           outputs: [],
           stateMutability: "nonpayable",
@@ -4361,19 +4356,6 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "mockMode",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -5020,19 +5002,6 @@ const deployedContracts = {
               name: "_keeperReward",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setMockMode",
-          inputs: [
-            {
-              name: "_mockMode",
-              type: "bool",
-              internalType: "bool",
             },
           ],
           outputs: [],
@@ -6105,11 +6074,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "MockModeNotAllowed",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "NoApprovedStake",
           inputs: [],
         },
@@ -6272,7 +6236,7 @@ const deployedContracts = {
       },
     },
     RoundRewardDistributor: {
-      address: "0xA922C3227149D9bc5001D796aA418b590D0C4a7B",
+      address: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
       abi: [
         {
           type: "constructor",
@@ -6914,7 +6878,7 @@ const deployedContracts = {
       },
     },
     FrontendRegistry: {
-      address: "0x1Cff7CDEcEF22D70FedefE1774831F18b86E9888",
+      address: "0x0C8E79F3534B00D9a3D4a856B665Bf4eBC22f2ba",
       abi: [
         {
           type: "constructor",
@@ -7890,7 +7854,7 @@ const deployedContracts = {
       },
     },
     ProfileRegistry: {
-      address: "0x32e0a4F5c9846C8C504103E41d7E8EdF03CE8CBC",
+      address: "0xeD1DB453C3156Ff3155a97AD217b3087D5Dc5f6E",
       abi: [
         {
           type: "constructor",
@@ -8607,7 +8571,7 @@ const deployedContracts = {
       },
     },
     ERC1967Proxy: {
-      address: "0x1cff7cdecef22d70fedefe1774831f18b86e9888",
+      address: "0x0c8e79f3534b00d9a3d4a856b665bf4ebc22f2ba",
       abi: [
         {
           type: "constructor",
@@ -8681,10 +8645,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 134,
+      deployedOnBlock: 7,
     },
     CategoryRegistry: {
-      address: "0x0D8694F47cDC22Bb8C6D2668a38d07a439F378F9",
+      address: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
       abi: [
         {
           type: "constructor",
@@ -9665,7 +9629,7 @@ const deployedContracts = {
       },
     },
     VoterIdNFT: {
-      address: "0x9B2b34edD270947dff226D57B233eD2465a8a1fA",
+      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
       abi: [
         {
           type: "constructor",
@@ -10888,7 +10852,7 @@ const deployedContracts = {
       },
     },
     ParticipationPool: {
-      address: "0x4Ba19F6fBF97E954D2980EbDAe23cD86BDfA04Bc",
+      address: "0xc8c25Aab3eeA991E083d2d0240eE4D693c59bDAC",
       abi: [
         {
           type: "constructor",
@@ -11298,7 +11262,7 @@ const deployedContracts = {
       },
     },
     MockIdentityVerificationHub: {
-      address: "0x4ebb74365be6b8abad7a16ebcd1c3fdb6588cff2",
+      address: "0xc624801dd98bef87c0718ddb43ad3a566cc51ecc",
       abi: [
         {
           type: "function",
@@ -11667,10 +11631,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 188,
+      deployedOnBlock: 61,
     },
     HumanFaucet: {
-      address: "0x9f08B14d75Fe9F44ec4f5Cfa06d763Ee7bFC3De5",
+      address: "0x5D1ce2A19Aa885765aBcef89b7590E213422a8b9",
       abi: [
         {
           type: "constructor",
@@ -14983,11 +14947,6 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
-            {
-              name: "_mockMode",
-              type: "bool",
-              internalType: "bool",
-            },
           ],
           outputs: [],
           stateMutability: "nonpayable",
@@ -15096,19 +15055,6 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "mockMode",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -15755,19 +15701,6 @@ const deployedContracts = {
               name: "_keeperReward",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setMockMode",
-          inputs: [
-            {
-              name: "_mockMode",
-              type: "bool",
-              internalType: "bool",
             },
           ],
           outputs: [],
@@ -16836,11 +16769,6 @@ const deployedContracts = {
         {
           type: "error",
           name: "MaxVotersReached",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "MockModeNotAllowed",
           inputs: [],
         },
         {
