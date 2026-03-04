@@ -24,6 +24,8 @@ export interface RoundPhaseInfo {
   roundTimeRemaining: number;
   /** Seconds remaining in epoch 1 (0 if epoch 1 has ended) */
   epoch1Remaining: number;
+  /** Seconds remaining in the current epoch (time until next epoch boundary) */
+  currentEpochRemaining: number;
   /** Whether we are still in epoch 1 (blind voting, full reward weight) */
   isEpoch1: boolean;
   /** Unix timestamp when epoch 1 ends for this round */
@@ -106,6 +108,7 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     votersNeeded: 0,
     roundTimeRemaining: 0,
     epoch1Remaining: 0,
+    currentEpochRemaining: 0,
     isEpoch1: false,
     epoch1EndTime: 0,
     epochDuration: configEpochDuration,
@@ -134,6 +137,10 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
   const epoch1EndTime = startTime + configEpochDuration;
   const isEpoch1 = now < epoch1EndTime;
   const epoch1Remaining = Math.max(0, epoch1EndTime - now);
+
+  // Time remaining in the current epoch (next epoch boundary)
+  const elapsed = now - startTime;
+  const currentEpochRemaining = elapsed >= 0 ? configEpochDuration - (elapsed % configEpochDuration) : 0;
 
   // Round expiry: startTime + maxDuration
   const roundTimeRemaining = Math.max(0, startTime + configMaxDuration - now);
@@ -173,6 +180,7 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     votersNeeded,
     roundTimeRemaining,
     epoch1Remaining,
+    currentEpochRemaining,
     isEpoch1,
     epoch1EndTime,
     epochDuration: configEpochDuration,

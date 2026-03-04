@@ -29,7 +29,7 @@ interface RoundStatsProps {
 export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
   const { round, isLoading, minVoters, maxVoters, isRoundFull, readyToSettle } = useRoundInfo(contentId);
-  const { phase, isEpoch1, settlementCountdown, thresholdReachedAt } = useRoundPhase(contentId);
+  const { phase, isEpoch1, settlementCountdown, thresholdReachedAt, currentEpochRemaining } = useRoundPhase(contentId);
 
   if (isLoading) {
     return (
@@ -156,9 +156,10 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
                 </>
               ) : (
                 <>
-                  Awaiting reveals
+                  Reveals in{" "}
+                  <span className="font-semibold tabular-nums">{formatSettlementCountdown(currentEpochRemaining)}</span>
                   <InfoTooltip
-                    text={`At least ${minVoters} votes committed. The keeper reveals votes after each epoch ends, then settles after a one-epoch delay.`}
+                    text={`At least ${minVoters} votes committed. Votes are revealed when the current epoch ends, then settled after a one-epoch delay.`}
                     position="bottom"
                   />
                 </>
