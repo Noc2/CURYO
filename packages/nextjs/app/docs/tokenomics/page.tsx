@@ -257,6 +257,58 @@ const Tokenomics = () => {
         <FaucetHalvingChart />
       </div>
 
+      <h3>Streak Bonuses</h3>
+      <p>
+        Daily voting streaks earn milestone bonuses from the Participation Pool. Voters who vote on consecutive days
+        build a streak, and at each milestone they can claim a one-time bonus directly on-chain &mdash; no trusted
+        intermediary required. If the streak breaks, milestones reset and can be re-earned on the next streak.
+      </p>
+      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
+        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
+          <thead>
+            <tr>
+              <th>Milestone</th>
+              <th>Base Bonus</th>
+              <th>Tier 0 (90%)</th>
+              <th>Tier 1 (45%)</th>
+              <th>Tier 2 (22.5%)</th>
+              <th>Tier 3 (11.25%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>7 days</td>
+              <td className="font-mono">10 cREP</td>
+              <td className="font-mono">10 cREP</td>
+              <td className="font-mono">5 cREP</td>
+              <td className="font-mono">2.5 cREP</td>
+              <td className="font-mono">1.25 cREP</td>
+            </tr>
+            <tr>
+              <td>30 days</td>
+              <td className="font-mono">50 cREP</td>
+              <td className="font-mono">50 cREP</td>
+              <td className="font-mono">25 cREP</td>
+              <td className="font-mono">12.5 cREP</td>
+              <td className="font-mono">6.25 cREP</td>
+            </tr>
+            <tr>
+              <td>90 days</td>
+              <td className="font-mono">200 cREP</td>
+              <td className="font-mono">200 cREP</td>
+              <td className="font-mono">100 cREP</td>
+              <td className="font-mono">50 cREP</td>
+              <td className="font-mono">25 cREP</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Bonuses scale with the same halving schedule as participation rewards. At Tier 0 (90% rate), the full base bonus
+        is paid. As the pool distributes more cREP and the rate halves, streak bonuses scale down proportionally. This
+        ensures streak bonuses cannot drain the pool faster than intended.
+      </p>
+
       <h3>Treasury</h3>
       <p>
         The governance treasury starts with <strong>10M cREP</strong> and grows over time through two inflow sources: a
