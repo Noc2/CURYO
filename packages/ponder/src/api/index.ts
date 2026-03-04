@@ -823,6 +823,7 @@ app.get("/voter-streak", async (c) => {
       bestDailyStreak: 0,
       totalActiveDays: 0,
       lastActiveDate: null,
+      lastMilestoneDay: 0,
       nextMilestone: STREAK_MILESTONES[0].days,
       nextMilestoneBonus: STREAK_MILESTONES[0].bonus,
     });

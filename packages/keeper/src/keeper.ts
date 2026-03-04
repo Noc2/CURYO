@@ -70,7 +70,6 @@ interface VoterStreakData {
   currentDailyStreak: number;
   bestDailyStreak: number;
   lastMilestoneDay: number;
-  voter: string;
 }
 
 async function fetchVoterStreak(voter: string): Promise<VoterStreakData | null> {

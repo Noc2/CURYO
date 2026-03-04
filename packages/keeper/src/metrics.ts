@@ -11,6 +11,7 @@ const counters: Record<string, number> = {
   keeper_rounds_cancelled_total: 0,
   keeper_votes_revealed_total: 0,
   keeper_content_marked_dormant_total: 0,
+  keeper_streak_bonuses_paid_total: 0,
   keeper_runs_total: 0,
   keeper_errors_total: 0,
 };
@@ -54,6 +55,7 @@ export function recordRun(result: KeeperResult, durationMs: number) {
   counters.keeper_rounds_cancelled_total += result.roundsCancelled;
   counters.keeper_votes_revealed_total += result.votesRevealed;
   counters.keeper_content_marked_dormant_total += result.contentMarkedDormant;
+  counters.keeper_streak_bonuses_paid_total += result.streakBonusesPaid;
   gauges.keeper_last_run_duration_seconds = durationMs / 1000;
   gauges.keeper_last_successful_run_timestamp = Date.now() / 1000;
   consecutiveErrors = 0;
@@ -75,6 +77,7 @@ function renderMetrics(): string {
     keeper_rounds_cancelled_total: "Total rounds cancelled by keeper",
     keeper_votes_revealed_total: "Total votes revealed by keeper",
     keeper_content_marked_dormant_total: "Total content items marked dormant",
+    keeper_streak_bonuses_paid_total: "Total streak milestone bonuses paid",
     keeper_runs_total: "Total keeper run cycles",
     keeper_errors_total: "Total keeper run errors",
   };
