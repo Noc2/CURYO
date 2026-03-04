@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePublicClient } from "wagmi";
 import { useOptimisticVote } from "~~/contexts/OptimisticVoteContext";
-import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useVotingConfig } from "~~/hooks/useVotingConfig";
+import { RoundData } from "~~/types/votingTypes";
 
 /**
  * Hook to read round state for a content item.
@@ -13,46 +13,7 @@ import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaff
 export function useRoundInfo(contentId?: bigint) {
   const { getOptimisticDelta } = useOptimisticVote();
   const optimistic = contentId !== undefined ? getOptimisticDelta(contentId) : undefined;
-
-  const publicClient = usePublicClient();
-  const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
-
-  // Read config for minVoters and maxVoters
-  // RoundConfig struct: [epochDuration, maxDuration, minVoters, maxVoters]
-  const [minVoters, setMinVoters] = useState(3);
-  const [maxVoters, setMaxVoters] = useState(1000);
-
-  useEffect(() => {
-    if (!publicClient || !votingEngineInfo) return;
-
-    let cancelled = false;
-
-    publicClient
-      .readContract({
-        address: votingEngineInfo.address,
-        abi: votingEngineInfo.abi,
-        functionName: "config",
-        args: [],
-      })
-      .then((data: any) => {
-        if (cancelled) return;
-        if (data.minVoters != null) {
-          setMinVoters(Number(data.minVoters));
-          setMaxVoters(Number(data.maxVoters));
-        } else if (Array.isArray(data) && data.length >= 4) {
-          // Positional tuple fallback: [epochDuration, maxDuration, minVoters, maxVoters]
-          setMinVoters(Number(data[2])); // minVoters
-          setMaxVoters(Number(data[3])); // maxVoters
-        }
-      })
-      .catch(() => {
-        // Fall back to default
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [publicClient, votingEngineInfo]);
+  const { minVoters, maxVoters } = useVotingConfig();
 
   // Active round ID for this content
   const { data: rawActiveRoundId } = useScaffoldReadContract({
@@ -80,24 +41,7 @@ export function useRoundInfo(contentId?: bigint) {
   const roundId = activeRoundId ?? 0n;
   const isLoading = contentId !== undefined && isRoundLoading;
 
-  // Parse round data from contract
-  // Round struct: { startTime, state, voteCount, revealedCount, totalStake,
-  //                 upPool, downPool, upCount, downCount, upWins, losingPool,
-  //                 settledAt, weightedUpPool, weightedDownPool, thresholdReachedAt }
-  const round = rawRoundData as unknown as
-    | {
-        startTime: bigint;
-        state: number;
-        voteCount: bigint;
-        revealedCount: bigint;
-        totalStake: bigint;
-        upPool: bigint; // revealed UP stake
-        downPool: bigint; // revealed DOWN stake
-        upCount: bigint; // revealed UP voter count
-        downCount: bigint; // revealed DOWN voter count
-        upWins: boolean;
-      }
-    | undefined;
+  const round = rawRoundData as unknown as RoundData | undefined;
 
   // Merge optimistic deltas (for immediate UI feedback after commitVote)
   const optimisticVoteCount = BigInt(optimistic?.voteCount ?? 0);

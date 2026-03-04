@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import { ponderApi } from "~~/services/ponder/client";
 
 export interface ActiveVoteWithDeadline {
@@ -50,25 +50,7 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
     return () => clearInterval(interval);
   }, []);
 
-  // Read config: [epochDuration, maxDuration, minVoters, maxVoters]
-  const { data: rawConfig } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine" as any,
-    functionName: "config" as any,
-    query: { refetchInterval: 60_000 },
-  } as any);
-
-  let epochDuration = 3600; // default 1 hour
-  let maxDuration = 7 * 24 * 60 * 60; // default 7 days
-  if (rawConfig) {
-    const config = rawConfig as any;
-    if (config.epochDuration != null) {
-      epochDuration = Number(config.epochDuration);
-      maxDuration = Number(config.maxDuration);
-    } else if (Array.isArray(config) && config.length >= 2) {
-      epochDuration = Number(config[0]); // epochDuration is index 0
-      maxDuration = Number(config[1]); // maxDuration is index 1
-    }
-  }
+  const { epochDuration, maxDuration } = useVotingConfig();
 
   // Fetch active votes (state=0 means open rounds) — revealed=false means pending reveal
   const { data: ponderResult, isLoading } = usePonderQuery({

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePublicClient } from "wagmi";
-import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useVotingConfig } from "~~/hooks/useVotingConfig";
+import { RoundData } from "~~/types/votingTypes";
 
 export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "none";
 
@@ -48,8 +49,12 @@ export interface RoundPhaseInfo {
  * Epoch 2+ (informed) = after epoch 1 ends — reduced reward weight (25%)
  */
 export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
-  const publicClient = usePublicClient();
-  const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
+  const {
+    epochDuration: configEpochDuration,
+    maxDuration: configMaxDuration,
+    minVoters: configMinVoters,
+    maxVoters: configMaxVoters,
+  } = useVotingConfig();
 
   // Get the active round ID for this content
   const { data: rawActiveRoundId, isLoading: roundIdLoading } = useScaffoldReadContract({
@@ -73,49 +78,6 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
       refetchInterval: 5000,
     },
   } as any);
-
-  // Read config: [epochDuration, maxDuration, minVoters, maxVoters]
-  const [configEpochDuration, setConfigEpochDuration] = useState(3600); // default 1 hour
-  const [configMaxDuration, setConfigMaxDuration] = useState(7 * 24 * 60 * 60); // default 1 week
-  const [configMinVoters, setConfigMinVoters] = useState(3);
-  const [configMaxVoters, setConfigMaxVoters] = useState(1000);
-
-  useEffect(() => {
-    if (!publicClient || !votingEngineInfo) return;
-
-    let cancelled = false;
-
-    publicClient
-      .readContract({
-        address: votingEngineInfo.address,
-        abi: votingEngineInfo.abi,
-        functionName: "config",
-        args: [],
-      })
-      .then((data: any) => {
-        if (cancelled) return;
-        // RoundConfig struct: { epochDuration, maxDuration, minVoters, maxVoters }
-        if (data.epochDuration != null) {
-          setConfigEpochDuration(Number(data.epochDuration));
-          setConfigMaxDuration(Number(data.maxDuration));
-          setConfigMinVoters(Number(data.minVoters));
-          setConfigMaxVoters(Number(data.maxVoters));
-        } else if (Array.isArray(data) && data.length >= 4) {
-          // Positional tuple fallback
-          setConfigEpochDuration(Number(data[0])); // epochDuration
-          setConfigMaxDuration(Number(data[1])); // maxDuration
-          setConfigMinVoters(Number(data[2])); // minVoters
-          setConfigMaxVoters(Number(data[3])); // maxVoters
-        }
-      })
-      .catch(() => {
-        // Fall back to defaults
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [publicClient, votingEngineInfo]);
 
   // Local clock for countdown (ticks every second)
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
@@ -151,17 +113,7 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     return defaultResult;
   }
 
-  // Parse round data from contract
-  // Round struct: { startTime, state, voteCount, revealedCount, totalStake, upPool, downPool,
-  //                 upCount, downCount, upWins, losingPool, settledAt, weightedUpPool, weightedDownPool,
-  //                 thresholdReachedAt }
-  const round = rawRoundData as unknown as {
-    startTime: bigint;
-    state: number;
-    voteCount: bigint;
-    revealedCount: bigint;
-    totalStake: bigint;
-  };
+  const round = rawRoundData as unknown as RoundData;
 
   const voteCount = Number(round.voteCount);
   const revealedCount = Number(round.revealedCount ?? 0n);

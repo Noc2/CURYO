@@ -3,6 +3,7 @@
 import { encodePacked, keccak256 } from "viem";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { CommitData, RoundData } from "~~/types/votingTypes";
 
 // RoundState enum (matching Solidity)
 const RoundState = { Open: 0, Settled: 1, Cancelled: 2, Tied: 3 } as const;
@@ -97,10 +98,7 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
 
   const isLoading = roundLoading || claimedLoading;
 
-  // Parse commit data
-  const commitData = rawCommitData as unknown as
-    | { voter: string; stakeAmount: bigint; epochIndex: number; revealed: boolean; isUp: boolean }
-    | undefined;
+  const commitData = rawCommitData as unknown as CommitData | undefined;
 
   const stakeWei = commitData?.stakeAmount ?? 0n;
   const isUp = commitData?.isUp ?? false;
@@ -119,9 +117,9 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     };
   }
 
-  const round = roundData as any;
-  const state = Number(round.state ?? round[1] ?? 0);
-  const upWins = round.upWins ?? round[9] ?? false;
+  const round = roundData as unknown as RoundData;
+  const state = Number(round.state);
+  const upWins = round.upWins;
 
   // Tied: full refund of stake
   if (state === RoundState.Tied) {
