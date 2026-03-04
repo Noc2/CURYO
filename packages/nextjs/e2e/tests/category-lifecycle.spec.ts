@@ -8,14 +8,14 @@ import { expect, test } from "@playwright/test";
  * Category lifecycle tests.
  * Triggers Ponder event: CategoryAdded.
  *
- * NOTE: submitCategory() calls governor.propose() which reverts in mock mode
+ * NOTE: submitCategory() calls governor.propose() which reverts in local dev
  * (governorAddr = deployer EOA, not a Governor contract). Therefore we can only
  * test the admin fast-path addApprovedCategory() on local Anvil.
  * CategorySubmitted + CategoryApproved events require a production-style
  * deployment with a real Governor contract and are covered by Foundry unit tests.
  *
  * Account allocation:
- * - Account #9 (scaffold-eth-default deployer = governance in mock mode) — has ADMIN_ROLE
+ * - Account #9 (scaffold-eth-default deployer = governance in local dev) — has ADMIN_ROLE
  */
 test.describe("Category lifecycle", () => {
   const CATEGORY_REGISTRY = CONTRACT_ADDRESSES.CategoryRegistry;

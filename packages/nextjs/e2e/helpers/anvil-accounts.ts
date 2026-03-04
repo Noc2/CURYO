@@ -2,7 +2,7 @@
  * Well-known Anvil/Hardhat accounts.
  * Deterministic and identical across all Anvil instances.
  *
- * After `yarn deploy` on chain 31337 (mock mode):
+ * After `yarn deploy` on chain 31337 (local dev):
  * - Accounts #2-#10 get 1000 cREP + a VoterID NFT
  * - Account #9 is the scaffold-eth-default deployer (has ADMIN_ROLE,
  *   GOVERNANCE_ROLE, CONFIG_ROLE, VoterIdNFT ownership, etc.)

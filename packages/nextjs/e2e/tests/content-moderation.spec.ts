@@ -16,7 +16,7 @@ import { expect, test } from "@playwright/test";
  *
  * Account allocation:
  * - Account #2 (cREP + VoterID) — submits content, cancels own content
- * - Account #9 (deployer = governance in mock mode) — funds account #2
+ * - Account #9 (deployer = governance in local dev) — funds account #2
  *
  * All interactions use direct contract calls for reliability.
  */

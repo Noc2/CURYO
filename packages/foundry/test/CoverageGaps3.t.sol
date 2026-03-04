@@ -760,7 +760,7 @@ contract RoundSettlementEdgeCase3Test is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry), true))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry)))
                 )
             )
         );
@@ -1356,7 +1356,7 @@ contract RoundSettlementEdgeCase3Test is Test {
         for (uint256 i = 0; i < keys.length; i++) {
             RoundLib.Commit memory c = engine.getCommit(contentId, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
-                // Reconstruct reveal params from ciphertext (mock mode: 65-byte plaintext)
+                // Reconstruct reveal params from ciphertext (test mode: 65-byte plaintext)
                 bytes memory ct = c.ciphertext;
                 bool isUp = uint8(ct[0]) == 1;
                 bytes32 salt;

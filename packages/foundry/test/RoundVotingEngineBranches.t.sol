@@ -65,11 +65,7 @@ contract MockVoterIdNFT_RVE is IVoterIdNFT {
         stakes[key] += amount;
     }
 
-    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId)
-        external
-        view
-        returns (uint256)
-    {
+    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
         bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
         return stakes[key];
     }
@@ -157,12 +153,14 @@ contract RoundVotingEngineBranchesTest is Test {
             )
         );
 
-        // mockMode=true so ciphertext validation is plaintext-based (65 bytes)
+        // ciphertext validation is plaintext-based on chainid 31337 (65 bytes)
         engine = RoundVotingEngine(
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry), true))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
+                    )
                 )
             )
         );
@@ -223,7 +221,7 @@ contract RoundVotingEngineBranchesTest is Test {
     // TEST HELPERS
     // =========================================================================
 
-    /// @dev Commit a vote in mock mode and return (commitKey, salt).
+    /// @dev Commit a vote in test mode and return (commitKey, salt).
     function _commit(address voter, uint256 contentId, bool isUp, uint256 stake)
         internal
         returns (bytes32 commitKey, bytes32 salt)
@@ -327,8 +325,7 @@ contract RoundVotingEngineBranchesTest is Test {
     // =========================================================================
 
     function test_BasicLifecycle_ThreeVoters_UpWins() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -339,8 +336,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_BasicLifecycle_ThreeVoters_DownWins() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, false, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, false, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -402,8 +398,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_BasicLifecycle_VoterPoolAndWinningStake() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -414,8 +409,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_BasicLifecycle_SettlementSetsTimestamp() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -480,8 +474,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_CancelExpired_RevertsIfRoundNotOpen() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
@@ -643,8 +636,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_Settle_AfterDelay_Succeeds() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
 
         // Settlement delay has already been warped past in _setupThreeVoterRound
         engine.settleRound(contentId, roundId);
@@ -673,8 +665,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_Settle_RoundNotOpen_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // Try to settle again
@@ -969,8 +960,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_FrontendFee_NoApprovedFrontends_PoolIsZero() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         uint256 frontendPool = engine.roundFrontendPool(contentId, roundId);
@@ -1006,8 +996,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_FrontendFee_ClaimReverts_NoPool() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // No frontend pool (no approved frontends were used)
@@ -1104,8 +1093,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_ProcessUnrevealed_AllRevealed_NoOp() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
@@ -1117,8 +1105,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_ProcessUnrevealed_IndexOutOfBounds_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // startIndex > commitKeys.length
@@ -1261,34 +1248,31 @@ contract RoundVotingEngineBranchesTest is Test {
         engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
     }
 
-    function test_Commit_MockMode_InvalidCiphertext_WrongLength_Reverts() public {
+    function test_Commit_EmptyCiphertext_Reverts() public {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
         bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
-        // Wrong length (not 65 bytes)
-        bytes memory badCiphertext = abi.encodePacked(uint8(1), salt); // 33 bytes
 
         vm.prank(voter1);
         crepToken.approve(address(engine), STAKE);
         vm.prank(voter1);
         vm.expectRevert(RoundVotingEngine.InvalidCiphertext.selector);
-        engine.commitVote(contentId, commitHash, badCiphertext, STAKE, address(0));
+        engine.commitVote(contentId, commitHash, "", STAKE, address(0));
     }
 
-    function test_Commit_MockMode_InvalidCiphertext_HashMismatch_Reverts() public {
+    function test_Commit_OversizedCiphertext_Reverts() public {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
         bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
-        // Ciphertext says isUp=false, but commitHash was computed with isUp=true
-        bytes memory mismatchedCiphertext = abi.encodePacked(uint8(0), salt, contentId);
+        bytes memory hugeCiphertext = new bytes(10_241); // exceeds MAX_CIPHERTEXT_SIZE
 
         vm.prank(voter1);
         crepToken.approve(address(engine), STAKE);
         vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.HashMismatch.selector);
-        engine.commitVote(contentId, commitHash, mismatchedCiphertext, STAKE, address(0));
+        vm.expectRevert(RoundVotingEngine.CiphertextTooLarge.selector);
+        engine.commitVote(contentId, commitHash, hugeCiphertext, STAKE, address(0));
     }
 
     function test_Commit_MaxVotersReached_Reverts() public {
@@ -1324,15 +1308,13 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_GetActiveRoundId_ReturnsZeroAfterSettlement() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
         assertEq(engine.getActiveRoundId(contentId), 0);
     }
 
     function test_NewRoundCreatedAfterSettlement() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // Wait past 24h cooldown then voter1 can commit again
@@ -1461,8 +1443,7 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_Cooldown_AfterRoundSettles_VoterCanRecommit() public {
-        (uint256 contentId, uint256 roundId,,,,,, ) =
-            _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // Warp past 24h cooldown

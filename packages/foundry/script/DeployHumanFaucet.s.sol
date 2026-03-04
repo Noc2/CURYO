@@ -34,7 +34,7 @@ contract DeployHumanFaucet is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         address hubAddress;
-        bool isMockMode = false;
+        bool isLocalDev = false;
 
         // Determine which hub to use based on chain
         if (block.chainid == 31337) {
@@ -42,7 +42,7 @@ contract DeployHumanFaucet is Script {
             console.log("Local network detected - deploying MockIdentityVerificationHub");
             MockIdentityVerificationHub mockHub = new MockIdentityVerificationHub();
             hubAddress = address(mockHub);
-            isMockMode = true;
+            isLocalDev = true;
             console.log("MockIdentityVerificationHub deployed at:", hubAddress);
         } else if (block.chainid == 42220) {
             // Celo mainnet
@@ -69,9 +69,9 @@ contract DeployHumanFaucet is Script {
         // Pre-mint 51,999,900 cREP to the faucet (52M minus 100 reserved for CategoryRegistry)
         CuryoReputation crepToken = CuryoReputation(crepTokenAddress);
         uint256 faucetAmount = 51_999_900 * 1e6; // 51,999,900 cREP
-        // In mock mode, deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
+        // In local dev, deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
         // In production, deployer already has MINTER_ROLE from CuryoReputation constructor
-        if (isMockMode) {
+        if (isLocalDev) {
             crepToken.grantRole(crepToken.MINTER_ROLE(), deployer);
         }
         crepToken.mint(address(faucet), faucetAmount);
@@ -80,7 +80,7 @@ contract DeployHumanFaucet is Script {
         console.log("Minted 52M cREP to HumanFaucet");
 
         // For production networks, create and set the verification config
-        if (!isMockMode) {
+        if (!isLocalDev) {
             // Create verification config with OFAC checking enabled
             SelfStructs.VerificationConfigV2 memory config = SelfStructs.VerificationConfigV2({
                 olderThanEnabled: true,
@@ -98,14 +98,14 @@ contract DeployHumanFaucet is Script {
             faucet.setConfigId(configId);
             console.log("Set configId on HumanFaucet");
         } else {
-            // For mock mode, use the mock config ID
+            // For local dev, use the mock config ID
             bytes32 mockConfigId = MockIdentityVerificationHub(hubAddress).MOCK_CONFIG_ID();
             faucet.setConfigId(mockConfigId);
             console.log("Set mock configId on HumanFaucet");
         }
 
         // Transfer HumanFaucet ownership to governance (production only)
-        if (!isMockMode) {
+        if (!isLocalDev) {
             faucet.transferOwnership(governanceAddress);
             console.log("HumanFaucet ownership transferred to governance");
         }
@@ -118,7 +118,7 @@ contract DeployHumanFaucet is Script {
         console.log("VoterIdNFT:", voterIdNFTAddress);
         console.log("Governance:", governanceAddress);
         console.log("Identity Hub:", hubAddress);
-        console.log("Mock Mode:", isMockMode);
+        console.log("Local dev:", isLocalDev);
         console.log("Scope:", faucet.getScope());
     }
 }

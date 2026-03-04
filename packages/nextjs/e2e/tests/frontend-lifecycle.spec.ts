@@ -21,7 +21,7 @@ import { expect, test } from "@playwright/test";
  *
  * Account allocation:
  * - Account #8 (VoterID #106, unlocked on Anvil) — registers as frontend operator
- * - Account #9 (deployer = governance in mock mode) — funds, approves, slashes
+ * - Account #9 (deployer = governance in local dev) — funds, approves, slashes
  *
  * Flow: cleanup prior state → register → approve → slash → deregister.
  * Idempotent: if already registered from a prior run, deregisters first.

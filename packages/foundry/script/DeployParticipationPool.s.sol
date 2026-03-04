@@ -37,7 +37,7 @@ contract DeployParticipationPool is Script {
         CuryoReputation crepToken = CuryoReputation(crepTokenAddress);
         uint256 poolAmount = 34_000_000 * 1e6; // 34M cREP
 
-        // Grant MINTER_ROLE if needed (mock mode)
+        // Grant MINTER_ROLE if needed (local dev)
         if (block.chainid == 31337) {
             crepToken.grantRole(crepToken.MINTER_ROLE(), deployer);
         }

@@ -1,7 +1,7 @@
 /**
  * Direct contract call helpers for admin/governance E2E tests.
  *
- * On local Anvil (chain 31337, mock mode), the deployer (account #0)
+ * On local Anvil (chain 31337, local dev), the deployer (account #0)
  * serves as governance and holds all roles: ADMIN_ROLE, GOVERNANCE_ROLE,
  * CONFIG_ROLE. No impersonation needed.
  *
@@ -76,7 +76,7 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
 /**
  * Approve a pending category via the timelock.
  * Calls CategoryRegistry.approveCategory(uint256 categoryId).
- * In mock mode, deployer == timelock so account #0 can call directly.
+ * In local dev, deployer == timelock so account #0 can call directly.
  */
 export async function approveCategory(
   categoryId: number | bigint,
@@ -160,7 +160,7 @@ export async function registerFrontend(fromAddress: string, contractAddress: str
 /**
  * Approve a registered frontend to start earning fees.
  * Calls FrontendRegistry.approveFrontend(address frontend).
- * Requires GOVERNANCE_ROLE (deployer has it in mock mode).
+ * Requires GOVERNANCE_ROLE (deployer has it in local dev).
  */
 export async function approveFrontend(
   frontendAddr: string,
@@ -270,7 +270,7 @@ export async function deregisterFrontend(fromAddress: string, contractAddress: s
 /**
  * Slash a registered frontend's stake.
  * Calls FrontendRegistry.slashFrontend(address, uint256, string).
- * Requires GOVERNANCE_ROLE (deployer has it in mock mode).
+ * Requires GOVERNANCE_ROLE (deployer has it in local dev).
  */
 export async function slashFrontend(
   frontendAddr: string,
@@ -303,7 +303,7 @@ export async function slashFrontend(
 /**
  * Unslash a frontend so it can be deregistered.
  * Calls FrontendRegistry.unslashFrontend(address).
- * Requires GOVERNANCE_ROLE (deployer in mock mode).
+ * Requires GOVERNANCE_ROLE (deployer in local dev).
  */
 export async function unslashFrontend(
   frontendAddr: string,
@@ -347,7 +347,7 @@ export async function evmIncreaseTime(seconds: number): Promise<void> {
 /**
  * Mint a voter ID NFT for a holder.
  * Calls VoterIdNFT.mint(address to, uint256 nullifier).
- * Requires authorized minter (account #0 in mock mode).
+ * Requires authorized minter (account #0 in local dev).
  */
 export async function mintVoterId(
   holderAddress: string,
@@ -378,7 +378,7 @@ export async function mintVoterId(
 /**
  * Revoke a voter ID NFT from a holder.
  * Calls VoterIdNFT.revokeVoterId(address holder).
- * Requires owner (deployer in mock mode).
+ * Requires owner (deployer in local dev).
  */
 export async function revokeVoterId(
   holderAddress: string,
@@ -682,7 +682,7 @@ export async function getFrontendInfoOnChain(
 
 /**
  * Commit a vote directly via contract call (tlock commit-reveal).
- * Generates mock ciphertext and computes commitHash/commitKey.
+ * Encrypts vote direction with drand tlock and computes commitHash/commitKey.
  * Caller must have approved stakeAmount of cREP to the RoundVotingEngine.
  *
  * Returns { success, commitKey, isUp, salt } for later reveal.
@@ -694,12 +694,18 @@ export async function commitVoteDirect(
   frontend: string,
   fromAddress: string,
   contractAddress: string,
+  epochDurationSeconds = 3600,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
   const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
+  const { timelockEncrypt, mainnetClient, roundAt } = await import("tlock-js");
+  const { Buffer } = await import("buffer");
 
   // Generate deterministic salt from voter + contentId + timestamp
   const salt = keccak256(
-    encodePacked(["address", "uint256", "uint256"], [fromAddress as `0x${string}`, BigInt(contentId), BigInt(Date.now())]),
+    encodePacked(
+      ["address", "uint256", "uint256"],
+      [fromAddress as `0x${string}`, BigInt(contentId), BigInt(Date.now())],
+    ),
   );
 
   // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
@@ -708,8 +714,16 @@ export async function commitVoteDirect(
   // commitKey = keccak256(abi.encodePacked(voter, commitHash))
   const ckey = keccak256(encodePacked(["address", "bytes32"], [fromAddress as `0x${string}`, chash]));
 
-  // MockMode ciphertext: abi.encodePacked(uint8(isUp ? 1 : 0), bytes32 salt, uint256 contentId) = 65 bytes
-  const ciphertext = encodePacked(["uint8", "bytes32", "uint256"], [isUp ? 1 : 0, salt, BigInt(contentId)]);
+  // tlock encrypt: 33-byte plaintext = [uint8 direction, bytes32 salt]
+  const plaintext = Buffer.alloc(33);
+  plaintext[0] = isUp ? 1 : 0;
+  Buffer.from(salt.slice(2), "hex").copy(plaintext, 1);
+
+  const client = mainnetClient();
+  const chainInfo = await client.chain().info();
+  const targetRound = roundAt(Date.now() + epochDurationSeconds * 1000, chainInfo);
+  const armored = await timelockEncrypt(targetRound, plaintext, client);
+  const ciphertext = `0x${Buffer.from(armored, "utf-8").toString("hex")}` as `0x${string}`;
 
   const data = encodeFunctionData({
     abi: [
@@ -1080,7 +1094,7 @@ export async function readRoundConfig(contractAddress: string): Promise<{
 /**
  * Set test-friendly config on the RoundVotingEngine.
  * Calls setConfig(epochDuration, maxDuration, minVoters, maxVoters).
- * Requires CONFIG_ROLE (account #9 / DEPLOYER in mock mode).
+ * Requires CONFIG_ROLE (account #9 / DEPLOYER in local dev).
  */
 export async function setTestConfig(
   contractAddress: string,

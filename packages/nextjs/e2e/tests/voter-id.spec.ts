@@ -15,7 +15,7 @@ import { expect, test } from "@playwright/test";
  * Account allocation:
  * - Account #11 (no cREP, no VoterID from seed) — gets VoterID minted then revoked
  * - Account #0 (authorized minter) — mints VoterID
- * - Account #9 (deployer = VoterIdNFT owner in mock mode) — revokes VoterID
+ * - Account #9 (deployer = VoterIdNFT owner in local dev) — revokes VoterID
  *
  * Uses account #11 instead of #10 to avoid conflicts with frontend-lifecycle
  * tests that depend on account #10's VoterID.

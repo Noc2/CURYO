@@ -106,11 +106,11 @@ function assert(condition: boolean, message: string) {
 }
 
 // ---------------------------------------------------------------------------
-// tlock commit-reveal helpers (MockMode)
+// tlock commit-reveal helpers (test helpers)
 // ---------------------------------------------------------------------------
 
 /**
- * MockMode ciphertext: abi.encodePacked(uint8(isUp ? 1 : 0), bytes32 salt, uint256 contentId)
+ * Test ciphertext: abi.encodePacked(uint8(isUp ? 1 : 0), bytes32 salt, uint256 contentId)
  * 65 bytes total: 1 + 32 + 32
  */
 function mockCiphertext(isUp: boolean, salt: `0x${string}`, contentId: bigint): `0x${string}` {
@@ -132,7 +132,7 @@ function commitKey(voter: Address, ch: `0x${string}`): `0x${string}` {
 }
 
 /**
- * Commit a vote in MockMode.
+ * Commit a vote in test mode.
  */
 async function commitVote(
   voter: ReturnType<typeof privateKeyToAccount>,
