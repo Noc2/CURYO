@@ -23,6 +23,61 @@ import { eq, desc, asc, and, or, inArray, notInArray, sql, gte, replaceBigInts }
 
 const app = new Hono();
 
+// ============================================================
+// RATE LIMITING — IP-based sliding window
+// ============================================================
+
+interface RateLimitEntry {
+  timestamps: number[];
+}
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
+const RATE_LIMIT = 120; // requests per window
+const RATE_WINDOW_MS = 60_000; // 1 minute
+const RATE_CLEANUP_INTERVAL_MS = 60_000;
+let rateLimitLastCleanup = Date.now();
+
+function rateLimitCleanup() {
+  const now = Date.now();
+  if (now - rateLimitLastCleanup < RATE_CLEANUP_INTERVAL_MS) return;
+  rateLimitLastCleanup = now;
+  const cutoff = now - RATE_WINDOW_MS;
+  for (const [key, entry] of rateLimitStore) {
+    entry.timestamps = entry.timestamps.filter(t => t > cutoff);
+    if (entry.timestamps.length === 0) rateLimitStore.delete(key);
+  }
+}
+
+app.use("/*", async (c, next) => {
+  const xff = c.req.header("x-forwarded-for");
+  const ip =
+    c.req.header("x-real-ip")?.trim() ||
+    xff?.split(",").pop()?.trim() ||
+    "unknown";
+  const now = Date.now();
+  const cutoff = now - RATE_WINDOW_MS;
+
+  rateLimitCleanup();
+
+  let entry = rateLimitStore.get(ip);
+  if (!entry) {
+    entry = { timestamps: [] };
+    rateLimitStore.set(ip, entry);
+  }
+
+  entry.timestamps = entry.timestamps.filter(t => t > cutoff);
+
+  if (entry.timestamps.length >= RATE_LIMIT) {
+    const oldestInWindow = entry.timestamps[0];
+    const retryAfter = Math.ceil((oldestInWindow + RATE_WINDOW_MS - now) / 1000);
+    c.header("Retry-After", String(retryAfter));
+    return c.json({ error: "Too many requests" }, 429);
+  }
+
+  entry.timestamps.push(now);
+  await next();
+});
+
 // Enable CORS for frontend access (restrict via CORS_ORIGIN in production, comma-separated)
 const corsOrigin = process.env.CORS_ORIGIN;
 if (!corsOrigin) {

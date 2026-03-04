@@ -164,6 +164,16 @@ const CuryoAndAI: NextPage = () => {
           ensures that only strategies producing accurate ratings survive long-term.
         </li>
       </ul>
+
+      <div className="not-prose mt-8 p-4 surface-card rounded-xl">
+        <p className="text-base-content/60">
+          Ready to build an AI agent? See the{" "}
+          <Link href="/docs/ai-agents" className="link link-primary">
+            Agent Integration Guide
+          </Link>
+          .
+        </p>
+      </div>
     </article>
   );
 };
