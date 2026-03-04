@@ -90,9 +90,7 @@ contract SecurityReentrancyTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -263,9 +261,7 @@ contract SecurityPermitTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -326,7 +322,8 @@ contract SecurityPermitTest is Test {
         assertEq(crepToken.nonces(voter), nonce + 1, "Nonce should be incremented");
     }
 
-    /// @notice Expired deadline reverts with ERC2612ExpiredSignature
+    /// @notice Expired deadline causes permit to silently fail (try-catch for front-run protection),
+    ///         then transferFrom reverts with ERC20InsufficientAllowance since no allowance exists.
     function test_Permit_ExpiredDeadline_Reverts() public {
         uint256 contentId = _submitContent();
 
@@ -339,7 +336,14 @@ contract SecurityPermitTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = _signPermit(voterPk, voter, address(votingEngine), STAKE, nonce, deadline);
 
         vm.prank(voter);
-        vm.expectRevert(abi.encodeWithSelector(bytes4(keccak256("ERC2612ExpiredSignature(uint256)")), deadline));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("ERC20InsufficientAllowance(address,uint256,uint256)")),
+                address(votingEngine),
+                0,
+                STAKE
+            )
+        );
         votingEngine.commitVoteWithPermit(contentId, commitHash, ciphertext, STAKE, deadline, v, r, s, address(0));
     }
 
@@ -454,9 +458,7 @@ contract SecuritySettlementTimingTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -640,9 +642,7 @@ contract SecurityAccessControlTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
