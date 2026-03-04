@@ -65,8 +65,7 @@ const DocsIntro: NextPage = () => {
         </li>
         <li>
           <strong>Settle:</strong> After the epoch ends, the keeper reveals all votes. Once at least 3 votes are
-          revealed and the settlement delay passes, the round settles. The majority side wins and the losing side&apos;s
-          stakes become the reward pool.
+          revealed, the round settles. The majority side wins and the losing side&apos;s stakes become the reward pool.
         </li>
       </ol>
       <p>The losing pool is split:</p>

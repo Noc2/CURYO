@@ -61,9 +61,9 @@ const FrontendCodes: NextPage = () => {
           Votes stay hidden until this step runs.
         </li>
         <li>
-          <strong>Settling rounds:</strong> Once at least 3 votes are revealed and the settlement delay (one epoch) has
-          elapsed, the service calls <code>settleRound(contentId, roundId)</code> to finalize the round, update the
-          content rating, and open rewards for claiming.
+          <strong>Settling rounds:</strong> Once at least 3 votes are revealed, the service calls{" "}
+          <code>settleRound(contentId, roundId)</code> to finalize the round, update the content rating, and open
+          rewards for claiming.
         </li>
       </ol>
       <p>

@@ -40,10 +40,8 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
     isEpoch1,
     epoch1Remaining,
     isReady,
-    settlementCountdown,
     thresholdReachedAt,
     currentEpochRemaining,
-    epochDuration,
     voteCount,
     minVoters,
   } = useRoundPhase(contentId);
@@ -157,24 +155,25 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
       {/* Round expiry or settlement countdown */}
       {voteCount >= minVoters ? (
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1">
-            Settles in
-            <InfoTooltip
-              text={
-                thresholdReachedAt > 0
-                  ? "Votes revealed. The keeper settles after the one-epoch settlement delay."
-                  : "Estimated time: votes revealed at epoch end, then one-epoch settlement delay."
-              }
-              position="bottom"
-            />
-          </span>
-          <span className="font-semibold tabular-nums">
-            {thresholdReachedAt > 0
-              ? settlementCountdown > 0
-                ? formatDuration(settlementCountdown)
-                : "now"
-              : formatDuration(currentEpochRemaining + epochDuration)}
-          </span>
+          {thresholdReachedAt > 0 ? (
+            <>
+              <span className="flex items-center gap-1">
+                Ready to settle
+                <InfoTooltip text="Votes revealed. The keeper settles within seconds." position="bottom" />
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="flex items-center gap-1">
+                Settles in
+                <InfoTooltip
+                  text="Estimated time: votes revealed at epoch end, then settled immediately."
+                  position="bottom"
+                />
+              </span>
+              <span className="font-semibold tabular-nums">{formatDuration(currentEpochRemaining)}</span>
+            </>
+          )}
         </div>
       ) : (
         formattedExpiry && (

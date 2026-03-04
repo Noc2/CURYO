@@ -57,7 +57,7 @@ contract RoundVotingEngine is
     error RoundNotSettledOrTied();
     error RoundNotCancelledOrTied();
     error ThresholdReached();
-    error SettlementDelayNotElapsed();
+
     error NotEnoughVotes();
     error AlreadyCommitted();
     error AlreadyRevealed();
@@ -598,9 +598,6 @@ contract RoundVotingEngine is
 
         // Must have ≥ minVoters revealed votes
         if (round.revealedCount < roundCfg.minVoters) revert NotEnoughVotes();
-
-        // Settlement delay: wait one epoch after threshold to let current-epoch votes be revealed
-        if (block.timestamp < round.thresholdReachedAt + roundCfg.epochDuration) revert SettlementDelayNotElapsed();
 
         // Tie: equal weighted pools, no winners
         if (round.weightedUpPool == round.weightedDownPool) {

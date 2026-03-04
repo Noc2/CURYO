@@ -86,7 +86,7 @@ function isExpectedRevert(msg: string): boolean {
     "RoundNotOpen",
     "EpochNotEnded",
     "NotEnoughVotes",
-    "SettlementDelayNotElapsed",
+
     "AlreadyRevealed",
     "AlreadyCancelled",
     "ThresholdReached",
@@ -218,11 +218,10 @@ export async function resolveRounds(
           continue;
         }
 
-        // --- 2. SETTLE: If threshold reached and delay elapsed ---
+        // --- 2. SETTLE: If threshold reached (enough votes revealed) ---
         if (
           round.state === RoundState.Open &&
-          round.thresholdReachedAt > 0n &&
-          now >= round.thresholdReachedAt + epochDuration
+          round.thresholdReachedAt > 0n
         ) {
           try {
             await walletClient.writeContract({

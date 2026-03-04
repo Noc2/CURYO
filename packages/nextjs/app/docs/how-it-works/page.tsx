@@ -61,10 +61,9 @@ const HowItWorks: NextPage = () => {
           decryption key. Revealing is also permissionless &mdash; anyone can reveal any vote after its epoch ends.
         </li>
         <li>
-          <strong>Settle:</strong> Once at least 3 votes are revealed and one full epoch has elapsed since the threshold
-          was reached, the round can be settled. The majority side wins. The losing side&apos;s stakes become the reward
-          pool. Content rating is updated by 1&ndash;5 points based on winning stake size. Winners can then click Claim
-          to collect their rewards.
+          <strong>Settle:</strong> Once at least 3 votes are revealed, the round can be settled. The majority side wins.
+          The losing side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points based on
+          winning stake size. Winners can then click Claim to collect their rewards.
         </li>
       </ol>
 
@@ -117,7 +116,7 @@ const HowItWorks: NextPage = () => {
                 <span className="badge badge-secondary badge-sm">Settled</span>
               </td>
               <td>&ldquo;Claim X cREP&rdquo; (winners) or &ldquo;Lost X cREP&rdquo; (losers)</td>
-              <td className="font-mono">~20 min after threshold</td>
+              <td className="font-mono">After min 3 revealed</td>
               <td>Winners click Claim</td>
             </tr>
           </tbody>
@@ -125,9 +124,9 @@ const HowItWorks: NextPage = () => {
       </div>
       <p>
         After the epoch ends, the keeper reveals all committed votes using the drand beacon. Once at least 3 votes are
-        revealed and one full epoch (~20&nbsp;min) has elapsed since the threshold was reached, settlement can be
-        triggered. Settlement is fully permissionless &mdash; anyone can call it. An automated keeper service handles
-        this automatically. Winners receive their original stake plus an epoch-weighted share of the losing pool.
+        revealed, settlement can be triggered immediately. Settlement is fully permissionless &mdash; anyone can call
+        it. An automated keeper service handles this automatically. Winners receive their original stake plus an
+        epoch-weighted share of the losing pool.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
@@ -142,7 +141,7 @@ const HowItWorks: NextPage = () => {
             <tr>
               <td className="font-mono">epochDuration</td>
               <td>20 minutes</td>
-              <td>Tier window for reward weighting; also the settlement delay after minVoters revealed.</td>
+              <td>Tier window for reward weighting.</td>
             </tr>
             <tr>
               <td className="font-mono">minVoters</td>

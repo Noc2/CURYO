@@ -16,8 +16,8 @@ const STEPS = [
   {
     label: "Settle",
     badge: "badge-secondary",
-    duration: "~20 min delay",
-    description: "Majority wins after min 3 voters + settlement delay",
+    duration: "",
+    description: "Majority wins after min 3 voters revealed",
     icon: "⚖️",
   },
   {

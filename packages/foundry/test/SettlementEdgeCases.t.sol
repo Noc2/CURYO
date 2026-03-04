@@ -256,22 +256,13 @@ contract SettlementEdgeCasesTest is Test {
     /// @dev Full 3-voter round: commit, warp past epoch, reveal all 3.
     function _setupThreeVoterRound(bool v1Up, bool v2Up, bool v3Up)
         internal
-        returns (
-            uint256 contentId,
-            uint256 roundId,
-            bytes32 ck1,
-            bytes32 s1,
-            bytes32 ck2,
-            bytes32 s2,
-            bytes32 ck3,
-            bytes32 s3
-        )
+        returns (uint256 contentId, uint256 roundId)
     {
         contentId = _submitContent();
 
-        (ck1, s1) = _commit(voter1, contentId, v1Up, STAKE);
-        (ck2, s2) = _commit(voter2, contentId, v2Up, STAKE);
-        (ck3, s3) = _commit(voter3, contentId, v3Up, STAKE);
+        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, v1Up, STAKE);
+        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, v2Up, STAKE);
+        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, v3Up, STAKE);
 
         roundId = engine.getActiveRoundId(contentId);
 
@@ -288,7 +279,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_Settle_AlreadySettled_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -371,7 +362,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_Cancel_SettledRound_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
@@ -412,7 +403,7 @@ contract SettlementEdgeCasesTest is Test {
 
     function test_Settle_ExactlyMinVoters_Succeeds() public {
         // minVoters=3, exactly 3 revealed
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
         engine.settleRound(contentId, roundId);
 
@@ -449,19 +440,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_Settle_ImmediatelyAfterThreshold_Succeeds() public {
-        uint256 contentId = _submitContent();
-
-        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
-        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
-        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
-
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r0 = engine.getRound(contentId, roundId);
-        vm.warp(r0.startTime + EPOCH + 1);
-
-        _reveal(contentId, roundId, ck1, true, s1);
-        _reveal(contentId, roundId, ck2, true, s2);
-        _reveal(contentId, roundId, ck3, false, s3);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
         // Settle immediately after threshold — no delay required
         engine.settleRound(contentId, roundId);
@@ -481,7 +460,7 @@ contract SettlementEdgeCasesTest is Test {
     }
 
     function test_Settle_TreasuryReceivesFee() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
 
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
 
@@ -524,7 +503,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_Settle_UnanimousUp_ConsensusSubsidy() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, true);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, true);
 
         uint256 reserveBefore = engine.consensusReserve();
 
@@ -540,7 +519,7 @@ contract SettlementEdgeCasesTest is Test {
     }
 
     function test_Settle_UnanimousDown_ConsensusSubsidy() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(false, false, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(false, false, false);
 
         uint256 reserveBefore = engine.consensusReserve();
 
@@ -738,7 +717,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_NewRound_AfterSettlement_Succeeds() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         // Warp past 24h cooldown so voter can vote again
@@ -807,7 +786,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_RewardClaim_Loser_GetsNothing() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         uint256 balanceBefore = crepToken.balanceOf(voter3);
@@ -826,7 +805,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_RewardClaim_DoubleClaim_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         vm.prank(voter1);
@@ -842,7 +821,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_RewardClaim_NonVoter_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         vm.prank(voter6); // Never voted
@@ -869,7 +848,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_SubmitterReward_NonSubmitter_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         vm.prank(voter1); // Not the submitter
@@ -882,7 +861,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_SubmitterReward_DoubleClaim_Reverts() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         vm.prank(submitter);
@@ -898,7 +877,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_SubmitterReward_UnanimousRound_HasSubsidy() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, true);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, true);
         engine.settleRound(contentId, roundId);
 
         uint256 pending = engine.pendingSubmitterReward(contentId, roundId);
@@ -951,7 +930,7 @@ contract SettlementEdgeCasesTest is Test {
     // =========================================================================
 
     function test_RewardClaim_Winner_GetsStakePlusReward() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
+        (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
         uint256 balanceBefore = crepToken.balanceOf(voter1);

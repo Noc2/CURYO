@@ -280,7 +280,7 @@ const SmartContracts: NextPage = () => {
             <tr>
               <td className="font-mono">epochDuration</td>
               <td>1 hour</td>
-              <td>Duration of each reward tier; also used as the settlement delay</td>
+              <td>Duration of each reward tier</td>
             </tr>
             <tr>
               <td className="font-mono">maxDuration</td>
@@ -319,8 +319,8 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
-          <code>minVoters</code> votes are revealed and one full epoch has elapsed since the threshold was reached.
-          Determines winners based on epoch-weighted stakes, splits reward pools, and updates content rating.
+          <code>minVoters</code> votes are revealed. Determines winners based on epoch-weighted stakes, splits reward
+          pools, and updates content rating.
         </li>
         <li>
           <code>claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators claim their

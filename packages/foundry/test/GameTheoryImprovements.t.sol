@@ -62,9 +62,7 @@ contract GameTheoryImprovementsTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -157,7 +155,7 @@ contract GameTheoryImprovementsTest is Test {
         engine.revealVoteByCommitKey(contentId, roundId, ck, isUp, salt);
     }
 
-    /// @dev Settle the round. Caller must ensure block.timestamp >= thresholdReachedAt + epochDuration.
+    /// @dev Settle the round. Caller must ensure minVoters have been revealed.
     function _settle(uint256 contentId, uint256 roundId) internal {
         engine.settleRound(contentId, roundId);
     }
@@ -210,9 +208,6 @@ contract GameTheoryImprovementsTest is Test {
         // thresholdReachedAt was set when 3rd vote was revealed (minVoters = 3)
         assertGt(round.thresholdReachedAt, 0, "threshold reached");
 
-        // Warp past thresholdReachedAt + epochDuration to allow settlement
-        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
-
         _settle(cid, roundId);
 
         RoundLib.Round memory settled = engine.getRound(cid, roundId);
@@ -261,9 +256,6 @@ contract GameTheoryImprovementsTest is Test {
         // weightedDownPool = 100e6
         assertEq(round.weightedUpPool, 125e6, "weighted UP pool = 125 cREP");
         assertEq(round.weightedDownPool, 100e6, "weighted DOWN pool = 100 cREP");
-
-        // Warp past settlement delay
-        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
 
         // Record balances before settlement + claims
         uint256 aliceBefore = crepToken.balanceOf(alice);
@@ -316,7 +308,7 @@ contract GameTheoryImprovementsTest is Test {
     // =========================================================================
 
     /// @notice Exactly minVoters=3 all commit and reveal in epoch-1. Settlement succeeds
-    ///         after the settlement delay (thresholdReachedAt + epochDuration).
+    ///         immediately after all votes are revealed.
     function test_MinVotersSettlement() public {
         uint256 cid = _submit();
         uint256 roundStart = block.timestamp;
@@ -338,13 +330,6 @@ contract GameTheoryImprovementsTest is Test {
         RoundLib.Round memory round = engine.getRound(cid, roundId);
         assertEq(round.revealedCount, 3, "3 votes revealed");
         assertGt(round.thresholdReachedAt, 0, "threshold reached at 3rd reveal");
-
-        // Attempt settlement before delay - should revert
-        vm.expectRevert(RoundVotingEngine.SettlementDelayNotElapsed.selector);
-        _settle(cid, roundId);
-
-        // Warp past thresholdReachedAt + epochDuration
-        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
 
         _settle(cid, roundId);
 
@@ -424,9 +409,6 @@ contract GameTheoryImprovementsTest is Test {
         assertEq(round.revealedCount, 3, "3 votes revealed");
         assertEq(round.downPool, 0, "No DOWN votes - unanimous");
         assertGt(round.thresholdReachedAt, 0, "threshold reached");
-
-        // Warp past settlement delay
-        vm.warp(round.thresholdReachedAt + EPOCH_DURATION + 1);
 
         _settle(cid, roundId);
 

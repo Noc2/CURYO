@@ -85,18 +85,9 @@ const CommitRevealVoting: NextPage = () => {
       </p>
 
       <h2>Settlement</h2>
-      <p>Settlement requires two conditions to be met:</p>
-      <ol>
-        <li>
-          At least <strong>3 votes</strong> must be revealed (the <code>minVoters</code> threshold).
-        </li>
-        <li>
-          One full epoch (~20 min) must have elapsed since the threshold was reached (the{" "}
-          <strong>settlement delay</strong>).
-        </li>
-      </ol>
       <p>
-        Once both conditions are met, anyone can call <code>settleRound()</code> to finalize the round. The keeper
+        Settlement requires at least <strong>3 votes</strong> to be revealed (the <code>minVoters</code> threshold).
+        Once the threshold is reached, anyone can call <code>settleRound()</code> to finalize the round. The keeper
         service does this automatically. Settlement determines the majority side, splits the reward pools, and updates
         the content rating.
       </p>

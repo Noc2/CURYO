@@ -166,10 +166,10 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
       phase = "none";
   }
 
-  // Settlement timing: thresholdReachedAt + epochDuration
+  // Settlement timing: immediate once threshold reached (no delay)
   const thresholdReachedAt = Number(round.thresholdReachedAt ?? 0n);
-  const settlementTime = thresholdReachedAt > 0 ? thresholdReachedAt + configEpochDuration : 0;
-  const settlementCountdown = settlementTime > 0 ? Math.max(0, settlementTime - now) : 0;
+  const settlementTime = thresholdReachedAt > 0 ? thresholdReachedAt : 0;
+  const settlementCountdown = 0;
 
   return {
     phase,
