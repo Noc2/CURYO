@@ -38,22 +38,7 @@ export function ExpectedPayoutBadge({ contentId }: ExpectedPayoutBadgeProps) {
     return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
-  const { potentialWinUp, potentialWinDown, potentialLoss, isBlindPhase } = useExpectedPayout(contentId, stake);
-
-  if (isBlindPhase) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs text-primary/70">
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-          />
-        </svg>
-        <span>Blind phase — 4x early bonus</span>
-      </div>
-    );
-  }
+  const { potentialWinUp, potentialWinDown, potentialLoss } = useExpectedPayout(contentId, stake);
 
   // Don't show if no meaningful data
   if (potentialWinUp === 0n && potentialWinDown === 0n && potentialLoss === 0n) return null;

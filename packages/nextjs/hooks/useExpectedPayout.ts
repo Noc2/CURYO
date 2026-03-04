@@ -1,32 +1,26 @@
 "use client";
 
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
-import { useVotingConfig } from "~~/hooks/useVotingConfig";
 
 interface ExpectedPayout {
   potentialWinUp: bigint; // net gain if voting UP wins
   potentialWinDown: bigint; // net gain if voting DOWN wins
   potentialLoss: bigint; // stake amount (what you lose)
-  isBlindPhase: boolean;
 }
 
 /**
  * Estimate potential win/loss for a given stake on the current round.
- * During blind phase (epoch 1), pools are hidden so we can't estimate.
+ * During epoch 1, pools are hidden (tlock) so estimates return 0.
  * After reveals, uses parimutuel formula: 82% of losing pool to voters.
  */
 export function useExpectedPayout(contentId?: bigint, stakeAmount?: bigint): ExpectedPayout {
   const { round } = useRoundInfo(contentId);
-  const { epochDuration } = useVotingConfig();
 
   const stake = stakeAmount ?? 0n;
-  const startTime = round?.startTime ?? 0;
-  const nowSec = Math.floor(Date.now() / 1000);
-  const isOpen = round?.state === 0 && startTime > 0;
-  const isBlindPhase = isOpen && nowSec < startTime + epochDuration;
+  const isOpen = round?.state === 0 && (round?.startTime ?? 0) > 0;
 
-  if (!isOpen || isBlindPhase || stake === 0n) {
-    return { potentialWinUp: 0n, potentialWinDown: 0n, potentialLoss: stake, isBlindPhase };
+  if (!isOpen || stake === 0n) {
+    return { potentialWinUp: 0n, potentialWinDown: 0n, potentialLoss: stake };
   }
 
   const upPool = round?.upPool ?? 0n;
@@ -46,6 +40,5 @@ export function useExpectedPayout(contentId?: bigint, stakeAmount?: bigint): Exp
     potentialWinUp: calcWin(upPool, downPool),
     potentialWinDown: calcWin(downPool, upPool),
     potentialLoss: stake,
-    isBlindPhase: false,
   };
 }
