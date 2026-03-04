@@ -412,13 +412,10 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
         emit TokensClaimed(user, output.nullifier, claimAmount);
 
-        // Mint Voter ID NFT if the contract is set.
-        // Wrapped in try-catch so that a mint failure (e.g., user address is already
-        // a delegate, or VoterIdNFT is paused) doesn't block the token claim.
+        // Mint Voter ID NFT if the contract is set
         if (address(voterIdNFT) != address(0)) {
-            try voterIdNFT.mint(user, output.nullifier) returns (uint256 tokenId) {
-                emit VoterIdMinted(user, tokenId, output.nullifier);
-            } catch { }
+            uint256 tokenId = voterIdNFT.mint(user, output.nullifier);
+            emit VoterIdMinted(user, tokenId, output.nullifier);
         }
 
         _claiming = false;
