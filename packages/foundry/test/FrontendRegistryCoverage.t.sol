@@ -1,0 +1,729 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import { Test } from "forge-std/Test.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
+import { IVoterIdNFT } from "../contracts/interfaces/IVoterIdNFT.sol";
+
+// =========================================================================
+// MOCKS
+// =========================================================================
+
+contract MockVotingEngine_FR is IRoundVotingEngine {
+    uint256 public totalAddedToReserve;
+
+    function addToConsensusReserve(uint256 amount) external override {
+        totalAddedToReserve += amount;
+    }
+
+    function getContentCommitCount(uint256) external pure override returns (uint256) {
+        return 0;
+    }
+
+    function hasUnrevealedVotes(uint256) external pure override returns (bool) {
+        return false;
+    }
+
+    function transferReward(address, uint256) external override { }
+    function claimFrontendFee(uint256, uint256, address) external override { }
+    function claimParticipationReward(uint256, uint256) external override { }
+}
+
+contract MockVoterIdNFT_FR is IVoterIdNFT {
+    mapping(address => bool) public holders;
+    mapping(address => uint256) public tokenIds;
+    mapping(uint256 => address) public tokenHolders;
+    mapping(uint256 => bool) public usedNullifiers;
+    uint256 private nextTokenId = 1;
+    mapping(bytes32 => uint256) public stakes;
+    mapping(address => address) public holderToDelegate;
+    mapping(address => address) public delegateToHolder;
+
+    function setHolder(address holder) external {
+        holders[holder] = true;
+        if (tokenIds[holder] == 0) {
+            tokenIds[holder] = nextTokenId;
+            tokenHolders[nextTokenId] = holder;
+            nextTokenId++;
+        }
+    }
+
+    function removeHolder(address holder) external {
+        holders[holder] = false;
+    }
+
+    function mint(address to, uint256 nullifier) external returns (uint256) {
+        usedNullifiers[nullifier] = true;
+        holders[to] = true;
+        uint256 id = nextTokenId++;
+        tokenIds[to] = id;
+        tokenHolders[id] = to;
+        return id;
+    }
+
+    function hasVoterId(address holder) external view returns (bool) {
+        return holders[holder];
+    }
+
+    function getTokenId(address holder) external view returns (uint256) {
+        return tokenIds[holder];
+    }
+
+    function getHolder(uint256 tokenId) external view returns (address) {
+        return tokenHolders[tokenId];
+    }
+
+    function recordStake(uint256 contentId, uint256 epochId, uint256 tokenId, uint256 amount) external {
+        bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
+        stakes[key] += amount;
+    }
+
+    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
+        bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
+        return stakes[key];
+    }
+
+    function isNullifierUsed(uint256 nullifier) external view returns (bool) {
+        return usedNullifiers[nullifier];
+    }
+
+    function revokeVoterId(address) external { }
+
+    function setDelegate(address delegate) external {
+        holderToDelegate[msg.sender] = delegate;
+        delegateToHolder[delegate] = msg.sender;
+    }
+
+    function removeDelegate() external {
+        address delegate = holderToDelegate[msg.sender];
+        delete delegateToHolder[delegate];
+        delete holderToDelegate[msg.sender];
+    }
+
+    function resolveHolder(address addr) external view returns (address) {
+        if (holders[addr]) return addr;
+        address h = delegateToHolder[addr];
+        if (holders[h]) return h;
+        return address(0);
+    }
+
+    function delegateTo(address holder) external view returns (address) {
+        return holderToDelegate[holder];
+    }
+
+    function delegateOf(address delegate) external view returns (address) {
+        return delegateToHolder[delegate];
+    }
+}
+
+// =========================================================================
+// TEST CONTRACT: FrontendRegistry Coverage Gaps
+// =========================================================================
+
+/// @title FrontendRegistryCoverageTest
+/// @notice Tests for branch coverage gaps in FrontendRegistry: register/deregister edge cases,
+///         VoterIdNFT gating, creditFees boundaries, slash edge cases, access control negatives.
+contract FrontendRegistryCoverageTest is Test {
+    FrontendRegistry public registry;
+    CuryoReputation public crepToken;
+    MockVotingEngine_FR public votingEngine;
+    MockVoterIdNFT_FR public mockVoterIdNFT;
+
+    address public admin = address(1);
+    address public governance = address(10);
+    address public frontend1 = address(3);
+    address public frontend2 = address(4);
+    address public frontend3 = address(5);
+    address public feeCreditor = address(6);
+    address public nonAdmin = address(7);
+
+    uint256 public constant STAKE = 1000e6;
+    uint256 public constant MAX_FEE_CREDIT = 10_000e6;
+
+    function setUp() public {
+        vm.startPrank(admin);
+
+        crepToken = new CuryoReputation(admin, admin);
+        crepToken.grantRole(crepToken.MINTER_ROLE(), admin);
+
+        votingEngine = new MockVotingEngine_FR();
+        mockVoterIdNFT = new MockVoterIdNFT_FR();
+
+        FrontendRegistry impl = new FrontendRegistry();
+        registry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(crepToken)))
+                )
+            )
+        );
+
+        registry.setVotingEngine(address(votingEngine));
+        registry.addFeeCreditor(feeCreditor);
+
+        crepToken.mint(frontend1, 50_000e6);
+        crepToken.mint(frontend2, 50_000e6);
+        crepToken.mint(frontend3, 50_000e6);
+        crepToken.mint(address(registry), 1_000_000e6);
+
+        vm.stopPrank();
+
+        vm.roll(block.number + 5);
+    }
+
+    // =========================================================================
+    // 1. INITIALIZE BRANCH COVERAGE
+    // =========================================================================
+
+    function test_Initialize_AdminNotEqGovernance_GrantsBothRoles() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        FrontendRegistry reg2 = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
+                )
+            )
+        );
+        vm.stopPrank();
+
+        // Both admin and governance should have ADMIN_ROLE
+        assertTrue(reg2.hasRole(reg2.ADMIN_ROLE(), admin));
+        assertTrue(reg2.hasRole(reg2.ADMIN_ROLE(), governance));
+        // Only governance gets GOVERNANCE_ROLE
+        assertTrue(reg2.hasRole(reg2.GOVERNANCE_ROLE(), governance));
+        assertFalse(reg2.hasRole(reg2.GOVERNANCE_ROLE(), admin));
+    }
+
+    function test_Initialize_ZeroAdmin_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        vm.expectRevert("Invalid admin");
+        new ERC1967Proxy(
+            address(impl2), abi.encodeCall(FrontendRegistry.initialize, (address(0), admin, address(crepToken)))
+        );
+        vm.stopPrank();
+    }
+
+    function test_Initialize_ZeroGovernance_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        vm.expectRevert("Invalid governance");
+        new ERC1967Proxy(
+            address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, address(0), address(crepToken)))
+        );
+        vm.stopPrank();
+    }
+
+    function test_Initialize_ZeroToken_Reverts() public {
+        vm.startPrank(admin);
+        FrontendRegistry impl2 = new FrontendRegistry();
+        vm.expectRevert("Invalid token");
+        new ERC1967Proxy(address(impl2), abi.encodeCall(FrontendRegistry.initialize, (admin, admin, address(0))));
+        vm.stopPrank();
+    }
+
+    // =========================================================================
+    // 2. REGISTER WITH VOTER ID NFT GATING
+    // =========================================================================
+
+    function test_Register_WithVoterIdNFT_RequiresVoterId() public {
+        vm.prank(admin);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+
+        // frontend1 doesn't have VoterId — should revert
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        vm.expectRevert("Voter ID required");
+        registry.register();
+        vm.stopPrank();
+    }
+
+    function test_Register_WithVoterIdNFT_SucceedsWithVoterId() public {
+        vm.prank(admin);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+
+        // Give frontend1 a VoterId
+        mockVoterIdNFT.setHolder(frontend1);
+
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        (address operator,,,) = registry.getFrontendInfo(frontend1);
+        assertEq(operator, frontend1);
+    }
+
+    function test_Register_WithoutVoterIdNFT_SkipsCheck() public {
+        // voterIdNFT is not set (address(0)) — registration should succeed without check
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        (address operator,,,) = registry.getFrontendInfo(frontend1);
+        assertEq(operator, frontend1);
+    }
+
+    function test_Register_InsufficientApproval_Reverts() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE - 1);
+        vm.expectRevert();
+        registry.register();
+        vm.stopPrank();
+    }
+
+    function test_Register_InsufficientBalance_Reverts() public {
+        address poorFrontend = address(99);
+        // Has no cREP tokens
+        vm.startPrank(poorFrontend);
+        crepToken.approve(address(registry), STAKE);
+        vm.expectRevert();
+        registry.register();
+        vm.stopPrank();
+    }
+
+    // =========================================================================
+    // 3. SET VOTER ID NFT
+    // =========================================================================
+
+    function test_SetVoterIdNFT_Success() public {
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit FrontendRegistry.VoterIdNFTUpdated(address(mockVoterIdNFT));
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+
+        assertEq(address(registry.voterIdNFT()), address(mockVoterIdNFT));
+    }
+
+    function test_SetVoterIdNFT_ZeroAddress_Reverts() public {
+        vm.prank(admin);
+        vm.expectRevert("Invalid address");
+        registry.setVoterIdNFT(address(0));
+    }
+
+    function test_SetVoterIdNFT_NonAdmin_Reverts() public {
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+    }
+
+    // =========================================================================
+    // 4. CREDIT FEES BRANCH COVERAGE
+    // =========================================================================
+
+    function test_CreditFees_ExactMaxAmount_Succeeds() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, MAX_FEE_CREDIT);
+
+        assertEq(registry.getAccumulatedFees(frontend1), MAX_FEE_CREDIT);
+    }
+
+    function test_CreditFees_ExceedsMax_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(feeCreditor);
+        vm.expectRevert("Fee credit too large");
+        registry.creditFees(frontend1, MAX_FEE_CREDIT + 1);
+    }
+
+    function test_CreditFees_ZeroAmount_Succeeds() public {
+        _registerFrontend(frontend1);
+
+        // Zero is <= MAX_FEE_CREDIT, so it should pass
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 0);
+
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
+    }
+
+    function test_CreditFees_ToUnapprovedFrontend_Succeeds() public {
+        // Register but don't approve
+        _registerFrontend(frontend1);
+        // creditFees does NOT check approval
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        assertEq(registry.getAccumulatedFees(frontend1), 100e6);
+    }
+
+    function test_CreditFees_ToSlashedFrontend_Succeeds() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, 100e6, "test");
+
+        // creditFees does NOT check slashed status
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        assertEq(registry.getAccumulatedFees(frontend1), 100e6);
+    }
+
+    // =========================================================================
+    // 5. SLASH EDGE CASES
+    // =========================================================================
+
+    function test_Slash_FullStake_SetsStakeToZero() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, STAKE, "full slash");
+
+        (, uint256 stakedAmount,, bool slashed) = registry.getFrontendInfo(frontend1);
+        assertEq(stakedAmount, 0);
+        assertTrue(slashed);
+    }
+
+    function test_Slash_ZeroAmount_SetsSlashedFlag() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, 0, "zero slash");
+
+        (, uint256 stakedAmount,, bool slashed) = registry.getFrontendInfo(frontend1);
+        assertEq(stakedAmount, STAKE); // No stake deducted
+        assertTrue(slashed); // But slashed flag is set
+    }
+
+    function test_Slash_ExceedsStake_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(admin);
+        vm.expectRevert("Slash exceeds stake");
+        registry.slashFrontend(frontend1, STAKE + 1, "too much");
+    }
+
+    function test_Slash_NotRegistered_Reverts() public {
+        vm.prank(admin);
+        vm.expectRevert("Frontend not registered");
+        registry.slashFrontend(frontend1, 100e6, "not registered");
+    }
+
+    function test_Slash_NonGovernance_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        registry.slashFrontend(frontend1, 100e6, "unauthorized");
+    }
+
+    function test_Slash_SetsApprovedToFalse() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(admin);
+        registry.approveFrontend(frontend1);
+        assertTrue(registry.isApproved(frontend1));
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, 100e6, "slash approved");
+
+        assertFalse(registry.isApproved(frontend1));
+    }
+
+    // =========================================================================
+    // 6. DEREGISTER WITH ZERO STAKE (post-full-slash + unslash)
+    // =========================================================================
+
+    function test_Deregister_AfterFullSlashAndUnslash_ReturnsZero() public {
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, STAKE, "full slash");
+        registry.unslashFrontend(frontend1);
+        vm.stopPrank();
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        vm.prank(frontend1);
+        registry.deregister();
+        uint256 balanceAfter = crepToken.balanceOf(frontend1);
+
+        // No stake to return, no fees
+        assertEq(balanceAfter - balanceBefore, 0);
+    }
+
+    function test_Deregister_ZeroRefundZeroFees_NoTransfer() public {
+        // Register, slash full stake, unslash, deregister — total=0, should not transfer
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, STAKE, "full");
+        registry.unslashFrontend(frontend1);
+        vm.stopPrank();
+
+        vm.prank(frontend1);
+        registry.deregister(); // Should not revert even with total=0
+
+        (address operator,,,) = registry.getFrontendInfo(frontend1);
+        assertEq(operator, address(0));
+    }
+
+    // =========================================================================
+    // 7. REVOKE EDGE CASES
+    // =========================================================================
+
+    function test_Revoke_NotRegistered_Reverts() public {
+        vm.prank(admin);
+        vm.expectRevert("Frontend not registered");
+        registry.revokeFrontend(frontend1);
+    }
+
+    function test_Revoke_AlreadyRevoked_Idempotent() public {
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.approveFrontend(frontend1);
+        registry.revokeFrontend(frontend1);
+        // Revoking again should not revert
+        registry.revokeFrontend(frontend1);
+        vm.stopPrank();
+
+        assertFalse(registry.isApproved(frontend1));
+    }
+
+    function test_Revoke_SlashedFrontend_Succeeds() public {
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, 100e6, "test");
+        // Revoke should work even if slashed
+        registry.revokeFrontend(frontend1);
+        vm.stopPrank();
+    }
+
+    function test_Revoke_NonGovernance_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        registry.revokeFrontend(frontend1);
+    }
+
+    // =========================================================================
+    // 8. APPROVE EDGE CASES
+    // =========================================================================
+
+    function test_Approve_AlreadyApproved_Idempotent() public {
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.approveFrontend(frontend1);
+        // Approving again should not revert
+        registry.approveFrontend(frontend1);
+        vm.stopPrank();
+
+        assertTrue(registry.isApproved(frontend1));
+    }
+
+    function test_Approve_NonGovernance_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        registry.approveFrontend(frontend1);
+    }
+
+    // =========================================================================
+    // 9. UNSLASH EDGE CASES
+    // =========================================================================
+
+    function test_Unslash_NotRegistered_Reverts() public {
+        vm.prank(admin);
+        vm.expectRevert("Frontend not registered");
+        registry.unslashFrontend(frontend1);
+    }
+
+    function test_Unslash_NonGovernance_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, 100e6, "test");
+        vm.stopPrank();
+
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        registry.unslashFrontend(frontend1);
+    }
+
+    function test_Unslash_DoesNotAutoApprove() public {
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.approveFrontend(frontend1);
+        registry.slashFrontend(frontend1, 100e6, "test");
+        registry.unslashFrontend(frontend1);
+        vm.stopPrank();
+
+        // Should NOT be approved after unslash
+        assertFalse(registry.isApproved(frontend1));
+    }
+
+    // =========================================================================
+    // 10. VIEW FUNCTIONS FOR UNREGISTERED ADDRESSES
+    // =========================================================================
+
+    function test_IsApproved_Unregistered_ReturnsFalse() public view {
+        assertFalse(registry.isApproved(frontend1));
+    }
+
+    function test_GetAccumulatedFees_Unregistered_ReturnsZero() public view {
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
+    }
+
+    function test_GetFrontendInfo_Unregistered_ReturnsDefaults() public view {
+        (address operator, uint256 stakedAmount, bool approved, bool slashed) = registry.getFrontendInfo(frontend1);
+        assertEq(operator, address(0));
+        assertEq(stakedAmount, 0);
+        assertFalse(approved);
+        assertFalse(slashed);
+    }
+
+    function test_GetRegisteredFrontends_Empty() public view {
+        address[] memory frontends = registry.getRegisteredFrontends();
+        assertEq(frontends.length, 0);
+    }
+
+    function test_GetFrontendCount_AfterMultipleRegistrations() public {
+        _registerFrontend(frontend1);
+        _registerFrontend(frontend2);
+        _registerFrontend(frontend3);
+
+        assertEq(registry.getFrontendCount(), 3);
+    }
+
+    // =========================================================================
+    // 11. MULTIPLE FRONTENDS — list consistency
+    // =========================================================================
+
+    function test_RegisteredFrontends_ListPersistsAfterDeregister() public {
+        _registerFrontend(frontend1);
+        _registerFrontend(frontend2);
+
+        vm.prank(frontend1);
+        registry.deregister();
+
+        // frontend1 is still in the list (just has operator=0)
+        address[] memory frontends = registry.getRegisteredFrontends();
+        assertEq(frontends.length, 2);
+    }
+
+    // =========================================================================
+    // 12. CLAIM FEES AFTER SLASH+UNSLASH
+    // =========================================================================
+
+    function test_ClaimFees_AfterSlashAndUnslash() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 500e6);
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, 100e6, "test");
+        registry.unslashFrontend(frontend1);
+        vm.stopPrank();
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+
+        vm.prank(frontend1);
+        registry.claimFees();
+
+        assertEq(crepToken.balanceOf(frontend1) - balanceBefore, 500e6);
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
+    }
+
+    // =========================================================================
+    // 13. SET VOTING ENGINE ACCESS CONTROL
+    // =========================================================================
+
+    function test_SetVotingEngine_NonAdmin_Reverts() public {
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        registry.setVotingEngine(address(votingEngine));
+    }
+
+    // =========================================================================
+    // 14. ADD/REMOVE FEE CREDITOR ACCESS CONTROL
+    // =========================================================================
+
+    function test_AddFeeCreditor_NonAdmin_Reverts() public {
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        registry.addFeeCreditor(address(99));
+    }
+
+    function test_RemoveFeeCreditor_NonAdmin_Reverts() public {
+        vm.prank(nonAdmin);
+        vm.expectRevert();
+        registry.removeFeeCreditor(feeCreditor);
+    }
+
+    // =========================================================================
+    // 15. EVENTS
+    // =========================================================================
+
+    function test_Register_EmitsFrontendRegistered() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+
+        vm.expectEmit(true, true, false, true);
+        emit FrontendRegistry.FrontendRegistered(frontend1, frontend1, STAKE);
+        registry.register();
+        vm.stopPrank();
+    }
+
+    function test_Deregister_EmitsFrontendDeregistered() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(frontend1);
+        vm.expectEmit(true, false, false, false);
+        emit FrontendRegistry.FrontendDeregistered(frontend1);
+        registry.deregister();
+    }
+
+    function test_Deregister_WithFees_EmitsFeesClaimed() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 200e6);
+
+        vm.prank(frontend1);
+        vm.expectEmit(true, false, false, true);
+        emit FrontendRegistry.FeesClaimed(frontend1, 200e6);
+        registry.deregister();
+    }
+
+    function test_Slash_EmitsFrontendSlashed() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, true);
+        emit FrontendRegistry.FrontendSlashed(frontend1, 100e6, "bad behavior");
+        registry.slashFrontend(frontend1, 100e6, "bad behavior");
+    }
+
+    function test_CreditFees_EmitsFeesCredited() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(feeCreditor);
+        vm.expectEmit(true, false, false, true);
+        emit FrontendRegistry.FeesCredited(frontend1, 100e6);
+        registry.creditFees(frontend1, 100e6);
+    }
+
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
+
+    function _registerFrontend(address fe) internal {
+        vm.startPrank(fe);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+    }
+}
