@@ -207,11 +207,6 @@ contract VotingHandler is Test {
         RoundLib.RoundConfig memory cfg = engine.getRoundConfig(contentId, roundId);
         if (round.revealedCount < cfg.minVoters) return;
 
-        // Warp past settlement delay if needed
-        if (round.thresholdReachedAt > 0 && block.timestamp < round.thresholdReachedAt + cfg.epochDuration) {
-            vm.warp(round.thresholdReachedAt + cfg.epochDuration + 1);
-        }
-
         try engine.settleRound(contentId, roundId) {
             settleCount++;
             _ensureRoundRecord(contentId, roundId);

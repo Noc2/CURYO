@@ -51,9 +51,7 @@ contract RoundRewardDistributorBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -147,7 +145,6 @@ contract RoundRewardDistributorBranchesTest is Test {
 
         RoundLib.Round memory r2 = votingEngine.getRound(contentId, roundId);
         if (r2.thresholdReachedAt > 0) {
-            vm.warp(r2.thresholdReachedAt + EPOCH_DURATION + 1);
             try votingEngine.settleRound(contentId, roundId) { } catch { }
         }
     }

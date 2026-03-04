@@ -175,9 +175,7 @@ contract SecurityReentrancyTest is Test {
         _revealFromCiphertext(contentId, roundId, ck1);
         _revealFromCiphertext(contentId, roundId, ck2);
 
-        // Settle after delay
-        RoundLib.Round memory r2 = votingEngine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + EPOCH_DURATION + 1);
+        // Settle
         votingEngine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round2 = votingEngine.getRound(contentId, roundId);
@@ -532,8 +530,8 @@ contract SecuritySettlementTimingTest is Test {
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, up, s);
     }
 
-    /// @notice Cannot settle before settlement delay elapses after threshold reached
-    function test_CannotSettleBeforeDelay() public {
+    /// @notice Settlement is possible immediately after minVoters revealed
+    function test_SettlementAfterReveals_Succeeds() public {
         uint256 contentId = _submitContent();
         bytes32 ck1 = _commit(voter1, contentId, true);
         bytes32 ck2 = _commit(voter2, contentId, false);
@@ -545,26 +543,6 @@ contract SecuritySettlementTimingTest is Test {
         _revealFromCiphertext(contentId, roundId, ck1);
         _revealFromCiphertext(contentId, roundId, ck2);
 
-        // Immediately after revealing — delay not elapsed
-        vm.expectRevert(RoundVotingEngine.SettlementDelayNotElapsed.selector);
-        votingEngine.settleRound(contentId, roundId);
-    }
-
-    /// @notice Settlement is possible after delay elapses
-    function test_SettlementAfterDelay_Succeeds() public {
-        uint256 contentId = _submitContent();
-        bytes32 ck1 = _commit(voter1, contentId, true);
-        bytes32 ck2 = _commit(voter2, contentId, false);
-
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
-
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
-        _revealFromCiphertext(contentId, roundId, ck1);
-        _revealFromCiphertext(contentId, roundId, ck2);
-
-        RoundLib.Round memory r2 = votingEngine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round2 = votingEngine.getRound(contentId, roundId);
@@ -589,8 +567,6 @@ contract SecuritySettlementTimingTest is Test {
         _revealFromCiphertext(contentId, roundId, ck1);
         _revealFromCiphertext(contentId, roundId, ck2);
 
-        RoundLib.Round memory r2 = votingEngine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + EPOCH_DURATION + 1);
         votingEngine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round2 = votingEngine.getRound(contentId, roundId);

@@ -738,8 +738,7 @@ contract RoundSettlementEdgeCaseTest is Test {
         RoundVotingEngine impl = new RoundVotingEngine();
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
-            address(impl),
-            abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(0), address(registry)))
+            address(impl), abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(0), address(registry)))
         );
     }
 
@@ -906,9 +905,6 @@ contract RoundSettlementEdgeCaseTest is Test {
         engine2.revealVoteByCommitKey(contentId, roundId, commitKey1, true, salt1);
         engine2.revealVoteByCommitKey(contentId, roundId, commitKey2, true, salt2);
 
-        // Warp past thresholdReachedAt + epochDuration to settle
-        RoundLib.Round memory roundAfter = engine2.getRound(contentId, roundId);
-        vm.warp(roundAfter.thresholdReachedAt + 5 minutes + 1);
         engine2.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine2.getRound(contentId, roundId);
@@ -1027,9 +1023,6 @@ contract RoundSettlementEdgeCaseTest is Test {
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, false, salt2);
 
-        // Settle after thresholdReachedAt + epochDuration
-        RoundLib.Round memory r1 = engine.getRound(contentId, roundId);
-        vm.warp(r1.thresholdReachedAt + 5 minutes + 1);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -1213,9 +1206,6 @@ contract RoundSettlementEdgeCaseTest is Test {
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, false, s2);
 
-        // Warp past settlement delay
-        RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
         engine.settleRound(contentId, roundId);
     }
 }

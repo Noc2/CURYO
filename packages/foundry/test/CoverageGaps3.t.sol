@@ -864,8 +864,6 @@ contract RoundSettlementEdgeCase3Test is Test {
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, true, s2);
         engine.revealVoteByCommitKey(contentId, roundId, ck3, true, s3);
-        RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -886,8 +884,6 @@ contract RoundSettlementEdgeCase3Test is Test {
         vm.warp(r.startTime + 5 minutes + 1);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, false, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, false, s2);
-        RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -961,8 +957,6 @@ contract RoundSettlementEdgeCase3Test is Test {
         vm.warp(r.startTime + 5 minutes + 1);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, true, s2);
-        RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
         engine.settleRound(contentId, roundId);
 
         uint256 reserveAfter = engine.consensusReserve();
@@ -1116,8 +1110,6 @@ contract RoundSettlementEdgeCase3Test is Test {
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, true, s2);
         engine.revealVoteByCommitKey(contentId, roundId, ck3, false, s3);
-        RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
         engine.settleRound(contentId, roundId);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -1152,8 +1144,6 @@ contract RoundSettlementEdgeCase3Test is Test {
             assembly { s := mload(add(ct, 33)) }
             engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, s);
         }
-        RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
 
         uint256 keeperBefore = crep.balanceOf(keeper);
         vm.prank(keeper);
@@ -1206,8 +1196,6 @@ contract RoundSettlementEdgeCase3Test is Test {
             assembly { s := mload(add(ct, 33)) }
             engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, s);
         }
-        RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
 
         uint256 keeperBefore = crep.balanceOf(keeper);
         vm.prank(keeper);
@@ -1367,15 +1355,13 @@ contract RoundSettlementEdgeCase3Test is Test {
             }
         }
 
-        // Warp past settlement delay
         RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
         if (r2.thresholdReachedAt > 0) {
-            vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
             try engine.settleRound(contentId, roundId) { } catch { }
         }
     }
 
-    /// @dev Reveal two votes, warp past settle delay, and settle. Requires minVoters=2 config.
+    /// @dev Reveal two votes and settle. Requires minVoters=2 config.
     function _revealAndSettle(
         uint256 contentId,
         uint256 roundId,
@@ -1391,9 +1377,6 @@ contract RoundSettlementEdgeCase3Test is Test {
         vm.warp(r.startTime + 5 minutes + 1);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, isUp1, s1);
         engine.revealVoteByCommitKey(contentId, roundId, ck2, isUp2, s2);
-        // Warp past settlement delay
-        RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
-        vm.warp(r2.thresholdReachedAt + 5 minutes + 1);
         engine.settleRound(contentId, roundId);
     }
 }
