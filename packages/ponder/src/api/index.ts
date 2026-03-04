@@ -17,6 +17,7 @@ import {
   tokenTransfer,
   voterStats,
   voterCategoryStats,
+  voterStreak,
 } from "ponder:schema";
 import { eq, desc, asc, and, or, inArray, notInArray, sql, gte, replaceBigInts } from "ponder";
 
@@ -787,6 +788,60 @@ app.get("/voter-ids", async (c) => {
   const items = await db.select().from(voterId).where(where).limit(limit);
 
   return jsonBig(c, { items });
+});
+
+// ============================================================
+// VOTER STREAK
+// ============================================================
+
+const STREAK_MILESTONES = [
+  { days: 7, bonus: 50 },
+  { days: 30, bonus: 500 },
+  { days: 90, bonus: 5000 },
+];
+
+app.get("/voter-streak", async (c) => {
+  const voter = c.req.query("voter");
+  if (!voter) {
+    return c.json({ error: "voter parameter required" }, 400);
+  }
+  if (!isValidAddress(voter)) {
+    return c.json({ error: "Invalid voter address" }, 400);
+  }
+
+  const voterAddr = voter.toLowerCase() as `0x${string}`;
+
+  const [streak] = await db
+    .select()
+    .from(voterStreak)
+    .where(eq(voterStreak.voter, voterAddr))
+    .limit(1);
+
+  if (!streak) {
+    return jsonBig(c, {
+      currentDailyStreak: 0,
+      bestDailyStreak: 0,
+      totalActiveDays: 0,
+      lastActiveDate: null,
+      nextMilestone: STREAK_MILESTONES[0].days,
+      nextMilestoneBonus: STREAK_MILESTONES[0].bonus,
+    });
+  }
+
+  // Find next milestone
+  const nextMilestone = STREAK_MILESTONES.find(
+    (m) => m.days > streak.currentDailyStreak,
+  );
+
+  return jsonBig(c, {
+    currentDailyStreak: streak.currentDailyStreak,
+    bestDailyStreak: streak.bestDailyStreak,
+    totalActiveDays: streak.totalActiveDays,
+    lastActiveDate: streak.lastActiveDate,
+    lastMilestoneDay: streak.lastMilestoneDay,
+    nextMilestone: nextMilestone?.days ?? null,
+    nextMilestoneBonus: nextMilestone?.bonus ?? null,
+  });
 });
 
 export default app;

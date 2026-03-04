@@ -10,6 +10,8 @@ import {
   globalStats,
   voterStats,
   voterCategoryStats,
+  dailyVoteActivity,
+  voterStreak,
 } from "ponder:schema";
 
 // Round states: Open(0), Settled(1), Cancelled(2), Tied(3)
@@ -110,6 +112,67 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
     .onConflictDoUpdate((row) => ({
       totalVotes: row.totalVotes + 1,
     }));
+
+  // --- Daily streak tracking ---
+  const date = new Date(Number(event.block.timestamp) * 1000);
+  const dateStr =
+    date.getUTCFullYear().toString() +
+    (date.getUTCMonth() + 1).toString().padStart(2, "0") +
+    date.getUTCDate().toString().padStart(2, "0");
+  const activityKey = `${voter}-${dateStr}`;
+
+  // Upsert daily activity
+  await context.db
+    .insert(dailyVoteActivity)
+    .values({
+      id: activityKey,
+      voter,
+      date: dateStr,
+      voteCount: 1,
+      firstVoteAt: event.block.timestamp,
+    })
+    .onConflictDoUpdate((row) => ({
+      voteCount: row.voteCount + 1,
+    }));
+
+  // Compute yesterday's date string
+  const yesterday = new Date(date);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const yesterdayStr =
+    yesterday.getUTCFullYear().toString() +
+    (yesterday.getUTCMonth() + 1).toString().padStart(2, "0") +
+    yesterday.getUTCDate().toString().padStart(2, "0");
+
+  // Upsert voter streak
+  const existingStreak = await context.db.find(voterStreak, { voter });
+  if (!existingStreak) {
+    await context.db.insert(voterStreak).values({
+      voter,
+      currentDailyStreak: 1,
+      bestDailyStreak: 1,
+      lastActiveDate: dateStr,
+      totalActiveDays: 1,
+      lastMilestoneDay: 0,
+    });
+  } else if (existingStreak.lastActiveDate === dateStr) {
+    // Already active today — no streak change
+  } else if (existingStreak.lastActiveDate === yesterdayStr) {
+    // Consecutive day — increment streak
+    const newStreak = existingStreak.currentDailyStreak + 1;
+    await context.db.update(voterStreak, { voter }).set({
+      currentDailyStreak: newStreak,
+      bestDailyStreak: Math.max(existingStreak.bestDailyStreak, newStreak),
+      lastActiveDate: dateStr,
+      totalActiveDays: existingStreak.totalActiveDays + 1,
+    });
+  } else {
+    // Gap — reset streak to 1
+    await context.db.update(voterStreak, { voter }).set({
+      currentDailyStreak: 1,
+      lastActiveDate: dateStr,
+      totalActiveDays: existingStreak.totalActiveDays + 1,
+    });
+  }
 });
 
 ponder.on("RoundVotingEngine:VoteRevealed", async ({ event, context }) => {
@@ -348,6 +411,13 @@ ponder.on("RoundVotingEngine:CancelledRoundRefundClaimed", async ({ event, conte
     .onConflictDoNothing();
 });
 
+// Streak milestone amounts (6 decimal cREP): used to detect streak bonus payments
+const STREAK_MILESTONE_AMOUNTS: Record<string, number> = {
+  "50000000": 7,    // 50 cREP → 7-day milestone
+  "500000000": 30,  // 500 cREP → 30-day milestone
+  "5000000000": 90, // 5,000 cREP → 90-day milestone
+};
+
 ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, context }) => {
   const { contentId, roundId, voter, amount } = event.args;
 
@@ -386,4 +456,15 @@ ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, contex
     .onConflictDoUpdate((row) => ({
       totalRewardsClaimed: row.totalRewardsClaimed + amount,
     }));
+
+  // Detect streak milestone bonus payments and update lastMilestoneDay
+  const milestoneDay = STREAK_MILESTONE_AMOUNTS[amount.toString()];
+  if (milestoneDay) {
+    const existingStreak = await context.db.find(voterStreak, { voter });
+    if (existingStreak && existingStreak.lastMilestoneDay < milestoneDay) {
+      await context.db.update(voterStreak, { voter }).set({
+        lastMilestoneDay: milestoneDay,
+      });
+    }
+  }
 });

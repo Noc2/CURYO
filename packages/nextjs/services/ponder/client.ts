@@ -192,6 +192,15 @@ export interface PonderVoteItem {
   roundState: number | null;
 }
 
+export interface PonderVoterStreak {
+  currentDailyStreak: number;
+  bestDailyStreak: number;
+  totalActiveDays: number;
+  lastActiveDate: string | null;
+  nextMilestone: number | null;
+  nextMilestoneBonus: number | null;
+}
+
 export type PonderVoterStatsBatch = Record<string, PonderVoterStats>;
 
 export const ponderApi = {
@@ -307,5 +316,9 @@ export const ponderApi = {
     offset?: string;
   }) {
     return ponderGet<{ items: PonderVoteItem[] }>("/votes", params);
+  },
+
+  getVoterStreak(voter: string) {
+    return ponderGet<PonderVoterStreak>("/voter-streak", { voter });
   },
 };

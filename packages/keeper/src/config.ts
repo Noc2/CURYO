@@ -10,7 +10,11 @@ export const config = {
   contracts: {
     votingEngine: process.env.VOTING_ENGINE_ADDRESS as `0x${string}` | undefined,
     contentRegistry: process.env.CONTENT_REGISTRY_ADDRESS as `0x${string}` | undefined,
+    participationPool: process.env.PARTICIPATION_POOL_ADDRESS as `0x${string}` | undefined,
   },
+
+  // Ponder indexer URL (for streak queries)
+  ponderUrl: process.env.PONDER_URL || "http://localhost:42069",
 
   // Wallet (keystore preferred, raw key fallback)
   keystoreAccount: process.env.KEYSTORE_ACCOUNT,

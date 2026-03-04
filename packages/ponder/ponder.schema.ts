@@ -329,3 +329,35 @@ export const ratingChange = onchainTable(
     contentIdx: index().on(table.contentId),
   }),
 );
+
+// ============================================================
+// DAILY VOTE ACTIVITY (per voter per day)
+// ============================================================
+
+export const dailyVoteActivity = onchainTable(
+  "daily_vote_activity",
+  (t) => ({
+    id: t.text().primaryKey(), // `${voter}-${YYYYMMDD}`
+    voter: t.hex().notNull(),
+    date: t.text().notNull(), // YYYYMMDD
+    voteCount: t.integer().notNull(),
+    firstVoteAt: t.bigint().notNull(),
+  }),
+  (table) => ({
+    voterIdx: index().on(table.voter),
+    dateIdx: index().on(table.date),
+  }),
+);
+
+// ============================================================
+// VOTER STREAK (daily voting streak tracking)
+// ============================================================
+
+export const voterStreak = onchainTable("voter_streak", (t) => ({
+  voter: t.hex().primaryKey(),
+  currentDailyStreak: t.integer().notNull(),
+  bestDailyStreak: t.integer().notNull(),
+  lastActiveDate: t.text().notNull(), // YYYYMMDD
+  totalActiveDays: t.integer().notNull(),
+  lastMilestoneDay: t.integer().notNull(), // last milestone that triggered a bonus
+}));

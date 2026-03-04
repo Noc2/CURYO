@@ -4,6 +4,8 @@ import { useCallback, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
+import { StreakCounter } from "~~/components/shared/StreakCounter";
+import { ExpectedPayoutBadge, saveLastStake } from "~~/components/swipe/ExpectedPayoutBadge";
 import { StakeSelector } from "~~/components/swipe/StakeSelector";
 import { SwipeCard } from "~~/components/swipe/SwipeCard";
 import { VoteActionBar } from "~~/components/swipe/VoteActionBar";
@@ -50,6 +52,7 @@ export function CardStack({ items, address }: CardStackProps) {
   const handleConfirmStake = async (stakeAmount: number) => {
     // Immediately update UI with optimistic vote (convert to wei - 6 decimals)
     const stakeWei = BigInt(stakeAmount) * 1000000n;
+    saveLastStake(stakeWei);
     addOptimisticVote(stakeModal.contentId, stakeWei);
 
     const item = items.find(i => i.id === stakeModal.contentId);
@@ -167,7 +170,10 @@ export function CardStack({ items, address }: CardStackProps) {
           </button>
         </div>
 
-        <RoundProgress contentId={visibleItems[0]?.id ?? 0n} />
+        <div className="flex items-center gap-3">
+          <StreakCounter />
+          <RoundProgress contentId={visibleItems[0]?.id ?? 0n} />
+        </div>
       </div>
 
       {/* Card stack */}
@@ -183,13 +189,16 @@ export function CardStack({ items, address }: CardStackProps) {
               canVote={!!address}
               actionBar={
                 address ? (
-                  <VoteActionBar
-                    contentId={item.id}
-                    categoryId={item.categoryId}
-                    onVote={handleButtonVote}
-                    isCommitting={isCommitting}
-                    isOwnContent={item.isOwnContent}
-                  />
+                  <div className="flex flex-col items-center gap-1">
+                    <ExpectedPayoutBadge contentId={item.id} />
+                    <VoteActionBar
+                      contentId={item.id}
+                      categoryId={item.categoryId}
+                      onVote={handleButtonVote}
+                      isCommitting={isCommitting}
+                      isOwnContent={item.isOwnContent}
+                    />
+                  </div>
                 ) : (
                   <RainbowKitCustomConnectButton />
                 )

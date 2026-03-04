@@ -15,6 +15,7 @@ import { BaseError, ContractFunctionRevertedError, decodeErrorResult } from "vie
 import { timelockDecrypt, mainnetClient } from "tlock-js";
 import { RoundVotingEngineAbi } from "./abis/RoundVotingEngineAbi.js";
 import { ContentRegistryAbi } from "./abis/ContentRegistryAbi.js";
+import { ParticipationPoolAbi } from "./abis/ParticipationPoolAbi.js";
 import { config } from "./config.js";
 import type { Logger } from "./logger.js";
 
@@ -34,6 +35,7 @@ export interface KeeperResult {
   roundsCancelled: number;
   votesRevealed: number;
   contentMarkedDormant: number;
+  streakBonusesPaid: number;
 }
 
 interface CommitData {
@@ -53,7 +55,34 @@ function emptyResult(): KeeperResult {
     roundsCancelled: 0,
     votesRevealed: 0,
     contentMarkedDormant: 0,
+    streakBonusesPaid: 0,
   };
+}
+
+// --- Streak milestone bonuses ---
+const STREAK_MILESTONES = [
+  { days: 7, bonus: 50_000_000n }, // 50 cREP (6 decimals)
+  { days: 30, bonus: 500_000_000n }, // 500 cREP
+  { days: 90, bonus: 5_000_000_000n }, // 5,000 cREP
+];
+
+interface VoterStreakData {
+  currentDailyStreak: number;
+  bestDailyStreak: number;
+  lastMilestoneDay: number;
+  voter: string;
+}
+
+async function fetchVoterStreak(voter: string): Promise<VoterStreakData | null> {
+  try {
+    const res = await fetch(`${config.ponderUrl}/voter-streak?voter=${voter}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 /** Extract the human-readable revert reason from a viem error. */
@@ -238,6 +267,27 @@ export async function resolveRounds(
               roundId: Number(activeRoundId),
             });
             result.roundsSettled++;
+
+            // --- Check streak milestone bonuses for voters in this round ---
+            if (config.contracts.participationPool) {
+              try {
+                const bonusesPaid = await _checkStreakBonuses(
+                  publicClient,
+                  walletClient,
+                  chain,
+                  account,
+                  logger,
+                  engineAddr,
+                  contentId,
+                  activeRoundId,
+                );
+                result.streakBonusesPaid += bonusesPaid;
+              } catch (err: unknown) {
+                logger.debug("Streak bonus check failed", {
+                  error: getRevertReason(err),
+                });
+              }
+            }
           } catch (err: unknown) {
             const reason = getRevertReason(err);
             if (!isExpectedRevert(reason)) {
@@ -426,4 +476,97 @@ async function _revealCommits(
   }
 
   return revealed;
+}
+
+/**
+ * Check if any voters in a settled round have hit a streak milestone.
+ * Distributes bonus from ParticipationPool if so.
+ */
+async function _checkStreakBonuses(
+  publicClient: PublicClient,
+  walletClient: WalletClient,
+  chain: Chain,
+  account: Account,
+  logger: Logger,
+  engineAddr: `0x${string}`,
+  contentId: bigint,
+  roundId: bigint,
+): Promise<number> {
+  const poolAddr = config.contracts.participationPool;
+  if (!poolAddr) return 0;
+
+  let bonusesPaid = 0;
+
+  // Get all commit keys for this round
+  let commitKeys: readonly `0x${string}`[];
+  try {
+    commitKeys = (await publicClient.readContract({
+      address: engineAddr,
+      abi: RoundVotingEngineAbi,
+      functionName: "getRoundCommitHashes",
+      args: [contentId, roundId],
+    })) as readonly `0x${string}`[];
+  } catch {
+    return 0;
+  }
+
+  // Collect unique voters
+  const voters = new Set<`0x${string}`>();
+  for (const commitKey of commitKeys) {
+    try {
+      const commit = (await publicClient.readContract({
+        address: engineAddr,
+        abi: RoundVotingEngineAbi,
+        functionName: "getCommit",
+        args: [contentId, roundId, commitKey],
+      })) as CommitData;
+      voters.add(commit.voter);
+    } catch {
+      // skip
+    }
+  }
+
+  // Check each voter's streak
+  for (const voter of voters) {
+    const streakData = await fetchVoterStreak(voter);
+    if (!streakData) continue;
+
+    // Find the highest milestone they've reached but haven't been paid for
+    for (const milestone of STREAK_MILESTONES) {
+      if (
+        streakData.currentDailyStreak >= milestone.days &&
+        streakData.lastMilestoneDay < milestone.days
+      ) {
+        try {
+          await walletClient.writeContract({
+            chain,
+            account,
+            address: poolAddr,
+            abi: ParticipationPoolAbi,
+            functionName: "distributeReward",
+            args: [voter as `0x${string}`, milestone.bonus],
+          });
+          logger.info("Paid streak milestone bonus", {
+            voter,
+            milestone: milestone.days,
+            bonus: Number(milestone.bonus) / 1e6,
+          });
+          bonusesPaid++;
+
+          // Update Ponder's lastMilestoneDay via a PATCH would require a write endpoint.
+          // For now, the Ponder indexer will see the ParticipationRewardClaimed event
+          // and we track lastMilestoneDay via the voterStreak table update below.
+        } catch (err: unknown) {
+          const reason = getRevertReason(err);
+          logger.warn("Failed to pay streak bonus", {
+            voter,
+            milestone: milestone.days,
+            error: reason,
+          });
+        }
+      }
+    }
+  }
+
+  return bonusesPaid;
 }

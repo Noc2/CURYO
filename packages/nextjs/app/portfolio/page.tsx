@@ -1,15 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { useAccount } from "wagmi";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { RewardRevealModal } from "~~/components/shared/RewardRevealModal";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { formatTimeRemaining, useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useClaimReward } from "~~/hooks/useClaimReward";
+import { useVoterStreak } from "~~/hooks/useVoterStreak";
 import { notification } from "~~/utils/scaffold-eth";
+
+type RevealModalState = {
+  outcome: "win" | "loss" | "tie";
+  amount: bigint;
+  stake: bigint;
+  contentId: bigint;
+  roundId: bigint;
+} | null;
 
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
   const { claimReward, isClaiming } = useClaimReward();
+  const [revealModal, setRevealModal] = useState<RevealModalState>(null);
 
   const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
@@ -32,11 +44,23 @@ export default function PortfolioPage() {
     args: [address],
   });
 
+  const streak = useVoterStreak(address);
+
   const handleClaim = async (contentId: bigint, roundId: bigint) => {
     const success = await claimReward(contentId, roundId);
     if (success) {
       notification.success("Reward claimed!");
     }
+  };
+
+  const handleRevealClaim = (contentId: bigint, roundId: bigint, stake: bigint) => {
+    setRevealModal({
+      outcome: "win",
+      amount: stake, // approximate — full reward calc happens on-chain
+      stake,
+      contentId,
+      roundId,
+    });
   };
 
   // Token has 6 decimals
@@ -105,6 +129,40 @@ export default function PortfolioPage() {
           </div>
         </div>
 
+        {/* Streak Stats */}
+        {streak && streak.currentDailyStreak > 0 && (
+          <div className="bg-base-200 rounded-2xl p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-3">Daily Streak</h2>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-3xl font-bold tabular-nums">{streak.currentDailyStreak}</p>
+                <p className="text-base text-base-content/50">Current</p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold tabular-nums">{streak.bestDailyStreak}</p>
+                <p className="text-base text-base-content/50">Best</p>
+              </div>
+              <div>
+                <p className="text-3xl font-bold tabular-nums">{streak.totalActiveDays}</p>
+                <p className="text-base text-base-content/50">Active Days</p>
+              </div>
+            </div>
+            {streak.nextMilestone && (
+              <div className="mt-3">
+                <div className="flex justify-between text-xs text-base-content/50 mb-1">
+                  <span>Next: {streak.nextMilestone} day milestone</span>
+                  <span>{streak.nextMilestoneBonus} cREP bonus</span>
+                </div>
+                <progress
+                  className="progress progress-primary w-full"
+                  value={streak.currentDailyStreak}
+                  max={streak.nextMilestone}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Vote History */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Vote History</h2>
@@ -118,7 +176,8 @@ export default function PortfolioPage() {
                 const args = event.args as { contentId?: bigint; roundId?: bigint; stake?: bigint };
                 const contentId = args.contentId;
                 const roundId = args.roundId;
-                const stake = args.stake ? (Number(args.stake) / 1e6).toFixed(0) : "?";
+                const stakeWei = args.stake ?? 0n;
+                const stake = stakeWei ? (Number(stakeWei) / 1e6).toFixed(0) : "?";
 
                 const isSettled =
                   contentId !== undefined &&
@@ -135,7 +194,7 @@ export default function PortfolioPage() {
                     </div>
                     {isSettled ? (
                       <button
-                        onClick={() => contentId && roundId && handleClaim(contentId, roundId)}
+                        onClick={() => contentId && roundId && handleRevealClaim(contentId, roundId, stakeWei)}
                         className="text-base font-medium px-4 py-2 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors disabled:opacity-40"
                         disabled={isClaiming || !contentId || !roundId}
                       >
@@ -167,6 +226,20 @@ export default function PortfolioPage() {
           )}
         </div>
       </div>
+
+      {/* Reward reveal modal */}
+      {revealModal && (
+        <RewardRevealModal
+          isOpen={true}
+          outcome={revealModal.outcome}
+          amount={revealModal.amount}
+          stake={revealModal.stake}
+          onClaim={() => {
+            handleClaim(revealModal.contentId, revealModal.roundId);
+          }}
+          onClose={() => setRevealModal(null)}
+        />
+      )}
     </div>
   );
 }
