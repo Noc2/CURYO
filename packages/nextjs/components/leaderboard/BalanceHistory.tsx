@@ -18,6 +18,7 @@ export function BalanceHistory() {
   const { address } = useAccount();
   const [transfers, setTransfers] = useState<PonderTokenTransfer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     if (!address) {
@@ -27,6 +28,7 @@ export function BalanceHistory() {
 
     let cancelled = false;
     setIsLoading(true);
+    setFetchError(false);
 
     ponderApi
       .getBalanceHistory(address)
@@ -34,7 +36,10 @@ export function BalanceHistory() {
         if (!cancelled) setTransfers(data.transfers);
       })
       .catch(() => {
-        if (!cancelled) setTransfers([]);
+        if (!cancelled) {
+          setTransfers([]);
+          setFetchError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -81,6 +86,14 @@ export function BalanceHistory() {
     return (
       <div className="h-[160px] flex items-center justify-center">
         <span className="loading loading-spinner loading-sm text-base-content/20"></span>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="h-[100px] flex items-center justify-center text-base text-error/60">
+        Failed to load balance history
       </div>
     );
   }

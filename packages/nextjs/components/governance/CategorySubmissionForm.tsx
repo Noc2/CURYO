@@ -118,6 +118,12 @@ export const CategorySubmissionForm = () => {
         await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
       }
 
+      // Re-check wallet before second tx
+      if (!address) {
+        notification.error("Wallet disconnected after approval. Please reconnect and retry.");
+        return;
+      }
+
       // 2. Submit category
       await writeRegistry({
         functionName: "submitCategory",

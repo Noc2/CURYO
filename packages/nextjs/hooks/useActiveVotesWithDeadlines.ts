@@ -64,7 +64,7 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
     if (config.epochDuration != null) {
       epochDuration = Number(config.epochDuration);
       maxDuration = Number(config.maxDuration);
-    } else if (Array.isArray(config)) {
+    } else if (Array.isArray(config) && config.length >= 2) {
       epochDuration = Number(config[0]); // epochDuration is index 0
       maxDuration = Number(config[1]); // maxDuration is index 1
     }

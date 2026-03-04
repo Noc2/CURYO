@@ -82,11 +82,15 @@ export function useUrlValidation(urls: string[]) {
     const BATCH_SIZE = 50;
     for (let i = 0; i < uncheckedUrls.length; i += BATCH_SIZE) {
       const batch = uncheckedUrls.slice(i, i + BATCH_SIZE);
-      await fetch("/api/url-validation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ urls: batch }),
-      });
+      try {
+        await fetch("/api/url-validation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ urls: batch }),
+        });
+      } catch {
+        // Validation POST failed (network error) — skip batch, cache will retry later
+      }
     }
 
     // Refetch cached results after validation completes

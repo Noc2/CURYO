@@ -70,7 +70,7 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
 
   // Format for 6 decimals; max stake = min(balance, remainingCapacity)
   const balanceFormatted = crepBalance ? Number(crepBalance) / 1e6 : 0;
-  const capacityFormatted = Number(remainingCapacity) / 1e6;
+  const capacityFormatted = remainingCapacity != null ? Number(remainingCapacity) / 1e6 : 100;
   const maxByBalance = Math.floor(balanceFormatted);
   const maxByCapacity = Math.floor(capacityFormatted);
   const maxStake = Math.min(maxByBalance, maxByCapacity);

@@ -48,6 +48,7 @@ export function UsernameEditor({ onProfileChange, onProfileUpdate }: UsernameEdi
     const fetchProfile = async () => {
       try {
         const res = await fetch(`/api/username?address=${address}`);
+        if (!res.ok) throw new Error(`Profile API returned ${res.status}`);
         const data = await res.json();
         setUsername(data.username);
         setProfileImageUrl(data.profileImageUrl);

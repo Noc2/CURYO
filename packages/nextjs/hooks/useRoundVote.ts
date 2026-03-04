@@ -153,6 +153,7 @@ export function useRoundVote() {
           // MetaMask can return a tx hash before Anvil has mined the block,
           // causing the next call to fail with ERC20InsufficientAllowance.
           for (let i = 0; i < 20; i++) {
+            if (!address) throw new Error("Wallet disconnected during approval confirmation");
             const newAllowance = await publicClient.readContract({
               address: crepInfo.address,
               abi: crepInfo.abi,

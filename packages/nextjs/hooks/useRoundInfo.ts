@@ -39,11 +39,10 @@ export function useRoundInfo(contentId?: bigint) {
         if (data.minVoters != null) {
           setMinVoters(Number(data.minVoters));
           setMaxVoters(Number(data.maxVoters));
-        } else {
+        } else if (Array.isArray(data) && data.length >= 4) {
           // Positional tuple fallback: [epochDuration, maxDuration, minVoters, maxVoters]
-          const config = data as any[];
-          setMinVoters(Number(config[2])); // minVoters
-          setMaxVoters(Number(config[3])); // maxVoters
+          setMinVoters(Number(data[2])); // minVoters
+          setMaxVoters(Number(data[3])); // maxVoters
         }
       })
       .catch(() => {

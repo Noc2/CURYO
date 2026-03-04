@@ -23,9 +23,13 @@ export function SettlementNotifier() {
 
     permissionRef.current = Notification.permission;
     if (Notification.permission === "default") {
-      Notification.requestPermission().then(perm => {
-        permissionRef.current = perm;
-      });
+      Notification.requestPermission()
+        .then(perm => {
+          permissionRef.current = perm;
+        })
+        .catch(() => {
+          // Browser blocked permission request
+        });
     }
   }, [address]);
 

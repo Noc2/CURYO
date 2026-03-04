@@ -39,6 +39,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
     const fetchUsers = async () => {
       try {
         const res = await fetch("/api/leaderboard");
+        if (!res.ok) throw new Error(`Leaderboard API returned ${res.status}`);
         const data = await res.json();
         let fetchedUsers: LeaderboardUser[] = data.users || [];
 

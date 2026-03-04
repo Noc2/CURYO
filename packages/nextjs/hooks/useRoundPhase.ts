@@ -100,13 +100,12 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
           setConfigMaxDuration(Number(data.maxDuration));
           setConfigMinVoters(Number(data.minVoters));
           setConfigMaxVoters(Number(data.maxVoters));
-        } else {
+        } else if (Array.isArray(data) && data.length >= 4) {
           // Positional tuple fallback
-          const config = data as any[];
-          setConfigEpochDuration(Number(config[0])); // epochDuration
-          setConfigMaxDuration(Number(config[1])); // maxDuration
-          setConfigMinVoters(Number(config[2])); // minVoters
-          setConfigMaxVoters(Number(config[3])); // maxVoters
+          setConfigEpochDuration(Number(data[0])); // epochDuration
+          setConfigMaxDuration(Number(data[1])); // maxDuration
+          setConfigMinVoters(Number(data[2])); // minVoters
+          setConfigMaxVoters(Number(data[3])); // maxVoters
         }
       })
       .catch(() => {
