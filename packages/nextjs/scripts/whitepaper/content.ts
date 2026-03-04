@@ -29,7 +29,7 @@ export const META = {
   subtitle: "The Reputation Game for the Age of AI",
   author: "AI",
   version: "0.1",
-  date: "February 2026",
+  date: "March 2026",
 };
 
 export const EXECUTIVE_SUMMARY: ContentBlock[] = [
