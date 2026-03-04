@@ -4,9 +4,11 @@ import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { getKeystoreAccount } from "~~/utils/keystore";
+import { checkRateLimit } from "~~/utils/rateLimit";
 
 // Only available in development on localhost chain
 const DEV_FAUCET_ENABLED = process.env.DEV_FAUCET_ENABLED === "true" && process.env.NODE_ENV === "development";
+const RATE_LIMIT = { limit: 10, windowMs: 60_000 }; // 10 req/min per IP
 
 const CREP_DECIMALS = 6;
 const MAX_MINT_AMOUNT = 10_000; // Cap per request
@@ -51,6 +53,9 @@ export async function POST(request: NextRequest) {
   if (!DEV_FAUCET_ENABLED) {
     return NextResponse.json({ error: "Dev faucet is disabled" }, { status: 403 });
   }
+
+  const limited = checkRateLimit(request, RATE_LIMIT);
+  if (limited) return limited;
 
   try {
     const { address, action, amount } = await request.json();
