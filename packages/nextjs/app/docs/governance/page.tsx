@@ -130,7 +130,7 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Minimum voting window</td>
-              <td>~1 hour</td>
+              <td>~20 min</td>
               <td>Minimum time before a round becomes eligible for resolution. Ensures a meaningful voting window.</td>
             </tr>
             <tr>

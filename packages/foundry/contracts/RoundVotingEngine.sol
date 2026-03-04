@@ -22,7 +22,7 @@ import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with tlock commit-reveal and epoch-weighted rewards.
 /// @dev Flow: commitVote (tlock-encrypted to epoch end) → epoch ends → revealVote (anyone decrypts via drand) → settleRound (≥3 votes).
-///      Rounds accumulate votes across 1-hour epochs. After each epoch, tlock ciphertexts
+///      Rounds accumulate votes across 20-minute epochs. After each epoch, tlock ciphertexts
 ///      become decryptable and anyone can call revealVote(). Settlement triggers when ≥3 votes
 ///      are revealed. If 1 week passes without ≥3 revealed votes, the round cancels with full refunds.
 ///      Epoch-weighting: epoch-1 (blind) = 100% reward weight; epoch-2+ (informed) = 25%.
@@ -223,10 +223,7 @@ contract RoundVotingEngine is
         _disableInitializers();
     }
 
-    function initialize(address _admin, address _governance, address _crepToken, address _registry)
-        public
-        initializer
-    {
+    function initialize(address _admin, address _governance, address _crepToken, address _registry) public initializer {
         __AccessControl_init();
         __Pausable_init();
 
@@ -248,8 +245,8 @@ contract RoundVotingEngine is
         crepToken = IERC20(_crepToken);
         registry = ContentRegistry(_registry);
 
-        // Default config: 1-hour epochs, 7-day max, 3 min voters
-        config = RoundLib.RoundConfig({ epochDuration: 1 hours, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
+        // Default config: 20-minute epochs, 7-day max, 3 min voters
+        config = RoundLib.RoundConfig({ epochDuration: 20 minutes, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
     }
 
     // =========================================================================
@@ -985,7 +982,6 @@ contract RoundVotingEngine is
 
         emit VoteRevealed(contentId, roundId, commit.voter, isUp);
     }
-
 
     function _distributeCategoryFee(uint256 contentId, uint256 roundId, uint256 categorySubmitterShare) internal {
         uint256 categoryId = registry.getCategoryId(contentId);

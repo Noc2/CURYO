@@ -9,14 +9,14 @@ const STEPS = [
   {
     label: "Reveal",
     badge: "badge-secondary",
-    duration: "~1 hour",
+    duration: "~20 min",
     description: "Keeper reveals votes after epoch ends via drand",
     icon: "🔓",
   },
   {
     label: "Settle",
     badge: "badge-secondary",
-    duration: "~1 hour delay",
+    duration: "~20 min delay",
     description: "Majority wins after min 3 voters + settlement delay",
     icon: "⚖️",
   },

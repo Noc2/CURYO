@@ -39,7 +39,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go UP or DOWN and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each 1-hour epoch ends, preventing herding. After the epoch, votes are automatically revealed by the keeper. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn 25% weight, creating a 4:1 incentive to vote early.",
+    text: "Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go UP or DOWN and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each 20-minute epoch ends, preventing herding. After the epoch, votes are automatically revealed by the keeper. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn 25% weight, creating a 4:1 incentive to vote early.",
   },
   {
     type: "paragraph",
@@ -91,7 +91,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
-              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each 1-hour epoch ends. After each epoch the keeper reveals votes automatically. Settlement occurs after at least 3 votes are revealed and the epoch delay has passed.",
+              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each 20-minute epoch ends. After each epoch the keeper reveals votes automatically. Settlement occurs after at least 3 votes are revealed and the epoch delay has passed.",
               "Contributor Rewards  -- Content submitters receive 10%, category submitters 1%, and frontend operators 1% of the losing pool.",
             ],
           },
@@ -108,7 +108,7 @@ export const SECTIONS: Section[] = [
             type: "ordered",
             items: [
               "Commit: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress). The vote direction is encrypted with tlock -- hidden until the epoch ends.",
-              "Accumulate: More voters commit during the 1-hour epoch. No one can see anyone else's vote direction until the epoch ends.",
+              "Accumulate: More voters commit during the 20-minute epoch. No one can see anyone else's vote direction until the epoch ends.",
               "Reveal: After the epoch ends, the keeper automatically decrypts and reveals all votes. The rating updates based on the revealed votes.",
               "Settle: Once at least 3 votes are revealed and the settlement delay has passed, anyone can call settleRound(). The side with the larger epoch-weighted stake wins.",
               "Claim: Winners receive their original stake back plus an epoch-weighted share of the losing pool (Tier 1 = 4x reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.",
@@ -172,13 +172,13 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the epoch ends. Each 1-hour epoch defines a reward tier: Tier 1 (first epoch, blind) earns 100% weight; Tier 2+ (subsequent epochs, informed) earns 25% weight.",
+            text: "Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the epoch ends. Each 20-minute epoch defines a reward tier: Tier 1 (first epoch, blind) earns 100% weight; Tier 2+ (subsequent epochs, informed) earns 25% weight.",
           },
           {
             type: "ordered",
             items: [
               "Commit (any time during the round): Choose UP or DOWN. The UI encrypts your direction and stake with tlock (commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress)). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
-              "Epoch ends (every 1 hour): The drand beacon publishes a randomness value. The keeper fetches it and calls revealVoteByCommitKey() for each unrevealed commit, decrypting the direction on-chain.",
+              "Epoch ends (every 20 minutes): The drand beacon publishes a randomness value. The keeper fetches it and calls revealVoteByCommitKey() for each unrevealed commit, decrypting the direction on-chain.",
               "Settlement: After at least 3 votes are revealed and one full epoch has elapsed since the third reveal (settlement delay), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating updates based on revealed raw stakes.",
               "Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the losing pool. Losers' stakes are distributed. Content submitters may claim a separate submitter reward.",
             ],
@@ -218,13 +218,13 @@ export const SECTIONS: Section[] = [
                 [
                   "Epoch ended",
                   "Keeper reveals votes automatically via drand",
-                  "~1 hour per epoch",
+                  "~20 min per epoch",
                   "None  -- keeper handles reveal",
                 ],
                 [
                   "Settlement delay",
                   "Waiting one epoch after minVoters threshold reached",
-                  "~1 hour",
+                  "~20 min",
                   "None  -- anyone can call settleRound() after delay",
                 ],
                 ["Settled", "Rewards calculated and claimable", "--", "Winners claim rewards"],
@@ -428,7 +428,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Each content item has independent voting rounds. A round begins when the first vote is committed. Voters commit encrypted votes at any time; the direction is hidden until the epoch ends. Each 1-hour period is an epoch -- commitments made within the first epoch are Tier 1 (100% reward weight), while later commitments are Tier 2 (25% weight).",
+            text: "Each content item has independent voting rounds. A round begins when the first vote is committed. Voters commit encrypted votes at any time; the direction is hidden until the epoch ends. Each 20-minute period is an epoch -- commitments made within the first epoch are Tier 1 (100% reward weight), while later commitments are Tier 2 (25% weight).",
           },
           {
             type: "paragraph",
@@ -483,7 +483,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Curyo uses tlock (time-lock encryption based on the drand randomness beacon) to achieve commit-reveal without the reveal burden. When a voter commits, the direction is encrypted to a future timestamp -- the end of the current 1-hour epoch. After the epoch ends, the drand beacon publishes a verifiable random value that enables decryption. The keeper fetches the beacon and calls revealVoteByCommitKey() on-chain, automatically decrypting all unrevealed votes. No voter needs to take any additional action after their initial commit.",
+            text: "Curyo uses tlock (time-lock encryption based on the drand randomness beacon) to achieve commit-reveal without the reveal burden. When a voter commits, the direction is encrypted to a future timestamp -- the end of the current 20-minute epoch. After the epoch ends, the drand beacon publishes a verifiable random value that enables decryption. The keeper fetches the beacon and calls revealVoteByCommitKey() on-chain, automatically decrypting all unrevealed votes. No voter needs to take any additional action after their initial commit.",
           },
         ],
       },
@@ -492,15 +492,15 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Each 1-hour epoch defines a reward tier. Voters who commit during the first epoch (before any results are visible) earn Tier 1 weight (100%). Voters who commit in subsequent epochs (after seeing epoch-1 results) earn Tier 2 weight (25%). This 4:1 ratio creates a strong incentive to vote early and honestly, before any herding signal exists.",
+            text: "Each 20-minute epoch defines a reward tier. Voters who commit during the first epoch (before any results are visible) earn Tier 1 weight (100%). Voters who commit in subsequent epochs (after seeing epoch-1 results) earn Tier 2 weight (25%). This 4:1 ratio creates a strong incentive to vote early and honestly, before any herding signal exists.",
           },
           {
             type: "table",
             data: {
               headers: ["Tier", "Epoch", "Reward Weight", "Information Available"],
               rows: [
-                ["Tier 1", "Epoch 1 (0 to 1 hour)", "100%", "None  -- all votes hidden by tlock"],
-                ["Tier 2", "Epoch 2+ (1+ hours)", "25%", "Epoch 1 results visible (directions + stakes revealed)"],
+                ["Tier 1", "Epoch 1 (0 to 20 min)", "100%", "None  -- all votes hidden by tlock"],
+                ["Tier 2", "Epoch 2+ (20+ min)", "25%", "Epoch 1 results visible (directions + stakes revealed)"],
               ],
             },
           },
@@ -546,7 +546,7 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Parameter", "Value", "Effect"],
               rows: [
-                ["epochDuration", "1 hour", "Duration of each reward tier; also the settlement delay"],
+                ["epochDuration", "20 minutes", "Duration of each reward tier; also the settlement delay"],
                 ["minVoters", "3", "Minimum revealed votes required for settlement"],
                 ["maxDuration", "7 days", "Maximum round lifetime  -- expired rounds are cancelled"],
               ],
@@ -1001,7 +1001,7 @@ export const SECTIONS: Section[] = [
               rows: [
                 [
                   "epochDuration",
-                  "1 hour",
+                  "20 minutes",
                   "Duration of each reward tier; commits in epoch 1 earn 100% weight, later epochs 25%",
                 ],
                 [
@@ -1019,7 +1019,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The epoch-based settlement mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (1 hour for full weight) and also the settlement delay after minVoters is reached, giving late voters time to reveal before the round closes. The maxDuration hard cap prevents indefinite rounds. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual revealed votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.",
+            text: "The epoch-based settlement mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (20 minutes for full weight) and also the settlement delay after minVoters is reached, giving late voters time to reveal before the round closes. The maxDuration hard cap prevents indefinite rounds. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual revealed votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.",
           },
         ],
       },

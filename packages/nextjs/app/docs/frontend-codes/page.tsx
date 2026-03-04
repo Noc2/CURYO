@@ -55,8 +55,8 @@ const FrontendCodes: NextPage = () => {
       </p>
       <ol>
         <li>
-          <strong>Revealing votes:</strong> After each 1-hour epoch ends, the service decrypts tlock ciphertexts using
-          the drand randomness beacon and calls{" "}
+          <strong>Revealing votes:</strong> After each 20-minute epoch ends, the service decrypts tlock ciphertexts
+          using the drand randomness beacon and calls{" "}
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> for each unrevealed commit.
           Votes stay hidden until this step runs.
         </li>

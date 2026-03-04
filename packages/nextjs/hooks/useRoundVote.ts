@@ -34,7 +34,7 @@ export function useRoundVote() {
   const [error, setError] = useState<string | null>(null);
   const { requireAcceptance } = useTermsAcceptance();
   const queryClient = useQueryClient();
-  const [epochDuration, setEpochDuration] = useState(3600); // Default 1 hour
+  const [epochDuration, setEpochDuration] = useState(1200); // Default 20 minutes
 
   const { writeContractAsync: writeCRep } = useScaffoldWriteContract({
     contractName: "CuryoReputation",
@@ -69,7 +69,7 @@ export function useRoundVote() {
         }
       })
       .catch(() => {
-        // Default to 1 hour
+        // Default to 20 minutes
       });
 
     return () => {

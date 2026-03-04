@@ -54,7 +54,7 @@ const HowItWorks: NextPage = () => {
         </li>
         <li>
           <strong>Accumulate:</strong> Votes accumulate within the round. Directions are hidden during the first epoch
-          (~1&nbsp;hour). After the epoch ends, the keeper reveals all committed votes using the drand beacon.
+          (~20&nbsp;min). After the epoch ends, the keeper reveals all committed votes using the drand beacon.
         </li>
         <li>
           <strong>Reveal:</strong> The keeper automatically reveals votes after each epoch using the drand beacon
@@ -101,7 +101,7 @@ const HowItWorks: NextPage = () => {
                 <span className="badge badge-secondary badge-sm">Committed</span>
               </td>
               <td>Vote recorded, direction hidden (tlock encrypted). Tier 1 = 100% reward weight, Tier 2+ = 25%</td>
-              <td className="font-mono">~1 hour per epoch</td>
+              <td className="font-mono">~20 min per epoch</td>
               <td>None</td>
             </tr>
             <tr>
@@ -117,7 +117,7 @@ const HowItWorks: NextPage = () => {
                 <span className="badge badge-secondary badge-sm">Settled</span>
               </td>
               <td>&ldquo;Claim X cREP&rdquo; (winners) or &ldquo;Lost X cREP&rdquo; (losers)</td>
-              <td className="font-mono">~1 hour after threshold</td>
+              <td className="font-mono">~20 min after threshold</td>
               <td>Winners click Claim</td>
             </tr>
           </tbody>
@@ -125,7 +125,7 @@ const HowItWorks: NextPage = () => {
       </div>
       <p>
         After the epoch ends, the keeper reveals all committed votes using the drand beacon. Once at least 3 votes are
-        revealed and one full epoch (~1&nbsp;hour) has elapsed since the threshold was reached, settlement can be
+        revealed and one full epoch (~20&nbsp;min) has elapsed since the threshold was reached, settlement can be
         triggered. Settlement is fully permissionless &mdash; anyone can call it. An automated keeper service handles
         this automatically. Winners receive their original stake plus an epoch-weighted share of the losing pool.
       </p>
@@ -141,7 +141,7 @@ const HowItWorks: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">epochDuration</td>
-              <td>1 hour</td>
+              <td>20 minutes</td>
               <td>Tier window for reward weighting; also the settlement delay after minVoters revealed.</td>
             </tr>
             <tr>

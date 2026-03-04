@@ -10,7 +10,7 @@ export interface VotingConfig {
 }
 
 const DEFAULTS: VotingConfig = {
-  epochDuration: 3600,
+  epochDuration: 1200,
   maxDuration: 7 * 24 * 60 * 60,
   minVoters: 3,
   maxVoters: 1000,

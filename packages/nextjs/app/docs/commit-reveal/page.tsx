@@ -48,7 +48,7 @@ const CommitRevealVoting: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">Tier 1 (Blind)</td>
-              <td>First epoch (~1 hour)</td>
+              <td>First epoch (~20 min)</td>
               <td className="font-mono">100% (10,000 BPS)</td>
               <td>Full stake counts toward rewards</td>
             </tr>
@@ -69,8 +69,8 @@ const CommitRevealVoting: NextPage = () => {
 
       <h2>How Epochs Work</h2>
       <p>
-        Each epoch lasts <strong>1 hour</strong> (configurable by governance). When the first vote on a content item is
-        committed, the round begins and the epoch clock starts. During the first epoch, all vote directions are
+        Each epoch lasts <strong>20 minutes</strong> (configurable by governance). When the first vote on a content item
+        is committed, the round begins and the epoch clock starts. During the first epoch, all vote directions are
         encrypted &mdash; no one can see which way anyone voted.
       </p>
       <p>
@@ -91,7 +91,7 @@ const CommitRevealVoting: NextPage = () => {
           At least <strong>3 votes</strong> must be revealed (the <code>minVoters</code> threshold).
         </li>
         <li>
-          One full epoch (~1 hour) must have elapsed since the threshold was reached (the{" "}
+          One full epoch (~20 min) must have elapsed since the threshold was reached (the{" "}
           <strong>settlement delay</strong>).
         </li>
       </ol>

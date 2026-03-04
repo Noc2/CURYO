@@ -13,7 +13,7 @@ library RoundLib {
     // --- Enums ---
 
     enum RoundState {
-        Open, // Accepting votes in 1-hour epochs; reveals happen after each epoch
+        Open, // Accepting votes in 20-minute epochs; reveals happen after each epoch
         Settled, // ≥3 votes revealed, rewards distributed
         Cancelled, // Expired (1 week) without ≥3 votes, or no reveals — full refund
         Tied // Equal weighted pools after ≥3 votes — refund revealed voters
@@ -22,7 +22,7 @@ library RoundLib {
     // --- Structs ---
 
     struct RoundConfig {
-        uint256 epochDuration; // Duration of each voting epoch (default: 1 hour)
+        uint256 epochDuration; // Duration of each voting epoch (default: 20 minutes)
         uint256 maxDuration; // Max time before round expires (default: 7 days)
         uint256 minVoters; // Minimum revealed votes to trigger settlement (default: 3)
         uint256 maxVoters; // Gas safety cap (default: 1000)

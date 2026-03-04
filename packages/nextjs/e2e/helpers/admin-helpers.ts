@@ -694,7 +694,7 @@ export async function commitVoteDirect(
   frontend: string,
   fromAddress: string,
   contractAddress: string,
-  epochDurationSeconds = 3600,
+  epochDurationSeconds = 1200,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
   const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
   const { timelockEncrypt, mainnetClient, roundAt } = await import("tlock-js");

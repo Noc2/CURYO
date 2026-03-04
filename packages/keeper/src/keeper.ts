@@ -168,7 +168,7 @@ export async function resolveRounds(
   const result: KeeperResult = emptyResult();
 
   // --- Read config ---
-  let epochDuration: bigint = 3600n; // default 1 hour
+  let epochDuration: bigint = 1200n; // default 20 minutes
   let maxDuration: bigint = 604800n; // default 7 days
   let minVoters: bigint = 3n;
 
