@@ -18,7 +18,7 @@ The contract at `331844e~1` implemented a tlock commit-reveal system. The core c
 /// @dev Flow: commitVote (tlock-encrypted to epoch end)
 ///          → epoch ends
 ///          → revealVote (anyone decrypts via drand, permissionless)
-///          → settleRound (≥3 votes revealed + 1 epoch delay).
+///          → settleRound (≥3 votes revealed, immediate settlement).
 ///      Rounds accumulate votes across 15-minute epochs. The keeper
 ///      needs NO secret data — it reads on-chain ciphertexts and public drand beacons.
 ```
@@ -41,12 +41,12 @@ Epoch 1 ends:         drand beacon produced, ciphertexts become decryptable
                       Revealed votes are now public
 Epoch 2 (15–30 min):  New voters can commit — they can see epoch 1 results
 ...
-Once revealedCount ≥ 3 AND block.timestamp ≥ thresholdReachedAt + epochDuration:
-                      Anyone calls settleRound()
+Once revealedCount ≥ 3:
+                      Anyone calls settleRound() immediately
                       Round settles, rewards distributed
 ```
 
-The one-epoch settlement delay (`thresholdReachedAt + epochDuration`) ensures all votes from the epoch in which the threshold was crossed have time to be revealed before settlement locks in the result.
+Settlement happens immediately once the minVoters threshold is reached — there is no additional delay. The `thresholdReachedAt` timestamp is still recorded on-chain for analytics and historical tracking.
 
 ### 1.3 Key properties
 
@@ -201,7 +201,7 @@ Everything else — pool split percentages, submitter reward, treasury fee, cons
 
 ### 4.1 Epoch 1 settles (ideal case)
 
-Content with 3 voters, all epoch 1. Settlement in epoch 2 (after 1-epoch delay).
+Content with 3 voters, all epoch 1. Settlement occurs immediately after epoch 1 reveals.
 
 | Voter | Side | Stake | Epoch | Weight | Effective stake |
 |-------|------|-------|-------|--------|-----------------|
@@ -300,9 +300,9 @@ A rational voter forms their best assessment of content quality, then faces the 
 
 **Cost of waiting:**
 - Epoch-weight penalty: earn 50% of epoch-1 weight
-- Risk of missing the round: if `minVoters` is reached in epoch 1 and settlement fires in epoch 2, late voters may commit but their votes may not be revealed before settlement
+- Risk of missing the round: if `minVoters` is reached in epoch 1, settlement can fire immediately after reveals — epoch 2 voters may not have a chance to participate
 
-Wait — with the original settlement delay (`thresholdReachedAt + epochDuration`), a round cannot settle until at least one full epoch passes after the threshold. So if `minVoters=3` are revealed in epoch 1, settlement can fire earliest at the start of epoch 3. Epoch 2 votes ARE included. But with `minVoters=2`, settlement can fire at the start of epoch 2, potentially before epoch 2 commits are revealed. This is a design tension explored in Section 6.
+Settlement happens immediately once the minVoters threshold is met (no additional delay). If `minVoters=3` are revealed in epoch 1, settlement can fire as soon as reveals complete. Epoch 2 votes are only included if they are revealed before the keeper calls `settleRound()`. This favors fast settlement over maximum participation.
 
 **The equilibrium:** For most content, the accuracy gain from watching epoch 1 results is marginal — you already had a view on content quality before the round started. The 50% weight penalty is concrete and certain. For a voter with genuine private information about content quality, the dominant strategy is to commit in epoch 1 at full weight. The mechanism correctly rewards this behavior.
 
@@ -354,28 +354,27 @@ As demonstrated in Section 4.2, even with only 3 epoch-1 voters and 2 epoch-2 fi
 **Best case (5+ epoch-1 voters):**
 ```
 T=0:       Epoch 1 opens. 5 voters commit (hidden).
-T=15min:   Epoch 1 ends. All 5 revealed. revealedCount=5 ≥ 5. thresholdReachedAt = T+15min.
-T=30min:   Earliest settlement: thresholdReachedAt + epochDuration.
-           settleRound() callable. Keeper calls it.
+T=20min:   Epoch 1 ends. All 5 revealed. revealedCount=5 ≥ 5. thresholdReachedAt = T+20min.
+           settleRound() callable immediately. Keeper calls it.
 ```
-Total: **30 minutes** from first commit to settled rating.
+Total: **~20 minutes** from first commit to settled rating.
 
 **Typical niche case (3 epoch-1 voters, 2 epoch-2 fillers):**
 ```
 T=0:       Epoch 1. 3 voters commit (hidden).
-T=15min:   Epoch 1 ends. 3 votes revealed (UP, UP, DOWN or similar). revealedCount=3 < 5.
-T=15–30m:  Epoch 2. 2 more voters see epoch-1 results and commit.
-T=30min:   Epoch 2 ends. 2 more votes revealed. revealedCount=5 ≥ 5.
-           thresholdReachedAt = T+30min.
-T=45min:   settleRound() callable.
+T=20min:   Epoch 1 ends. 3 votes revealed (UP, UP, DOWN or similar). revealedCount=3 < 5.
+T=20–40m:  Epoch 2. 2 more voters see epoch-1 results and commit.
+T=40min:   Epoch 2 ends. 2 more votes revealed. revealedCount=5 ≥ 5.
+           thresholdReachedAt = T+40min.
+           settleRound() callable immediately.
 ```
-Total: **45 minutes**. Epoch-2 fillers get 25% weight; epoch-1 assessors dominate the reward pool.
+Total: **~40 minutes**. Epoch-2 fillers get 25% weight; epoch-1 assessors dominate the reward pool.
 
 ### 6.3 What if epoch 1 has very few voters?
 
 With `minVoters=5` and only 1 epoch-1 voter:
 - 4 epoch-2+ fillers needed to reach quorum
-- Round settles at T+45min with the 1 epoch-1 voter holding 100/(100 + 4×25) = 100/200 = **50% of reward pool** despite being 1 of 5 voters
+- Round settles at T+40min (immediately after epoch 2 reveals) with the 1 epoch-1 voter holding 100/(100 + 4×25) = 100/200 = **50% of reward pool** despite being 1 of 5 voters
 - The lone epoch-1 curator earns the same from rewards as all 4 fillers combined
 
 This is the correct incentive: the first person to independently assess a piece of niche content earns the majority of the reward pool, while those who followed earn a smaller but still positive return for filling quorum.
@@ -422,7 +421,7 @@ Option A was the original design and remains the better choice: permissionless o
 The keeper in the original design was already minimal:
 1. Monitor drand beacons for epoch end timestamps
 2. For each expired epoch, read on-chain ciphertexts, decrypt using the drand output, call `revealVote()`
-3. After `minVoters` revealed + epoch delay, call `settleRound()`
+3. After `minVoters` revealed, call `settleRound()` immediately
 
 With epoch-weighting, the keeper role is identical — no changes needed to the keeper.
 
@@ -532,7 +531,7 @@ The `epochIndex` field is added to the `Commit` struct inside a mapping (not a s
 | **Inter-epoch herding** | Not penalized | 75% penalty (epoch 2+ gets 25% weight) |
 | **MinVoters** | 3 | **5** (matches live contract) |
 | **Niche content settlement** | Requires 3 voters (may never settle) | Requires 5 participants; epoch-2 fillers count at 25% weight |
-| **Settlement time (best case)** | 30 min (epoch 1 + delay) | 30 min (5 epoch-1 voters) / 45 min (3+2 split) |
+| **Settlement time (best case)** | ~20 min (epoch 1 + immediate settle) | ~20 min (5 epoch-1 voters) / ~40 min (3+2 split) |
 | **Epoch-2 hedge attack profit** | Not modeled (no weighting) | **+2.6 cREP** (near break-even, was +17.3 cREP before) |
 | **Permissionless reveals** | Yes — anyone with drand beacon | Same |
 | **Keeper complexity** | Low | Same (no changes) |
@@ -578,9 +577,9 @@ A 15-minute epoch only captures genuine assessors for short-form content. For mo
 
 The cleanest solution is to store `epochDuration` in `CategoryRegistry` alongside other per-category parameters. A tweet category uses 10 minutes; a film review category uses 2 hours. This allows the mechanism to serve the full content spectrum without compromising epoch-1 capture rates.
 
-If a single platform-wide duration is required: **30 minutes** is a better default than 15. It captures most medium-form content in epoch 1, and settlement timing remains acceptable:
-- Popular content (5+ epoch-1 voters): 60 min total
-- Niche content (3+2 split): 90 min total
+If a single platform-wide duration is required: **30 minutes** is a better default than 15. It captures most medium-form content in epoch 1, and settlement timing remains acceptable (settlement is immediate once minVoters is reached):
+- Popular content (5+ epoch-1 voters): ~30 min total
+- Niche content (3+2 split): ~60 min total
 
 ### 10.3 minVoters analysis
 
@@ -655,7 +654,7 @@ This attack requires 3+ additional Voter IDs, 600+ cREP capital, and coordinatio
 
 5. **The win condition vs reward distribution split.** The current design uses raw stake for the win condition (which side wins) but epoch-weighted effective stake for reward distribution (how much each winner gets). This means a large epoch-2+ wave can flip the outcome even if epoch-1 clearly favored the other direction (see Section 10.4). Applying epoch-weighting to the win condition would make the epoch-1 signal nearly decisive but complicates the UI.
 
-6. **Settlement timing edge case.** With minVoters=5 and exactly 5 epoch-1 voters, settlement fires at T+2×epochDuration. Epoch-2 commits have their epoch end at T+2×epochDuration — same block the settlement could fire. The strict `block.timestamp > thresholdReachedAt + epochDuration` check (note `>` not `>=`) ensures epoch-2 voters have at minimum one extra second to be revealed. Worth verifying this in tests when implementing.
+6. **Settlement timing edge case.** With the removal of the one-epoch settlement delay, settlement can now fire immediately once minVoters is reached. This means that if 5 epoch-1 voters are all revealed, settlement can happen before any epoch-2 commits are even revealed. The trade-off is faster settlement at the cost of potentially excluding late voters. In practice, the keeper processes reveals and settlement in sequence, so any reveals completed before the settlement call will be included.
 
 7. **Per-category epoch configuration.** Storing `epochDuration` in `CategoryRegistry` would allow 10-minute epochs for meme/tweet categories and 2-hour epochs for film/podcast categories. This is the cleanest long-term solution but requires a CategoryRegistry schema change and governance process for setting per-category parameters.
 
