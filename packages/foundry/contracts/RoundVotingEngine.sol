@@ -370,6 +370,9 @@ contract RoundVotingEngine is
     }
 
     /// @notice Commit a blind vote using ERC2612 permit (single transaction).
+    /// @dev Uses try-catch around permit to mitigate front-running grief (EIP-2612 known issue).
+    ///      If an attacker front-runs the permit signature, the allowance is already set and
+    ///      safeTransferFrom in _commitVote succeeds using the existing allowance.
     function commitVoteWithPermit(
         uint256 contentId,
         bytes32 commitHash,
@@ -381,7 +384,8 @@ contract RoundVotingEngine is
         bytes32 s,
         address frontend
     ) external nonReentrant whenNotPaused {
-        IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s);
+        try IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s) { }
+        catch { }
         _commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend);
     }
 
