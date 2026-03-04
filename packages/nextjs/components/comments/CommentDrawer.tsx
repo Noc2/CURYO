@@ -19,6 +19,16 @@ export function CommentDrawer({ contentId, open, onClose }: CommentDrawerProps) 
   const { comments, count, isLoading, submitComment, isSubmitting, submitError } = useComments(open ? contentId : null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   // Scroll to bottom when new comments arrive
   useEffect(() => {
     if (listRef.current) {
@@ -42,6 +52,7 @@ export function CommentDrawer({ contentId, open, onClose }: CommentDrawerProps) 
           {/* Drawer panel */}
           <motion.div
             role="dialog"
+            aria-modal="true"
             aria-label="Comments"
             className="absolute top-0 right-0 h-full w-full max-w-md bg-base-200 border-l border-base-content/10 shadow-2xl flex flex-col"
             initial={{ x: "100%" }}

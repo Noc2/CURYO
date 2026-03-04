@@ -146,6 +146,9 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(token.imageUrl)}`}
             alt={token.name}
+            loading="lazy"
+            width={192}
+            height={192}
             className={`w-40 h-40 lg:w-48 lg:h-48 rounded-full shadow-lg transition-transform group-hover:scale-[1.05] ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}

@@ -194,6 +194,9 @@ export function GitHubEmbed({ info, compact }: GitHubEmbedProps) {
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(repo.imageUrl)}`}
             alt={repo.name}
+            loading="lazy"
+            width={192}
+            height={192}
             className={`w-40 h-40 lg:w-48 lg:h-48 rounded-2xl shadow-lg transition-transform group-hover:scale-[1.05] ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}

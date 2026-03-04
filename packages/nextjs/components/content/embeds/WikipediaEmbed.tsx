@@ -142,7 +142,8 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
         <img
           src={person.imageUrl}
           alt={person.title}
-          className={`w-full h-auto rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
+          loading="lazy"
+          className={`w-full h-auto rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] aspect-[3/4] object-cover ${
             imageLoaded ? "opacity-100" : "opacity-0"
           }`}
           onLoad={() => setImageLoaded(true)}

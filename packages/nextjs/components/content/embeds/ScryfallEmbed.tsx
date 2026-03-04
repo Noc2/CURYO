@@ -68,7 +68,8 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
       <img
         src={`/api/image-proxy?url=${encodeURIComponent(info.thumbnailUrl)}`}
         alt={formattedName}
-        className={`w-full h-auto rounded-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
+        loading="lazy"
+        className={`w-full h-auto rounded-xl shadow-lg transition-transform group-hover:scale-[1.02] aspect-[5/7] object-cover ${
           imageLoaded ? "opacity-100" : "opacity-0"
         }`}
         onLoad={() => setImageLoaded(true)}

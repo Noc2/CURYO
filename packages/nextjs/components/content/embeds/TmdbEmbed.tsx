@@ -145,7 +145,8 @@ export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
         <img
           src={movie.posterUrl}
           alt={movie.title}
-          className={`w-full h-auto rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
+          loading="lazy"
+          className={`w-full h-auto rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] aspect-[2/3] object-cover ${
             imageLoaded ? "opacity-100" : "opacity-0"
           }`}
           onLoad={() => setImageLoaded(true)}

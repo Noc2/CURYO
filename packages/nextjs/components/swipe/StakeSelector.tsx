@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAccount } from "wagmi";
@@ -54,6 +54,16 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
     functionName: "symbol",
   });
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onCancel]);
+
   const symbol = tokenSymbol ?? "cREP";
   const { ratePercent, calculateBonus } = useParticipationRate();
   const voteBonus = calculateBonus(amount);
@@ -72,6 +82,7 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
       {isOpen && (
         <motion.div
           role="dialog"
+          aria-modal="true"
           aria-label="Select stake amount"
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
           initial={{ opacity: 0 }}
@@ -117,6 +128,8 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
               <span
                 className="inline-block ml-1.5 align-middle tooltip tooltip-bottom cursor-help"
                 data-tip="You can only vote once per content per round. Choose your stake carefully!"
+                role="img"
+                aria-label="You can only vote once per content per round. Choose your stake carefully!"
               >
                 <svg
                   width="16"
@@ -128,6 +141,7 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   className="opacity-50"
+                  aria-hidden="true"
                 >
                   <circle cx="12" cy="12" r="10" />
                   <path d="M12 16v-4" />
@@ -185,6 +199,8 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
                 <span
                   className="inline-block ml-2 align-middle tooltip tooltip-top cursor-help"
                   data-tip={`Max per ${contentLabel}: ${maxByCapacity} ${symbol} remaining (100 limit per round)`}
+                  role="img"
+                  aria-label={`Max per ${contentLabel}: ${maxByCapacity} ${symbol} remaining (100 limit per round)`}
                 >
                   <svg
                     width="16"
@@ -196,6 +212,7 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     className="opacity-60"
+                    aria-hidden="true"
                   >
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 16v-4" />

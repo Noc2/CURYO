@@ -148,7 +148,8 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
         <img
           src={`/api/image-proxy?url=${encodeURIComponent(game.backgroundImage)}`}
           alt={game.name}
-          className={`w-full h-auto rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
+          loading="lazy"
+          className={`w-full h-auto rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] aspect-video object-cover ${
             imageLoaded ? "opacity-100" : "opacity-0"
           }`}
           onLoad={() => setImageLoaded(true)}
