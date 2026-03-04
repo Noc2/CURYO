@@ -36,12 +36,9 @@ contract ContentRegistry is
     uint256 public constant REVIVAL_STAKE = 5e6; // 5 cREP (6 decimals)
     uint256 public constant CANCELLATION_FEE = 1e6; // 1 cREP (prevents submit-cancel spam)
     uint256 public constant DORMANCY_PERIOD = 30 days;
-    uint256 public constant CONTENT_EXPIRY = 90 days;
     uint8 public constant MAX_REVIVALS = 2;
 
     // Submitter stake rules
-    uint256 public constant STAKE_GRACE_EPOCHS = 96; // Grace period before slash possible (~24 hours at 15-min epochs)
-    uint256 public constant STAKE_RETURN_EPOCHS = 384; // Auto-return after this many epochs (~4 days at 15-min epochs)
     uint256 public constant SLASH_RATING_THRESHOLD = 25; // Rating below this triggers slash
 
     // String length limits (prevent storage bloat)
