@@ -180,9 +180,7 @@ contract ContentRegistryBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -531,6 +529,33 @@ contract ContentRegistryBranchesTest is Test {
 
         ContentRegistry.Content memory c = registry.getContent(1);
         assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Dormant));
+    }
+
+    function test_MarkDormant_ReleasesUrlForResubmission() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://example.com/dormant-url", "goal", "tags", 0);
+        vm.stopPrank();
+
+        // URL should be marked as submitted
+        assertTrue(registry.isUrlSubmitted("https://example.com/dormant-url"));
+
+        // Mark dormant after 31 days
+        vm.warp(T0 + 31 days);
+        registry.markDormant(1);
+
+        // URL should now be released
+        assertFalse(registry.isUrlSubmitted("https://example.com/dormant-url"));
+
+        // Should be able to resubmit the same URL
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/dormant-url", "goal2", "tags2", 0);
+        vm.stopPrank();
+
+        // New content created with same URL
+        ContentRegistry.Content memory c2 = registry.getContent(2);
+        assertEq(uint256(c2.status), uint256(ContentRegistry.ContentStatus.Active));
     }
 
     // =========================================================================

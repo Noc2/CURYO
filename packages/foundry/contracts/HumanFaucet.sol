@@ -366,7 +366,10 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         // Apply referral logic if valid referrer
         // AUDIT NOTE (L-2): A person with two passports can self-refer (different addresses).
         // This is a protocol-level limitation of pseudonymous identity, not fixable on-chain.
-        if (referrer != address(0) && referrer != user && addressClaimed[referrer]) {
+        if (
+            referrer != address(0) && referrer != user && addressClaimed[referrer]
+                && (address(voterIdNFT) == address(0) || voterIdNFT.hasVoterId(referrer))
+        ) {
             (claimantBonus, referrerReward) = getCurrentReferralAmounts();
             claimAmount += claimantBonus;
         }
@@ -431,7 +434,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
         address referrer;
         assembly {
-            referrer := mload(add(userData, 20))
+            referrer := shr(96, mload(add(userData, 32)))
         }
         return referrer;
     }

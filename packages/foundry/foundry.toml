@@ -48,6 +48,12 @@ baseSepolia = { key = "${BASESCAN_API_KEY}", url = "https://api-sepolia.basescan
 
 
 
+[invariant]
+runs = 256
+depth = 50
+fail_on_revert = false
+dictionary_weight = 80
+
 [fmt]
 line_length = 120
 tab_width = 4

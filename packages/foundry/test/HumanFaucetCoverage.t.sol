@@ -496,6 +496,38 @@ contract HumanFaucetCoverageTest is Test {
     }
 
     // =========================================================================
+    // 16. M-11: REFERRER WITH REVOKED VOTER ID GETS NO BONUS
+    // =========================================================================
+
+    function test_Referral_RevokedVoterIdReferrer_NoBonus() public {
+        // Set VoterID NFT on faucet
+        vm.prank(admin);
+        faucet.setVoterIdNFT(address(mockVoterIdNFT));
+
+        // user1 claims (gets VoterID minted via mock)
+        mockHub.setVerified(user1);
+        mockHub.simulateVerification(address(faucet), user1);
+        assertTrue(faucet.hasClaimed(user1));
+        assertTrue(mockVoterIdNFT.hasVoterId(user1));
+
+        // Revoke user1's VoterID
+        mockVoterIdNFT.removeHolder(user1);
+        assertFalse(mockVoterIdNFT.hasVoterId(user1));
+
+        // user2 claims with user1 as referrer — should get NO referral bonus
+        mockHub.setVerified(user2);
+        bytes memory userData = abi.encodePacked(user1);
+        mockHub.simulateVerificationWithUserData(address(faucet), user2, userData);
+
+        // user2 should get base tier amount only (no referral bonus)
+        assertEq(crepToken.balanceOf(user2), TIER_0_AMOUNT);
+        // user1 should NOT get referrer reward
+        assertEq(faucet.referralCount(user1), 0);
+        // referredBy should not be set
+        assertEq(faucet.referredBy(user2), address(0));
+    }
+
+    // =========================================================================
     // HELPERS
     // =========================================================================
 

@@ -293,6 +293,12 @@ contract ContentRegistry is
 
         c.status = ContentStatus.Dormant;
 
+        // Release URL so it can be resubmitted (M-07 fix)
+        bytes32 urlHash = contentUrlHash[contentId];
+        if (urlHash != bytes32(0)) {
+            urlSubmitted[urlHash] = false;
+        }
+
         // Return submitter stake if not already returned
         if (!c.submitterStakeReturned) {
             c.submitterStakeReturned = true;
