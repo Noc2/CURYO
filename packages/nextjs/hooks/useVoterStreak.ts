@@ -3,13 +3,20 @@
 import { useEffect, useState } from "react";
 import { isPonderAvailable, ponderGet } from "~~/services/ponder/client";
 
+interface StreakMilestone {
+  days: number;
+  baseBonus: number;
+}
+
 interface VoterStreakData {
   currentDailyStreak: number;
   bestDailyStreak: number;
   totalActiveDays: number;
   lastActiveDate: string | null;
+  lastMilestoneDay: number;
+  milestones: StreakMilestone[];
   nextMilestone: number | null;
-  nextMilestoneBonus: number | null;
+  nextMilestoneBaseBonus: number | null;
 }
 
 /**

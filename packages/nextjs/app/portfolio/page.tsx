@@ -2,15 +2,22 @@
 
 import { useAccount } from "wagmi";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
-import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldEventHistory, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { formatTimeRemaining, useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useClaimReward } from "~~/hooks/useClaimReward";
+import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useVoterStreak } from "~~/hooks/useVoterStreak";
 import { notification } from "~~/utils/scaffold-eth";
+
+const STREAK_INITIAL_RATE_BPS = 9000;
 
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
   const { claimReward, isClaiming } = useClaimReward();
+  const { rateBps } = useParticipationRate();
+  const { writeContractAsync: writeVotingEngine, isPending: isClaimingStreak } = useScaffoldWriteContract({
+    contractName: "RoundVotingEngine",
+  } as any);
 
   const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
@@ -130,13 +137,69 @@ export default function PortfolioPage() {
               <div className="mt-3">
                 <div className="flex justify-between text-xs text-base-content/50 mb-1">
                   <span>Next: {streak.nextMilestone} day milestone</span>
-                  <span>{streak.nextMilestoneBonus} cREP bonus</span>
+                  <span>
+                    ~
+                    {rateBps
+                      ? Math.floor(((streak.nextMilestoneBaseBonus ?? 0) * rateBps) / STREAK_INITIAL_RATE_BPS)
+                      : streak.nextMilestoneBaseBonus}{" "}
+                    cREP bonus
+                  </span>
                 </div>
                 <progress
                   className="progress progress-primary w-full"
                   value={streak.currentDailyStreak}
                   max={streak.nextMilestone}
                 />
+              </div>
+            )}
+
+            {/* Milestone list */}
+            {streak.milestones && streak.milestones.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {streak.milestones.map((m, idx) => {
+                  const adjustedBonus = rateBps
+                    ? Math.floor((m.baseBonus * rateBps) / STREAK_INITIAL_RATE_BPS)
+                    : m.baseBonus;
+                  const earned = streak.currentDailyStreak >= m.days;
+                  const claimed = streak.lastMilestoneDay >= m.days;
+                  const claimable = earned && !claimed;
+
+                  return (
+                    <div key={m.days} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className={earned ? "text-success" : "text-base-content/30"}>
+                          {claimed ? "&#10003;" : earned ? "&#9679;" : "&#9675;"}
+                        </span>
+                        <span className={earned ? "" : "text-base-content/50"}>
+                          {m.days} days &middot; ~{adjustedBonus} cREP
+                        </span>
+                      </div>
+                      {claimable ? (
+                        <button
+                          className="btn btn-xs btn-success"
+                          disabled={isClaimingStreak}
+                          onClick={async () => {
+                            try {
+                              await (writeVotingEngine as any)({
+                                functionName: "claimStreakBonus",
+                                args: [BigInt(idx)],
+                              });
+                              notification.success(`${m.days}-day streak bonus claimed!`);
+                            } catch {
+                              notification.error("Failed to claim streak bonus");
+                            }
+                          }}
+                        >
+                          {isClaimingStreak ? <span className="loading loading-spinner loading-xs"></span> : "Claim"}
+                        </button>
+                      ) : claimed ? (
+                        <span className="badge badge-ghost badge-sm">Claimed</span>
+                      ) : (
+                        <span className="text-xs text-base-content/30">Locked</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
