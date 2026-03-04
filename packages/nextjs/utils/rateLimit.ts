@@ -39,9 +39,14 @@ export interface RateLimitConfig {
  * or null if the request is within limits.
  */
 export function checkRateLimit(request: NextRequest, config: RateLimitConfig): NextResponse | null {
+  // Prefer platform-verified IP (e.g. Vercel sets request.ip), then x-real-ip
+  // (set by nginx/Cloudflare), then rightmost x-forwarded-for entry (nearest
+  // trusted proxy), to prevent trivial rate-limit bypass via header spoofing.
+  const xff = request.headers.get("x-forwarded-for");
   const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     (request as NextRequest & { ip?: string }).ip ||
+    request.headers.get("x-real-ip")?.trim() ||
+    xff?.split(",").pop()?.trim() ||
     "unknown";
   // Namespace by route path so different API routes don't share counters
   const key = `${ip}:${request.nextUrl.pathname}`;
