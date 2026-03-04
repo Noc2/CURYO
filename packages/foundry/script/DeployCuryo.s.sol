@@ -120,7 +120,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // RoundVotingEngine proxy
         ERC1967Proxy votingEngineProxy = new ERC1967Proxy(
             address(votingEngineImpl),
-            abi.encodeCall(RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry), false))
+            abi.encodeCall(
+                RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry), false)
+            )
         );
         RoundVotingEngine votingEngine = RoundVotingEngine(address(votingEngineProxy));
 
@@ -323,9 +325,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 13. Renounce deployer's temporary roles
         // In mock mode: deployer IS governance, so don't renounce (need roles for dev)
         if (!isMockMode) {
-            // Grant MINTER_ROLE to dev faucet account (testnets only — blocked on Celo mainnet)
+            // Grant MINTER_ROLE to dev faucet account (whitelisted testnets only)
             address devFaucet = vm.envOr("DEV_FAUCET_ADDRESS", address(0));
-            if (devFaucet != address(0) && block.chainid != 42220) {
+            bool isTestnet = (block.chainid == 44787 || block.chainid == 11142220);
+            if (devFaucet != address(0) && isTestnet) {
                 crepToken.grantRole(crepToken.MINTER_ROLE(), devFaucet);
                 voterIdNFT.addMinter(devFaucet);
                 console.log("Granted MINTER_ROLE to dev faucet:", devFaucet);
