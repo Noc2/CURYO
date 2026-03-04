@@ -80,6 +80,7 @@ app.use("/*", async (c, next) => {
 
 // Enable CORS for frontend access (restrict via CORS_ORIGIN in production, comma-separated)
 const DEFAULT_CORS_ORIGINS = [
+  "https://curyo.xyz",
   "http://localhost:3000",
   "http://localhost:3001",
   "http://127.0.0.1:3000",
