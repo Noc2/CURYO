@@ -79,14 +79,23 @@ app.use("/*", async (c, next) => {
 });
 
 // Enable CORS for frontend access (restrict via CORS_ORIGIN in production, comma-separated)
+const DEFAULT_CORS_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+];
 const corsOrigin = process.env.CORS_ORIGIN;
+const allowedOrigins = corsOrigin
+  ? corsOrigin.split(",").map(o => o.trim())
+  : DEFAULT_CORS_ORIGINS;
 if (!corsOrigin) {
-  console.warn("[ponder] WARNING: CORS_ORIGIN not set — allowing all origins. Set CORS_ORIGIN in production.");
+  console.warn("[ponder] CORS_ORIGIN not set — allowing localhost only. Set CORS_ORIGIN for production domains.");
 }
 app.use(
   "/*",
   cors({
-    origin: corsOrigin ? corsOrigin.split(",").map(o => o.trim()) : "*",
+    origin: allowedOrigins,
   }),
 );
 
