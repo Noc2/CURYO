@@ -76,6 +76,9 @@ contract RoundVotingEngine is
     error NoParticipationRate();
     error IndexOutOfBounds();
     error IdentityAlreadyCommitted();
+    error StreakTooShort();
+    error MilestoneAlreadyClaimed();
+    error InvalidMilestoneIndex();
 
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -88,6 +91,16 @@ contract RoundVotingEngine is
     uint256 public constant MAX_STAKE = 100e6; // 100 cREP (6 decimals)
     uint256 public constant VOTE_COOLDOWN = 24 hours; // Time-based cooldown per content per voter
     uint256 public constant MAX_CIPHERTEXT_SIZE = 10_240; // 10 KB max ciphertext to prevent storage bloat
+
+    // --- Streak Milestone Constants ---
+    uint256 private constant STREAK_M1_DAYS = 7;
+    uint256 private constant STREAK_M1_BASE = 10e6;    // 10 cREP
+    uint256 private constant STREAK_M2_DAYS = 30;
+    uint256 private constant STREAK_M2_BASE = 50e6;    // 50 cREP
+    uint256 private constant STREAK_M3_DAYS = 90;
+    uint256 private constant STREAK_M3_BASE = 200e6;   // 200 cREP
+    uint256 private constant STREAK_INITIAL_RATE_BPS = 9000;
+    uint256 private constant STREAK_MILESTONE_COUNT = 3;
 
     // --- State ---
     IERC20 public crepToken;
@@ -211,6 +224,7 @@ contract RoundVotingEngine is
     event KeeperRewardUpdated(uint256 keeperReward);
     event KeeperRewardPoolFunded(address indexed funder, uint256 amount);
     event KeeperRewarded(address indexed keeper, uint256 amount, string operation);
+    event StreakBonusClaimed(address indexed voter, uint256 milestoneDays, uint256 amount);
 
     /// @dev Only callable by this contract itself (for try-catch external wrappers).
     modifier onlySelf() {
@@ -485,6 +499,9 @@ contract RoundVotingEngine is
 
         // Record cooldown
         lastVoteTimestamp[contentId][msg.sender] = block.timestamp;
+
+        // Update voting streak
+        _updateStreak(msg.sender);
 
         emit VoteCommitted(contentId, roundId, msg.sender, commitHash, stakeAmount);
     }
@@ -809,6 +826,72 @@ contract RoundVotingEngine is
         }
 
         emit ParticipationRewardClaimed(contentId, roundId, msg.sender, paidReward);
+    }
+
+    // =========================================================================
+    // STREAK BONUSES
+    // =========================================================================
+
+    /// @notice Claim a streak milestone bonus. Pull-based: voter calls directly.
+    /// @param milestoneIndex 0 = 7-day, 1 = 30-day, 2 = 90-day
+    function claimStreakBonus(uint256 milestoneIndex) external nonReentrant {
+        if (address(participationPool) == address(0)) revert NoPool();
+        (uint256 mDays, uint256 mBase) = _getStreakMilestone(milestoneIndex);
+        if (voterCurrentStreak[msg.sender] < mDays) revert StreakTooShort();
+        if (voterLastMilestoneDay[msg.sender] >= mDays) revert MilestoneAlreadyClaimed();
+
+        voterLastMilestoneDay[msg.sender] = mDays;
+
+        uint256 scaled = mBase * participationPool.getCurrentRateBps() / STREAK_INITIAL_RATE_BPS;
+        if (scaled == 0) return;
+
+        uint256 paid = participationPool.distributeReward(msg.sender, scaled);
+        emit StreakBonusClaimed(msg.sender, mDays, paid);
+    }
+
+    /// @dev Update voter's daily voting streak. Called at end of _commitVote.
+    function _updateStreak(address voter) internal {
+        uint256 today = block.timestamp / 86400;
+        uint256 lastDay = voterLastActiveDay[voter];
+        uint256 currentStreak = voterCurrentStreak[voter];
+
+        // Already counted today (but not first-ever vote where both are 0)
+        if (lastDay == today && currentStreak > 0) return;
+
+        if (currentStreak > 0 && lastDay == today - 1) {
+            voterCurrentStreak[voter] = currentStreak + 1;
+        } else {
+            voterCurrentStreak[voter] = 1;
+            if (currentStreak > 0) {
+                voterLastMilestoneDay[voter] = 0; // reset milestones on streak break
+            }
+        }
+        voterLastActiveDay[voter] = today;
+    }
+
+    /// @dev Returns (milestoneDays, baseBonus) for a given milestone index.
+    function _getStreakMilestone(uint256 index) internal pure returns (uint256 days_, uint256 baseBonus) {
+        if (index == 0) return (STREAK_M1_DAYS, STREAK_M1_BASE);
+        if (index == 1) return (STREAK_M2_DAYS, STREAK_M2_BASE);
+        if (index == 2) return (STREAK_M3_DAYS, STREAK_M3_BASE);
+        revert InvalidMilestoneIndex();
+    }
+
+    /// @notice Get a voter's current streak info.
+    function getVoterStreakInfo(address voter) external view returns (
+        uint256 currentStreak, uint256 lastActiveDay, uint256 lastMilestoneDay_
+    ) {
+        return (voterCurrentStreak[voter], voterLastActiveDay[voter], voterLastMilestoneDay[voter]);
+    }
+
+    /// @notice Get streak milestone config by index.
+    function getStreakMilestone(uint256 index) external pure returns (uint256 days_, uint256 baseBonus) {
+        return _getStreakMilestone(index);
+    }
+
+    /// @notice Get the number of streak milestones.
+    function getStreakMilestoneCount() external pure returns (uint256) {
+        return STREAK_MILESTONE_COUNT;
     }
 
     // =========================================================================
@@ -1161,6 +1244,11 @@ contract RoundVotingEngine is
     // One vote per identity per round
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public hasTokenIdCommitted;
 
+    // --- Streak Tracking ---
+    mapping(address => uint256) public voterLastActiveDay;    // unix day number
+    mapping(address => uint256) public voterCurrentStreak;    // consecutive days
+    mapping(address => uint256) public voterLastMilestoneDay; // prevents double-payment, resets on streak break
+
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[25] private __gap;
+    uint256[22] private __gap;
 }
