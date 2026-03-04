@@ -86,8 +86,7 @@ async function main() {
         result.roundsSettled +
         result.roundsCancelled +
         result.votesRevealed +
-        result.contentMarkedDormant +
-        result.streakBonusesPaid;
+        result.contentMarkedDormant;
       if (total > 0) {
         logger.info("Run complete", { ...result, durationMs: duration });
       }
