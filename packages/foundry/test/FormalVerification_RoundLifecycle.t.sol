@@ -54,9 +54,7 @@ contract FormalVerification_RoundLifecycleTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -141,7 +139,6 @@ contract FormalVerification_RoundLifecycleTest is Test {
         }
         RoundLib.Round memory r2 = engine.getRound(cid, roundId);
         if (r2.thresholdReachedAt > 0) {
-            vm.warp(r2.thresholdReachedAt + EPOCH_DURATION + 1);
             try engine.settleRound(cid, roundId) { } catch { }
         }
     }
@@ -308,7 +305,7 @@ contract FormalVerification_RoundLifecycleTest is Test {
     // ==================== Test 7: Settlement Requires Epoch End and Min Voters ====================
 
     /// @notice Before epoch ends, settlement is not possible. After epoch ends and minVoters reveals,
-    ///         settlement becomes available after the settlement delay.
+    ///         settlement succeeds immediately.
     function test_Settlement_RequiresEpochEndAndMinVoters() public {
         uint256 cid = _submit();
 
@@ -332,21 +329,16 @@ contract FormalVerification_RoundLifecycleTest is Test {
         RoundLib.Round memory afterReveal = engine.getRound(cid, rid);
         assertGt(afterReveal.thresholdReachedAt, 0, "Threshold reached after minVoters reveals");
 
-        // Cannot settle before settlement delay (thresholdReachedAt + epochDuration)
-        vm.expectRevert(RoundVotingEngine.SettlementDelayNotElapsed.selector);
-        engine.settleRound(cid, rid);
-
-        // After settlement delay: settleRound succeeds
-        vm.warp(afterReveal.thresholdReachedAt + EPOCH_DURATION + 1);
+        // Settlement succeeds immediately after minVoters revealed
         engine.settleRound(cid, rid);
 
         RoundLib.Round memory settled = engine.getRound(cid, rid);
-        assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Settled after delay");
+        assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Settled after reveals");
     }
 
     // ==================== Test 8: One-Sided Votes — UP Wins Consensus ====================
 
-    /// @notice When only UP votes exist and threshold is reached, UP wins after settlement delay.
+    /// @notice When only UP votes exist and threshold is reached, UP wins after settlement.
     function test_ConsensusSettlement_OneSided_UpWins() public {
         uint256 cid = _submit();
 
@@ -367,8 +359,7 @@ contract FormalVerification_RoundLifecycleTest is Test {
         RoundLib.Round memory afterReveal = engine.getRound(cid, rid);
         assertGt(afterReveal.thresholdReachedAt, 0, "Threshold reached");
 
-        // Wait out settlement delay and settle
-        vm.warp(afterReveal.thresholdReachedAt + EPOCH_DURATION + 1);
+        // Settle immediately after reveals
         engine.settleRound(cid, rid);
 
         RoundLib.Round memory afterSettle = engine.getRound(cid, rid);
@@ -397,8 +388,7 @@ contract FormalVerification_RoundLifecycleTest is Test {
         RoundLib.Round memory afterReveal = engine.getRound(cid, rid);
         assertGt(afterReveal.thresholdReachedAt, 0, "Threshold reached");
 
-        // Wait for settlement delay and settle
-        vm.warp(afterReveal.thresholdReachedAt + EPOCH_DURATION + 1);
+        // Settle immediately after reveals
         engine.settleRound(cid, rid);
 
         RoundLib.Round memory tied = engine.getRound(cid, rid);

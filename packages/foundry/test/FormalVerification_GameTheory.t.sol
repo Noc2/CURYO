@@ -57,9 +57,7 @@ contract FormalVerification_GameTheoryTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry))
-                    )
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
                 )
             )
         );
@@ -144,7 +142,6 @@ contract FormalVerification_GameTheoryTest is Test {
         }
         RoundLib.Round memory r2 = engine.getRound(cid, roundId);
         if (r2.thresholdReachedAt > 0) {
-            vm.warp(r2.thresholdReachedAt + 1 hours + 1);
             try engine.settleRound(cid, roundId) { } catch { }
         }
     }
@@ -539,10 +536,10 @@ contract FormalVerification_GameTheoryTest is Test {
         assertEq(reserve, 100_000e6 - 20_000_000, "Net drain = 20 cREP");
     }
 
-    // ==================== Test 12: Settlement Delay - Cannot Settle Before Epoch Ends ====================
+    // ==================== Test 12: Settlement After Reveals ====================
 
-    /// @notice settleRound before epoch ends reverts (EpochNotEnded or SettlementDelayNotElapsed).
-    function test_SettlementDelay_CannotSettleBeforeEpochEnds() public {
+    /// @notice After epoch ends and all votes are revealed, settlement succeeds immediately.
+    function test_Settlement_SucceedsAfterReveals() public {
         uint256 cid = _submit();
 
         _vote(v[0], cid, true, 50e6);
@@ -566,17 +563,11 @@ contract FormalVerification_GameTheoryTest is Test {
             engine.revealVoteByCommitKey(cid, rid, keys[i], up, s);
         }
 
-        // Immediately after reveal — settlement delay not elapsed yet
-        vm.expectRevert(RoundVotingEngine.SettlementDelayNotElapsed.selector);
-        engine.settleRound(cid, rid);
-
-        // After settlement delay — settleRound succeeds
-        RoundLib.Round memory r2 = engine.getRound(cid, rid);
-        vm.warp(r2.thresholdReachedAt + 1 hours + 1);
+        // Settlement succeeds immediately after minVoters revealed
         engine.settleRound(cid, rid);
 
         RoundLib.Round memory afterForce = engine.getRound(cid, rid);
-        assertEq(uint256(afterForce.state), uint256(RoundLib.RoundState.Settled), "Round settled after delay");
+        assertEq(uint256(afterForce.state), uint256(RoundLib.RoundState.Settled), "Round settled after reveals");
     }
 
     // ==================== Test 13: Settlement Only Possible After Enough Reveals ====================
