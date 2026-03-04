@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolve4, resolve6 } from "dns/promises";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "~~/lib/db";
 import { urlValidations } from "~~/lib/db/schema";
@@ -8,12 +9,33 @@ import { resolveEmbed } from "~~/utils/resolveEmbed";
 
 const RATE_LIMIT_GET = { limit: 100, windowMs: 60_000 };
 
+/** Check whether an IP address belongs to a private/reserved range. */
+function isPrivateIp(ip: string): boolean {
+  // IPv4
+  const parts = ip.split(".").map(Number);
+  if (parts.length === 4 && parts.every(p => p >= 0 && p <= 255)) {
+    const [a, b] = parts;
+    if (a === 0) return true; // 0.0.0.0/8
+    if (a === 10) return true; // 10.0.0.0/8
+    if (a === 127) return true; // 127.0.0.0/8
+    if (a === 169 && b === 254) return true; // 169.254.0.0/16 (link-local)
+    if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
+    if (a === 192 && b === 168) return true; // 192.168.0.0/16
+  }
+  // IPv6
+  const lower = ip.toLowerCase();
+  if (lower === "::1" || lower === "::") return true;
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return true; // unique local
+  if (lower.startsWith("fe80")) return true; // link-local
+  return false;
+}
+
 /**
  * Block URLs that could be used for SSRF (internal network probing).
  * Rejects: non-HTTPS, IP-address hostnames, localhost, *.local, *.internal,
- * and single-label hostnames (no dots).
+ * single-label hostnames (no dots), and hostnames that resolve to private IPs.
  */
-function isSafeUrl(url: string): boolean {
+async function isSafeUrl(url: string): Promise<boolean> {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -39,6 +61,19 @@ function isSafeUrl(url: string): boolean {
 
   // Reject IPv6 addresses (bracketed in URLs, parsed hostname strips brackets)
   if (hostname.startsWith("[") || hostname.includes(":")) return false;
+
+  // DNS rebinding protection: resolve hostname and reject private/reserved IPs.
+  // Note: TOCTOU race exists (fetch may resolve differently), but this raises
+  // the bar significantly against DNS rebinding attacks.
+  try {
+    const ipv4 = await resolve4(hostname).catch(() => [] as string[]);
+    const ipv6 = await resolve6(hostname).catch(() => [] as string[]);
+    const allIps = [...ipv4, ...ipv6];
+    if (allIps.length === 0) return false;
+    if (allIps.some(isPrivateIp)) return false;
+  } catch {
+    return false;
+  }
 
   return true;
 }
@@ -203,13 +238,30 @@ async function validateUrl(url: string): Promise<boolean> {
       }
 
       case "generic": {
-        if (!isSafeUrl(url)) return false;
-        // HEAD request with timeout for unknown platforms
+        if (!(await isSafeUrl(url))) return false;
+        // HEAD request with manual redirect handling to prevent SSRF via open redirects
         const res = await fetch(url, {
           method: "HEAD",
-          redirect: "follow",
+          redirect: "manual",
           signal: AbortSignal.timeout(10_000),
         });
+        if (res.status >= 300 && res.status < 400) {
+          const location = res.headers.get("location");
+          if (!location) return false;
+          let target: string;
+          try {
+            target = new URL(location, url).toString();
+          } catch {
+            return false;
+          }
+          if (!(await isSafeUrl(target))) return false;
+          const res2 = await fetch(target, {
+            method: "HEAD",
+            redirect: "manual",
+            signal: AbortSignal.timeout(10_000),
+          });
+          return res2.ok || (res2.status >= 300 && res2.status < 400);
+        }
         return res.ok;
       }
 
