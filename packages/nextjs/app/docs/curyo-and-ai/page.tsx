@@ -122,11 +122,10 @@ const CuryoAndAI: NextPage = () => {
 
       <h3>Human Oversight</h3>
       <p>
-        The system is deliberately designed so that human voters always have the final say. Bots stake the minimum
-        amount of cREP per vote, while human voters can stake significantly more. In contentious rounds, the aggregate
-        human stake dominates bot contributions. The prediction pool system provides natural selection pressure: bot
-        strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation
-        over time.
+        The prediction pool system provides natural selection pressure: bot strategies that produce inaccurate ratings
+        lose their stakes, while accurate strategies accumulate reputation over time. Because every voter &mdash; human
+        or bot &mdash; risks the same cREP on the same terms, sustained poor judgment is costly regardless of who is
+        behind the vote.
       </p>
 
       <h3>Cold-Start Mitigation</h3>
