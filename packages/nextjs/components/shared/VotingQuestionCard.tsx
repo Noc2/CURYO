@@ -6,7 +6,6 @@ import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RewardRevealModal } from "~~/components/shared/RewardRevealModal";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
-import { ExpectedPayoutBadge } from "~~/components/swipe/ExpectedPayoutBadge";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
@@ -357,11 +356,6 @@ export function VotingQuestionCard({
         {/* Round stats - below progress, left aligned */}
         <div className="mb-3 flex justify-start">
           <RoundStats contentId={contentId} categoryId={categoryId} />
-        </div>
-
-        {/* Expected payout badge */}
-        <div className="mb-3 flex justify-start">
-          <ExpectedPayoutBadge contentId={contentId} />
         </div>
 
         {/* Rating history chart at the bottom */}
