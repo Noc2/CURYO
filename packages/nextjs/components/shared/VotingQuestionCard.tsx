@@ -222,11 +222,6 @@ export function VotingQuestionCard({
         {/* Vote error message */}
         {error && <p className="text-base text-center text-red-400 mb-2">{error}</p>}
 
-        {/* Expected payout badge */}
-        <div className="flex justify-center mb-2">
-          <ExpectedPayoutBadge contentId={contentId} />
-        </div>
-
         {/* Voting arrows - centered below question */}
         <div className="flex items-center justify-center gap-2 lg:gap-3 mb-3">
           {address ? (
@@ -362,6 +357,11 @@ export function VotingQuestionCard({
         {/* Round stats - below progress, left aligned */}
         <div className="mb-3 flex justify-start">
           <RoundStats contentId={contentId} categoryId={categoryId} />
+        </div>
+
+        {/* Expected payout badge */}
+        <div className="mb-3 flex justify-start">
+          <ExpectedPayoutBadge contentId={contentId} />
         </div>
 
         {/* Rating history chart at the bottom */}

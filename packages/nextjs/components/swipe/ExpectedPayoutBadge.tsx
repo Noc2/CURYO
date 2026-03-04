@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useExpectedPayout } from "~~/hooks/useExpectedPayout";
 
 const STORAGE_KEY = "curyo-last-stake";
@@ -40,20 +41,26 @@ export function ExpectedPayoutBadge({ contentId }: ExpectedPayoutBadgeProps) {
 
   const { potentialWinUp, potentialWinDown, potentialLoss } = useExpectedPayout(contentId, stake);
 
-  // Don't show if no meaningful data
-  if (potentialWinUp === 0n && potentialWinDown === 0n && potentialLoss === 0n) return null;
-
+  // Hide when both win estimates are 0
   const fmtWin = Math.max(Number(potentialWinUp), Number(potentialWinDown));
+  if (fmtWin === 0 && potentialLoss === 0n) return null;
+  if (fmtWin === 0) return null;
+
   const fmtLoss = Number(potentialLoss);
   const winDisplay = (fmtWin / 1e6).toFixed(0);
   const lossDisplay = (fmtLoss / 1e6).toFixed(0);
 
   return (
-    <div className="flex items-center gap-1.5 text-xs tabular-nums">
+    <div className="flex items-center gap-1.5 text-base text-base-content/60 tabular-nums">
+      <span className="text-base-content/60">Est. payout</span>
+      <InfoTooltip
+        text="Estimated reward if you win vs. loss if the majority disagrees. Includes participation bonus. Actual payout depends on final vote distribution."
+        position="bottom"
+      />
       <span className="text-success">+{winDisplay}</span>
       <span className="text-base-content/30">/</span>
       <span className="text-error">-{lossDisplay}</span>
-      <span className="text-base-content/30">cREP</span>
+      <span className="text-base-content/40">cREP</span>
     </div>
   );
 }

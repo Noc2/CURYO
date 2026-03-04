@@ -1,11 +1,13 @@
 "use client";
 
+import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
 
 interface ExpectedPayout {
   potentialWinUp: bigint; // net gain if voting UP wins
   potentialWinDown: bigint; // net gain if voting DOWN wins
   potentialLoss: bigint; // stake amount (what you lose)
+  participationBonus: bigint; // participation pool bonus
 }
 
 /**
@@ -15,12 +17,16 @@ interface ExpectedPayout {
  */
 export function useExpectedPayout(contentId?: bigint, stakeAmount?: bigint): ExpectedPayout {
   const { round } = useRoundInfo(contentId);
+  const { rateBps } = useParticipationRate();
 
   const stake = stakeAmount ?? 0n;
   const isOpen = round?.state === 0 && (round?.startTime ?? 0) > 0;
 
+  // Participation bonus: stake * rateBps / 10000
+  const participationBonus = rateBps !== undefined ? (stake * BigInt(rateBps)) / 10000n : 0n;
+
   if (!isOpen || stake === 0n) {
-    return { potentialWinUp: 0n, potentialWinDown: 0n, potentialLoss: stake };
+    return { potentialWinUp: 0n, potentialWinDown: 0n, potentialLoss: stake, participationBonus: 0n };
   }
 
   const upPool = round?.upPool ?? 0n;
@@ -37,8 +43,9 @@ export function useExpectedPayout(contentId?: bigint, stakeAmount?: bigint): Exp
   };
 
   return {
-    potentialWinUp: calcWin(upPool, downPool),
-    potentialWinDown: calcWin(downPool, upPool),
+    potentialWinUp: calcWin(upPool, downPool) + participationBonus,
+    potentialWinDown: calcWin(downPool, upPool) + participationBonus,
     potentialLoss: stake,
+    participationBonus,
   };
 }
