@@ -182,7 +182,25 @@ export function useRoundVote() {
         args: [contentId, commitHash, ciphertext, stakeWei, frontend],
       });
 
-      // Immediately refetch voting stakes so the navbar staked amount updates
+      // Optimistically update voting stakes so the navbar shows the new total
+      // immediately, without waiting for Ponder to index the event.
+      const stakeDisplay = stakeWei;
+      queryClient.setQueriesData<{
+        data: { activeStaked: number; activeCount: number; totalVotingStake: number };
+        source: string;
+      }>({ queryKey: ["ponder-fallback", "votingStakes"] }, old => {
+        if (!old?.data) return old;
+        const added = Number(stakeDisplay) / 1e6;
+        return {
+          ...old,
+          data: {
+            activeStaked: old.data.activeStaked + added,
+            activeCount: old.data.activeCount + 1,
+            totalVotingStake: old.data.totalVotingStake + added,
+          },
+        };
+      });
+      // Also invalidate so the real indexed data replaces the optimistic value once available
       queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes"] });
 
       return true;
