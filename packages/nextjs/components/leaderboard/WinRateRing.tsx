@@ -78,7 +78,7 @@ export function WinRateRing({
       {/* Centre text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
         <span className="text-xl font-semibold font-mono tabular-nums leading-tight">{pct}</span>
-        <span className="text-xs text-base-content/50 font-mono tabular-nums">{record}</span>
+        <span className="text-sm text-base-content/50 font-mono tabular-nums">{record}</span>
       </div>
     </div>
   );

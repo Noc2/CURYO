@@ -42,11 +42,11 @@ export function VoterAccuracyStats() {
         <div className="flex flex-col gap-2">
           {/* Streak pills */}
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-base">
               <span className="text-base-content/50">Streak</span>
               <span className="font-mono tabular-nums">{streakLabel}</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-base">
               <span className="text-base-content/50">Best</span>
               <span className="font-mono tabular-nums">{stats.bestWinStreak}W</span>
             </div>
@@ -54,11 +54,11 @@ export function VoterAccuracyStats() {
 
           {/* Stake summary */}
           <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-base">
               <span className="text-base-content/50">Won</span>
               <span className="font-mono tabular-nums text-success">{formatStake(stats.totalStakeWon)} cREP</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-base">
               <span className="text-base-content/50">Lost</span>
               <span className="font-mono tabular-nums text-error">{formatStake(stats.totalStakeLost)} cREP</span>
             </div>

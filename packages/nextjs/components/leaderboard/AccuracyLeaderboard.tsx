@@ -62,7 +62,7 @@ export function AccuracyLeaderboard() {
       <div className="flex flex-wrap gap-2">
         {/* Category filter */}
         <select
-          className="select select-sm bg-base-200 text-sm rounded-full"
+          className="select select-sm bg-base-200 text-base rounded-full"
           value={categoryId}
           onChange={e => setCategoryId(e.target.value)}
         >
@@ -76,7 +76,7 @@ export function AccuracyLeaderboard() {
 
         {/* Sort toggle */}
         <select
-          className="select select-sm bg-base-200 text-sm rounded-full"
+          className="select select-sm bg-base-200 text-base rounded-full"
           value={sortBy}
           onChange={e => setSortBy(e.target.value as SortOption)}
         >
@@ -87,7 +87,7 @@ export function AccuracyLeaderboard() {
 
         {/* Min votes filter */}
         <select
-          className="select select-sm bg-base-200 text-sm rounded-full"
+          className="select select-sm bg-base-200 text-base rounded-full"
           value={minVotes}
           onChange={e => setMinVotes(e.target.value as MinVotesOption)}
         >

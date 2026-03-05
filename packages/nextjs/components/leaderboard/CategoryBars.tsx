@@ -20,7 +20,7 @@ export function CategoryBars({ categories }: { categories: CategoryStat[] }) {
 
   return (
     <div className="space-y-1.5">
-      <span className="text-sm text-base-content/40">By category</span>
+      <span className="text-base text-base-content/40">By category</span>
       <div className="space-y-2">
         {categories.map(cat => {
           const total = cat.totalWins + cat.totalLosses;
@@ -30,7 +30,7 @@ export function CategoryBars({ categories }: { categories: CategoryStat[] }) {
           return (
             <div key={cat.id} className="space-y-0.5">
               {/* Label row */}
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-base">
                 <span className="text-base-content/60 truncate mr-2">{cat.categoryName ?? `#${cat.categoryId}`}</span>
                 <span className="font-mono tabular-nums text-base-content/50 shrink-0">
                   {formatRate(cat.winRate)}
