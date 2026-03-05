@@ -207,33 +207,70 @@ for _ in {1..5}; do
   cast rpc anvil_mine --rpc-url "$RPC" > /dev/null 2>&1
 done
 
-# Vote on content items 1, 2, and 3 using public vote() function
-# vote(uint256 contentId, bool isUp, uint256 stakeAmount, address frontend)
-# Voter 1 votes UP on content 1 and 2
-# Voter 2 votes DOWN on content 1, UP on content 3
+# Vote on content items 1, 2, and 3 using commitVote (tlock commit-reveal).
+# commitVote(uint256 contentId, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)
+# The contract only checks ciphertext length > 0 && <= 10KB; any bytes work for seeding.
+# commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
+#
+# Voter 1 (account #9) votes UP on content 1 and 2
+# Voter 2 (account #10) votes DOWN on content 1, UP on content 3
 
-echo "Voter 1 voting UP on content 1..."
-cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1
-cast send "$VOTING_ENGINE" "vote(uint256,bool,uint256,address)" 1 true "$VOTE_STAKE" "$ZERO_ADDR" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed)"
+# Helper: generate commitHash and submit commitVote
+# Usage: seed_commit <contentId> <isUp:true|false> <salt_hex> <private_key>
+seed_commit() {
+  local contentId="$1"
+  local isUp="$2"
+  local salt="$3"
+  local privKey="$4"
+
+  # isUp: true=01, false=00 (1 byte)
+  local isUpByte
+  if [ "$isUp" = "true" ]; then isUpByte="01"; else isUpByte="00"; fi
+
+  # commitHash = keccak256(abi.encodePacked(bool isUp, bytes32 salt, uint256 contentId))
+  # encodePacked: 1 byte bool + 32 bytes salt + 32 bytes contentId
+  local contentIdHex
+  contentIdHex=$(printf '%064x' "$contentId")
+  local packed="${isUpByte}${salt}${contentIdHex}"
+  local commitHash
+  commitHash=$(cast keccak "0x${packed}")
+
+  # Use a dummy ciphertext (contract only checks length > 0)
+  local ciphertext="0xdeadbeef"
+
+  cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" \
+    --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1
+
+  cast send "$VOTING_ENGINE" \
+    "commitVote(uint256,bytes32,bytes,uint256,address)" \
+    "$contentId" "$commitHash" "$ciphertext" "$VOTE_STAKE" "$ZERO_ADDR" \
+    --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1 || { echo "  (Commit may have failed)"; return 1; }
+}
+
+# Use deterministic salts for reproducibility
+SALT1A="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+SALT1B="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+SALT2A="cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+SALT2B="dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+
+echo "Voter 1 committing UP on content 1..."
+seed_commit 1 true "$SALT1A" "$VOTER1_KEY"
 echo "  Done!"
 
-echo "Voter 1 voting UP on content 2..."
-cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1
-cast send "$VOTING_ENGINE" "vote(uint256,bool,uint256,address)" 2 true "$VOTE_STAKE" "$ZERO_ADDR" --private-key "$VOTER1_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed)"
+echo "Voter 1 committing UP on content 2..."
+seed_commit 2 true "$SALT1B" "$VOTER1_KEY"
 echo "  Done!"
 
-echo "Voter 2 voting DOWN on content 1..."
-cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1
-cast send "$VOTING_ENGINE" "vote(uint256,bool,uint256,address)" 1 false "$VOTE_STAKE" "$ZERO_ADDR" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed)"
+echo "Voter 2 committing DOWN on content 1..."
+seed_commit 1 false "$SALT2A" "$VOTER2_KEY"
 echo "  Done!"
 
-echo "Voter 2 voting UP on content 3..."
-cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1
-cast send "$VOTING_ENGINE" "vote(uint256,bool,uint256,address)" 3 true "$VOTE_STAKE" "$ZERO_ADDR" --private-key "$VOTER2_KEY" --rpc-url "$RPC" > /dev/null 2>&1 || echo "  (Vote may have failed)"
+echo "Voter 2 committing UP on content 3..."
+seed_commit 3 true "$SALT2B" "$VOTER2_KEY"
 echo "  Done!"
 
 echo ""
-echo "=== Voting complete: 4 public votes cast ==="
-echo "  Content 1: 2 votes (1 up, 1 down)"
-echo "  Content 2: 1 vote (1 up)"
-echo "  Content 3: 1 vote (1 up)"
+echo "=== Voting complete: 4 commit-reveal votes submitted ==="
+echo "  Content 1: 2 commits (1 up, 1 down)"
+echo "  Content 2: 1 commit (1 up)"
+echo "  Content 3: 1 commit (1 up)"
