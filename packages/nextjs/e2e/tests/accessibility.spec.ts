@@ -39,10 +39,12 @@ test.describe("Accessibility basics", () => {
 
     const canVote = await findVoteableContent(page);
     expect(canVote, "Should find at least one voteable content via thumbnail grid").toBeTruthy();
+    // Ponder polling triggers React re-renders that detach/reattach the vote button.
+    // Use toPass() retry pattern to handle DOM detachment during click.
     const voteUpBtn = page.getByRole("button", { name: "Vote up" });
-    await voteUpBtn.waitFor({ state: "visible", timeout: 10_000 });
-    await page.waitForTimeout(500); // let React settle after Ponder polling re-renders
-    await voteUpBtn.click();
+    await expect(async () => {
+      await voteUpBtn.click({ timeout: 5_000 });
+    }).toPass({ timeout: 30_000, intervals: [500, 1_000, 2_000] });
 
     // Dialog should have proper ARIA role and label
     const dialog = page.getByRole("dialog", { name: "Select stake amount" });
