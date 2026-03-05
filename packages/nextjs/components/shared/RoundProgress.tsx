@@ -114,7 +114,7 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
       {/* Epoch tier badge */}
       {isEpoch1 ? (
         <div className="flex items-center gap-1.5">
-          <span className="badge badge-success badge-sm gap-1 text-base">
+          <span className="badge badge-primary badge-sm gap-1 text-base">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
@@ -129,7 +129,7 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
             position="bottom"
           />
           {epoch1Remaining > 0 && (
-            <span className="text-success/80 tabular-nums text-base">{formatDuration(epoch1Remaining)} left</span>
+            <span className="text-primary/80 tabular-nums text-base">{formatDuration(epoch1Remaining)} left</span>
           )}
         </div>
       ) : (
