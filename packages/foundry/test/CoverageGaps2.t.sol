@@ -13,7 +13,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { IVoterIdNFT } from "../contracts/interfaces/IVoterIdNFT.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { IParticipationPool } from "../contracts/interfaces/IParticipationPool.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -21,95 +21,6 @@ import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 // =========================================================================
 // SHARED MOCKS
 // =========================================================================
-
-contract MockVoterIdNFT2 is IVoterIdNFT {
-    mapping(address => bool) public holders;
-    mapping(address => uint256) public tokenIds;
-    mapping(uint256 => address) public tokenHolders;
-    mapping(uint256 => bool) public usedNullifiers;
-    uint256 private nextTokenId = 1;
-    mapping(bytes32 => uint256) public stakes;
-    mapping(address => address) public holderToDelegate;
-    mapping(address => address) public delegateToHolder;
-
-    function setHolder(address holder) external {
-        holders[holder] = true;
-        if (tokenIds[holder] == 0) {
-            tokenIds[holder] = nextTokenId;
-            tokenHolders[nextTokenId] = holder;
-            nextTokenId++;
-        }
-    }
-
-    function removeHolder(address holder) external {
-        holders[holder] = false;
-    }
-
-    function mint(address to, uint256 nullifier) external returns (uint256) {
-        usedNullifiers[nullifier] = true;
-        holders[to] = true;
-        uint256 id = nextTokenId++;
-        tokenIds[to] = id;
-        tokenHolders[id] = to;
-        return id;
-    }
-
-    function hasVoterId(address holder) external view returns (bool) {
-        return holders[holder];
-    }
-
-    function getTokenId(address holder) external view returns (uint256) {
-        return tokenIds[holder];
-    }
-
-    function getHolder(uint256 tokenId) external view returns (address) {
-        return tokenHolders[tokenId];
-    }
-
-    function recordStake(uint256 contentId, uint256 epochId, uint256 tokenId, uint256 amount) external {
-        bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
-        stakes[key] += amount;
-    }
-
-    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
-        bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
-        return stakes[key];
-    }
-
-    function isNullifierUsed(uint256 nullifier) external view returns (bool) {
-        return usedNullifiers[nullifier];
-    }
-
-    function revokeVoterId(address holder) external {
-        holders[holder] = false;
-    }
-
-    function setDelegate(address delegate) external {
-        holderToDelegate[msg.sender] = delegate;
-        delegateToHolder[delegate] = msg.sender;
-    }
-
-    function removeDelegate() external {
-        address delegate = holderToDelegate[msg.sender];
-        delete delegateToHolder[delegate];
-        delete holderToDelegate[msg.sender];
-    }
-
-    function resolveHolder(address addr) external view returns (address) {
-        if (holders[addr]) return addr;
-        address h = delegateToHolder[addr];
-        if (holders[h]) return h;
-        return address(0);
-    }
-
-    function delegateTo(address holder) external view returns (address) {
-        return holderToDelegate[holder];
-    }
-
-    function delegateOf(address delegate) external view returns (address) {
-        return delegateToHolder[delegate];
-    }
-}
 
 contract MockVotingEngineForFR2 is IRoundVotingEngine {
     uint256 public totalAdded;
@@ -138,7 +49,7 @@ contract FrontendRegistryBranchTest is Test {
     FrontendRegistry public reg;
     CuryoReputation public crep;
     MockVotingEngineForFR2 public engine;
-    MockVoterIdNFT2 public voterNFT;
+    MockVoterIdNFT public voterNFT;
 
     address public admin = address(0xA);
     address public frontend1 = address(0xF1);
@@ -152,7 +63,7 @@ contract FrontendRegistryBranchTest is Test {
         crep = new CuryoReputation(admin, admin);
         crep.grantRole(crep.MINTER_ROLE(), admin);
         engine = new MockVotingEngineForFR2();
-        voterNFT = new MockVoterIdNFT2();
+        voterNFT = new MockVoterIdNFT();
 
         FrontendRegistry impl = new FrontendRegistry();
         reg = FrontendRegistry(
@@ -424,7 +335,7 @@ contract HumanFaucetBranchTest is Test {
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
     CuryoReputation public crep;
-    MockVoterIdNFT2 public voterNFT;
+    MockVoterIdNFT public voterNFT;
 
     address public admin = address(0xA);
     address public governance = address(0xB);
@@ -437,7 +348,7 @@ contract HumanFaucetBranchTest is Test {
         crep = new CuryoReputation(admin, admin);
         crep.grantRole(crep.MINTER_ROLE(), admin);
         mockHub = new MockIdentityVerificationHub();
-        voterNFT = new MockVoterIdNFT2();
+        voterNFT = new MockVoterIdNFT();
         faucet = new HumanFaucet(address(crep), address(mockHub), governance);
         crep.mint(address(faucet), 52_000_000e6);
         faucet.setConfigId(mockHub.MOCK_CONFIG_ID());
@@ -683,7 +594,7 @@ contract HumanFaucetBranchTest is Test {
 contract ContentRegistryCoverageTest is Test {
     ContentRegistry public registry;
     CuryoReputation public crep;
-    MockVoterIdNFT2 public voterNFT;
+    MockVoterIdNFT public voterNFT;
 
     address public admin = address(0xA);
     address public submitter = address(0xB);
@@ -695,7 +606,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.startPrank(admin);
         crep = new CuryoReputation(admin, admin);
         crep.grantRole(crep.MINTER_ROLE(), admin);
-        voterNFT = new MockVoterIdNFT2();
+        voterNFT = new MockVoterIdNFT();
 
         ContentRegistry impl = new ContentRegistry();
         registry = ContentRegistry(
