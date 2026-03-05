@@ -107,9 +107,7 @@ export async function waitForSettlementIndexed(
         if (hasSettledRound) return true;
       }
     } catch (err) {
-      console.warn(
-        `[${label}] content ${contentId} poll error: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      console.warn(`[${label}] content ${contentId} poll error: ${err instanceof Error ? err.message : String(err)}`);
     }
     await new Promise(resolve => setTimeout(resolve, pollInterval));
   }

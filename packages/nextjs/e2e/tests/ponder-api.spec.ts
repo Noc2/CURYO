@@ -101,7 +101,12 @@ test.describe("Ponder API endpoints", () => {
 
   test("GET /profile/:address returns profile or 404", async () => {
     const address = ANVIL_ACCOUNTS.account2.address.toLowerCase();
-    const res = await fetch(`http://localhost:42069/profile/${address}`);
+    // Use retry logic — Ponder may return 429 during rapid test runs
+    let res = await fetch(`http://localhost:42069/profile/${address}`);
+    for (let attempt = 0; attempt < 3 && res.status === 429; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      res = await fetch(`http://localhost:42069/profile/${address}`);
+    }
     // Profile may or may not exist on fresh chain (requires on-chain setProfile tx)
     expect([200, 404]).toContain(res.status);
 

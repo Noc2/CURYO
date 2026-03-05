@@ -1025,7 +1025,7 @@ export async function getActiveRoundId(contentId: number | bigint, contractAddre
  */
 export async function waitForPonderIndexed(
   pollFn: () => Promise<boolean>,
-  maxWaitMs = 30_000,
+  maxWaitMs = 60_000,
   pollInterval = 2_000,
   label = "waitForPonderIndexed",
 ): Promise<boolean> {

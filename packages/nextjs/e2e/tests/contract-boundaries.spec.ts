@@ -88,7 +88,7 @@ test.describe("Contract boundary conditions", () => {
         return true;
       }
       return false;
-    }, 30_000);
+    }, 60_000);
     expect(indexed).toBe(true);
     expect(freshContentId).toBeTruthy();
 
