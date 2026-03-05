@@ -1,5 +1,5 @@
 import { expect, test } from "../fixtures/wallet";
-import { waitForFeedLoaded } from "../helpers/wait-helpers";
+import { findVoteableContent, waitForFeedLoaded } from "../helpers/wait-helpers";
 
 test.describe("Accessibility basics", () => {
   test("main pages have h1 heading", async ({ connectedPage: page }) => {
@@ -34,37 +34,12 @@ test.describe("Accessibility basics", () => {
   });
 
   test("StakeSelector dialog has ARIA attributes", async ({ connectedPage: page }) => {
-    // Navigate to vote page and find voteable content via thumbnail cycling.
-    // The default featured card may be the user's own content, so click through
-    // thumbnails until we find one with a Vote button.
     await page.goto("/vote");
     await waitForFeedLoaded(page);
 
-    const voteBtn = page.getByRole("button", { name: "Vote up" });
-    let canVote = await voteBtn
-      .waitFor({ state: "visible", timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!canVote) {
-      const thumbnails = page.locator("[data-testid='content-thumbnail']");
-      const thumbCount = await thumbnails.count();
-
-      for (let i = 0; i < Math.min(thumbCount, 20); i++) {
-        const thumb = thumbnails.nth(i);
-        if (await thumb.isVisible().catch(() => false)) {
-          await thumb.click();
-          canVote = await voteBtn
-            .waitFor({ state: "visible", timeout: 5_000 })
-            .then(() => true)
-            .catch(() => false);
-          if (canVote) break;
-        }
-      }
-    }
-
+    const canVote = await findVoteableContent(page);
     expect(canVote, "Should find at least one voteable content via thumbnail grid").toBeTruthy();
-    await voteBtn.click();
+    await page.getByRole("button", { name: "Vote up" }).click();
 
     // Dialog should have proper ARIA role and label
     const dialog = page.getByRole("dialog", { name: "Select stake amount" });

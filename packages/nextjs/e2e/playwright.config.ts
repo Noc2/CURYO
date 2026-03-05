@@ -48,6 +48,20 @@ export default defineConfig({
       testMatch: /content-dormancy/,
       dependencies: ["round-cancellation"],
     },
+    // Mobile: opt-in via --project=mobile-phone or --project=mobile-tablet
+    // Install first: npx playwright install webkit
+    {
+      name: "mobile-phone",
+      use: { ...devices["iPhone 12"] },
+      testMatch: /mobile/,
+      dependencies: ["chromium"],
+    },
+    {
+      name: "mobile-tablet",
+      use: { ...devices["iPad Mini"] },
+      testMatch: /mobile/,
+      dependencies: ["chromium"],
+    },
     // Cross-browser: opt-in via --project=firefox or --project=webkit
     // Not included in default run to avoid tripling runtime on shared Anvil state.
     // Install first: npx playwright install firefox webkit
