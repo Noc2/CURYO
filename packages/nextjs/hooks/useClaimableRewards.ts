@@ -8,6 +8,8 @@ import { CommitData, RoundData } from "~~/types/votingTypes";
 // RoundState enum (matching Solidity)
 const RoundState = { Open: 0, Settled: 1, Cancelled: 2, Tied: 3 } as const;
 
+const ZERO_BYTES32 = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
 // epochWeightBps: epoch-1 = 10000 (100%), epoch-2+ = 2500 (25%)
 function epochWeightBps(epochIndex: number): number {
   return epochIndex === 0 ? 10000 : 2500;
@@ -24,14 +26,19 @@ interface ClaimableReward {
 }
 
 /**
- * Hook to check if user has claimable rewards for a specific content from the active round.
- * Uses voterCommitHash + getCommit for tlock commit-reveal (no getVote/hasVoted).
- * Reward is epoch-weighted: effectiveStake * voterPool / weightedWinningStake.
+ * Hook to check if user has claimable rewards for a specific content.
+ *
+ * Round resolution strategy:
+ * 1. Try getActiveRoundId (non-zero when an open round exists)
+ * 2. Fall back to currentRoundId (always points to the latest round, even terminal)
+ * 3. If the user has no commit in that round, check the previous round (roundId - 1)
+ *    — handles the case where a new round started after the user's winning round settled
  */
 export function useClaimableRewards(contentId: bigint): ClaimableReward {
   const { address } = useAccount();
 
-  // Get active round ID (returns 0 for terminal rounds: settled/cancelled/tied)
+  // --- Step 1: Determine candidate round IDs ---
+
   const { data: rawActiveRoundId } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "getActiveRoundId" as any,
@@ -40,34 +47,50 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
   } as any);
   const activeRoundId = (rawActiveRoundId as unknown as bigint) ?? 0n;
 
-  // Fallback: currentRoundId always points to the most recent round (even if settled)
   const { data: rawCurrentRoundId } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "currentRoundId" as any,
     args: [contentId] as any,
-    query: { enabled: contentId !== undefined && activeRoundId === 0n },
+    query: { enabled: contentId !== undefined },
   } as any);
+  const latestRoundId = (rawCurrentRoundId as unknown as bigint) ?? 0n;
 
-  const roundId = activeRoundId > 0n ? activeRoundId : ((rawCurrentRoundId as unknown as bigint) ?? 0n);
+  const primaryRoundId = activeRoundId > 0n ? activeRoundId : latestRoundId;
+  const prevRoundId = primaryRoundId > 1n ? primaryRoundId - 1n : 0n;
 
-  // Get user's commitHash for this round (0 = not committed)
-  const { data: rawCommitHash } = useScaffoldReadContract({
+  // --- Step 2: Check user's commit in primary and previous rounds ---
+
+  const { data: rawPrimaryCommitHash } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "voterCommitHash" as any,
-    args: [contentId, roundId, address] as any,
-    query: { enabled: !!address && roundId > 0n },
+    args: [contentId, primaryRoundId, address] as any,
+    query: { enabled: !!address && primaryRoundId > 0n },
   } as any);
-  const commitHash = rawCommitHash as unknown as `0x${string}` | undefined;
-  const hasCommitted =
-    commitHash != null && commitHash !== "0x0000000000000000000000000000000000000000000000000000000000000000";
+  const primaryCommitHash = rawPrimaryCommitHash as unknown as `0x${string}` | undefined;
+  const hasPrimaryCommit = primaryCommitHash != null && primaryCommitHash !== ZERO_BYTES32;
 
-  // Compute commitKey = keccak256(abi.encodePacked(voter, commitHash)) for getCommit lookup
+  const { data: rawPrevCommitHash } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "voterCommitHash" as any,
+    args: [contentId, prevRoundId, address] as any,
+    query: { enabled: !!address && prevRoundId > 0n && !hasPrimaryCommit },
+  } as any);
+  const prevCommitHash = rawPrevCommitHash as unknown as `0x${string}` | undefined;
+  const hasPrevCommit = prevCommitHash != null && prevCommitHash !== ZERO_BYTES32;
+
+  // --- Step 3: Choose the effective round ---
+
+  const roundId = hasPrimaryCommit ? primaryRoundId : hasPrevCommit ? prevRoundId : primaryRoundId;
+  const commitHash = hasPrimaryCommit ? primaryCommitHash : hasPrevCommit ? prevCommitHash : undefined;
+  const hasCommitted = hasPrimaryCommit || hasPrevCommit;
+
+  // --- Step 4: Read commit data, round state, and reward info for the chosen round ---
+
   const commitKey =
     hasCommitted && address && commitHash
       ? keccak256(encodePacked(["address", "bytes32"], [address as `0x${string}`, commitHash]))
       : undefined;
 
-  // Get the full commit data (stake, epochIndex, isUp, revealed)
   const { data: rawCommitData } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "getCommit" as any,
@@ -75,7 +98,6 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     query: { enabled: !!commitKey },
   } as any);
 
-  // Get round state
   const { data: roundData, isLoading: roundLoading } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "getRound" as any,
@@ -83,7 +105,6 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     query: { enabled: roundId > 0n },
   } as any);
 
-  // Check if already claimed (rewardClaimed mapping in RoundRewardDistributor)
   const { data: alreadyClaimed, isLoading: claimedLoading } = useScaffoldReadContract({
     contractName: "RoundRewardDistributor" as any,
     functionName: "rewardClaimed" as any,
@@ -91,7 +112,6 @@ export function useClaimableRewards(contentId: bigint): ClaimableReward {
     query: { enabled: !!address && roundId > 0n },
   } as any);
 
-  // Get reward pool data
   const { data: voterPool } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "roundVoterPool" as any,
