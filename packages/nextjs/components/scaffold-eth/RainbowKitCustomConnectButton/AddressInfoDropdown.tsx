@@ -125,17 +125,14 @@ export const AddressInfoDropdown = ({
   const isLocalNetwork = targetNetwork.id === hardhat.id && chain?.id === hardhat.id;
   const showFaucet = isLocalNetwork;
 
-  const { claimableItems, totalClaimable, activeStake, refetch: refetchClaimable } = useAllClaimableRewards();
+  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked: votingStaked } = useVotingStakes(address);
   const { claimAll, isClaiming, progress } = useClaimAll();
-  const { earliestDeadline, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
+  const { earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
 
   const claimableFormatted =
     totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
-
-  const activeFormatted =
-    activeStake > 0n ? (Number(activeStake) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
 
   const handleClaimAll = () => {
     claimAll(claimableItems, () => refetchClaimable());
@@ -204,18 +201,6 @@ export const AddressInfoDropdown = ({
           <InfoTooltip text={stakeTooltip} position="bottom" />
         </div>
       )}
-      {activeStake > 0n && (
-        <div
-          className="tooltip tooltip-top text-sm text-base-content/40 text-left px-4 pl-12 cursor-help"
-          data-tip={
-            earliestDeadline
-              ? `Staked in active rounds. Votes revealed after each blind phase. If unresolved after 7 days, stakes are refunded.`
-              : "Staked in active rounds. If unresolved after 7 days, stakes are refunded."
-          }
-        >
-          {activeFormatted} cREP in active votes
-        </div>
-      )}
       {totalClaimable > 0n && (
         <div className="text-left px-4 pl-12 mt-1">
           <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-xs text-white">
@@ -257,18 +242,6 @@ export const AddressInfoDropdown = ({
         <span className="text-base text-base-content hidden xl:inline xl:px-2 items-center gap-1">
           {stakedFormatted} Staked
           <InfoTooltip text={stakeTooltip} position="top" />
-        </span>
-      )}
-      {activeStake > 0n && (
-        <span
-          className="tooltip tooltip-right text-sm text-base-content/40 hidden xl:inline xl:px-2 cursor-help"
-          data-tip={
-            earliestDeadline
-              ? `Staked in active rounds. Votes revealed after each blind phase. If unresolved after 7 days, stakes are refunded.`
-              : "Staked in active rounds. If unresolved after 7 days, stakes are refunded."
-          }
-        >
-          {activeFormatted} cREP in active votes
         </span>
       )}
       {totalClaimable > 0n && (
