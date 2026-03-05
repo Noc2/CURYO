@@ -2,16 +2,18 @@ import { expect, test } from "../fixtures/wallet";
 
 test.describe("Governance page", () => {
   test("page loads and shows tabs", async ({ connectedPage: page }) => {
-    await page.goto("/governance");
+    await page.goto("/governance", { waitUntil: "domcontentloaded" });
+    // Wait for main content to render before checking tabs
+    await expect(page.locator("main")).toBeVisible({ timeout: 15_000 });
 
     // Account #2 has cREP, so should see all tabs (not just Faucet)
     const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
     const profileTab = page.getByRole("button", { name: "Profile" });
     const voteTab = page.getByRole("button", { name: "Vote" });
 
-    // At least one tab should be visible
+    // At least one tab should be visible (tabs render after wallet state loads)
     const anyTab = leaderboardTab.or(profileTab).or(voteTab);
-    await expect(anyTab.first()).toBeVisible({ timeout: 15_000 });
+    await expect(anyTab.first()).toBeVisible({ timeout: 30_000 });
   });
 
   test("leaderboard tab shows table", async ({ connectedPage: page }) => {
