@@ -14,7 +14,6 @@ import {
   PlusCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
-import { CrepNavBadge } from "~~/components/CrepNavBadge";
 import { CuryoLogo } from "~~/components/CuryoLogo";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/RainbowKitCustomConnectButton/AddressInfoDropdown";
@@ -104,7 +103,6 @@ export const HeaderMenuLinks = () => {
             >
               <Icon className="w-6 h-6 shrink-0" style={{ color }} />
               <span className={isActive ? "text-white" : ""}>{label}</span>
-              {label === "cREP" && <CrepNavBadge />}
             </Link>
           </li>
         );
@@ -333,7 +331,6 @@ export const Header = () => {
                   >
                     <Icon className="w-6 h-6 shrink-0" style={{ color }} />
                     <span className={isActive ? "text-white" : ""}>{label}</span>
-                    {label === "cREP" && <CrepNavBadge />}
                   </Link>
                 </li>
               );
