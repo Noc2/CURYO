@@ -73,8 +73,7 @@ contract UpgradeTest is Test {
                 new ERC1967Proxy(
                     address(veImpl),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize,
-                        (admin, governance, address(crepToken), address(contentRegistry))
+                        RoundVotingEngine.initialize, (admin, governance, address(crepToken), address(contentRegistry))
                     )
                 )
             )
