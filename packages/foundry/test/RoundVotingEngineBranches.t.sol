@@ -221,7 +221,6 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck1, v1Up, s1);
         _reveal(contentId, roundId, ck2, v2Up, s2);
         _reveal(contentId, roundId, ck3, v3Up, s3);
-
     }
 
     // =========================================================================

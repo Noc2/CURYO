@@ -94,11 +94,11 @@ contract RoundVotingEngine is
 
     // --- Streak Milestone Constants ---
     uint256 private constant STREAK_M1_DAYS = 7;
-    uint256 private constant STREAK_M1_BASE = 10e6;    // 10 cREP
+    uint256 private constant STREAK_M1_BASE = 10e6; // 10 cREP
     uint256 private constant STREAK_M2_DAYS = 30;
-    uint256 private constant STREAK_M2_BASE = 50e6;    // 50 cREP
+    uint256 private constant STREAK_M2_BASE = 50e6; // 50 cREP
     uint256 private constant STREAK_M3_DAYS = 90;
-    uint256 private constant STREAK_M3_BASE = 200e6;   // 200 cREP
+    uint256 private constant STREAK_M3_BASE = 200e6; // 200 cREP
     uint256 private constant STREAK_INITIAL_RATE_BPS = 9000;
     uint256 private constant STREAK_MILESTONE_COUNT = 3;
 
@@ -889,9 +889,11 @@ contract RoundVotingEngine is
     }
 
     /// @notice Get a voter's current streak info.
-    function getVoterStreakInfo(address voter) external view returns (
-        uint256 currentStreak, uint256 lastActiveDay, uint256 lastMilestoneDay_
-    ) {
+    function getVoterStreakInfo(address voter)
+        external
+        view
+        returns (uint256 currentStreak, uint256 lastActiveDay, uint256 lastMilestoneDay_)
+    {
         return (voterCurrentStreak[voter], voterLastActiveDay[voter], voterLastMilestoneDay[voter]);
     }
 
@@ -1256,8 +1258,8 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public hasTokenIdCommitted;
 
     // --- Streak Tracking ---
-    mapping(address => uint256) public voterLastActiveDay;    // unix day number
-    mapping(address => uint256) public voterCurrentStreak;    // consecutive days
+    mapping(address => uint256) public voterLastActiveDay; // unix day number
+    mapping(address => uint256) public voterCurrentStreak; // consecutive days
     mapping(address => uint256) public voterLastMilestoneDay; // prevents double-payment, resets on streak break
 
     // --- Storage Gap for UUPS Upgradeability ---

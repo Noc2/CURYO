@@ -635,8 +635,14 @@ function updateBotConfig(allGeneratedContracts) {
  * Paths are relative to the monorepo root (packages/).
  */
 const ABI_TARGETS = [
-  { contract: "RoundVotingEngine", targets: ["ponder/abis", "keeper/src/abis", "bot/src/abis"] },
-  { contract: "ContentRegistry", targets: ["ponder/abis", "keeper/src/abis", "bot/src/abis"] },
+  {
+    contract: "RoundVotingEngine",
+    targets: ["ponder/abis", "keeper/src/abis", "bot/src/abis"],
+  },
+  {
+    contract: "ContentRegistry",
+    targets: ["ponder/abis", "keeper/src/abis", "bot/src/abis"],
+  },
   { contract: "CategoryRegistry", targets: ["ponder/abis"] },
   { contract: "CuryoReputation", targets: ["ponder/abis", "bot/src/abis"] },
   { contract: "VoterIdNFT", targets: ["ponder/abis", "bot/src/abis"] },
@@ -652,7 +658,9 @@ function generateAbiFiles() {
   for (const { contract, targets } of ABI_TARGETS) {
     const artifact = getArtifactOfContract(contract);
     if (!artifact) {
-      console.warn(`⚠️  No artifact found for ${contract} — skipping ABI generation`);
+      console.warn(
+        `⚠️  No artifact found for ${contract} — skipping ABI generation`
+      );
       continue;
     }
 
@@ -669,7 +677,12 @@ function generateAbiFiles() {
     }
   }
 
-  console.log(`📝 Generated ${totalWritten} ABI files across ${ABI_TARGETS.reduce((n, t) => n + t.targets.length, 0)} targets`);
+  console.log(
+    `📝 Generated ${totalWritten} ABI files across ${ABI_TARGETS.reduce(
+      (n, t) => n + t.targets.length,
+      0
+    )} targets`
+  );
 }
 
 try {
