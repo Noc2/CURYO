@@ -108,13 +108,11 @@ test.describe("Mobile viewport (phone)", () => {
     const main = page.locator("main");
     await expect(main).toBeVisible({ timeout: 10_000 });
 
-    // Portfolio should show tabs or content
-    const portfolioContent = page
-      .getByRole("tab")
-      .first()
-      .or(page.getByText(/portfolio/i).first())
-      .or(page.getByText(/cREP/i).first());
-    await expect(portfolioContent).toBeVisible({ timeout: 10_000 });
+    // Portfolio should show heading or content
+    const portfolioHeading = page.getByRole("heading", { name: /portfolio/i });
+    const crepText = page.getByText(/cREP/i).first();
+    const tabElement = page.getByRole("tab").first();
+    await expect(portfolioHeading.or(crepText).or(tabElement).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("docs page renders without overflow", async ({ connectedPage: page }) => {
@@ -135,13 +133,17 @@ test.describe("Tablet viewport", () => {
     test.skip(testInfo.project.name !== "mobile-tablet", "Tablet-only tests");
   });
 
-  test("sidebar visible on tablet width", async ({ connectedPage: page }) => {
+  test("sidebar hidden on tablet width (xl breakpoint)", async ({ connectedPage: page }) => {
     await page.goto("/vote");
     await waitForFeedLoaded(page);
 
-    // At 768px+ the sidebar should be visible (not hidden behind hamburger)
+    // Sidebar uses xl:flex (1280px+). iPad Mini (768px) is below xl, so sidebar is hidden
+    // and the hamburger menu is used instead.
     const sidebar = page.locator("aside");
-    await expect(sidebar).toBeVisible({ timeout: 5_000 });
+    await expect(sidebar).toBeHidden({ timeout: 5_000 });
+
+    const hamburger = page.getByLabel("Open menu");
+    await expect(hamburger).toBeVisible({ timeout: 5_000 });
   });
 
   test("vote page layout on tablet", async ({ connectedPage: page }) => {
