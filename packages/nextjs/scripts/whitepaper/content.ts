@@ -233,7 +233,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement requires: (1) at least 3 voters revealed (minVoters threshold), and (2) one full epoch delay elapsed since the threshold was reached. Anyone may call settleRound(contentId, roundId) once these conditions are met. A lightweight keeper service handles both reveal and settlement automatically. Winners receive their original stake plus an epoch-weighted share of the losing pool.",
+            text: "Settlement requires at least 3 voters revealed (minVoters threshold). Once this threshold is reached, anyone may call settleRound(contentId, roundId) immediately -- no additional delay is required. A lightweight keeper service handles both reveal and settlement automatically. Winners receive their original stake plus an epoch-weighted share of the losing pool.",
           },
         ],
       },
@@ -777,7 +777,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform two tasks: (1) revealing tlock votes after each epoch ends by fetching the drand beacon and calling revealVoteByCommitKey(), and (2) calling settleRound() once the settlement conditions are met (minVoters revealed and one full epoch elapsed since the threshold). Both operations are permissionless  -- any account can call them.",
+            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform two tasks: (1) revealing tlock votes after each epoch ends by fetching the drand beacon and calling revealVoteByCommitKey(), and (2) calling settleRound() once the minVoters threshold is reached (settlement is immediate, no additional delay required). Both operations are permissionless  -- any account can call them.",
           },
           {
             type: "paragraph",
