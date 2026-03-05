@@ -110,7 +110,7 @@ export function BalanceHistory() {
   const currentFormatted = currentBalance.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (
-    <div className="w-full">
+    <div className="surface-card rounded-2xl p-6 w-full">
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-base font-medium text-base-content/60">Your cREP balance</span>
         <span className="text-base tabular-nums text-base-content/60">{currentFormatted} cREP</span>

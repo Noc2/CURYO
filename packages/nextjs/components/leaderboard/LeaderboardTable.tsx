@@ -154,7 +154,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="surface-card rounded-2xl p-6 overflow-x-auto">
       <table className="table w-full">
         <thead>
           <tr className="text-base-content/60">

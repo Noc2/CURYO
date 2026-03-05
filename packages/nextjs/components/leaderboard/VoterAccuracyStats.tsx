@@ -29,7 +29,7 @@ export function VoterAccuracyStats() {
         : "0";
 
   return (
-    <div className="space-y-4">
+    <div className="surface-card rounded-2xl p-6 space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-base font-medium text-base-content/60">Your voting accuracy</span>
         <span className="text-base tabular-nums text-base-content/60">{stats.totalSettledVotes} resolved votes</span>

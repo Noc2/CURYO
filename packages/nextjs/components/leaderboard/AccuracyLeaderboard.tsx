@@ -55,7 +55,7 @@ export function AccuracyLeaderboard() {
   const approvedCategories = categories.filter(c => c.status === 1);
 
   return (
-    <div className="space-y-3">
+    <div className="surface-card rounded-2xl p-6 space-y-3">
       <span className="text-base font-medium text-base-content/60">Accuracy leaderboard</span>
 
       {/* Filters */}

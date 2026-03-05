@@ -39,7 +39,7 @@ export function StakeBreakdown() {
   const format = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (
-    <div className="space-y-1.5">
+    <div className="surface-card rounded-2xl p-6 space-y-1.5">
       <div className="flex items-center justify-between">
         <span className="text-base font-medium text-base-content/60">Your staked cREP</span>
         <span className="text-base tabular-nums text-base-content/60">{format(totalStaked)} cREP</span>
