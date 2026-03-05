@@ -108,11 +108,10 @@ test.describe("Mobile viewport (phone)", () => {
     const main = page.locator("main");
     await expect(main).toBeVisible({ timeout: 10_000 });
 
-    // Portfolio should show heading or content
-    const portfolioHeading = page.getByRole("heading", { name: /portfolio/i });
-    const crepText = page.getByText(/cREP/i).first();
-    const tabElement = page.getByRole("tab").first();
-    await expect(portfolioHeading.or(crepText).or(tabElement).first()).toBeVisible({ timeout: 10_000 });
+    // Portfolio should show heading or stats — scope to main to avoid hidden nav elements
+    const portfolioHeading = main.getByRole("heading", { name: /portfolio/i });
+    const voteHistory = main.getByText(/vote history/i);
+    await expect(portfolioHeading.or(voteHistory).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("docs page renders without overflow", async ({ connectedPage: page }) => {
