@@ -691,6 +691,7 @@ app.get("/votes", async (c) => {
       revealedAt: vote.revealedAt,
       roundStartTime: round.startTime,
       roundState: round.state,
+      roundUpWins: round.upWins,
     })
     .from(vote)
     .leftJoin(

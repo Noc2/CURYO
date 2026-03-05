@@ -190,6 +190,7 @@ export interface PonderVoteItem {
   revealedAt: string | null;
   roundStartTime: string | null;
   roundState: number | null;
+  roundUpWins: boolean | null;
 }
 
 export interface PonderVoterStreak {

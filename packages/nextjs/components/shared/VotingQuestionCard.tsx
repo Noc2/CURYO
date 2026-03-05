@@ -1,16 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
-import { RewardRevealModal } from "~~/components/shared/RewardRevealModal";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
-import { useClaimReward } from "~~/hooks/useClaimReward";
-import { useClaimableRewards } from "~~/hooks/useClaimableRewards";
 import { useRoundCountdown } from "~~/hooks/useRoundCountdown";
 import { useRoundInfo } from "~~/hooks/useRoundInfo";
 import { useRoundPhase } from "~~/hooks/useRoundPhase";
@@ -63,48 +60,11 @@ export function VotingQuestionCard({
   }, [category, currentRatingValue, contentLabel]);
 
   // Check if user already voted on this content in the current round
-  const { round, roundId, isRoundFull } = useRoundInfo(contentId);
+  const { roundId, isRoundFull } = useRoundInfo(contentId);
   const { phase, voteCount, minVoters } = useRoundPhase(contentId);
-
-  // Claim rewards
-  const {
-    hasClaimable,
-    epochId: claimableEpochId,
-    reward,
-    lost,
-    isWinner,
-    isTie,
-    isLoading: claimLoading,
-  } = useClaimableRewards(contentId);
-  const { claimReward, claimTieRefund, isClaiming } = useClaimReward();
-
-  type RevealModalState = {
-    outcome: "win" | "loss" | "tie";
-    amount: bigint;
-    stake: bigint;
-    upPool: bigint;
-    downPool: bigint;
-  } | null;
-  const [revealModal, setRevealModal] = useState<RevealModalState>(null);
-
-  const openReveal = (outcome: "win" | "loss" | "tie", amount: bigint, stake: bigint) => {
-    setRevealModal({
-      outcome,
-      amount,
-      stake,
-      upPool: round?.upPool ?? 0n,
-      downPool: round?.downPool ?? 0n,
-    });
-  };
 
   // Round countdown (only show when urgent)
   const { label: countdownLabel, urgency, isActive: countdownActive } = useRoundCountdown(contentId);
-
-  const { data: tokenSymbol } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
-    functionName: "symbol",
-  });
-  const symbol = tokenSymbol ?? "cREP";
 
   // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
@@ -303,40 +263,6 @@ export function VotingQuestionCard({
           )}
         </div>
 
-        {/* Claim reward buttons */}
-        {!claimLoading && hasClaimable && isWinner && reward > 0n && (
-          <div className="flex justify-center mb-2">
-            <button
-              onClick={() => openReveal("win", reward, lost > 0n ? lost : reward)}
-              disabled={isClaiming}
-              className="btn btn-success btn-sm text-white"
-            >
-              {isClaiming ? "Claiming..." : `Claim ${(Number(reward) / 1e6).toFixed(0)} ${symbol}`}
-            </button>
-          </div>
-        )}
-        {!claimLoading && hasClaimable && isTie && reward > 0n && (
-          <div className="flex justify-center mb-2">
-            <button
-              onClick={() => openReveal("tie", reward, reward)}
-              disabled={isClaiming}
-              className="btn btn-info btn-sm text-white"
-            >
-              {isClaiming ? "Claiming..." : `Tie - Refund ${(Number(reward) / 1e6).toFixed(0)} ${symbol}`}
-            </button>
-          </div>
-        )}
-        {!claimLoading && hasClaimable && !isWinner && !isTie && lost > 0n && (
-          <div className="flex justify-center mb-2">
-            <button
-              onClick={() => openReveal("loss", lost, lost)}
-              className="text-error text-xs hover:underline cursor-pointer bg-transparent border-none p-0"
-            >
-              Lost {(Number(lost) / 1e6).toFixed(0)} {symbol}
-            </button>
-          </div>
-        )}
-
         {/* Round progress - left aligned */}
         <div className="mb-1.5 flex justify-start">
           <RoundProgress contentId={contentId} />
@@ -363,26 +289,6 @@ export function VotingQuestionCard({
           <RatingHistory contentId={contentId} />
         </div>
       </div>
-
-      {/* Reward reveal modal */}
-      {revealModal && (
-        <RewardRevealModal
-          isOpen={true}
-          outcome={revealModal.outcome}
-          amount={revealModal.amount}
-          stake={revealModal.stake}
-          upPool={revealModal.upPool}
-          downPool={revealModal.downPool}
-          onClaim={() => {
-            if (revealModal.outcome === "win") {
-              claimReward(contentId, claimableEpochId);
-            } else if (revealModal.outcome === "tie") {
-              claimTieRefund(contentId, claimableEpochId);
-            }
-          }}
-          onClose={() => setRevealModal(null)}
-        />
-      )}
     </div>
   );
 }
