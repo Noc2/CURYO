@@ -630,6 +630,80 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     // =========================================================================
+    // 16. PAGINATED VIEW (L-15)
+    // =========================================================================
+
+    function test_GetRegisteredFrontendsPaginated_FullPage() public {
+        _registerFrontend(frontend1);
+        _registerFrontend(frontend2);
+        _registerFrontend(frontend3);
+
+        (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 3);
+        assertEq(addrs.length, 3);
+        assertEq(addrs[0], frontend1);
+        assertEq(addrs[1], frontend2);
+        assertEq(addrs[2], frontend3);
+    }
+
+    function test_GetRegisteredFrontendsPaginated_OffsetAndLimit() public {
+        _registerFrontend(frontend1);
+        _registerFrontend(frontend2);
+        _registerFrontend(frontend3);
+
+        (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(1, 1);
+        assertEq(total, 3);
+        assertEq(addrs.length, 1);
+        assertEq(addrs[0], frontend2);
+    }
+
+    function test_GetRegisteredFrontendsPaginated_OffsetBeyondLength() public {
+        _registerFrontend(frontend1);
+
+        (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(5, 10);
+        assertEq(total, 1);
+        assertEq(addrs.length, 0);
+    }
+
+    function test_GetRegisteredFrontendsPaginated_ZeroLimit() public {
+        _registerFrontend(frontend1);
+
+        (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 0);
+        assertEq(total, 1);
+        assertEq(addrs.length, 0);
+    }
+
+    function test_GetRegisteredFrontendsPaginated_Empty() public view {
+        (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 0);
+        assertEq(addrs.length, 0);
+    }
+
+    function test_GetRegisteredFrontendsPaginated_LimitClampedToEnd() public {
+        _registerFrontend(frontend1);
+        _registerFrontend(frontend2);
+
+        (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(1, 100);
+        assertEq(total, 2);
+        assertEq(addrs.length, 1);
+        assertEq(addrs[0], frontend2);
+    }
+
+    function test_GetRegisteredFrontendsPaginated_AfterDeregister() public {
+        _registerFrontend(frontend1);
+        _registerFrontend(frontend2);
+
+        vm.prank(frontend1);
+        registry.deregister();
+
+        // frontend1 still in array (just has operator=0), total unchanged
+        (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 2);
+        assertEq(addrs.length, 2);
+        assertEq(addrs[0], frontend1);
+    }
+
+    // =========================================================================
     // HELPERS
     // =========================================================================
 

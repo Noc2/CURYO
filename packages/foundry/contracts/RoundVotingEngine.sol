@@ -336,7 +336,11 @@ contract RoundVotingEngine is
         emit ConfigUpdated(_epochDuration, _maxDuration, _minVoters, _maxVoters);
     }
 
-    /// @notice Fund the consensus subsidy reserve.
+    /// @notice Fund the consensus subsidy reserve (admin-only, initial/top-up funding).
+    /// @dev AUDIT NOTE (I-1): This is the admin-gated entry point for treasury-funded top-ups.
+    ///      `addToConsensusReserve` below is intentionally permissionless so that any contract
+    ///      (e.g. FrontendRegistry slashing) can route forfeited cREP into the reserve via
+    ///      safeTransferFrom, without requiring a role grant.
     function fundConsensusReserve(uint256 amount) external onlyRole(CONFIG_ROLE) {
         if (amount == 0) revert ZeroAmount();
         crepToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -344,6 +348,7 @@ contract RoundVotingEngine is
     }
 
     /// @notice Add cREP to the consensus reserve (e.g. from slashed stakes).
+    /// @dev Permissionless by design — caller must have approved cREP; see fundConsensusReserve above.
     function addToConsensusReserve(uint256 amount) external {
         if (amount == 0) revert ZeroAmount();
         crepToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -729,6 +734,8 @@ contract RoundVotingEngine is
     // =========================================================================
 
     /// @notice Claim refund for a cancelled or tied round. Pull-based.
+    /// @dev AUDIT NOTE (I-7): No forfeiture deadline is intentional — cancelled/tied round stakes
+    ///      belong to voters indefinitely. Adding a deadline would create a governance extraction vector.
     function claimCancelledRoundRefund(uint256 contentId, uint256 roundId) external nonReentrant {
         RoundLib.Round storage round = rounds[contentId][roundId];
         if (round.state != RoundLib.RoundState.Cancelled && round.state != RoundLib.RoundState.Tied) {
@@ -1253,6 +1260,14 @@ contract RoundVotingEngine is
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
+
+    // =========================================================================
+    // POST-UPGRADE STORAGE — UUPS LAYOUT COMPATIBILITY
+    // =========================================================================
+    // AUDIT NOTE (I-6): These variables were appended after the initial deployment to support
+    // new features (sybil resistance, streak rewards). They MUST remain at the end of the
+    // contract storage and MUST NOT be reordered or moved above the __gap. The __gap size
+    // was reduced accordingly to preserve total slot count.
 
     // One vote per identity per round
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public hasTokenIdCommitted;

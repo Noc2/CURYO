@@ -72,7 +72,10 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Track actual referral earnings per address
     mapping(address => uint256) public referralEarnings;
 
-    /// @notice Reentrancy lock for customVerificationHook (defense-in-depth)
+    /// @notice Reentrancy lock for customVerificationHook (defense-in-depth).
+    /// @dev AUDIT NOTE (L-5): `nonReentrant` cannot be applied here because the entry points
+    ///      (`verifySelfProof` / `onVerificationSuccess`) are non-virtual in SelfVerificationRoot
+    ///      and cannot be overridden. This manual bool guard achieves equivalent protection.
     bool private _claiming;
 
     /// @notice The Voter ID NFT contract (soulbound token for verified humans)

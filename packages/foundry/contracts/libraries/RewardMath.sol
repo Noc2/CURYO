@@ -29,6 +29,10 @@ library RewardMath {
     /// @dev rating = 50 + 50 * (qUp - qDown) / (qUp + qDown + b)
     ///      Clamped to [0, 100]. Uses fixed b=50 cREP for smoothing.
     ///      Called at settlement with final revealed raw pools.
+    ///      AUDIT NOTE (I-2): Integer granularity [0-100] is intentional. The RATING_B smoothing
+    ///      parameter (50 cREP) ensures small-stake rounds stay near 50, preventing manipulation.
+    ///      Higher precision (e.g. 1e18) would add gas cost with no UX benefit since ratings
+    ///      are displayed as whole numbers in the frontend.
     /// @param totalUpStake Total revealed UP stake in the current round.
     /// @param totalDownStake Total revealed DOWN stake in the current round.
     /// @return rating New content rating [0, 100].

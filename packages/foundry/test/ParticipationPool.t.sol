@@ -523,6 +523,63 @@ contract ParticipationPoolTest is Test {
         assertEq(pool.poolBalance(), POOL_AMOUNT - totalDistributed);
     }
 
+    // --- DistributeReward Tests ---
+
+    function test_DistributeReward_TransfersPreComputedAmount() public {
+        uint256 amount = 50e6;
+        uint256 balBefore = crepToken.balanceOf(user1);
+
+        vm.prank(votingEngine);
+        uint256 paid = pool.distributeReward(user1, amount);
+
+        assertEq(paid, amount);
+        assertEq(crepToken.balanceOf(user1), balBefore + amount);
+        assertEq(pool.totalDistributed(), amount);
+    }
+
+    function test_DistributeReward_CapsAtPoolBalance() public {
+        vm.prank(admin);
+        pool.withdrawRemaining(admin, POOL_AMOUNT - 10e6);
+
+        vm.prank(votingEngine);
+        uint256 paid = pool.distributeReward(user1, 50e6);
+
+        assertEq(paid, 10e6);
+        assertEq(pool.poolBalance(), 0);
+    }
+
+    function test_DistributeReward_OnlyAuthorized() public {
+        vm.prank(unauthorized);
+        vm.expectRevert("Not authorized");
+        pool.distributeReward(user1, 100e6);
+    }
+
+    // --- Reentrancy Guard Tests (L-2) ---
+
+    function test_RewardVote_FunctionalWithNonReentrant() public {
+        vm.prank(votingEngine);
+        pool.rewardVote(user1, 100e6);
+        assertEq(crepToken.balanceOf(user1), 90e6);
+    }
+
+    function test_RewardSubmission_FunctionalWithNonReentrant() public {
+        vm.prank(contentRegistry);
+        pool.rewardSubmission(user1, 10e6);
+        assertEq(crepToken.balanceOf(user1), 9e6);
+    }
+
+    function test_DistributeReward_FunctionalWithNonReentrant() public {
+        vm.prank(votingEngine);
+        uint256 paid = pool.distributeReward(user1, 25e6);
+        assertEq(paid, 25e6);
+    }
+
+    function test_WithdrawRemaining_FunctionalWithNonReentrant() public {
+        vm.prank(admin);
+        pool.withdrawRemaining(admin, 1_000e6);
+        assertEq(crepToken.balanceOf(admin), 1_000e6);
+    }
+
     // --- Helpers ---
 
     /// @dev Directly set totalDistributed for gas-efficient tier testing

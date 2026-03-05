@@ -126,6 +126,31 @@ contract FrontendRegistry is
         return registeredFrontends;
     }
 
+    /// @notice Get a paginated slice of the registered frontend addresses
+    /// @param offset Index to start from
+    /// @param limit Maximum number of addresses to return
+    /// @return addresses The slice of frontend addresses
+    /// @return total The total number of registered frontends
+    function getRegisteredFrontendsPaginated(uint256 offset, uint256 limit)
+        external
+        view
+        returns (address[] memory addresses, uint256 total)
+    {
+        total = registeredFrontends.length;
+        if (offset >= total || limit == 0) {
+            return (new address[](0), total);
+        }
+        uint256 end = offset + limit;
+        if (end > total) {
+            end = total;
+        }
+        uint256 resultLength = end - offset;
+        addresses = new address[](resultLength);
+        for (uint256 i = 0; i < resultLength; i++) {
+            addresses[i] = registeredFrontends[offset + i];
+        }
+    }
+
     /// @notice Get the total number of registered frontends
     function getFrontendCount() external view returns (uint256) {
         return registeredFrontends.length;

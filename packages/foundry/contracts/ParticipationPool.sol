@@ -4,13 +4,14 @@ pragma solidity 0.8.28;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 
 /// @title ParticipationPool
 /// @notice Distributes cREP rewards proportional to stake for voting and submitting content, with distribution-based halving.
 /// @dev Funded with 34M cREP. Early participants earn more — the reward rate halves as cumulative cREP distributed grows.
 ///      Reward = stakeAmount × currentRateBps / 10000. Rate starts at 90% and halves per tier.
-contract ParticipationPool is IParticipationPool, Ownable {
+contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     // --- Constants ---
@@ -101,7 +102,7 @@ contract ParticipationPool is IParticipationPool, Ownable {
     /// @notice Withdraw remaining cREP tokens (governance emergency extraction)
     /// @param to Address to receive tokens
     /// @param amount Amount to withdraw (use type(uint256).max for full balance)
-    function withdrawRemaining(address to, uint256 amount) external onlyOwner {
+    function withdrawRemaining(address to, uint256 amount) external onlyOwner nonReentrant {
         require(to != address(0), "Invalid address");
         uint256 withdrawAmount = amount > poolBalance ? poolBalance : amount;
         require(withdrawAmount > 0, "Nothing to withdraw");
@@ -131,7 +132,7 @@ contract ParticipationPool is IParticipationPool, Ownable {
     /// @notice Reward a voter for casting a vote. Called by RoundVotingEngine.
     /// @param voter The address to reward
     /// @param stakeAmount The amount staked on this vote
-    function rewardVote(address voter, uint256 stakeAmount) external onlyAuthorized {
+    function rewardVote(address voter, uint256 stakeAmount) external onlyAuthorized nonReentrant {
         uint256 reward = stakeAmount * getCurrentRateBps() / 10000;
         _distribute(voter, reward, false);
     }
@@ -139,7 +140,7 @@ contract ParticipationPool is IParticipationPool, Ownable {
     /// @notice Reward a submitter for submitting content. Called by ContentRegistry.
     /// @param submitter The address to reward
     /// @param stakeAmount The submitter stake amount
-    function rewardSubmission(address submitter, uint256 stakeAmount) external onlyAuthorized {
+    function rewardSubmission(address submitter, uint256 stakeAmount) external onlyAuthorized nonReentrant {
         uint256 reward = stakeAmount * getCurrentRateBps() / 10000;
         _distribute(submitter, reward, true);
     }
@@ -149,7 +150,7 @@ contract ParticipationPool is IParticipationPool, Ownable {
     /// @param voter The address to reward
     /// @param amount The pre-computed reward amount
     /// @return paidAmount The actual amount distributed (can be less than requested if depleted)
-    function distributeReward(address voter, uint256 amount) external onlyAuthorized returns (uint256 paidAmount) {
+    function distributeReward(address voter, uint256 amount) external onlyAuthorized nonReentrant returns (uint256 paidAmount) {
         return _distribute(voter, amount, false);
     }
 
