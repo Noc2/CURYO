@@ -79,8 +79,10 @@ Open four terminals:
 
 **1. Local chain:**
 ```bash
-yarn chain
+yarn chain --block-time 12
 ```
+
+> **Important:** The `--block-time 12` flag makes Anvil auto-mine a block every 12 seconds. Without it, Anvil only mines blocks when transactions are sent, causing `block.timestamp` to freeze during idle periods. This prevents the keeper from revealing and settling votes (it uses `block.timestamp` to decide when epochs have ended).
 
 **2. Deploy contracts:**
 ```bash
