@@ -42,7 +42,7 @@ export function useAllClaimableRewards() {
     refetchInterval: 30_000,
   });
 
-  const votes = ponderResult?.data ?? [];
+  const votes = useMemo(() => ponderResult?.data ?? [], [ponderResult?.data]);
 
   // --- Step 2: Filter to terminal rounds only (Settled+revealed, Cancelled, Tied) ---
   const terminalVotes = useMemo(() => {
