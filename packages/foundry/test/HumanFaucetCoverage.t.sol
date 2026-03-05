@@ -6,95 +6,7 @@ import { HumanFaucet } from "../contracts/HumanFaucet.sol";
 import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
-import { IVoterIdNFT } from "../contracts/interfaces/IVoterIdNFT.sol";
-
-// =========================================================================
-// MOCKS
-// =========================================================================
-
-contract MockVoterIdNFT_HF is IVoterIdNFT {
-    mapping(address => bool) public holders;
-    mapping(address => uint256) public tokenIds;
-    mapping(uint256 => address) public tokenHolders;
-    mapping(uint256 => bool) public usedNullifiers;
-    uint256 private nextTokenId = 1;
-    mapping(bytes32 => uint256) public stakes;
-    mapping(address => address) public holderToDelegate;
-    mapping(address => address) public delegateToHolder;
-
-    function setHolder(address holder) external {
-        holders[holder] = true;
-        if (tokenIds[holder] == 0) {
-            tokenIds[holder] = nextTokenId;
-            tokenHolders[nextTokenId] = holder;
-            nextTokenId++;
-        }
-    }
-
-    function mint(address to, uint256 nullifier) external returns (uint256) {
-        usedNullifiers[nullifier] = true;
-        holders[to] = true;
-        uint256 id = nextTokenId++;
-        tokenIds[to] = id;
-        tokenHolders[id] = to;
-        return id;
-    }
-
-    function hasVoterId(address holder) external view returns (bool) {
-        return holders[holder];
-    }
-
-    function getTokenId(address holder) external view returns (uint256) {
-        return tokenIds[holder];
-    }
-
-    function getHolder(uint256 tokenId) external view returns (address) {
-        return tokenHolders[tokenId];
-    }
-
-    function recordStake(uint256, uint256, uint256, uint256) external { }
-
-    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
-        bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
-        return stakes[key];
-    }
-
-    function isNullifierUsed(uint256 nullifier) external view returns (bool) {
-        return usedNullifiers[nullifier];
-    }
-
-    function revokeVoterId(address) external { }
-
-    function removeHolder(address holder) external {
-        holders[holder] = false;
-    }
-
-    function setDelegate(address delegate) external {
-        holderToDelegate[msg.sender] = delegate;
-        delegateToHolder[delegate] = msg.sender;
-    }
-
-    function removeDelegate() external {
-        address delegate = holderToDelegate[msg.sender];
-        delete delegateToHolder[delegate];
-        delete holderToDelegate[msg.sender];
-    }
-
-    function resolveHolder(address addr) external view returns (address) {
-        if (holders[addr]) return addr;
-        address h = delegateToHolder[addr];
-        if (holders[h]) return h;
-        return address(0);
-    }
-
-    function delegateTo(address holder) external view returns (address) {
-        return holderToDelegate[holder];
-    }
-
-    function delegateOf(address delegate) external view returns (address) {
-        return delegateToHolder[delegate];
-    }
-}
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 // =========================================================================
 // TEST CONTRACT: HumanFaucet Coverage Gaps
@@ -107,7 +19,7 @@ contract HumanFaucetCoverageTest is Test {
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
     CuryoReputation public crepToken;
-    MockVoterIdNFT_HF public mockVoterIdNFT;
+    MockVoterIdNFT public mockVoterIdNFT;
 
     address public admin = address(1);
     address public user1 = address(2);
@@ -125,7 +37,7 @@ contract HumanFaucetCoverageTest is Test {
 
         crepToken = new CuryoReputation(admin, admin);
         mockHub = new MockIdentityVerificationHub();
-        mockVoterIdNFT = new MockVoterIdNFT_HF();
+        mockVoterIdNFT = new MockVoterIdNFT();
 
         faucet = new HumanFaucet(address(crepToken), address(mockHub), admin);
 
