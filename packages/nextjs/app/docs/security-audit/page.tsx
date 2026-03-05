@@ -218,8 +218,8 @@ const SecurityAudit: NextPage = () => {
                 <strong>Pool solvency &mdash; reward claims must not exceed VotingEngine balance.</strong> Reward is{" "}
                 <code>(stake / totalWinStake) &times; pool</code>. Due to integer division rounding down, the sum of all
                 claims &le; pool. The VotingEngine holds both winning stakes (returned to winners) and losing pool
-                tokens (distributed as rewards). Algebraically correct. Verified via stateful invariant fuzzing
-                (<code>invariant_C01_PoolSolvency</code> in InvariantSolvency.t.sol).
+                tokens (distributed as rewards). Algebraically correct. Verified via stateful invariant fuzzing (
+                <code>invariant_C01_PoolSolvency</code> in InvariantSolvency.t.sol).
               </td>
               <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
               <td>
@@ -231,9 +231,8 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <strong>Token conservation invariant.</strong> For any round that reaches a terminal state: SUM(vote
                 stakes) must equal SUM(claimed rewards) + SUM(platform fees) + SUM(treasury fees) + SUM(submitter
-                rewards) + dust. Verified via stateful invariant fuzzing (
-                <code>invariant_C02_TokenConservation</code> in InvariantSolvency.t.sol). Ghost variables track all
-                token flows.
+                rewards) + dust. Verified via stateful invariant fuzzing (<code>invariant_C02_TokenConservation</code>{" "}
+                in InvariantSolvency.t.sol). Ghost variables track all token flows.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -246,8 +245,8 @@ const SecurityAudit: NextPage = () => {
                 <strong>VotingEngine balance solvency invariant.</strong> At any point:{" "}
                 <code>crepToken.balanceOf(votingEngine)</code> must be &ge; SUM(open round stakes) + SUM(unclaimed
                 winner rewards) + SUM(unclaimed refunds) + SUM(unclaimed submitter rewards). Verified via stateful
-                invariant fuzzing (<code>invariant_C03_BalanceSolvency</code> in InvariantSolvency.t.sol). Checks
-                engine balance against computed obligations after random vote/settle/claim sequences.
+                invariant fuzzing (<code>invariant_C03_BalanceSolvency</code> in InvariantSolvency.t.sol). Checks engine
+                balance against computed obligations after random vote/settle/claim sequences.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -1244,11 +1243,13 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>2 stakes (1 + 100 cREP)</td>
               <td>
-                12% fee on losing side vs. participation reward on both sides. Needs formal verification: may be
-                profitable at tier 0 but becomes unprofitable at lower tiers.
+                Tested in <code>SelfOppositionProfitability.t.sol</code> (10 tests). Optimal strategy (100 cREP
+                winning / 1 cREP losing) is profitable at all participation tiers due to parimutuel voter-pool
+                share. Equal-stakes strategy unprofitable at tier 2+. Mitigated by VoterIdNFT sybil resistance
+                (1 identity per voter) and halving participation tiers.
               </td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Testing</span>
+                <span className="badge badge-info whitespace-nowrap">Tested</span>
               </td>
             </tr>
             <tr>
@@ -1649,9 +1650,9 @@ const SecurityAudit: NextPage = () => {
               <td>Category domain normalization</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FormalVerification_GameTheory</td>
-              <td>14</td>
-              <td>Self-opposition, participation pool drain</td>
+              <td className="font-mono text-[#EF476F]">SelfOppositionProfitabilityTest</td>
+              <td>10</td>
+              <td>Self-opposition profitability across all participation tiers</td>
             </tr>
             <tr>
               <td className="font-mono text-[#EF476F]">FormalVerification_RoundLifecycle</td>
@@ -1821,9 +1822,8 @@ const SecurityAudit: NextPage = () => {
           <strong>Set timelock minimum delay</strong> to an appropriate value (e.g., 2 days) for governance proposals.
         </li>
         <li>
-          <del>Implement invariant tests</del> for C-01, C-02, C-03 &mdash;{" "}
-          <span className="text-success">Done.</span> Stateful fuzz tests in{" "}
-          <code>InvariantSolvency.t.sol</code> with ghost-variable accounting via{" "}
+          <del>Implement invariant tests</del> for C-01, C-02, C-03 &mdash; <span className="text-success">Done.</span>{" "}
+          Stateful fuzz tests in <code>InvariantSolvency.t.sol</code> with ghost-variable accounting via{" "}
           <code>VotingHandler.sol</code>.
         </li>
         <li>
@@ -1831,8 +1831,8 @@ const SecurityAudit: NextPage = () => {
           to the contract.
         </li>
         <li>
-          <del>Review dormant URL locking</del> (M-07) &mdash;{" "}
-          <span className="text-success">Done.</span> <code>markDormant()</code> now releases the URL hash.
+          <del>Review dormant URL locking</del> (M-07) &mdash; <span className="text-success">Done.</span>{" "}
+          <code>markDormant()</code> now releases the URL hash.
         </li>
         <li>
           <del>Test self-opposition profitability</del> with participation pool at all tiers &mdash;{" "}
@@ -1848,8 +1848,8 @@ const SecurityAudit: NextPage = () => {
           safety.
         </li>
         <li>
-          <del>Review referrer validation</del> (M-11) &mdash;{" "}
-          <span className="text-success">Done.</span> Revoked VoterID holders no longer earn referral bonuses.
+          <del>Review referrer validation</del> (M-11) &mdash; <span className="text-success">Done.</span> Revoked
+          VoterID holders no longer earn referral bonuses.
         </li>
       </ol>
 

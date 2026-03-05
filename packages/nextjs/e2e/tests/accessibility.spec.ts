@@ -39,7 +39,10 @@ test.describe("Accessibility basics", () => {
 
     const canVote = await findVoteableContent(page);
     expect(canVote, "Should find at least one voteable content via thumbnail grid").toBeTruthy();
-    await page.getByRole("button", { name: "Vote up" }).click();
+    const voteUpBtn = page.getByRole("button", { name: "Vote up" });
+    await voteUpBtn.waitFor({ state: "visible", timeout: 10_000 });
+    await page.waitForTimeout(500); // let React settle after Ponder polling re-renders
+    await voteUpBtn.click();
 
     // Dialog should have proper ARIA role and label
     const dialog = page.getByRole("dialog", { name: "Select stake amount" });
