@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useAccount, useReadContracts } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
@@ -68,7 +68,11 @@ export function useAllClaimableRewards() {
     }));
   }, [distributorInfo, address, terminalVotes]);
 
-  const { data: claimedResults, isLoading: claimedLoading } = useReadContracts({
+  const {
+    data: claimedResults,
+    isLoading: claimedLoading,
+    refetch: refetchClaimed,
+  } = useReadContracts({
     contracts: claimedContracts,
     query: { enabled: claimedContracts.length > 0 },
   });
@@ -182,11 +186,16 @@ export function useAllClaimableRewards() {
 
   const isLoading = claimedLoading || rewardsLoading;
 
+  const refetch = useCallback(() => {
+    refetchVotes();
+    refetchClaimed();
+  }, [refetchVotes, refetchClaimed]);
+
   return {
     claimableItems,
     totalClaimable,
     activeStake,
     isLoading,
-    refetch: refetchVotes,
+    refetch,
   };
 }
