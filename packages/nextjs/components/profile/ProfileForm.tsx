@@ -121,7 +121,7 @@ export function ProfileForm() {
           <IdentificationIcon className="w-12 h-12 text-warning mx-auto" />
           <h2 className="text-lg font-semibold">Voter ID Required</h2>
           <p className="text-base-content/70">
-            You need a Voter ID to create a profile. Verify your identity with Self.xyz to receive your Voter ID NFT.
+            You need a Voter ID to create a profile. Verify your identity with Self.xyz to receive your Voter ID.
           </p>
           <Link href="/governance" className="btn btn-curyo">
             <IdentificationIcon className="w-5 h-5" />

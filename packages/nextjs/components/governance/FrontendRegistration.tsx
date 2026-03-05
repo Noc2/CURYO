@@ -163,7 +163,7 @@ export function FrontendRegistration() {
       <div className="flex items-center gap-2">
         <CodeBracketIcon className="w-6 h-6 text-primary" />
         <h2 className="text-xl font-bold">Frontend Registration</h2>
-        <InfoTooltip text="Register as a frontend operator to receive 1% of the losing pool from votes through your interface" />
+        <InfoTooltip text="Register as a frontend operator to receive 1% of the losing stakes from votes through your interface" />
       </div>
 
       <p className="text-base text-base-content/60">
@@ -193,7 +193,7 @@ export function FrontendRegistration() {
               <div>
                 <p className="flex items-center gap-1.5 text-base font-medium text-white">
                   Frontend Stake
-                  <InfoTooltip text="Returned when you withdraw, forfeited if you act maliciously. Receive 1% of the losing pool from votes via your interface" />
+                  <InfoTooltip text="Returned when you withdraw, forfeited if you act maliciously. Receive 1% of the losing stakes from votes via your interface" />
                 </p>
               </div>
               <div className="text-right">

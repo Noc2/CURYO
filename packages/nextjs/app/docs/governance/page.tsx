@@ -180,8 +180,8 @@ const GovernanceDocs: NextPage = () => {
       </p>
       <ul>
         <li>
-          <strong>1% resolution fee</strong> &mdash; 1% of every losing pool is sent to the treasury when rounds are
-          resolved.
+          <strong>1% resolution fee</strong> &mdash; 1% of every losing stakes pool is sent to the treasury when rounds
+          are resolved.
         </li>
         <li>
           <strong>Forfeited submitter deposits</strong> &mdash; when content is flagged for policy violations or
@@ -214,7 +214,7 @@ const GovernanceDocs: NextPage = () => {
       </p>
       <ul>
         <li>
-          <strong>Revoke Voter IDs</strong> &mdash; governance can permanently revoke the Voter ID NFTs of confirmed
+          <strong>Revoke Voter IDs</strong> &mdash; governance can permanently revoke the Voter IDs of confirmed
           colluders, removing their ability to vote on the platform.
         </li>
         <li>
@@ -226,7 +226,7 @@ const GovernanceDocs: NextPage = () => {
         <strong>Deterrence:</strong> Several protocol features make collusion costly and difficult:
       </p>
       <ul>
-        <li>Sybil resistance &mdash; 1 person = 1 Voter ID via passport verification (Self.xyz).</li>
+        <li>Identity verification &mdash; 1 person = 1 Voter ID via passport verification (Self.xyz).</li>
         <li>Stake caps &mdash; maximum 100 cREP per content per round limits single-voter influence.</li>
         <li>Vote cooldowns &mdash; 24-hour cooldown prevents rapid re-voting on the same content.</li>
         <li>Permanent revocation &mdash; losing your Voter ID is irreversible and eliminates voting ability.</li>

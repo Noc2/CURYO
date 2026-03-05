@@ -257,9 +257,9 @@ const GettingStarted: NextPage = () => {
       <h2>4. Vote on Content</h2>
       <p>
         The <strong>Vote</strong> page shows content cards. For each card, predict whether the rating will go UP or DOWN
-        and choose a stake (1&ndash;100 cREP). Your vote direction is encrypted and hidden until the epoch ends
-        (~1&nbsp;hour). Early (blind) voters earn 4x more reward weight. The keeper reveals votes automatically, and
-        settlement occurs after enough votes are revealed.
+        and choose a stake (1&ndash;100 cREP). Your vote direction is encrypted and hidden until the blind phase ends
+        (~20&nbsp;min). Early (blind phase) voters earn 4x more reward weight. Votes are revealed automatically, and
+        resolution occurs after enough votes are revealed.
       </p>
       <p>
         <strong>Note:</strong> Each Voter ID can stake a maximum of 100 cREP per content per round. This limit is
@@ -285,7 +285,7 @@ const GettingStarted: NextPage = () => {
         </li>
       </ul>
       <p>
-        As a submitter, you receive <strong>10% of the losing pool</strong> every time a round is resolved on your
+        As a submitter, you receive <strong>10% of the losing stakes</strong> every time a round is resolved on your
         content.
       </p>
 

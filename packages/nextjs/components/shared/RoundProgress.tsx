@@ -27,9 +27,9 @@ function formatDays(seconds: number): string {
 /**
  * Displays compact round progress for a content item.
  *
- * Active round shows the epoch tier badge:
- * - Tier 1 (epoch 1): Full reward weight (100%) — blind voting, direction hidden
- * - Tier 2 (epoch 2+): Reduced reward weight (25%) — epoch 1 results now visible
+ * Active round shows the phase badge:
+ * - Blind phase: Full reward weight (100%) — votes encrypted, direction hidden
+ * - Open phase: Reduced reward weight (25%) — blind phase results now visible
  *
  * Terminal states: Resolved / Cancelled / Tied
  */
@@ -111,7 +111,7 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
 
   return (
     <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap text-base text-base-content/60">
-      {/* Epoch tier badge */}
+      {/* Phase badge */}
       {isEpoch1 ? (
         <div className="flex items-center gap-1.5">
           <span className="badge badge-primary badge-sm gap-1 text-base">
@@ -122,10 +122,10 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
                 clipRule="evenodd"
               />
             </svg>
-            Tier 1 — full weight
+            Blind phase — full weight
           </span>
           <InfoTooltip
-            text="Epoch 1: votes are hidden (tlock). You earn 100% reward weight. Tier drops to 25% when epoch ends."
+            text="Blind phase: votes are encrypted and hidden. You earn 100% reward weight. Weight drops to 25% when the blind phase ends."
             position="bottom"
           />
           {epoch1Remaining > 0 && (
@@ -143,31 +143,31 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
                 clipRule="evenodd"
               />
             </svg>
-            Tier 2 — 25% weight
+            Open phase — 25% weight
           </span>
           <InfoTooltip
-            text="Epoch 2+: epoch 1 results are now visible. Late voters earn 25% reward weight (4× less than epoch 1)."
+            text="Open phase: earlier votes are now visible. Late voters earn 25% reward weight (4× less than blind phase voters)."
             position="bottom"
           />
         </div>
       )}
 
-      {/* Round expiry or settlement countdown */}
+      {/* Round expiry or resolution countdown */}
       {voteCount >= minVoters ? (
         <div className="flex items-center gap-2">
           {thresholdReachedAt > 0 ? (
             <>
               <span className="flex items-center gap-1">
-                Ready to settle
-                <InfoTooltip text="Votes revealed. The keeper settles within seconds." position="bottom" />
+                Ready to resolve
+                <InfoTooltip text="Votes revealed. The system resolves within seconds." position="bottom" />
               </span>
             </>
           ) : (
             <>
               <span className="flex items-center gap-1">
-                Settles in
+                Resolves in
                 <InfoTooltip
-                  text="Estimated time: votes revealed at epoch end, then settled immediately."
+                  text="Estimated time: votes revealed when the blind phase ends, then resolved immediately."
                   position="bottom"
                 />
               </span>
@@ -181,7 +181,7 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
             <span className="flex items-center gap-1">
               Expires in
               <InfoTooltip
-                text="Maximum time until the round expires. Settlement happens sooner once enough votes are revealed."
+                text="Maximum time until the round expires. Resolution happens sooner once enough votes are revealed."
                 position="bottom"
               />
             </span>

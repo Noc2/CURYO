@@ -1,20 +1,20 @@
 const STEPS = [
   {
-    label: "Commit",
+    label: "Vote",
     badge: "badge-secondary",
     duration: "1–100 cREP",
-    description: "Choose UP or DOWN, stake is locked, direction is hidden (tlock)",
+    description: "Choose UP or DOWN, stake is locked, direction is encrypted",
     icon: "🔒",
   },
   {
     label: "Reveal",
     badge: "badge-secondary",
     duration: "~20 min",
-    description: "Keeper reveals votes after epoch ends via drand",
+    description: "Votes revealed after blind phase ends",
     icon: "🔓",
   },
   {
-    label: "Settle",
+    label: "Resolve",
     badge: "badge-secondary",
     duration: "",
     description: "Majority wins after min 3 voters revealed",

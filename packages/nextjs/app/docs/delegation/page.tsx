@@ -11,7 +11,7 @@ const DelegationDocs: NextPage = () => {
       <h2>What is Delegation?</h2>
       <p>
         Your Voter ID is a non-transferable digital ID tied to your verified identity via Self.xyz. If the private key
-        holding this NFT is compromised, the attacker gains a verified identity that cannot be re-issued to the same
+        holding this ID is compromised, the attacker gains a verified identity that cannot be re-issued to the same
         passport. This makes the Voter ID key uniquely high-value.
       </p>
       <p>
@@ -19,7 +19,7 @@ const DelegationDocs: NextPage = () => {
       </p>
       <ul>
         <li>
-          <strong>Cold wallet</strong> &mdash; holds the Voter ID NFT, stays on a hardware wallet (Ledger, Trezor), only
+          <strong>Cold wallet</strong> &mdash; holds the Voter ID, stays on a hardware wallet (Ledger, Trezor), only
           used to set/remove delegates
         </li>
         <li>
@@ -182,7 +182,7 @@ const DelegationDocs: NextPage = () => {
           <tbody>
             <tr>
               <td>One delegate per holder</td>
-              <td>Prevents Sybil amplification through multiple delegates</td>
+              <td>Prevents identity amplification through multiple delegates</td>
             </tr>
             <tr>
               <td>One holder per delegate</td>

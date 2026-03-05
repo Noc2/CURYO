@@ -10,11 +10,15 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 // Navbar brand colors: Discover=#359EEE, Submit=#03CEA4, cREP=#FFC43D, Docs=#EF476F
 const STEPS = [
   { label: "Browse", desc: "explore submitted content in the feed", hex: "#359EEE" },
-  { label: "Vote", desc: "predict and commit your vote — direction is hidden until the epoch ends", hex: "#03CEA4" },
+  {
+    label: "Vote",
+    desc: "predict and place your vote — direction is hidden until the blind phase ends",
+    hex: "#03CEA4",
+  },
   { label: "Stake", desc: "back your prediction with cREP tokens", hex: "#FFC43D" },
   {
-    label: "Reveal & Settle",
-    desc: "the keeper reveals votes after each epoch (~20 min); rounds settle automatically",
+    label: "Reveal & Resolve",
+    desc: "votes are revealed after each blind phase (~20 min); rounds resolve automatically",
     hex: "#EF476F",
   },
   { label: "Claim", desc: "collect your rewards if your prediction was correct", hex: "#359EEE" },
@@ -22,7 +26,7 @@ const STEPS = [
 
 /**
  * Right-side popup explaining the 5-step voting flow.
- * Only appears once a user has claimed their Voter ID NFT, and only once.
+ * Only appears once a user has claimed their Voter ID, and only once.
  */
 export function VotingGuide() {
   const { shouldShowGuide, dismissGuide } = useOnboarding();

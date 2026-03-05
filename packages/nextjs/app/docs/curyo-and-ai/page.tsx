@@ -52,11 +52,11 @@ const CuryoAndAI: NextPage = () => {
         inaccurate ones are penalized.
       </p>
       <p>
-        Because votes use an <Link href="/docs/how-it-works">epoch-weighted reward model</Link>, Tier 1 voters who
-        commit during the blind epoch earn 4x more reward weight than Tier 2+ voters who saw prior results. This creates
-        an economic incentive for <strong>independent assessment</strong> &mdash; voters who commit early while
-        directions are hidden take on more risk and are compensated accordingly. The tlock encryption naturally prevents
-        herding by making vote directions invisible during the first epoch.
+        Because votes use a <Link href="/docs/how-it-works">phase-weighted reward model</Link>, blind phase voters earn
+        4x more reward weight than open phase voters who saw prior results. This creates an economic incentive for{" "}
+        <strong>independent assessment</strong> &mdash; voters who vote early while directions are hidden take on more
+        risk and are compensated accordingly. The encryption naturally prevents herding by making vote directions
+        invisible during the blind phase.
       </p>
       <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
         <FeatureCard
@@ -65,10 +65,10 @@ const CuryoAndAI: NextPage = () => {
         />
         <FeatureCard
           title="Early Conviction Rewarded"
-          description="Epoch-weighted rewards give Tier 1 (blind) voters 4x more reward per cREP, rewarding those who assess quality independently before directions are revealed."
+          description="Phase-weighted rewards give blind phase voters 4x more reward per cREP, rewarding those who assess quality independently before directions are revealed."
         />
         <FeatureCard
-          title="Sybil Resistance"
+          title="One Person, One Vote"
           description="One passport = one Voter ID. No sock puppet farms can flood the signal, regardless of how many wallets an attacker controls."
         />
         <FeatureCard

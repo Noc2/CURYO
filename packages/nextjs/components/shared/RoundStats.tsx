@@ -13,9 +13,9 @@ interface RoundStatsProps {
 /**
  * Displays stake and vote statistics for the current round on a specific content.
  *
- * tlock commit-reveal model:
- * - During epoch 1: votes are hidden (commit phase). Only totalStake and voteCount are shown.
- * - After epoch 1: keeper reveals votes. Revealed UP/DOWN pool breakdown is shown.
+ * Blind voting model:
+ * - During blind phase: votes are encrypted and hidden. Only totalStake and voteCount are shown.
+ * - After blind phase: the system reveals votes. Revealed UP/DOWN pool breakdown is shown.
  */
 export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
@@ -78,8 +78,8 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
                 <InfoTooltip
                   text={
                     isEpoch1
-                      ? "Votes are hidden until epoch 1 ends. The keeper reveals them automatically after the epoch."
-                      : "The keeper is revealing votes. Revealed votes are counted toward settlement."
+                      ? "Votes are encrypted until the blind phase ends. They are revealed automatically afterward."
+                      : "The system is revealing votes. Revealed votes are counted toward resolution."
                   }
                   position="bottom"
                 />
@@ -132,7 +132,7 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
         <div className="flex items-center gap-1 text-success/80">
           <span>Rewards distributed</span>
           <InfoTooltip
-            text="Rewards are proportional to epoch-weighted stake. Epoch-1 voters earn 4× more per cREP than epoch-2+ voters."
+            text="Rewards are proportional to phase-weighted stake. Blind phase voters earn 4× more per cREP than open phase voters."
             position="bottom"
           />
         </div>

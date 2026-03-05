@@ -106,7 +106,7 @@ export function VotingQuestionCard({
   });
   const symbol = tokenSymbol ?? "cREP";
 
-  // Check if user has committed to this round (tlock: direction hidden until reveal)
+  // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
   const { data: myCommitHash } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
@@ -211,7 +211,7 @@ export function VotingQuestionCard({
                 ))}
               </span>
               <InfoTooltip
-                text={`${voteCount} of ${minVoters} voters. ${Math.max(0, minVoters - voteCount) > 0 ? `${Math.max(0, minVoters - voteCount)} more vote${Math.max(0, minVoters - voteCount) === 1 ? "" : "s"} needed.` : "Ready to settle."} Votes are revealed after each epoch ends.`}
+                text={`${voteCount} of ${minVoters} voters. ${Math.max(0, minVoters - voteCount) > 0 ? `${Math.max(0, minVoters - voteCount)} more vote${Math.max(0, minVoters - voteCount) === 1 ? "" : "s"} needed.` : "Ready to resolve."} Votes are revealed after the blind phase ends.`}
                 position="bottom"
               />
             </span>
@@ -225,10 +225,10 @@ export function VotingQuestionCard({
         <div className="flex items-center justify-center gap-2 lg:gap-3 mb-3">
           {address ? (
             hasMyVote ? (
-              /* Already committed — direction hidden until epoch ends (tlock) */
+              /* Already committed — direction hidden until blind phase ends */
               <div
                 className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
-                data-tip="Your vote is committed and encrypted until the epoch ends. The keeper reveals it automatically."
+                data-tip="Your vote is encrypted until the blind phase ends. It is revealed automatically."
               >
                 <span className="text-base font-semibold text-primary">Committed</span>
                 <span className="text-base text-base-content/50">hidden</span>

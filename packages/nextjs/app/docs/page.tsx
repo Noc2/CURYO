@@ -32,43 +32,44 @@ const DocsIntro: NextPage = () => {
           description="Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes."
         />
         <FeatureCard
-          title="Voter ID (Sybil Resistance)"
+          title="Voter ID (One Person, One Vote)"
           description="Each verified human gets one non-transferable Voter ID, limiting stake to 100 cREP per content per round."
         />
         <FeatureCard
           title="Per-Content Rounds"
-          description="Each content item has independent rounds with tlock commit-reveal voting. Tier 1 (blind) voters earn 4x more reward weight per cREP than Tier 2+ (informed) voters."
+          description="Each content item has independent rounds with blind voting. Blind phase voters earn 4x more reward weight per cREP than open phase voters."
         />
         <FeatureCard
           title="Contributor Rewards"
-          description="Content submitters receive 10%, category submitters 1%, and frontend operators 1% of the losing pool."
+          description="Content submitters receive 10%, category submitters 1%, and frontend operators 1% of the losing stakes."
         />
       </div>
 
       <h2>Voting Flow</h2>
       <p>
         Voters predict whether content&apos;s rating will go <strong>UP</strong> or <strong>DOWN</strong> and back their
-        prediction with a cREP stake. Vote directions are encrypted via tlock and hidden until the epoch ends &mdash;
-        epoch-weighted rewards give early (blind) voters 4x more reward per cREP than later voters.
+        prediction with a cREP stake. Vote directions are encrypted and hidden until the blind phase ends &mdash;
+        phase-weighted rewards give early (blind) voters 4x more reward per cREP than later voters.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
       </div>
       <ol>
         <li>
-          <strong>Commit:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote direction
-          is committed on-chain with your direction encrypted via tlock.
+          <strong>Vote:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote direction is
+          encrypted and hidden on-chain.
         </li>
         <li>
-          <strong>Accumulate:</strong> Votes accumulate during the epoch. Directions are hidden until the keeper reveals
-          them after the epoch ends.
+          <strong>Accumulate:</strong> Votes accumulate during the blind phase. Directions are hidden until the system
+          reveals them after the blind phase ends.
         </li>
         <li>
-          <strong>Settle:</strong> After the epoch ends, the keeper reveals all votes. Once at least 3 votes are
-          revealed, the round settles. The majority side wins and the losing side&apos;s stakes become the reward pool.
+          <strong>Resolve:</strong> After the blind phase ends, votes are revealed automatically. Once at least 3 votes
+          are revealed, the round resolves. The majority side wins and the losing side&apos;s stakes become the reward
+          pool.
         </li>
       </ol>
-      <p>The losing pool is split:</p>
+      <p>The losing stakes are split:</p>
       <div className="not-prose my-6">
         <RewardSplitChart />
       </div>
@@ -79,8 +80,9 @@ const DocsIntro: NextPage = () => {
 
       <h2>Content Rating</h2>
       <p>
-        Every content item has a <strong>rating from 0 to 100</strong>, starting at 50. After each round is settled, the
-        winning side moves the rating UP or DOWN by 1&ndash;5 points depending on the total stake and number of voters.
+        Every content item has a <strong>rating from 0 to 100</strong>, starting at 50. After each round is resolved,
+        the winning side moves the rating UP or DOWN by 1&ndash;5 points depending on the total stake and number of
+        voters.
       </p>
       <p>
         Each category (platform) has a <strong>ranking question</strong> set by its creator &mdash; for example,

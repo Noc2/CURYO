@@ -209,8 +209,8 @@ export const AddressInfoDropdown = ({
           className="tooltip tooltip-top text-sm text-base-content/40 text-left px-4 pl-12 cursor-help"
           data-tip={
             earliestDeadline
-              ? `Staked in active rounds. Votes revealed each epoch (~1h). If unsettled after 7 days, stakes are refunded.`
-              : "Staked in active rounds. If unsettled after 7 days, stakes are refunded."
+              ? `Staked in active rounds. Votes revealed after each blind phase. If unresolved after 7 days, stakes are refunded.`
+              : "Staked in active rounds. If unresolved after 7 days, stakes are refunded."
           }
         >
           {activeFormatted} cREP in active votes
@@ -264,8 +264,8 @@ export const AddressInfoDropdown = ({
           className="tooltip tooltip-right text-sm text-base-content/40 hidden xl:inline xl:px-2 cursor-help"
           data-tip={
             earliestDeadline
-              ? `Staked in active rounds. Votes revealed each epoch (~1h). If unsettled after 7 days, stakes are refunded.`
-              : "Staked in active rounds. If unsettled after 7 days, stakes are refunded."
+              ? `Staked in active rounds. Votes revealed after each blind phase. If unresolved after 7 days, stakes are refunded.`
+              : "Staked in active rounds. If unresolved after 7 days, stakes are refunded."
           }
         >
           {activeFormatted} cREP in active votes

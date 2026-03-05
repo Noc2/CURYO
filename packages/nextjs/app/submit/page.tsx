@@ -442,7 +442,7 @@ const SubmitPage: NextPage = () => {
           <h1 className="text-2xl font-semibold">Voter ID Required</h1>
           <p className="text-base-content/60">
             You need a Voter ID to submit content, propose platforms, or register as a frontend operator. Verify your
-            identity with Self.xyz to receive your Voter ID NFT.
+            identity with Self.xyz to receive your Voter ID.
           </p>
           <Link href="/governance" className="btn btn-submit">
             <IdentificationIcon className="w-5 h-5" />
@@ -739,7 +739,7 @@ const SubmitPage: NextPage = () => {
                   <div>
                     <p className="flex items-center gap-1.5 text-base font-medium text-white">
                       Submission Stake
-                      <InfoTooltip text="Returned after ~4 days if rating stays above 10%. Receive 10% of the losing pool of the content every round" />
+                      <InfoTooltip text="Returned after ~4 days if rating stays above 10%. Receive 10% of the losing stakes every round" />
                     </p>
                   </div>
                   <div className="text-right">

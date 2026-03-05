@@ -62,8 +62,8 @@ const Tokenomics = () => {
           deployment finalization (role renounce ceremony), no privileged admin keys remain.
         </li>
         <li>
-          <strong>Sybil-resistant distribution.</strong> Tokens are claimed once per verified human via passport
-          verification, preventing concentration and ensuring broad distribution.
+          <strong>Fair distribution (one person, one claim).</strong> Tokens are claimed once per verified human via
+          passport verification, preventing concentration and ensuring broad distribution.
         </li>
       </ul>
 
@@ -102,7 +102,9 @@ const Tokenomics = () => {
             <tr>
               <td className="font-medium">Agreement Bonus</td>
               <td className="font-mono">4,000,000 cREP</td>
-              <td>Pre-funded reserve for unanimous agreement rewards, replenished by 5% of each losing pool</td>
+              <td>
+                Pre-funded reserve for unanimous agreement rewards, replenished by 5% of each round&apos;s losing stakes
+              </td>
             </tr>
             <tr>
               <td className="font-medium">Treasury</td>
@@ -368,10 +370,10 @@ const Tokenomics = () => {
 
       <p>
         The 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
-        <strong>epoch-weighted effective stake</strong> to winning voters on that content. Tier 1 (blind) voters earn 4x
-        more per cREP than Tier 2+ (informed) voters. An additional 5% goes to an agreement bonus reserve. Because each
-        content item has independent rounds that settle on their own timeline, rewards are claimable immediately after
-        settlement. The 1% treasury fee goes to the governance timelock.
+        <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase voters earn 4x
+        more per cREP than open phase voters. An additional 5% goes to an agreement bonus reserve. Because each content
+        item has independent rounds that resolve on their own timeline, rewards are claimable immediately after
+        resolution. The 1% treasury fee goes to the governance timelock.
       </p>
 
       <hr />

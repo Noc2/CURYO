@@ -7,13 +7,13 @@ const HowItWorks: NextPage = () => {
     <article className="prose max-w-none">
       <h1>How It Works</h1>
       <p className="lead text-base-content/60 text-lg">
-        Per-content round voting with tlock commit-reveal and epoch-weighted rewards.
+        Per-content round voting with blind voting and phase-weighted rewards.
       </p>
 
-      <h2>Voter ID &amp; Sybil Resistance</h2>
+      <h2>Voter ID &amp; Identity Verification</h2>
       <p>
-        To prevent manipulation through multiple wallets (sybil attacks), Curyo uses <strong>Voter ID NFTs</strong>{" "}
-        &mdash; non-transferable digital IDs tied to verified human identities via Self.xyz passport verification.
+        To prevent manipulation through multiple wallets, Curyo uses <strong>Voter IDs</strong> &mdash; non-transferable
+        digital IDs tied to verified human identities via Self.xyz passport verification.
       </p>
       <ul>
         <li>
@@ -40,30 +40,29 @@ const HowItWorks: NextPage = () => {
       <p>
         Each content item has independent <strong>rounds</strong>. Voters predict whether content&apos;s rating will go{" "}
         <strong>UP</strong> or <strong>DOWN</strong> and back their prediction with a cREP stake. Vote directions are{" "}
-        <strong>encrypted via tlock</strong> and hidden until the epoch ends &mdash; epoch-weighted rewards give early
-        (blind) voters <strong>4x more reward weight</strong> per cREP than later voters who saw prior results.
+        <strong>encrypted</strong> and hidden until the blind phase ends &mdash; phase-weighted rewards give early
+        (blind phase) voters <strong>4x more reward weight</strong> per cREP than later voters who saw prior results.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
       </div>
       <ol>
         <li>
-          <strong>Commit:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote direction
-          is encrypted via tlock and hidden on-chain. Your stake amount is visible, but no one knows which side you
-          chose.
+          <strong>Vote:</strong> Choose UP or DOWN, select stake (1&ndash;100 cREP per Voter ID). Your vote direction is
+          encrypted and hidden on-chain. Your stake amount is visible, but no one knows which side you chose.
         </li>
         <li>
-          <strong>Accumulate:</strong> Votes accumulate within the round. Directions are hidden during the first epoch
-          (~20&nbsp;min). After the epoch ends, the keeper reveals all committed votes using the drand beacon.
+          <strong>Accumulate:</strong> Votes accumulate within the round. Directions are hidden during the blind phase
+          (~20&nbsp;min). After the blind phase ends, the system reveals all votes automatically.
         </li>
         <li>
-          <strong>Reveal:</strong> The keeper automatically reveals votes after each epoch using the drand beacon
-          decryption key. Revealing is also permissionless &mdash; anyone can reveal any vote after its epoch ends.
+          <strong>Reveal:</strong> The system automatically reveals votes after each blind phase. Revealing is also open
+          &mdash; anyone can reveal any vote after its blind phase ends.
         </li>
         <li>
-          <strong>Settle:</strong> Once at least 3 votes are revealed, the round can be settled. The majority side wins.
-          The losing side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points based on
-          winning stake size. Winners can then click Claim to collect their rewards.
+          <strong>Resolve:</strong> Once at least 3 votes are revealed, the round can be resolved. The majority side
+          wins. The losing side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points
+          based on winning stake size. Winners can then click Claim to collect their rewards.
         </li>
       </ol>
 
@@ -99,21 +98,21 @@ const HowItWorks: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Committed</span>
               </td>
-              <td>Vote recorded, direction hidden (tlock encrypted). Tier 1 = 100% reward weight, Tier 2+ = 25%</td>
-              <td className="font-mono">~20 min per epoch</td>
+              <td>Vote recorded, direction encrypted and hidden. Blind phase = 100% reward weight, open phase = 25%</td>
+              <td className="font-mono">~20 min per phase</td>
               <td>None</td>
             </tr>
             <tr>
               <td>
                 <span className="badge badge-secondary badge-sm">Revealed</span>
               </td>
-              <td>Keeper reveals votes after epoch ends via drand beacon &mdash; directions now visible</td>
+              <td>System reveals votes after blind phase ends &mdash; directions now visible</td>
               <td className="font-mono">Automatic</td>
               <td>None</td>
             </tr>
             <tr>
               <td>
-                <span className="badge badge-secondary badge-sm">Settled</span>
+                <span className="badge badge-secondary badge-sm">Resolved</span>
               </td>
               <td>&ldquo;Claim X cREP&rdquo; (winners) or &ldquo;Lost X cREP&rdquo; (losers)</td>
               <td className="font-mono">After min 3 revealed</td>
@@ -123,10 +122,10 @@ const HowItWorks: NextPage = () => {
         </table>
       </div>
       <p>
-        After the epoch ends, the keeper reveals all committed votes using the drand beacon. Once at least 3 votes are
-        revealed, settlement can be triggered immediately. Settlement is fully permissionless &mdash; anyone can call
-        it. An automated keeper service handles this automatically. Winners receive their original stake plus an
-        epoch-weighted share of the losing pool.
+        After the blind phase ends, the system reveals all votes automatically. Once at least 3 votes are revealed,
+        resolution can be triggered immediately. Resolution is fully open &mdash; anyone can trigger it. An automated
+        service handles this automatically. Winners receive their original stake plus a phase-weighted share of the
+        losing stakes.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
@@ -139,14 +138,14 @@ const HowItWorks: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono">epochDuration</td>
+              <td className="font-mono">Blind phase duration</td>
               <td>20 minutes</td>
-              <td>Tier window for reward weighting.</td>
+              <td>Phase window for reward weighting.</td>
             </tr>
             <tr>
-              <td className="font-mono">minVoters</td>
+              <td className="font-mono">Minimum voters</td>
               <td>3</td>
-              <td>Minimum revealed votes required before settlement is allowed.</td>
+              <td>Minimum revealed votes required before resolution is allowed.</td>
             </tr>
             <tr>
               <td className="font-mono">maxDuration</td>
@@ -158,7 +157,7 @@ const HowItWorks: NextPage = () => {
       </div>
 
       <h2>Reward Distribution</h2>
-      <p>The losing pool is split:</p>
+      <p>The losing stakes are split:</p>
       <div className="not-prose my-6">
         <RewardSplitChart />
       </div>
@@ -200,44 +199,44 @@ const HowItWorks: NextPage = () => {
       </div>
       <p>
         The <strong>82%</strong> voter share goes entirely to a <strong>content-specific pool</strong> distributed
-        proportionally by <strong>epoch-weighted effective stake</strong> to winning voters on that content. Tier 1
-        (blind) voters receive 100% reward weight, while Tier 2+ (informed) voters receive 25% &mdash; giving early
-        voters a 4x advantage per cREP staked. An additional <strong>5%</strong> goes to an agreement bonus reserve.
-        Rewards become claimable immediately after the round is settled. There is no global pool &mdash; each content
-        round is self-contained.
+        proportionally by <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase
+        voters receive 100% reward weight, while open phase voters receive 25% &mdash; giving early voters a 4x
+        advantage per cREP staked. An additional <strong>5%</strong> goes to an agreement bonus reserve. Rewards become
+        claimable immediately after the round is resolved. There is no global pool &mdash; each content round is
+        self-contained.
       </p>
 
       <h2>Content Rating</h2>
       <p>
         Each content item has a rating from 0 to 100 (starting at 50). The rating{" "}
-        <strong>only changes when a round is settled</strong> &mdash; it stays unchanged while voting is ongoing. Once
-        settlement is triggered, the rating moves by 1&ndash;5 points toward the winning side based on the total winning
+        <strong>only changes when a round is resolved</strong> &mdash; it stays unchanged while voting is ongoing. Once
+        resolution is triggered, the rating moves by 1&ndash;5 points toward the winning side based on the total winning
         stake. The delta is also capped by the number of unique winning voters (1 voter = max 1 point, 2 voters = max 2
         points, etc.), preventing a single actor from making large rating swings.
       </p>
       <p>
         If a round <strong>expires</strong> (7&nbsp;days pass without reaching the minimum 3 revealed voters) or ends in
-        a <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive settlement with
+        a <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive resolution with
         a clear majority updates the rating.
       </p>
 
-      <h2>Content Dormancy &amp; Revival</h2>
+      <h2>Content Inactivity &amp; Revival</h2>
       <p>
-        Content that receives no voting activity for <strong>30 days</strong> can be marked as <strong>dormant</strong>.
-        This is a permissionless action &mdash; anyone can trigger it, and the Keeper service does so automatically.
-        Dormancy prevents new votes on inactive content and returns the submitter&apos;s original stake.
+        Content that receives no voting activity for <strong>30 days</strong> can be marked as <strong>inactive</strong>
+        . Anyone can trigger this, and the system does so automatically. Inactivity prevents new votes on idle content
+        and returns the submitter&apos;s original stake.
       </p>
       <ul>
         <li>
-          <strong>Safety check:</strong> Content with an active open round cannot be marked dormant, protecting voters
+          <strong>Safety check:</strong> Content with an active open round cannot be marked inactive, protecting voters
           from stranded stakes.
         </li>
         <li>
-          <strong>Revival:</strong> Dormant content can be revived by staking <strong>5 cREP</strong>. This resets the
+          <strong>Revival:</strong> Inactive content can be revived by staking <strong>5 cREP</strong>. This resets the
           30-day activity timer. Each content item can be revived up to <strong>2 times</strong>.
         </li>
         <li>
-          <strong>Permanent dormancy:</strong> After 2 revivals, content that goes dormant again cannot be revived.
+          <strong>Permanently inactive:</strong> After 2 revivals, content that goes inactive again cannot be revived.
         </li>
       </ul>
     </article>
