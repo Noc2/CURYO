@@ -32,6 +32,7 @@ contract VotingHandler is Test {
     uint256 public ghost_totalClaimed; // voter rewards (stake return + pool share)
     uint256 public ghost_totalSubmitterClaimed;
     uint256 public ghost_totalRefunded;
+    uint256 public ghost_totalConsensusSubsidy;
 
     // --- Per-round tracking ---
     struct RoundRecord {
@@ -207,7 +208,13 @@ contract VotingHandler is Test {
         RoundLib.RoundConfig memory cfg = engine.getRoundConfig(contentId, roundId);
         if (round.revealedCount < cfg.minVoters) return;
 
+        uint256 reserveBefore = engine.consensusReserve();
         try engine.settleRound(contentId, roundId) {
+            uint256 reserveAfter = engine.consensusReserve();
+            if (reserveBefore > reserveAfter) {
+                ghost_totalConsensusSubsidy += reserveBefore - reserveAfter;
+            }
+
             settleCount++;
             _ensureRoundRecord(contentId, roundId);
             uint256 idx = roundRecordIndex[contentId][roundId] - 1;

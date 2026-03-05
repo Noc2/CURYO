@@ -159,13 +159,12 @@ contract InvariantSolvency is Test {
         // This is a soft check: outflows can exceed stake-inflows by at most the consensus used
         // The strict check is C-03 (balance solvency)
         if (totalIn > 0 || totalClaimedOut > 0) {
-            // outflows <= inflows + consensus_reserve_spent + dust
-            // consensus_reserve_spent is bounded by initial reserve
+            // outflows <= inflows + actual consensus subsidy spent + dust
             uint256 dust = handler.settleCount() * 5;
             assertLe(
                 totalClaimedOut,
-                totalIn + 1_000_000e6 + dust, // 1M = initial reserve, generous upper bound
-                "C-02: outflows exceed inflows + reserve"
+                totalIn + handler.ghost_totalConsensusSubsidy() + dust,
+                "C-02: outflows exceed inflows + consensus subsidy"
             );
         }
     }
