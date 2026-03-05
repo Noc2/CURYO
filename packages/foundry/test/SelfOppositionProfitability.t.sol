@@ -173,11 +173,7 @@ contract SelfOppositionProfitabilityTest is Test {
     ///      Attacker votes UP with walletA (stakeA) and DOWN with walletB (stakeB).
     ///      Honest voter votes UP (stakeHonest) to break the tie (UP wins).
     ///      Returns: positive = profit, negative = loss (as int256).
-    function _runSelfOppositionAttack(
-        uint256 stakeA,
-        uint256 stakeB,
-        uint256 stakeHonest
-    )
+    function _runSelfOppositionAttack(uint256 stakeA, uint256 stakeB, uint256 stakeHonest)
         internal
         returns (
             int256 netProfitLoss,
@@ -257,7 +253,7 @@ contract SelfOppositionProfitabilityTest is Test {
     ///         At tier 0, the attack may be marginally profitable due to 90% participation rewards.
     function test_Tier0_AsymmetricStakes_MinDown_MaxUp() public {
         uint256 stakeA = 100e6; // UP — max stake (will win)
-        uint256 stakeB = 1e6;   // DOWN — min stake (will lose)
+        uint256 stakeB = 1e6; // DOWN — min stake (will lose)
         uint256 stakeHonest = 50e6; // UP (honest, breaks tie)
 
         (
@@ -308,9 +304,9 @@ contract SelfOppositionProfitabilityTest is Test {
     ///         Honest voter votes 50 cREP UP. UP wins. Attacker loses 100 cREP.
     ///         This is the WORST case for the attacker — large stake on losing side.
     function test_Tier0_AsymmetricStakes_MaxDown_MinUp() public {
-        uint256 stakeA = 1e6;    // UP — min stake (will win)
-        uint256 stakeB = 100e6;  // DOWN — max stake (will lose)
-        uint256 stakeHonest = 50e6; // UP (honest, breaks tie — UP pool > DOWN pool)
+        uint256 stakeA = 1e6; // UP — min stake (will win)
+        uint256 stakeB = 100e6; // DOWN — max stake (will lose)
+        uint256 stakeHonest = 100e6; // UP (honest, needs to outweigh 100 DOWN)
 
         (
             int256 netProfitLoss,
@@ -334,9 +330,9 @@ contract SelfOppositionProfitabilityTest is Test {
 
         // Lost stake = 100 cREP. Participation = 0.9 + 90 = 90.9 cREP.
         // Voter pool from 100 cREP losing pool = 82 cREP.
-        // WalletA gets: 1/51 * 82 = ~1.608 cREP reward, + 1 cREP stake return.
-        // Net voting game: 1.608 - 100 = -98.39 cREP.
-        // Net with participation: -98.39 + 90.9 = -7.49 cREP (LOSS).
+        // WalletA gets: 1/101 * 82 = ~0.81 cREP reward, + 1 cREP stake return.
+        // Net voting game: 0.81 - 100 = -99.19 cREP.
+        // Net with participation: -99.19 + 90.9 = -8.29 cREP (LOSS).
         // Even at tier 0, losing a large stake overwhelms participation rewards.
         assertLt(netProfitLoss, 0, "Large losing stake makes self-opposition unprofitable even at tier 0");
     }
@@ -354,12 +350,8 @@ contract SelfOppositionProfitabilityTest is Test {
         uint256 stakeB = 1e6;
         uint256 stakeHonest = 50e6;
 
-        (
-            int256 netProfitLoss,
-            uint256 participationA,
-            uint256 participationB,
-            uint256 voterRewardA,
-        ) = _runSelfOppositionAttack(stakeA, stakeB, stakeHonest);
+        (int256 netProfitLoss, uint256 participationA, uint256 participationB, uint256 voterRewardA,) =
+            _runSelfOppositionAttack(stakeA, stakeB, stakeHonest);
 
         console2.log("=== Tier 1: Asymmetric (100 UP / 1 DOWN) ===");
         console2.log("Voter reward (walletA, includes stake return):", voterRewardA);
@@ -396,12 +388,8 @@ contract SelfOppositionProfitabilityTest is Test {
         uint256 stakeB = 1e6;
         uint256 stakeHonest = 50e6;
 
-        (
-            int256 netProfitLoss,
-            uint256 participationA,
-            uint256 participationB,
-            uint256 voterRewardA,
-        ) = _runSelfOppositionAttack(stakeA, stakeB, stakeHonest);
+        (int256 netProfitLoss, uint256 participationA, uint256 participationB, uint256 voterRewardA,) =
+            _runSelfOppositionAttack(stakeA, stakeB, stakeHonest);
 
         console2.log("=== Tier 2: Asymmetric (100 UP / 1 DOWN) ===");
         console2.log("Voter reward (walletA, includes stake return):", voterRewardA);
@@ -437,12 +425,8 @@ contract SelfOppositionProfitabilityTest is Test {
         uint256 stakeB = 1e6;
         uint256 stakeHonest = 50e6;
 
-        (
-            int256 netProfitLoss,
-            uint256 participationA,
-            uint256 participationB,
-            uint256 voterRewardA,
-        ) = _runSelfOppositionAttack(stakeA, stakeB, stakeHonest);
+        (int256 netProfitLoss, uint256 participationA, uint256 participationB, uint256 voterRewardA,) =
+            _runSelfOppositionAttack(stakeA, stakeB, stakeHonest);
 
         console2.log("=== Tier 3: Asymmetric (100 UP / 1 DOWN) ===");
         console2.log("Voter reward (walletA, includes stake return):", voterRewardA);
@@ -518,12 +502,8 @@ contract SelfOppositionProfitabilityTest is Test {
         uint256 stakeB = 50e6;
         uint256 stakeHonest = 50e6;
 
-        (
-            int256 netProfitLoss,
-            uint256 participationA,
-            uint256 participationB,
-            uint256 voterRewardA,
-        ) = _runSelfOppositionAttack(stakeA, stakeB, stakeHonest);
+        (int256 netProfitLoss, uint256 participationA, uint256 participationB, uint256 voterRewardA,) =
+            _runSelfOppositionAttack(stakeA, stakeB, stakeHonest);
 
         console2.log("=== Tier 2: Equal Stakes (50 UP / 50 DOWN) ===");
         console2.log("Voter reward (walletA, includes stake return):", voterRewardA);
@@ -720,21 +700,16 @@ contract SelfOppositionProfitabilityTest is Test {
     ///         With max/min stakes (100/1): nearly always profitable until rate < ~1%.
     function test_Summary_BreakEvenAnalysis() public pure {
         // Mathematical analysis (no contract interaction needed)
-        uint256 stakeWin = 100e6;  // Winning side stake
-        uint256 stakeLose = 1e6;   // Losing side stake (minimum)
+        uint256 stakeWin = 100e6; // Winning side stake
+        uint256 stakeLose = 1e6; // Losing side stake (minimum)
 
         // At each tier, calculate net from participation alone (ignoring voter pool share)
         // Participation net = (stakeWin + stakeLose) * rateBps / 10000 - stakeLose
         // This is a lower bound (actual profit is higher due to voter pool share)
 
         uint256[5] memory rates = [uint256(9000), uint256(4500), uint256(2250), uint256(1125), uint256(562)];
-        string[5] memory tierNames = [
-            string("Tier 0 (90.0%)"),
-            "Tier 1 (45.0%)",
-            "Tier 2 (22.5%)",
-            "Tier 3 (11.25%)",
-            "Tier 4 (5.62%)"
-        ];
+        string[5] memory tierNames =
+            [string("Tier 0 (90.0%)"), "Tier 1 (45.0%)", "Tier 2 (22.5%)", "Tier 3 (11.25%)", "Tier 4 (5.62%)"];
 
         for (uint256 i = 0; i < 5; i++) {
             uint256 totalParticipation = (stakeWin + stakeLose) * rates[i] / 10000;
