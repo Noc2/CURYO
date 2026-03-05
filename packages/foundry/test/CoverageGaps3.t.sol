@@ -13,98 +13,13 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { IVoterIdNFT } from "../contracts/interfaces/IVoterIdNFT.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 
 // =========================================================================
 // MOCKS
 // =========================================================================
-
-contract MockVoterIdNFT3 is IVoterIdNFT {
-    mapping(address => bool) public holders;
-    mapping(address => uint256) public tokenIds;
-    mapping(uint256 => address) public tokenHolders;
-    mapping(uint256 => bool) public usedNullifiers;
-    uint256 private nextTokenId = 1;
-    mapping(bytes32 => uint256) public stakes;
-    mapping(address => address) public holderToDelegate;
-    mapping(address => address) public delegateToHolder;
-
-    function setHolder(address holder) external {
-        holders[holder] = true;
-        if (tokenIds[holder] == 0) {
-            tokenIds[holder] = nextTokenId;
-            tokenHolders[nextTokenId] = holder;
-            nextTokenId++;
-        }
-    }
-
-    function mint(address to, uint256 nullifier) external returns (uint256) {
-        usedNullifiers[nullifier] = true;
-        holders[to] = true;
-        uint256 id = nextTokenId++;
-        tokenIds[to] = id;
-        tokenHolders[id] = to;
-        return id;
-    }
-
-    function hasVoterId(address holder) external view returns (bool) {
-        return holders[holder];
-    }
-
-    function getTokenId(address holder) external view returns (uint256) {
-        return tokenIds[holder];
-    }
-
-    function getHolder(uint256 tokenId) external view returns (address) {
-        return tokenHolders[tokenId];
-    }
-
-    function recordStake(uint256 contentId, uint256 epochId, uint256 tokenId, uint256 amount) external {
-        bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
-        stakes[key] += amount;
-    }
-
-    function getEpochContentStake(uint256 contentId, uint256 epochId, uint256 tokenId) external view returns (uint256) {
-        bytes32 key = keccak256(abi.encodePacked(contentId, epochId, tokenId));
-        return stakes[key];
-    }
-
-    function isNullifierUsed(uint256 nullifier) external view returns (bool) {
-        return usedNullifiers[nullifier];
-    }
-
-    function revokeVoterId(address holder) external {
-        holders[holder] = false;
-    }
-
-    function setDelegate(address delegate) external {
-        holderToDelegate[msg.sender] = delegate;
-        delegateToHolder[delegate] = msg.sender;
-    }
-
-    function removeDelegate() external {
-        address delegate = holderToDelegate[msg.sender];
-        delete delegateToHolder[delegate];
-        delete holderToDelegate[msg.sender];
-    }
-
-    function resolveHolder(address addr) external view returns (address) {
-        if (holders[addr]) return addr;
-        address h = delegateToHolder[addr];
-        if (holders[h]) return h;
-        return address(0);
-    }
-
-    function delegateTo(address holder) external view returns (address) {
-        return holderToDelegate[holder];
-    }
-
-    function delegateOf(address delegate) external view returns (address) {
-        return delegateToHolder[delegate];
-    }
-}
 
 contract MockVotingEngine3 is IRoundVotingEngine {
     uint256 public totalAdded;
@@ -133,7 +48,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
     FrontendRegistry public reg;
     CuryoReputation public crep;
     MockVotingEngine3 public engine;
-    MockVoterIdNFT3 public voterNFT;
+    MockVoterIdNFT public voterNFT;
 
     address public admin = address(0xAA);
     address public governance = address(0xBB);
@@ -150,7 +65,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
         crep.grantRole(crep.MINTER_ROLE(), admin);
 
         engine = new MockVotingEngine3();
-        voterNFT = new MockVoterIdNFT3();
+        voterNFT = new MockVoterIdNFT();
 
         FrontendRegistry impl = new FrontendRegistry();
         reg = FrontendRegistry(
@@ -429,7 +344,7 @@ contract HumanFaucetTierEdgeCaseTest is Test {
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
     CuryoReputation public crep;
-    MockVoterIdNFT3 public voterNFT;
+    MockVoterIdNFT public voterNFT;
 
     address public admin = address(0xAA);
     address public governance = address(0xBB);
@@ -441,7 +356,7 @@ contract HumanFaucetTierEdgeCaseTest is Test {
         crep.grantRole(crep.MINTER_ROLE(), admin);
 
         mockHub = new MockIdentityVerificationHub();
-        voterNFT = new MockVoterIdNFT3();
+        voterNFT = new MockVoterIdNFT();
 
         faucet = new HumanFaucet(address(crep), address(mockHub), governance);
 
@@ -724,7 +639,7 @@ contract RoundSettlementEdgeCase3Test is Test {
     RoundVotingEngine public engine;
     RoundRewardDistributor public distributor;
     FrontendRegistry public frontendReg;
-    MockVoterIdNFT3 public voterNFT;
+    MockVoterIdNFT public voterNFT;
 
     address public owner = address(0xAA);
     address public submitter = address(0xBB);
@@ -1233,7 +1148,7 @@ contract RoundSettlementEdgeCase3Test is Test {
     // --- VoterIdNFT integration ---
 
     function test_CommitWithVoterIdNFT() public {
-        voterNFT = new MockVoterIdNFT3();
+        voterNFT = new MockVoterIdNFT();
         vm.prank(owner);
         engine.setVoterIdNFT(address(voterNFT));
 
@@ -1249,7 +1164,7 @@ contract RoundSettlementEdgeCase3Test is Test {
     }
 
     function test_CommitWithoutVoterId_WhenRequired_Reverts() public {
-        voterNFT = new MockVoterIdNFT3();
+        voterNFT = new MockVoterIdNFT();
         vm.prank(owner);
         engine.setVoterIdNFT(address(voterNFT));
 
