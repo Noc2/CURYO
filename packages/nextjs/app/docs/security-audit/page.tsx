@@ -1243,10 +1243,10 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>2 stakes (1 + 100 cREP)</td>
               <td>
-                Tested in <code>SelfOppositionProfitability.t.sol</code> (10 tests). Optimal strategy (100 cREP
-                winning / 1 cREP losing) is profitable at all participation tiers due to parimutuel voter-pool
-                share. Equal-stakes strategy unprofitable at tier 2+. Mitigated by VoterIdNFT sybil resistance
-                (1 identity per voter) and halving participation tiers.
+                Tested in <code>SelfOppositionProfitability.t.sol</code> (10 tests). Optimal strategy (100 cREP winning
+                / 1 cREP losing) is profitable at all participation tiers due to parimutuel voter-pool share.
+                Equal-stakes strategy unprofitable at tier 2+. Mitigated by VoterIdNFT sybil resistance (1 identity per
+                voter) and halving participation tiers.
               </td>
               <td>
                 <span className="badge badge-info whitespace-nowrap">Tested</span>
