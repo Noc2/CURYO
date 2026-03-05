@@ -30,7 +30,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>Critical</td>
               <td>3</td>
-              <td>3 need invariant testing</td>
+              <td>3 tested (invariant fuzzing)</td>
             </tr>
             <tr>
               <td>High</td>
@@ -40,7 +40,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>Medium</td>
               <td>21</td>
-              <td>13 resolved/verified, 3 design, 3 needs review, 2 accepted</td>
+              <td>15 resolved/verified, 3 design, 1 needs verification, 2 accepted</td>
             </tr>
             <tr>
               <td>Low</td>
@@ -218,12 +218,12 @@ const SecurityAudit: NextPage = () => {
                 <strong>Pool solvency &mdash; reward claims must not exceed VotingEngine balance.</strong> Reward is{" "}
                 <code>(stake / totalWinStake) &times; pool</code>. Due to integer division rounding down, the sum of all
                 claims &le; pool. The VotingEngine holds both winning stakes (returned to winners) and losing pool
-                tokens (distributed as rewards). Algebraically correct. Recommend formal invariant test to prove across
-                all possible round configurations.
+                tokens (distributed as rewards). Algebraically correct. Verified via stateful invariant fuzzing
+                (<code>invariant_C01_PoolSolvency</code> in InvariantSolvency.t.sol).
               </td>
               <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Testing</span>
+                <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
             </tr>
             <tr>
@@ -231,11 +231,13 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <strong>Token conservation invariant.</strong> For any round that reaches a terminal state: SUM(vote
                 stakes) must equal SUM(claimed rewards) + SUM(platform fees) + SUM(treasury fees) + SUM(submitter
-                rewards) + dust. Should be formally verified with stateful fuzz testing.
+                rewards) + dust. Verified via stateful invariant fuzzing (
+                <code>invariant_C02_TokenConservation</code> in InvariantSolvency.t.sol). Ghost variables track all
+                token flows.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Testing</span>
+                <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
             </tr>
             <tr>
@@ -243,12 +245,13 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <strong>VotingEngine balance solvency invariant.</strong> At any point:{" "}
                 <code>crepToken.balanceOf(votingEngine)</code> must be &ge; SUM(open round stakes) + SUM(unclaimed
-                winner rewards) + SUM(unclaimed refunds) + SUM(unclaimed submitter rewards). Should be tested as a
-                Foundry invariant test with random vote/settle/claim sequences.
+                winner rewards) + SUM(unclaimed refunds) + SUM(unclaimed submitter rewards). Verified via stateful
+                invariant fuzzing (<code>invariant_C03_BalanceSolvency</code> in InvariantSolvency.t.sol). Checks
+                engine balance against computed obligations after random vote/settle/claim sequences.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Testing</span>
+                <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
             </tr>
           </tbody>
@@ -560,11 +563,12 @@ const SecurityAudit: NextPage = () => {
               <td>M-07</td>
               <td>
                 <strong>Dormant URL stays locked.</strong> URL hash is cleared on cancel but not on dormancy. Dormant
-                URLs staying locked prevents legitimate resubmission. Verify if this is the intended behavior.
+                URLs staying locked prevents legitimate resubmission. Fix: <code>markDormant()</code> now releases the
+                URL hash (<code>urlSubmitted[urlHash] = false</code>) so it can be resubmitted.
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Review</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -610,11 +614,13 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <strong>Referrer validation doesn&apos;t check revoked VoterID.</strong> The actual claim logic at{" "}
                 <code>customVerificationHook</code> only checks <code>addressClaimed[referrer]</code>. A user whose
-                VoterID has been revoked can still serve as a referrer if they previously claimed.
+                VoterID has been revoked can still serve as a referrer if they previously claimed. Fix: referrer
+                validation now checks <code>hasVoterId(referrer)</code>; revoked referrers produce no bonus. Tested in{" "}
+                <code>test_Referral_RevokedVoterIdReferrer_NoBonus</code>.
               </td>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Review</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
@@ -1721,7 +1727,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Critical</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Test</span>
+                <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
             </tr>
             <tr>
@@ -1732,7 +1738,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Critical</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Test</span>
+                <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
             </tr>
             <tr>
@@ -1815,19 +1821,23 @@ const SecurityAudit: NextPage = () => {
           <strong>Set timelock minimum delay</strong> to an appropriate value (e.g., 2 days) for governance proposals.
         </li>
         <li>
-          <strong>Implement invariant tests</strong> for C-01, C-02, C-03 (pool solvency, token conservation, balance
-          solvency).
+          <del>Implement invariant tests</del> for C-01, C-02, C-03 &mdash;{" "}
+          <span className="text-success">Done.</span> Stateful fuzz tests in{" "}
+          <code>InvariantSolvency.t.sol</code> with ghost-variable accounting via{" "}
+          <code>VotingHandler.sol</code>.
         </li>
         <li>
           <strong>Verify CategoryRegistry delegation</strong> (M-14) &mdash; ensure deployment script delegates tokens
           to the contract.
         </li>
         <li>
-          <strong>Review dormant URL locking</strong> (M-07) &mdash; decide if dormant URLs should be unlocked for
-          resubmission.
+          <del>Review dormant URL locking</del> (M-07) &mdash;{" "}
+          <span className="text-success">Done.</span> <code>markDormant()</code> now releases the URL hash.
         </li>
         <li>
-          <strong>Test self-opposition profitability</strong> with participation pool at all tiers.
+          <del>Test self-opposition profitability</del> with participation pool at all tiers &mdash;{" "}
+          <span className="text-success">Done.</span> Formal profit/loss analysis in{" "}
+          <code>SelfOppositionProfitability.t.sol</code>.
         </li>
       </ol>
 
@@ -1838,8 +1848,8 @@ const SecurityAudit: NextPage = () => {
           safety.
         </li>
         <li>
-          <strong>Review referrer validation</strong> (M-11) &mdash; decide if revoked VoterID holders should still
-          serve as referrers.
+          <del>Review referrer validation</del> (M-11) &mdash;{" "}
+          <span className="text-success">Done.</span> Revoked VoterID holders no longer earn referral bonuses.
         </li>
       </ol>
 
