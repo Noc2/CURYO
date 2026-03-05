@@ -1,12 +1,12 @@
-# Curyo Production Deployment Plan
+# Curyo Mainnet Deployment Guide
 
-Target chain: **Celo Sepolia** (testnet) → then **Celo mainnet**
+Target chain: **Celo Mainnet** (chain ID `42220`)
 
 ## Prerequisites
 
 - [ ] Foundry toolchain installed (`forge`, `cast`, `anvil`)
 - [ ] Node.js 20+ and Yarn 3.x
-- [ ] Celo Sepolia ETH for gas (from faucet: https://faucet.celo.org/alfajores)
+- [ ] CELO for gas — buy from an exchange (Binance, Coinbase, KuCoin, etc.) and send to your deployer address
 - [ ] Vercel account (for frontend hosting)
 - [ ] Railway account (for Keeper, Ponder, and Bot services)
 - [ ] TMDB API key (for bot content seeding)
@@ -14,15 +14,25 @@ Target chain: **Celo Sepolia** (testnet) → then **Celo mainnet**
 
 ---
 
-## 1. Create Secure Keys
+## 1. Create Wallets
 
-You need **five** separate keystore accounts. Never reuse keys across roles.
+You need **seven** wallets across three security tiers. Never reuse keys across roles.
+
+| Role | Type | Holds | Notes |
+|---|---|---|---|
+| **Deployer** | Foundry keystore (temporary) | CELO for gas only | Roles renounced post-deploy; archive offline |
+| **Cold Wallet A** | Paper / hardware wallet | Voter ID + bulk cREP | Private key NEVER touches a computer; delegates to submit-bot |
+| **Cold Wallet B** | Paper / hardware wallet | Voter ID + bulk cREP | Private key NEVER touches a computer; delegates to rate-bot |
+| **submit-bot** | Foundry keystore (hot) | Small cREP + gas | Delegate of Cold Wallet A; daily operations |
+| **rate-bot** | Foundry keystore (hot) | Small cREP + gas | Delegate of Cold Wallet B; daily operations |
+| **keeper** | Foundry keystore (hot) | Gas only (no cREP) | Resolves rounds, cancels expired content |
+| **server** | Foundry keystore (hot) | Gas only | Next.js server operations |
 
 ### 1a. Create the Deployer key
 
 ```bash
 cd packages/foundry
-yarn deploy --network celoSepolia
+yarn deploy --network celo
 # Select "0. Create new keystore" → name it "deployer"
 # Set a strong password — write it down offline
 ```
@@ -35,22 +45,39 @@ Get the address:
 cast wallet address --account deployer
 ```
 
-Fund it with Celo Sepolia ETH for gas (~0.5 CELO should be plenty for deployment).
+Fund it with CELO for gas (~0.5 CELO is plenty for deployment).
 
-### 1b. Create the Keeper key
+### 1b. Create Cold Wallets (2 identities for bots)
 
+Cold wallets hold Voter IDs and bulk cREP. Their private keys **never touch any computer** after generation — they are written on paper and stored physically (safe deposit box, fireproof safe).
+
+**Generate each cold wallet:**
+
+Option A — Air-gapped machine:
 ```bash
+# On an air-gapped (offline) machine:
 cast wallet new
-# Copy the private key
-cast wallet import keeper --private-key <PRIVATE_KEY>
-# Set a password
+# Record the address AND private key on paper
+# Destroy the digital copy immediately
 ```
 
-Fund with a small amount of CELO for gas (~0.1 CELO, the keeper only sends settle/cancel/dormancy txns).
+Option B — Hardware wallet (Ledger, Trezor):
+- Create two separate accounts on your hardware wallet
+- Record the addresses — the hardware wallet manages the private keys
 
-### 1c. Create the Bot keys
+You need two cold wallets (one per bot identity):
+- **Cold Wallet A** — will hold the Voter ID that delegates to submit-bot
+- **Cold Wallet B** — will hold the Voter ID that delegates to rate-bot
 
-Two separate bot accounts are required — one for content submission, one for voting. **Each bot needs its own Voter ID**, which requires a unique passport via Self.xyz verification (one passport = one Voter ID). If you are a single operator, you will need two different verified identities.
+**Fund both cold wallets** with CELO from an exchange (enough for a few transactions — ~0.1 CELO each). They only need gas for:
+1. Claiming a Voter ID (one-time)
+2. Claiming cREP from HumanFaucet (one-time)
+3. Setting delegation (one-time)
+4. Occasional top-up transfers to bot hot wallets
+
+### 1c. Create Bot Hot Wallets
+
+Two separate bot accounts — one for content submission, one for voting. Each operates as a **delegate** of its corresponding cold wallet.
 
 ```bash
 # Submission bot
@@ -62,27 +89,37 @@ cast wallet new
 cast wallet import rate-bot --private-key <PRIVATE_KEY>
 ```
 
-Fund both with CELO for gas. Both bots need cREP and a Voter ID (acquired from the HumanFaucet after Self.xyz verification).
+Fund both with a small amount of CELO for gas. They will receive operational cREP from their cold wallets after delegation is set up (Step 6).
 
-> **Why separate keys?** Each Voter ID is soulbound to a single address. Submitting content and voting from the same address is blocked (submitters cannot vote on their own content). Separate keys also limit blast radius if one is compromised.
+> **Why separate keys?** Each Voter ID is non-transferable and bound to a single address. Submitting content and voting from the same address is blocked (submitters cannot vote on their own content). Separate keys also limit blast radius if one is compromised.
 
-### 1d. Create the Faucet/Server key (for Next.js server-side operations)
+### 1d. Create the Keeper key
+
+```bash
+cast wallet new
+cast wallet import keeper --private-key <PRIVATE_KEY>
+```
+
+Fund with a small amount of CELO for gas (~0.1 CELO — the keeper only sends resolve/cancel/inactive-marking transactions).
+
+### 1e. Create the Server key
 
 ```bash
 cast wallet new
 cast wallet import server --private-key <PRIVATE_KEY>
 ```
 
-Fund with CELO for gas (the dev faucet sends test tokens server-side).
+Fund with CELO for gas (server-side operations).
 
-### 1e. Security checklist
+### 1f. Security checklist
 
-- [ ] All private keys stored **only** in Foundry encrypted keystores (`~/.foundry/keystores/`)
-- [ ] Passwords stored in a password manager (1Password, Bitwarden), never in `.env` files on disk in plaintext for production
-- [ ] No raw private keys in `.env` files (use `KEYSTORE_ACCOUNT` + `KEYSTORE_PASSWORD` env vars, or secrets manager)
-- [ ] Each role uses a **dedicated** address — deployer, keeper, submit-bot, rate-bot, server are all different
-- [ ] Deployer key will have its roles renounced after deployment (see Step 2)
-- [ ] Back up keystores: `cp -r ~/.foundry/keystores/ <secure-backup-location>`
+- [ ] Cold wallet private keys exist **only on paper** — never stored digitally
+- [ ] All hot wallet keys stored in Foundry encrypted keystores (`~/.foundry/keystores/`)
+- [ ] Keystore passwords stored in a password manager (1Password, Bitwarden), never in plaintext `.env` files
+- [ ] No raw private keys in `.env` files (use `KEYSTORE_ACCOUNT` + `KEYSTORE_PASSWORD` env vars)
+- [ ] Each role uses a **dedicated** address — deployer, cold-a, cold-b, submit-bot, rate-bot, keeper, server are all different
+- [ ] Deployer key will have its roles renounced after deployment (Step 2)
+- [ ] Back up hot wallet keystores: `cp -r ~/.foundry/keystores/ <secure-backup-location>`
 
 ---
 
@@ -100,7 +137,7 @@ LOCALHOST_KEYSTORE_ACCOUNT=scaffold-eth-default
 ### 2b. Run deployment
 
 ```bash
-yarn deploy --network celoSepolia --keystore deployer
+yarn deploy --network celo --keystore deployer
 ```
 
 This will:
@@ -126,7 +163,7 @@ make verify-blockscout CONTRACT_ADDRESS=0x... CONTRACT_NAME=ContentRegistry
 ### 2d. Record deployed addresses
 
 Addresses are written to:
-- `packages/foundry/deployments/11142220.json`
+- `packages/foundry/deployments/42220.json`
 - `packages/nextjs/contracts/deployedContracts.ts` (auto-generated)
 
 Save a copy of these addresses somewhere safe. You'll need them for Ponder, Keeper, and Bot config.
@@ -135,19 +172,62 @@ Save a copy of these addresses somewhere safe. You'll need them for Ponder, Keep
 
 ```bash
 # Confirm governance owns all admin roles (deployer should have none)
-cast call <ContentRegistry> "hasRole(bytes32,address)(bool)" $(cast keccak "ADMIN_ROLE") <deployer-address> --rpc-url https://forno.celo-sepolia.celo-testnet.org
+cast call <ContentRegistry> "hasRole(bytes32,address)(bool)" \
+  $(cast keccak "ADMIN_ROLE") <deployer-address> \
+  --rpc-url https://forno.celo.org
 # Should return false
 
 # Confirm TimelockController has governance
-cast call <ContentRegistry> "hasRole(bytes32,address)(bool)" $(cast keccak "ADMIN_ROLE") <timelock-address> --rpc-url https://forno.celo-sepolia.celo-testnet.org
+cast call <ContentRegistry> "hasRole(bytes32,address)(bool)" \
+  $(cast keccak "ADMIN_ROLE") <timelock-address> \
+  --rpc-url https://forno.celo.org
 # Should return true
 ```
 
 ---
 
-## 3. Deploy the Frontend
+## 3. Deploy the Ponder Indexer
 
-### 3a. Configure environment variables
+The indexer must be running **before** the frontend can display content. Deploy it before the frontend.
+
+### 3a. Configure
+
+Update `ponder.config.ts` with the deployed contract addresses from Step 2d (they are already baked in from the deployment).
+
+### 3b. Deploy to Railway
+
+```bash
+# Create a new service in the same Railway project
+cd packages/ponder
+railway service create curyo-ponder
+
+# Set environment variables
+railway variables set PONDER_RPC_URL_42220=https://forno.celo.org
+
+# Deploy
+railway up
+```
+
+Ponder uses PGlite for local storage. Attach a **Railway volume** to persist the indexed data across deploys:
+1. In the Railway dashboard, go to the Ponder service
+2. Click **+ New** → **Volume**
+3. Mount path: `/app/.ponder`
+4. This prevents re-indexing from scratch on every redeploy
+
+Expose a public domain in the Railway dashboard — you'll need the URL for `NEXT_PUBLIC_PONDER_URL` in Vercel.
+
+### 3c. Verify
+
+```bash
+curl 'https://<ponder>.up.railway.app/content'
+# Should return indexed content (empty initially, populated after bot seeding)
+```
+
+---
+
+## 4. Deploy the Frontend
+
+### 4a. Configure environment variables
 
 Create production env vars (on Vercel dashboard or `.env.production`):
 
@@ -157,8 +237,8 @@ NEXT_PUBLIC_ALCHEMY_API_KEY=<alchemy-key>
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=<walletconnect-project-id>
 NEXT_PUBLIC_TMDB_API_KEY=<tmdb-api-key>
 NEXT_PUBLIC_PONDER_URL=https://<your-ponder-domain>
-NEXT_PUBLIC_FRONTEND_CODE=<your-frontend-address>   # Set after Step 4
-NEXT_PUBLIC_DEV_FAUCET=false                         # true only on testnet
+NEXT_PUBLIC_FRONTEND_CODE=<your-frontend-address>   # Set after Step 5
+NEXT_PUBLIC_DEV_FAUCET=false
 
 # Server-side only
 NEXTAUTH_URL=https://<your-domain>
@@ -167,10 +247,10 @@ DATABASE_URL=<turso-database-url>                    # e.g., libsql://your-db.tu
 DATABASE_AUTH_TOKEN=<turso-auth-token>
 KEYSTORE_ACCOUNT=server
 KEYSTORE_PASSWORD=<server-keystore-password>
-DEV_FAUCET_ENABLED=false                             # true only on testnet
+DEV_FAUCET_ENABLED=false
 ```
 
-### 3b. Set up Turso database (production)
+### 4b. Set up Turso database (production)
 
 ```bash
 # Install Turso CLI
@@ -187,76 +267,142 @@ cd packages/nextjs
 DATABASE_URL=<turso-url> DATABASE_AUTH_TOKEN=<token> yarn db:push
 ```
 
-### 3c. Deploy to Vercel
+### 4c. Deploy to Vercel
 
 ```bash
 cd packages/nextjs
 yarn vercel --prod
 ```
 
-Set all environment variables from 3a in the Vercel dashboard under **Settings → Environment Variables** before deploying. Redeploy if you add variables after the first deploy.
+Set all environment variables from 4a in the Vercel dashboard under **Settings → Environment Variables** before deploying. Redeploy if you add variables after the first deploy.
 
-### 3d. Post-deploy checks
+### 4d. Post-deploy checks
 
-- [ ] Site loads, wallet connects on Celo Sepolia
+- [ ] Site loads, wallet connects on Celo Mainnet
 - [ ] Contract interactions work (content list loads from Ponder)
-- [ ] HumanFaucet / Self.xyz identity verification flow works
+- [ ] Self.xyz identity verification flow works
 
 ---
 
-## 4. Register the Frontend
+## 5. Register the Frontend
 
-The frontend address earns 1% of the losing pool from votes placed through it. Registration requires a Voter ID and 1,000 cREP stake.
+The frontend address earns 1% of losing stakes from votes placed through it. Registration requires a Voter ID and 1,000 cREP stake.
 
-### 4a. Get a Voter ID
+### 5a. Get a Voter ID for the server wallet
 
-The frontend operator address needs a VoterIdNFT first. Use the HumanFaucet's Self.xyz verification flow from the deployed frontend, or if on testnet with dev faucet enabled, use that.
+The server wallet needs a Voter ID. Use the HumanFaucet's Self.xyz verification flow from the deployed frontend.
 
-### 4b. Acquire 1,000 cREP
+### 5b. Acquire 1,000 cREP
 
-On testnet: claim from HumanFaucet (gives cREP on verification). On mainnet: acquire through the ParticipationPool or other distribution mechanisms.
+Claim from HumanFaucet (gives cREP on verification).
 
-### 4c. Approve + Register
+### 5c. Approve + Register
 
 ```bash
 # Approve cREP spending by FrontendRegistry
 cast send <CuryoReputation> "approve(address,uint256)" <FrontendRegistry> 1000000000 \
   --account server \
-  --rpc-url https://forno.celo-sepolia.celo-testnet.org
+  --rpc-url https://forno.celo.org
 
 # Register (stakes fixed 1000 cREP)
 cast send <FrontendRegistry> "register()" \
   --account server \
-  --rpc-url https://forno.celo-sepolia.celo-testnet.org
+  --rpc-url https://forno.celo.org
 ```
 
-### 4d. Get governance approval
+### 5d. Get governance approval
 
-On testnet where deployer still has governance: self-approve. On production: submit a governance proposal.
+On mainnet, the deployer has renounced all roles. Frontend approval requires a governance proposal:
 
-```bash
-# Testnet only — deployer has governance role
-cast send <FrontendRegistry> "approveFrontend(address)" <server-address> \
-  --account deployer \
-  --rpc-url https://forno.celo-sepolia.celo-testnet.org
-```
+1. Create a proposal via the CuryoGovernor to call `FrontendRegistry.approveFrontend(<server-address>)`
+2. cREP holders vote on the proposal
+3. After passing + timelock delay (2 days), execute the proposal
 
-### 4e. Update frontend config
+### 5e. Update frontend config
 
 Set `NEXT_PUBLIC_FRONTEND_CODE=<server-address>` in your Vercel environment variables and redeploy. All votes through your frontend will now credit fees to your address.
 
 ---
 
-## 5. Deploy the Keeper
+## 6. Set Up Bot Identities (Cold Wallet + Delegation)
 
-The Keeper is a stateless service that settles rounds, cancels stale content, and marks dormant items. It needs only a funded wallet for gas.
+This is the core security architecture: cold wallets hold Voter IDs and bulk cREP, while bot hot wallets operate as delegates. The cold wallet private key **never touches a server**.
 
-### 5a. Configure
+### 6a. Claim Voter IDs on cold wallets
+
+Each cold wallet needs its own Voter ID, which requires a unique passport via Self.xyz verification (one passport = one Voter ID). You need **two separate verified identities** — one for each cold wallet.
+
+For each cold wallet:
+1. Connect the cold wallet to the frontend (hardware wallet, or temporarily import paper wallet key for this one-time step on a secure offline-capable machine)
+2. Complete the Self.xyz identity verification flow
+3. The HumanFaucet mints a non-transferable Voter ID to the cold wallet address
+
+The Self.xyz verification hub address on Celo Mainnet is `0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF`.
+
+### 6b. Claim cREP on cold wallets
+
+Each cold wallet claims cREP from the HumanFaucet during the verification step above. This gives each cold wallet a starting balance of cREP.
+
+### 6c. Set up delegation: cold wallet → bot hot wallet
+
+Delegation allows the bot hot wallet to act on behalf of the cold wallet's Voter ID. The cold wallet calls `setDelegate()` once — after this, the cold wallet can go fully offline.
+
+```bash
+# Cold Wallet A delegates to submit-bot
+cast send <VoterIdNFT> "setDelegate(address)" <submit-bot-address> \
+  --account cold-wallet-a \
+  --rpc-url https://forno.celo.org
+
+# Cold Wallet B delegates to rate-bot
+cast send <VoterIdNFT> "setDelegate(address)" <rate-bot-address> \
+  --account cold-wallet-b \
+  --rpc-url https://forno.celo.org
+```
+
+> If using a paper wallet: temporarily import the key into a Foundry keystore on a secure machine, sign the delegation tx, then **delete the keystore** (`rm ~/.foundry/keystores/cold-wallet-a`). The paper key remains the only copy.
+
+After delegation is set, the bot hot wallet passes all Voter ID checks transparently — `commitVote`, `submitContent`, etc. all work as if the bot holds the Voter ID.
+
+### 6d. Fund bot hot wallets with operational cREP + gas
+
+Transfer a small operational amount of cREP from each cold wallet to its delegate bot:
+
+```bash
+# Transfer operational cREP to submit-bot (e.g. 100 cREP = 100_000_000 units)
+cast send <CuryoReputation> "transfer(address,uint256)" <submit-bot-address> 100000000 \
+  --account cold-wallet-a \
+  --rpc-url https://forno.celo.org
+
+# Transfer operational cREP to rate-bot
+cast send <CuryoReputation> "transfer(address,uint256)" <rate-bot-address> 100000000 \
+  --account cold-wallet-b \
+  --rpc-url https://forno.celo.org
+```
+
+Also ensure both bot wallets have CELO for gas (~0.1 CELO each, sent from an exchange or another wallet).
+
+### 6e. Top-up procedure
+
+Periodically (e.g. weekly), top up bot hot wallets from cold wallets:
+
+1. Briefly bring the cold wallet online (hardware wallet, or temporarily import paper key)
+2. Transfer a small cREP amount to the bot hot wallet
+3. Cold wallet goes back offline
+
+Keep the bulk of cREP on the cold wallets. Bot wallets should only hold what they need for the next few days of operations.
+
+---
+
+## 7. Deploy the Keeper
+
+The Keeper is a stateless service that resolves rounds, cancels stale content, and marks inactive items. It needs only a funded wallet for gas.
+
+### 7a. Configure
 
 ```bash
 # packages/keeper/.env
-RPC_URL=https://forno.celo-sepolia.celo-testnet.org
-CHAIN_ID=11142220
+RPC_URL=https://forno.celo.org
+CHAIN_ID=42220
 VOTING_ENGINE_ADDRESS=<RoundVotingEngine-address>
 CONTENT_REGISTRY_ADDRESS=<ContentRegistry-address>
 KEYSTORE_ACCOUNT=keeper
@@ -268,7 +414,7 @@ METRICS_PORT=9090
 LOG_FORMAT=json
 ```
 
-### 5b. Deploy to Railway
+### 7b. Deploy to Railway
 
 ```bash
 # Install Railway CLI
@@ -280,8 +426,8 @@ railway init          # Name it "curyo-keeper"
 railway link
 
 # Set environment variables
-railway variables set RPC_URL=https://forno.celo-sepolia.celo-testnet.org
-railway variables set CHAIN_ID=11142220
+railway variables set RPC_URL=https://forno.celo.org
+railway variables set CHAIN_ID=42220
 railway variables set VOTING_ENGINE_ADDRESS=<RoundVotingEngine-address>
 railway variables set CONTENT_REGISTRY_ADDRESS=<ContentRegistry-address>
 railway variables set KEEPER_PRIVATE_KEY=<keeper-private-key>
@@ -297,173 +443,60 @@ railway up
 
 Railway will auto-detect the Dockerfile, build, and deploy. Set up a public domain in the Railway dashboard if you want external health checks.
 
-### 5c. Verify it's running
+### 7c. Verify it's running
 
 ```bash
 # Use the Railway-assigned domain or check logs
 railway logs
 
 # If you exposed a public domain:
-curl https://<keeper>.up.railway.app/health
+curl 'https://<keeper>.up.railway.app/health'
 # Should return healthy status
 
-curl https://<keeper>.up.railway.app/metrics
-# Should show Prometheus metrics (roundsSettled, roundsCancelled, etc.)
+curl 'https://<keeper>.up.railway.app/metrics'
+# Should show Prometheus metrics (roundsResolved, roundsCancelled, etc.)
 ```
 
-### 5d. Redundancy (recommended)
+### 7d. Redundancy (recommended)
 
 Run 2+ Keeper instances with different wallets. Duplicate transactions simply revert (no harm). Use `KEEPER_STARTUP_JITTER_MS` to stagger instances and reduce wasted gas.
 
 ---
 
-## 6. Security Hardening
-
-### 6a. Key security
-
-- [ ] Deployer keystore is **archived offline** — it has no remaining roles after deployment, but keep it safe for potential future reference
-- [ ] Keeper wallet holds **minimal gas only** — it cannot access protocol funds
-- [ ] Bot wallets hold **minimal gas + cREP** — only what they need to submit/vote
-- [ ] Server wallet credentials stored in Vercel environment variables (encrypted at rest), not in repo
-- [ ] No raw private keys in any `.env` file committed to git — `.gitignore` covers all `.env*` files
-
-### 6a-1. Bot key security (Voter ID protection)
-
-Bot keys are **especially sensitive** because each is linked to a soulbound Voter ID. If a bot key is compromised, the attacker gains a verified identity that cannot be re-issued to the same passport.
-
-**Why cloud secrets managers are NOT ideal for bot keys:**
-
-Cloud providers (Railway encrypted variables, AWS Secrets Manager, etc.) still store and decrypt your private key in their infrastructure. For a regular API key this is fine, but a blockchain private key tied to a soulbound identity has a unique risk: if compromised, the Voter ID cannot be re-issued to the same passport — you permanently lose that identity. Trusting a third party with this key defeats the purpose of self-custody.
-
-**Why multisig (Safe) doesn't work:**
-
-The VoterIdNFT is soulbound and non-transferable. All contract interactions (`vote`, `submitContent`) require `msg.sender` to hold a Voter ID. A Safe multisig address cannot receive a soulbound NFT in a useful way, and there is no delegation or session key mechanism in the current contracts. The signing key **must** be the same EOA that holds the Voter ID.
-
-**Recommended approaches (best → acceptable):**
-
-**1. Transaction queue + local signing (recommended)**
-
-The bot runs on Railway (or any server) **without any private key**. It prepares unsigned transactions and stores them in a queue. You review and sign them locally with a hardware wallet or Foundry keystore.
-
-Flow:
-1. Bot discovers content / rates items → generates unsigned tx calldata
-2. Bot writes pending transactions to a queue (JSON file, SQLite, or API endpoint)
-3. You review pending transactions locally (CLI or simple web UI)
-4. You sign and submit a batch using `cast send` with your hardware wallet or keystore
-5. Bot marks transactions as submitted
-
-This eliminates hot key risk entirely. The private key never leaves your local machine. Content submission is not time-critical, so batch signing once or twice a day works well. Voting has round deadlines but a daily signing window is usually sufficient given 15-minute epochs.
-
-**2. Run bots locally**
-
-Run the bot on your own machine using a Foundry encrypted keystore. The key never leaves your device. Schedule runs with cron:
-
-```bash
-# Local crontab
-0 */6 * * * cd ~/source/curyo/packages/bot && KEYSTORE_PASSWORD=$(security find-generic-password -s "submit-bot" -w) yarn submit
-0 * * * *   cd ~/source/curyo/packages/bot && KEYSTORE_PASSWORD=$(security find-generic-password -s "rate-bot" -w) yarn vote
-```
-
-On macOS, store keystore passwords in Keychain. On Linux, use `secret-tool` or `pass`. The key is encrypted at rest and only decrypted in memory during execution.
-
-**3. Cloud deployment with encrypted variables (acceptable for testnet)**
-
-If you accept the trust tradeoff (e.g., on testnet where the Voter ID has no real value), you can use Railway encrypted variables. See section 7f. This is the simplest setup but means Railway infrastructure has access to your key.
-
-**Principle of least privilege (all approaches):**
-- [ ] Fund bot wallets with only enough cREP for the next few runs (e.g. 50-100 cREP), not the full faucet claim
-- [ ] Keep the bulk of cREP in a separate cold wallet and top up periodically
-- [ ] Fund with minimal CELO for gas (~0.1 CELO at a time)
-
-**Monitoring and response:**
-- [ ] Set up balance alerts — a sudden drain indicates compromise
-- [ ] Monitor for unexpected transactions from bot addresses (Blockscout watch or custom Ponder alerts)
-- [ ] **Incident response plan**: if compromised, immediately report the Voter ID to governance for revocation (`VoterIdNFT.revoke(tokenId)`), then create a new wallet and re-verify with a new passport
-
-**Contract-level delegation (implemented):**
-
-VoterIdNFT now supports delegation: the SBT holder (cold wallet) calls `setDelegate(botAddress)` once, and the bot operates with its own key while transparently passing all Voter ID checks. The cold wallet's private key never touches a server. See the [Delegation & Security docs](/docs/delegation) for full setup instructions and security recommendations.
-
-- [ ] Set up delegation from cold wallet to bot key via Governance > Profile > Delegation
-- [ ] Store cold wallet (SBT holder) offline on a hardware wallet after setting delegate
-- [ ] Fund delegate with only the cREP needed for upcoming operations
-
-### 6b. Infrastructure security
-
-- [ ] Railway services expose **only** the necessary ports (Ponder: 42069, Keeper: 9090)
-- [ ] Ponder API endpoint is rate-limited (use Railway's built-in networking or a Cloudflare proxy)
-- [ ] HTTPS everywhere — Railway provides TLS by default on public domains
-- [ ] Keeper metrics port (9090) is either private (Railway internal networking) or protected behind auth
-- [ ] Enable Vercel's DDoS protection and edge caching for the frontend
-
-### 6c. Contract security
-
-- [ ] All admin roles have been renounced by deployer and transferred to governance (TimelockController)
-- [ ] UUPS upgrade authority is held by governance only (`UPGRADER_ROLE`)
-- [ ] Frontend operators require governance approval — no self-approval on mainnet
-- [ ] HumanFaucet requires Self.xyz identity verification (sybil resistance)
-- [ ] TimelockController enforces 2-day delay on all governance actions
-
-### 6d. Monitoring
-
-- [ ] Set up alerts on Keeper health endpoint (e.g., UptimeRobot, Betterstack)
-- [ ] Monitor Keeper gas balance — alert if below 0.05 CELO
-- [ ] Monitor Ponder sync status — alert if it falls behind chain head
-- [ ] Watch for unusual governance proposals (TimelockController events)
-
-### 6e. Secrets rotation plan
-
-| Secret | Rotation frequency | How |
-|--------|-------------------|-----|
-| Keeper keystore | On compromise | Create new wallet, fund, update Railway env |
-| Submit-bot keystore | On compromise | Revoke Voter ID via governance, create new wallet, re-verify with new passport, fund, update Railway env |
-| Rate-bot keystore | On compromise | Revoke Voter ID via governance, create new wallet, re-verify with new passport, fund, update Railway env |
-| Server keystore | On compromise | Create new wallet, fund, update Vercel env |
-| NEXTAUTH_SECRET | Quarterly | Regenerate, update Vercel env |
-| DATABASE_AUTH_TOKEN | Quarterly | `turso db tokens create`, update Vercel env |
-| ALCHEMY_API_KEY | On compromise | Rotate in Alchemy dashboard |
-
----
-
-## 7. Seed Initial Content with Bots
+## 8. Seed Content with Bots
 
 The bot package contains two specialized bots that work together:
 
 - **Submission Bot** (`yarn submit`) — discovers trending content from 9 platforms (YouTube, TMDB, Steam, Wikipedia, Twitch, OpenLibrary, HuggingFace, Scryfall, CoinGecko) and submits it on-chain
 - **Rating Bot** (`yarn vote`) — fetches active content from Ponder, rates it using external APIs (like ratio, review scores, market data), and places votes on-chain
 
-Each bot uses a **separate wallet** for isolation and reputation tracking.
+Each bot uses a **delegate hot wallet** — the Voter ID stays safe on the cold wallet.
 
-### 7a. Set up bot accounts
-
-Each bot address needs its own Voter ID and cREP. Voter IDs are soulbound (non-transferable) and require a unique passport via Self.xyz — **each bot needs a separate verified identity**. Use the HumanFaucet claim flow for each bot address (or the dev faucet on testnet).
+### 8a. Check bot status
 
 ```bash
-# Check both bots' status
 cd packages/bot
 yarn status
-# Shows: addresses, CELO balances, cREP balances, Voter ID status, round config
+# Shows: addresses, CELO balances, cREP balances, Voter ID status (via delegation), round config
 ```
 
-### 7b. Configure bots
+### 8b. Configure bots
 
 ```bash
 # packages/bot/.env
 
 # --- Network ---
-RPC_URL=https://forno.celo-sepolia.celo-testnet.org
-CHAIN_ID=11142220
+RPC_URL=https://forno.celo.org
+CHAIN_ID=42220
 PONDER_URL=https://<your-ponder-domain>
 
 # --- Submission Bot Identity ---
 SUBMIT_KEYSTORE_ACCOUNT=submit-bot
 SUBMIT_KEYSTORE_PASSWORD=<submit-bot-keystore-password>
-# Or use: SUBMIT_PRIVATE_KEY=0x...
 
 # --- Rating Bot Identity ---
 RATE_KEYSTORE_ACCOUNT=rate-bot
 RATE_KEYSTORE_PASSWORD=<rate-bot-keystore-password>
-# Or use: RATE_PRIVATE_KEY=0x...
 
 # --- Voting ---
 VOTE_STAKE=1000000            # 1 cREP per vote (6 decimals)
@@ -481,7 +514,7 @@ TWITCH_CLIENT_ID=<twitch-client-id>
 TWITCH_CLIENT_SECRET=<twitch-client-secret>
 ```
 
-### 7c. Submit initial content
+### 8c. Submit initial content
 
 ```bash
 cd packages/bot
@@ -491,12 +524,12 @@ yarn submit
 ```
 
 The submission bot will:
-1. Check that the submit-bot wallet has a Voter ID and sufficient cREP (10 cREP per submission)
+1. Check that the submit-bot wallet has a Voter ID (via delegation from Cold Wallet A) and sufficient cREP (10 cREP per submission)
 2. Fetch trending content from each configured source
 3. Skip already-submitted URLs (deduplication)
 4. Submit up to `MAX_SUBMISSIONS_PER_RUN` items (max `MAX_SUBMISSIONS_PER_CATEGORY` per source)
 
-### 7d. Vote on content
+### 8d. Vote on content
 
 ```bash
 # Rate content via external APIs and place votes
@@ -504,57 +537,27 @@ yarn vote
 ```
 
 The rating bot will:
-1. Check that the rate-bot wallet has a Voter ID and sufficient cREP
+1. Check that the rate-bot wallet has a Voter ID (via delegation from Cold Wallet B) and sufficient cREP
 2. Fetch active content from the Ponder indexer
 3. For each item, call the matching rating strategy (YouTube like ratio, TMDB score, Steam reviews, etc.)
 4. Determine vote direction: score >= `VOTE_THRESHOLD` → UP, otherwise → DOWN
 5. Commit the vote on-chain via `commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend)` — the vote direction is encrypted with tlock timelock encryption and hidden until reveal (up to `MAX_VOTES_PER_RUN`)
 
-After each epoch ends, the Keeper service reveals committed votes using `revealVoteByCommitKey()` and then settles rounds. Each content item is voted on only once (the bot tracks previous votes).
+After each blind phase ends, the Keeper service reveals committed votes using `revealVoteByCommitKey()` and then resolves rounds. Each content item is voted on only once (the bot tracks previous votes).
 
-### 7e. Verify the full loop
+### 8e. Verify the full loop
 
 1. Submission bot submits content → visible on frontend
 2. Rating bot commits encrypted votes → vote directions hidden on-chain until reveal
-3. Epoch ends → Keeper reveals votes via `revealVoteByCommitKey()`
-4. Keeper calls `settleRound(contentId, roundId)` → round outcome determined, rewards distributed (epoch-weighted), ratings updated
+3. Blind phase ends → Keeper reveals votes via `revealVoteByCommitKey()`
+4. Keeper calls `settleRound(contentId, roundId)` → round outcome determined, rewards distributed (weighted by phase), ratings updated
 5. Content ratings visible on frontend
 
-### 7f. Ongoing operation
+### 8f. Ongoing operation
 
-Choose a deployment strategy based on your security requirements (see Section 6a-1):
+With delegation, the bot hot wallets hold minimal funds and no Voter IDs — cloud deployment is acceptable since the identity stays on the cold wallet.
 
-#### Option A: Transaction queue (recommended for mainnet)
-
-Deploy the bot to Railway **without private keys**. The bot prepares unsigned transactions that you sign locally.
-
-```bash
-cd packages/bot
-railway service create curyo-bot
-
-# Set shared environment variables (NO private keys)
-railway variables set RPC_URL=https://forno.celo-sepolia.celo-testnet.org
-railway variables set CHAIN_ID=11142220
-railway variables set PONDER_URL=https://<ponder>.up.railway.app
-railway variables set TMDB_API_KEY=<tmdb-api-key>
-railway variables set YOUTUBE_API_KEY=<youtube-api-key>
-railway variables set BOT_MODE=prepare  # Prepare transactions only, don't sign
-```
-
-The bot writes pending transactions to stdout/logs or a shared volume. You then sign locally:
-
-```bash
-# Review and sign pending submissions
-cd packages/bot
-yarn sign-pending --role submit --keystore submit-bot
-
-# Review and sign pending votes
-yarn sign-pending --role vote --keystore rate-bot
-```
-
-> **Note:** The `prepare` mode and `sign-pending` command need to be implemented (see the bot README for status). Until then, run the bots locally (Option B).
-
-#### Option B: Local cron (recommended until tx queue is implemented)
+**Option A: Local cron (recommended)**
 
 Run bots on your own machine with encrypted keystores:
 
@@ -568,21 +571,19 @@ security add-generic-password -s "rate-bot" -a "$USER" -w "<password>"
 0 * * * *   cd ~/source/curyo/packages/bot && RATE_KEYSTORE_ACCOUNT=rate-bot RATE_KEYSTORE_PASSWORD=$(security find-generic-password -s "rate-bot" -w) yarn vote >> /tmp/curyo-vote.log 2>&1
 ```
 
-#### Option C: Railway with private keys (testnet only)
+**Option B: Railway (acceptable with delegation)**
 
-If you accept the cloud trust tradeoff (testnet only):
+Since the Voter ID stays on the cold wallet, deploying bot hot wallets to Railway is acceptable — a compromise only exposes the small operational cREP balance, not the identity.
 
 ```bash
 cd packages/bot
 railway service create curyo-bot
 
-railway variables set RPC_URL=https://forno.celo-sepolia.celo-testnet.org
-railway variables set CHAIN_ID=11142220
+railway variables set RPC_URL=https://forno.celo.org
+railway variables set CHAIN_ID=42220
 railway variables set PONDER_URL=https://<ponder>.up.railway.app
 railway variables set TMDB_API_KEY=<tmdb-api-key>
 railway variables set YOUTUBE_API_KEY=<youtube-api-key>
-
-# ⚠️ Private keys in cloud — acceptable for testnet, not recommended for mainnet
 railway variables set SUBMIT_PRIVATE_KEY=<submit-bot-private-key>
 railway variables set RATE_PRIVATE_KEY=<rate-bot-private-key>
 ```
@@ -591,62 +592,83 @@ Set up two cron schedules in the Railway dashboard:
 - **Submit**: `0 */6 * * *` (every 6 hours) → `yarn submit`
 - **Vote**: `0 * * * *` (every hour) → `yarn vote`
 
-Or run manually during initial seeding and switch to cron once satisfied.
-
 ---
 
-## Deploy the Ponder Indexer
+## 9. Security Hardening
 
-The indexer must be running **before** the frontend can display content. Deploy it alongside or before the frontend.
+### 9a. Cold wallet security
 
-### Configure
+- [ ] Cold wallet private keys exist **only on paper** (or in a hardware wallet) — never stored digitally
+- [ ] Paper keys stored in a secure physical location (safe deposit box, fireproof safe)
+- [ ] Each cold wallet holds a non-transferable Voter ID — if the key is lost, the identity cannot be recovered or transferred
+- [ ] Cold wallets only come online briefly for top-up transfers; delegation is a one-time setup
+- [ ] Consider splitting paper keys across two locations (e.g. first half in home safe, second half in bank deposit box)
 
-Update `ponder.config.ts` with the deployed contract addresses from Step 2d (they are already baked in from the deployment).
+### 9b. Hot wallet principle of least privilege
 
-### Deploy to Railway
+- [ ] Deployer keystore is **archived offline** — it has no remaining roles after deployment
+- [ ] Keeper wallet holds **minimal gas only** — it cannot access protocol funds
+- [ ] Bot wallets hold **minimal gas + small operational cREP** — only what they need for the next few days
+- [ ] Server wallet credentials stored in Vercel environment variables (encrypted at rest), not in repo
+- [ ] No raw private keys in any `.env` file committed to git — `.gitignore` covers all `.env*` files
+- [ ] Bot wallets do NOT hold Voter IDs — identity stays on cold wallets via delegation
 
-```bash
-# Create a new service in the same Railway project
-cd packages/ponder
-railway service create curyo-ponder
+### 9c. Infrastructure security
 
-# Set environment variables
-railway variables set PONDER_RPC_URL_11142220=https://forno.celo-sepolia.celo-testnet.org
+- [ ] Railway services expose **only** the necessary ports (Ponder: 42069, Keeper: 9090)
+- [ ] Ponder API endpoint is rate-limited (use Railway's built-in networking or a Cloudflare proxy)
+- [ ] HTTPS everywhere — Railway provides TLS by default on public domains
+- [ ] Keeper metrics port (9090) is either private (Railway internal networking) or protected behind auth
+- [ ] Enable Vercel's DDoS protection and edge caching for the frontend
 
-# Deploy
-railway up
-```
+### 9d. Contract security
 
-Ponder uses PGlite for local storage. Attach a **Railway volume** to persist the indexed data across deploys:
-1. In the Railway dashboard, go to the Ponder service
-2. Click **+ New** → **Volume**
-3. Mount path: `/app/.ponder`
-4. This prevents re-indexing from scratch on every redeploy
+- [ ] All admin roles have been renounced by deployer and transferred to governance (TimelockController)
+- [ ] UUPS upgrade authority is held by governance only (`UPGRADER_ROLE`)
+- [ ] Frontend operators require governance approval — no self-approval on mainnet
+- [ ] HumanFaucet requires Self.xyz identity verification (one person, one vote)
+- [ ] TimelockController enforces 2-day delay on all governance actions
 
-Expose a public domain in the Railway dashboard — you'll need the URL for `NEXT_PUBLIC_PONDER_URL` in Vercel.
+### 9e. Monitoring
 
-### Verify
+- [ ] Set up alerts on Keeper health endpoint (e.g., UptimeRobot, Betterstack)
+- [ ] Monitor Keeper gas balance — alert if below 0.05 CELO
+- [ ] Monitor bot wallet cREP balances — a sudden drain indicates compromise
+- [ ] Monitor Ponder sync status — alert if it falls behind chain head
+- [ ] Watch for unusual governance proposals (TimelockController events)
+- [ ] Monitor for unexpected transactions from bot or cold wallet addresses (Blockscout watch)
 
-```bash
-curl https://<ponder>.up.railway.app/content
-# Should return indexed content (empty initially, populated after bot seeding)
-```
+### 9f. Secrets rotation plan
+
+| Secret | Rotation frequency | How |
+|--------|-------------------|-----|
+| Keeper keystore | On compromise | Create new wallet, fund, update Railway env |
+| Submit-bot keystore | On compromise | Create new delegate wallet, update delegation from Cold Wallet A, fund, update env |
+| Rate-bot keystore | On compromise | Create new delegate wallet, update delegation from Cold Wallet B, fund, update env |
+| Server keystore | On compromise | Create new wallet, fund, update Vercel env |
+| NEXTAUTH_SECRET | Quarterly | Regenerate, update Vercel env |
+| DATABASE_AUTH_TOKEN | Quarterly | `turso db tokens create`, update Vercel env |
+| ALCHEMY_API_KEY | On compromise | Rotate in Alchemy dashboard |
+
+> **Bot key compromise recovery:** With delegation, a compromised bot key does NOT compromise the Voter ID. Simply: (1) call `setDelegate(newBotAddress)` from the cold wallet to revoke the old delegate, (2) create a new bot wallet, (3) fund it and update env vars. No governance action needed, no identity loss.
 
 ---
 
 ## Deployment Order Summary
 
 ```
-1.  Create keys (deployer, keeper, submit-bot, rate-bot, server)
-2.  Fund deployer with CELO
-3.  Deploy contracts (yarn deploy --network celoSepolia --keystore deployer)
+1.  Create wallets (deployer, 2 cold wallets, submit-bot, rate-bot, keeper, server)
+2.  Fund deployer with CELO (buy from exchange)
+3.  Deploy contracts (yarn deploy --network celo --keystore deployer)
 4.  Verify contracts on Blockscout
 5.  Deploy Ponder indexer to Railway (with volume for PGlite persistence)
 6.  Deploy frontend to Vercel (with Ponder URL, contract addresses)
-7.  Register frontend in FrontendRegistry (fixed 1,000 cREP stake, get governance approval)
-8.  Deploy Keeper to Railway (point at RoundVotingEngine + ContentRegistry)
-9.  Set up bot accounts (Voter ID + cREP via HumanFaucet for both submit-bot and rate-bot)
-10. Run bots locally with encrypted keystores, or deploy to Railway (testnet only — see 7f)
-11. Verify full loop: submit → vote → settle → display
-12. Set up monitoring and alerts
+7.  Register frontend in FrontendRegistry (1,000 cREP stake + governance proposal)
+8.  Set up bot identities on cold wallets (Voter ID + cREP via Self.xyz / HumanFaucet)
+9.  Set delegation: cold wallets → bot hot wallets (setDelegate)
+10. Fund bot hot wallets with operational cREP + gas
+11. Deploy Keeper to Railway (point at RoundVotingEngine + ContentRegistry)
+12. Run bots (local cron or Railway) — submit content, vote
+13. Verify full loop: submit → vote → reveal → resolve → display
+14. Set up monitoring and alerts
 ```
