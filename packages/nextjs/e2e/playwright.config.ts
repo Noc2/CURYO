@@ -23,8 +23,9 @@ export default defineConfig({
       // Exclude tests that need special conditions:
       // - settlement/reward/tied-round: need block advancement for settlement
       // - round-cancellation/content-dormancy: need time-skip (fast-forward days)
+      // - mobile: need phone/tablet device profiles (run via mobile-phone/mobile-tablet projects)
       testIgnore:
-        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement/,
+        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement|mobile/,
     },
     {
       // Settlement tests need block advancement for random settlement.
