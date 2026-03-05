@@ -31,9 +31,7 @@ export function CategoryBars({ categories }: { categories: CategoryStat[] }) {
             <div key={cat.id} className="space-y-0.5">
               {/* Label row */}
               <div className="flex items-center justify-between text-sm">
-                <span className="text-base-content/60 truncate mr-2">
-                  {cat.categoryName ?? `#${cat.categoryId}`}
-                </span>
+                <span className="text-base-content/60 truncate mr-2">{cat.categoryName ?? `#${cat.categoryId}`}</span>
                 <span className="font-mono tabular-nums text-base-content/50 shrink-0">
                   {formatRate(cat.winRate)}
                   <span className="text-base-content/30 ml-1.5">
@@ -45,16 +43,10 @@ export function CategoryBars({ categories }: { categories: CategoryStat[] }) {
               {/* Stacked bar */}
               <div className="flex h-2 w-full rounded-full overflow-hidden bg-base-content/[0.06]">
                 {winPct > 0 && (
-                  <div
-                    className="h-full bg-success/70 transition-all duration-300"
-                    style={{ width: `${winPct}%` }}
-                  />
+                  <div className="h-full bg-success/70 transition-all duration-300" style={{ width: `${winPct}%` }} />
                 )}
                 {lossPct > 0 && (
-                  <div
-                    className="h-full bg-error/50 transition-all duration-300"
-                    style={{ width: `${lossPct}%` }}
-                  />
+                  <div className="h-full bg-error/50 transition-all duration-300" style={{ width: `${lossPct}%` }} />
                 )}
               </div>
             </div>
