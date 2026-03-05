@@ -143,8 +143,10 @@ export const Faucet = () => {
     }
   }, [connectedAddress, inputAddress]);
 
-  // Check if inputAddress has a Voter ID
+  // Check if inputAddress has a Voter ID (local chain only)
   useEffect(() => {
+    if (!isHardhat) return;
+
     const checkVoterId = async () => {
       if (!inputAddress || !voterIdNFTAddress) {
         setHasVoterId(null);
@@ -172,8 +174,7 @@ export const Faucet = () => {
         } else {
           setVoterIdTokenId(null);
         }
-      } catch (error) {
-        console.error("Error checking Voter ID:", error);
+      } catch {
         setHasVoterId(null);
         setVoterIdTokenId(null);
       }

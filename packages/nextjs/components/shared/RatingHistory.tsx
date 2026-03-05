@@ -29,6 +29,7 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     contractName: "ContentRegistry",
     functionName: "getRating",
     args: [contentId],
+    query: { refetchInterval: 5000 },
   });
 
   const dataPoints = useMemo(() => {
