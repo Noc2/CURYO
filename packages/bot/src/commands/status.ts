@@ -74,7 +74,7 @@ export async function runStatus() {
     });
 
     console.log(`=== Round Config ===`);
-    console.log(`Epoch dur:  ${Number(epochDuration) / 60}m (tlock tier window + settlement delay)`);
+    console.log(`Epoch dur:  ${Number(epochDuration) / 60}m (tlock tier window)`);
     console.log(`Max dur:  ${Number(maxDuration) / 86400} days`);
     console.log(`Min vote: ${minVoters} voters to settle`);
     console.log(`Max vote: ${maxVoters} voters per round`);

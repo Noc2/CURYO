@@ -6,6 +6,11 @@ export const CuryoReputationAbi = [
         "name": "_admin",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_governance",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -22,6 +27,19 @@ export const CuryoReputationAbi = [
       }
     ],
     "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "CONFIG_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -339,19 +357,6 @@ export const CuryoReputationAbi = [
         "name": "extensions",
         "type": "uint256[]",
         "internalType": "uint256[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "epochVotingEngine",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -744,7 +749,7 @@ export const CuryoReputationAbi = [
     "name": "setContentVotingContracts",
     "inputs": [
       {
-        "name": "_epochVotingEngine",
+        "name": "_votingEngine",
         "type": "address",
         "internalType": "address"
       },
@@ -869,6 +874,19 @@ export const CuryoReputationAbi = [
     "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "votingEngine",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
     "type": "event",
     "name": "Approval",
     "inputs": [
@@ -898,7 +916,7 @@ export const CuryoReputationAbi = [
     "name": "ContentVotingContractsSet",
     "inputs": [
       {
-        "name": "epochVotingEngine",
+        "name": "votingEngine",
         "type": "address",
         "indexed": true,
         "internalType": "address"

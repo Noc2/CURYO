@@ -30,6 +30,19 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_SUPPLY",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "addMinter",
     "inputs": [
       {
@@ -1120,6 +1133,11 @@ export const VoterIdNFTAbi = [
   {
     "type": "error",
     "name": "InvalidAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MaxSupplyReached",
     "inputs": []
   },
   {

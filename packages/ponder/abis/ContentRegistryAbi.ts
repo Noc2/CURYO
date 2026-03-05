@@ -45,19 +45,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "CONTENT_EXPIRY",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "DEFAULT_ADMIN_ROLE",
     "inputs": [],
     "outputs": [
@@ -176,32 +163,6 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "SLASH_RATING_THRESHOLD",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "STAKE_GRACE_EPOCHS",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "STAKE_RETURN_EPOCHS",
     "inputs": [],
     "outputs": [
       {

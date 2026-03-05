@@ -45,19 +45,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "CONTENT_EXPIRY",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "DEFAULT_ADMIN_ROLE",
     "inputs": [],
     "outputs": [
@@ -149,19 +136,6 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MODERATOR_ROLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "PAUSER_ROLE",
     "inputs": [],
     "outputs": [
@@ -189,32 +163,6 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "SLASH_RATING_THRESHOLD",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "STAKE_GRACE_EPOCHS",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "STAKE_RETURN_EPOCHS",
     "inputs": [],
     "outputs": [
       {
@@ -376,19 +324,6 @@ export const ContentRegistryAbi = [
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "flagContent",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -618,6 +553,11 @@ export const ContentRegistryAbi = [
         "internalType": "address"
       },
       {
+        "name": "_governance",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "_crepToken",
         "type": "address",
         "internalType": "address"
@@ -705,6 +645,19 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "participationPool",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "contract IParticipationPool"
       }
     ],
     "stateMutability": "view"
@@ -832,6 +785,32 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "setParticipationPool",
+    "inputs": [
+      {
+        "name": "_participationPool",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setTreasury",
+    "inputs": [
+      {
+        "name": "_treasury",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setVoterIdNFT",
     "inputs": [
       {
@@ -930,6 +909,19 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "treasury",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "unpause",
     "inputs": [],
     "outputs": [],
@@ -950,7 +942,7 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "updateRating",
+    "name": "updateRatingDirect",
     "inputs": [
       {
         "name": "contentId",
@@ -958,14 +950,9 @@ export const ContentRegistryAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "upWins",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "delta",
-        "type": "uint8",
-        "internalType": "uint8"
+        "name": "newRating",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "outputs": [],
@@ -1050,19 +1037,6 @@ export const ContentRegistryAbi = [
   {
     "type": "event",
     "name": "ContentDormant",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "ContentFlagged",
     "inputs": [
       {
         "name": "contentId",

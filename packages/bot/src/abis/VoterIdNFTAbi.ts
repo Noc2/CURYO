@@ -6,6 +6,11 @@ export const VoterIdNFTAbi = [
         "name": "_owner",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_governance",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -22,6 +27,32 @@ export const VoterIdNFTAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_SUPPLY",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "addMinter",
+    "inputs": [
+      {
+        "name": "_minter",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -43,6 +74,25 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "authorizedMinters",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "balanceOf",
     "inputs": [
       {
@@ -56,6 +106,44 @@ export const VoterIdNFTAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "delegateOf",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "delegateTo",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -177,6 +265,19 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "governance",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "hasVoterId",
     "inputs": [
       {
@@ -282,19 +383,6 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
-    "name": "minter",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "name",
     "inputs": [],
     "outputs": [
@@ -387,8 +475,60 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "removeDelegate",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "removeMinter",
+    "inputs": [
+      {
+        "name": "_minter",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "renounceOwnership",
     "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "resolveHolder",
+    "inputs": [
+      {
+        "name": "addr",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "revokeVoterId",
+    "inputs": [
+      {
+        "name": "holder",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -463,10 +603,10 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
-    "name": "setMinter",
+    "name": "setDelegate",
     "inputs": [
       {
-        "name": "_minter",
+        "name": "delegate",
         "type": "address",
         "internalType": "address"
       }
@@ -658,7 +798,58 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "event",
-    "name": "MinterSet",
+    "name": "DelegateRemoved",
+    "inputs": [
+      {
+        "name": "holder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "previousDelegate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DelegateSet",
+    "inputs": [
+      {
+        "name": "holder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "delegate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MinterAdded",
+    "inputs": [
+      {
+        "name": "minter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MinterRemoved",
     "inputs": [
       {
         "name": "minter",
@@ -783,6 +974,25 @@ export const VoterIdNFTAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "VoterIdRevoked",
+    "inputs": [
+      {
+        "name": "tokenId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "holder",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "AlreadyHasVoterId",
     "inputs": []
@@ -790,6 +1000,31 @@ export const VoterIdNFTAbi = [
   {
     "type": "error",
     "name": "ApprovalNotAllowed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CallerIsDelegate",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CallerNotHolder",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "CannotDelegateSelf",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DelegateAlreadyAssigned",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "DelegateIsHolder",
     "inputs": []
   },
   {
@@ -898,6 +1133,16 @@ export const VoterIdNFTAbi = [
   {
     "type": "error",
     "name": "InvalidAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "MaxSupplyReached",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoDelegateSet",
     "inputs": []
   },
   {

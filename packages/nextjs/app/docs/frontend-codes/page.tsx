@@ -24,7 +24,7 @@ const FrontendCodes: NextPage = () => {
         </li>
         <li>
           <strong>Integrate:</strong> Pass your registered address as the <code>frontend</code> parameter when calling{" "}
-          <code>vote</code>.
+          <code>commitVote</code>.
         </li>
         <li>
           <strong>Claim:</strong> Call <code>claimFees()</code> to withdraw accumulated points anytime.
@@ -33,12 +33,13 @@ const FrontendCodes: NextPage = () => {
 
       <h2>Integration</h2>
       <p>
-        Include your frontend address when submitting votes via <code>RoundVotingEngine.vote()</code>:
+        Include your frontend address when submitting votes via <code>RoundVotingEngine.commitVote()</code>:
       </p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
-        <code>{`function vote(
+        <code>{`function commitVote(
     uint256 contentId,
-    bool isUp,
+    bytes32 commitHash,
+    bytes calldata ciphertext,
     uint256 stakeAmount,
     address frontend  // Your registered frontend address
 ) external`}</code>

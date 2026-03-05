@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
@@ -15,7 +15,7 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 ///         2. minVoters = 3 required for settlement
 ///         3. Expired rounds cancelled after maxDuration without enough voters
 ///         4. Consensus subsidy paid from reserve when all voters unanimous
-contract GameTheoryImprovementsTest is Test {
+contract GameTheoryImprovementsTest is VotingTestBase {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine engine;
@@ -116,21 +116,6 @@ contract GameTheoryImprovementsTest is Test {
         );
         vm.stopPrank();
         return id;
-    }
-
-    /// @dev Build the 65-byte mock ciphertext: uint8(isUp) || salt || contentId
-    function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
-        return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
-    }
-
-    /// @dev Build commitHash: keccak256(abi.encodePacked(isUp, salt, contentId))
-    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(isUp, salt, contentId));
-    }
-
-    /// @dev Build commitKey: keccak256(abi.encodePacked(voter, commitHash))
-    function _commitKey(address voter, bytes32 commitHash_) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(voter, commitHash_));
     }
 
     /// @dev Commit a vote for a voter in the current round. Approves and calls commitVote.

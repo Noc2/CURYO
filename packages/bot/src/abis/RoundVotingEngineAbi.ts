@@ -3426,11 +3426,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
-    "name": "SettlementDelayNotElapsed",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "StreakTooShort",
     "inputs": []
   },

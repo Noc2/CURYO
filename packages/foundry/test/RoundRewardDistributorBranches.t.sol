@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
@@ -10,7 +10,7 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 
 /// @title RoundRewardDistributor branch coverage tests (tlock commit-reveal)
-contract RoundRewardDistributorBranchesTest is Test {
+contract RoundRewardDistributorBranchesTest is VotingTestBase {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
@@ -88,18 +88,6 @@ contract RoundRewardDistributorBranchesTest is Test {
     // =========================================================================
     // HELPERS
     // =========================================================================
-
-    function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
-        return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
-    }
-
-    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(isUp, salt, contentId));
-    }
-
-    function _commitKey(address voter, bytes32 ch) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(voter, ch));
-    }
 
     function _commit(address voter, uint256 contentId, bool isUp, uint256 stake)
         internal

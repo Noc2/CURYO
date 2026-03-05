@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   31337: {
     CuryoReputation: {
-      address: "0x933e69f6d8EB4D8eC823aC9E7F625B1fc5be036c",
+      address: "0x700b6A60ce7EaaEA56F065753d8dcB9653dbAD35",
       abi: [
         {
           type: "constructor",
@@ -1431,7 +1431,7 @@ const deployedContracts = {
       },
     },
     ContentRegistry: {
-      address: "0x1280C81140F17eE991723ff2d1616c9970b8197A",
+      address: "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
       abi: [
         {
           type: "constructor",
@@ -2873,7 +2873,7 @@ const deployedContracts = {
       },
     },
     RoundVotingEngine: {
-      address: "0x92294dF15133c5b050eEB9d0fa415e2AD9CB9bC0",
+      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
       abi: [
         {
           type: "constructor",
@@ -6368,7 +6368,7 @@ const deployedContracts = {
       },
     },
     RoundRewardDistributor: {
-      address: "0xc565ed7E22ef351A1b8A4d9c95c4cE8E1eE14Ca0",
+      address: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
       abi: [
         {
           type: "constructor",
@@ -7010,7 +7010,7 @@ const deployedContracts = {
       },
     },
     FrontendRegistry: {
-      address: "0x0FAe036cC9F0087e6F4c7D9Ad1e744D194c4d71F",
+      address: "0x0C8E79F3534B00D9a3D4a856B665Bf4eBC22f2ba",
       abi: [
         {
           type: "constructor",
@@ -7986,7 +7986,7 @@ const deployedContracts = {
       },
     },
     ProfileRegistry: {
-      address: "0x72F22afff521796c686d482eB256a7d2192eF8De",
+      address: "0xeD1DB453C3156Ff3155a97AD217b3087D5Dc5f6E",
       abi: [
         {
           type: "constructor",
@@ -8703,7 +8703,7 @@ const deployedContracts = {
       },
     },
     ERC1967Proxy: {
-      address: "0x0fae036cc9f0087e6f4c7d9ad1e744d194c4d71f",
+      address: "0x0c8e79f3534b00d9a3d4a856b665bf4ebc22f2ba",
       abi: [
         {
           type: "constructor",
@@ -8777,10 +8777,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1272,
+      deployedOnBlock: 7,
     },
     CategoryRegistry: {
-      address: "0x7C56116fCD7acF4ed56765F246004D57359bD555",
+      address: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
       abi: [
         {
           type: "constructor",
@@ -9761,7 +9761,7 @@ const deployedContracts = {
       },
     },
     VoterIdNFT: {
-      address: "0xeE99593Bf469CD98769E8e18926B126C8B2e4f2B",
+      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
       abi: [
         {
           type: "constructor",
@@ -10984,7 +10984,7 @@ const deployedContracts = {
       },
     },
     ParticipationPool: {
-      address: "0xE9cD12E3d9eba2937b638be59F24Ef79115046Cc",
+      address: "0xc8c25Aab3eeA991E083d2d0240eE4D693c59bDAC",
       abi: [
         {
           type: "constructor",
@@ -11394,7 +11394,7 @@ const deployedContracts = {
       },
     },
     MockIdentityVerificationHub: {
-      address: "0x0ac5b6368ce334c6a74887f1893b39658fb16427",
+      address: "0xc624801dd98bef87c0718ddb43ad3a566cc51ecc",
       abi: [
         {
           type: "function",
@@ -11763,10 +11763,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 1326,
+      deployedOnBlock: 61,
     },
     HumanFaucet: {
-      address: "0x444ECE34fE752d3d3f8490A9619aE84a374b0D15",
+      address: "0x5D1ce2A19Aa885765aBcef89b7590E213422a8b9",
       abi: [
         {
           type: "constructor",

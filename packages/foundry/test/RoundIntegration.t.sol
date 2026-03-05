@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
@@ -16,7 +16,7 @@ import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol
 /// @dev Covers: full lifecycle, multi-voter, concurrent rounds, tied rounds,
 ///      cancelled/expired rounds, consensus settlement, config snapshots.
 ///      Uses test ciphertext (chainid 31337): ciphertext = abi.encodePacked(uint8(isUp?1:0), salt, contentId).
-contract RoundIntegrationTest is Test {
+contract RoundIntegrationTest is VotingTestBase {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
@@ -125,21 +125,6 @@ contract RoundIntegrationTest is Test {
         registry.submitContent(url, "test goal", "test", 0);
         vm.stopPrank();
         contentId = n;
-    }
-
-    /// @dev Build mock ciphertext: abi.encodePacked(uint8(isUp?1:0), salt, contentId) = 65 bytes.
-    function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
-        return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
-    }
-
-    /// @dev Build commit hash: keccak256(abi.encodePacked(isUp, salt, contentId)).
-    function _commitHash(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(isUp, salt, contentId));
-    }
-
-    /// @dev Build commit key: keccak256(abi.encodePacked(voter, commitHash)).
-    function _commitKey(address voter, bytes32 commitHash) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(voter, commitHash));
     }
 
     /// @dev Commit + reveal a vote for a voter in a single epoch boundary.

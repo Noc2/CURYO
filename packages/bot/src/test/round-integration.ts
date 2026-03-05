@@ -350,7 +350,7 @@ async function testCommitRevealSettle() {
   assert(roundAfterReveal.revealedCount === 3n, `Should have 3 revealed votes`);
   assert(roundAfterReveal.thresholdReachedAt > 0n, `thresholdReachedAt should be set`);
 
-  // Advance past settlement delay (one epoch after thresholdReachedAt)
+  // Advance past epoch so reveals can happen
   await advanceTime(epochDuration + 1);
 
   // Settle
@@ -474,7 +474,7 @@ async function testRoundAdvancementAfterSettlement() {
   });
   assert(round1Id === 1n, `First round should be 1`);
 
-  // Advance past epoch + settlement delay
+  // Advance past epoch so reveals can happen
   await advanceTime(epochDuration + 1);
   const revealer = ACCOUNTS.deployer;
   await revealVote(revealer, contentId, round1Id, ck1, true, s1);

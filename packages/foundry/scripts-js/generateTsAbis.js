@@ -309,6 +309,9 @@ function main() {
     `📝 Updated TypeScript contract definition file on ${NEXTJS_TARGET_DIR}deployedContracts.ts`
   );
 
+  // --- Auto-generate ABI files for ponder, keeper, and bot ---
+  generateAbiFiles();
+
   // --- Auto-update scaffold.config.ts targetNetworks ---
   updateScaffoldConfig(Object.keys(allGeneratedContracts).map(Number));
 
@@ -624,6 +627,49 @@ function updateBotConfig(allGeneratedContracts) {
     writeFileSync(botConfigPath, content);
     console.log(`📝 Updated bot contract addresses: ${updatedKeys.join(", ")}`);
   }
+}
+
+/**
+ * Contract-to-ABI-target mapping.
+ * Each entry specifies which packages should receive the full ABI for a contract.
+ * Paths are relative to the monorepo root (packages/).
+ */
+const ABI_TARGETS = [
+  { contract: "RoundVotingEngine", targets: ["ponder/abis", "keeper/src/abis", "bot/src/abis"] },
+  { contract: "ContentRegistry", targets: ["ponder/abis", "keeper/src/abis", "bot/src/abis"] },
+  { contract: "CategoryRegistry", targets: ["ponder/abis"] },
+  { contract: "CuryoReputation", targets: ["ponder/abis", "bot/src/abis"] },
+  { contract: "VoterIdNFT", targets: ["ponder/abis", "bot/src/abis"] },
+  { contract: "FrontendRegistry", targets: ["ponder/abis"] },
+  { contract: "RoundRewardDistributor", targets: ["ponder/abis"] },
+  { contract: "ProfileRegistry", targets: ["ponder/abis"] },
+];
+
+function generateAbiFiles() {
+  const packagesDir = join(__dirname, "..", "..");
+  let totalWritten = 0;
+
+  for (const { contract, targets } of ABI_TARGETS) {
+    const artifact = getArtifactOfContract(contract);
+    if (!artifact) {
+      console.warn(`⚠️  No artifact found for ${contract} — skipping ABI generation`);
+      continue;
+    }
+
+    const abiJson = JSON.stringify(artifact.abi, null, 2);
+    const fileContent = `export const ${contract}Abi = ${abiJson} as const;\n`;
+
+    for (const target of targets) {
+      const targetDir = join(packagesDir, target);
+      if (!existsSync(targetDir)) {
+        mkdirSync(targetDir, { recursive: true });
+      }
+      writeFileSync(join(targetDir, `${contract}Abi.ts`), fileContent);
+      totalWritten++;
+    }
+  }
+
+  console.log(`📝 Generated ${totalWritten} ABI files across ${ABI_TARGETS.reduce((n, t) => n + t.targets.length, 0)} targets`);
 }
 
 try {
