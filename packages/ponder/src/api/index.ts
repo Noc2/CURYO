@@ -54,6 +54,14 @@ app.use("/*", async (c, next) => {
     c.req.header("x-real-ip")?.trim() ||
     xff?.split(",").pop()?.trim() ||
     "unknown";
+
+  // Skip rate limiting for localhost/loopback (dev server, E2E tests)
+  const isLocal = ip === "unknown" || ip === "127.0.0.1" || ip === "::1" || ip === "localhost";
+  if (isLocal) {
+    await next();
+    return;
+  }
+
   const now = Date.now();
   const cutoff = now - RATE_WINDOW_MS;
 
