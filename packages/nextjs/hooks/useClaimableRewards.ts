@@ -31,14 +31,24 @@ interface ClaimableReward {
 export function useClaimableRewards(contentId: bigint): ClaimableReward {
   const { address } = useAccount();
 
-  // Get active round ID
+  // Get active round ID (returns 0 for terminal rounds: settled/cancelled/tied)
   const { data: rawActiveRoundId } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "getActiveRoundId" as any,
     args: [contentId] as any,
     query: { enabled: contentId !== undefined },
   } as any);
-  const roundId = (rawActiveRoundId as unknown as bigint) ?? 0n;
+  const activeRoundId = (rawActiveRoundId as unknown as bigint) ?? 0n;
+
+  // Fallback: currentRoundId always points to the most recent round (even if settled)
+  const { data: rawCurrentRoundId } = useScaffoldReadContract({
+    contractName: "RoundVotingEngine" as any,
+    functionName: "currentRoundId" as any,
+    args: [contentId] as any,
+    query: { enabled: contentId !== undefined && activeRoundId === 0n },
+  } as any);
+
+  const roundId = activeRoundId > 0n ? activeRoundId : ((rawCurrentRoundId as unknown as bigint) ?? 0n);
 
   // Get user's commitHash for this round (0 = not committed)
   const { data: rawCommitHash } = useScaffoldReadContract({
