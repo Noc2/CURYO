@@ -104,7 +104,10 @@ test.describe("Negative cases", () => {
       return;
     }
 
-    // First vote
+    // First vote — wait for the button to stabilize (React re-renders from Ponder polling
+    // can detach/reattach the element between locator resolution and click)
+    await voteUp.waitFor({ state: "visible", timeout: 10_000 });
+    await page.waitForTimeout(500); // let React settle
     await voteUp.click();
     const stakeModal = page.locator("[role='dialog']").first();
     await expect(stakeModal).toBeVisible({ timeout: 5_000 });
