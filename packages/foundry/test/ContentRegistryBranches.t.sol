@@ -146,13 +146,18 @@ contract ContentRegistryBranchesTest is Test {
     }
 
     function _vote(address voter, uint256 contentId, bool isUp) internal {
+        _commit(voter, contentId, isUp);
+    }
+
+    function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {
         vm.startPrank(voter);
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp));
+        salt = keccak256(abi.encodePacked(voter, block.timestamp));
         bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
         bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
+        commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
     // =========================================================================
@@ -450,6 +455,56 @@ contract ContentRegistryBranchesTest is Test {
 
         ContentRegistry.Content memory c = registry.getContent(1);
         assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Dormant));
+    }
+
+    function test_VoteCommit_UpdatesLastActivityAt() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/activity", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 29 days);
+        _vote(voter1, 1, true);
+
+        ContentRegistry.Content memory c = registry.getContent(1);
+        assertEq(c.lastActivityAt, block.timestamp, "Commit should refresh lastActivityAt");
+    }
+
+    function test_MarkDormant_ActiveRound_AllVotesRevealed_Reverts() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/open-round", "goal", "tags", 0);
+        vm.stopPrank();
+
+        (bytes32 commitKey, bytes32 salt) = _commit(voter1, 1, true);
+        uint256 roundId = votingEngine.getActiveRoundId(1);
+
+        vm.warp(T0 + 1 hours + 1);
+        votingEngine.revealVoteByCommitKey(1, roundId, commitKey, true, salt);
+
+        assertEq(votingEngine.getActiveRoundId(1), roundId, "Round should still be open");
+        assertFalse(votingEngine.hasUnrevealedVotes(1), "All votes are revealed");
+
+        vm.warp(T0 + 31 days);
+        vm.expectRevert("Content has active round");
+        registry.markDormant(1);
+    }
+
+    function test_MarkDormant_CancelledRound_StillUsesLastVoteTimestamp() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/recent-vote", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 29 days);
+        _vote(voter1, 1, true);
+
+        uint256 roundId = votingEngine.getActiveRoundId(1);
+        vm.warp(T0 + 29 days + 7 days + 1);
+        votingEngine.cancelExpiredRound(1, roundId);
+
+        vm.expectRevert("Dormancy period not elapsed");
+        registry.markDormant(1);
     }
 
     function test_MarkDormant_ReleasesUrlForResubmission() public {

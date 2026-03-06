@@ -32,6 +32,10 @@ contract MockVotingEngine3 is IRoundVotingEngine {
         return 0;
     }
 
+    function getActiveRoundId(uint256) external pure override returns (uint256) {
+        return 0;
+    }
+
     function hasUnrevealedVotes(uint256) external pure override returns (bool) {
         return false;
     }

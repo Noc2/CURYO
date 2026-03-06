@@ -283,9 +283,9 @@ contract ContentRegistry is
         Content storage c = contents[contentId];
         require(c.status == ContentStatus.Active, "Not active");
         require(block.timestamp > c.lastActivityAt + DORMANCY_PERIOD, "Dormancy period not elapsed");
-        // Prevent dormancy if content has active votes in an open round
+        // Prevent dormancy while any round is still open, even if all votes have been revealed.
         if (votingEngine != address(0)) {
-            require(!IRoundVotingEngine(votingEngine).hasUnrevealedVotes(contentId), "Content has active votes");
+            require(IRoundVotingEngine(votingEngine).getActiveRoundId(contentId) == 0, "Content has active round");
         }
 
         c.status = ContentStatus.Dormant;

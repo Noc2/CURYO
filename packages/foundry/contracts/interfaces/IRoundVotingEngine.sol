@@ -9,6 +9,11 @@ interface IRoundVotingEngine {
     /// @return Total number of commits ever made for this content.
     function getContentCommitCount(uint256 contentId) external view returns (uint256);
 
+    /// @notice Get the current active round ID for a content item.
+    /// @param contentId The content ID to query.
+    /// @return Active round ID, or 0 if there is no open round.
+    function getActiveRoundId(uint256 contentId) external view returns (uint256);
+
     /// @notice Check if content has unrevealed votes in active rounds.
     /// @param contentId The content ID to query.
     /// @return True if there are pending unrevealed votes.

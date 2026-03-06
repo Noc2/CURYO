@@ -541,6 +541,9 @@ contract RoundVotingEngine is
             lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
         }
 
+        // Vote commits count as content activity for dormancy tracking.
+        registry.updateActivity(contentId);
+
         // Update voting streak
         _updateStreak(msg.sender);
 
