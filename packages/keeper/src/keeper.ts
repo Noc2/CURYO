@@ -57,7 +57,7 @@ function emptyResult(): KeeperResult {
 }
 
 /** Extract the human-readable revert reason from a viem error. */
-function getRevertReason(err: unknown): string {
+export function getRevertReason(err: unknown): string {
   if (err instanceof BaseError) {
     const revertError = err.walk(e => e instanceof ContractFunctionRevertedError);
     if (revertError instanceof ContractFunctionRevertedError) {
@@ -81,7 +81,7 @@ function getRevertReason(err: unknown): string {
 }
 
 /** Returns true if the error message indicates an expected/benign revert. */
-function isExpectedRevert(msg: string): boolean {
+export function isExpectedRevert(msg: string): boolean {
   const benign = [
     "RoundNotOpen",
     "EpochNotEnded",
@@ -100,7 +100,7 @@ function isExpectedRevert(msg: string): boolean {
  * Ciphertext on-chain is hex-encoded UTF-8 armored AGE string.
  * Plaintext is 33 bytes: [uint8 isUp (0|1), bytes32 salt].
  */
-async function decryptTlockCiphertext(
+export async function decryptTlockCiphertext(
   ciphertext: `0x${string}`,
 ): Promise<{ isUp: boolean; salt: `0x${string}` } | null> {
   const hex = ciphertext.startsWith("0x") ? ciphertext.slice(2) : ciphertext;

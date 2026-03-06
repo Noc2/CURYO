@@ -1,0 +1,36 @@
+name: Unit Tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  foundry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: ./.github/actions/setup-foundry
+      - uses: actions/cache@v4
+        with:
+          path: |
+            packages/foundry/cache
+            packages/foundry/out
+          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/contracts/**/*.sol') }}
+      - run: forge test -vvv
+        working-directory: packages/foundry
+
+  typescript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn test:ts

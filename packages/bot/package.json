@@ -6,7 +6,9 @@
   "scripts": {
     "vote": "tsx src/index.ts vote",
     "submit": "tsx src/index.ts submit",
-    "status": "tsx src/index.ts status"
+    "status": "tsx src/index.ts status",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
@@ -16,7 +18,8 @@
   "devDependencies": {
     "@types/node": "~18.19.50",
     "tsx": "^4.19.0",
-    "typescript": "~5.8.2"
+    "typescript": "~5.8.2",
+    "vitest": "^4.0.18"
   },
   "license": "MIT",
   "engines": {

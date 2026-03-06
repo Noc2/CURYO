@@ -20,6 +20,8 @@ import {
   voterStreak,
 } from "ponder:schema";
 import { eq, desc, asc, and, or, inArray, notInArray, sql, gte, replaceBigInts } from "ponder";
+import { RateLimiter } from "./rate-limit.js";
+import { safeBigInt, safeLimit, safeOffset, isValidAddress } from "./utils.js";
 
 const app = new Hono();
 
@@ -27,26 +29,7 @@ const app = new Hono();
 // RATE LIMITING — IP-based sliding window
 // ============================================================
 
-interface RateLimitEntry {
-  timestamps: number[];
-}
-
-const rateLimitStore = new Map<string, RateLimitEntry>();
-const RATE_LIMIT = 120; // requests per window
-const RATE_WINDOW_MS = 60_000; // 1 minute
-const RATE_CLEANUP_INTERVAL_MS = 60_000;
-let rateLimitLastCleanup = Date.now();
-
-function rateLimitCleanup() {
-  const now = Date.now();
-  if (now - rateLimitLastCleanup < RATE_CLEANUP_INTERVAL_MS) return;
-  rateLimitLastCleanup = now;
-  const cutoff = now - RATE_WINDOW_MS;
-  for (const [key, entry] of rateLimitStore) {
-    entry.timestamps = entry.timestamps.filter(t => t > cutoff);
-    if (entry.timestamps.length === 0) rateLimitStore.delete(key);
-  }
-}
+const rateLimiter = new RateLimiter(120, 60_000, 60_000);
 
 app.use("/*", async (c, next) => {
   const xff = c.req.header("x-forwarded-for");
@@ -62,27 +45,13 @@ app.use("/*", async (c, next) => {
     return;
   }
 
-  const now = Date.now();
-  const cutoff = now - RATE_WINDOW_MS;
+  const { allowed, retryAfter } = rateLimiter.check(ip);
 
-  rateLimitCleanup();
-
-  let entry = rateLimitStore.get(ip);
-  if (!entry) {
-    entry = { timestamps: [] };
-    rateLimitStore.set(ip, entry);
-  }
-
-  entry.timestamps = entry.timestamps.filter(t => t > cutoff);
-
-  if (entry.timestamps.length >= RATE_LIMIT) {
-    const oldestInWindow = entry.timestamps[0];
-    const retryAfter = Math.ceil((oldestInWindow + RATE_WINDOW_MS - now) / 1000);
+  if (!allowed) {
     c.header("Retry-After", String(retryAfter));
     return c.json({ error: "Too many requests" }, 429);
   }
 
-  entry.timestamps.push(now);
   await next();
 });
 
@@ -108,32 +77,6 @@ app.use(
 // Helper: serialize BigInts as strings for JSON responses
 function jsonBig(c: any, data: any, status?: number) {
   return c.json(replaceBigInts(data, (v: bigint) => String(v)), status);
-}
-
-// Helper: safely parse a BigInt from a query/path parameter, returning null on invalid input
-function safeBigInt(value: string): bigint | null {
-  try {
-    return BigInt(value);
-  } catch {
-    return null;
-  }
-}
-
-// Helper: safely parse pagination params with defaults and clamping
-function safeLimit(value: string | undefined, defaultVal: number, max: number): number {
-  const parsed = parseInt(value ?? String(defaultVal));
-  if (isNaN(parsed) || parsed < 1) return defaultVal;
-  return Math.min(parsed, max);
-}
-
-function safeOffset(value: string | undefined): number {
-  const parsed = parseInt(value ?? "0");
-  return isNaN(parsed) || parsed < 0 ? 0 : parsed;
-}
-
-// Helper: validate Ethereum address format
-function isValidAddress(value: string): boolean {
-  return /^0x[0-9a-fA-F]{40}$/i.test(value);
 }
 
 // Ponder provides /health and /status natively — no custom health check needed.

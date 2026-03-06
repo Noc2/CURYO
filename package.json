@@ -48,6 +48,7 @@
     "precommit": "lint-staged",
     "start": "yarn workspace @curyo/nextjs dev",
     "test": "yarn foundry:test",
+    "test:ts": "yarn workspace @curyo/keeper test && yarn workspace @curyo/bot test && yarn workspace @curyo/ponder test",
     "vercel": "yarn workspace @curyo/nextjs vercel",
     "vercel:login": "yarn workspace @curyo/nextjs vercel:login",
     "vercel:yolo": "yarn workspace @curyo/nextjs vercel:yolo",
