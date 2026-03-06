@@ -62,6 +62,15 @@ test.describe("Next.js API routes", () => {
     expect(data.thumbnailUrl).toBeTruthy();
   });
 
+  test("GET /api/thumbnail does not trust lookalike YouTube hostnames", async () => {
+    const attackerUrl = "https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ";
+    const res = await fetch(`${BASE_URL}/api/thumbnail?url=${encodeURIComponent(attackerUrl)}`);
+    expect(res.ok).toBe(true);
+
+    const data = await res.json();
+    expect(data.thumbnailUrl).toBeNull();
+  });
+
   test("GET /api/thumbnail returns 400 for missing url", async () => {
     const res = await fetch(`${BASE_URL}/api/thumbnail`);
     expect(res.status).toBe(400);

@@ -1,4 +1,5 @@
 import type { PlatformHandler, PlatformInfo } from "../types";
+import { matchesHostname } from "~~/utils/urlHosts";
 
 /**
  * Extract work or edition ID from Open Library URL formats.
@@ -11,7 +12,7 @@ function extractOpenLibraryId(url: string): { type: "works" | "books"; id: strin
   try {
     const parsed = new URL(url);
 
-    if (!parsed.hostname.endsWith("openlibrary.org")) {
+    if (!matchesHostname(parsed.hostname, "openlibrary.org")) {
       return null;
     }
 

@@ -1,4 +1,5 @@
 import type { PlatformHandler, PlatformInfo } from "../types";
+import { matchesHostname } from "~~/utils/urlHosts";
 
 /**
  * Extract movie ID from various TMDB URL formats.
@@ -12,7 +13,7 @@ function extractTmdbMovieId(url: string): string | null {
     const parsed = new URL(url);
 
     // Check hostname (www.themoviedb.org or themoviedb.org)
-    if (!parsed.hostname.endsWith("themoviedb.org")) {
+    if (!matchesHostname(parsed.hostname, "themoviedb.org")) {
       return null;
     }
 

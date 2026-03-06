@@ -1,4 +1,5 @@
 import type { EmbedOptions, PlatformHandler, PlatformInfo } from "../types";
+import { matchesHostname } from "~~/utils/urlHosts";
 
 type TwitchContentType = "video" | "clip" | "channel";
 
@@ -11,7 +12,7 @@ function extractTwitchInfo(url: string): { id: string; contentType: TwitchConten
     const parsed = new URL(url);
 
     // clips.twitch.tv/CLIP_SLUG
-    if (parsed.hostname === "clips.twitch.tv") {
+    if (matchesHostname(parsed.hostname, "clips.twitch.tv")) {
       const clipSlug = parsed.pathname.slice(1); // Remove leading /
       if (clipSlug && !clipSlug.includes("/")) {
         return { id: clipSlug, contentType: "clip" };
@@ -19,7 +20,7 @@ function extractTwitchInfo(url: string): { id: string; contentType: TwitchConten
     }
 
     // twitch.tv URLs
-    if (parsed.hostname.includes("twitch.tv")) {
+    if (matchesHostname(parsed.hostname, "twitch.tv")) {
       // twitch.tv/videos/123456789 - VODs
       const videoMatch = parsed.pathname.match(/\/videos\/(\d+)/);
       if (videoMatch) {
@@ -49,7 +50,7 @@ export const twitchHandler: PlatformHandler = {
   matches(url: string): boolean {
     try {
       const parsed = new URL(url);
-      return parsed.hostname.includes("twitch.tv") || parsed.hostname === "clips.twitch.tv";
+      return matchesHostname(parsed.hostname, "twitch.tv") || matchesHostname(parsed.hostname, "clips.twitch.tv");
     } catch {
       return false;
     }

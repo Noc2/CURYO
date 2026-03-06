@@ -1,4 +1,5 @@
 import type { PlatformHandler, PlatformInfo } from "../types";
+import { matchesHostname } from "~~/utils/urlHosts";
 
 /**
  * Extract article title from various Wikipedia URL formats.
@@ -12,7 +13,7 @@ function extractWikipediaTitle(url: string): string | null {
     const parsed = new URL(url);
 
     // Check hostname (en.wikipedia.org, www.wikipedia.org, etc.)
-    if (!parsed.hostname.endsWith("wikipedia.org")) {
+    if (!matchesHostname(parsed.hostname, "wikipedia.org")) {
       return null;
     }
 

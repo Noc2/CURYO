@@ -1,4 +1,5 @@
 import type { PlatformHandler, PlatformInfo } from "../types";
+import { matchesHostname } from "~~/utils/urlHosts";
 
 /**
  * Extract org/model path from HuggingFace model URLs.
@@ -11,7 +12,7 @@ function extractHuggingFaceModel(url: string): { modelId: string; author: string
   try {
     const parsed = new URL(url);
 
-    if (!parsed.hostname.endsWith("huggingface.co")) {
+    if (!matchesHostname(parsed.hostname, "huggingface.co")) {
       return null;
     }
 

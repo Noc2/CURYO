@@ -1,4 +1,5 @@
 import type { PlatformHandler, PlatformInfo } from "../types";
+import { matchesHostname } from "~~/utils/urlHosts";
 
 /**
  * Extract owner/repo from GitHub repository URLs.
@@ -11,7 +12,7 @@ function extractGitHubRepo(url: string): { owner: string; repo: string } | null 
   try {
     const parsed = new URL(url);
 
-    if (!parsed.hostname.endsWith("github.com")) {
+    if (!matchesHostname(parsed.hostname, "github.com")) {
       return null;
     }
 

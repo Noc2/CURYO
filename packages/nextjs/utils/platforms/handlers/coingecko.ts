@@ -1,4 +1,5 @@
 import type { PlatformHandler, PlatformInfo } from "../types";
+import { matchesHostname } from "~~/utils/urlHosts";
 
 /**
  * Extract coin slug from CoinGecko URL formats.
@@ -11,7 +12,7 @@ function extractCoinGeckoSlug(url: string): string | null {
   try {
     const parsed = new URL(url);
 
-    if (!parsed.hostname.endsWith("coingecko.com")) {
+    if (!matchesHostname(parsed.hostname, "coingecko.com")) {
       return null;
     }
 

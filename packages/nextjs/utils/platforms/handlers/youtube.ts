@@ -1,11 +1,12 @@
 import type { EmbedOptions, PlatformHandler, PlatformInfo } from "../types";
+import { matchesHostname } from "~~/utils/urlHosts";
 
 function extractYouTubeId(url: string): string | null {
   try {
     const parsed = new URL(url);
 
     // youtube.com/watch?v=...
-    if (parsed.hostname.includes("youtube.com") && parsed.searchParams.has("v")) {
+    if (matchesHostname(parsed.hostname, "youtube.com") && parsed.searchParams.has("v")) {
       return parsed.searchParams.get("v");
     }
 
@@ -15,7 +16,7 @@ function extractYouTubeId(url: string): string | null {
     }
 
     // youtube.com/embed/...
-    if (parsed.hostname.includes("youtube.com") && parsed.pathname.startsWith("/embed/")) {
+    if (matchesHostname(parsed.hostname, "youtube.com") && parsed.pathname.startsWith("/embed/")) {
       return parsed.pathname.split("/embed/")[1];
     }
 
@@ -29,7 +30,7 @@ export const youtubeHandler: PlatformHandler = {
   matches(url: string): boolean {
     try {
       const parsed = new URL(url);
-      return parsed.hostname.includes("youtube.com") || parsed.hostname === "youtu.be";
+      return matchesHostname(parsed.hostname, "youtube.com") || parsed.hostname === "youtu.be";
     } catch {
       return false;
     }
