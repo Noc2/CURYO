@@ -5,6 +5,7 @@ import {
   claimVoterReward,
   commitVoteDirect,
   evmIncreaseTime,
+  processUnrevealedVotes,
   getActiveRoundId,
   revealVoteDirect,
   setTestConfig,
@@ -298,5 +299,23 @@ test.describe("Reward claim lifecycle", () => {
       VOTING_ENGINE,
     );
     expect(doubleClaim, "Double participation reward claim should revert").toBe(false);
+  });
+
+  test("losing voter cannot claim participation reward (NotWinningSide)", async () => {
+    test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
+    test.setTimeout(60_000);
+
+    const loser = ANVIL_ACCOUNTS.account7;
+    const result = await claimParticipationReward(BigInt(settledContentId!), roundId, loser.address, VOTING_ENGINE);
+    expect(result, "Losing voter participation reward claim should revert with NotWinningSide").toBe(false);
+  });
+
+  test("processUnrevealedVotes reverts when nothing to process (NothingProcessed)", async () => {
+    test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
+    test.setTimeout(60_000);
+
+    const keeper = ANVIL_ACCOUNTS.account1;
+    const result = await processUnrevealedVotes(BigInt(settledContentId!), roundId, 0, 10, keeper.address, VOTING_ENGINE);
+    expect(result, "processUnrevealedVotes should revert with NothingProcessed when all votes revealed").toBe(false);
   });
 });
