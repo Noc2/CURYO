@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { blo } from "blo";
 import { useAccount } from "wagmi";
@@ -200,7 +201,11 @@ export function AccuracyLeaderboard() {
                     </td>
                     <td>
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
+                        <Link
+                          href={`/profiles/${entry.voter}`}
+                          className="group flex min-w-0 items-center gap-3"
+                          aria-label={`View profile for ${entry.profileName || truncateAddress(entry.voter)}`}
+                        >
                           <img
                             src={entry.profileImageUrl || blo(entry.voter as `0x${string}`)}
                             onError={e => {
@@ -215,15 +220,19 @@ export function AccuracyLeaderboard() {
                           <div className="flex min-w-0 flex-col">
                             {entry.profileName ? (
                               <>
-                                <span className="font-medium truncate">{entry.profileName}</span>
+                                <span className="truncate font-medium transition-colors group-hover:text-primary">
+                                  {entry.profileName}
+                                </span>
                                 <span className="text-base text-base-content/50">{truncateAddress(entry.voter)}</span>
                               </>
                             ) : (
-                              <span className="font-mono">{truncateAddress(entry.voter)}</span>
+                              <span className="font-mono transition-colors group-hover:text-primary">
+                                {truncateAddress(entry.voter)}
+                              </span>
                             )}
                             {isCurrentUser && <span className="text-base text-primary">(You)</span>}
                           </div>
-                        </div>
+                        </Link>
                         {!isCurrentUser ? (
                           <FollowProfileButton
                             following={followedWallets.has(entry.voter.toLowerCase())}

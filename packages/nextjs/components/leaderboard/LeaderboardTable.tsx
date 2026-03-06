@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { blo } from "blo";
 import { Address } from "viem";
@@ -233,7 +234,11 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
                   </td>
                   <td>
                     <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
+                      <Link
+                        href={`/profiles/${entry.address}`}
+                        className="group flex min-w-0 items-center gap-3"
+                        aria-label={`View profile for ${entry.username || truncateAddress(entry.address)}`}
+                      >
                         <img
                           src={entry.profileImageUrl || blo(entry.address as `0x${string}`)}
                           onError={e => {
@@ -248,15 +253,19 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
                         <div className="flex min-w-0 flex-col">
                           {entry.username ? (
                             <>
-                              <span className="font-medium truncate">{entry.username}</span>
+                              <span className="truncate font-medium transition-colors group-hover:text-primary">
+                                {entry.username}
+                              </span>
                               <span className="text-base text-base-content/50">{truncateAddress(entry.address)}</span>
                             </>
                           ) : (
-                            <span className="font-mono">{truncateAddress(entry.address)}</span>
+                            <span className="font-mono transition-colors group-hover:text-primary">
+                              {truncateAddress(entry.address)}
+                            </span>
                           )}
                           {isCurrentUser && <span className="text-base text-primary">(You)</span>}
                         </div>
-                      </div>
+                      </Link>
                       {!isCurrentUser ? (
                         <FollowProfileButton
                           following={followedWallets.has(entry.address.toLowerCase())}

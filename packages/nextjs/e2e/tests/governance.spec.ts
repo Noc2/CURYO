@@ -34,6 +34,9 @@ test.describe("Governance page", () => {
 
     const followingOnlyToggle = page.getByRole("button", { name: "Following Only" }).first();
     await expect(followingOnlyToggle).toBeVisible({ timeout: 5_000 });
+
+    const profileLink = page.locator('a[href^="/profiles/0x"]').first();
+    await expect(profileLink).toBeVisible({ timeout: 5_000 });
   });
 
   test("accuracy tab shows following-only filter", async ({ connectedPage: page }) => {
