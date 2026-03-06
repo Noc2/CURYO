@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ResponseTooLargeError, readResponseBytes } from "~~/utils/fetchBodyLimit";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 /**
@@ -73,11 +74,8 @@ export async function GET(request: NextRequest) {
       if (!redirectRes.ok) return new NextResponse(null, { status: redirectRes.status });
       const ct = redirectRes.headers.get("content-type") || "image/png";
       if (!ct.startsWith("image/")) return new NextResponse(null, { status: 502 });
-      const cl = Number(redirectRes.headers.get("content-length") || 0);
-      if (cl > MAX_RESPONSE_SIZE) return new NextResponse(null, { status: 413 });
-      const buf = await redirectRes.arrayBuffer();
-      if (buf.byteLength > MAX_RESPONSE_SIZE) return new NextResponse(null, { status: 413 });
-      return new NextResponse(buf, {
+      const bytes = await readResponseBytes(redirectRes, MAX_RESPONSE_SIZE);
+      return new NextResponse(bytes, {
         headers: { "Content-Type": ct, "Cache-Control": "public, max-age=86400, immutable" },
       });
     }
@@ -91,15 +89,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(null, { status: 502 });
     }
 
-    const contentLength = Number(res.headers.get("content-length") || 0);
-    if (contentLength > MAX_RESPONSE_SIZE) {
-      return new NextResponse(null, { status: 413 });
-    }
-
-    const buffer = await res.arrayBuffer();
-    if (buffer.byteLength > MAX_RESPONSE_SIZE) {
-      return new NextResponse(null, { status: 413 });
-    }
+    const buffer = await readResponseBytes(res, MAX_RESPONSE_SIZE);
 
     return new NextResponse(buffer, {
       headers: {
@@ -107,7 +97,10 @@ export async function GET(request: NextRequest) {
         "Cache-Control": "public, max-age=86400, immutable",
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof ResponseTooLargeError) {
+      return new NextResponse(null, { status: 413 });
+    }
     return new NextResponse(null, { status: 502 });
   }
 }

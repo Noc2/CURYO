@@ -1,3 +1,5 @@
+import { ResponseTooLargeError, readResponseJson, readResponseText } from "~~/utils/fetchBodyLimit";
+
 /**
  * Shared embed resolution logic.
  * Used by /api/thumbnail and /api/url-validation routes.
@@ -23,24 +25,30 @@ const MAX_DESCRIPTION_LENGTH = 500;
 
 /** Fetch JSON with a response-size guard to prevent memory abuse. */
 async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
-  const res = await fetch(url, { ...CACHE_OPTIONS, ...options });
-  if (!res.ok) return null;
-  const contentLength = Number(res.headers.get("content-length") || 0);
-  if (contentLength > MAX_RESPONSE_BYTES) return null;
-  const text = await res.text();
-  if (text.length > MAX_RESPONSE_BYTES) return null;
-  return JSON.parse(text);
+  try {
+    const res = await fetch(url, { ...CACHE_OPTIONS, ...options });
+    if (!res.ok) return null;
+    return await readResponseJson(res, MAX_RESPONSE_BYTES);
+  } catch (error) {
+    if (error instanceof ResponseTooLargeError) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /** Fetch text with a response-size guard to prevent memory abuse. */
 async function safeFetchText(url: string, options?: RequestInit): Promise<string | null> {
-  const res = await fetch(url, { ...CACHE_OPTIONS, ...options });
-  if (!res.ok) return null;
-  const contentLength = Number(res.headers.get("content-length") || 0);
-  if (contentLength > MAX_RESPONSE_BYTES) return null;
-  const text = await res.text();
-  if (text.length > MAX_RESPONSE_BYTES) return null;
-  return text;
+  try {
+    const res = await fetch(url, { ...CACHE_OPTIONS, ...options });
+    if (!res.ok) return null;
+    return await readResponseText(res, MAX_RESPONSE_BYTES);
+  } catch (error) {
+    if (error instanceof ResponseTooLargeError) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function resolveEmbed(

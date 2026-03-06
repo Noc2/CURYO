@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "~~/lib/db";
 import { contentMetadata } from "~~/lib/db/schema";
+import { ResponseTooLargeError, readResponseJson } from "~~/utils/fetchBodyLimit";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 30, windowMs: 60_000 }; // 30 req/min per IP
@@ -53,15 +54,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "RAWG API error" }, { status: response.status });
     }
 
-    const contentLength = Number(response.headers.get("content-length") || 0);
-    if (contentLength > MAX_RESPONSE_BYTES) {
-      return NextResponse.json({ error: "RAWG API response too large" }, { status: 502 });
-    }
-    const text = await response.text();
-    if (text.length > MAX_RESPONSE_BYTES) {
-      return NextResponse.json({ error: "RAWG API response too large" }, { status: 502 });
-    }
-    const data = JSON.parse(text);
+    const data = await readResponseJson<any>(response, MAX_RESPONSE_BYTES);
     const result = {
       name: data.name,
       description_raw: data.description_raw?.slice(0, 500),
@@ -99,7 +92,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    if (error instanceof ResponseTooLargeError) {
+      return NextResponse.json({ error: "RAWG API response too large" }, { status: 502 });
+    }
     return NextResponse.json({ error: "Failed to fetch from RAWG" }, { status: 502 });
   }
 }
