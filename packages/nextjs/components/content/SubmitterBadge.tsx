@@ -10,6 +10,7 @@ interface SubmitterBadgeProps {
   showAddress?: boolean;
   winRate?: number;
   totalSettledVotes?: number;
+  action?: React.ReactNode;
 }
 
 /**
@@ -24,6 +25,7 @@ export function SubmitterBadge({
   showAddress = false,
   winRate,
   totalSettledVotes,
+  action,
 }: SubmitterBadgeProps) {
   const avatarSize = size === "sm" ? 20 : 28;
   const textSize = size === "sm" ? "text-base" : "text-base";
@@ -60,21 +62,24 @@ export function SubmitterBadge({
         style={{ width: avatarSize, height: avatarSize }}
         loading="lazy"
       />
-      <div className="flex flex-col min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className={`${textSize} font-medium text-base-content/70 truncate`}>{displayName}</span>
-          {showAccuracy && (
-            <span
-              className={`text-xs font-semibold px-1.5 py-0.5 rounded-full bg-base-200 ${accuracyColor}`}
-              title={`${winPct}% win rate (${wins}W/${losses}L)`}
-            >
-              {winPct}%
-            </span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex flex-col min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className={`${textSize} font-medium text-base-content/70 truncate`}>{displayName}</span>
+            {showAccuracy && (
+              <span
+                className={`text-xs font-semibold px-1.5 py-0.5 rounded-full bg-base-200 ${accuracyColor}`}
+                title={`${winPct}% win rate (${wins}W/${losses}L)`}
+              >
+                {winPct}%
+              </span>
+            )}
+          </div>
+          {showAddress && username && (
+            <span className="text-base text-base-content/50 font-mono">{truncatedAddress}</span>
           )}
         </div>
-        {showAddress && username && (
-          <span className="text-base text-base-content/50 font-mono">{truncatedAddress}</span>
-        )}
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
     </div>
   );

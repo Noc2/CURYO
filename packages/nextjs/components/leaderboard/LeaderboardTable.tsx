@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { blo } from "blo";
 import { Address } from "viem";
 import { useAccount, useReadContracts } from "wagmi";
+import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
+import { notification } from "~~/utils/scaffold-eth";
 
 interface LeaderboardUser {
   address: string;
@@ -28,7 +32,9 @@ interface LeaderboardTableProps {
 
 export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   const { address: connectedAddress } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const { data: tokenInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(connectedAddress);
 
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -129,6 +135,30 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
+  const handleToggleFollow = useCallback(
+    async (targetAddress: string) => {
+      const result = await toggleFollow(targetAddress);
+
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          notification.info("Connect your wallet to follow curators.");
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason === "self_follow" || result.reason === "rejected") {
+          return;
+        }
+
+        notification.error(result.error || "Failed to update follows");
+        return;
+      }
+
+      notification.success(result.following ? "Following curator" : "Unfollowed curator");
+    },
+    [openConnectModal, toggleFollow],
+  );
+
   if (isLoading || balancesLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -185,29 +215,41 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
                   )}
                 </td>
                 <td>
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={entry.profileImageUrl || blo(entry.address as `0x${string}`)}
-                      onError={e => {
-                        e.currentTarget.src = blo(entry.address as `0x${string}`);
-                      }}
-                      width={32}
-                      height={32}
-                      className="w-8 h-8 rounded-full object-cover shrink-0"
-                      alt={`${entry.username || truncateAddress(entry.address)} avatar`}
-                      loading="lazy"
-                    />
-                    <div className="flex flex-col">
-                      {entry.username ? (
-                        <>
-                          <span className="font-medium">{entry.username}</span>
-                          <span className="text-base text-base-content/50">{truncateAddress(entry.address)}</span>
-                        </>
-                      ) : (
-                        <span className="font-mono">{truncateAddress(entry.address)}</span>
-                      )}
-                      {isCurrentUser && <span className="text-base text-primary">(You)</span>}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={entry.profileImageUrl || blo(entry.address as `0x${string}`)}
+                        onError={e => {
+                          e.currentTarget.src = blo(entry.address as `0x${string}`);
+                        }}
+                        width={32}
+                        height={32}
+                        className="w-8 h-8 rounded-full object-cover shrink-0"
+                        alt={`${entry.username || truncateAddress(entry.address)} avatar`}
+                        loading="lazy"
+                      />
+                      <div className="flex min-w-0 flex-col">
+                        {entry.username ? (
+                          <>
+                            <span className="font-medium truncate">{entry.username}</span>
+                            <span className="text-base text-base-content/50">{truncateAddress(entry.address)}</span>
+                          </>
+                        ) : (
+                          <span className="font-mono">{truncateAddress(entry.address)}</span>
+                        )}
+                        {isCurrentUser && <span className="text-base text-primary">(You)</span>}
+                      </div>
                     </div>
+                    {!isCurrentUser ? (
+                      <FollowProfileButton
+                        following={followedWallets.has(entry.address.toLowerCase())}
+                        pending={isFollowPending(entry.address)}
+                        onClick={() => {
+                          void handleToggleFollow(entry.address);
+                        }}
+                        variant="pill"
+                      />
+                    ) : null}
                   </div>
                 </td>
                 <td className="text-right font-mono">{formatBalance(entry.balance)}</td>

@@ -39,6 +39,25 @@ export const watchedContent = sqliteTable(
 export type WatchedContent = typeof watchedContent.$inferSelect;
 export type NewWatchedContent = typeof watchedContent.$inferInsert;
 
+export const followedProfiles = sqliteTable(
+  "followed_profiles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    followerWalletAddress: text("follower_wallet_address").notNull(),
+    followedWalletAddress: text("followed_wallet_address").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  table => ({
+    followerFollowedUnique: uniqueIndex("followed_profiles_follower_followed_unique").on(
+      table.followerWalletAddress,
+      table.followedWalletAddress,
+    ),
+  }),
+);
+
+export type FollowedProfile = typeof followedProfiles.$inferSelect;
+export type NewFollowedProfile = typeof followedProfiles.$inferInsert;
+
 export const urlValidations = sqliteTable("url_validations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   url: text("url").notNull().unique(),

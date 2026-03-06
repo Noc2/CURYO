@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { blo } from "blo";
 import { useAccount } from "wagmi";
+import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
+import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { PonderAccuracyLeaderboardItem, ponderApi } from "~~/services/ponder/client";
+import { notification } from "~~/utils/scaffold-eth";
 
 type SortOption = "winRate" | "wins" | "stakeWon";
 type MinVotesOption = "3" | "5" | "10";
 
 export function AccuracyLeaderboard() {
   const { address: connectedAddress } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const { categories } = useCategoryRegistry();
+  const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(connectedAddress);
 
   const [items, setItems] = useState<PonderAccuracyLeaderboardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +64,30 @@ export function AccuracyLeaderboard() {
   };
 
   const approvedCategories = categories.filter(c => c.status === 1);
+
+  const handleToggleFollow = useCallback(
+    async (targetAddress: string) => {
+      const result = await toggleFollow(targetAddress);
+
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          notification.info("Connect your wallet to follow curators.");
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason === "self_follow" || result.reason === "rejected") {
+          return;
+        }
+
+        notification.error(result.error || "Failed to update follows");
+        return;
+      }
+
+      notification.success(result.following ? "Following curator" : "Unfollowed curator");
+    },
+    [openConnectModal, toggleFollow],
+  );
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-3">
@@ -154,29 +184,41 @@ export function AccuracyLeaderboard() {
                       )}
                     </td>
                     <td>
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={entry.profileImageUrl || blo(entry.voter as `0x${string}`)}
-                          onError={e => {
-                            e.currentTarget.src = blo(entry.voter as `0x${string}`);
-                          }}
-                          width={32}
-                          height={32}
-                          className="w-8 h-8 rounded-full object-cover shrink-0"
-                          alt={`${entry.profileName || truncateAddress(entry.voter)} avatar`}
-                          loading="lazy"
-                        />
-                        <div className="flex flex-col">
-                          {entry.profileName ? (
-                            <>
-                              <span className="font-medium">{entry.profileName}</span>
-                              <span className="text-base text-base-content/50">{truncateAddress(entry.voter)}</span>
-                            </>
-                          ) : (
-                            <span className="font-mono">{truncateAddress(entry.voter)}</span>
-                          )}
-                          {isCurrentUser && <span className="text-base text-primary">(You)</span>}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={entry.profileImageUrl || blo(entry.voter as `0x${string}`)}
+                            onError={e => {
+                              e.currentTarget.src = blo(entry.voter as `0x${string}`);
+                            }}
+                            width={32}
+                            height={32}
+                            className="w-8 h-8 rounded-full object-cover shrink-0"
+                            alt={`${entry.profileName || truncateAddress(entry.voter)} avatar`}
+                            loading="lazy"
+                          />
+                          <div className="flex min-w-0 flex-col">
+                            {entry.profileName ? (
+                              <>
+                                <span className="font-medium truncate">{entry.profileName}</span>
+                                <span className="text-base text-base-content/50">{truncateAddress(entry.voter)}</span>
+                              </>
+                            ) : (
+                              <span className="font-mono">{truncateAddress(entry.voter)}</span>
+                            )}
+                            {isCurrentUser && <span className="text-base text-primary">(You)</span>}
+                          </div>
                         </div>
+                        {!isCurrentUser ? (
+                          <FollowProfileButton
+                            following={followedWallets.has(entry.voter.toLowerCase())}
+                            pending={isFollowPending(entry.voter)}
+                            onClick={() => {
+                              void handleToggleFollow(entry.voter);
+                            }}
+                            variant="pill"
+                          />
+                        ) : null}
                       </div>
                     </td>
                     <td className="text-right font-mono">{formatRate(entry.winRate)}</td>

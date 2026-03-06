@@ -33,6 +33,7 @@ interface SwipeCardProps {
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
   headerActions?: React.ReactNode;
+  submitterAction?: React.ReactNode;
 }
 
 /**
@@ -52,6 +53,7 @@ export function SwipeCard({
   standalone,
   embedded,
   headerActions,
+  submitterAction,
 }: SwipeCardProps) {
   const [showShare, setShowShare] = useState(false);
   const x = useMotionValue(0);
@@ -109,6 +111,7 @@ export function SwipeCard({
                 winRate={submitterProfile?.winRate}
                 totalSettledVotes={submitterProfile?.totalSettledVotes}
                 size="sm"
+                action={submitterAction}
               />
             )}
             <div className="flex items-center gap-1">

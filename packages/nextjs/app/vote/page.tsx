@@ -4,13 +4,14 @@ import { type KeyboardEvent, Suspense, memo, useCallback, useEffect, useMemo, us
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { blo } from "blo";
 import { AnimatePresence, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount, useReadContracts } from "wagmi";
 import { ShareIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
+import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
+import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
@@ -21,6 +22,7 @@ import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
+import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
@@ -88,6 +90,7 @@ const HomeInner = () => {
     toggleWatch,
     isPending: isWatchPending,
   } = useWatchedContent(address);
+  const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(address);
 
   // URL validation — async check for broken URLs
   const feedUrls = useMemo(() => feed.map(item => item.url), [feed]);
@@ -122,6 +125,7 @@ const HomeInner = () => {
   }, [votes]);
   const scopeLoading =
     (scope === "watched" && !!address && watchedLoading) || (scope === "my_votes" && !!address && votesLoading);
+  const normalizedAddress = address?.toLowerCase();
 
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback((name: string) => {
@@ -461,6 +465,30 @@ const HomeInner = () => {
     [openConnectModal, toggleWatch],
   );
 
+  const handleToggleFollow = useCallback(
+    async (targetAddress: string) => {
+      const result = await toggleFollow(targetAddress);
+
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          notification.info("Connect your wallet to follow curators.");
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason === "self_follow" || result.reason === "rejected") {
+          return;
+        }
+
+        notification.error(result.error || "Failed to update follows");
+        return;
+      }
+
+      notification.success(result.following ? "Following curator" : "Unfollowed curator");
+    },
+    [openConnectModal, toggleFollow],
+  );
+
   // Count broken URLs for the filter pill
   const brokenCount = useMemo(() => {
     return feed.filter(item => !isContentItemBlocked(item) && validationMap.get(item.url) === false).length;
@@ -628,6 +656,17 @@ const HomeInner = () => {
                           canVote={!!address}
                           standalone
                           embedded
+                          submitterAction={
+                            normalizedAddress && selectedItem.submitter.toLowerCase() === normalizedAddress ? null : (
+                              <FollowProfileButton
+                                following={followedWallets.has(selectedItem.submitter.toLowerCase())}
+                                pending={isFollowPending(selectedItem.submitter)}
+                                onClick={() => {
+                                  void handleToggleFollow(selectedItem.submitter);
+                                }}
+                              />
+                            )
+                          }
                           headerActions={
                             <WatchContentButton
                               watched={watchedContentIds.has(selectedItem.id.toString())}
@@ -671,8 +710,12 @@ const HomeInner = () => {
                       submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
                       onSelect={handleSelectCard}
                       onToggleWatch={handleToggleWatch}
+                      onToggleFollow={handleToggleFollow}
                       watched={watchedContentIds.has(item.id.toString())}
                       watchPending={isWatchPending(item.id)}
+                      following={followedWallets.has(item.submitter.toLowerCase())}
+                      followPending={isFollowPending(item.submitter)}
+                      isOwnSubmitter={normalizedAddress === item.submitter.toLowerCase()}
                     />
                   ))}
                 </div>
@@ -707,16 +750,24 @@ const ThumbnailCard = memo(function ThumbnailCard({
   submitterProfile,
   onSelect,
   onToggleWatch,
+  onToggleFollow,
   watched,
   watchPending,
+  following,
+  followPending,
+  isOwnSubmitter,
 }: {
   item: ContentItem;
   rating?: number;
   submitterProfile?: SubmitterProfile;
   onSelect: (id: bigint, categoryId: bigint) => void;
   onToggleWatch: (id: bigint) => void;
+  onToggleFollow: (address: string) => void;
   watched: boolean;
   watchPending: boolean;
+  following: boolean;
+  followPending: boolean;
+  isOwnSubmitter: boolean;
 }) {
   const onClick = useCallback(() => onSelect(item.id, item.categoryId), [onSelect, item.id, item.categoryId]);
   const onKeyDown = useCallback(
@@ -773,7 +824,6 @@ const ThumbnailCard = memo(function ThumbnailCard({
   const displayRating = rating ?? 50;
   const ratingColor =
     displayRating >= 60 ? "text-success" : displayRating <= 40 ? "text-error" : "text-base-content/60";
-  const submitterDisplayName = submitterProfile?.username || `${item.submitter.slice(0, 6)}...`;
 
   // Platform badge component
   const PlatformBadge = () => {
@@ -899,17 +949,22 @@ const ThumbnailCard = memo(function ThumbnailCard({
       {/* Card body */}
       <div className="p-2.5 space-y-1.5">
         {/* Submitter info */}
-        <div className="flex items-center gap-1.5">
-          <img
-            src={submitterProfile?.profileImageUrl || blo(item.submitter as `0x${string}`)}
-            onError={e => {
-              e.currentTarget.src = blo(item.submitter as `0x${string}`);
-            }}
-            className="w-4 h-4 rounded-full object-cover shrink-0"
-            alt=""
-          />
-          <span className="text-base text-base-content/60 truncate">{submitterDisplayName}</span>
-        </div>
+        <SubmitterBadge
+          address={item.submitter}
+          username={submitterProfile?.username}
+          profileImageUrl={submitterProfile?.profileImageUrl}
+          winRate={submitterProfile?.winRate}
+          totalSettledVotes={submitterProfile?.totalSettledVotes}
+          action={
+            isOwnSubmitter ? null : (
+              <FollowProfileButton
+                following={following}
+                pending={followPending}
+                onClick={() => onToggleFollow(item.submitter)}
+              />
+            )
+          }
+        />
         <p className="text-base font-medium line-clamp-2 leading-snug">{item.goal}</p>
         {item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
