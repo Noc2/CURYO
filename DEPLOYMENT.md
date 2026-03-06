@@ -630,7 +630,17 @@ Set up two cron schedules in the Railway dashboard:
 - [ ] HumanFaucet requires Self.xyz identity verification (one person, one vote)
 - [ ] TimelockController enforces 2-day delay on all governance actions
 
-### 9e. Monitoring
+### 9e. Governance parameter tuning
+
+Several voting parameters are tunable via governance (`CONFIG_ROLE`) and should be adjusted as the protocol grows:
+
+- **`minVoters`** (default: 3) — the minimum number of revealed votes required to settle a round. At low values, a small coordinated group can dominate round outcomes. **It is highly recommended to increase `minVoters` as the user base grows** (e.g., 5–10 for moderate activity, 15+ for high activity). This raises the cost of collusion attacks, content rating manipulation, and selective revelation strategies. The parameter accepts values from 2 to 10,000.
+- **`epochDuration`** (default: 20 minutes) — longer epochs give more time for voter participation before reveals begin but delay settlement. Shorter epochs speed up rounds but reduce the blind voting window.
+- **`maxVoters`** (default: 1,000) — the voter cap per round. Raise if rounds consistently hit the cap.
+
+These parameters can be updated via governance proposal (2-day timelock delay). Monitor round statistics (average voter count, unanimous round frequency, participation pool drain rate) to inform tuning decisions.
+
+### 9f. Monitoring
 
 - [ ] Set up alerts on Keeper health endpoint (e.g., UptimeRobot, Betterstack)
 - [ ] Monitor Keeper gas balance — alert if below 0.05 CELO
@@ -639,7 +649,7 @@ Set up two cron schedules in the Railway dashboard:
 - [ ] Watch for unusual governance proposals (TimelockController events)
 - [ ] Monitor for unexpected transactions from bot or cold wallet addresses (Blockscout watch)
 
-### 9f. Secrets rotation plan
+### 9g. Secrets rotation plan
 
 | Secret | Rotation frequency | How |
 |--------|-------------------|-----|
