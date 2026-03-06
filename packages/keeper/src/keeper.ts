@@ -17,6 +17,7 @@ import { RoundVotingEngineAbi } from "./abis/RoundVotingEngineAbi.js";
 import { ContentRegistryAbi } from "./abis/ContentRegistryAbi.js";
 import { config } from "./config.js";
 import type { Logger } from "./logger.js";
+import { incrementCounter } from "./metrics.js";
 
 const tlockClient = mainnetClient();
 
@@ -86,6 +87,7 @@ export function isExpectedRevert(msg: string): boolean {
     "RoundNotOpen",
     "EpochNotEnded",
     "NotEnoughVotes",
+    "UnrevealedPastEpochVotes",
 
     "AlreadyRevealed",
     "AlreadyCancelled",
@@ -369,7 +371,8 @@ async function _revealCommits(
         decrypted = await decryptTlockCiphertext(commit.ciphertext as `0x${string}`);
       } catch (err: unknown) {
         // Beacon not yet available — retry on next tick
-        logger.debug("tlock decryption not yet available", {
+        incrementCounter("keeper_decrypt_failures_total");
+        logger.warn("tlock decryption failed", {
           contentId: Number(contentId),
           roundId: Number(roundId),
           commitKey,
@@ -379,6 +382,7 @@ async function _revealCommits(
       }
 
       if (!decrypted) {
+        incrementCounter("keeper_decrypt_failures_total");
         logger.warn("Failed to decode tlock ciphertext", {
           contentId: Number(contentId),
           roundId: Number(roundId),
