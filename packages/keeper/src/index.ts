@@ -55,11 +55,12 @@ async function main() {
 
   // --- Run loop ---
   let isRunning = false;
+  let shuttingDown = false;
 
   const MIN_BALANCE = BigInt(config.minGasBalanceWei);
 
   async function tick() {
-    if (isRunning) return;
+    if (isRunning || shuttingDown) return;
     isRunning = true;
     setGauge("keeper_is_running", 1);
     const start = Date.now();
@@ -110,10 +111,26 @@ async function main() {
   // Interval
   const intervalId = setInterval(tick, config.intervalMs);
 
-  // Graceful shutdown
-  function shutdown(signal: string) {
+  // Graceful shutdown — wait for in-flight tick to finish
+  const SHUTDOWN_TIMEOUT_MS = 30_000;
+
+  async function shutdown(signal: string) {
+    if (shuttingDown) return;
+    shuttingDown = true;
     logger.info("Shutting down", { signal });
     clearInterval(intervalId);
+
+    if (isRunning) {
+      logger.info("Waiting for in-flight tick to complete...");
+      const deadline = Date.now() + SHUTDOWN_TIMEOUT_MS;
+      while (isRunning && Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 500));
+      }
+      if (isRunning) {
+        logger.warn("Shutdown timeout — forcing exit with tick still running");
+      }
+    }
+
     metricsServer?.close();
     process.exit(0);
   }

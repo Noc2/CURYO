@@ -6,6 +6,7 @@ describe("isExpectedRevert", () => {
     "RoundNotOpen",
     "EpochNotEnded",
     "NotEnoughVotes",
+    "UnrevealedPastEpochVotes",
     "AlreadyRevealed",
     "AlreadyCancelled",
     "ThresholdReached",

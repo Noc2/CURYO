@@ -47,9 +47,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Frontend (Next.js)
 
-- [ ] **Content-Security-Policy header**
-  Security headers are set (HSTS, X-Frame-Options, etc.) but CSP is missing. Without CSP, an XSS in user-generated content or a compromised CDN can execute arbitrary scripts in the user's browser. Add a CSP that restricts `script-src`, `connect-src`, and `frame-src` to known origins.
-  _Ref: `packages/nextjs/next.config.ts:4-13`_
+- [x] **Content-Security-Policy header** _(fixed)_
+  Added a comprehensive CSP header restricting `script-src`, `connect-src`, `frame-src`, `img-src`, `font-src`, `style-src`, `object-src`, `base-uri`, and `form-action` to known origins. Dev-only localhost origins are conditionally included. Production Ponder URL injected via `NEXT_PUBLIC_PONDER_URL` at build time.
+  _Ref: `packages/nextjs/next.config.ts:8-56`_
 
 - [ ] **Database migration strategy documented**
   Drizzle + Turso is configured, and `DEPLOYMENT.md` shows `yarn db:push`, but there is no rollback procedure, no migration versioning, and no pre-deploy dry-run step. A failed migration on a production Turso database could corrupt user data (profiles, cached metadata, rate-limit state).
@@ -110,8 +110,8 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Frontend (Next.js)
 
-- [ ] **robots.txt and sitemap.xml**
-  Neither file exists. Search engines will crawl all routes indiscriminately, including debug pages (already gated, but still generates 302 noise).
+- [x] **robots.txt** _(fixed)_
+  Added `public/robots.txt` blocking `/api/` and `/debug/` routes. Sitemap deferred — all routes are dynamic/app-generated content.
 
 - [ ] **URL validation TOCTOU window (documented)**
   The SSRF check resolves DNS separately from the fetch. A DNS rebinding attack could bypass private-IP checks. The code already documents this at line 66-67. For the current threat model (server-side validation of user-submitted URLs, not fetching sensitive resources), this is acceptable. If the server ever runs on AWS/GCP with instance metadata endpoints, revisit.

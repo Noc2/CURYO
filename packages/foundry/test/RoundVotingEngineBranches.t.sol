@@ -911,9 +911,9 @@ contract RoundVotingEngineBranchesTest is Test {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
 
-        // Warp past epoch
+        // Warp past epoch + reveal grace period (voter1's unrevealed vote no longer blocks settlement)
         RoundLib.Round memory rPU1start = engine.getRound(contentId, roundId);
-        vm.warp(rPU1start.startTime + EPOCH + 1);
+        vm.warp(rPU1start.startTime + EPOCH + engine.revealGracePeriod() + 1);
 
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -1008,7 +1008,9 @@ contract RoundVotingEngineBranchesTest is Test {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
 
-        vm.warp(block.timestamp + EPOCH + 1);
+        // Warp past epoch + reveal grace period (voter4's unrevealed vote no longer blocks settlement)
+        RoundLib.Round memory rTied = engine.getRound(contentId, roundId);
+        vm.warp(rTied.startTime + EPOCH + engine.revealGracePeriod() + 1);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
         _reveal(contentId, roundId, ck3, true, s3);

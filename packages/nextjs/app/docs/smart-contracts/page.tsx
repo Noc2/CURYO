@@ -298,6 +298,11 @@ const SmartContracts: NextPage = () => {
               <td>Cap on voters per content per round (O(1) settlement)</td>
             </tr>
             <tr>
+              <td className="font-mono">revealGracePeriod</td>
+              <td>60 minutes</td>
+              <td>Time after each epoch during which all past-epoch votes must be revealed before settlement</td>
+            </tr>
+            <tr>
               <td className="font-mono">VOTE_COOLDOWN</td>
               <td>24 hours</td>
               <td>Time before same user can re-vote on same content</td>
@@ -319,8 +324,9 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
-          <code>minVoters</code> votes are revealed. Determines winners based on epoch-weighted stakes, splits reward
-          pools, and updates content rating.
+          <code>minVoters</code> votes are revealed and all past-epoch votes have been revealed (or their 60-minute
+          reveal grace period has expired). Determines winners based on epoch-weighted stakes, splits reward pools, and
+          updates content rating.
         </li>
         <li>
           <code>claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators claim their

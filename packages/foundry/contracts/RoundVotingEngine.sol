@@ -76,6 +76,7 @@ contract RoundVotingEngine is
     error NoParticipationRate();
     error IndexOutOfBounds();
     error IdentityAlreadyCommitted();
+    error UnrevealedPastEpochVotes();
     error StreakTooShort();
     error MilestoneAlreadyClaimed();
     error InvalidMilestoneIndex();
@@ -224,6 +225,7 @@ contract RoundVotingEngine is
     event KeeperRewardUpdated(uint256 keeperReward);
     event KeeperRewardPoolFunded(address indexed funder, uint256 amount);
     event KeeperRewarded(address indexed keeper, uint256 amount, uint8 operation);
+    event RevealGracePeriodUpdated(uint256 revealGracePeriod);
 
     // Settlement side-effect failure reason codes
     uint8 internal constant REASON_CATEGORY_FEE = 1;
@@ -275,6 +277,9 @@ contract RoundVotingEngine is
 
         // Default config: 20-minute epochs, 7-day max, 3 min voters
         config = RoundLib.RoundConfig({ epochDuration: 20 minutes, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
+
+        // Default reveal grace period: 60 minutes (3 epochs)
+        revealGracePeriod = 60 minutes;
     }
 
     // =========================================================================
@@ -307,6 +312,12 @@ contract RoundVotingEngine is
     function setKeeperReward(uint256 _keeperReward) external onlyRole(CONFIG_ROLE) {
         keeperReward = _keeperReward;
         emit KeeperRewardUpdated(_keeperReward);
+    }
+
+    function setRevealGracePeriod(uint256 _revealGracePeriod) external onlyRole(CONFIG_ROLE) {
+        if (_revealGracePeriod < config.epochDuration) revert InvalidConfig();
+        revealGracePeriod = _revealGracePeriod;
+        emit RevealGracePeriodUpdated(_revealGracePeriod);
     }
 
     function setVoterIdNFT(address _voterIdNFT) external onlyRole(CONFIG_ROLE) {
@@ -502,6 +513,9 @@ contract RoundVotingEngine is
         // Track for iteration
         roundCommitHashes[contentId][roundId].push(commitKey);
         hasCommitted[contentId][roundId][msg.sender] = true;
+
+        // Track unrevealed count per epoch (selective revelation prevention)
+        epochUnrevealedCount[contentId][roundId][epochEnd]++;
         voterCommitHash[contentId][roundId][msg.sender] = commitHash;
         contentCommitCount[contentId]++;
 
@@ -609,6 +623,20 @@ contract RoundVotingEngine is
 
         // Must have ≥ minVoters revealed votes
         if (round.revealedCount < roundCfg.minVoters) revert NotEnoughVotes();
+
+        // Prevent selective revelation: all past-epoch commits must be revealed
+        // (or their grace period must have expired) before settlement is allowed.
+        {
+            uint256 _gracePeriod = revealGracePeriod;
+            uint256 epochEnd = round.startTime + roundCfg.epochDuration;
+            while (epochEnd <= block.timestamp) {
+                if (epochUnrevealedCount[contentId][roundId][epochEnd] > 0
+                    && block.timestamp < epochEnd + _gracePeriod) {
+                    revert UnrevealedPastEpochVotes();
+                }
+                epochEnd += roundCfg.epochDuration;
+            }
+        }
 
         // Tie: equal weighted pools, no winners
         if (round.weightedUpPool == round.weightedDownPool) {
@@ -1041,6 +1069,9 @@ contract RoundVotingEngine is
         commit.revealed = true;
         commit.isUp = isUp;
 
+        // Decrement unrevealed count for this epoch (selective revelation prevention)
+        epochUnrevealedCount[contentId][roundId][commit.revealableAfter]--;
+
         // Increment revealed count
         round.revealedCount++;
 
@@ -1286,6 +1317,14 @@ contract RoundVotingEngine is
     // Per-identity cooldown: contentId => tokenId => timestamp (prevents cooldown bypass via delegation)
     mapping(uint256 => mapping(uint256 => uint256)) public lastVoteTimestampByToken;
 
+    // Per-epoch unrevealed commit counter: prevents selective vote revelation (front-running keeper).
+    // contentId => roundId => epochEnd => number of unrevealed commits for that epoch.
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) public epochUnrevealedCount;
+
+    // Minimum time after epoch end during which all past-epoch votes must be revealed before settlement.
+    // After this period, unrevealed votes no longer block settlement (forfeited post-settlement).
+    uint256 public revealGracePeriod;
+
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[21] private __gap;
+    uint256[19] private __gap;
 }

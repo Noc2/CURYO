@@ -60,9 +60,10 @@ const HowItWorks: NextPage = () => {
           &mdash; anyone can reveal any vote after its blind phase ends.
         </li>
         <li>
-          <strong>Resolve:</strong> Once at least 3 votes are revealed, the round can be resolved. The majority side
-          wins. The losing side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points
-          based on winning stake size. Winners can then click Claim to collect their rewards.
+          <strong>Resolve:</strong> Once at least 3 votes are revealed and all past-phase votes have been revealed (or
+          the 60-minute reveal grace period has expired), the round can be resolved. The majority side wins. The losing
+          side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points based on winning
+          stake size. Winners can then click Claim to collect their rewards.
         </li>
       </ol>
 
@@ -122,10 +123,10 @@ const HowItWorks: NextPage = () => {
         </table>
       </div>
       <p>
-        After the blind phase ends, the system reveals all votes automatically. Once at least 3 votes are revealed,
-        resolution can be triggered immediately. Resolution is fully open &mdash; anyone can trigger it. An automated
-        service handles this automatically. Winners receive their original stake plus a phase-weighted share of the
-        losing stakes.
+        After the blind phase ends, the system reveals all votes automatically. Once at least 3 votes are revealed and
+        all past-phase votes have been revealed (or the 60-minute reveal grace period has expired), resolution can be
+        triggered. Resolution is fully open &mdash; anyone can trigger it. An automated service handles this
+        automatically. Winners receive their original stake plus a phase-weighted share of the losing stakes.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
@@ -151,6 +152,11 @@ const HowItWorks: NextPage = () => {
               <td className="font-mono">maxDuration</td>
               <td>7 days</td>
               <td>Maximum round lifetime. Expired rounds are cancelled and all stakes refunded.</td>
+            </tr>
+            <tr>
+              <td className="font-mono">Reveal grace period</td>
+              <td>60 minutes</td>
+              <td>Time after each blind phase during which all votes must be revealed before resolution is allowed.</td>
             </tr>
           </tbody>
         </table>

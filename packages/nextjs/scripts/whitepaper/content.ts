@@ -533,7 +533,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Settlement requires at least 3 votes to be revealed (minVoters). Once the threshold is reached, anyone can call settleRound() immediately to finalize the round.",
+            text: "Settlement requires at least 3 votes to be revealed (minVoters). Additionally, all votes from past epochs must be revealed before settlement is allowed during the reveal grace period (default: 60 minutes after each epoch ends). This prevents selective revelation attacks where an attacker reveals only favorable votes. After the grace period, any remaining unrevealed votes no longer block settlement and are forfeited post-settlement.",
           },
           {
             type: "table",
@@ -543,12 +543,17 @@ export const SECTIONS: Section[] = [
                 ["epochDuration", "20 minutes", "Duration of each reward tier"],
                 ["minVoters", "3", "Minimum revealed votes required for settlement"],
                 ["maxDuration", "7 days", "Maximum round lifetime  -- expired rounds are cancelled"],
+                [
+                  "revealGracePeriod",
+                  "60 minutes",
+                  "Time after each epoch during which all votes must be revealed before settlement",
+                ],
               ],
             },
           },
           {
             type: "paragraph",
-            text: "Settlement is permissionless: anyone may call settleRound(contentId, roundId) once conditions are met. The keeper service handles settlement automatically. The content rating updates at settlement based on raw revealed stakes (not epoch-weighted), so the rating accurately reflects crowd opinion regardless of when voters committed.",
+            text: "Settlement is permissionless: anyone may call settleRound(contentId, roundId) once conditions are met. The contract enforces that all past-epoch votes have been revealed (or their reveal grace period has expired) before allowing settlement, preventing selective revelation attacks. The keeper service handles both reveal and settlement automatically. The content rating updates at settlement based on raw revealed stakes (not epoch-weighted), so the rating accurately reflects crowd opinion regardless of when voters committed.",
           },
         ],
       },
@@ -579,7 +584,7 @@ export const SECTIONS: Section[] = [
               "Economic anti-herding: Tier 2 voters (who saw epoch-1 results) earn only 25% reward weight per cREP. Herding is economically unattractive regardless of information advantage.",
               "Epoch-weighted win condition: A flood of late Tier-2 voters cannot flip a Tier-1 consensus  -- 3 Tier-2 voters at 100 cREP each (effective stake 25 each = 75 total) cannot override 1 Tier-1 voter at 100 cREP (effective stake 100). Even 4 Tier-2 voters at 100 cREP each (effective 100 total) only produce a tie.",
               "Keeper is not trusted: The reveal step (decrypting and calling revealVoteByCommitKey) is permissionless  -- any party can call it. The keeper is a convenience, not a gatekeeper.",
-              "Locked positions: Voters cannot exit before settlement. Unrevealed votes at settlement are treated as forfeited (losers) or refunded (current epoch), preventing selective reveal attacks.",
+              "Anti-selective-revelation: The contract tracks unrevealed vote counts per epoch. Settlement is blocked during the reveal grace period (60 minutes) if any past-epoch votes remain unrevealed, forcing the keeper to reveal all votes before anyone can settle. After the grace period, any unrevealed votes are forfeited (past epoch) or refunded (current epoch) post-settlement.",
               "Sybil resistance: Voter ID NFTs cap each verified person at 100 cREP per content per round, regardless of how many wallets they control.",
               "Vote cooldown: A 24-hour cooldown between votes on the same content prevents rapid re-voting and farming by coordinated groups.",
             ],
@@ -603,7 +608,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The reveal step is permissionless -- anyone can call revealVoteByCommitKey() once the epoch ends. The drand beacon is a decentralized network with high availability. Even if the keeper is down, any other participant (another keeper, the voter themselves, a third party) can perform the reveal. The only requirement is knowledge of the voter's direction and salt, which the frontend stores client-side after the commit.",
+            text: "The reveal step is permissionless -- anyone can call revealVoteByCommitKey() once the epoch ends. The drand beacon is a decentralized network with high availability. Even if the keeper is down, any other participant (another keeper, the voter themselves, a third party) can perform the reveal. If the keeper is offline, settlement is delayed by the reveal grace period (60 minutes). After the grace period, settlement can proceed with whatever votes have been revealed; unrevealed past-epoch votes are forfeited post-settlement.",
           },
           {
             type: "sub_heading",
@@ -619,7 +624,15 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Votes whose revealableAfter timestamp falls before the settlement time are considered forfeited  -- the voter failed to arrange for reveal. Their stake goes to the winning side's pool. Votes whose revealableAfter is after the settlement time (committed in the last epoch) are refunded in full, as they could not yet be revealed.",
+            text: "During the reveal grace period (60 minutes after each epoch ends), settlement is blocked if any past-epoch votes remain unrevealed. This prevents selective revelation attacks. Once all past-epoch votes are revealed (or the grace period expires), settlement proceeds. Post-settlement, votes whose revealableAfter timestamp falls before the settlement time are considered forfeited  -- their stake goes to treasury. Votes whose revealableAfter is after the settlement time (committed in the current epoch) are refunded in full, as they could not yet be revealed.",
+          },
+          {
+            type: "sub_heading",
+            text: "Can Votes Be Selectively Revealed?",
+          },
+          {
+            type: "paragraph",
+            text: "No. Because revealVoteByCommitKey() is permissionless, an attacker could in theory decrypt all tlock ciphertexts after an epoch ends and reveal only votes favoring their side. The contract prevents this via the epochUnrevealedCount mechanism: each epoch tracks how many commits remain unrevealed, and settlement is blocked during the reveal grace period if any past-epoch votes have not been revealed. The keeper (or any honest party) reveals all votes within minutes of each epoch ending, well within the 60-minute grace window. An attacker cannot atomically reveal a subset and settle in one transaction.",
           },
         ],
       },
@@ -777,7 +790,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform two tasks: (1) revealing tlock votes after each epoch ends by fetching the drand beacon and calling revealVoteByCommitKey(), and (2) calling settleRound() once the minVoters threshold is reached (settlement is immediate, no additional delay required). Both operations are permissionless  -- any account can call them.",
+            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform two tasks: (1) revealing tlock votes after each epoch ends by fetching the drand beacon and calling revealVoteByCommitKey(), and (2) calling settleRound() once the minVoters threshold is reached and all past-epoch votes have been revealed. The contract enforces a reveal grace period (60 minutes) during which all past-epoch votes must be revealed before settlement is allowed, preventing selective revelation attacks. Both operations are permissionless  -- any account can call them.",
           },
           {
             type: "paragraph",

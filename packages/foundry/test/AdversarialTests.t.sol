@@ -146,7 +146,8 @@ contract AdversarialTests is VotingTestBase {
 
     function _settleRound(uint256 contentId, uint256 roundId, bytes32[] memory commitKeys) internal {
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
-        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        // Warp past epoch + reveal grace period so unrevealed votes don't block settlement
+        vm.warp(round.startTime + EPOCH_DURATION + engine.revealGracePeriod() + 1);
         for (uint256 i = 0; i < commitKeys.length; i++) {
             _reveal(contentId, roundId, commitKeys[i]);
         }
