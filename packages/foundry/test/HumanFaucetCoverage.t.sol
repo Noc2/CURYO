@@ -336,6 +336,61 @@ contract HumanFaucetCoverageTest is Test {
         assertEq(faucet.getCurrentTier(), 1);
     }
 
+    function test_ReferralAcrossTier1To2Boundary_UsesTier1AmountsAndEmitsTier2() public {
+        mockHub.setVerified(user1);
+        mockHub.simulateVerification(address(faucet), user1);
+
+        _setTotalClaimants(999);
+
+        address boundaryUser = address(uint160(90001));
+        mockHub.setVerified(boundaryUser);
+        bytes memory userData = abi.encodePacked(user1);
+
+        vm.expectEmit(false, false, false, true);
+        emit HumanFaucet.TierChanged(2, TIER_2_AMOUNT, 1000);
+
+        mockHub.simulateVerificationWithUserData(address(faucet), boundaryUser, userData);
+
+        assertEq(crepToken.balanceOf(boundaryUser), TIER_1_AMOUNT + 500e6);
+        assertEq(faucet.referralEarnings(user1), 500e6);
+        assertEq(faucet.getCurrentTier(), 2);
+    }
+
+    function test_ReferralAcrossTier2To3Boundary_UsesTier2AmountsAndEmitsTier3() public {
+        mockHub.setVerified(user1);
+        mockHub.simulateVerification(address(faucet), user1);
+
+        _setTotalClaimants(9_999);
+
+        address boundaryUser = address(uint160(90002));
+        mockHub.setVerified(boundaryUser);
+        bytes memory userData = abi.encodePacked(user1);
+
+        vm.expectEmit(false, false, false, true);
+        emit HumanFaucet.TierChanged(3, TIER_3_AMOUNT, 10_000);
+
+        mockHub.simulateVerificationWithUserData(address(faucet), boundaryUser, userData);
+
+        assertEq(crepToken.balanceOf(boundaryUser), TIER_2_AMOUNT + 50e6);
+        assertEq(faucet.referralEarnings(user1), 50e6);
+        assertEq(faucet.getCurrentTier(), 3);
+    }
+
+    function test_ClaimAcrossTier3To4Boundary_UsesTier3RateAndEmitsTier4() public {
+        _setTotalClaimants(999_999);
+
+        address boundaryUser = address(uint160(90003));
+        mockHub.setVerified(boundaryUser);
+
+        vm.expectEmit(false, false, false, true);
+        emit HumanFaucet.TierChanged(4, TIER_4_AMOUNT, 1_000_000);
+
+        mockHub.simulateVerification(address(faucet), boundaryUser);
+
+        assertEq(crepToken.balanceOf(boundaryUser), TIER_3_AMOUNT);
+        assertEq(faucet.getCurrentTier(), 4);
+    }
+
     // =========================================================================
     // 12. CONSTRUCTOR VALIDATION
     // =========================================================================

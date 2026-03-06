@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Vm } from "forge-std/Test.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
@@ -11,6 +12,12 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
+
+contract RevertingParticipationPool {
+    function getCurrentRateBps() external pure returns (uint256) {
+        revert("rate unavailable");
+    }
+}
 
 /// @title Round-based integration tests for tlock commit-reveal flow with epoch-weighted rewards.
 /// @dev Covers: full lifecycle, multi-voter, concurrent rounds, tied rounds,
@@ -1430,6 +1437,47 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
     }
 
+    function test_ClaimFrontendFee_RevertsWhileFrontendIsDeregistered() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        vm.prank(frontendOp);
+        frontendReg.deregister();
+
+        vm.expectRevert("Frontend not registered");
+        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+    }
+
+    function test_ClaimFrontendFee_SucceedsAfterFrontendReregistersWithoutReapproval() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        vm.startPrank(frontendOp);
+        frontendReg.deregister();
+        crepToken.approve(address(frontendReg), 1000e6);
+        frontendReg.register();
+        vm.stopPrank();
+
+        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+
+        assertTrue(votingEngine.isFrontendFeeClaimed(contentId, roundId, frontendOp));
+        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Re-registered frontend should still receive fees");
+        assertFalse(frontendReg.isApproved(frontendOp), "Re-registration should not silently restore approval");
+    }
+
+    function test_FrontendTrackingGetters_ReturnCommittedStakeAndKeys() public {
+        (, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        bytes32[] memory commitKeys = votingEngine.getRoundCommitHashes(contentId, roundId);
+
+        assertEq(votingEngine.getRoundCommitCount(contentId, roundId), 3);
+        assertEq(commitKeys.length, 3);
+        assertEq(votingEngine.getRoundCommitHash(contentId, roundId, 0), commitKeys[0]);
+        assertEq(votingEngine.getRoundPerFrontendStake(contentId, roundId, frontendOp), STAKE * 3);
+        assertEq(votingEngine.getRoundStakeWithApprovedFrontend(contentId, roundId), STAKE * 3);
+    }
+
     function test_ClaimFrontendFee_NoApprovedFrontendRedirectsToVoterPool() public {
         // No frontend registry set — 3 voters (2 up, 1 down) to avoid tie
         uint256 contentId = _submitContent();
@@ -1535,6 +1583,49 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert(RoundVotingEngine.RoundNotSettled.selector);
         votingEngine.claimParticipationReward(contentId, 1);
+    }
+
+    function test_SettlementSideEffectFailure_ParticipationRateSnapshotLeavesRewardsUnclaimable() public {
+        RevertingParticipationPool badPool = new RevertingParticipationPool();
+        vm.prank(owner);
+        votingEngine.setParticipationPool(address(badPool));
+
+        uint256 contentId = _submitContent();
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        _commitAllThenReveal(voters, contentId, dirs, STAKE);
+        uint256 roundId = _getActiveOrLatestRoundId(contentId);
+
+        vm.recordLogs();
+        votingEngine.settleRound(contentId, roundId);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 expectedSig = keccak256("SettlementSideEffectFailed(uint256,uint256,uint8)");
+        bool foundFailureEvent = false;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (
+                logs[i].topics.length == 3 && logs[i].topics[0] == expectedSig
+                    && logs[i].topics[1] == bytes32(contentId) && logs[i].topics[2] == bytes32(roundId)
+                    && abi.decode(logs[i].data, (uint8)) == 5
+            ) {
+                foundFailureEvent = true;
+                break;
+            }
+        }
+
+        assertTrue(foundFailureEvent, "participation rate failure should be logged");
+        assertEq(votingEngine.getRoundParticipationRateBps(contentId, roundId), 0);
+
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.NoParticipationRate.selector);
+        votingEngine.claimParticipationReward(contentId, roundId);
     }
 
     // =========================================================================
