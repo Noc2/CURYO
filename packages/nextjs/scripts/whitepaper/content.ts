@@ -109,8 +109,8 @@ export const SECTIONS: Section[] = [
             items: [
               "Commit: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress). The vote direction is encrypted with tlock -- hidden until the epoch ends.",
               "Accumulate: More voters commit during the 20-minute epoch. No one can see anyone else's vote direction until the epoch ends.",
-              "Reveal: After the epoch ends, the keeper automatically decrypts and reveals all votes. The rating updates based on the revealed votes.",
-              "Settle: Once at least 3 votes are revealed, anyone can call settleRound(). The side with the larger epoch-weighted stake wins.",
+              "Reveal: After the epoch ends, the keeper automatically decrypts and reveals all votes. The rating does not change yet -- it updates only when the round later settles.",
+              "Settle: Once at least 3 votes are revealed and all past-epoch votes are revealed (or the 60-minute reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.",
               "Claim: Winners receive their original stake back plus an epoch-weighted share of the losing pool (Tier 1 = 4x reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.",
             ],
           },
@@ -179,7 +179,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Commit (any time during the round): Choose UP or DOWN. The UI encrypts your direction and stake with tlock (commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress)). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               "Epoch ends (every 20 minutes): The drand beacon publishes a randomness value. The keeper fetches it and calls revealVoteByCommitKey() for each unrevealed commit, decrypting the direction on-chain.",
-              "Settlement: After at least 3 votes are revealed, anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating updates based on revealed raw stakes.",
+              "Settlement: After at least 3 votes are revealed and all past-epoch votes are revealed (or the 60-minute reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.",
               "Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the losing pool. Losers' stakes are distributed. Content submitters may claim a separate submitter reward.",
             ],
           },
@@ -233,7 +233,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement requires at least 3 voters revealed (minVoters threshold). Once this threshold is reached, anyone may call settleRound(contentId, roundId) immediately -- no additional delay is required. A lightweight keeper service handles both reveal and settlement automatically. Winners receive their original stake plus an epoch-weighted share of the losing pool.",
+            text: "Settlement requires at least 3 voters revealed (minVoters threshold). It is only allowed once all past-epoch votes are revealed or their 60-minute reveal grace period has expired. A lightweight keeper service handles both reveal and settlement automatically. Winners receive their original stake plus an epoch-weighted share of the losing pool.",
           },
         ],
       },
@@ -430,7 +430,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement conditions: at least 3 votes must be revealed (minVoters). Once the threshold is reached, anyone can call settleRound() immediately. Rounds that expire (7 days) without meeting minVoters are cancelled and all stakes refunded.",
+            text: "Settlement conditions: at least 3 votes must be revealed (minVoters), and all past-epoch votes must be revealed unless their 60-minute reveal grace period has expired. Rounds that expire (7 days) without meeting minVoters are cancelled and all stakes refunded.",
           },
         ],
       },
@@ -1026,7 +1026,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The epoch-based mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (20 minutes for full weight). Settlement happens immediately once minVoters is reached. The maxDuration hard cap prevents indefinite rounds. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual revealed votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.",
+            text: "The epoch-based mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (20 minutes for full weight). Settlement becomes available once minVoters is reached and past-epoch reveal constraints are satisfied. The maxDuration hard cap prevents indefinite rounds. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual revealed votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.",
           },
         ],
       },
