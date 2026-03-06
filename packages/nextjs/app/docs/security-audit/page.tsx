@@ -321,8 +321,9 @@ const SecurityAudit: NextPage = () => {
               <td>H-05</td>
               <td>
                 <strong>Zero-cost rating manipulation.</strong> Unopposed DOWN votes update content rating at no cost
-                (stake returned). Rating delta is now capped by the number of unique winning voters (1 voter = max delta
-                1), so a lone attacker can only move rating by 1 per round instead of up to 5.
+                (stake returned). Rating now uses a smoothed stake-imbalance formula with a fixed 50 cREP parameter, so
+                low-stake unanimous rounds only move rating slightly and large swings require materially larger revealed
+                stake imbalance.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine, RewardMath</td>
               <td>
@@ -332,10 +333,9 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>H-06</td>
               <td>
-                <strong>Critical functions missing whenNotPaused.</strong> <code>vote</code> has{" "}
-                <code>whenNotPaused</code> but <code>trySettle</code> did not. During an emergency pause, settlements
-                could still execute and distribute rewards incorrectly. Added <code>whenNotPaused</code> to settlement
-                functions.
+                <strong>Critical functions missing whenNotPaused.</strong> Settlement was previously callable during an
+                emergency pause. The current <code>settleRound</code> path is protected by <code>whenNotPaused</code>,
+                so paused state now blocks settlement side effects as intended.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -525,9 +525,9 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>M-04</td>
               <td>
-                <strong>Settlement timing manipulation.</strong> Mitigated by design: <code>trySettle</code> is
-                permissionless and settlement probability is determined by <code>block.prevrandao</code> randomness. No
-                single party can deterministically control when settlement occurs.
+                <strong>Settlement timing manipulation.</strong> Mitigated by design: <code>settleRound</code> is
+                permissionless once <code>minVoters</code> is reached and past-epoch reveal constraints are satisfied. A
+                single keeper cannot settle early or bypass the reveal gate.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -1017,10 +1017,10 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>I-10</td>
               <td>
-                <strong>trySettle is permissionless.</strong> Anyone can call <code>trySettle(contentId)</code> to
-                attempt settlement after the minimum epoch length has passed. Intentionally permissionless so any keeper
-                or user can trigger settlement. The probabilistic mechanism using <code>block.prevrandao</code> prevents
-                deterministic timing manipulation.
+                <strong>settleRound is permissionless.</strong> Anyone can call{" "}
+                <code>settleRound(contentId, roundId)</code> once the revealed-vote threshold is reached and reveal
+                constraints are satisfied. Any keeper or user can trigger settlement; no privileged operator controls
+                it.
               </td>
               <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
               <td>
@@ -1145,11 +1145,11 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>
                 <strong>Rating manipulation</strong> &mdash; Unopposed DOWN votes move content rating. Rating delta is
-                capped by the number of unique winning voters (1 voter = max delta 1), so a lone attacker can only move
-                rating by 1 per round.
+                smoothed by a fixed 50 cREP parameter, so low-stake attacks only nudge rating and larger swings require
+                significantly more revealed stake imbalance.
               </td>
               <td>1&ndash;100 cREP (returned if unopposed)</td>
-              <td>Reduced: 1 point/round per attacker</td>
+              <td>Reduced: low-stake rounds have limited impact</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Mitigated</span>
               </td>
@@ -1168,8 +1168,8 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>
                 <strong>Settlement timing manipulation</strong> &mdash; Malicious keeper attempts to control settlement
-                timing. Mitigated: settlement probability is determined by <code>block.prevrandao</code> randomness, and{" "}
-                <code>trySettle</code> is permissionless.
+                timing. Mitigated: <code>settleRound</code> is permissionless, but only callable once the round reaches
+                the revealed-vote threshold and past-epoch reveal gate.
               </td>
               <td>Gas only</td>
               <td>No impact: any party can attempt settlement</td>
@@ -1285,8 +1285,8 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Gas only</td>
               <td>
-                No MEV surface: settlement is probabilistic via block.prevrandao, no party can deterministically control
-                timing.
+                Reduced: settlement is rule-based and permissionless, so no privileged keeper controls the timing once
+                the round is eligible.
               </td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">No Issue</span>
@@ -1362,7 +1362,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>Settlement callback chain</td>
               <td>
-                trySettle() makes external calls: safeTransfer to treasury, frontendRegistry; registry.updateRating();
+                settleRound() makes external calls: safeTransfer to treasury, frontendRegistry; registry.updateRating();
                 registry.returnSubmitterStake()/slashSubmitterStake()
               </td>
               <td>

@@ -27,7 +27,7 @@ Curyo replaces passive likes with **prediction games**. Voters predict whether c
 
 - **Skin in the Game** — every vote requires a token stake
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
-- **Per-Content Rounds** — each content item accumulates votes; settlement triggers randomly with increasing probability
+- **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption and revealed after each epoch; vote directions stay hidden until reveal, preventing front-running and copycat strategies
 - **Fully Decentralized** — no team, no foundation, no central authority
 
@@ -49,7 +49,7 @@ Curyo is a monorepo with five packages:
 foundry (compile) → ABIs + addresses
 ponder  (index)   → REST API at localhost:42069
 nextjs  (frontend)→ reads contracts via wagmi + Ponder API
-keeper  (service) → settles rounds via trySettle(), cancels expired rounds
+keeper  (service) → settles rounds via settleRound(), cancels expired rounds, marks dormant content
 ```
 
 Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, RainbowKit, wagmi, and viem.
@@ -103,7 +103,7 @@ Visit [http://localhost:3000](http://localhost:3000).
 
 ### Run the Keeper
 
-The keeper is a lightweight stateless service that calls trySettle() on active rounds, cancels expired rounds, and marks dormant content. Anyone can run a keeper — all data is public, and multiple instances provide redundancy with no coordination.
+The keeper is a lightweight stateless service that calls settleRound() on eligible active rounds, cancels expired rounds, and marks dormant content. Anyone can run a keeper — all data is public, and multiple instances provide redundancy with no coordination.
 
 **Configure** by copying `.env.example` and setting contract addresses and a wallet:
 

@@ -121,7 +121,7 @@ const GovernanceDocs: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">Minimum voters</td>
-              <td>5</td>
+              <td>3</td>
               <td>
                 Minimum votes required before a round can resolve. Prevents thin-market exploitation by coordinated
                 minorities. Rounds that don&apos;t reach this threshold within the maximum round duration are cancelled
@@ -129,16 +129,16 @@ const GovernanceDocs: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td className="font-mono">Minimum voting window</td>
-              <td>~20 min</td>
-              <td>Minimum time before a round becomes eligible for resolution. Ensures a meaningful voting window.</td>
+              <td className="font-mono">Epoch duration</td>
+              <td>20 minutes</td>
+              <td>Length of each blind-voting epoch before votes from that epoch can be revealed.</td>
             </tr>
             <tr>
-              <td className="font-mono">Maximum round length</td>
-              <td>~24 hours</td>
+              <td className="font-mono">Reveal grace period</td>
+              <td>60 minutes</td>
               <td>
-                Maximum blocks before a round must resolve or expire. All round types follow the same ~24-hour
-                lifecycle.
+                After each epoch ends, past-epoch votes must be revealed before settlement, unless this grace period has
+                expired.
               </td>
             </tr>
             <tr>
@@ -162,7 +162,7 @@ const GovernanceDocs: NextPage = () => {
             <tr>
               <td className="font-mono">Vote cooldown</td>
               <td>24 hours</td>
-              <td>Time a voter must wait before voting on the same content again after a round is resolved.</td>
+              <td>Time a voter must wait before voting on the same content again after their last vote.</td>
             </tr>
           </tbody>
         </table>
@@ -176,7 +176,7 @@ const GovernanceDocs: NextPage = () => {
       <h2>Treasury</h2>
       <p>
         The governance treasury is held by the timelock controller and starts with 10M cREP. It grows over time through
-        three token inflow sources:
+        two token inflow sources:
       </p>
       <ul>
         <li>
@@ -187,15 +187,15 @@ const GovernanceDocs: NextPage = () => {
           <strong>Forfeited submitter deposits</strong> &mdash; when content is flagged for policy violations or
           receives unfavorable ratings, the submitter&apos;s 10 cREP stake is forfeited to the treasury.
         </li>
-        <li>
-          <strong>Agreement bonus</strong> &mdash; when one-sided rounds reach the maximum round length, a small
-          agreement bonus from the treasury rewards voters who identified uncontroversial content.
-        </li>
       </ul>
       <p>
         Treasury tokens can only be distributed through governance proposals. Token holders propose allocations, the
         community votes, and after the timelock delay, the transaction is executed automatically. This ensures
         transparent, community-controlled distribution of community tokens.
+      </p>
+      <p>
+        The consensus subsidy reserve is separate from the treasury. It is seeded with 4M cREP at deployment and
+        replenished by 5% of losing pools from two-sided rounds, then used to subsidize one-sided round payouts.
       </p>
 
       <h2>Collusion Prevention</h2>

@@ -27,7 +27,8 @@ const FrontendCodes: NextPage = () => {
           <code>commitVote</code>.
         </li>
         <li>
-          <strong>Claim:</strong> Call <code>claimFees()</code> to withdraw accumulated points anytime.
+          <strong>Claim:</strong> First call <code>claimFrontendFee(contentId, roundId, frontend)</code> on each settled
+          round, then withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>.
         </li>
       </ol>
 
@@ -62,7 +63,8 @@ const FrontendCodes: NextPage = () => {
           Votes stay hidden until this step runs.
         </li>
         <li>
-          <strong>Settling rounds:</strong> Once at least 3 votes are revealed, the service calls{" "}
+          <strong>Settling rounds:</strong> Once at least 3 votes are revealed and all past-epoch votes have been
+          revealed (or the 60-minute reveal grace period has expired), the service calls{" "}
           <code>settleRound(contentId, roundId)</code> to finalize the round, update the content rating, and open
           rewards for claiming.
         </li>

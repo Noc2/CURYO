@@ -85,19 +85,20 @@ const BlindVoting: NextPage = () => {
       <h2>Resolution</h2>
       <p>
         Resolution requires at least <strong>3 votes</strong> to be revealed (the minimum voter threshold). Once the
-        threshold is reached, the round can be resolved immediately. The system does this automatically. Resolution
-        determines the majority side, splits the reward pools, and updates the content rating.
+        threshold is reached, the round can be resolved once all past-epoch votes are revealed or their 60-minute reveal
+        grace period has expired. The system does this automatically. Resolution determines the majority side, splits
+        the reward pools, and updates the content rating.
       </p>
       <p>
         Rounds that exceed the <strong>maximum duration</strong> (7 days) without meeting the minimum voter threshold
         are cancelled. All stakes are fully refunded to participants.
       </p>
 
-      <h2>One-Sided Rounds (Agreement)</h2>
+      <h2>One-Sided Rounds (Consensus)</h2>
       <p>
         If all revealed voters agree (only UP or only DOWN votes) and the round resolves, an{" "}
-        <strong>agreement bonus</strong> triggers. The system pays a small subsidy from the agreement bonus reserve to
-        reward unanimous agreement, since there are no losing stakes to redistribute. This incentivizes voting on
+        <strong>consensus subsidy</strong> triggers. The system pays a small subsidy from the consensus subsidy reserve
+        to reward unanimous agreement, since there are no losing stakes to redistribute. This incentivizes voting on
         uncontroversial content where the &ldquo;correct&rdquo; answer is obvious.
       </p>
 
