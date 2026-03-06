@@ -30,6 +30,7 @@
     "e2e:reset": "bash e2e/scripts/reset-chain.sh"
   },
   "dependencies": {
+    "@curyo/contracts": "workspace:*",
     "@heroicons/react": "~2.1.5",
     "@libsql/client": "^0.17.0",
     "@rainbow-me/rainbowkit": "2.2.9",

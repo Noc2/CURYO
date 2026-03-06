@@ -2,14 +2,16 @@ import { createConfig } from "ponder";
 import { isAddress } from "viem";
 import { http } from "viem";
 
-import { ContentRegistryAbi } from "./abis/ContentRegistryAbi";
-import { RoundVotingEngineAbi } from "./abis/RoundVotingEngineAbi";
-import { RoundRewardDistributorAbi } from "./abis/RoundRewardDistributorAbi";
-import { CategoryRegistryAbi } from "./abis/CategoryRegistryAbi";
-import { ProfileRegistryAbi } from "./abis/ProfileRegistryAbi";
-import { FrontendRegistryAbi } from "./abis/FrontendRegistryAbi";
-import { VoterIdNFTAbi } from "./abis/VoterIdNFTAbi";
-import { CuryoReputationAbi } from "./abis/CuryoReputationAbi";
+import {
+  CategoryRegistryAbi,
+  ContentRegistryAbi,
+  CuryoReputationAbi,
+  FrontendRegistryAbi,
+  ProfileRegistryAbi,
+  RoundRewardDistributorAbi,
+  RoundVotingEngineAbi,
+  VoterIdNFTAbi,
+} from "@curyo/contracts/abis";
 
 type PonderNetworkName = "celoSepolia" | "hardhat" | "celo";
 

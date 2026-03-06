@@ -1,6 +1,6 @@
+import deployedContracts from "@curyo/contracts/deployedContracts";
 import { isAddress } from "viem";
 import * as chains from "viem/chains";
-import deployedContracts from "~~/contracts/deployedContracts";
 
 const isProduction = process.env.NODE_ENV === "production";
 

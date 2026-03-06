@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  PROFILE_UPDATE_CHALLENGE_ACTION,
-  createProfileUpdateChallenge,
-  normalizeProfileUpdateInput,
-} from "~~/lib/auth/profileUpdateChallenge";
+  COMMENT_CHALLENGE_ACTION,
+  createCommentChallenge,
+  normalizeCommentChallengeInput,
+} from "~~/lib/auth/commentChallenge";
 import {
   cleanupSignedActionChallenges,
   ensureSignedActionChallengeTable,
@@ -20,22 +20,22 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as {
       address?: string;
-      username?: string | null;
-      profileImageUrl?: string | null;
+      contentId?: string | number | bigint;
+      body?: string;
     };
 
-    const normalized = normalizeProfileUpdateInput(body);
+    const normalized = normalizeCommentChallengeInput(body);
     if (!normalized.ok) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
     await ensureSignedActionChallengeTable();
 
-    const challenge = createProfileUpdateChallenge(normalized.payload);
+    const challenge = createCommentChallenge(normalized.payload);
     await cleanupSignedActionChallenges();
     await persistSignedActionChallenge({
       challengeId: challenge.challengeId,
-      action: PROFILE_UPDATE_CHALLENGE_ACTION,
+      action: COMMENT_CHALLENGE_ACTION,
       walletAddress: normalized.payload.normalizedAddress,
       payloadHash: challenge.payloadHash,
       nonce: challenge.nonce,
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       expiresAt: challenge.expiresAt.toISOString(),
     });
   } catch (error) {
-    console.error("Error creating profile update challenge:", error);
+    console.error("Error creating comment challenge:", error);
     return NextResponse.json({ error: "Failed to create challenge" }, { status: 500 });
   }
 }

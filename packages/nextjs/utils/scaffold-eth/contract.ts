@@ -1,6 +1,7 @@
 import { getParsedError } from "./getParsedError";
 import { AllowedChainIds } from "./networks";
 import { notification } from "./notification";
+import deployedContractsData from "@curyo/contracts/deployedContracts";
 import { MutateOptions } from "@tanstack/react-query";
 import {
   Abi,
@@ -29,7 +30,6 @@ import {
 import { Config, UseReadContractParameters, UseWatchContractEventParameters, UseWriteContractParameters } from "wagmi";
 import { WriteContractParameters, WriteContractReturnType, simulateContract } from "wagmi/actions";
 import { WriteContractVariables } from "wagmi/query";
-import deployedContractsData from "~~/contracts/deployedContracts";
 import externalContractsData from "~~/contracts/externalContracts";
 import scaffoldConfig from "~~/scaffold.config";
 

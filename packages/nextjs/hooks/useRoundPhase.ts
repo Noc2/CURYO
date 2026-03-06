@@ -1,11 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { useVotingConfig } from "~~/hooks/useVotingConfig";
-import { RoundData } from "~~/types/votingTypes";
-
-export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "none";
+import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
+import { RoundPhase } from "~~/lib/contracts/roundVotingEngine";
 
 export interface RoundPhaseInfo {
   /** Current phase of the round for this content */
@@ -57,47 +53,7 @@ export interface RoundPhaseInfo {
  * Epoch 2+ (informed) = after epoch 1 ends — reduced reward weight (25%)
  */
 export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
-  const {
-    epochDuration: configEpochDuration,
-    maxDuration: configMaxDuration,
-    minVoters: configMinVoters,
-    maxVoters: configMaxVoters,
-  } = useVotingConfig();
-
-  // Get the active round ID for this content
-  const { data: rawActiveRoundId, isLoading: roundIdLoading } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine" as any,
-    functionName: "getActiveRoundId" as any,
-    args: [contentId] as any,
-    query: {
-      enabled: contentId !== undefined,
-      refetchInterval: 5000,
-    },
-  } as any);
-  const activeRoundId = rawActiveRoundId as unknown as bigint | undefined;
-
-  // Get the round data
-  const { data: rawRoundData, isLoading: roundLoading } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine" as any,
-    functionName: "getRound" as any,
-    args: [contentId, activeRoundId] as any,
-    query: {
-      enabled: contentId !== undefined && activeRoundId !== undefined && activeRoundId > 0n,
-      refetchInterval: 5000,
-    },
-  } as any);
-
-  // Local clock for countdown (ticks every second)
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Math.floor(Date.now() / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const roundId = activeRoundId ?? 0n;
-  const isReady = !roundIdLoading && !roundLoading && contentId !== undefined;
+  const snapshot = useRoundSnapshot(contentId);
 
   const defaultResult: RoundPhaseInfo = {
     phase: "none",
@@ -111,85 +67,39 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
     currentEpochRemaining: 0,
     isEpoch1: false,
     epoch1EndTime: 0,
-    epochDuration: configEpochDuration,
+    epochDuration: snapshot.epochDuration,
     startTime: 0,
-    minVoters: configMinVoters,
-    maxVoters: configMaxVoters,
+    minVoters: snapshot.minVoters,
+    maxVoters: snapshot.maxVoters,
     thresholdReachedAt: 0,
     settlementTime: 0,
     settlementCountdown: 0,
-    isReady,
+    isReady: snapshot.isReady,
   };
 
-  if (!rawRoundData || roundId === 0n) {
+  if (!snapshot.hasRound) {
     return defaultResult;
   }
 
-  const round = rawRoundData as unknown as RoundData;
-
-  const voteCount = Number(round.voteCount ?? 0n);
-  const revealedCount = Number(round.revealedCount ?? 0n);
-  const totalStake = round.totalStake ?? 0n;
-  const startTime = Number(round.startTime);
-  const votersNeeded = Math.max(0, configMinVoters - voteCount);
-
-  // Epoch 1 ends at startTime + epochDuration
-  const epoch1EndTime = startTime + configEpochDuration;
-  const isEpoch1 = now < epoch1EndTime;
-  const epoch1Remaining = Math.max(0, epoch1EndTime - now);
-
-  // Time remaining in the current epoch (next epoch boundary)
-  const elapsed = now - startTime;
-  const currentEpochRemaining = elapsed >= 0 ? configEpochDuration - (elapsed % configEpochDuration) : 0;
-
-  // Round expiry: startTime + maxDuration
-  const roundTimeRemaining = Math.max(0, startTime + configMaxDuration - now);
-
-  // Determine phase from contract state
-  // Round states: Open (0), Settled (1), Cancelled (2), Tied (3)
-  let phase: RoundPhase;
-
-  switch (round.state) {
-    case 0:
-      phase = "voting";
-      break;
-    case 1:
-      phase = "settled";
-      break;
-    case 2:
-      phase = "cancelled";
-      break;
-    case 3:
-      phase = "tied";
-      break;
-    default:
-      phase = "none";
-  }
-
-  // Settlement timing: immediate once threshold reached (no delay)
-  const thresholdReachedAt = Number(round.thresholdReachedAt ?? 0n);
-  const settlementTime = thresholdReachedAt > 0 ? thresholdReachedAt : 0;
-  const settlementCountdown = 0;
-
   return {
-    phase,
-    roundId,
-    voteCount,
-    revealedCount,
-    totalStake,
-    votersNeeded,
-    roundTimeRemaining,
-    epoch1Remaining,
-    currentEpochRemaining,
-    isEpoch1,
-    epoch1EndTime,
-    epochDuration: configEpochDuration,
-    startTime,
-    minVoters: configMinVoters,
-    maxVoters: configMaxVoters,
-    thresholdReachedAt,
-    settlementTime,
-    settlementCountdown,
-    isReady,
+    phase: snapshot.phase,
+    roundId: snapshot.roundId,
+    voteCount: snapshot.voteCount,
+    revealedCount: snapshot.revealedCount,
+    totalStake: snapshot.totalStake,
+    votersNeeded: snapshot.votersNeeded,
+    roundTimeRemaining: snapshot.roundTimeRemaining,
+    epoch1Remaining: snapshot.epoch1Remaining,
+    currentEpochRemaining: snapshot.currentEpochRemaining,
+    isEpoch1: snapshot.isEpoch1,
+    epoch1EndTime: snapshot.epoch1EndTime,
+    epochDuration: snapshot.epochDuration,
+    startTime: snapshot.startTime,
+    minVoters: snapshot.minVoters,
+    maxVoters: snapshot.maxVoters,
+    thresholdReachedAt: snapshot.thresholdReachedAt,
+    settlementTime: snapshot.settlementTime,
+    settlementCountdown: snapshot.settlementCountdown,
+    isReady: snapshot.isReady,
   };
 }

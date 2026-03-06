@@ -1,0 +1,24 @@
+{
+  "name": "@curyo/contracts",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./abis": "./src/abis/index.ts",
+    "./addresses": "./src/addresses.ts",
+    "./deployedContracts": "./src/deployedContracts.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "~18.19.50",
+    "typescript": "~5.8.2"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.18.3"
+  }
+}

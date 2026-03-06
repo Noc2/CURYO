@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRoundInfo } from "~~/hooks/useRoundInfo";
-import { useVotingConfig } from "~~/hooks/useVotingConfig";
+import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 
 type Urgency = "normal" | "warning" | "critical";
 
@@ -31,22 +29,9 @@ function getUrgency(seconds: number): Urgency {
 }
 
 export function useRoundCountdown(contentId?: bigint): RoundCountdown {
-  const { round } = useRoundInfo(contentId);
-  const { maxDuration } = useVotingConfig();
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-
-  const startTime = round?.startTime ?? 0;
-  const isOpen = round?.state === 0 && startTime > 0;
-  const endTime = startTime + maxDuration;
-  const timeLeft = isOpen ? Math.max(0, endTime - now) : 0;
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const interval = setInterval(() => {
-      setNow(Math.floor(Date.now() / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isOpen]);
+  const { phase, roundTimeRemaining } = useRoundSnapshot(contentId);
+  const isOpen = phase === "voting" && roundTimeRemaining > 0;
+  const timeLeft = isOpen ? roundTimeRemaining : 0;
 
   return {
     timeLeft,

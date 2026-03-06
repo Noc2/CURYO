@@ -327,6 +327,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@curyo/bot@workspace:packages/bot"
   dependencies:
+    "@curyo/contracts": "workspace:*"
     "@types/node": ~18.19.50
     dotenv: ^16.4.5
     tlock-js: ^0.9.0
@@ -334,6 +335,15 @@ __metadata:
     typescript: ~5.8.2
     viem: 2.39.0
     vitest: ^4.0.18
+  languageName: unknown
+  linkType: soft
+
+"@curyo/contracts@workspace:*, @curyo/contracts@workspace:packages/contracts":
+  version: 0.0.0-use.local
+  resolution: "@curyo/contracts@workspace:packages/contracts"
+  dependencies:
+    "@types/node": ~18.19.50
+    typescript: ~5.8.2
   languageName: unknown
   linkType: soft
 
@@ -358,6 +368,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@curyo/keeper@workspace:packages/keeper"
   dependencies:
+    "@curyo/contracts": "workspace:*"
     "@types/node": ~18.19.50
     dotenv: ^16.4.5
     tlock-js: ^0.9.0
@@ -385,6 +396,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@curyo/nextjs@workspace:packages/nextjs"
   dependencies:
+    "@curyo/contracts": "workspace:*"
     "@heroicons/react": ~2.1.5
     "@libsql/client": ^0.17.0
     "@next/bundle-analyzer": ^16.1.6
@@ -446,6 +458,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@curyo/ponder@workspace:packages/ponder"
   dependencies:
+    "@curyo/contracts": "workspace:*"
     hono: ~4.12.2
     ponder: ^1.0.0
     typescript: ~5.8.2

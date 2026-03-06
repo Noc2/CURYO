@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
+import { deriveRoundTiming } from "~~/lib/contracts/roundVotingEngine";
 import { ponderApi } from "~~/services/ponder/client";
 
 export interface ActiveVoteWithDeadline {
@@ -71,14 +72,13 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
     .filter(v => v.roundStartTime != null)
     .map(v => {
       const startTime = Number(v.roundStartTime);
-
-      // Epoch 1 ends at startTime + epochDuration
-      const epoch1EndTime = startTime + epochDuration;
-      const epoch1Remaining = Math.max(0, epoch1EndTime - now);
-
-      // Round expiry: startTime + maxDuration
+      const timing = deriveRoundTiming({
+        startTime,
+        now,
+        epochDuration,
+        maxDuration,
+      });
       const roundExpiry = startTime + maxDuration;
-      const timeRemaining = Math.max(0, roundExpiry - now);
 
       return {
         contentId: v.contentId,
@@ -88,10 +88,10 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
         revealed: v.revealed,
         epochIndex: v.epochIndex,
         startTime,
-        epoch1EndTime,
+        epoch1EndTime: timing.epoch1EndTime,
         deadline: roundExpiry,
-        timeRemaining,
-        epoch1Remaining,
+        timeRemaining: timing.roundTimeRemaining,
+        epoch1Remaining: timing.epoch1Remaining,
       };
     });
 

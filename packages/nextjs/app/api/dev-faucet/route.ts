@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import deployedContracts from "@curyo/contracts/deployedContracts";
 import { createPublicClient, createWalletClient, http, parseUnits } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
-import deployedContracts from "~~/contracts/deployedContracts";
 import { getKeystoreAccount } from "~~/utils/keystore";
 import { checkRateLimit } from "~~/utils/rateLimit";
 

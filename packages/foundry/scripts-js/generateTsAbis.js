@@ -263,11 +263,15 @@ function main() {
     });
   });
 
-  const NEXTJS_TARGET_DIR = "../nextjs/contracts/";
+  const NEXTJS_TARGET_DIR = join(__dirname, "..", "..", "nextjs", "contracts");
+  const CONTRACTS_TARGET_DIR = join(__dirname, "..", "..", "contracts", "src");
 
   // Ensure target directories exist
   if (!existsSync(NEXTJS_TARGET_DIR)) {
     mkdirSync(NEXTJS_TARGET_DIR, { recursive: true });
+  }
+  if (!existsSync(CONTRACTS_TARGET_DIR)) {
+    mkdirSync(CONTRACTS_TARGET_DIR, { recursive: true });
   }
 
   // Generate the deployedContracts content
@@ -299,14 +303,24 @@ function main() {
   `;
 
   writeFileSync(
-    `${NEXTJS_TARGET_DIR}deployedContracts.ts`,
+    join(NEXTJS_TARGET_DIR, "deployedContracts.ts"),
     format(fileTemplate("~~/utils/scaffold-eth/contract"), {
       parser: "typescript",
     })
   );
 
+  writeFileSync(
+    join(CONTRACTS_TARGET_DIR, "deployedContracts.ts"),
+    format(fileTemplate("./types"), {
+      parser: "typescript",
+    })
+  );
+
   console.log(
-    `📝 Updated TypeScript contract definition file on ${NEXTJS_TARGET_DIR}deployedContracts.ts`
+    `📝 Updated TypeScript contract definition file on ${join(NEXTJS_TARGET_DIR, "deployedContracts.ts")}`
+  );
+  console.log(
+    `📝 Updated shared contract definition file on ${join(CONTRACTS_TARGET_DIR, "deployedContracts.ts")}`
   );
 
   // --- Auto-generate ABI files for ponder, keeper, and bot ---
@@ -495,18 +509,18 @@ function updatePonderEnv(allGeneratedContracts, deployers = {}) {
 const ABI_TARGETS = [
   {
     contract: "RoundVotingEngine",
-    targets: ["ponder/abis", "keeper/src/abis", "bot/src/abis"],
+    targets: ["contracts/src/abis", "ponder/abis", "keeper/src/abis", "bot/src/abis"],
   },
   {
     contract: "ContentRegistry",
-    targets: ["ponder/abis", "keeper/src/abis", "bot/src/abis"],
+    targets: ["contracts/src/abis", "ponder/abis", "keeper/src/abis", "bot/src/abis"],
   },
-  { contract: "CategoryRegistry", targets: ["ponder/abis"] },
-  { contract: "CuryoReputation", targets: ["ponder/abis", "bot/src/abis"] },
-  { contract: "VoterIdNFT", targets: ["ponder/abis", "bot/src/abis"] },
-  { contract: "FrontendRegistry", targets: ["ponder/abis"] },
-  { contract: "RoundRewardDistributor", targets: ["ponder/abis"] },
-  { contract: "ProfileRegistry", targets: ["ponder/abis"] },
+  { contract: "CategoryRegistry", targets: ["contracts/src/abis", "ponder/abis"] },
+  { contract: "CuryoReputation", targets: ["contracts/src/abis", "ponder/abis", "bot/src/abis"] },
+  { contract: "VoterIdNFT", targets: ["contracts/src/abis", "ponder/abis", "bot/src/abis"] },
+  { contract: "FrontendRegistry", targets: ["contracts/src/abis", "ponder/abis"] },
+  { contract: "RoundRewardDistributor", targets: ["contracts/src/abis", "ponder/abis"] },
+  { contract: "ProfileRegistry", targets: ["contracts/src/abis", "ponder/abis"] },
 ];
 
 function generateAbiFiles() {

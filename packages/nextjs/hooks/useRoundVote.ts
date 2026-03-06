@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { encodePacked, keccak256 } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import scaffoldConfig from "~~/scaffold.config";
 import { tlockEncryptVote } from "~~/utils/tlock";
 
@@ -34,7 +35,7 @@ export function useRoundVote() {
   const [error, setError] = useState<string | null>(null);
   const { requireAcceptance } = useTermsAcceptance();
   const queryClient = useQueryClient();
-  const [epochDuration, setEpochDuration] = useState(1200); // Default 20 minutes
+  const { epochDuration } = useVotingConfig();
 
   const { writeContractAsync: writeCRep } = useScaffoldWriteContract({
     contractName: "CuryoReputation",
@@ -47,35 +48,6 @@ export function useRoundVote() {
   const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const publicClient = usePublicClient();
-
-  // Read epochDuration from contract config once on mount
-  useEffect(() => {
-    if (!publicClient || !votingEngineInfo) return;
-
-    let cancelled = false;
-
-    publicClient
-      .readContract({
-        address: votingEngineInfo.address,
-        abi: votingEngineInfo.abi,
-        functionName: "config",
-        args: [],
-      })
-      .then((result: any) => {
-        if (!cancelled && result) {
-          // config() returns (epochDuration, maxDuration, minVoters, maxVoters)
-          const epoch = Number(result[0] ?? result.epochDuration);
-          if (epoch > 0) setEpochDuration(epoch);
-        }
-      })
-      .catch(() => {
-        // Default to 20 minutes
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [publicClient, votingEngineInfo]);
 
   const commitVote = async ({ contentId, isUp, stakeAmount, frontendCode, submitter }: RoundVoteParams) => {
     const accepted = await requireAcceptance("vote");

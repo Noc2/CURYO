@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { asc, count, eq, inArray } from "drizzle-orm";
-import { verifyMessage } from "viem";
+import {
+  COMMENT_CHALLENGE_ACTION,
+  buildCommentChallengeMessage,
+  hashCommentChallengePayload,
+  normalizeCommentChallengeInput,
+} from "~~/lib/auth/commentChallenge";
+import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { db } from "~~/lib/db";
 import { comments, userProfiles } from "~~/lib/db/schema";
 import { checkRateLimit } from "~~/utils/rateLimit";
@@ -69,52 +75,75 @@ export async function POST(request: NextRequest) {
   if (limited) return limited;
 
   try {
-    const { contentId, body, address, signature } = await request.json();
+    const { contentId, body, address, signature, challengeId } = await request.json();
 
-    if (!contentId || !body || !address || !signature) {
+    if (!signature || !challengeId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const trimmedBody = body.trim();
-    if (trimmedBody.length === 0 || trimmedBody.length > 500) {
-      return NextResponse.json({ error: "Comment must be 1-500 characters" }, { status: 400 });
+    const normalized = normalizeCommentChallengeInput({ contentId, body, address });
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
-      return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
-    }
-
-    // Verify wallet signature (message includes contentId + body to prevent replay)
-    const message = `Post comment on Curyo content #${contentId}:\n${trimmedBody}`;
-    const isValid = await verifyMessage({
-      address: address as `0x${string}`,
-      message,
-      signature: signature as `0x${string}`,
-    });
-
-    if (!isValid) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
-
-    const normalizedAddress = address.toLowerCase();
+    const payload = normalized.payload;
+    const payloadHash = hashCommentChallengePayload(payload);
     const now = new Date();
+    let inserted: typeof comments.$inferSelect | undefined;
 
-    const [inserted] = await db
-      .insert(comments)
-      .values({
-        contentId: contentId.toString(),
-        walletAddress: normalizedAddress,
-        body: trimmedBody,
-        createdAt: now,
-      })
-      .returning();
+    await ensureSignedActionChallengeTable();
+
+    try {
+      await db.transaction(async tx => {
+        await verifyAndConsumeSignedActionChallenge(tx, {
+          challengeId: String(challengeId),
+          action: COMMENT_CHALLENGE_ACTION,
+          walletAddress: payload.normalizedAddress,
+          payloadHash,
+          signature: signature as `0x${string}`,
+          now,
+          buildMessage: ({ nonce, expiresAt }) =>
+            buildCommentChallengeMessage({
+              address: payload.normalizedAddress,
+              payloadHash,
+              nonce,
+              expiresAt,
+            }),
+        });
+
+        [inserted] = await tx
+          .insert(comments)
+          .values({
+            contentId: payload.contentId,
+            walletAddress: payload.normalizedAddress,
+            body: payload.body,
+            createdAt: now,
+          })
+          .returning();
+      });
+    } catch (error: any) {
+      if (error.message === "CHALLENGE_USED") {
+        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
+      }
+      if (error.message === "CHALLENGE_EXPIRED") {
+        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
+      }
+      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
+        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+      }
+      throw error;
+    }
 
     // Fetch profile for response enrichment
     const profile = await db
       .select()
       .from(userProfiles)
-      .where(eq(userProfiles.walletAddress, normalizedAddress))
+      .where(eq(userProfiles.walletAddress, payload.normalizedAddress))
       .limit(1);
+
+    if (!inserted) {
+      throw new Error("COMMENT_INSERT_FAILED");
+    }
 
     return NextResponse.json({
       comment: {

@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, inArray, isNull } from "drizzle-orm";
-import { verifyMessage } from "viem";
+import { eq, inArray } from "drizzle-orm";
 import {
   PROFILE_UPDATE_CHALLENGE_ACTION,
   buildProfileUpdateChallengeMessage,
-  ensureProfileUpdateChallengeTable,
   hashProfileUpdatePayload,
   normalizeProfileUpdateInput,
-  signedActionChallenges,
 } from "~~/lib/auth/profileUpdateChallenge";
+import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { db } from "~~/lib/db";
 import { userProfiles } from "~~/lib/db/schema";
 import { checkRateLimit } from "~~/utils/rateLimit";
@@ -90,52 +88,25 @@ export async function POST(request: NextRequest) {
     const payloadHash = hashProfileUpdatePayload(payload);
     const now = new Date();
 
-    await ensureProfileUpdateChallengeTable();
+    await ensureSignedActionChallengeTable();
 
     try {
       await db.transaction(async tx => {
-        const [challenge] = await tx
-          .select()
-          .from(signedActionChallenges)
-          .where(eq(signedActionChallenges.id, String(challengeId)))
-          .limit(1);
-
-        if (!challenge) {
-          throw new Error("INVALID_CHALLENGE");
-        }
-
-        if (
-          challenge.action !== PROFILE_UPDATE_CHALLENGE_ACTION ||
-          challenge.walletAddress !== payload.normalizedAddress ||
-          challenge.payloadHash !== payloadHash
-        ) {
-          throw new Error("INVALID_CHALLENGE");
-        }
-
-        if (challenge.usedAt) {
-          throw new Error("CHALLENGE_USED");
-        }
-
-        if (challenge.expiresAt <= now) {
-          throw new Error("CHALLENGE_EXPIRED");
-        }
-
-        const message = buildProfileUpdateChallengeMessage({
-          address: payload.normalizedAddress,
+        await verifyAndConsumeSignedActionChallenge(tx, {
+          challengeId: String(challengeId),
+          action: PROFILE_UPDATE_CHALLENGE_ACTION,
+          walletAddress: payload.normalizedAddress,
           payloadHash,
-          nonce: challenge.nonce,
-          expiresAt: challenge.expiresAt,
-        });
-
-        const isValid = await verifyMessage({
-          address: payload.normalizedAddress,
-          message,
           signature: signature as `0x${string}`,
+          now,
+          buildMessage: ({ nonce, expiresAt }) =>
+            buildProfileUpdateChallengeMessage({
+              address: payload.normalizedAddress,
+              payloadHash,
+              nonce,
+              expiresAt,
+            }),
         });
-
-        if (!isValid) {
-          throw new Error("INVALID_SIGNATURE");
-        }
 
         if (payload.hasUsername) {
           const existingUsername = await tx
@@ -147,16 +118,6 @@ export async function POST(request: NextRequest) {
           if (existingUsername.length > 0 && existingUsername[0].walletAddress !== payload.normalizedAddress) {
             throw new Error("USERNAME_TAKEN");
           }
-        }
-
-        const claimedChallenge = await tx
-          .update(signedActionChallenges)
-          .set({ usedAt: now })
-          .where(and(eq(signedActionChallenges.id, challenge.id), isNull(signedActionChallenges.usedAt)))
-          .returning({ id: signedActionChallenges.id });
-
-        if (claimedChallenge.length === 0) {
-          throw new Error("CHALLENGE_USED");
         }
 
         const existingProfile = await tx

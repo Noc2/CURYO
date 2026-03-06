@@ -1,24 +1,14 @@
-import { createHash, randomBytes } from "crypto";
-import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-import { db } from "~~/lib/db";
+import { createHash } from "crypto";
+import {
+  buildSignedActionMessage,
+  createSignedActionChallenge,
+  ensureSignedActionChallengeTable,
+} from "~~/lib/auth/signedActions";
 
 export const PROFILE_UPDATE_CHALLENGE_ACTION = "profile-update";
-export const PROFILE_UPDATE_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+export const PROFILE_UPDATE_CHALLENGE_TITLE = "Curyo profile update authorization";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
-let ensureProfileUpdateChallengeTablePromise: Promise<void> | null = null;
-
-export const signedActionChallenges = sqliteTable("signed_action_challenges", {
-  id: text("id").primaryKey(),
-  walletAddress: text("wallet_address").notNull(),
-  action: text("action").notNull(),
-  payloadHash: text("payload_hash").notNull(),
-  nonce: text("nonce").notNull(),
-  expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-  usedAt: integer("used_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
 
 export interface ProfileUpdateInput {
   address?: string;
@@ -35,32 +25,7 @@ export interface NormalizedProfileUpdatePayload {
 }
 
 export async function ensureProfileUpdateChallengeTable() {
-  if (!ensureProfileUpdateChallengeTablePromise) {
-    ensureProfileUpdateChallengeTablePromise = (async () => {
-      await db.run(
-        sql.raw(`
-        CREATE TABLE IF NOT EXISTS signed_action_challenges (
-          id TEXT PRIMARY KEY NOT NULL,
-          wallet_address TEXT NOT NULL,
-          action TEXT NOT NULL,
-          payload_hash TEXT NOT NULL,
-          nonce TEXT NOT NULL,
-          expires_at INTEGER NOT NULL,
-          used_at INTEGER,
-          created_at INTEGER NOT NULL
-        )
-      `),
-      );
-      await db.run(
-        sql.raw(`
-        CREATE INDEX IF NOT EXISTS signed_action_challenges_expires_at_idx
-        ON signed_action_challenges (expires_at)
-      `),
-      );
-    })();
-  }
-
-  await ensureProfileUpdateChallengeTablePromise;
+  await ensureSignedActionChallengeTable();
 }
 
 function isValidAddress(address: string): address is `0x${string}` {
@@ -134,35 +99,22 @@ export function buildProfileUpdateChallengeMessage(params: {
   nonce: string;
   expiresAt: Date;
 }): string {
-  return [
-    "Curyo profile update authorization",
-    "",
-    `Wallet: ${params.address}`,
-    `Payload Hash: ${params.payloadHash}`,
-    `Nonce: ${params.nonce}`,
-    `Expires At: ${params.expiresAt.toISOString()}`,
-  ].join("\n");
+  return buildSignedActionMessage({
+    title: PROFILE_UPDATE_CHALLENGE_TITLE,
+    action: PROFILE_UPDATE_CHALLENGE_ACTION,
+    address: params.address,
+    payloadHash: params.payloadHash,
+    nonce: params.nonce,
+    expiresAt: params.expiresAt,
+  });
 }
 
 export function createProfileUpdateChallenge(payload: NormalizedProfileUpdatePayload) {
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + PROFILE_UPDATE_CHALLENGE_TTL_MS);
-  const challengeId = randomBytes(16).toString("hex");
-  const nonce = randomBytes(16).toString("hex");
   const payloadHash = hashProfileUpdatePayload(payload);
-  const message = buildProfileUpdateChallengeMessage({
+  return createSignedActionChallenge({
+    title: PROFILE_UPDATE_CHALLENGE_TITLE,
+    action: PROFILE_UPDATE_CHALLENGE_ACTION,
     address: payload.normalizedAddress,
     payloadHash,
-    nonce,
-    expiresAt,
   });
-
-  return {
-    challengeId,
-    nonce,
-    payloadHash,
-    expiresAt,
-    createdAt: now,
-    message,
-  };
 }

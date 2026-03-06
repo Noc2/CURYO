@@ -1,8 +1,5 @@
 import { config } from "./config.js";
-import { CuryoReputationAbi } from "./abis/CuryoReputationAbi.js";
-import { ContentRegistryAbi } from "./abis/ContentRegistryAbi.js";
-import { RoundVotingEngineAbi } from "./abis/RoundVotingEngineAbi.js";
-import { VoterIdNFTAbi } from "./abis/VoterIdNFTAbi.js";
+import { ContentRegistryAbi, CuryoReputationAbi, RoundVotingEngineAbi, VoterIdNFTAbi } from "@curyo/contracts/abis";
 
 export { CuryoReputationAbi, ContentRegistryAbi, RoundVotingEngineAbi, VoterIdNFTAbi };
 

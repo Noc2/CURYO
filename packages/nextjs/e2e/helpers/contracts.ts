@@ -5,7 +5,7 @@
  * after redeploys.  The import uses a relative path because the E2E tests run
  * outside the Next.js bundler (no `~~/*` alias).
  */
-import deployedContracts from "../../contracts/deployedContracts";
+import deployedContracts from "@curyo/contracts/deployedContracts";
 
 const chain31337 = (deployedContracts as Record<number, any>)[31337];
 

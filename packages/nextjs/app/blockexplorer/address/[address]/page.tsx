@@ -1,10 +1,10 @@
+import deployedContracts from "@curyo/contracts/deployedContracts";
 import fs from "fs";
 import path from "path";
 import { Address } from "viem";
-import { LocalBlockExplorerGuard } from "~~/app/blockexplorer/_components/LocalBlockExplorerGuard";
 import { foundry } from "viem/chains";
 import { AddressComponent } from "~~/app/blockexplorer/_components/AddressComponent";
-import deployedContracts from "~~/contracts/deployedContracts";
+import { LocalBlockExplorerGuard } from "~~/app/blockexplorer/_components/LocalBlockExplorerGuard";
 import { isZeroAddress } from "~~/utils/scaffold-eth/common";
 import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 

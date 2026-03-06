@@ -43,8 +43,18 @@ export function useComments(contentId: bigint | null) {
 
       try {
         const trimmed = body.trim();
-        const message = `Post comment on Curyo content #${contentIdStr}:\n${trimmed}`;
-        const signature = await signMessageAsync({ message });
+        const challengeRes = await fetch("/api/comments/challenge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contentId: contentIdStr, body: trimmed, address }),
+        });
+
+        const challengeData = await challengeRes.json();
+        if (!challengeRes.ok) {
+          throw new Error(challengeData.error || "Failed to create signature challenge");
+        }
+
+        const signature = await signMessageAsync({ message: challengeData.message as string });
 
         // Optimistic update
         const optimisticComment: CommentData = {
@@ -68,7 +78,13 @@ export function useComments(contentId: bigint | null) {
         const res = await fetch("/api/comments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contentId: contentIdStr, body: trimmed, address, signature }),
+          body: JSON.stringify({
+            contentId: contentIdStr,
+            body: trimmed,
+            address,
+            signature,
+            challengeId: challengeData.challengeId,
+          }),
         });
 
         if (!res.ok) {

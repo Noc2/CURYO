@@ -13,8 +13,7 @@
 import type { PublicClient, WalletClient, Chain, Account } from "viem";
 import { BaseError, ContractFunctionRevertedError, decodeErrorResult } from "viem";
 import { timelockDecrypt, mainnetClient } from "tlock-js";
-import { RoundVotingEngineAbi } from "./abis/RoundVotingEngineAbi.js";
-import { ContentRegistryAbi } from "./abis/ContentRegistryAbi.js";
+import { ContentRegistryAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { config } from "./config.js";
 import type { Logger } from "./logger.js";
 import { incrementCounter } from "./metrics.js";

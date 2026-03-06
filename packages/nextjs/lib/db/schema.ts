@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const userProfiles = sqliteTable("user_profiles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -22,6 +22,27 @@ export const comments = sqliteTable("comments", {
 
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
+
+export const signedActionChallenges = sqliteTable(
+  "signed_action_challenges",
+  {
+    id: text("id").primaryKey(),
+    walletAddress: text("wallet_address").notNull(),
+    action: text("action").notNull(),
+    payloadHash: text("payload_hash").notNull(),
+    nonce: text("nonce").notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    usedAt: integer("used_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  table => ({
+    expiresAtIdx: index("signed_action_challenges_expires_at_idx").on(table.expiresAt),
+    walletActionIdx: index("signed_action_challenges_wallet_action_idx").on(table.walletAddress, table.action),
+  }),
+);
+
+export type SignedActionChallenge = typeof signedActionChallenges.$inferSelect;
+export type NewSignedActionChallenge = typeof signedActionChallenges.$inferInsert;
 
 export const watchedContent = sqliteTable(
   "watched_content",

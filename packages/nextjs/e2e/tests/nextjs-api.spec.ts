@@ -101,13 +101,20 @@ test.describe("Next.js API routes", () => {
 
     const contentId = "1";
     const body = `E2E test comment ${Date.now()}`;
-    const message = `Post comment on Curyo content #${contentId}:\n${body}`;
-    const signature = await account.signMessage({ message });
+    const challengeRes = await fetch(`${BASE_URL}/api/comments/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentId, body, address: account.address }),
+    });
+    expect(challengeRes.status).toBe(200);
+
+    const challenge = await challengeRes.json();
+    const signature = await account.signMessage({ message: challenge.message });
 
     const res = await fetch(`${BASE_URL}/api/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contentId, body, address: account.address, signature }),
+      body: JSON.stringify({ contentId, body, address: account.address, signature, challengeId: challenge.challengeId }),
     });
     expect(res.status).toBe(200);
 
@@ -117,7 +124,52 @@ test.describe("Next.js API routes", () => {
     expect(data.comment.walletAddress).toBe(account.address.toLowerCase());
   });
 
+  test("POST /api/comments requires a one-time challenge and rejects replay", async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
+    const contentId = "1";
+    const body = `Replay test comment ${Date.now()}`;
+
+    const challengeRes = await fetch(`${BASE_URL}/api/comments/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentId, body, address: account.address }),
+    });
+    expect(challengeRes.status).toBe(200);
+
+    const challenge = await challengeRes.json();
+    const signature = await account.signMessage({ message: challenge.message });
+
+    const firstRes = await fetch(`${BASE_URL}/api/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentId, body, address: account.address, signature, challengeId: challenge.challengeId }),
+    });
+    expect(firstRes.status).toBe(200);
+
+    const replayRes = await fetch(`${BASE_URL}/api/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentId, body, address: account.address, signature, challengeId: challenge.challengeId }),
+    });
+    expect(replayRes.status).toBe(409);
+  });
+
   test("POST /api/comments rejects invalid signature", async () => {
+    const contentId = "1";
+    const body = "fake comment";
+    const challengeRes = await fetch(`${BASE_URL}/api/comments/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contentId,
+        body,
+        address: ANVIL_ACCOUNTS.account2.address,
+      }),
+    });
+    expect(challengeRes.status).toBe(200);
+
+    const challenge = await challengeRes.json();
     const fakeSignature =
       "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff";
 
@@ -125,14 +177,14 @@ test.describe("Next.js API routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contentId: "1",
-        body: "fake comment",
+        contentId,
+        body,
         address: ANVIL_ACCOUNTS.account2.address,
         signature: fakeSignature,
+        challengeId: challenge.challengeId,
       }),
     });
-    // Should be 401 (invalid signature) or 500 (signature recovery fails)
-    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBe(401);
   });
 
   test("POST /api/comments rejects missing fields", async () => {
