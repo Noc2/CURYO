@@ -11,7 +11,7 @@ const MAX_LIMIT = 100;
 // GET: Fetch leaderboard data
 // Uses Ponder when available for richer data (vote counts, rewards), falls back to local DB
 export async function GET(request: NextRequest) {
-  const limited = checkRateLimit(request, RATE_LIMIT);
+  const limited = await checkRateLimit(request, RATE_LIMIT);
   if (limited) return limited;
 
   try {

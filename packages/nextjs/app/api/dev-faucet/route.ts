@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Dev faucet is disabled" }, { status: 403 });
   }
 
-  const limited = checkRateLimit(request, RATE_LIMIT);
+  const limited = await checkRateLimit(request, RATE_LIMIT);
   if (limited) return limited;
 
   try {

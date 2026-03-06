@@ -10,7 +10,7 @@ const WRITE_RATE_LIMIT = { limit: 10, windowMs: 60_000 }; // 10 req/min per IP
 
 // GET: Fetch comments for a content item
 export async function GET(request: NextRequest) {
-  const limited = checkRateLimit(request, READ_RATE_LIMIT);
+  const limited = await checkRateLimit(request, READ_RATE_LIMIT);
   if (limited) return limited;
 
   try {
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
 // POST: Create a comment with wallet signature verification
 export async function POST(request: NextRequest) {
-  const limited = checkRateLimit(request, WRITE_RATE_LIMIT);
+  const limited = await checkRateLimit(request, WRITE_RATE_LIMIT);
   if (limited) return limited;
 
   try {

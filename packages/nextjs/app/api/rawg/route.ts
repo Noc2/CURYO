@@ -13,7 +13,7 @@ const MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB cap on upstream response
  * Usage: GET /api/rawg?slug=elden-ring
  */
 export async function GET(request: NextRequest) {
-  const limited = checkRateLimit(request, RATE_LIMIT);
+  const limited = await checkRateLimit(request, RATE_LIMIT);
   if (limited) return limited;
   const slug = request.nextUrl.searchParams.get("slug");
 

@@ -17,7 +17,7 @@ const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
  * Returns: { thumbnailUrl, title?, description?, imageUrl?, authors?, releaseYear?, symbol? }
  */
 export async function GET(request: NextRequest) {
-  const limited = checkRateLimit(request, RATE_LIMIT);
+  const limited = await checkRateLimit(request, RATE_LIMIT);
   if (limited) return limited;
 
   const url = request.nextUrl.searchParams.get("url");

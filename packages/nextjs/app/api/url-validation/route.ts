@@ -91,7 +91,7 @@ interface ValidationResult {
  * Returns cached validation results from the database.
  */
 export async function GET(request: NextRequest) {
-  const limited = checkRateLimit(request, RATE_LIMIT_GET);
+  const limited = await checkRateLimit(request, RATE_LIMIT_GET);
   if (limited) return limited;
 
   const urlsParam = request.nextUrl.searchParams.get("urls");
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
  * Validates unchecked/stale URLs, stores results, returns all.
  */
 export async function POST(request: NextRequest) {
-  const limited = checkRateLimit(request, RATE_LIMIT_POST);
+  const limited = await checkRateLimit(request, RATE_LIMIT_POST);
   if (limited) return limited;
 
   let body: { urls?: string[] };

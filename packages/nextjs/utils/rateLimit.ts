@@ -1,31 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
+import { dbClient } from "~~/lib/db";
 
 /**
- * Simple in-memory sliding-window rate limiter.
- * Not shared across serverless instances — good enough for single-process
- * deployments and local dev; use Redis/KV for multi-instance production.
+ * Shared fixed-window rate limiter backed by the application database.
+ * This survives across stateless/serverless instances and avoids in-memory
+ * counters that reset per process.
  */
-
-interface WindowEntry {
-  timestamps: number[];
-}
-
-const store = new Map<string, WindowEntry>();
-
-// Evict stale entries every 60s to prevent unbounded memory growth
-const CLEANUP_INTERVAL_MS = 60_000;
-let lastCleanup = Date.now();
-
-function cleanup(windowMs: number) {
-  const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
-  lastCleanup = now;
-  const cutoff = now - windowMs;
-  for (const [key, entry] of store) {
-    entry.timestamps = entry.timestamps.filter(t => t > cutoff);
-    if (entry.timestamps.length === 0) store.delete(key);
-  }
-}
 
 export interface RateLimitConfig {
   /** Max requests per window */
@@ -34,40 +15,94 @@ export interface RateLimitConfig {
   windowMs: number;
 }
 
+const CLEANUP_INTERVAL_MS = 60_000;
+
+let initPromise: Promise<void> | null = null;
+let lastCleanup = 0;
+
+async function ensureRateLimitTable() {
+  if (!initPromise) {
+    initPromise = (async () => {
+      await dbClient.execute(`
+        CREATE TABLE IF NOT EXISTS api_rate_limits (
+          key TEXT PRIMARY KEY,
+          request_count INTEGER NOT NULL,
+          window_started_at INTEGER NOT NULL,
+          expires_at INTEGER NOT NULL
+        )
+      `);
+      await dbClient.execute(`
+        CREATE INDEX IF NOT EXISTS api_rate_limits_expires_at_idx
+        ON api_rate_limits (expires_at)
+      `);
+    })();
+  }
+
+  await initPromise;
+}
+
+function hashIdentifier(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function getClientIp(request: NextRequest): string {
+  const nextRequest = request as NextRequest & { ip?: string };
+
+  return (
+    nextRequest.ip?.trim() ||
+    request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("cf-connecting-ip")?.trim() ||
+    request.headers.get("fly-client-ip")?.trim() ||
+    request.headers.get("fastly-client-ip")?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
+  );
+}
+
+async function cleanupExpiredEntries(now: number) {
+  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
+  lastCleanup = now;
+
+  await dbClient.execute({
+    sql: "DELETE FROM api_rate_limits WHERE expires_at <= ?",
+    args: [now],
+  });
+}
+
 /**
  * Check rate limit for a request. Returns a 429 NextResponse if exceeded,
  * or null if the request is within limits.
  */
-export function checkRateLimit(request: NextRequest, config: RateLimitConfig): NextResponse | null {
-  // Prefer platform-verified IP (e.g. Vercel sets request.ip), then x-real-ip
-  // (set by nginx/Cloudflare), then rightmost x-forwarded-for entry (nearest
-  // trusted proxy), to prevent trivial rate-limit bypass via header spoofing.
-  const xff = request.headers.get("x-forwarded-for");
-  const ip =
-    (request as NextRequest & { ip?: string }).ip ||
-    request.headers.get("x-real-ip")?.trim() ||
-    xff?.split(",").pop()?.trim() ||
-    "unknown";
-  // Namespace by route path so different API routes don't share counters
-  const key = `${ip}:${request.nextUrl.pathname}`;
+export async function checkRateLimit(request: NextRequest, config: RateLimitConfig): Promise<NextResponse | null> {
   const now = Date.now();
-  const cutoff = now - config.windowMs;
+  const windowStartedAt = now - (now % config.windowMs);
+  const expiresAt = windowStartedAt + config.windowMs;
+  const ip = getClientIp(request);
+  const key = hashIdentifier(`${request.nextUrl.pathname}:${windowStartedAt}:${ip}`);
 
-  cleanup(config.windowMs);
+  await ensureRateLimitTable();
+  await cleanupExpiredEntries(now);
 
-  let entry = store.get(key);
-  if (!entry) {
-    entry = { timestamps: [] };
-    store.set(key, entry);
+  const result = await dbClient.execute({
+    sql: `
+      INSERT INTO api_rate_limits (key, request_count, window_started_at, expires_at)
+      VALUES (?, 1, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET request_count = request_count + 1
+      RETURNING request_count
+    `,
+    args: [key, windowStartedAt, expiresAt],
+  });
+
+  const requestCount = Number(result.rows[0]?.request_count ?? 0);
+  if (requestCount > config.limit) {
+    const retryAfter = Math.max(1, Math.ceil((expiresAt - now) / 1000));
+
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+    );
   }
 
-  // Drop timestamps outside the window
-  entry.timestamps = entry.timestamps.filter(t => t > cutoff);
-
-  if (entry.timestamps.length >= config.limit) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  }
-
-  entry.timestamps.push(now);
   return null;
 }

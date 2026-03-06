@@ -50,3 +50,12 @@ export const contentMetadata = sqliteTable("content_metadata", {
 });
 
 export type ContentMetadata = typeof contentMetadata.$inferSelect;
+
+export const apiRateLimits = sqliteTable("api_rate_limits", {
+  key: text("key").primaryKey(),
+  requestCount: integer("request_count").notNull(),
+  windowStartedAt: integer("window_started_at").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
+
+export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
