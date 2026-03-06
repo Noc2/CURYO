@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
 import {
+  ArrowLeftIcon,
   Bars3Icon,
   BookOpenIcon,
   GlobeAltIcon,
@@ -136,44 +137,47 @@ const MobileMenuLinks = () => {
   );
 };
 
+const buildVoteSearchTarget = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed ? `/vote?q=${encodeURIComponent(trimmed)}` : "/vote";
+};
+
 const HeaderSearchBar = ({ className }: { className?: string }) => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [inputValue, setInputValue] = useState(searchParams.get("q") ?? "");
+  const activeQuery = searchParams.get("q") ?? "";
+  const [inputValue, setInputValue] = useState(activeQuery);
 
   useEffect(() => {
-    setInputValue(searchParams.get("q") ?? "");
-  }, [searchParams]);
+    setInputValue(activeQuery);
+  }, [activeQuery]);
 
-  const updateSearch = useCallback(
+  const commitSearch = useCallback(
     (value: string) => {
-      setInputValue(value);
-      const params = new URLSearchParams(searchParams.toString());
-      if (value.trim()) {
-        params.set("q", value);
-      } else {
-        params.delete("q");
-      }
-      const queryString = params.toString();
-      const target = `/vote${queryString ? `?${queryString}` : ""}`;
-
+      const target = buildVoteSearchTarget(value);
       if (pathname === "/vote") {
         router.replace(target, { scroll: false });
       } else {
         router.push(target);
       }
     },
-    [router, pathname, searchParams],
+    [pathname, router],
+  );
+
+  const updateSearch = useCallback(
+    (value: string) => {
+      setInputValue(value);
+      commitSearch(value);
+    },
+    [commitSearch],
   );
 
   const clearSearch = useCallback(() => {
     setInputValue("");
-    if (pathname === "/vote") {
-      router.replace("/vote", { scroll: false });
-    }
-  }, [router, pathname]);
+    commitSearch("");
+  }, [commitSearch]);
 
   const isSidebar = className?.includes("sidebar");
   return (
@@ -202,52 +206,150 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
   );
 };
 
+const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeQuery = searchParams.get("q") ?? "";
+  const [draftValue, setDraftValue] = useState(activeQuery);
+
+  useEffect(() => {
+    setDraftValue(activeQuery);
+  }, [activeQuery]);
+
+  const commitSearch = useCallback(
+    (value: string) => {
+      const target = buildVoteSearchTarget(value);
+      if (pathname === "/vote") {
+        router.replace(target, { scroll: false });
+      } else {
+        router.push(target);
+      }
+    },
+    [pathname, router],
+  );
+
+  const handleClose = useCallback(() => {
+    setDraftValue(activeQuery);
+    onClose();
+  }, [activeQuery, onClose]);
+
+  const handleSubmit = useCallback(
+    (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      commitSearch(draftValue);
+      onClose();
+    },
+    [commitSearch, draftValue, onClose],
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className="flex w-full items-center gap-2">
+      <button type="button" onClick={handleClose} className="btn btn-ghost btn-sm p-1" aria-label="Close search">
+        <ArrowLeftIcon className="h-5 w-5" />
+      </button>
+      <div className="relative min-w-0 flex-1">
+        <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-base-content/30" />
+        <input
+          type="text"
+          placeholder="Search content"
+          aria-label="Search content"
+          value={draftValue}
+          onChange={event => setDraftValue(event.target.value)}
+          autoFocus
+          className="input input-sm w-full border-none bg-base-100 pl-9 pr-9 text-base"
+        />
+        {draftValue ? (
+          <button
+            type="button"
+            onClick={() => setDraftValue("")}
+            aria-label="Clear search"
+            className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-base-content/10 text-base-content/50"
+          >
+            <XMarkIcon className="h-3 w-3" />
+          </button>
+        ) : null}
+      </div>
+      <button
+        type="submit"
+        className="btn btn-sm border-none bg-white px-3 text-black hover:bg-gray-200"
+        aria-label="Submit search"
+      >
+        <MagnifyingGlassIcon className="h-4 w-4" />
+      </button>
+    </form>
+  );
+};
+
 /**
  * Left-side vertical navbar (TikTok-style). Desktop: fixed sidebar; mobile: top bar with burger.
  */
 export const Header = () => {
   const pathname = usePathname();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
 
+  useEffect(() => {
+    setMobileSearchOpen(false);
+  }, [pathname]);
+
   return (
     <>
       {/* Mobile: top bar */}
       <div className="xl:hidden sticky top-0 z-20">
         <div className="navbar min-h-0 shrink-0 justify-between px-4 sm:px-6 py-3 bg-base-200 backdrop-blur-lg border-b border-base-200">
-          <div className="flex items-center gap-2">
-            <details className="dropdown" ref={burgerMenuRef}>
-              <summary className="btn btn-ghost btn-sm hover:bg-transparent p-1" aria-label="Open menu">
-                <Bars3Icon className="h-5 w-5" />
-              </summary>
-              <ul
-                className="menu menu-compact dropdown-content mt-3 p-2 bg-base-200 rounded-xl w-64 shadow-lg border border-base-content/5"
-                onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
-              >
-                <Suspense>
-                  <MobileMenuLinks />
-                </Suspense>
-              </ul>
-            </details>
-            <Link href="/" className="flex items-center gap-2">
-              <CuryoLogo className="w-7 h-7 shrink-0" />
-              <div className="flex flex-col gap-0.5">
-                <span className="font-heading font-semibold text-base tracking-tight text-white">CURYO (BETA)</span>
-                <span className="text-base-content/60" style={{ fontSize: "14px" }}>
-                  Reputation Game
-                </span>
-              </div>
-            </Link>
-          </div>
-          <div className="flex items-center gap-2">
+          {mobileSearchOpen ? (
             <Suspense>
-              <HeaderSearchBar />
+              <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
             </Suspense>
-            <RainbowKitCustomConnectButton />
-          </div>
+          ) : (
+            <>
+              <div className="flex min-w-0 items-center gap-2">
+                <details className="dropdown" ref={burgerMenuRef}>
+                  <summary className="btn btn-ghost btn-sm hover:bg-transparent p-1" aria-label="Open menu">
+                    <Bars3Icon className="h-5 w-5" />
+                  </summary>
+                  <ul
+                    className="menu menu-compact dropdown-content mt-3 p-2 bg-base-200 rounded-xl w-64 shadow-lg border border-base-content/5"
+                    onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
+                  >
+                    <Suspense>
+                      <MobileMenuLinks />
+                    </Suspense>
+                  </ul>
+                </details>
+                <Link href="/" className="flex min-w-0 items-center gap-2">
+                  <CuryoLogo className="w-7 h-7 shrink-0" />
+                  <div className="flex min-w-0 flex-col gap-0.5">
+                    <span className="truncate font-heading font-semibold text-base tracking-tight text-white">
+                      CURYO (BETA)
+                    </span>
+                    <span className="truncate text-base-content/60" style={{ fontSize: "14px" }}>
+                      Reputation Game
+                    </span>
+                  </div>
+                </Link>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMobileSearchOpen(true)}
+                  className="btn btn-ghost btn-sm p-1 sm:hidden"
+                  aria-label="Search content"
+                >
+                  <MagnifyingGlassIcon className="h-5 w-5" />
+                </button>
+                <Suspense>
+                  <HeaderSearchBar />
+                </Suspense>
+                <RainbowKitCustomConnectButton />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

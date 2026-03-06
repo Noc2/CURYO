@@ -115,8 +115,26 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
         ))}
       </div>
 
-      {/* Visible pills */}
-      <div className="flex gap-2 items-center">
+      {/* Mobile: horizontal chip rail */}
+      <div className="flex gap-2 overflow-x-auto pb-1 sm:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {categories.map(category => {
+          const isActive = activeCategory === category;
+          const custom = pillClassName?.(category, isActive);
+          const defaultCls = isActive ? "pill-category" : "bg-base-200 text-white hover:bg-base-300";
+          return (
+            <button
+              key={category}
+              onClick={() => handleSelect(category)}
+              className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors shrink-0 ${custom ?? defaultCls}`}
+            >
+              {category}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop: measured pills with overflow */}
+      <div className="hidden gap-2 items-center sm:flex">
         {visible.map(category => {
           const isActive = activeCategory === category;
           const custom = pillClassName?.(category, isActive);

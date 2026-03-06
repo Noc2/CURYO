@@ -35,7 +35,8 @@ export const RainbowKitCustomConnectButton = ({ inlineMenu = false }: { inlineMe
                     type="button"
                     style={{ fontSize: "16px" }}
                   >
-                    Connect Wallet
+                    <span className="sm:hidden">Connect</span>
+                    <span className="hidden sm:inline">Connect Wallet</span>
                   </button>
                 );
               }

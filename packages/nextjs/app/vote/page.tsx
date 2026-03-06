@@ -8,13 +8,14 @@ import { blo } from "blo";
 import { AnimatePresence, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount, useReadContracts } from "wagmi";
-import { ShareIcon } from "@heroicons/react/24/outline";
+import { ShareIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import { SwipeCard } from "~~/components/swipe/SwipeCard";
+import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
@@ -50,10 +51,10 @@ const ALL_FILTER = "All";
 const BROKEN_FILTER = "Broken";
 const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 type SortOption = "for_you" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
+type SearchSortOption = Exclude<SortOption, "for_you">;
 type ScopeOption = "all" | "watched" | "my_votes" | "my_submissions";
 
-const SORT_OPTIONS: { value: SortOption; label: string }[] = [
-  { value: "for_you", label: "For You" },
+const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
   { value: "highest_rated", label: "Highest Rated" },
@@ -81,6 +82,7 @@ const HomeInner = () => {
   const voteCounts = useCategoryPopularity(feed);
   const { votes, isLoading: votesLoading } = useVoteHistory(address);
   const {
+    watchedItems,
     watchedContentIds,
     isLoading: watchedLoading,
     toggleWatch,
@@ -95,8 +97,29 @@ const HomeInner = () => {
   const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
   const [scope, setScope] = useState<ScopeOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
+  const isSearchMode = searchQuery.trim().length > 0;
+  const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
 
   const votedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
+  const watchedOrderMap = useMemo(() => {
+    const order = new Map<string, number>();
+    watchedItems.forEach((item, index) => {
+      if (!order.has(item.contentId)) {
+        order.set(item.contentId, index);
+      }
+    });
+    return order;
+  }, [watchedItems]);
+  const voteOrderMap = useMemo(() => {
+    const order = new Map<string, number>();
+    votes.forEach((vote, index) => {
+      const contentId = vote.contentId.toString();
+      if (!order.has(contentId)) {
+        order.set(contentId, index);
+      }
+    });
+    return order;
+  }, [votes]);
   const scopeLoading =
     (scope === "watched" && !!address && watchedLoading) || (scope === "my_votes" && !!address && votesLoading);
 
@@ -209,8 +232,51 @@ const HomeInner = () => {
         break;
     }
 
-    switch (sortBy) {
-      case "for_you":
+    if (isSearchMode) {
+      switch (effectiveSearchSortBy) {
+        case "newest":
+          items.sort((a, b) => Number(b.id - a.id));
+          break;
+        case "oldest":
+          items.sort((a, b) => Number(a.id - b.id));
+          break;
+        case "highest_rated":
+          items.sort((a, b) => {
+            const rA = ratingsMap.get(a.id.toString()) ?? 50;
+            const rB = ratingsMap.get(b.id.toString()) ?? 50;
+            return rB - rA;
+          });
+          break;
+        case "lowest_rated":
+          items.sort((a, b) => {
+            const rA = ratingsMap.get(a.id.toString()) ?? 50;
+            const rB = ratingsMap.get(b.id.toString()) ?? 50;
+            return rA - rB;
+          });
+          break;
+      }
+      return items;
+    }
+
+    switch (scope) {
+      case "watched":
+        items.sort((a, b) => {
+          const indexA = watchedOrderMap.get(a.id.toString()) ?? Number.MAX_SAFE_INTEGER;
+          const indexB = watchedOrderMap.get(b.id.toString()) ?? Number.MAX_SAFE_INTEGER;
+          return indexA - indexB;
+        });
+        break;
+      case "my_votes":
+        items.sort((a, b) => {
+          const indexA = voteOrderMap.get(a.id.toString()) ?? Number.MAX_SAFE_INTEGER;
+          const indexB = voteOrderMap.get(b.id.toString()) ?? Number.MAX_SAFE_INTEGER;
+          return indexA - indexB;
+        });
+        break;
+      case "my_submissions":
+        items.sort((a, b) => Number(b.id - a.id));
+        break;
+      default:
         if (hasPreferences && activeCategory === ALL_FILTER) {
           items.sort((a, b) => {
             const scoreA = categoryScores.get(a.categoryId.toString()) ?? 0;
@@ -222,40 +288,23 @@ const HomeInner = () => {
           items.sort((a, b) => Number(b.id - a.id));
         }
         break;
-      case "newest":
-        items.sort((a, b) => Number(b.id - a.id));
-        break;
-      case "oldest":
-        items.sort((a, b) => Number(a.id - b.id));
-        break;
-      case "highest_rated":
-        items.sort((a, b) => {
-          const rA = ratingsMap.get(a.id.toString()) ?? 50;
-          const rB = ratingsMap.get(b.id.toString()) ?? 50;
-          return rB - rA;
-        });
-        break;
-      case "lowest_rated":
-        items.sort((a, b) => {
-          const rA = ratingsMap.get(a.id.toString()) ?? 50;
-          const rB = ratingsMap.get(b.id.toString()) ?? 50;
-          return rA - rB;
-        });
-        break;
     }
 
     return items;
   }, [
     feed,
     searchQuery,
+    isSearchMode,
     activeCategory,
-    sortBy,
+    effectiveSearchSortBy,
     ratingsMap,
     categoryNameToId,
     categoryScores,
     hasPreferences,
     validationMap,
     scope,
+    watchedOrderMap,
+    voteOrderMap,
     watchedContentIds,
     votedContentIds,
   ]);
@@ -470,42 +519,13 @@ const HomeInner = () => {
     return `No content found in "${activeCategory}".`;
   }, [activeCategory, address, scope, searchQuery]);
 
+  const activeScopeLabel = SCOPE_OPTIONS.find(option => option.value === scope)?.label ?? "All";
+
   return (
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
       <div className="w-full max-w-5xl">
         <VotingGuide />
-        {/* Filter bar: sort + category pills */}
-        <div className="flex items-center gap-3 mb-5">
-          <select
-            value={scope}
-            onChange={e => setScope(e.target.value as ScopeOption)}
-            className="select bg-base-200 text-base font-medium border-none focus:outline-none shrink-0 w-auto"
-            aria-label="Content scope"
-          >
-            {SCOPE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value as SortOption)}
-            className="select bg-base-200 text-base font-medium border-none focus:outline-none shrink-0 w-auto"
-            aria-label="Sort content"
-          >
-            {SORT_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-
-          <StreakCounter />
-
-          <div className="w-px h-5 bg-base-content/10 shrink-0" />
-
+        <div className="mb-4 flex items-start gap-3">
           <CategoryFilter
             categories={categories}
             activeCategory={activeCategory}
@@ -517,6 +537,49 @@ const HomeInner = () => {
                 : "bg-base-200 text-warning/70 hover:bg-warning/10";
             }}
           />
+          <div className="hidden shrink-0 sm:flex">
+            <StreakCounter />
+          </div>
+        </div>
+
+        <div className="mb-5 flex flex-wrap items-center gap-2">
+          <FeedScopeFilter value={scope} options={SCOPE_OPTIONS} onChange={value => setScope(value as ScopeOption)} />
+
+          {scope !== "all" ? (
+            <button
+              type="button"
+              onClick={() => setScope("all")}
+              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
+              aria-label={`Clear ${activeScopeLabel} filter`}
+            >
+              {activeScopeLabel}
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+          ) : null}
+
+          {isSearchMode ? (
+            <>
+              <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
+                Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
+              </div>
+              <select
+                value={effectiveSearchSortBy}
+                onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+                aria-label="Sort search results"
+              >
+                {SEARCH_SORT_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
+        </div>
+
+        <div className="sm:hidden">
+          <StreakCounter />
         </div>
 
         {/* Main content */}
