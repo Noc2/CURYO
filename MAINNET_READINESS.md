@@ -67,11 +67,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### CI/CD
 
-- [ ] **E2E tests do not run on push to main**
-  E2E tests only run on PRs and a weekly schedule. A merge to main that breaks the full stack won't be caught until the next PR or Monday morning.
-  _Ref: `.github/workflows/e2e.yaml:3-7`_
-
-  Fix: add `push: branches: [main]` to the E2E workflow trigger.
+- [x] **E2E tests do not run on push to main** _(fixed)_
+  Added `push: branches: [main]` trigger to the E2E workflow.
+  _Ref: `.github/workflows/e2e.yaml:3-8`_
 
 ---
 
