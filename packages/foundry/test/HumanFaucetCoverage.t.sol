@@ -102,6 +102,15 @@ contract HumanFaucetCoverageTest is Test {
         // No revert, no minting
     }
 
+    function test_Claim_RevertsWhenAddressAlreadyClaimedEvenWithFreshNullifier() public {
+        mockHub.setVerified(user1);
+        mockHub.simulateVerification(address(faucet), user1);
+
+        mockHub.setVerified(user1);
+        vm.expectRevert(HumanFaucet.AddressAlreadyClaimed.selector);
+        mockHub.simulateVerification(address(faucet), user1);
+    }
+
     // =========================================================================
     // 3. transferOwnership — governance restriction
     // =========================================================================

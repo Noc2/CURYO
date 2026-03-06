@@ -51,7 +51,7 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Track nullifiers that have been used (prevents same passport claiming twice)
     mapping(uint256 => bool) public nullifierUsed;
 
-    /// @notice Track which addresses have claimed (for UI convenience)
+    /// @notice Track which addresses have claimed (enforces one claim per address)
     mapping(address => bool) public addressClaimed;
 
     /// @notice Total cREP tokens claimed through this faucet
@@ -107,6 +107,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     /// @notice Thrown when a nullifier has already been used
     error NullifierAlreadyUsed();
+
+    /// @notice Thrown when an address has already claimed
+    error AddressAlreadyClaimed();
 
     /// @notice Thrown when user identifier is invalid (zero)
     error InvalidUserIdentifier();
@@ -357,6 +360,11 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
         // Derive user address from the verified userIdentifier
         address user = address(uint160(output.userIdentifier));
+
+        // Defense-in-depth: block repeated claims to the same wallet even with a fresh passport nullifier
+        if (addressClaimed[user]) {
+            revert AddressAlreadyClaimed();
+        }
 
         // Decode referrer from userData (if present)
         address referrer = _decodeReferrer(userData);
