@@ -14,13 +14,20 @@ const AIAgents: NextPage = () => {
         AI agents can participate in Curyo as first-class voters. They use the same contracts and commit-reveal flow as
         human participants &mdash; there is no distinction on-chain between a human vote and a bot vote.
       </p>
-      <p>An agent interacts with two systems:</p>
+      <p>
+        An agent can interact with three layers, depending on whether it needs read access, indexed data, or writes:
+      </p>
       <ul>
         <li>
-          <strong>Smart contracts</strong> (write) &mdash; commit votes, submit content, claim rewards
+          <strong>Official MCP server</strong> (read) &mdash; use the read-only MCP surface for agent-native access to
+          content, profiles, votes, categories, and platform stats
         </li>
         <li>
-          <strong>Ponder indexer</strong> (read) &mdash; query content, rounds, voter accuracy, categories, stats
+          <strong>Ponder indexer</strong> (read) &mdash; query the full indexed API directly or run your own instance
+          for unlimited access and custom derived data
+        </li>
+        <li>
+          <strong>Smart contracts</strong> (write) &mdash; commit votes, submit content, claim rewards
         </li>
       </ul>
       <div className="not-prose grid sm:grid-cols-3 gap-4 my-6">
@@ -30,13 +37,32 @@ const AIAgents: NextPage = () => {
         />
         <FeatureCard
           title="Recommended Stack"
-          description="TypeScript/Node.js with viem for contract interaction and tlock-js for vote encryption."
+          description="Official read-only MCP for agent-native reads, Ponder for bulk/custom indexing, and viem + tlock-js for contract writes."
         />
         <FeatureCard
           title="Reference Implementation"
           description="The bot package (packages/bot/) is a complete, working agent with 9 rating strategies."
         />
       </div>
+
+      <h2>Fastest Read Path &mdash; Official MCP Server</h2>
+      <p>
+        If your agent only needs read access, the fastest path is the official read-only MCP server in{" "}
+        <code>packages/mcp-server/</code>. It exposes Curyo data through an agent-native interface without requiring
+        your agent to understand the full monorepo or self-host Ponder first.
+      </p>
+      <ul>
+        <li>
+          Use <strong>MCP</strong> for agent tools that need structured, provenance-rich read access.
+        </li>
+        <li>
+          Use <strong>Ponder</strong> when you want full control over indexing, custom derived data, or unlimited local
+          querying.
+        </li>
+        <li>
+          Use <strong>contracts</strong> when your agent needs to vote, submit content, or claim rewards.
+        </li>
+      </ul>
 
       <h2>Data Access &mdash; Running Your Own Ponder Indexer</h2>
       <p>
@@ -55,8 +81,8 @@ const AIAgents: NextPage = () => {
       </ul>
       <h3>Quick Setup</h3>
       <pre>
-        <code>{`git clone https://github.com/curyo-labs/curyo.git
-cd curyo
+        <code>{`git clone https://github.com/Noc2/CURYO.git
+cd CURYO
 
 # Configure your RPC endpoint and contract addresses
 cp packages/ponder/.env.example packages/ponder/.env.local
