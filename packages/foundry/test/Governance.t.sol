@@ -20,19 +20,31 @@ contract GovernanceTest is Test {
     address public voter2 = address(3);
     address public voter3 = address(4);
 
-    // Mock pool addresses that hold "locked" tokens
+    // Mock protocol-controlled holders whose balances should not count toward quorum
     address public mockFaucet = address(10);
     address public mockParticipationPool = address(11);
     address public mockRewardDistributor = address(12);
+    address public mockVotingEngine = address(13);
+    address public mockTreasury = address(14);
+    address public mockContentRegistry = address(15);
+    address public mockFrontendRegistry = address(16);
+    address public mockCategoryRegistry = address(17);
 
-    // Pool balances (simulating locked tokens — scaled to fit 100M max supply)
+    // Protocol-controlled balances excluded from quorum
     uint256 public constant FAUCET_BALANCE = 30_000_000 * 1e6;
     uint256 public constant PARTICIPATION_BALANCE = 20_000_000 * 1e6;
     uint256 public constant REWARD_BALANCE = 14_000_000 * 1e6;
+    uint256 public constant ENGINE_BALANCE = 4_100_000 * 1e6;
+    uint256 public constant TREASURY_BALANCE = 10_000_000 * 1e6;
+    uint256 public constant CONTENT_REGISTRY_BALANCE = 20_000 * 1e6;
+    uint256 public constant FRONTEND_REGISTRY_BALANCE = 10_000 * 1e6;
+    uint256 public constant CATEGORY_REGISTRY_BALANCE = 100 * 1e6;
 
-    // Voter balances — circulating supply is 6M (out of 70M total)
+    // Voter balances — circulating supply is 6M after excluded protocol balances are removed.
     uint256 public constant VOTER_BALANCE = 2_000_000 * 1e6; // 2M tokens each
-    uint256 public constant TOTAL_MINTED = FAUCET_BALANCE + PARTICIPATION_BALANCE + REWARD_BALANCE + 6_000_000 * 1e6;
+    uint256 public constant TOTAL_MINTED = FAUCET_BALANCE + PARTICIPATION_BALANCE + REWARD_BALANCE + ENGINE_BALANCE
+        + TREASURY_BALANCE + CONTENT_REGISTRY_BALANCE + FRONTEND_REGISTRY_BALANCE + CATEGORY_REGISTRY_BALANCE
+        + 6_000_000 * 1e6;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -54,8 +66,8 @@ contract GovernanceTest is Test {
         // Deploy Governor with cREP directly (no wrapper needed)
         governor = new CuryoGovernor(IVotes(address(token)), timelock);
 
-        // Initialize pool addresses for dynamic quorum
-        governor.initializePools(mockFaucet, mockParticipationPool, mockRewardDistributor);
+        // Initialize protocol-controlled holders excluded from dynamic quorum
+        governor.initializePools(_excludedHolders());
 
         // Set governor on token so it can lock tokens during governance
         token.setGovernor(address(governor));
@@ -68,6 +80,11 @@ contract GovernanceTest is Test {
         token.mint(mockFaucet, FAUCET_BALANCE);
         token.mint(mockParticipationPool, PARTICIPATION_BALANCE);
         token.mint(mockRewardDistributor, REWARD_BALANCE);
+        token.mint(mockVotingEngine, ENGINE_BALANCE);
+        token.mint(mockTreasury, TREASURY_BALANCE);
+        token.mint(mockContentRegistry, CONTENT_REGISTRY_BALANCE);
+        token.mint(mockFrontendRegistry, FRONTEND_REGISTRY_BALANCE);
+        token.mint(mockCategoryRegistry, CATEGORY_REGISTRY_BALANCE);
 
         // Mint tokens to voters (circulating supply)
         token.mint(voter1, VOTER_BALANCE);
@@ -206,13 +223,24 @@ contract GovernanceTest is Test {
     }
 
     function test_GovernorQuorum() public {
-        // Quorum is 4% of CIRCULATING supply (total minus pool balances)
+        // Quorum is 4% of circulating supply after excluding all configured protocol-controlled holders.
         vm.roll(block.number + 1);
 
-        // Circulating = 6M (3 voters × 2M each), pools hold 96M
-        uint256 circulatingSupply = TOTAL_MINTED - FAUCET_BALANCE - PARTICIPATION_BALANCE - REWARD_BALANCE;
+        uint256 circulatingSupply = TOTAL_MINTED - FAUCET_BALANCE - PARTICIPATION_BALANCE - REWARD_BALANCE
+            - ENGINE_BALANCE - TREASURY_BALANCE - CONTENT_REGISTRY_BALANCE - FRONTEND_REGISTRY_BALANCE
+            - CATEGORY_REGISTRY_BALANCE;
         uint256 expectedQuorum = (circulatingSupply * 4) / 100; // 4% of 6M = 240K
         assertEq(governor.quorum(block.number - 1), expectedQuorum);
+    }
+
+    function test_GovernorQuorum_ExcludesEngineAndTreasuryBalances() public {
+        vm.roll(block.number + 1);
+
+        uint256 expectedQuorum = (6_000_000 * 1e6 * 4) / 100;
+        uint256 brokenQuorum = ((6_000_000 * 1e6 + ENGINE_BALANCE + TREASURY_BALANCE) * 4) / 100;
+
+        assertEq(governor.quorum(block.number - 1), expectedQuorum);
+        assertEq(brokenQuorum - expectedQuorum, 564_000 * 1e6);
     }
 
     function test_GovernorQuorumMinimumFloor() public {
@@ -227,11 +255,14 @@ contract GovernanceTest is Test {
         TimelockController smallTimelock = new TimelockController(2 days, new address[](0), new address[](0), deployer);
         CuryoGovernor smallGovernor = new CuryoGovernor(IVotes(address(smallToken)), smallTimelock);
 
-        address pool = address(100);
-        smallGovernor.initializePools(pool, address(101), address(102));
+        address[] memory holders = new address[](3);
+        holders[0] = address(100);
+        holders[1] = address(101);
+        holders[2] = address(102);
+        smallGovernor.initializePools(holders);
 
         // Mint 1M to pool, 100K to a user → circulating = 100K, 4% = 4K < 10K floor
-        smallToken.mint(pool, 1_000_000 * 1e6);
+        smallToken.mint(holders[0], 1_000_000 * 1e6);
         smallToken.mint(address(200), 100_000 * 1e6);
         vm.stopPrank();
 
@@ -278,28 +309,75 @@ contract GovernanceTest is Test {
         CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
         vm.stopPrank();
 
+        address[] memory holders = new address[](3);
+        holders[0] = address(1);
+        holders[1] = address(2);
+        holders[2] = address(3);
+
         vm.prank(voter1);
         vm.expectRevert("Only pools initializer");
-        freshGovernor.initializePools(address(1), address(2), address(3));
+        freshGovernor.initializePools(holders);
 
         vm.prank(deployer);
-        freshGovernor.initializePools(address(1), address(2), address(3));
+        freshGovernor.initializePools(holders);
         assertTrue(freshGovernor.poolsInitialized());
     }
 
     function test_GovernorPoolsRejectDuplicateAddresses() public {
         vm.startPrank(deployer);
         CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
-        vm.expectRevert("Duplicate pool");
-        freshGovernor.initializePools(address(1), address(1), address(2));
+        address[] memory holders = new address[](3);
+        holders[0] = address(1);
+        holders[1] = address(1);
+        holders[2] = address(2);
+        vm.expectRevert("Duplicate holder");
+        freshGovernor.initializePools(holders);
+        vm.stopPrank();
+    }
+
+    function test_GovernorPoolsRejectEmptyArray() public {
+        vm.startPrank(deployer);
+        CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
+        address[] memory holders = new address[](0);
+        vm.expectRevert("No excluded holders");
+        freshGovernor.initializePools(holders);
         vm.stopPrank();
     }
 
     function test_GovernorPoolsInitializedOnce() public {
         // initializePools can only be called once
+        address[] memory holders = new address[](3);
+        holders[0] = address(1);
+        holders[1] = address(2);
+        holders[2] = address(3);
         vm.prank(deployer);
         vm.expectRevert("Pools already initialized");
-        governor.initializePools(address(1), address(2), address(3));
+        governor.initializePools(holders);
+    }
+
+    function test_GovernorGetExcludedHolders() public view {
+        address[] memory holders = governor.getExcludedHolders();
+        assertEq(holders.length, 8);
+        assertEq(holders[0], mockFaucet);
+        assertEq(holders[1], mockParticipationPool);
+        assertEq(holders[2], mockRewardDistributor);
+        assertEq(holders[3], mockVotingEngine);
+        assertEq(holders[4], mockTreasury);
+        assertEq(holders[5], mockContentRegistry);
+        assertEq(holders[6], mockFrontendRegistry);
+        assertEq(holders[7], mockCategoryRegistry);
+    }
+
+    function _excludedHolders() internal view returns (address[] memory holders) {
+        holders = new address[](8);
+        holders[0] = mockFaucet;
+        holders[1] = mockParticipationPool;
+        holders[2] = mockRewardDistributor;
+        holders[3] = mockVotingEngine;
+        holders[4] = mockTreasury;
+        holders[5] = mockContentRegistry;
+        holders[6] = mockFrontendRegistry;
+        holders[7] = mockCategoryRegistry;
     }
 
     function test_CreateProposal() public {

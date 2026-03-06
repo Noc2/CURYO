@@ -39,7 +39,11 @@ contract FormalVerification_GovernanceTest is Test {
         timelock = new TimelockController(2 days, empty, empty, deployer);
 
         governor = new CuryoGovernor(IVotes(address(token)), timelock);
-        governor.initializePools(mockFaucet, mockParticipation, mockDistributor);
+        address[] memory holders = new address[](3);
+        holders[0] = mockFaucet;
+        holders[1] = mockParticipation;
+        holders[2] = mockDistributor;
+        governor.initializePools(holders);
 
         token.setGovernor(address(governor));
         timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));

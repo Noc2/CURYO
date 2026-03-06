@@ -69,7 +69,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         console.log("CuryoReputation deployed at:", address(crepToken));
 
         // 3. Deploy CuryoGovernor (production only)
-        //    Pool addresses are set later via initializePools() after pools are deployed.
+        //    Excluded holders are set later via initializePools() after protocol contracts are deployed.
         if (!isLocalDev) {
             CuryoGovernor governor =
                 new CuryoGovernor(IVotes(address(crepToken)), TimelockController(payable(governance)));
@@ -283,11 +283,20 @@ contract DeployCuryo is ScaffoldETHDeploy {
             }
         }
 
-        // 12d. Initialize Governor pool addresses for dynamic quorum (production only)
+        // 12d. Initialize Governor excluded holders for dynamic quorum (production only)
         if (!isLocalDev) {
-            CuryoGovernor(payable(governorAddr))
-                .initializePools(address(humanFaucet), address(participationPool), address(rewardDistributor));
-            console.log("Governor pool addresses initialized for dynamic quorum");
+            address[] memory excludedHolders = _buildQuorumExcludedHolders(
+                address(humanFaucet),
+                address(participationPool),
+                address(rewardDistributor),
+                address(votingEngine),
+                governance,
+                address(registry),
+                address(frontendRegistry),
+                address(categoryRegistry)
+            );
+            CuryoGovernor(payable(governorAddr)).initializePools(excludedHolders);
+            console.log("Governor excluded holders initialized for dynamic quorum");
         }
 
         // 12e. Mint test tokens and Voter IDs for localhost development
@@ -398,6 +407,36 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
         console.log("Seeded categories:", categoryRegistry.approvedCategoryCount());
         console.log("Local dev:", isLocalDev);
+    }
+
+    function _buildQuorumExcludedHolders(
+        address humanFaucet,
+        address participationPool,
+        address rewardDistributor,
+        address votingEngine,
+        address treasury,
+        address contentRegistry,
+        address frontendRegistry,
+        address categoryRegistry
+    ) internal pure returns (address[] memory holders) {
+        address[] memory temp = new address[](8);
+        uint256 count;
+
+        if (humanFaucet != address(0)) {
+            temp[count++] = humanFaucet;
+        }
+        temp[count++] = participationPool;
+        temp[count++] = rewardDistributor;
+        temp[count++] = votingEngine;
+        temp[count++] = treasury;
+        temp[count++] = contentRegistry;
+        temp[count++] = frontendRegistry;
+        temp[count++] = categoryRegistry;
+
+        holders = new address[](count);
+        for (uint256 i = 0; i < count; i++) {
+            holders[i] = temp[i];
+        }
     }
 
     function _seedCategories(CategoryRegistry registry) internal {

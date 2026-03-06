@@ -18,7 +18,7 @@ import { CuryoReputation } from "../CuryoReputation.sol";
 /// @dev Implements OpenZeppelin Governor with:
 ///      - Simple counting (For/Against/Abstain)
 ///      - Votes from cREP token (which implements ERC20Votes)
-///      - Dynamic quorum: 4% of circulating supply (total minus locked pool balances)
+///      - Dynamic quorum: 4% of circulating supply (total minus protocol-controlled balances)
 ///      - Minimum quorum floor of 10K cREP to prevent trivial early proposals
 ///      - Timelock execution for security
 ///      - 7-day token lock when voting or proposing
@@ -32,13 +32,12 @@ contract CuryoGovernor is
 {
     /// @notice cREP token used for historical locked-balance checks
     IVotes public immutable crepToken;
-    /// @notice Address authorized to perform one-time pool initialization
+    /// @notice Address authorized to perform one-time quorum exclusion initialization
     address public immutable poolsInitializer;
-    /// @notice Pool contracts whose balances are excluded from quorum calculation
-    address public humanFaucet;
-    address public participationPool;
-    address public rewardDistributor;
-    /// @notice Whether pool addresses have been set (one-time initialization)
+    /// @notice Protocol-controlled holders whose balances are excluded from quorum calculation.
+    address[] private _excludedHolders;
+    mapping(address => bool) public isExcludedHolder;
+    /// @notice Whether excluded holders have been set (one-time initialization)
     bool public poolsInitialized;
     /// @notice Minimum quorum regardless of circulating supply (10K cREP with 6 decimals)
     uint256 public constant MINIMUM_QUORUM = 10_000 * 1e6;
@@ -61,28 +60,30 @@ contract CuryoGovernor is
         poolsInitializer = msg.sender;
     }
 
-    /// @notice One-time initialization of pool addresses for dynamic quorum calculation.
+    /// @notice One-time initialization of protocol-controlled holders excluded from dynamic quorum.
     /// @dev Can only be called once by the deployment initializer.
-    ///      After initialization, pool addresses cannot be changed — the quorum formula is fixed.
-    // AUDIT NOTE (L-1): Pool addresses are immutable after initialization. If wrong
+    ///      After initialization, the excluded-holder set cannot be changed — the quorum formula is fixed.
+    // AUDIT NOTE (L-1): Excluded holders are immutable after initialization. If wrong
     // addresses are passed, dynamic quorum is permanently broken. This is intentional
     // to prevent governance manipulation of the quorum formula.
-    function initializePools(address _humanFaucet, address _participationPool, address _rewardDistributor) external {
+    function initializePools(address[] calldata excludedHolders) external {
         require(!poolsInitialized, "Pools already initialized");
         require(msg.sender == poolsInitializer, "Only pools initializer");
-        require(
-            _humanFaucet != address(0) && _participationPool != address(0) && _rewardDistributor != address(0),
-            "Invalid address"
-        );
-        require(
-            _humanFaucet != _participationPool && _humanFaucet != _rewardDistributor
-                && _participationPool != _rewardDistributor,
-            "Duplicate pool"
-        );
-        humanFaucet = _humanFaucet;
-        participationPool = _participationPool;
-        rewardDistributor = _rewardDistributor;
+        require(excludedHolders.length > 0, "No excluded holders");
+
+        for (uint256 i = 0; i < excludedHolders.length; i++) {
+            address holder = excludedHolders[i];
+            require(holder != address(0), "Invalid address");
+            require(!isExcludedHolder[holder], "Duplicate holder");
+            isExcludedHolder[holder] = true;
+            _excludedHolders.push(holder);
+        }
         poolsInitialized = true;
+    }
+
+    /// @notice Return the full set of holders excluded from quorum calculations.
+    function getExcludedHolders() external view returns (address[] memory) {
+        return _excludedHolders;
     }
 
     // --- Required Overrides ---
@@ -99,14 +100,15 @@ contract CuryoGovernor is
         return super.proposalThreshold();
     }
 
-    /// @notice Dynamic quorum: 4% of circulating supply (total minus locked pool balances)
-    /// @dev Uses historical pool balances at `blockNumber` to align with snapshotted total supply.
+    /// @notice Dynamic quorum: 4% of circulating supply (total minus excluded protocol-controlled balances)
+    /// @dev Uses historical excluded-holder balances at `blockNumber` to align with snapshotted total supply.
     ///      Returns at least MINIMUM_QUORUM to prevent trivial early proposals.
     function quorum(uint256 blockNumber) public view override(Governor, GovernorVotesQuorumFraction) returns (uint256) {
         uint256 totalSupply = token().getPastTotalSupply(blockNumber);
-        uint256 locked = crepToken.getPastVotes(humanFaucet, blockNumber)
-            + crepToken.getPastVotes(participationPool, blockNumber)
-            + crepToken.getPastVotes(rewardDistributor, blockNumber);
+        uint256 locked;
+        for (uint256 i = 0; i < _excludedHolders.length; i++) {
+            locked += crepToken.getPastVotes(_excludedHolders[i], blockNumber);
+        }
         uint256 circulating = totalSupply > locked ? totalSupply - locked : 0;
         uint256 dynamicQuorum = (circulating * quorumNumerator(blockNumber)) / quorumDenominator();
         return dynamicQuorum > MINIMUM_QUORUM ? dynamicQuorum : MINIMUM_QUORUM;

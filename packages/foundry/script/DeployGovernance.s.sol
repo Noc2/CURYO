@@ -17,9 +17,14 @@ contract DeployGovernance is Script {
         // Get deployment parameters from environment
         address crepToken = vm.envAddress("CREP_TOKEN");
         address multisig = vm.envAddress("MULTISIG_ADDRESS");
-        address _humanFaucet = vm.envAddress("HUMAN_FAUCET");
-        address _participationPool = vm.envAddress("PARTICIPATION_POOL");
-        address _rewardDistributor = vm.envAddress("REWARD_DISTRIBUTOR");
+        address humanFaucet = vm.envOr("HUMAN_FAUCET", address(0));
+        address participationPool = vm.envAddress("PARTICIPATION_POOL");
+        address rewardDistributor = vm.envAddress("REWARD_DISTRIBUTOR");
+        address votingEngine = vm.envAddress("ROUND_VOTING_ENGINE");
+        address treasury = vm.envAddress("TREASURY_ADDRESS");
+        address contentRegistry = vm.envAddress("CONTENT_REGISTRY");
+        address frontendRegistry = vm.envAddress("FRONTEND_REGISTRY");
+        address categoryRegistry = vm.envAddress("CATEGORY_REGISTRY");
 
         require(crepToken != address(0), "CREP_TOKEN not set");
         require(multisig != address(0), "MULTISIG_ADDRESS not set");
@@ -57,13 +62,19 @@ contract DeployGovernance is Script {
         timelock.grantRole(timelock.CANCELLER_ROLE(), multisig);
         console.log("Granted CANCELLER_ROLE to multisig");
 
-        // 4. Initialize pool addresses for dynamic quorum calculation
-        if (_humanFaucet != address(0) && _participationPool != address(0) && _rewardDistributor != address(0)) {
-            governor.initializePools(_humanFaucet, _participationPool, _rewardDistributor);
-            console.log("Governor pool addresses initialized for dynamic quorum");
-        } else {
-            console.log("Pool addresses not provided - call initializePools() manually from the deployer/initializer");
-        }
+        // 4. Initialize excluded holders for dynamic quorum calculation
+        address[] memory excludedHolders = _buildQuorumExcludedHolders(
+            humanFaucet,
+            participationPool,
+            rewardDistributor,
+            votingEngine,
+            treasury,
+            contentRegistry,
+            frontendRegistry,
+            categoryRegistry
+        );
+        governor.initializePools(excludedHolders);
+        console.log("Governor excluded holders initialized for dynamic quorum");
 
         // Note: Do NOT renounce admin yet - that should be done after:
         // 1. Protocol contracts have their roles transferred to Timelock
@@ -82,5 +93,35 @@ contract DeployGovernance is Script {
         console.log("1. Grant CONFIG_ROLE and UPGRADER_ROLE to Timelock on protocol contracts");
         console.log("2. Test governance flow with a proposal");
         console.log("3. Renounce admin role on Timelock");
+    }
+
+    function _buildQuorumExcludedHolders(
+        address humanFaucet,
+        address participationPool,
+        address rewardDistributor,
+        address votingEngine,
+        address treasury,
+        address contentRegistry,
+        address frontendRegistry,
+        address categoryRegistry
+    ) internal pure returns (address[] memory holders) {
+        address[] memory temp = new address[](8);
+        uint256 count;
+
+        if (humanFaucet != address(0)) {
+            temp[count++] = humanFaucet;
+        }
+        temp[count++] = participationPool;
+        temp[count++] = rewardDistributor;
+        temp[count++] = votingEngine;
+        temp[count++] = treasury;
+        temp[count++] = contentRegistry;
+        temp[count++] = frontendRegistry;
+        temp[count++] = categoryRegistry;
+
+        holders = new address[](count);
+        for (uint256 i = 0; i < count; i++) {
+            holders[i] = temp[i];
+        }
     }
 }
