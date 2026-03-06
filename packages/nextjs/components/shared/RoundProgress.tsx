@@ -159,7 +159,10 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
             <>
               <span className="flex items-center gap-1">
                 Ready to resolve
-                <InfoTooltip text="Votes revealed. The system resolves within seconds." position="bottom" />
+                <InfoTooltip
+                  text="Enough votes are revealed. Settlement is available once past-epoch reveal checks are satisfied."
+                  position="bottom"
+                />
               </span>
             </>
           ) : (
@@ -167,7 +170,7 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
               <span className="flex items-center gap-1">
                 Resolves in
                 <InfoTooltip
-                  text="Estimated time: votes revealed when the blind phase ends, then resolved immediately."
+                  text="Estimated time: votes reveal when the blind phase ends. Settlement follows once enough votes are revealed and past-epoch reveal checks clear."
                   position="bottom"
                 />
               </span>
