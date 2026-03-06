@@ -1,4 +1,3 @@
-import * as chains from "viem/chains";
 import { publicEnv } from "~~/utils/env/public";
 import type { SupportedTargetNetwork } from "~~/utils/env/public";
 
@@ -26,7 +25,7 @@ const scaffoldConfig = {
   // The key is the chain ID, and the value is the HTTP RPC URL
   rpcOverrides: {
     // Example:
-    // [chains.mainnet.id]: "https://mainnet.rpc.buidlguidl.com",
+    // [1]: "https://mainnet.rpc.buidlguidl.com",
   },
   // Your WalletConnect project ID — get one at https://cloud.walletconnect.com
   walletConnectProjectId: publicEnv.walletConnectProjectId,
