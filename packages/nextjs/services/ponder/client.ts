@@ -1,4 +1,6 @@
-const PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL || "http://localhost:42069";
+import { publicEnv } from "~~/utils/env/public";
+
+const PONDER_URL = publicEnv.ponderUrl;
 
 let cachedAvailability: boolean | null = null;
 let cacheExpiry = 0;
