@@ -1,4 +1,5 @@
 import { ResponseTooLargeError, readResponseJson, readResponseText } from "~~/utils/fetchBodyLimit";
+import { getTmdbApiKey } from "~~/lib/env/server";
 
 /**
  * Shared embed resolution logic.
@@ -97,7 +98,7 @@ async function resolveWikipedia(title: string): Promise<EmbedResult> {
 }
 
 async function resolveTmdb(movieId: string): Promise<EmbedResult> {
-  const apiKey = process.env.TMDB_API_KEY;
+  const apiKey = getTmdbApiKey();
   if (!apiKey) {
     console.warn("[thumbnail] TMDB_API_KEY not configured — skipping TMDB lookup");
     return { thumbnailUrl: null };

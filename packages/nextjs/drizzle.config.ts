@@ -1,10 +1,9 @@
 import type { Config } from "drizzle-kit";
+import { getDatabaseConfig } from "./lib/env/server";
 
 export default {
   schema: "./lib/db/schema.ts",
   out: "./drizzle",
   dialect: "sqlite",
-  dbCredentials: {
-    url: process.env.DATABASE_URL || "file:local.db",
-  },
+  dbCredentials: getDatabaseConfig(),
 } satisfies Config;

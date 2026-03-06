@@ -235,7 +235,7 @@ Create production env vars (on Vercel dashboard or `.env.production`):
 # Public (exposed to browser)
 NEXT_PUBLIC_ALCHEMY_API_KEY=<alchemy-key>
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=<walletconnect-project-id>
-NEXT_PUBLIC_TMDB_API_KEY=<tmdb-api-key>
+TMDB_API_KEY=<tmdb-api-key>
 NEXT_PUBLIC_PONDER_URL=https://<your-ponder-domain>
 NEXT_PUBLIC_FRONTEND_CODE=<your-frontend-address>   # Set after Step 5
 NEXT_PUBLIC_DEV_FAUCET=false
