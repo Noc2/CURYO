@@ -39,7 +39,7 @@ export function StreakCounter() {
   return (
     <div className="tooltip tooltip-bottom" data-tip={tooltipText}>
       <div
-        className={`flex items-center gap-1 text-base font-semibold tabular-nums ${color} ${
+        className={`flex items-center gap-1.5 rounded-full bg-base-200 px-3 py-1.5 text-base font-medium tabular-nums ${color} ${
           nearMilestone ? "animate-pulse" : ""
         }`}
       >
