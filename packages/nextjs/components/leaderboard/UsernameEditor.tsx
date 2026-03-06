@@ -85,6 +85,24 @@ export function UsernameEditor({ onProfileChange, onProfileUpdate }: UsernameEdi
     setError(null);
   };
 
+  const requestProfileChallenge = async (payload: { username?: string; profileImageUrl?: string | null }) => {
+    const res = await fetch("/api/username/challenge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address,
+        ...payload,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to create signature challenge");
+    }
+
+    return data as { challengeId: string; message: string; expiresAt: string };
+  };
+
   const handleSaveUsername = async () => {
     if (!address || !usernameInput.trim()) return;
 
@@ -99,8 +117,8 @@ export function UsernameEditor({ onProfileChange, onProfileUpdate }: UsernameEdi
     setError(null);
 
     try {
-      const message = `Set Curyo username to: ${usernameInput}`;
-      const signature = await signMessageAsync({ message });
+      const challenge = await requestProfileChallenge({ username: usernameInput });
+      const signature = await signMessageAsync({ message: challenge.message });
 
       const res = await fetch("/api/username", {
         method: "POST",
@@ -108,6 +126,7 @@ export function UsernameEditor({ onProfileChange, onProfileUpdate }: UsernameEdi
         body: JSON.stringify({
           address,
           username: usernameInput,
+          challengeId: challenge.challengeId,
           signature,
         }),
       });
@@ -148,8 +167,8 @@ export function UsernameEditor({ onProfileChange, onProfileUpdate }: UsernameEdi
     setError(null);
 
     try {
-      const message = imageInput ? `Set profile image to: ${imageInput}` : "Remove profile image";
-      const signature = await signMessageAsync({ message });
+      const challenge = await requestProfileChallenge({ profileImageUrl: imageInput || null });
+      const signature = await signMessageAsync({ message: challenge.message });
 
       const res = await fetch("/api/username", {
         method: "POST",
@@ -157,6 +176,7 @@ export function UsernameEditor({ onProfileChange, onProfileUpdate }: UsernameEdi
         body: JSON.stringify({
           address,
           profileImageUrl: imageInput || null,
+          challengeId: challenge.challengeId,
           signature,
         }),
       });

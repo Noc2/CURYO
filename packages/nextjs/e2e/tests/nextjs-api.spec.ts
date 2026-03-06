@@ -130,6 +130,53 @@ test.describe("Next.js API routes", () => {
     expect(res.status).toBe(400);
   });
 
+  test("POST /api/username requires a one-time challenge and rejects replay", async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
+    const username = `e2e_user_${Date.now()}`;
+
+    const challengeRes = await fetch(`${BASE_URL}/api/username/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: account.address, username }),
+    });
+    expect(challengeRes.status).toBe(200);
+
+    const challenge = await challengeRes.json();
+    expect(challenge).toHaveProperty("challengeId");
+    expect(challenge).toHaveProperty("message");
+
+    const signature = await account.signMessage({ message: challenge.message });
+
+    const firstRes = await fetch(`${BASE_URL}/api/username`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address: account.address,
+        username,
+        challengeId: challenge.challengeId,
+        signature,
+      }),
+    });
+    expect(firstRes.status).toBe(200);
+
+    const firstData = await firstRes.json();
+    expect(firstData.success).toBe(true);
+    expect(firstData.username).toBe(username);
+
+    const replayRes = await fetch(`${BASE_URL}/api/username`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address: account.address,
+        username,
+        challengeId: challenge.challengeId,
+        signature,
+      }),
+    });
+    expect(replayRes.status).toBe(409);
+  });
+
   test("GET /api/leaderboard?type=voters includes known voter accounts", async () => {
     const res = await fetch(`${BASE_URL}/api/leaderboard?type=voters&limit=100`);
     expect(res.ok).toBe(true);

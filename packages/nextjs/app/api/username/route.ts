@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { verifyMessage } from "viem";
+import {
+  PROFILE_UPDATE_CHALLENGE_ACTION,
+  buildProfileUpdateChallengeMessage,
+  ensureProfileUpdateChallengeTable,
+  hashProfileUpdatePayload,
+  normalizeProfileUpdateInput,
+  signedActionChallenges,
+} from "~~/lib/auth/profileUpdateChallenge";
 import { db } from "~~/lib/db";
 import { userProfiles } from "~~/lib/db/schema";
 import { checkRateLimit } from "~~/utils/rateLimit";
@@ -11,7 +19,7 @@ const WRITE_RATE_LIMIT = { limit: 10, windowMs: 60_000 };
 // GET: Fetch username(s) for address(es)
 // Query params: ?address=0x... or ?addresses=0x...,0x...
 export async function GET(request: NextRequest) {
-  const limited = checkRateLimit(request, READ_RATE_LIMIT);
+  const limited = await checkRateLimit(request, READ_RATE_LIMIT);
   if (limited) return limited;
 
   try {
@@ -61,128 +69,126 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper to validate image URL format
-function isValidImageUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-// POST: Set/update profile (username and/or profile image) with wallet signature
+// POST: Set/update profile (username and/or profile image) with one-time wallet signature challenge
 export async function POST(request: NextRequest) {
-  const limited = checkRateLimit(request, WRITE_RATE_LIMIT);
+  const limited = await checkRateLimit(request, WRITE_RATE_LIMIT);
   if (limited) return limited;
 
   try {
-    const { address, username, profileImageUrl, signature } = await request.json();
+    const { address, username, profileImageUrl, signature, challengeId } = await request.json();
 
-    // Validate required fields - need address, signature, and at least one field to update
-    if (!address || !signature) {
+    if (!signature || !challengeId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // At least one of username or profileImageUrl must be provided
-    const hasUsername = username !== undefined && username !== null;
-    const hasProfileImage = profileImageUrl !== undefined;
-
-    if (!hasUsername && !hasProfileImage) {
-      return NextResponse.json({ error: "Must provide username or profileImageUrl" }, { status: 400 });
+    const normalized = normalizeProfileUpdateInput({ address, username, profileImageUrl });
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    // Validate username format if provided
-    if (hasUsername) {
-      const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-      if (!usernameRegex.test(username)) {
-        return NextResponse.json(
-          { error: "Username must be 3-20 characters (letters, numbers, underscores only)" },
-          { status: 400 },
-        );
-      }
-    }
-
-    // Validate profile image URL if provided (empty string means remove)
-    if (hasProfileImage && profileImageUrl !== "" && profileImageUrl !== null) {
-      if (!isValidImageUrl(profileImageUrl)) {
-        return NextResponse.json({ error: "Invalid image URL format (must be http or https)" }, { status: 400 });
-      }
-    }
-
-    // Build signature message based on what's being updated
-    const messageParts: string[] = [];
-    if (hasUsername) {
-      messageParts.push(`Set Curyo username to: ${username}`);
-    }
-    if (hasProfileImage) {
-      if (profileImageUrl && profileImageUrl !== "") {
-        messageParts.push(`Set profile image to: ${profileImageUrl}`);
-      } else {
-        messageParts.push("Remove profile image");
-      }
-    }
-    const message = messageParts.join("\n");
-
-    // Verify the signature
-    const isValid = await verifyMessage({
-      address: address as `0x${string}`,
-      message,
-      signature: signature as `0x${string}`,
-    });
-
-    if (!isValid) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
-
-    const normalizedAddress = address.toLowerCase();
+    const payload = normalized.payload;
+    const payloadHash = hashProfileUpdatePayload(payload);
     const now = new Date();
+
+    await ensureProfileUpdateChallengeTable();
 
     try {
       await db.transaction(async tx => {
-        // Check if username is already taken by another address (if updating username)
-        if (hasUsername) {
+        const [challenge] = await tx
+          .select()
+          .from(signedActionChallenges)
+          .where(eq(signedActionChallenges.id, String(challengeId)))
+          .limit(1);
+
+        if (!challenge) {
+          throw new Error("INVALID_CHALLENGE");
+        }
+
+        if (
+          challenge.action !== PROFILE_UPDATE_CHALLENGE_ACTION ||
+          challenge.walletAddress !== payload.normalizedAddress ||
+          challenge.payloadHash !== payloadHash
+        ) {
+          throw new Error("INVALID_CHALLENGE");
+        }
+
+        if (challenge.usedAt) {
+          throw new Error("CHALLENGE_USED");
+        }
+
+        if (challenge.expiresAt <= now) {
+          throw new Error("CHALLENGE_EXPIRED");
+        }
+
+        const message = buildProfileUpdateChallengeMessage({
+          address: payload.normalizedAddress,
+          payloadHash,
+          nonce: challenge.nonce,
+          expiresAt: challenge.expiresAt,
+        });
+
+        const isValid = await verifyMessage({
+          address: payload.normalizedAddress,
+          message,
+          signature: signature as `0x${string}`,
+        });
+
+        if (!isValid) {
+          throw new Error("INVALID_SIGNATURE");
+        }
+
+        if (payload.hasUsername) {
           const existingUsername = await tx
             .select()
             .from(userProfiles)
-            .where(eq(userProfiles.username, username))
+            .where(eq(userProfiles.username, payload.username!))
             .limit(1);
 
-          if (existingUsername.length > 0 && existingUsername[0].walletAddress !== normalizedAddress) {
+          if (existingUsername.length > 0 && existingUsername[0].walletAddress !== payload.normalizedAddress) {
             throw new Error("USERNAME_TAKEN");
           }
         }
 
-        // Check if user already has a profile
+        const claimedChallenge = await tx
+          .update(signedActionChallenges)
+          .set({ usedAt: now })
+          .where(and(eq(signedActionChallenges.id, challenge.id), isNull(signedActionChallenges.usedAt)))
+          .returning({ id: signedActionChallenges.id });
+
+        if (claimedChallenge.length === 0) {
+          throw new Error("CHALLENGE_USED");
+        }
+
         const existingProfile = await tx
           .select()
           .from(userProfiles)
-          .where(eq(userProfiles.walletAddress, normalizedAddress))
+          .where(eq(userProfiles.walletAddress, payload.normalizedAddress))
           .limit(1);
 
-        // Build update data
         const updateData: { username?: string; profileImageUrl?: string | null; updatedAt: Date } = {
           updatedAt: now,
         };
-        if (hasUsername) {
-          updateData.username = username;
+        if (payload.hasUsername) {
+          updateData.username = payload.username!;
         }
-        if (hasProfileImage) {
-          updateData.profileImageUrl = profileImageUrl === "" ? null : profileImageUrl;
+        if (payload.hasProfileImage) {
+          updateData.profileImageUrl = payload.profileImageUrl ?? null;
         }
 
         if (existingProfile.length > 0) {
-          // Update existing profile
-          await tx.update(userProfiles).set(updateData).where(eq(userProfiles.walletAddress, normalizedAddress));
+          await tx
+            .update(userProfiles)
+            .set(updateData)
+            .where(eq(userProfiles.walletAddress, payload.normalizedAddress));
         } else {
-          // Create new profile - username is required for new profiles
-          if (!hasUsername) {
+          if (!payload.hasUsername) {
             throw new Error("USERNAME_REQUIRED");
           }
+
           await tx.insert(userProfiles).values({
-            walletAddress: normalizedAddress,
-            username,
-            profileImageUrl: profileImageUrl === "" ? null : profileImageUrl || null,
+            walletAddress: payload.normalizedAddress,
+            username: payload.username!,
+            profileImageUrl: payload.hasProfileImage ? (payload.profileImageUrl ?? null) : null,
             createdAt: now,
             updatedAt: now,
           });
@@ -195,18 +201,25 @@ export async function POST(request: NextRequest) {
       if (error.message === "USERNAME_REQUIRED") {
         return NextResponse.json({ error: "Username is required for new profiles" }, { status: 400 });
       }
-      // Catch unique constraint violations from race conditions
+      if (error.message === "CHALLENGE_USED") {
+        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
+      }
+      if (error.message === "CHALLENGE_EXPIRED") {
+        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
+      }
+      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
+        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+      }
       if (error.code === "SQLITE_CONSTRAINT_UNIQUE" || error.message?.includes("UNIQUE constraint failed")) {
         return NextResponse.json({ error: "Username already taken" }, { status: 409 });
       }
       throw error;
     }
 
-    // Fetch updated profile to return
     const updatedProfile = await db
       .select()
       .from(userProfiles)
-      .where(eq(userProfiles.walletAddress, normalizedAddress))
+      .where(eq(userProfiles.walletAddress, payload.normalizedAddress))
       .limit(1);
 
     return NextResponse.json({
