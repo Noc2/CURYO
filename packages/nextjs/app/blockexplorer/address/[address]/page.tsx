@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { Address } from "viem";
+import { LocalBlockExplorerGuard } from "~~/app/blockexplorer/_components/LocalBlockExplorerGuard";
 import { foundry } from "viem/chains";
 import { AddressComponent } from "~~/app/blockexplorer/_components/AddressComponent";
 import deployedContracts from "~~/contracts/deployedContracts";
@@ -62,7 +63,7 @@ const getContractData = async (address: Address) => {
   );
 
   if (!fs.existsSync(buildInfoDirectory)) {
-    throw new Error(`Directory ${buildInfoDirectory} not found.`);
+    return null;
   }
 
   const deployedContractsOnChain = contracts[chainId];
@@ -95,7 +96,11 @@ const AddressPage = async (props: PageProps) => {
   if (isZeroAddress(address)) return null;
 
   const contractData: { bytecode: string; assembly: string } | null = await getContractData(address);
-  return <AddressComponent address={address} contractData={contractData} />;
+  return (
+    <LocalBlockExplorerGuard>
+      <AddressComponent address={address} contractData={contractData} />
+    </LocalBlockExplorerGuard>
+  );
 };
 
 export default AddressPage;

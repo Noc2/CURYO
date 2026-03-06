@@ -1,6 +1,7 @@
 import TransactionComp from "../_components/TransactionComp";
 import type { NextPage } from "next";
 import { Hash } from "viem";
+import { LocalBlockExplorerGuard } from "~~/app/blockexplorer/_components/LocalBlockExplorerGuard";
 import { isZeroAddress } from "~~/utils/scaffold-eth/common";
 
 type PageProps = {
@@ -17,7 +18,11 @@ const TransactionPage: NextPage<PageProps> = async (props: PageProps) => {
 
   if (isZeroAddress(txHash)) return null;
 
-  return <TransactionComp txHash={txHash} />;
+  return (
+    <LocalBlockExplorerGuard>
+      <TransactionComp txHash={txHash} />
+    </LocalBlockExplorerGuard>
+  );
 };
 
 export default TransactionPage;
