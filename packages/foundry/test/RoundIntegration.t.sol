@@ -1358,6 +1358,7 @@ contract RoundIntegrationTest is VotingTestBase {
             )
         );
         votingEngine.setFrontendRegistry(address(frontendReg));
+        frontendReg.setVotingEngine(address(votingEngine));
         frontendReg.addFeeCreditor(address(votingEngine));
 
         frontendOp = address(200);
@@ -1448,6 +1449,17 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
     }
 
+    function test_ClaimFrontendFee_RevertsWhileFrontendIsSlashed() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        vm.prank(owner);
+        frontendReg.slashFrontend(frontendOp, 100e6, "test");
+
+        vm.expectRevert(FrontendRegistry.FrontendIsSlashed.selector);
+        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+    }
+
     function test_ClaimFrontendFee_SucceedsAfterFrontendReregistersWithoutReapproval() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
@@ -1463,6 +1475,22 @@ contract RoundIntegrationTest is VotingTestBase {
         assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
         assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Re-registered frontend should still receive fees");
         assertFalse(frontendReg.isApproved(frontendOp), "Re-registration should not silently restore approval");
+    }
+
+    function test_ClaimFrontendFee_SucceedsAfterFrontendIsUnslashed() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        vm.startPrank(owner);
+        frontendReg.slashFrontend(frontendOp, 100e6, "test");
+        frontendReg.unslashFrontend(frontendOp);
+        vm.stopPrank();
+
+        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+
+        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
+        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Unslashed frontend should receive preserved fees");
+        assertFalse(frontendReg.isApproved(frontendOp), "Unslashing should not silently restore approval");
     }
 
     function test_FrontendTrackingGetters_ReturnCommittedStakeAndKeys() public {

@@ -270,17 +270,17 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 100e6);
     }
 
-    function test_CreditFees_ToSlashedFrontend_Succeeds() public {
+    function test_CreditFees_ToSlashedFrontend_Reverts() public {
         _registerFrontend(frontend1);
 
         vm.prank(admin);
         registry.slashFrontend(frontend1, 100e6, "test");
 
-        // creditFees does NOT check slashed status
         vm.prank(feeCreditor);
+        vm.expectRevert(FrontendRegistry.FrontendIsSlashed.selector);
         registry.creditFees(frontend1, 100e6);
 
-        assertEq(registry.getAccumulatedFees(frontend1), 100e6);
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
     // =========================================================================
@@ -552,6 +552,22 @@ contract FrontendRegistryCoverageTest is Test {
 
         assertEq(crepToken.balanceOf(frontend1) - balanceBefore, 500e6);
         assertEq(registry.getAccumulatedFees(frontend1), 0);
+    }
+
+    function test_ClaimFees_WhileSlashed_RevertsAndPreservesFees() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 500e6);
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, 100e6, "test");
+
+        vm.prank(frontend1);
+        vm.expectRevert(FrontendRegistry.FrontendIsSlashed.selector);
+        registry.claimFees();
+
+        assertEq(registry.getAccumulatedFees(frontend1), 500e6);
     }
 
     // =========================================================================
