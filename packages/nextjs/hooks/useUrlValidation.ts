@@ -49,8 +49,8 @@ export function useUrlValidation(urls: string[]) {
     queryFn: async (): Promise<Record<string, ValidationResult | null>> => {
       if (uniqueUrls.length === 0) return {};
 
-      // Split into batches of 50 (URL param length limit)
-      const BATCH_SIZE = 50;
+      // Split into batches of 10 (API limit: MAX_URLS_PER_REQUEST)
+      const BATCH_SIZE = 10;
       const allResults: Record<string, ValidationResult | null> = {};
 
       for (let i = 0; i < uniqueUrls.length; i += BATCH_SIZE) {
@@ -79,7 +79,7 @@ export function useUrlValidation(urls: string[]) {
   const triggerValidation = useCallback(async () => {
     if (uncheckedUrls.length === 0) return;
 
-    const BATCH_SIZE = 50;
+    const BATCH_SIZE = 10;
     for (let i = 0; i < uncheckedUrls.length; i += BATCH_SIZE) {
       const batch = uncheckedUrls.slice(i, i + BATCH_SIZE);
       try {
