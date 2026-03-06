@@ -79,11 +79,31 @@ async function isSafeUrl(url: string): Promise<boolean> {
 }
 const RATE_LIMIT_POST = { limit: 20, windowMs: 60_000 };
 const MAX_URLS_PER_REQUEST = 50;
+const MAX_URL_LENGTH = 2048;
 const STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 24h
 
 interface ValidationResult {
   isValid: boolean;
   checkedAt: string;
+}
+
+function normalizeValidationUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const normalized = value.trim();
+  if (normalized.length === 0 || normalized.length > MAX_URL_LENGTH) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    return normalized;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -99,7 +119,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing urls parameter" }, { status: 400 });
   }
 
-  const urls = urlsParam.split(",").map(decodeURIComponent).slice(0, MAX_URLS_PER_REQUEST);
+  const rawUrls = urlsParam.split(",");
+  if (rawUrls.length > MAX_URLS_PER_REQUEST) {
+    return NextResponse.json({ error: `Too many URLs (max ${MAX_URLS_PER_REQUEST})` }, { status: 400 });
+  }
+
+  const urls = rawUrls.map(normalizeValidationUrl);
+  if (urls.some(url => url === null)) {
+    return NextResponse.json({ error: "Invalid URL list" }, { status: 400 });
+  }
+
   if (urls.length === 0) {
     return NextResponse.json({ results: {} });
   }
@@ -133,16 +162,28 @@ export async function POST(request: NextRequest) {
   const limited = await checkRateLimit(request, RATE_LIMIT_POST);
   if (limited) return limited;
 
-  let body: { urls?: string[] };
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const urls = body.urls?.slice(0, MAX_URLS_PER_REQUEST);
-  if (!urls || urls.length === 0) {
+  if (!body || typeof body !== "object" || !Array.isArray((body as { urls?: unknown }).urls)) {
+    return NextResponse.json({ error: "Missing or invalid urls array" }, { status: 400 });
+  }
+
+  const rawUrls = (body as { urls: unknown[] }).urls;
+  if (rawUrls.length === 0) {
     return NextResponse.json({ error: "Missing or empty urls array" }, { status: 400 });
+  }
+  if (rawUrls.length > MAX_URLS_PER_REQUEST) {
+    return NextResponse.json({ error: `Too many URLs (max ${MAX_URLS_PER_REQUEST})` }, { status: 400 });
+  }
+
+  const urls = rawUrls.map(normalizeValidationUrl);
+  if (urls.some(url => url === null)) {
+    return NextResponse.json({ error: "Invalid URL list" }, { status: 400 });
   }
 
   // Fetch existing results

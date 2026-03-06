@@ -76,6 +76,20 @@ test.describe("Next.js API routes", () => {
     expect(res.status).toBe(400);
   });
 
+  test("GET /api/url-validation rejects malformed URL lists", async () => {
+    const res = await fetch(`${BASE_URL}/api/url-validation?urls=notaurl,https://example.com`);
+    expect(res.status).toBe(400);
+  });
+
+  test("POST /api/url-validation rejects non-array bodies", async () => {
+    const res = await fetch(`${BASE_URL}/api/url-validation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: "https://example.com" }),
+    });
+    expect(res.status).toBe(400);
+  });
+
   test("GET /api/comments returns 400 for missing contentId", async () => {
     const res = await fetch(`${BASE_URL}/api/comments`);
     expect(res.status).toBe(400);
