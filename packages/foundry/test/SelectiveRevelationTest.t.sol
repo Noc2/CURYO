@@ -348,6 +348,70 @@ contract SelectiveRevelationTest is Test {
         engine.setRevealGracePeriod(2 hours);
     }
 
+    function test_RevealGracePeriodSnapshot_OldRoundKeepsOriginalValue() public {
+        uint256 contentId = _submitContent();
+
+        bytes32[4] memory commitKeys;
+        bytes32[4] memory salts;
+        bool[4] memory directions = [true, true, false, false];
+
+        for (uint256 i = 0; i < 4; i++) {
+            (commitKeys[i], salts[i]) = _commit(voters[i], contentId, directions[i], STAKE);
+        }
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), GRACE_PERIOD);
+
+        vm.prank(owner);
+        engine.setRevealGracePeriod(2 hours);
+
+        vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
+
+        _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
+        _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
+        _reveal(contentId, roundId, commitKeys[2], false, salts[2]);
+
+        engine.settleRound(contentId, roundId);
+
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+    }
+
+    function test_RevealGracePeriodSnapshot_NewRoundUsesUpdatedValue() public {
+        vm.prank(owner);
+        engine.setRevealGracePeriod(2 hours);
+
+        uint256 contentId = _submitContent();
+
+        bytes32[4] memory commitKeys;
+        bytes32[4] memory salts;
+        bool[4] memory directions = [true, true, false, false];
+
+        for (uint256 i = 0; i < 4; i++) {
+            (commitKeys[i], salts[i]) = _commit(voters[i], contentId, directions[i], STAKE);
+        }
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), 2 hours);
+
+        vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
+
+        _reveal(contentId, roundId, commitKeys[0], true, salts[0]);
+        _reveal(contentId, roundId, commitKeys[1], true, salts[1]);
+        _reveal(contentId, roundId, commitKeys[2], false, salts[2]);
+
+        vm.expectRevert(RoundVotingEngine.UnrevealedPastEpochVotes.selector);
+        engine.settleRound(contentId, roundId);
+
+        vm.warp(r.startTime + EPOCH + 2 hours + 1);
+        engine.settleRound(contentId, roundId);
+
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
+    }
+
     // =========================================================================
     // MULTI-EPOCH SETTLEMENT: BOTH EPOCHS PAST
     // =========================================================================

@@ -572,6 +572,7 @@ contract RoundVotingEngine is
 
         // Snapshot config at round creation to prevent mid-round governance changes
         roundConfigSnapshot[contentId][roundId] = config;
+        roundRevealGracePeriodSnapshot[contentId][roundId] = revealGracePeriod;
 
         return roundId;
     }
@@ -634,7 +635,7 @@ contract RoundVotingEngine is
         // Loop is bounded: votes can only be committed during maxDuration, so no
         // epochUnrevealedCount entries exist beyond startTime + maxDuration + epochDuration.
         {
-            uint256 _gracePeriod = revealGracePeriod;
+            uint256 _gracePeriod = _getRoundRevealGracePeriod(contentId, roundId);
             uint256 epochEnd = round.startTime + roundCfg.epochDuration;
             uint256 maxEpochEnd = round.startTime + roundCfg.maxDuration + roundCfg.epochDuration;
             while (epochEnd <= block.timestamp && epochEnd <= maxEpochEnd) {
@@ -1038,6 +1039,12 @@ contract RoundVotingEngine is
         return cfg;
     }
 
+    function _getRoundRevealGracePeriod(uint256 contentId, uint256 roundId) internal view returns (uint256) {
+        uint256 gracePeriod = roundRevealGracePeriodSnapshot[contentId][roundId];
+        if (gracePeriod == 0) return revealGracePeriod;
+        return gracePeriod;
+    }
+
     function _buildCommitKey(address voter, bytes32 commitHash) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(voter, commitHash));
     }
@@ -1273,6 +1280,9 @@ contract RoundVotingEngine is
     // After this period, unrevealed votes no longer block settlement (forfeited post-settlement).
     uint256 public revealGracePeriod;
 
+    // Per-round reveal grace period snapshot for governance consistency across open rounds.
+    mapping(uint256 => mapping(uint256 => uint256)) public roundRevealGracePeriodSnapshot;
+
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[19] private __gap;
+    uint256[18] private __gap;
 }
