@@ -318,8 +318,6 @@ function main() {
   // --- Auto-update Ponder env with latest deployment for the selected target network ---
   updatePonderEnv(allGeneratedContracts, deployers);
 
-  // --- Auto-update bot config.ts contract addresses ---
-  updateBotConfig(allGeneratedContracts);
 }
 
 /**
@@ -589,44 +587,6 @@ function updatePonderEnv(allGeneratedContracts, deployers = {}) {
       ", "
     )}`
   );
-}
-
-/**
- * Maps deployed contract names to the bot config.ts key names.
- */
-const CONTRACT_TO_BOT_KEY = {
-  CuryoReputation: "crepToken",
-  ContentRegistry: "contentRegistry",
-  RoundVotingEngine: "votingEngine",
-  VoterIdNFT: "voterIdNFT",
-  CategoryRegistry: "categoryRegistry",
-};
-
-function updateBotConfig(allGeneratedContracts) {
-  const botConfigPath = join(__dirname, "..", "..", "bot", "src", "config.ts");
-  if (!existsSync(botConfigPath)) return;
-
-  let content = readFileSync(botConfigPath, "utf8");
-  const updatedKeys = [];
-
-  for (const [, contracts] of Object.entries(allGeneratedContracts)) {
-    for (const [contractName, contractData] of Object.entries(contracts)) {
-      const botKey = CONTRACT_TO_BOT_KEY[contractName];
-      if (!botKey) continue;
-
-      const regex = new RegExp(`(${botKey}:\\s*")0x[a-fA-F0-9]+(")`);
-      const updated = content.replace(regex, `$1${contractData.address}$2`);
-      if (updated !== content) {
-        content = updated;
-        updatedKeys.push(botKey);
-      }
-    }
-  }
-
-  if (updatedKeys.length > 0) {
-    writeFileSync(botConfigPath, content);
-    console.log(`📝 Updated bot contract addresses: ${updatedKeys.join(", ")}`);
-  }
 }
 
 /**

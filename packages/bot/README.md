@@ -23,7 +23,7 @@ Requires a running Ponder indexer (`yarn ponder:dev`) and configured environment
 
 ## Configuration
 
-Create a `.env` file in the package directory:
+Copy `.env.example` to `.env` in the package directory and fill in the deployed network details:
 
 **Wallet (one of):**
 
@@ -40,7 +40,12 @@ Create a `.env` file in the package directory:
 |---|---|---|
 | `RPC_URL` | — | Blockchain RPC endpoint |
 | `CHAIN_ID` | — | Network chain ID |
-| `PONDER_URL` | `localhost:42069` | Ponder indexer URL |
+| `CREP_TOKEN_ADDRESS` | — | Deployed cREP token address |
+| `CONTENT_REGISTRY_ADDRESS` | — | Deployed ContentRegistry address |
+| `VOTING_ENGINE_ADDRESS` | — | Deployed RoundVotingEngine address |
+| `VOTER_ID_NFT_ADDRESS` | — | Deployed VoterIdNFT address |
+| `CATEGORY_REGISTRY_ADDRESS` | — | Deployed CategoryRegistry address |
+| `PONDER_URL` | — | Ponder indexer URL |
 
 **External API Keys:**
 
