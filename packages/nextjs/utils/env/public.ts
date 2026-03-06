@@ -13,7 +13,6 @@ const AVAILABLE_TARGET_NETWORKS = {
 export type SupportedTargetNetwork = (typeof AVAILABLE_TARGET_NETWORKS)[keyof typeof AVAILABLE_TARGET_NETWORKS];
 
 const DEFAULT_DEV_TARGET_NETWORKS = `${chains.foundry.id},${chains.celoSepolia.id}`;
-const DEFAULT_PRODUCTION_TARGET_NETWORKS = `${chains.celoSepolia.id}`;
 
 export const DEFAULT_ALCHEMY_API_KEY = "cR4WnXePioePZ5fFrnSiR";
 const DEV_WALLET_CONNECT_PROJECT_ID = "3a8170812b534d0ff9d794f19a901d64";
@@ -64,10 +63,13 @@ function parseTargetNetworkIds(value: string): number[] {
   return [...new Set(ids)];
 }
 
-const targetNetworkIds = parseTargetNetworkIds(
-  readEnv("NEXT_PUBLIC_TARGET_NETWORKS") ??
-    (isProduction ? DEFAULT_PRODUCTION_TARGET_NETWORKS : DEFAULT_DEV_TARGET_NETWORKS),
-);
+const targetNetworkIdsEnv = readEnv("NEXT_PUBLIC_TARGET_NETWORKS");
+
+if (isProduction && !targetNetworkIdsEnv) {
+  throw new Error("NEXT_PUBLIC_TARGET_NETWORKS is required in production.");
+}
+
+const targetNetworkIds = parseTargetNetworkIds(targetNetworkIdsEnv ?? DEFAULT_DEV_TARGET_NETWORKS);
 
 if (isProduction && targetNetworkIds.includes(chains.foundry.id)) {
   throw new Error("NEXT_PUBLIC_TARGET_NETWORKS must not include the local Foundry chain in production.");
