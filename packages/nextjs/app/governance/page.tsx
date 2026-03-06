@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
@@ -11,23 +12,29 @@ import { ProposalList } from "~~/components/governance/ProposalList";
 import { ReferralSection } from "~~/components/governance/ReferralSection";
 import { TokenManagement } from "~~/components/governance/TokenManagement";
 import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
-import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
 import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
 import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
 import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
-import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
 import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { ProfileForm } from "~~/components/profile/ProfileForm";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
-type GovernanceTab = "leaderboard" | "accuracy" | "profile" | "vote" | "faucet";
+type GovernanceTab = "leaderboard" | "profile" | "vote" | "faucet";
+
+const governanceTabs: GovernanceTab[] = ["leaderboard", "profile", "vote", "faucet"];
+
+function normalizeGovernanceHash(hash: string): GovernanceTab | null {
+  if (hash === "accuracy") return "profile";
+  return governanceTabs.includes(hash as GovernanceTab) ? (hash as GovernanceTab) : null;
+}
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("leaderboard");
   const [referrer, setReferrer] = useState<string | null>(null);
+  const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/governance#profile";
 
   // Sync tab with URL hash (e.g. /governance#profile)
   const selectTab = useCallback((tab: GovernanceTab) => {
@@ -38,9 +45,16 @@ function GovernancePageInner() {
 
   useEffect(() => {
     const applyHash = () => {
-      const hash = window.location.hash.replace(/^#/, "") as GovernanceTab;
-      if (hash && ["leaderboard", "accuracy", "profile", "vote", "faucet"].includes(hash)) {
-        setActiveTab(hash);
+      const rawHash = window.location.hash.replace(/^#/, "");
+      const nextTab = normalizeGovernanceHash(rawHash);
+
+      if (nextTab) {
+        setActiveTab(nextTab);
+
+        if (rawHash === "accuracy") {
+          const nextHash = nextTab === "leaderboard" ? "" : `#${nextTab}`;
+          history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
+        }
       }
     };
     applyHash();
@@ -116,14 +130,6 @@ function GovernancePageInner() {
                 Leaderboard
               </button>
               <button
-                onClick={() => selectTab("accuracy")}
-                className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                  activeTab === "accuracy" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
-                }`}
-              >
-                Accuracy
-              </button>
-              <button
                 onClick={() => selectTab("profile")}
                 className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
                   activeTab === "profile" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
@@ -155,17 +161,25 @@ function GovernancePageInner() {
           </>
         )}
 
-        {/* Accuracy Tab */}
-        {activeTab === "accuracy" && (
-          <>
-            <VoterAccuracyStats />
-            <AccuracyLeaderboard />
-          </>
-        )}
-
         {/* Profile Tab */}
         {activeTab === "profile" && (
           <>
+            <div className="surface-card rounded-2xl p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-semibold">Your public profile</h2>
+                  <p className="text-base text-base-content/60">
+                    Your accuracy, streaks, category breakdown, and recent votes now live on your profile page.
+                  </p>
+                </div>
+                <Link
+                  href={publicProfileHref}
+                  className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
+                >
+                  Open public profile
+                </Link>
+              </div>
+            </div>
             <ProfileForm />
             <DelegationSection />
             <ReferralSection />

@@ -117,6 +117,8 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const following = followedWallets.has(normalizedAddress);
   const pending = isFollowPending(normalizedAddress);
   const fallbackProfile = profiles[normalizedAddress];
+  const backHref = ownProfile ? "/governance#profile" : "/governance#leaderboard";
+  const backLabel = ownProfile ? "Back to profile settings" : "Back to leaderboard";
 
   const displayName = summary?.name || fallbackProfile?.username || truncateAddress(normalizedAddress);
   const profileImageUrl = summary?.imageUrl || fallbackProfile?.profileImageUrl || blo(normalizedAddress);
@@ -157,11 +159,11 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     <div className="flex flex-col items-center grow px-4 pt-8 pb-12">
       <div className="w-full max-w-5xl space-y-6">
         <Link
-          href="/governance#leaderboard"
+          href={backHref}
           className="inline-flex items-center gap-2 rounded-full bg-base-200 px-3 py-1.5 text-base font-medium text-white transition-colors hover:bg-base-300"
         >
           <ArrowLeftIcon className="h-4 w-4" />
-          Back to leaderboard
+          {backLabel}
         </Link>
 
         <div className="surface-card rounded-3xl p-6">
@@ -196,7 +198,14 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
               </div>
             </div>
 
-            {!ownProfile ? (
+            {ownProfile ? (
+              <Link
+                href="/governance#profile"
+                className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
+              >
+                Manage profile
+              </Link>
+            ) : (
               <FollowProfileButton
                 following={following}
                 pending={pending}
@@ -205,7 +214,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
                 }}
                 variant="pill"
               />
-            ) : null}
+            )}
           </div>
         </div>
 
