@@ -7,7 +7,7 @@ Stateless service that reveals committed votes via `revealVoteByCommitKey()` aft
 ```bash
 # Copy and configure environment:
 cp .env.example .env.local
-# Edit .env.local with your contract addresses and wallet
+# Edit .env.local with your RPC URL, contract addresses, and wallet
 
 # From the monorepo root:
 yarn keeper:dev    # Development mode (with file watching)
@@ -31,8 +31,10 @@ Copy `.env.example` to `.env.local` and configure:
 | `CHAIN_ID` | — | Network chain ID (required) |
 | `VOTING_ENGINE_ADDRESS` | — | Deployed VotingEngine contract address |
 | `CONTENT_REGISTRY_ADDRESS` | — | Deployed ContentRegistry contract address |
+| `CHAIN_NAME` | Auto-derived from `CHAIN_ID` | Optional human-readable chain label |
 | `KEYSTORE_ACCOUNT` | — | Foundry keystore account name (preferred) |
 | `KEYSTORE_PASSWORD` | — | Keystore decryption password |
+| `KEEPER_PRIVATE_KEY` | — | Raw private key fallback if no keystore is configured |
 | `KEEPER_INTERVAL_MS` | `30000` | Resolution loop frequency (ms) |
 | `KEEPER_STARTUP_JITTER_MS` | `0` | Random startup delay for multi-instance staggering |
 | `METRICS_ENABLED` | `true` | Enable Prometheus metrics server |

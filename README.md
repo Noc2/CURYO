@@ -109,7 +109,7 @@ The keeper is a lightweight stateless service that calls trySettle() on active r
 
 ```bash
 cp packages/keeper/.env.example packages/keeper/.env.local
-# Edit packages/keeper/.env.local with your contract addresses and wallet key
+# Edit packages/keeper/.env.local with your RPC URL, contract addresses, and wallet key
 ```
 
 **Start the keeper:**

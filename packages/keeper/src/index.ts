@@ -23,21 +23,7 @@ import {
 
 const logger = createLogger(config.logFormat);
 
-// --- Validate required config ---
-function validateConfig() {
-  if (!config.contracts.votingEngine) {
-    logger.error("VOTING_ENGINE_ADDRESS is required");
-    process.exit(1);
-  }
-  if (!config.contracts.contentRegistry) {
-    logger.error("CONTENT_REGISTRY_ADDRESS is required");
-    process.exit(1);
-  }
-}
-
 async function main() {
-  validateConfig();
-
   const account = getAccount();
   logger.info("Keeper starting", {
     chain: config.chainName,
