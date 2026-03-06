@@ -1,6 +1,7 @@
 # Curyo User Engagement Recommendations
 
 Prepared: 2026-03-06
+Updated: 2026-03-06
 
 ## Executive summary
 
@@ -21,6 +22,37 @@ The research and market scan point to a clear direction:
 4. The consumer prediction products that look most lively in 2025-2026 are not just "markets"; they are communities, tournaments, and live events.
 
 My main recommendation is to evolve Curyo from "a place where you vote on content" into "a place where people build a public taste reputation."
+
+## What has changed since the first draft of this memo
+
+Curyo now has more engagement scaffolding than it did when this memo was first written.
+
+Recently implemented:
+
+- explicit watched-content state and watch buttons on discover
+- watched scope on the vote/discover page
+- in-app settlement notifications
+- mobile search entry in the top navbar with a YouTube-style search takeover on small screens
+- a categories-first discover layout with lighter filters
+- curator follows on content cards
+- curator follows on the leaderboard and accuracy leaderboard
+- following-only leaderboard filters
+
+Already present before this update:
+
+- streaks
+- accuracy stats
+- leaderboards
+- comments
+- referrals
+
+This materially changes the recommendation stack.
+
+The biggest remaining gap is no longer "add follows" or "add watchlists." Those primitives now exist. The biggest remaining gap is giving those primitives somewhere valuable to lead:
+
+- a real following/radar feed
+- event-driven reminders and recaps
+- concentrated competition through seasons and featured arenas
 
 ## What the research says
 
@@ -68,6 +100,41 @@ Current consumer examples support the same direction:
 
 The signal is consistent: the winning consumer products are not selling "financial contracts." They are selling participation, identity, and live excitement.
 
+### 9. First social connections can have durable retention effects
+
+Large-scale observational evidence from an activity-tracking app with a built-in social network found that joining the social network increased one-year retention by 17% and increased posting by 30% immediately after the first connection.
+
+For Curyo, this matters a lot. The new follow feature is directionally correct, but its real value will only show up if users quickly get:
+
+- a first meaningful follow
+- visible activity from people they follow
+- a reason to come back because of those connections
+
+### 10. Notifications work best when they are contextual, not generic
+
+Micro-randomized trials on app notifications show a consistent pattern:
+
+- notifications can materially increase near-term engagement
+- fixed daily notifications do not reliably improve long-term retention
+- timing, relevance, and user context matter
+
+The practical implication for Curyo is clear. It should not send generic "come back" pings. It should send highly legible, event-driven reminders:
+
+- a watched round is settling soon
+- a followed curator made a new call
+- a followed curator was proven right
+- your season standing changed
+
+### 11. Peer-support and social/community app modes tend to retain better than purely solitary utility
+
+Real-world usage analysis across mental health apps found that peer-support apps had stronger daily open rates and higher 30-day retention than many more solitary app types.
+
+This is relevant because Curyo is currently closer to a solitary utility product than to a social one. The new follow feature helps, but it needs to be followed by:
+
+- a visible activity feed
+- lightweight public interaction around calls
+- better profile pages that make people worth following
+
 ## What this means for Curyo
 
 Right now, Curyo is intellectually interesting. To become more interesting for users, it needs stronger answers to five product questions:
@@ -78,7 +145,156 @@ Right now, Curyo is intellectually interesting. To become more interesting for u
 4. What are the big moments I should not miss?
 5. Who can I follow, rival, or learn from?
 
-## Recommendations
+## Updated status reading
+
+After the recent frontend work, I would describe Curyo like this:
+
+- the product now has the beginnings of a social graph
+- the product now has the beginnings of a watch/reminder loop
+- discovery on mobile is materially better than before
+- but the social graph is still mostly a storage layer, not yet a feed
+- and the watch/reminder loop is still mostly a notification primitive, not yet a habit loop
+
+That means the next highest-impact work is not more isolated controls. It is turning the newly added follows and watches into a true repeat-use system.
+
+## Updated recommendations ranked by likely impact now
+
+### P0: Highest-impact remaining work
+
+### 1. Build a "Following / Radar" home feed
+
+This is now the highest-value next step.
+
+Use the new follow graph and watch state to create a single return surface that answers:
+
+- what is settling soon
+- what did people I follow just submit or vote on
+- what did I miss since my last visit
+- what are the best things to look at right now
+
+Feed modules should include:
+
+- watched rounds settling soon
+- recent submissions from followed curators
+- recent wins/losses from followed curators
+- recommended curators to follow
+- featured items needing early signal
+
+Why this moved to #1:
+
+- follows and watchlists now exist
+- without a home/radar surface, they are mostly passive state
+- with a home/radar surface, they become a habit loop
+
+### 2. Turn notifications into event-driven "return moments"
+
+V1 notifications are already live, but they should become more targeted and more legible.
+
+Highest-value next notification types:
+
+- settling within 1 hour
+- settling today
+- followed curator submitted something new
+- followed curator made a high-conviction call
+- weekly digest of watched and followed activity
+
+Important design rule from the research: avoid generic daily prompts. Ship only notifications with obvious user value.
+
+### 3. Launch weekly and category seasons
+
+This is still a top-three bet.
+
+Why it remains high impact:
+
+- it gives users a reason to care now, not eventually
+- it makes the existing leaderboard system more winnable
+- it combines well with follows, since users can track friends/rivals across a bounded time window
+
+I would start with:
+
+- one global weekly season
+- one or two category seasons
+- a newcomer season with capped stakes
+
+### 4. Build featured arenas and "Featured Today"
+
+The product still needs more attention concentration.
+
+The right move is not to add more thin surfaces. It is to make a smaller number of rounds feel important.
+
+Good candidates:
+
+- editor-picked featured items
+- hotly split items
+- items from followed curators
+- items in active seasons
+
+### 5. Add short reasoned takes and post-settlement receipts
+
+Now that follows exist, reasons and receipts become more valuable.
+
+Users should be able to see:
+
+- why someone voted up or down
+- whether that thesis aged well
+- who consistently makes sharp early calls
+
+This is the bridge from "I follow this wallet" to "I trust this person's taste."
+
+### P1: Strong secondary bets
+
+### 6. Add curator portfolio pages and taste graphs
+
+Show:
+
+- strongest categories
+- recent form
+- blind-phase participation rate
+- best calls
+- worst misses
+- agreement/disagreement with other curators
+
+This should be a public identity layer, not just an account page.
+
+### 7. Add category follows
+
+Curator follows are now live. Category follows are the next logical expansion, but they are slightly lower priority than the feed and season work.
+
+They matter because they improve:
+
+- cold-start discovery
+- niche expertise discovery
+- alert routing
+- category-specific season participation
+
+### 8. Add post-settlement recap cards
+
+These should summarize:
+
+- what settled
+- what the crowd predicted
+- who called it well
+- what changed the rating
+
+This gives Curyo a repeatable "moment of truth" surface that users can open even when they are not voting.
+
+### P2: Bigger ecosystem bets
+
+### 9. Private leagues and community competitions
+
+Still strong, but no longer the immediate next step. They work better after the base feed/follow/radar loop is working.
+
+### 10. Team play and rivalries
+
+Still promising, but I would not do this before seasons plus follows plus recaps are in place.
+
+### 11. Creator/community modes
+
+Still attractive, especially for newsletters, Discords, DAOs, and stream communities, but I would sequence this after the consumer loop is proven.
+
+## Detailed feature backlog
+
+The ranking above is the current priority order. The sections below expand the most important product bets in more concrete design terms.
 
 ### P0: Highest-leverage product changes
 
@@ -134,13 +350,14 @@ This should be curated by a mix of:
 - creator challenges
 - newly submitted items needing early signal
 
-### 4. Make settlement a spectator event
+### 4. Expand settlement into a spectator event
 
-Right now, the mechanism is clever but the emotional product moment is still undersold. Add:
+Right now, the mechanism is clever but the emotional product moment is still undersold. Curyo now has watch state and in-app settlement notifications, but the product still needs a stronger moment around reveal and resolution. Add:
 
-- watchlists
 - countdowns to reveal/settlement
 - "you have skin in 3 rounds settling today"
+- settling-soon surfaces
+- followed-curator settlement recaps
 - push/email/in-app notifications
 - post-settlement recap cards showing what happened and who called it correctly
 
@@ -149,11 +366,13 @@ Why this matters:
 - anticipation is a retention loop
 - prediction products get more interesting when outcomes are felt as moments, not background accounting
 
-### 5. Add a lightweight follow graph
+### 5. Turn the lightweight follow graph into a living network
+
+Curator follows are now live. The next step is to expand follows where useful and make them matter every time a user returns.
 
 Let users follow:
 
-- curators
+- curators (already live)
 - creators
 - categories
 - collections
@@ -307,21 +526,21 @@ If Curyo only shows content and prices, it leaves social energy on the table. Pe
 
 Curyo's edge is not "bet on anything." Its edge is "build public credibility around taste and judgment." The product should feel more like social curation with stakes than generic gambling.
 
-## Suggested roadmap
+## Updated roadmap
 
 ### Next 30 days
 
-- define a public curator score and category score
-- build weekly seasons and newcomer leagues
-- ship featured arenas
-- ship watchlists and settlement notifications
+- build a Following / Radar feed
+- add settling-soon and followed-curator notifications
+- launch a lightweight "Featured Today" surface
+- pilot one weekly season and one category season
 
 ### Next 60-90 days
 
-- add follows for curators, creators, and categories
-- launch a personalized home/activity feed
+- add category follows
+- add post-settlement recap cards
 - add short "why I voted" takes
-- launch missions and first-vote onboarding path
+- add public curator portfolio pages and taste graphs
 
 ### Next 3-6 months
 
@@ -344,15 +563,21 @@ If you make these changes, I would watch:
 - percent of users who join a season or league
 - creator/community-driven submission share
 
-## My bottom-line recommendation
+## Updated bottom-line recommendation
 
-If I had to pick only three bets, I would do these first:
+If I had to pick only three bets now, given what is already implemented, I would do these first:
 
-1. Public taste progression
-2. Weekly/category seasons
-3. Follow graph plus activity feed
+1. Following / Radar feed
+2. Event-driven settlement and follow notifications
+3. Weekly/category seasons
 
-Those three changes would move Curyo from a clever protocol into a product people can identify with, compete inside, and talk about.
+The reason is simple:
+
+- follows and watches now exist, so the next job is to make them useful every day
+- seasons create urgency
+- notifications turn that urgency into return behavior
+
+In other words, the product has enough primitives now. The next step is to turn them into a real loop.
 
 ## Sources
 
@@ -369,3 +594,8 @@ Those three changes would move Curyo from a clever protocol into a product peopl
 11. Getting started on the Substack app (Substack Help Center): https://support.substack.com/hc/en-us/articles/19291693034004-Getting-started-on-the-Substack-app
 12. RYVAL product site: https://www.ryval.com/
 13. Fanatics Markets launch announcement: https://crypto.com/en-it/company-news/fanatics-launches-fanatics-markets-the-first-fan-led-prediction-market-at-the-intersection-of-sports-finance-and-culture-through-a-strategic-partnership-with-cryptocom
+14. Online Actions with Offline Impact: How Online Social Networks Influence Online and Offline User Behavior (PMC): https://pmc.ncbi.nlm.nih.gov/articles/PMC5361221/
+15. Objective User Engagement With Mental Health Apps: Systematic Search and Panel-Based Usage Analysis (PMC): https://pmc.ncbi.nlm.nih.gov/articles/PMC6785720/
+16. How Notifications Affect Engagement With a Behavior Change App: Results From a Micro-Randomized Trial (PMC): https://pmc.ncbi.nlm.nih.gov/articles/PMC10337295/
+17. To Prompt or Not to Prompt? A Microrandomized Trial of Time-Varying Push Notifications to Increase Proximal Engagement With a Mobile Health App (PMC): https://pmc.ncbi.nlm.nih.gov/articles/PMC6293241/
+18. Can Personalization Persuade? Study of Notification Adaptation in Mobile Behavior Change Intervention Application (PMC): https://pmc.ncbi.nlm.nih.gov/articles/PMC9137841/
