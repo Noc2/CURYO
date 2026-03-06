@@ -368,6 +368,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@curyo/mcp-server@workspace:packages/mcp-server":
+  version: 0.0.0-use.local
+  resolution: "@curyo/mcp-server@workspace:packages/mcp-server"
+  languageName: unknown
+  linkType: soft
+
 "@curyo/nextjs@workspace:packages/nextjs":
   version: 0.0.0-use.local
   resolution: "@curyo/nextjs@workspace:packages/nextjs"

@@ -1,0 +1,11 @@
+{
+  "name": "@curyo/mcp-server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Planning stub for the official read-only Curyo MCP server",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.18.3"
+  }
+}
