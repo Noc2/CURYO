@@ -3,9 +3,15 @@ import { privateKeyToAccount } from "viem/accounts";
 import { config, type BotIdentityConfig } from "./config.js";
 import { getKeystoreAccount } from "./keystore.js";
 
-const celoSepolia = defineChain({
+const CHAIN_NAMES: Record<number, string> = {
+  31337: "Foundry",
+  42220: "Celo",
+  11142220: "Celo Sepolia",
+};
+
+export const chain = defineChain({
   id: config.chainId,
-  name: "Celo Sepolia",
+  name: CHAIN_NAMES[config.chainId] || `Chain ${config.chainId}`,
   nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },
   rpcUrls: {
     default: { http: [config.rpcUrl] },
@@ -26,7 +32,7 @@ export function getAccount(identity: BotIdentityConfig) {
 }
 
 export const publicClient = createPublicClient({
-  chain: celoSepolia,
+  chain,
   transport: http(config.rpcUrl),
 });
 
@@ -34,7 +40,7 @@ export function getWalletClient(identity: BotIdentityConfig) {
   const account = getAccount(identity);
   return createWalletClient({
     account,
-    chain: celoSepolia,
+    chain,
     transport: http(config.rpcUrl),
   });
 }
