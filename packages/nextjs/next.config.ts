@@ -37,7 +37,7 @@ const cspDirectives = [
     "https://www.youtube.com",
     "https://api.twitch.tv",
     // Dev-only
-    ...(isDev ? ["http://localhost:*", "ws://localhost:*", "ws://127.0.0.1:*"] : []),
+    ...(isDev ? ["http://localhost:*", "http://127.0.0.1:*", "ws://localhost:*", "ws://127.0.0.1:*"] : []),
   ]
     .filter(Boolean)
     .join(" "),
