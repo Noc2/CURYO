@@ -26,7 +26,16 @@ import { safeBigInt, safeLimit, safeOffset, isValidAddress } from "./utils.js";
 const app = new Hono();
 
 // ============================================================
-// RATE LIMITING — IP-based sliding window
+// GLOBAL ERROR HANDLER — catch unhandled DB/runtime errors
+// ============================================================
+
+app.onError((err, c) => {
+  console.error("[ponder-api] Unhandled error:", err.message);
+  return c.json({ error: "Internal server error" }, 500);
+});
+
+// ============================================================
+// RATE LIMITING — IP-based sliding window (in-memory, resets on restart)
 // ============================================================
 
 const rateLimiter = new RateLimiter(120, 60_000, 60_000);
@@ -59,14 +68,27 @@ app.use("/*", async (c, next) => {
 const isProduction = process.env.NODE_ENV === "production";
 const DEFAULT_CORS_ORIGINS = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "http://127.0.0.1:3001"];
 const corsOrigin = process.env.CORS_ORIGIN;
-if (isProduction && !corsOrigin) {
-  throw new Error("CORS_ORIGIN is required in production.");
+const corsMisconfigured = isProduction && !corsOrigin;
+if (corsMisconfigured) {
+  console.error(
+    "[ponder] FATAL: CORS_ORIGIN is required in production. " +
+    "Set CORS_ORIGIN env var to your frontend domain(s). " +
+    "All API routes will return 503 until this is fixed.",
+  );
 }
 
 const allowedOrigins = corsOrigin ? corsOrigin.split(",").map((origin: string) => origin.trim()) : DEFAULT_CORS_ORIGINS;
 if (!isProduction && !corsOrigin) {
   console.warn("[ponder] CORS_ORIGIN not set — allowing localhost only. Set CORS_ORIGIN for production domains.");
 }
+
+// Block all custom routes if CORS is misconfigured — Ponder's built-in /health still works
+if (corsMisconfigured) {
+  app.use("/*", async (c) => {
+    return c.json({ error: "CORS_ORIGIN not configured. Set CORS_ORIGIN env var." }, 503);
+  });
+}
+
 app.use(
   "/*",
   cors({

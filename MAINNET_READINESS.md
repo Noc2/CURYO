@@ -37,13 +37,13 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Ponder Indexer
 
-- [ ] **Production database strategy**
-  `DEPLOYMENT.md` recommends PGlite with a Railway volume. PGlite is an embedded single-process database — it cannot be shared across replicas, has no backup tooling, and a volume corruption requires full re-index from block 0. Evaluate migrating to managed PostgreSQL (Ponder supports it natively) or document the accepted risk and recovery procedure.
-  _Ref: `DEPLOYMENT.md:211-215`_
+- [x] **Production database strategy** _(documented)_
+  Ponder auto-detects `DATABASE_URL` and uses PostgreSQL when set (falls back to PGlite otherwise). Added `DATABASE_URL`, `DATABASE_PRIVATE_URL`, and `DATABASE_SCHEMA` to `.env.example` with production guidance. PGlite is now documented as dev-only. Operators must set `DATABASE_URL` to a managed PostgreSQL instance (Railway Postgres, Neon, Supabase) for production.
+  _Ref: `packages/ponder/.env.example:32-40`_
 
-- [ ] **`CORS_ORIGIN` startup failure is silent**
-  In production, a missing `CORS_ORIGIN` throws during config load. On Railway this means the container exits and restarts in a loop with no user-facing error. Ensure Railway health checks detect this and alert.
-  _Ref: `packages/ponder/ponder.config.ts:93`, `packages/ponder/.env.example:32`_
+- [x] **`CORS_ORIGIN` startup failure is silent** _(fixed)_
+  Replaced the top-level `throw` with a `console.error` + 503 middleware. Ponder now starts successfully (preserving built-in `/health` and `/status`), logs a clear `FATAL` message, and returns `503` with an actionable error body on all custom API routes. Railway health checks can detect the unhealthy state without crash loops.
+  _Ref: `packages/ponder/src/api/index.ts:62-72`_
 
 ### Frontend (Next.js)
 
@@ -100,13 +100,13 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Ponder Indexer
 
-- [ ] **Rate limiting is in-memory**
-  The Ponder API uses an in-memory rate-limit store. It resets on container restart and cannot be shared across replicas. For a single-instance deployment this is acceptable; document the limitation.
-  _Ref: `packages/ponder/src/api/index.ts:27-37`_
+- [x] **Rate limiting is in-memory** _(documented)_
+  Added doc comment to `RateLimiter` class documenting the limitation: resets on restart, not shared across replicas. Acceptable for single-instance Ponder deployment. Comment notes Redis-backed replacement needed if scaling to multiple instances.
+  _Ref: `packages/ponder/src/api/rate-limit.ts:5-12`_
 
-- [ ] **Database query error handling**
-  Drizzle queries in API routes are not wrapped in try-catch. A database error returns a raw 500 with no structured error message. Wrap queries and return consistent error responses.
-  _Ref: `packages/ponder/src/api/index.ts` (various query locations)_
+- [x] **Database query error handling** _(fixed)_
+  Added `app.onError()` global handler that catches unhandled errors from all routes and returns `{ "error": "Internal server error" }` with 500 status. Errors are logged to stderr for operator visibility.
+  _Ref: `packages/ponder/src/api/index.ts:33-36`_
 
 ### Frontend (Next.js)
 

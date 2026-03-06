@@ -2,6 +2,14 @@ export interface RateLimitEntry {
   timestamps: number[];
 }
 
+/**
+ * In-memory IP-based sliding-window rate limiter.
+ *
+ * Limitations (acceptable for single-instance Ponder deployments):
+ * - State resets on process restart — brief burst allowed after redeploy.
+ * - Cannot be shared across replicas — each instance tracks independently.
+ * If Ponder is scaled to multiple instances, replace with a Redis-backed limiter.
+ */
 export class RateLimiter {
   private store = new Map<string, RateLimitEntry>();
   private lastCleanup: number;
