@@ -8,9 +8,7 @@ import { RoundStats } from "~~/components/shared/RoundStats";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
-import { useRoundCountdown } from "~~/hooks/useRoundCountdown";
-import { useRoundInfo } from "~~/hooks/useRoundInfo";
-import { useRoundPhase } from "~~/hooks/useRoundPhase";
+import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 
 interface VotingQuestionCardProps {
   contentId: bigint;
@@ -22,6 +20,25 @@ interface VotingQuestionCardProps {
   isOwnContent?: boolean;
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
+}
+
+type CountdownUrgency = "normal" | "warning" | "critical";
+
+function formatRoundCountdown(seconds: number): string {
+  if (seconds <= 0) return "Expired";
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m ${s}s`;
+}
+
+function getCountdownUrgency(seconds: number): CountdownUrgency {
+  if (seconds <= 3600) return "critical";
+  if (seconds <= 21600) return "warning";
+  return "normal";
 }
 
 /**
@@ -60,11 +77,11 @@ export function VotingQuestionCard({
   }, [category, currentRatingValue, contentLabel]);
 
   // Check if user already voted on this content in the current round
-  const { roundId, isRoundFull } = useRoundInfo(contentId);
-  const { phase, voteCount, minVoters } = useRoundPhase(contentId);
-
-  // Round countdown (only show when urgent)
-  const { label: countdownLabel, urgency, isActive: countdownActive } = useRoundCountdown(contentId);
+  const { roundId, isRoundFull, phase, voteCount, minVoters, roundTimeRemaining } = useRoundSnapshot(contentId);
+  const countdownTimeLeft = phase === "voting" && roundTimeRemaining > 0 ? roundTimeRemaining : 0;
+  const urgency = getCountdownUrgency(countdownTimeLeft);
+  const countdownLabel = formatRoundCountdown(countdownTimeLeft);
+  const countdownActive = countdownTimeLeft > 0;
 
   // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)

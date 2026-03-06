@@ -66,8 +66,8 @@ components/                   # React components
 
 hooks/                        # Custom React hooks
 ├── scaffold-eth/             # useScaffoldReadContract, useScaffoldWriteContract, etc.
-├── useRoundInfo.ts           # Fetch round data from Ponder
-└── useRoundPhase.ts          # Calculate current round phase
+├── useRoundSnapshot.ts       # Shared active-round contract read + derived state
+└── useVotingConfig.ts        # Shared voting config contract read
 
 services/ponder/client.ts     # REST client for the Ponder indexer API
 utils/platforms/handlers/     # Platform detection & URL parsing

@@ -54,7 +54,7 @@ These rules are mandatory for any Solidity changes:
 ## Architecture
 
 ```
-foundry (compile) → ABIs in ponder/abis/ + addresses in nextjs/contracts/deployedContracts.ts
+foundry (compile) → ABIs + addresses in packages/contracts/src/
 ponder (index)    → REST API at localhost:42069, consumed by nextjs via services/ponder/client.ts
 nextjs (frontend) → reads contracts via wagmi/scaffold-eth hooks + Ponder API
 keeper (service)  → settles rounds via trySettle(), cancels expired rounds, marks dormant content
@@ -66,8 +66,8 @@ keeper (service)  → settles rounds via trySettle(), cancels expired rounds, ma
 |---|---|
 | Contract source | `packages/foundry/contracts/` |
 | Contract tests | `packages/foundry/test/` |
-| Deployed addresses | `packages/nextjs/contracts/deployedContracts.ts` |
-| Contract ABIs | `packages/ponder/abis/` |
+| Deployed addresses | `packages/contracts/src/deployedContracts.ts` |
+| Contract ABIs | `packages/contracts/src/abis/` |
 | Ponder schema | `packages/ponder/ponder.schema.ts` |
 | Ponder API routes | `packages/ponder/src/api/index.ts` |
 | Ponder client | `packages/nextjs/services/ponder/client.ts` |

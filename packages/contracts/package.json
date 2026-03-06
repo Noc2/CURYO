@@ -6,7 +6,6 @@
   "exports": {
     ".": "./src/index.ts",
     "./abis": "./src/abis/index.ts",
-    "./addresses": "./src/addresses.ts",
     "./deployedContracts": "./src/deployedContracts.ts",
     "./types": "./src/types.ts"
   },

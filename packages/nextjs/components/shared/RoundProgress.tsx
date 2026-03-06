@@ -1,7 +1,7 @@
 "use client";
 
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
-import { useRoundPhase } from "~~/hooks/useRoundPhase";
+import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 
 interface RoundProgressProps {
   contentId: bigint;
@@ -44,7 +44,7 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
     currentEpochRemaining,
     voteCount,
     minVoters,
-  } = useRoundPhase(contentId);
+  } = useRoundSnapshot(contentId);
 
   if (!isReady) {
     return (

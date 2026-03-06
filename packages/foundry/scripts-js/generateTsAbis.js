@@ -263,18 +263,14 @@ function main() {
     });
   });
 
-  const NEXTJS_TARGET_DIR = join(__dirname, "..", "..", "nextjs", "contracts");
   const CONTRACTS_TARGET_DIR = join(__dirname, "..", "..", "contracts", "src");
 
   // Ensure target directories exist
-  if (!existsSync(NEXTJS_TARGET_DIR)) {
-    mkdirSync(NEXTJS_TARGET_DIR, { recursive: true });
-  }
   if (!existsSync(CONTRACTS_TARGET_DIR)) {
     mkdirSync(CONTRACTS_TARGET_DIR, { recursive: true });
   }
 
-  // Generate the deployedContracts content
+  // Generate the shared deployedContracts content
   const fileContent = Object.entries(allGeneratedContracts).reduce(
     (content, [chainId, chainConfig]) => {
       const cleanedChainConfig = Object.fromEntries(
@@ -293,9 +289,9 @@ function main() {
   );
 
   // Write the files
-  const fileTemplate = (importPath) => `
+  const fileTemplate = `
     ${generatedContractComment}
-    import { GenericContractsDeclaration } from "${importPath}";
+    import type { GenericContractsDeclaration } from "./types";
 
     const deployedContracts = {${fileContent}} as const;
 
@@ -303,22 +299,12 @@ function main() {
   `;
 
   writeFileSync(
-    join(NEXTJS_TARGET_DIR, "deployedContracts.ts"),
-    format(fileTemplate("~~/utils/scaffold-eth/contract"), {
-      parser: "typescript",
-    })
-  );
-
-  writeFileSync(
     join(CONTRACTS_TARGET_DIR, "deployedContracts.ts"),
-    format(fileTemplate("./types"), {
+    format(fileTemplate, {
       parser: "typescript",
     })
   );
 
-  console.log(
-    `📝 Updated TypeScript contract definition file on ${join(NEXTJS_TARGET_DIR, "deployedContracts.ts")}`
-  );
   console.log(
     `📝 Updated shared contract definition file on ${join(CONTRACTS_TARGET_DIR, "deployedContracts.ts")}`
   );

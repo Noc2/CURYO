@@ -2,8 +2,7 @@
 
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
-import { useRoundInfo } from "~~/hooks/useRoundInfo";
-import { useRoundPhase } from "~~/hooks/useRoundPhase";
+import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 
 interface RoundStatsProps {
   contentId: bigint;
@@ -19,8 +18,8 @@ interface RoundStatsProps {
  */
 export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, maxVoters, isRoundFull } = useRoundInfo(contentId);
-  const { phase, isEpoch1 } = useRoundPhase(contentId);
+  const snapshot = useRoundSnapshot(contentId);
+  const { round, isLoading, maxVoters, isRoundFull, phase, isEpoch1 } = snapshot;
 
   if (isLoading) {
     return (
