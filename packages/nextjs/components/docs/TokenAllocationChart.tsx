@@ -3,10 +3,18 @@
 import { useState } from "react";
 
 const SLICES = [
-  { label: "Faucet Pool", amount: "52M", value: 52, color: "#359EEE" },
-  { label: "Participation Pool", amount: "34M", value: 34, color: "#03CEA4" },
-  { label: "Treasury", amount: "10M", value: 10, color: "#FFC43D" },
-  { label: "Consensus Subsidy", amount: "4M", value: 4, color: "#F97316" },
+  { label: "Faucet Pool", amount: "51,899,900 cREP", value: 51.8999, percentLabel: "51.8999%", color: "#359EEE" },
+  { label: "Participation Pool", amount: "34,000,000 cREP", value: 34, percentLabel: "34.0%", color: "#03CEA4" },
+  { label: "Treasury", amount: "10,000,000 cREP", value: 10, percentLabel: "10.0%", color: "#FFC43D" },
+  {
+    label: "Consensus Subsidy Reserve",
+    amount: "4,000,000 cREP",
+    value: 4,
+    percentLabel: "4.0%",
+    color: "#F97316",
+  },
+  { label: "Keeper Reward Pool", amount: "100,000 cREP", value: 0.1, percentLabel: "0.1%", color: "#EF476F" },
+  { label: "Category Registry", amount: "100 cREP", value: 0.0001, percentLabel: "0.0001%", color: "#6C5CE7" },
 ];
 
 const SIZE = 200;
@@ -35,7 +43,7 @@ function describeDonut(cx: number, cy: number, outer: number, inner: number, sta
 }
 
 /**
- * SVG donut chart showing the token allocation (Faucet / Participation / Treasury / Consensus Subsidy).
+ * SVG donut chart showing the token allocation across all system-controlled pools.
  */
 export function TokenAllocationChart() {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -100,7 +108,7 @@ export function TokenAllocationChart() {
           >
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
             <span className="text-base-content/70">
-              <span className="font-mono font-medium text-base-content/90">{slice.value}%</span> {slice.label}{" "}
+              <span className="font-mono font-medium text-base-content/90">{slice.percentLabel}</span> {slice.label}{" "}
               <span className="text-base-content/40">({slice.amount})</span>
             </span>
           </div>

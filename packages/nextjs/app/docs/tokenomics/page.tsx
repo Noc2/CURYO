@@ -44,7 +44,8 @@ const Tokenomics = () => {
       </div>
       <p>
         Fixed supply of <strong>100 million tokens</strong>. Fair launch &mdash; no pre-mine, no VC allocation, no team
-        tokens, and no token sale of any kind. All tokens are distributed exclusively through four distribution pools:
+        tokens, and no token sale of any kind. All tokens are distributed exclusively through six system-controlled
+        pools:
       </p>
 
       <h3>Design Principles</h3>
@@ -85,7 +86,7 @@ const Tokenomics = () => {
           <tbody>
             <tr>
               <td className="font-medium">Faucet Pool</td>
-              <td className="font-mono">52,000,000 cREP</td>
+              <td className="font-mono">51,899,900 cREP</td>
               <td>
                 One-time claims for verified humans (10,000 to 1 cREP per claim, tiered by adoption, serves up to ~41M
                 users)
@@ -100,7 +101,7 @@ const Tokenomics = () => {
               </td>
             </tr>
             <tr>
-              <td className="font-medium">Agreement Bonus</td>
+              <td className="font-medium">Consensus Subsidy Reserve</td>
               <td className="font-mono">4,000,000 cREP</td>
               <td>
                 Pre-funded reserve for unanimous agreement rewards, replenished by 5% of each round&apos;s losing stakes
@@ -110,6 +111,18 @@ const Tokenomics = () => {
               <td className="font-medium">Treasury</td>
               <td className="font-mono">10,000,000 cREP</td>
               <td>Governance-controlled cREP tokens for grants, whistleblower rewards, and protocol development</td>
+            </tr>
+            <tr>
+              <td className="font-medium">Keeper Reward Pool</td>
+              <td className="font-mono">100,000 cREP</td>
+              <td>
+                Dedicated flat rewards for settle/cancel housekeeping so keeper incentives do not drain user stakes
+              </td>
+            </tr>
+            <tr>
+              <td className="font-medium">Category Registry</td>
+              <td className="font-mono">100 cREP</td>
+              <td>Initial reserve so category proposal mechanics meet the governance proposal threshold from launch</td>
             </tr>
           </tbody>
         </table>
@@ -178,11 +191,11 @@ const Tokenomics = () => {
         <FaucetTierChart />
       </div>
       <p>
-        The 52M faucet pool serves <strong>up to ~41 million users</strong> without referrals (~15M with full referral
-        usage). Referral bonuses scale proportionally at 50% of the claim amount. The first 10 Genesis claimants receive
-        10,000 cREP each to bootstrap the platform from day one. As the platform grows and becomes more populated, later
-        claimants need fewer tokens since there is already content to engage with. The decreasing schedule also reduces
-        exploitation risk as the platform becomes more visible.
+        The 51,899,900 cREP faucet pool serves <strong>up to ~41 million users</strong> without referrals (~15M with
+        full referral usage). Referral bonuses scale proportionally at 50% of the claim amount. The first 10 Genesis
+        claimants receive 10,000 cREP each to bootstrap the platform from day one. As the platform grows and becomes
+        more populated, later claimants need fewer tokens since there is already content to engage with. The decreasing
+        schedule also reduces exploitation risk as the platform becomes more visible.
       </p>
 
       <h3>Participation Pool</h3>
@@ -345,7 +358,7 @@ const Tokenomics = () => {
               <td className="font-mono">82%</td>
             </tr>
             <tr>
-              <td>Agreement bonus reserve</td>
+              <td>Consensus subsidy reserve</td>
               <td className="font-mono">5%</td>
             </tr>
             <tr>
@@ -371,7 +384,7 @@ const Tokenomics = () => {
       <p>
         The 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
         <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase voters earn 4x
-        more per cREP than open phase voters. An additional 5% goes to an agreement bonus reserve. Because each content
+        more per cREP than open phase voters. An additional 5% goes to a consensus subsidy reserve. Because each content
         item has independent rounds that resolve on their own timeline, rewards are claimable immediately after
         resolution. The 1% treasury fee goes to the governance timelock.
       </p>
