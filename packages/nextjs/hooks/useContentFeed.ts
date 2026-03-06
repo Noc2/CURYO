@@ -5,6 +5,7 @@ import { parseTags } from "~~/constants/categories";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
+import { publicEnv } from "~~/utils/env/public";
 
 export interface ContentItem {
   id: bigint;
@@ -22,12 +23,15 @@ export interface ContentItem {
  * Uses Ponder API when available, falls back to on-chain event scanning.
  */
 export function useContentFeed(voterAddress?: string) {
+  const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+
   // --- RPC fallback: get content submitted events ---
   const { data: events, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
     eventName: "ContentSubmitted",
     fromBlock: 0n,
-    watch: true,
+    watch: rpcFallbackEnabled,
+    enabled: rpcFallbackEnabled,
   });
 
   const { data: nextContentId } = useScaffoldReadContract({
@@ -91,6 +95,7 @@ export function useContentFeed(voterAddress?: string) {
       feed: rpcFeed,
       totalContent: nextContentId ? Number(nextContentId) - 1 : 0,
     }),
+    rpcEnabled: rpcFallbackEnabled,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });

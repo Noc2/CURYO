@@ -76,6 +76,14 @@ export interface PonderContentResponse {
   offset: number;
 }
 
+export interface PonderRatingChange {
+  id: string;
+  contentId: string;
+  oldRating: number;
+  newRating: number;
+  timestamp: string;
+}
+
 export interface PonderCategory {
   id: string;
   name: string;
@@ -206,6 +214,28 @@ export interface PonderVoterStreak {
 
 export type PonderVoterStatsBatch = Record<string, PonderVoterStats>;
 
+const PONDER_PAGE_LIMIT = 200;
+
+async function getAllPages<TItem>(
+  fetchPage: (offset: number) => Promise<{ items: TItem[] }>,
+): Promise<TItem[]> {
+  const items: TItem[] = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await fetchPage(offset);
+    items.push(...page.items);
+
+    if (page.items.length < PONDER_PAGE_LIMIT) {
+      break;
+    }
+
+    offset += page.items.length;
+  }
+
+  return items;
+}
+
 export const ponderApi = {
   getContent(params?: { categoryId?: string; status?: string; sortBy?: string; limit?: string; offset?: string }) {
     return ponderGet<PonderContentResponse>("/content", params);
@@ -215,8 +245,18 @@ export const ponderApi = {
     return ponderGet<{
       content: PonderContentItem;
       rounds: any[];
-      ratings: any[];
+      ratings: PonderRatingChange[];
     }>(`/content/${id}`);
+  },
+
+  async getAllContent(params?: { categoryId?: string; status?: string; sortBy?: string }) {
+    return getAllPages(offset =>
+      this.getContent({
+        ...params,
+        limit: String(PONDER_PAGE_LIMIT),
+        offset: String(offset),
+      }),
+    );
   },
 
   getCategories(status?: string) {
@@ -319,6 +359,21 @@ export const ponderApi = {
     offset?: string;
   }) {
     return ponderGet<{ items: PonderVoteItem[] }>("/votes", params);
+  },
+
+  async getAllVotes(params?: {
+    voter?: string;
+    contentId?: string;
+    roundId?: string;
+    state?: string;
+  }) {
+    return getAllPages(offset =>
+      this.getVotes({
+        ...params,
+        limit: String(PONDER_PAGE_LIMIT),
+        offset: String(offset),
+      }),
+    );
   },
 
   getVoterStreak(voter: string) {

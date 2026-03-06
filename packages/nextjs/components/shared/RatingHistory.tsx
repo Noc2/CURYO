@@ -2,6 +2,9 @@
 
 import { useMemo } from "react";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { ponderApi } from "~~/services/ponder/client";
+import { publicEnv } from "~~/utils/env/public";
 
 interface RatingHistoryProps {
   contentId: bigint;
@@ -13,16 +16,18 @@ interface RatingHistoryProps {
  * Plots data from RatingUpdated events + current on-chain rating.
  */
 export function RatingHistory({ contentId, variant = "default" }: RatingHistoryProps) {
+  const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
   const {
     data: events,
-    isLoading,
+    isLoading: eventsLoading,
     error: eventsError,
   } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
     eventName: "RatingUpdated",
     fromBlock: 0n,
     filters: { contentId },
-    watch: true,
+    watch: rpcFallbackEnabled,
+    enabled: rpcFallbackEnabled,
   });
 
   const { data: currentRating } = useScaffoldReadContract({
@@ -32,7 +37,7 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     query: { refetchInterval: 5000 },
   });
 
-  const dataPoints = useMemo(() => {
+  const rpcDataPoints = useMemo(() => {
     // Start with the initial rating (50)
     const points: number[] = [50];
 
@@ -52,7 +57,27 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     return points;
   }, [events, currentRating]);
 
-  if (isLoading) {
+  const { data: result, isLoading, error } = usePonderQuery({
+    queryKey: ["ratingHistory", contentId.toString()],
+    ponderFn: async () => {
+      const response = await ponderApi.getContentById(contentId.toString());
+      const ratings = response.ratings.slice().reverse().map(rating => rating.newRating);
+
+      if (ratings.length > 0) {
+        return [50, ...ratings];
+      }
+
+      return [50, response.content.rating];
+    },
+    rpcFn: async () => rpcDataPoints,
+    rpcEnabled: rpcFallbackEnabled,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+
+  const dataPoints = result?.data ?? rpcDataPoints;
+
+  if (isLoading || (rpcFallbackEnabled && eventsLoading)) {
     return (
       <div className="h-16 flex items-center justify-center">
         <span className="loading loading-spinner loading-xs text-base-content/20"></span>
@@ -60,7 +85,7 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     );
   }
 
-  if (eventsError) {
+  if (error || (rpcFallbackEnabled && eventsError)) {
     const textColor = variant === "dark" ? "text-white/40" : "text-base-content/25";
     return (
       <div className={`h-16 flex items-center justify-center text-base ${textColor}`}>

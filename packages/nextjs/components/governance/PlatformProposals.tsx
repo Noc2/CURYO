@@ -4,6 +4,9 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { GlobeAltIcon } from "@heroicons/react/24/outline";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { ponderApi } from "~~/services/ponder/client";
+import { publicEnv } from "~~/utils/env/public";
 
 type FilterState = "all" | "pending" | "approved" | "rejected";
 
@@ -33,18 +36,18 @@ interface Category {
  */
 export function PlatformProposals() {
   const [filter, setFilter] = useState<FilterState>("all");
+  const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
 
   // Fetch CategorySubmitted events to get all submitted category IDs
   const { data: categoryEvents, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "CategoryRegistry",
     eventName: "CategorySubmitted",
     fromBlock: 0n,
-    watch: true,
+    watch: rpcFallbackEnabled,
+    enabled: rpcFallbackEnabled,
   });
 
-  // We'll fetch category details for each ID
-  // Note: This is a simplified approach - in production you might batch these calls
-  const categories = useMemo(() => {
+  const rpcCategories = useMemo(() => {
     if (!categoryEvents) return [];
     return categoryEvents.map(e => ({
       id: e.args.categoryId as bigint,
@@ -54,6 +57,27 @@ export function PlatformProposals() {
       proposalId: e.args.proposalId as bigint,
     }));
   }, [categoryEvents]);
+
+  const { data: result, isLoading } = usePonderQuery({
+    queryKey: ["platformProposals"],
+    ponderFn: async () => {
+      const response = await ponderApi.getCategories("all");
+      return response.items.map(item => ({
+        id: BigInt(item.id),
+        name: item.name,
+        domain: item.domain,
+        submitter: item.submitter as `0x${string}`,
+        proposalId: item.proposalId ? BigInt(item.proposalId) : 0n,
+      }));
+    },
+    rpcFn: async () => rpcCategories,
+    rpcEnabled: rpcFallbackEnabled,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+
+  const categories = result?.data ?? rpcCategories;
+  const proposalsLoading = isLoading || (rpcFallbackEnabled && eventsLoading);
 
   return (
     <div className="surface-card rounded-2xl p-6">
@@ -78,7 +102,7 @@ export function PlatformProposals() {
       </div>
 
       {/* Loading State */}
-      {eventsLoading && (
+      {proposalsLoading && (
         <div className="text-center py-8">
           <span className="loading loading-spinner loading-md" />
           <p className="text-base text-base-content/60 mt-2">Loading proposals...</p>
@@ -86,13 +110,13 @@ export function PlatformProposals() {
       )}
 
       {/* Proposals List */}
-      {!eventsLoading && categories.length > 0 ? (
+      {!proposalsLoading && categories.length > 0 ? (
         <div className="space-y-3">
           {categories.map(category => (
             <PlatformProposalCard key={category.id.toString()} categoryId={category.id} filter={filter} />
           ))}
         </div>
-      ) : !eventsLoading ? (
+      ) : !proposalsLoading ? (
         <div className="text-center py-8">
           <GlobeAltIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
           <p className="text-base-content/60 mb-2">No platform proposals yet</p>

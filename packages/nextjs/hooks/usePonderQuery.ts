@@ -9,6 +9,8 @@ interface UsePonderQueryOptions<TPonder, TRpc> {
   ponderFn: () => Promise<TPonder>;
   /** Fetch data from RPC as fallback */
   rpcFn: () => Promise<TRpc>;
+  /** Whether the RPC fallback is allowed */
+  rpcEnabled?: boolean;
   /** Whether the query is enabled */
   enabled?: boolean;
   /** How long data stays fresh (ms) */
@@ -40,6 +42,7 @@ export function usePonderQuery<TPonder, TRpc>({
   queryKey,
   ponderFn,
   rpcFn,
+  rpcEnabled = true,
   enabled = true,
   staleTime = 10_000,
   refetchInterval = false,
@@ -54,10 +57,16 @@ export function usePonderQuery<TPonder, TRpc>({
           const data = await ponderFn();
           return { data, source: "ponder" };
         } catch (e) {
-          console.warn("[Ponder] Query failed, falling back to RPC:", e);
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("[Ponder] Query failed, falling back to RPC:", e);
+          }
           // Invalidate cache so next query re-checks availability
           invalidatePonderCache();
         }
+      }
+
+      if (!rpcEnabled) {
+        throw new Error("Ponder is unavailable and RPC fallback is disabled.");
       }
 
       const data = await rpcFn();

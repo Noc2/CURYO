@@ -19,6 +19,7 @@ import {
   useScaffoldReadContract,
   useScaffoldWriteContract,
 } from "~~/hooks/scaffold-eth";
+import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import {
   Category,
   extractDomain,
@@ -28,8 +29,10 @@ import {
 } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { ponderApi } from "~~/services/ponder/client";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
+import { publicEnv } from "~~/utils/env/public";
 import { notification } from "~~/utils/scaffold-eth";
 
 type SubmissionType = "content" | "category" | "frontend";
@@ -107,6 +110,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 }
 
 const SubmitPage: NextPage = () => {
+  const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
   const { address } = useAccount();
   const { hasVoterId, isLoading: voterIdLoading } = useVoterIdNFT(address);
   const { ratePercent, calculateBonus } = useParticipationRate();
@@ -312,19 +316,31 @@ const SubmitPage: NextPage = () => {
     contractName: "ContentRegistry",
     functionName: "nextContentId",
   });
-
-  // Check if URL is already submitted by querying existing content events
-  const { data: existingContent } = useScaffoldEventHistory({
+  const { data: existingContentEvents } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
     eventName: "ContentSubmitted",
     fromBlock: 0n,
     watch: false,
+    enabled: rpcFallbackEnabled,
+  });
+
+  // Check if URL is already submitted by querying Ponder, with an optional RPC fallback for local development.
+  const { data: existingContent } = usePonderQuery({
+    queryKey: ["submittedContent", url],
+    enabled: Boolean(url) && !urlError,
+    ponderFn: async () => {
+      const existingItems = await ponderApi.getAllContent({ status: "all" });
+      return existingItems.map(item => item.url);
+    },
+    rpcFn: async () => existingContentEvents?.map(event => event.args.url ?? "").filter(Boolean) ?? [],
+    rpcEnabled: rpcFallbackEnabled,
+    staleTime: 30_000,
   });
 
   const isUrlAlreadySubmitted = !!(
     url &&
     !urlError &&
-    existingContent?.some(event => canonicalizeUrl(event.args.url ?? "") === canonicalizeUrl(url))
+    existingContent?.data?.some(existingUrl => canonicalizeUrl(existingUrl) === canonicalizeUrl(url))
   );
 
   const handleGoalChange = (value: string) => {

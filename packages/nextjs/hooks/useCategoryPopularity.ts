@@ -5,18 +5,22 @@ import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
+import { publicEnv } from "~~/utils/env/public";
 
 /**
  * Hook that returns vote popularity per category.
  * Uses Ponder API when available, falls back to scanning VoteCommitted events.
  */
 export function useCategoryPopularity(feed: ContentItem[]): Map<string, number> {
+  const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+
   // --- RPC fallback: scan VoteCommitted events ---
   const { data: voteEvents } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "VoteCommitted",
     fromBlock: 0n,
-    watch: true,
+    watch: rpcFallbackEnabled,
+    enabled: rpcFallbackEnabled,
   } as any);
 
   const rpcPopularity = useMemo(() => {
@@ -52,6 +56,7 @@ export function useCategoryPopularity(feed: ContentItem[]): Map<string, number> 
       return map;
     },
     rpcFn: async () => rpcPopularity,
+    rpcEnabled: rpcFallbackEnabled,
     staleTime: 60_000,
     refetchInterval: 120_000,
   });

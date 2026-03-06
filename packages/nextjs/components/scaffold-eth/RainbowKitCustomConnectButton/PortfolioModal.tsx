@@ -1,8 +1,9 @@
 "use client";
 
 import { Address } from "viem";
-import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useClaimReward } from "~~/hooks/useClaimReward";
+import { useVoteHistory } from "~~/hooks/useVoteHistory";
 import { notification } from "~~/utils/scaffold-eth";
 
 type PortfolioModalProps = {
@@ -12,21 +13,7 @@ type PortfolioModalProps = {
 
 export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
   const { claimReward, isClaiming } = useClaimReward();
-
-  const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
-    contractName: "RoundVotingEngine",
-    eventName: "VoteCommitted",
-    fromBlock: 0n,
-    filters: { voter: address },
-    watch: true,
-  } as any);
-
-  const { data: settledEvents, isLoading: settledLoading } = useScaffoldEventHistory({
-    contractName: "RoundVotingEngine",
-    eventName: "RoundSettled",
-    fromBlock: 0n,
-    watch: true,
-  } as any);
+  const { votes, isLoading } = useVoteHistory(address);
 
   const { data: balance } = useScaffoldReadContract({
     contractName: "CuryoReputation",
@@ -45,24 +32,7 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
     ? (Number(balance) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 })
     : "0";
 
-  // Count settled rounds where user participated
-  const settledRoundKeys = new Set(
-    settledEvents
-      ?.map(e => {
-        const args = e.args as { contentId?: bigint; roundId?: bigint } | undefined;
-        if (!args || args.contentId === undefined || args.roundId === undefined) return null;
-        return `${args.contentId.toString()}-${args.roundId.toString()}`;
-      })
-      .filter((key): key is string => Boolean(key)) ?? [],
-  );
-  const settledVoteCount =
-    commitEvents?.filter(e => {
-      const args = e.args as { contentId?: bigint; roundId?: bigint } | undefined;
-      if (!args || args.contentId === undefined || args.roundId === undefined) return false;
-      return settledRoundKeys.has(`${args.contentId.toString()}-${args.roundId.toString()}`);
-    }).length ?? 0;
-
-  const isLoading = commitsLoading || settledLoading;
+  const settledVoteCount = votes.filter(vote => vote.isSettled).length;
 
   return (
     <div>
@@ -85,7 +55,7 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
                 <p className="text-base text-base-content/50">cREP</p>
               </div>
               <div>
-                <p className="text-xl font-bold tabular-nums">{commitEvents?.length ?? 0}</p>
+                <p className="text-xl font-bold tabular-nums">{votes.length}</p>
                 <p className="text-base text-base-content/50">Votes</p>
               </div>
               <div>
@@ -102,32 +72,27 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
               <div className="flex justify-center py-8">
                 <span className="loading loading-spinner loading-md text-primary"></span>
               </div>
-            ) : commitEvents && commitEvents.length > 0 ? (
+            ) : votes.length > 0 ? (
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {commitEvents.map((event, idx) => {
-                  const args = event.args as { contentId?: bigint; roundId?: bigint; stake?: bigint } | undefined;
-                  const contentId = args?.contentId;
-                  const roundId = args?.roundId;
-                  const stake = args?.stake ? (Number(args.stake) / 1e6).toFixed(0) : "?";
-
-                  const isSettled =
-                    contentId !== undefined &&
-                    roundId !== undefined &&
-                    settledRoundKeys.has(`${contentId.toString()}-${roundId.toString()}`);
+                {votes.map((vote, idx) => {
+                  const contentId = vote.contentId;
+                  const roundId = vote.roundId;
+                  const stake = (Number(vote.stake) / 1e6).toFixed(0);
+                  const isSettled = vote.isSettled;
 
                   return (
                     <div key={idx} className="bg-base-300 rounded-lg p-3 flex items-center justify-between">
                       <div>
-                        <p className="text-base font-medium">Content #{contentId?.toString() ?? "?"}</p>
+                        <p className="text-base font-medium">Content #{contentId.toString()}</p>
                         <p className="text-base text-base-content/50">
-                          {stake} cREP · Round #{roundId?.toString() ?? "?"}
+                          {stake} cREP · Round #{roundId.toString()}
                         </p>
                       </div>
                       {isSettled ? (
                         <button
-                          onClick={() => contentId && roundId && handleClaim(contentId, roundId)}
+                          onClick={() => handleClaim(contentId, roundId)}
                           className="text-base font-medium px-2 py-1 rounded-full bg-success/10 text-success hover:bg-success/20 transition-colors disabled:opacity-40"
-                          disabled={isClaiming || !contentId || !roundId}
+                          disabled={isClaiming}
                         >
                           {isClaiming ? <span className="loading loading-spinner loading-xs"></span> : "Claim"}
                         </button>
