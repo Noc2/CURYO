@@ -1,10 +1,37 @@
-# Curyo MCP Server Plan
+# Curyo MCP Server
+
+Status: local read-only `stdio` MVP implemented on March 6, 2026.
+
+## Quick Start
+
+```bash
+# From the monorepo root:
+yarn mcp:start
+```
+
+Environment:
+
+- `CURYO_PONDER_URL` or `PONDER_URL`: base URL for the backing Ponder API
+
+Current scope:
+
+- local `stdio` transport
+- read-only tools backed by Ponder
+- no wallet actions or write-capable tools
+
+Planned next steps:
+
+- hosted Streamable HTTP transport
+- MCP resources and prompts
+- registry packaging and OpenClaw integration
+
+## Plan
 
 Date: March 6, 2026
 
 ## Purpose
 
-This package is the planned home for the official read-only Curyo MCP server.
+This package is the home for the official read-only Curyo MCP server.
 
 The goal is to make Curyo's public reputation data easy for agents to consume through MCP without requiring them to understand the full monorepo, self-host Ponder first, or interact with wallets and on-chain write flows.
 

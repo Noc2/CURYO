@@ -74,6 +74,7 @@ The REST API is built with Hono. Key routes:
 |---|---|
 | `GET /content` | List content with filters and pagination |
 | `GET /content/:id` | Single content item |
+| `GET /content/by-url?url=...` | Look up a single content item by URL |
 | `GET /votes` | List votes with filters |
 | `GET /profile/:address` | User profile and reputation |
 | `GET /category` | List content categories |

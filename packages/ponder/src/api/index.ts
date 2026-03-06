@@ -21,7 +21,7 @@ import {
 } from "ponder:schema";
 import { eq, desc, asc, and, or, inArray, notInArray, sql, gte, replaceBigInts } from "ponder";
 import { RateLimiter } from "./rate-limit.js";
-import { safeBigInt, safeLimit, safeOffset, isValidAddress } from "./utils.js";
+import { safeBigInt, safeLimit, safeOffset, isValidAddress, getUrlLookupCandidates } from "./utils.js";
 
 const app = new Hono();
 
@@ -164,6 +164,51 @@ app.get("/content", async (c) => {
     total: countResult?.count ?? 0,
     limit,
     offset,
+  });
+});
+
+app.get("/content/by-url", async (c) => {
+  const url = c.req.query("url");
+  if (!url) {
+    return c.json({ error: "url parameter required" }, 400);
+  }
+
+  const candidates = getUrlLookupCandidates(url);
+  if (!candidates) {
+    return c.json({ error: "Invalid URL" }, 400);
+  }
+
+  const matches = await db
+    .select()
+    .from(content)
+    .where(inArray(content.url, candidates))
+    .orderBy(desc(content.createdAt))
+    .limit(5);
+
+  const item = matches[0];
+  if (!item) {
+    return c.json({ error: "Content not found" }, 404);
+  }
+
+  const rounds = await db
+    .select()
+    .from(round)
+    .where(eq(round.contentId, item.id))
+    .orderBy(desc(round.roundId))
+    .limit(20);
+
+  const ratings = await db
+    .select()
+    .from(ratingChange)
+    .where(eq(ratingChange.contentId, item.id))
+    .orderBy(desc(ratingChange.timestamp))
+    .limit(50);
+
+  return jsonBig(c, {
+    content: item,
+    rounds,
+    ratings,
+    matchCount: matches.length,
   });
 });
 

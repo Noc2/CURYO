@@ -35,7 +35,7 @@ See the in-app documentation at `/docs` for detailed game theory analysis and se
 
 ## Architecture
 
-Curyo is a monorepo with five packages:
+Curyo is a monorepo with six packages:
 
 | Package | Description |
 |---|---|
@@ -44,12 +44,14 @@ Curyo is a monorepo with five packages:
 | `packages/ponder` | Ponder indexer for on-chain event processing and API |
 | `packages/keeper` | Standalone keeper service for trustless round settlement |
 | `packages/bot` | CLI voting bot with pluggable rating strategies |
+| `packages/mcp-server` | Read-only MCP server exposing Curyo data to AI agents |
 
 ```
 foundry (compile) → ABIs + addresses
 ponder  (index)   → REST API at localhost:42069
 nextjs  (frontend)→ reads contracts via wagmi + Ponder API
 keeper  (service) → settles rounds via settleRound(), cancels expired rounds, marks dormant content
+mcp-server (tools)→ exposes read-only MCP tools backed by the Ponder API
 ```
 
 Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, RainbowKit, wagmi, and viem.

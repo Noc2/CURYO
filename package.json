@@ -61,6 +61,10 @@
     "bot:status": "yarn workspace @curyo/bot status",
     "keeper:start": "yarn workspace @curyo/keeper start",
     "keeper:dev": "yarn workspace @curyo/keeper dev",
+    "mcp:start": "yarn workspace @curyo/mcp-server start",
+    "mcp:dev": "yarn workspace @curyo/mcp-server dev",
+    "mcp:test": "yarn workspace @curyo/mcp-server test",
+    "mcp:check-types": "yarn workspace @curyo/mcp-server check-types",
     "e2e": "yarn workspace @curyo/nextjs e2e",
     "e2e:ui": "yarn workspace @curyo/nextjs e2e:ui"
   },

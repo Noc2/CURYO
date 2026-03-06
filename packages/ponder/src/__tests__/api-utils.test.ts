@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { safeBigInt, safeLimit, safeOffset, isValidAddress } from "../api/utils.js";
+import { safeBigInt, safeLimit, safeOffset, isValidAddress, getUrlLookupCandidates } from "../api/utils.js";
 
 describe("safeBigInt", () => {
   it("parses valid positive integer", () => {
@@ -99,5 +99,37 @@ describe("isValidAddress", () => {
 
   it("rejects non-hex characters", () => {
     expect(isValidAddress("0xZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ")).toBe(false);
+  });
+});
+
+describe("getUrlLookupCandidates", () => {
+  it("returns exact and normalized candidates for valid http urls", () => {
+    expect(getUrlLookupCandidates("https://Example.com:443/path?q=1#frag")).toEqual(
+      expect.arrayContaining([
+        "https://Example.com:443/path?q=1#frag",
+        "https://example.com/path?q=1",
+      ]),
+    );
+  });
+
+  it("adds trailing slash variants for root urls", () => {
+    expect(getUrlLookupCandidates("https://example.com")).toEqual(
+      expect.arrayContaining([
+        "https://example.com",
+        "https://example.com/",
+      ]),
+    );
+  });
+
+  it("rejects blank values", () => {
+    expect(getUrlLookupCandidates("   ")).toBeNull();
+  });
+
+  it("rejects non-http protocols", () => {
+    expect(getUrlLookupCandidates("ftp://example.com")).toBeNull();
+  });
+
+  it("rejects invalid urls", () => {
+    expect(getUrlLookupCandidates("not a url")).toBeNull();
   });
 });
