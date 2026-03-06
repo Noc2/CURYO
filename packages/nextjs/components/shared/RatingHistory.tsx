@@ -57,17 +57,25 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     return points;
   }, [events, currentRating]);
 
-  const { data: result, isLoading, error } = usePonderQuery({
+  const {
+    data: result,
+    isLoading,
+    error,
+  } = usePonderQuery({
     queryKey: ["ratingHistory", contentId.toString()],
     ponderFn: async () => {
       const response = await ponderApi.getContentById(contentId.toString());
-      const ratings = response.ratings.slice().reverse().map(rating => rating.newRating);
+      const ratings =
+        response.ratings
+          ?.slice()
+          .reverse()
+          .map(rating => rating.newRating) ?? [];
 
       if (ratings.length > 0) {
         return [50, ...ratings];
       }
 
-      return [50, response.content.rating];
+      return [50, response.content?.rating ?? 50];
     },
     rpcFn: async () => rpcDataPoints,
     rpcEnabled: rpcFallbackEnabled,

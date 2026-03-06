@@ -127,9 +127,9 @@ export function useRoundPhase(contentId?: bigint): RoundPhaseInfo {
 
   const round = rawRoundData as unknown as RoundData;
 
-  const voteCount = Number(round.voteCount);
+  const voteCount = Number(round.voteCount ?? 0n);
   const revealedCount = Number(round.revealedCount ?? 0n);
-  const totalStake = round.totalStake;
+  const totalStake = round.totalStake ?? 0n;
   const startTime = Number(round.startTime);
   const votersNeeded = Math.max(0, configMinVoters - voteCount);
 

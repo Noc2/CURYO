@@ -15,6 +15,7 @@ export function AccuracyLeaderboard() {
 
   const [items, setItems] = useState<PonderAccuracyLeaderboardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("winRate");
   const [minVotes, setMinVotes] = useState<MinVotesOption>("3");
   const [categoryId, setCategoryId] = useState<string>("");
@@ -23,6 +24,7 @@ export function AccuracyLeaderboard() {
     let cancelled = false;
     const fetchData = async () => {
       setIsLoading(true);
+      setFetchError(false);
       try {
         const params: Record<string, string> = {
           sortBy,
@@ -34,7 +36,10 @@ export function AccuracyLeaderboard() {
         if (!cancelled) setItems(data.items);
       } catch (err) {
         console.error("Failed to fetch accuracy leaderboard:", err);
-        if (!cancelled) setItems([]);
+        if (!cancelled) {
+          setItems([]);
+          setFetchError(true);
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -65,6 +70,7 @@ export function AccuracyLeaderboard() {
           className="select select-sm bg-base-200 text-base rounded-full"
           value={categoryId}
           onChange={e => setCategoryId(e.target.value)}
+          aria-label="Filter by category"
         >
           <option value="">All categories</option>
           {approvedCategories.map(cat => (
@@ -79,6 +85,7 @@ export function AccuracyLeaderboard() {
           className="select select-sm bg-base-200 text-base rounded-full"
           value={sortBy}
           onChange={e => setSortBy(e.target.value as SortOption)}
+          aria-label="Sort by"
         >
           <option value="winRate">Win Rate</option>
           <option value="wins">Wins</option>
@@ -90,6 +97,7 @@ export function AccuracyLeaderboard() {
           className="select select-sm bg-base-200 text-base rounded-full"
           value={minVotes}
           onChange={e => setMinVotes(e.target.value as MinVotesOption)}
+          aria-label="Minimum votes"
         >
           <option value="3">Min 3 votes</option>
           <option value="5">Min 5 votes</option>
@@ -101,6 +109,10 @@ export function AccuracyLeaderboard() {
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      ) : fetchError ? (
+        <div className="text-center py-12 text-base-content/50">
+          <p>Failed to load leaderboard</p>
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 text-base-content/50">
@@ -151,7 +163,8 @@ export function AccuracyLeaderboard() {
                           width={32}
                           height={32}
                           className="w-8 h-8 rounded-full object-cover shrink-0"
-                          alt=""
+                          alt={`${entry.profileName || truncateAddress(entry.voter)} avatar`}
+                          loading="lazy"
                         />
                         <div className="flex flex-col">
                           {entry.profileName ? (

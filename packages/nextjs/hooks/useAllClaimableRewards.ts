@@ -131,12 +131,21 @@ export function useAllClaimableRewards() {
     const items: ClaimableItem[] = [];
     let total = 0n;
 
+    // Safe BigInt conversion — Ponder returns numeric strings, but guard against bad data
+    const safeBigInt = (val: unknown): bigint => {
+      try {
+        return BigInt(val as string | number);
+      } catch {
+        return 0n;
+      }
+    };
+
     // Add ties/cancelled (refund = stake)
     for (const v of ties) {
-      const stake = BigInt(v.stake);
+      const stake = safeBigInt(v.stake);
       items.push({
-        contentId: BigInt(v.contentId),
-        epochId: BigInt(v.roundId),
+        contentId: safeBigInt(v.contentId),
+        epochId: safeBigInt(v.roundId),
         reward: stake,
         isTie: true,
       });
@@ -147,14 +156,14 @@ export function useAllClaimableRewards() {
     if (rewardResults && rewardResults.length === winners.length * 2) {
       for (let i = 0; i < winners.length; i++) {
         const v = winners[i];
-        const stake = BigInt(v.stake);
+        const stake = safeBigInt(v.stake);
         const poolResult = rewardResults[i * 2];
         const winStakeResult = rewardResults[i * 2 + 1];
 
         let reward = stake; // at minimum, get stake back
         if (poolResult?.status === "success" && winStakeResult?.status === "success") {
-          const pool = BigInt(poolResult.result as any);
-          const weighted = BigInt(winStakeResult.result as any);
+          const pool = safeBigInt(poolResult.result);
+          const weighted = safeBigInt(winStakeResult.result);
           if (weighted > 0n) {
             const w = BigInt(epochWeightBps(v.epochIndex));
             const effectiveStake = (stake * w) / 10000n;
@@ -164,8 +173,8 @@ export function useAllClaimableRewards() {
         }
 
         items.push({
-          contentId: BigInt(v.contentId),
-          epochId: BigInt(v.roundId),
+          contentId: safeBigInt(v.contentId),
+          epochId: safeBigInt(v.roundId),
           reward,
           isTie: false,
         });
@@ -177,7 +186,7 @@ export function useAllClaimableRewards() {
     let active = 0n;
     for (const v of votes) {
       if (v.roundState === RoundState.Open) {
-        active += BigInt(v.stake);
+        active += safeBigInt(v.stake);
       }
     }
 

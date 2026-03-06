@@ -33,6 +33,7 @@ function TmdbIcon({ className }: { className?: string }) {
 export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
   const [movie, setMovie] = useState<TmdbMovie | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -58,7 +59,9 @@ export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
           });
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setFetchError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -98,7 +101,7 @@ export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
           <TmdbIcon className="w-5 h-5 text-white" />
         </div>
         <div className="min-w-0">
-          <p className="text-base font-medium truncate">Movie not found</p>
+          <p className="text-base font-medium truncate">{fetchError ? "Failed to load movie" : "Movie not found"}</p>
           <p className="text-base text-base-content/50 mt-0.5">View on TMDB</p>
         </div>
       </a>

@@ -101,7 +101,10 @@ export function useUrlValidation(urls: string[]) {
   useEffect(() => {
     if (uncheckedUrls.length > 0 && !hasTriggeredValidation && !isCacheLoading) {
       setHasTriggeredValidation(true);
-      triggerValidation();
+      triggerValidation().catch(() => {
+        // Reset so validation can be retried on next render cycle
+        setHasTriggeredValidation(false);
+      });
     }
   }, [uncheckedUrls.length, hasTriggeredValidation, isCacheLoading, triggerValidation]);
 

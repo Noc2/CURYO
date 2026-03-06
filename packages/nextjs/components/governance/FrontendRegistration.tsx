@@ -85,6 +85,12 @@ export function FrontendRegistration() {
         args: [frontendRegistryInfo.address, amountWei],
       });
 
+      // Re-check wallet before second tx
+      if (!address) {
+        notification.error("Wallet disconnected after approval. Please reconnect and retry.");
+        return;
+      }
+
       // Register as frontend operator (skip simulation — allowance state may be stale)
       await writeFrontendRegistryNoSim({
         functionName: "register",

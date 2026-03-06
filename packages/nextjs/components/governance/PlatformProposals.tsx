@@ -58,7 +58,11 @@ export function PlatformProposals() {
     }));
   }, [categoryEvents]);
 
-  const { data: result, isLoading } = usePonderQuery({
+  const {
+    data: result,
+    isLoading,
+    error,
+  } = usePonderQuery({
     queryKey: ["platformProposals"],
     ponderFn: async () => {
       const response = await ponderApi.getCategories("all");
@@ -109,14 +113,21 @@ export function PlatformProposals() {
         </div>
       )}
 
+      {/* Error State */}
+      {!proposalsLoading && error && (
+        <div className="text-center py-8">
+          <p className="text-base text-base-content/50">Unable to load proposals</p>
+        </div>
+      )}
+
       {/* Proposals List */}
-      {!proposalsLoading && categories.length > 0 ? (
+      {!proposalsLoading && !error && categories.length > 0 ? (
         <div className="space-y-3">
           {categories.map(category => (
             <PlatformProposalCard key={category.id.toString()} categoryId={category.id} filter={filter} />
           ))}
         </div>
-      ) : !proposalsLoading ? (
+      ) : !proposalsLoading && !error ? (
         <div className="text-center py-8">
           <GlobeAltIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
           <p className="text-base-content/60 mb-2">No platform proposals yet</p>

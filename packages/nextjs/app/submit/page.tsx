@@ -19,7 +19,6 @@ import {
   useScaffoldReadContract,
   useScaffoldWriteContract,
 } from "~~/hooks/scaffold-eth";
-import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import {
   Category,
   extractDomain,
@@ -28,11 +27,12 @@ import {
   useCategoryRegistry,
 } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
+import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { ponderApi } from "~~/services/ponder/client";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
-import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
 import { publicEnv } from "~~/utils/env/public";
+import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
 
 type SubmissionType = "content" | "category" | "frontend";
@@ -391,6 +391,13 @@ const SubmitPage: NextPage = () => {
       );
       // Brief delay to let the sequencer's nonce state catch up after the approve tx
       await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Re-check wallet before second tx
+      if (!address) {
+        notification.error("Wallet disconnected after approval. Please reconnect and retry.");
+        return;
+      }
+
       const canonicalUrl = canonicalizeUrl(url);
       await writeRegistry({
         functionName: "submitContent",
