@@ -7,7 +7,7 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount, useReadContracts } from "wagmi";
-import { ShareIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ShareIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
@@ -126,6 +126,12 @@ const HomeInner = () => {
   const scopeLoading =
     (scope === "watched" && !!address && watchedLoading) || (scope === "my_votes" && !!address && votesLoading);
   const normalizedAddress = address?.toLowerCase();
+
+  useEffect(() => {
+    if (!address && scope !== "all") {
+      setScope("all");
+    }
+  }, [address, scope]);
 
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback((name: string) => {
@@ -547,8 +553,6 @@ const HomeInner = () => {
     return `No content found in "${activeCategory}".`;
   }, [activeCategory, address, scope, searchQuery]);
 
-  const activeScopeLabel = SCOPE_OPTIONS.find(option => option.value === scope)?.label ?? "All";
-
   return (
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
       <div className="w-full max-w-5xl">
@@ -565,46 +569,33 @@ const HomeInner = () => {
                 : "bg-base-200 text-warning/70 hover:bg-warning/10";
             }}
           />
+          {address ? (
+            <FeedScopeFilter value={scope} options={SCOPE_OPTIONS} onChange={value => setScope(value as ScopeOption)} />
+          ) : null}
           <div className="hidden shrink-0 sm:flex">
             <StreakCounter />
           </div>
         </div>
 
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          <FeedScopeFilter value={scope} options={SCOPE_OPTIONS} onChange={value => setScope(value as ScopeOption)} />
-
-          {scope !== "all" ? (
-            <button
-              type="button"
-              onClick={() => setScope("all")}
-              className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-              aria-label={`Clear ${activeScopeLabel} filter`}
+        {isSearchMode ? (
+          <div className="mb-5 flex flex-wrap items-center gap-2">
+            <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
+              Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
+            </div>
+            <select
+              value={effectiveSearchSortBy}
+              onChange={e => setSortBy(e.target.value as SearchSortOption)}
+              className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+              aria-label="Sort search results"
             >
-              {activeScopeLabel}
-              <XMarkIcon className="h-4 w-4" />
-            </button>
-          ) : null}
-
-          {isSearchMode ? (
-            <>
-              <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-                Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
-              </div>
-              <select
-                value={effectiveSearchSortBy}
-                onChange={e => setSortBy(e.target.value as SearchSortOption)}
-                className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-                aria-label="Sort search results"
-              >
-                {SEARCH_SORT_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </>
-          ) : null}
-        </div>
+              {SEARCH_SORT_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
 
         <div className="sm:hidden">
           <StreakCounter />

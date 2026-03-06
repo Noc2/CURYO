@@ -26,4 +26,12 @@ test.describe("Content feed", () => {
     const allPill = page.getByRole("button", { name: /^All$/i }).first();
     await expect(allPill).toBeVisible({ timeout: 10_000 });
   });
+
+  test("connected users see the feed scope filter pill", async ({ connectedPage: page }) => {
+    await page.goto("/vote");
+    await waitForFeedLoaded(page);
+
+    const filterPill = page.getByRole("button", { name: /^Filter$/i }).first();
+    await expect(filterPill).toBeVisible({ timeout: 10_000 });
+  });
 });

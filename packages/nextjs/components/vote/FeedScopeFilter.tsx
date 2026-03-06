@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckIcon, ChevronDownIcon, FunnelIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useOutsideClick } from "~~/hooks/scaffold-eth/useOutsideClick";
 
 export interface FeedScopeOption {
@@ -24,6 +24,7 @@ export function FeedScopeFilter({ value, options, onChange, label = "Filter" }: 
   const isFiltered = value !== defaultValue;
 
   const selectedOption = useMemo(() => options.find(option => option.value === value) ?? options[0], [options, value]);
+  const buttonLabel = isFiltered ? (selectedOption?.label ?? label) : label;
 
   const close = useCallback(() => setIsOpen(false), []);
 
@@ -52,15 +53,14 @@ export function FeedScopeFilter({ value, options, onChange, label = "Filter" }: 
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
-          isFiltered ? "bg-primary/10 text-primary" : "bg-base-200 text-base-content/70 hover:text-base-content"
+        className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
+          isFiltered ? "pill-category" : "bg-base-200 text-white hover:bg-base-300"
         }`}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
+        aria-label={isFiltered && selectedOption ? `${label}: ${selectedOption.label}` : label}
       >
-        <FunnelIcon className="h-4 w-4" />
-        <span>{label}</span>
-        <ChevronDownIcon className="h-4 w-4" />
+        <span>{buttonLabel}</span>
       </button>
 
       {isOpen && (
