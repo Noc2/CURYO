@@ -13,8 +13,6 @@ const AVAILABLE_TARGET_NETWORKS = {
 export type SupportedTargetNetwork = (typeof AVAILABLE_TARGET_NETWORKS)[keyof typeof AVAILABLE_TARGET_NETWORKS];
 
 const DEFAULT_DEV_TARGET_NETWORKS = `${chains.foundry.id},${chains.celoSepolia.id}`;
-
-export const DEFAULT_ALCHEMY_API_KEY = "cR4WnXePioePZ5fFrnSiR";
 const DEV_WALLET_CONNECT_PROJECT_ID = "3a8170812b534d0ff9d794f19a901d64";
 
 function readEnv(name: string): string | undefined {
@@ -111,7 +109,7 @@ if (frontendCode && !isAddress(frontendCode)) {
 export const publicEnv = {
   isProduction,
   targetNetworks,
-  alchemyApiKey: readEnv("NEXT_PUBLIC_ALCHEMY_API_KEY") ?? (!isProduction ? DEFAULT_ALCHEMY_API_KEY : undefined),
+  alchemyApiKey: readEnv("NEXT_PUBLIC_ALCHEMY_API_KEY"),
   walletConnectProjectId,
   ponderUrl: requireUrl("NEXT_PUBLIC_PONDER_URL", !isProduction ? "http://localhost:42069" : undefined),
   frontendCode: frontendCode as `0x${string}` | undefined,

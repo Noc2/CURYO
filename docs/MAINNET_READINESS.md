@@ -53,13 +53,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Environment & Secrets
 
-- [x] **Alchemy fallback behavior documented** _(documented)_
-  Production does not require `NEXT_PUBLIC_ALCHEMY_API_KEY`. On Celo the frontend can run without a dedicated Alchemy key, and `.env.example` now documents that the key is optional while the shared fallback is intended for local development only. Teams that want predictable RPC throughput should still provision their own provider key.
-  _Ref: `packages/nextjs/utils/env/public.ts:111-119`, `packages/nextjs/.env.example:10-13`_
-
-- [ ] **Rotate shared Alchemy key in source**
-  `DEFAULT_ALCHEMY_API_KEY = "cR4WnXePioePZ5fFrnSiR"` is committed to git. This is a scaffold-eth shared key. If the repo goes public, it will be scraped and abused. Rotate it or accept it as a low-priority public fallback.
-  _Ref: `packages/nextjs/utils/env/public.ts:17`_
+- [x] **Alchemy fallback behavior documented** _(resolved)_
+  Production does not require `NEXT_PUBLIC_ALCHEMY_API_KEY`. On Celo the frontend can run without a dedicated Alchemy key, and `.env.example` now documents that the key is optional and the app uses the configured public RPCs when no Alchemy key is set. Teams that want predictable RPC throughput should still provision their own provider key.
+  _Ref: `packages/nextjs/utils/env/public.ts:109-117`, `packages/nextjs/.env.example:10-13`_
 
 ### CI/CD
 

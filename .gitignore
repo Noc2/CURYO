@@ -29,6 +29,7 @@ node_modules
 .cursor
 
 # AI tools
+AGENTS.md
 CLAUDE.md
 .claudeignore
 

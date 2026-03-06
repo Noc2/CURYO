@@ -1,5 +1,5 @@
 import * as chains from "viem/chains";
-import { DEFAULT_ALCHEMY_API_KEY, publicEnv } from "~~/utils/env/public";
+import { publicEnv } from "~~/utils/env/public";
 import type { SupportedTargetNetwork } from "~~/utils/env/public";
 
 export type BaseConfig = {
@@ -20,7 +20,7 @@ const scaffoldConfig = {
   // The interval at which your front-end polls the RPC servers for new data (it has no effect if you only target the local network (default is 4000))
   pollingInterval: 30000,
   // Your Alchemy API key — get one at https://dashboard.alchemyapi.io
-  // Optional on Celo because public RPCs are available; dev only falls back to a shared key.
+  // Optional on Celo because public RPCs are available.
   alchemyApiKey: publicEnv.alchemyApiKey,
   // If you want to use a different RPC for a specific network, you can add it here.
   // The key is the chain ID, and the value is the HTTP RPC URL
@@ -37,4 +37,3 @@ const scaffoldConfig = {
 } as const satisfies ScaffoldConfig;
 
 export default scaffoldConfig;
-export { DEFAULT_ALCHEMY_API_KEY };
