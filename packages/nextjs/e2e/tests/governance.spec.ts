@@ -39,12 +39,14 @@ test.describe("Governance page", () => {
     await expect(profileLink).toBeVisible({ timeout: 5_000 });
   });
 
-  test("accuracy tab shows following-only filter", async ({ connectedPage: page }) => {
+  test("profile tab shows following-only filter on leaderboard", async ({ connectedPage: page }) => {
     await page.goto("/governance");
 
-    const accuracyTab = page.getByRole("button", { name: "Accuracy" });
-    await expect(accuracyTab).toBeVisible({ timeout: 15_000 });
-    await accuracyTab.click();
+    // The governance page tabs are: Leaderboard, Profile, Vote (no Accuracy tab).
+    // The "Following Only" filter lives on the Leaderboard tab.
+    const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
+    await expect(leaderboardTab).toBeVisible({ timeout: 15_000 });
+    await leaderboardTab.click();
 
     const followingOnlyToggle = page.getByRole("button", { name: "Following Only" }).first();
     await expect(followingOnlyToggle).toBeVisible({ timeout: 10_000 });

@@ -27,43 +27,17 @@ test.describe("Error states and edge cases", () => {
   });
 
   test("own content shows 'Your submission' label", async ({ browser }) => {
-    // Account #2 submitted content #1 and #10 (from seed), and content-moderation
-    // tests may add more. Navigate to /vote — the featured card may not be own
-    // content, so cycle through thumbnails to find it.
+    // Account #2 submitted content #1 (from seed). Navigate directly to it.
     const context = await browser.newContext();
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
-    await page.goto("/vote");
+    // Navigate directly to content #1 which was submitted by account #2
+    await page.goto("/vote?content=1");
     await waitForFeedLoaded(page);
 
     const ownContentLabel = page.getByText("Your submission");
-
-    // Check if the featured card already shows "Your submission"
-    let found = await ownContentLabel
-      .waitFor({ state: "visible", timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    // If not, cycle through thumbnail grid to find own content
-    if (!found) {
-      const thumbnails = page.locator("[data-testid='content-thumbnail']");
-      const thumbCount = await thumbnails.count();
-
-      for (let i = 0; i < Math.min(thumbCount, 20); i++) {
-        const thumb = thumbnails.nth(i);
-        if (await thumb.isVisible().catch(() => false)) {
-          await thumb.click();
-          found = await ownContentLabel
-            .waitFor({ state: "visible", timeout: 3_000 })
-            .then(() => true)
-            .catch(() => false);
-          if (found) break;
-        }
-      }
-    }
-
-    expect(found, "Could not find 'Your submission' label for account #2's content").toBe(true);
+    await expect(ownContentLabel).toBeVisible({ timeout: 15_000 });
 
     // Verify vote buttons are NOT visible on own content
     const voteUp = page.getByRole("button", { name: "Vote up" });

@@ -109,13 +109,23 @@ test.describe("Next.js API routes", () => {
     expect(challengeRes.status).toBe(200);
 
     const challenge = await challengeRes.json();
+    expect(challenge).toHaveProperty("challengeId");
+    expect(challenge).toHaveProperty("message");
     const signature = await account.signMessage({ message: challenge.message });
+
+    // Small delay to ensure SQLite WAL flushes the challenge insert
+    await new Promise(r => setTimeout(r, 200));
 
     const res = await fetch(`${BASE_URL}/api/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contentId, body, address: account.address, signature, challengeId: challenge.challengeId }),
     });
+
+    if (res.status !== 200) {
+      const errBody = await res.json().catch(() => ({}));
+      console.log(`    ⚠ Comment POST failed: ${res.status} ${JSON.stringify(errBody)}`);
+    }
     expect(res.status).toBe(200);
 
     const data = await res.json();
@@ -138,13 +148,22 @@ test.describe("Next.js API routes", () => {
     expect(challengeRes.status).toBe(200);
 
     const challenge = await challengeRes.json();
+    expect(challenge).toHaveProperty("challengeId");
     const signature = await account.signMessage({ message: challenge.message });
+
+    // Small delay to ensure SQLite WAL flushes the challenge insert
+    await new Promise(r => setTimeout(r, 200));
 
     const firstRes = await fetch(`${BASE_URL}/api/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contentId, body, address: account.address, signature, challengeId: challenge.challengeId }),
     });
+
+    if (firstRes.status !== 200) {
+      const errBody = await firstRes.json().catch(() => ({}));
+      console.log(`    ⚠ First comment POST failed: ${firstRes.status} ${JSON.stringify(errBody)}`);
+    }
     expect(firstRes.status).toBe(200);
 
     const replayRes = await fetch(`${BASE_URL}/api/comments`, {
@@ -199,13 +218,18 @@ test.describe("Next.js API routes", () => {
   test("POST /api/username requires a one-time challenge and rejects replay", async () => {
     const { privateKeyToAccount } = await import("viem/accounts");
     const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
-    const username = `e2e_user_${Date.now()}`;
+    const username = `e2e_${(Date.now() % 1e9).toString(36)}`;
 
     const challengeRes = await fetch(`${BASE_URL}/api/username/challenge`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ address: account.address, username }),
     });
+
+    if (challengeRes.status !== 200) {
+      const errBody = await challengeRes.json().catch(() => ({}));
+      console.log(`    ⚠ Username challenge failed: ${challengeRes.status} ${JSON.stringify(errBody)}`);
+    }
     expect(challengeRes.status).toBe(200);
 
     const challenge = await challengeRes.json();
@@ -213,6 +237,9 @@ test.describe("Next.js API routes", () => {
     expect(challenge).toHaveProperty("message");
 
     const signature = await account.signMessage({ message: challenge.message });
+
+    // Small delay to ensure SQLite WAL flushes the challenge insert
+    await new Promise(r => setTimeout(r, 200));
 
     const firstRes = await fetch(`${BASE_URL}/api/username`, {
       method: "POST",

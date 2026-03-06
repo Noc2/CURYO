@@ -5,7 +5,7 @@ test.describe("Public profiles", () => {
   test("public profile page renders without a connected wallet", async ({ page }) => {
     await page.goto(`/profiles/${ANVIL_ACCOUNTS.account9.address}`);
 
-    await expect(page.getByText("Public profile")).toBeVisible({ timeout: 15_000 });
+    // PublicProfileView renders the address, "Voting performance", and "Recent votes" sections.
     await expect(page.getByText(ANVIL_ACCOUNTS.account9.address.toLowerCase())).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Voting performance")).toBeVisible({ timeout: 15_000 });
 
