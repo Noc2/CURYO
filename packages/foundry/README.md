@@ -70,4 +70,4 @@ scripts-js/                      # JS helpers for deployment & account managemen
 
 All contracts use the **UUPS upgradeable** pattern with `AccessControlUpgradeable` for role-based permissions. Storage layout must be preserved across upgrades — never reorder, remove, or change types of existing storage variables.
 
-Compiled ABIs are consumed by the `ponder` package (indexing) and deployed addresses are written to `packages/nextjs/contracts/deployedContracts.ts` for frontend use.
+Compiled ABIs and deployed addresses are generated into `packages/contracts/src/` and consumed via the `@curyo/contracts` workspace package.

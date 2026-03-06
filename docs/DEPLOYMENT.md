@@ -164,7 +164,7 @@ make verify-blockscout CONTRACT_ADDRESS=0x... CONTRACT_NAME=ContentRegistry
 
 Addresses are written to:
 - `packages/foundry/deployments/42220.json`
-- `packages/nextjs/contracts/deployedContracts.ts` (auto-generated)
+- `packages/contracts/src/deployedContracts.ts` (auto-generated)
 
 Save a copy of these addresses somewhere safe. You'll need them for Ponder, Keeper, and Bot config.
 

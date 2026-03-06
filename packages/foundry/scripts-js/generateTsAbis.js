@@ -323,7 +323,7 @@ function main() {
     `📝 Updated shared contract definition file on ${join(CONTRACTS_TARGET_DIR, "deployedContracts.ts")}`
   );
 
-  // --- Auto-generate ABI files for ponder, keeper, and bot ---
+  // --- Auto-generate ABI files for the shared contracts package ---
   generateAbiFiles();
 
   // --- Auto-update Ponder env with latest deployment for the selected target network ---
@@ -503,24 +503,24 @@ function updatePonderEnv(allGeneratedContracts, deployers = {}) {
 
 /**
  * Contract-to-ABI-target mapping.
- * Each entry specifies which packages should receive the full ABI for a contract.
+ * ABI files are generated once into the shared contracts package.
  * Paths are relative to the monorepo root (packages/).
  */
 const ABI_TARGETS = [
   {
     contract: "RoundVotingEngine",
-    targets: ["contracts/src/abis", "ponder/abis", "keeper/src/abis", "bot/src/abis"],
+    targets: ["contracts/src/abis"],
   },
   {
     contract: "ContentRegistry",
-    targets: ["contracts/src/abis", "ponder/abis", "keeper/src/abis", "bot/src/abis"],
+    targets: ["contracts/src/abis"],
   },
-  { contract: "CategoryRegistry", targets: ["contracts/src/abis", "ponder/abis"] },
-  { contract: "CuryoReputation", targets: ["contracts/src/abis", "ponder/abis", "bot/src/abis"] },
-  { contract: "VoterIdNFT", targets: ["contracts/src/abis", "ponder/abis", "bot/src/abis"] },
-  { contract: "FrontendRegistry", targets: ["contracts/src/abis", "ponder/abis"] },
-  { contract: "RoundRewardDistributor", targets: ["contracts/src/abis", "ponder/abis"] },
-  { contract: "ProfileRegistry", targets: ["contracts/src/abis", "ponder/abis"] },
+  { contract: "CategoryRegistry", targets: ["contracts/src/abis"] },
+  { contract: "CuryoReputation", targets: ["contracts/src/abis"] },
+  { contract: "VoterIdNFT", targets: ["contracts/src/abis"] },
+  { contract: "FrontendRegistry", targets: ["contracts/src/abis"] },
+  { contract: "RoundRewardDistributor", targets: ["contracts/src/abis"] },
+  { contract: "ProfileRegistry", targets: ["contracts/src/abis"] },
 ];
 
 function generateAbiFiles() {
@@ -553,7 +553,7 @@ function generateAbiFiles() {
     `📝 Generated ${totalWritten} ABI files across ${ABI_TARGETS.reduce(
       (n, t) => n + t.targets.length,
       0
-    )} targets`
+    )} shared targets`
   );
 }
 

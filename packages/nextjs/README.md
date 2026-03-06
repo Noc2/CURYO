@@ -72,7 +72,6 @@ hooks/                        # Custom React hooks
 services/ponder/client.ts     # REST client for the Ponder indexer API
 utils/platforms/handlers/     # Platform detection & URL parsing
 lib/db/schema.ts              # Drizzle ORM database schema
-contracts/deployedContracts.ts # Auto-generated contract addresses & ABIs
 scaffold.config.ts            # Target networks, Alchemy/WalletConnect config
 ```
 
@@ -82,5 +81,7 @@ The frontend reads on-chain data in two ways:
 
 1. **Wagmi/Scaffold-ETH hooks** — direct contract reads and writes via the user's wallet
 2. **Ponder API** — indexed historical data fetched through `services/ponder/client.ts`
+
+Shared contract ABIs and deployment metadata come from the `@curyo/contracts` workspace package.
 
 Uses the `~~/*` path alias for imports from the project root. All client components require the `"use client"` directive.
