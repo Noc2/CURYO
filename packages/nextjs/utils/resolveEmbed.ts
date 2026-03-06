@@ -1,5 +1,5 @@
-import { ResponseTooLargeError, readResponseJson, readResponseText } from "~~/utils/fetchBodyLimit";
 import { getTmdbApiKey } from "~~/lib/env/server";
+import { ResponseTooLargeError, readResponseJson, readResponseText } from "~~/utils/fetchBodyLimit";
 
 /**
  * Shared embed resolution logic.
@@ -21,7 +21,7 @@ export interface EmbedResult {
 
 const CACHE_OPTIONS = { next: { revalidate: 86400 } }; // 24h cache
 const MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB cap on external API responses
-const MAX_AUTHORS = 10; // Cap author lookups per book
+const MAX_AUTHORS = 3; // Cap author lookups per book (limits amplification)
 const MAX_DESCRIPTION_LENGTH = 500;
 
 /** Fetch JSON with a response-size guard to prevent memory abuse. */

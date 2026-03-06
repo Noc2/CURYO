@@ -46,18 +46,22 @@ function hashIdentifier(value: string): string {
 }
 
 function getClientIp(request: NextRequest): string {
+  // In production, only trust the platform-provided IP (e.g. Vercel sets request.ip).
+  // Reading raw headers like x-forwarded-for is unsafe — clients can spoof them to
+  // bypass rate limits unless a trusted reverse proxy overwrites them.
   const nextRequest = request as NextRequest & { ip?: string };
 
-  return (
-    nextRequest.ip?.trim() ||
-    request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("cf-connecting-ip")?.trim() ||
-    request.headers.get("fly-client-ip")?.trim() ||
-    request.headers.get("fastly-client-ip")?.trim() ||
-    request.headers.get("x-real-ip")?.trim() ||
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    "unknown"
-  );
+  if (nextRequest.ip?.trim()) {
+    return nextRequest.ip.trim();
+  }
+
+  // In development there is no reverse proxy, so fall back to x-forwarded-for.
+  if (process.env.NODE_ENV === "development") {
+    return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+  }
+
+  // Unknown IP — all such requests share a single rate-limit bucket (safe default).
+  return "unknown";
 }
 
 async function cleanupExpiredEntries(now: number) {
