@@ -1346,15 +1346,15 @@ const SecurityAudit: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td>Frontend slash &rarr; treasury</td>
-              <td>FrontendRegistry &rarr; forceApprove &rarr; Treasury</td>
+              <td>Frontend slash &rarr; consensus reserve</td>
+              <td>FrontendRegistry &rarr; forceApprove &rarr; RoundVotingEngine consensus reserve</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
             </tr>
             <tr>
-              <td>Category rejection &rarr; treasury</td>
-              <td>CategoryRegistry &rarr; forceApprove &rarr; Treasury</td>
+              <td>Category rejection &rarr; consensus reserve</td>
+              <td>CategoryRegistry &rarr; forceApprove &rarr; RoundVotingEngine consensus reserve</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>

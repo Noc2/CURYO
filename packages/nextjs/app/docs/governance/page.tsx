@@ -105,9 +105,10 @@ const GovernanceDocs: NextPage = () => {
 
       <h2>Round Voting Parameters</h2>
       <p>
-        The following parameters control per-content round-based voting. They are adjustable via governance proposals
-        through the <code className="bg-base-300 px-1 rounded text-base">setConfig()</code> function on the
-        RoundVotingEngine contract.
+        The following parameters control per-content round-based voting. Core round settings are adjustable via
+        governance proposals through the <code className="bg-base-300 px-1 rounded text-base">setConfig()</code>{" "}
+        function on the RoundVotingEngine contract. The reveal grace period is updated separately through{" "}
+        <code className="bg-base-300 px-1 rounded text-base">setRevealGracePeriod()</code>.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -123,9 +124,9 @@ const GovernanceDocs: NextPage = () => {
               <td className="font-mono">Minimum voters</td>
               <td>3</td>
               <td>
-                Minimum votes required before a round can resolve. Prevents thin-market exploitation by coordinated
-                minorities. Rounds that don&apos;t reach this threshold within the maximum round duration are cancelled
-                with full refunds.
+                Minimum revealed votes required before a round becomes eligible to settle. Past-epoch reveal checks may
+                still delay settlement. Rounds that don&apos;t reach this threshold within the maximum round duration
+                are cancelled with full refunds.
               </td>
             </tr>
             <tr>
@@ -138,7 +139,7 @@ const GovernanceDocs: NextPage = () => {
               <td>60 minutes</td>
               <td>
                 After each epoch ends, past-epoch votes must be revealed before settlement, unless this grace period has
-                expired.
+                expired. This parameter is configured separately from <code>setConfig()</code>.
               </td>
             </tr>
             <tr>

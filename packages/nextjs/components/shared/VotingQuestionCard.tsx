@@ -171,7 +171,7 @@ export function VotingQuestionCard({
                 ))}
               </span>
               <InfoTooltip
-                text={`${voteCount} of ${minVoters} voters. ${Math.max(0, minVoters - voteCount) > 0 ? `${Math.max(0, minVoters - voteCount)} more vote${Math.max(0, minVoters - voteCount) === 1 ? "" : "s"} needed.` : "Ready to resolve."} Votes are revealed after the blind phase ends.`}
+                text={`${voteCount} of ${minVoters} voters. ${Math.max(0, minVoters - voteCount) > 0 ? `${Math.max(0, minVoters - voteCount)} more vote${Math.max(0, minVoters - voteCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."} Votes are revealed after the blind phase ends.`}
                 position="bottom"
               />
             </span>

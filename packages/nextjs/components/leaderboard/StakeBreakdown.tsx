@@ -61,7 +61,7 @@ export function StakeBreakdown() {
             <div
               key={e.label}
               className="tooltip tooltip-top flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-base-content/[0.06] text-sm cursor-help"
-              data-tip="Votes are revealed after each blind phase (~20 min). Rounds resolve once enough votes are revealed. If unresolved after 7 days, stakes are refunded."
+              data-tip="Votes are revealed after each blind phase (~20 min). Rounds settle once the revealed-vote threshold is met and past-epoch reveal checks clear. If the threshold is not reached within 7 days, stakes are refunded."
             >
               <span className="text-base-content/50">{e.label}</span>
               <span className="font-mono tabular-nums">{format(e.amount)}</span>

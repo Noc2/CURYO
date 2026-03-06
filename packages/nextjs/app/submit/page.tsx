@@ -764,7 +764,7 @@ const SubmitPage: NextPage = () => {
                   <div>
                     <p className="flex items-center gap-1.5 text-base font-medium text-white">
                       Submission Stake
-                      <InfoTooltip text="Returned after ~4 days if rating stays above 10%. Receive 10% of the losing stakes every round" />
+                      <InfoTooltip text="Returned after ~4 days if rating stays above 25. Settled two-sided rounds allocate 10% of the losing pool to the submitter." />
                     </p>
                   </div>
                   <div className="text-right">

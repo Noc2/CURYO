@@ -999,7 +999,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The following parameters control per-content round-based voting. They are adjustable via governance proposals through the setConfig() function on the RoundVotingEngine contract.",
+            text: "The following parameters control per-content round-based voting. Core round settings are adjustable via governance proposals through the setConfig() function on the RoundVotingEngine contract. The reveal grace period is updated separately through setRevealGracePeriod().",
           },
           {
             type: "table",
@@ -1176,7 +1176,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Quorum is calculated as 4% of circulating supply  -- total supply minus tokens locked in the HumanFaucet, ParticipationPool, and RewardDistributor contracts. This dynamic calculation ensures governance is usable from day one: when only a small number of users have claimed tokens, the quorum scales proportionally to actual circulation rather than the full 100M supply. A minimum floor of 10,000 cREP prevents trivially small quorums in the earliest stages. As the user base grows and more tokens enter circulation, the quorum threshold increases proportionally, requiring increasingly broad consensus.",
+            text: "Quorum is calculated as 4% of circulating supply  -- total supply minus balances held by protocol-controlled holders excluded by the governor. In the deployment model this includes custody contracts such as HumanFaucet, ParticipationPool, RewardDistributor, RoundVotingEngine reserves, the governance timelock, and registry-held stakes. This dynamic calculation ensures governance is usable from day one: when only a small number of users have claimed tokens, the quorum scales proportionally to actual circulation rather than the full 100M supply. A minimum floor of 10,000 cREP prevents trivially small quorums in the earliest stages. As the user base grows and more tokens enter circulation, the quorum threshold increases proportionally, requiring increasingly broad consensus.",
           },
           {
             type: "sub_heading",
