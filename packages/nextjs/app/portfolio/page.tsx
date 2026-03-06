@@ -76,11 +76,15 @@ export default function PortfolioPage() {
               <p className="text-base text-base-content/50">cREP</p>
             </div>
             <div>
-                  <p className="text-3xl font-bold tabular-nums">{votes.length}</p>
+              <p className="text-3xl font-bold tabular-nums">
+                {isLoading ? <span className="loading loading-dots loading-sm"></span> : votes.length}
+              </p>
               <p className="text-base text-base-content/50">Total Votes</p>
             </div>
             <div>
-              <p className="text-3xl font-bold tabular-nums">{settledVoteCount}</p>
+              <p className="text-3xl font-bold tabular-nums">
+                {isLoading ? <span className="loading loading-dots loading-sm"></span> : settledVoteCount}
+              </p>
               <p className="text-base text-base-content/50">Resolved</p>
             </div>
           </div>

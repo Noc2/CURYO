@@ -194,7 +194,8 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
                       width={32}
                       height={32}
                       className="w-8 h-8 rounded-full object-cover shrink-0"
-                      alt=""
+                      alt={`${entry.username || truncateAddress(entry.address)} avatar`}
+                      loading="lazy"
                     />
                     <div className="flex flex-col">
                       {entry.username ? (

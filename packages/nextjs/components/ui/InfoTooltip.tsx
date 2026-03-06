@@ -19,7 +19,13 @@ export const InfoTooltip = ({ text, position = "top", className = "" }: InfoTool
   }[position];
 
   return (
-    <span className={`tooltip ${positionClass} ${className}`} data-tip={text}>
+    <span
+      className={`tooltip ${positionClass} ${className}`}
+      data-tip={text}
+      tabIndex={0}
+      role="note"
+      aria-label={text}
+    >
       <InformationCircleIcon className="w-4 h-4 text-base-content/40 hover:text-base-content/60 cursor-help" />
     </span>
   );

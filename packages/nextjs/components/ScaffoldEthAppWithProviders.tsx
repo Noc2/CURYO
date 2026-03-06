@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
@@ -11,11 +12,15 @@ import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RewardNotifier } from "~~/components/RewardNotifier";
 import { SettlementNotifier } from "~~/components/SettlementNotifier";
-import { TermsAcceptanceModal } from "~~/components/legal/TermsAcceptanceModal";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
 import { TermsAcceptanceProvider } from "~~/contexts/TermsAcceptanceContext";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
+
+const TermsAcceptanceModal = dynamic(
+  () => import("~~/components/legal/TermsAcceptanceModal").then(m => m.TermsAcceptanceModal),
+  { ssr: false },
+);
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (

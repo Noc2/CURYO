@@ -29,6 +29,7 @@ export function CommentItem({ comment }: { comment: CommentData }) {
         height={32}
         className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5"
         alt={`${displayName} avatar`}
+        loading="lazy"
       />
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">

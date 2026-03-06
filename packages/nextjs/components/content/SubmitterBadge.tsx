@@ -58,6 +58,7 @@ export function SubmitterBadge({
         alt={`${displayName} avatar`}
         className="rounded-full object-cover shrink-0"
         style={{ width: avatarSize, height: avatarSize }}
+        loading="lazy"
       />
       <div className="flex flex-col min-w-0">
         <div className="flex items-center gap-1.5">

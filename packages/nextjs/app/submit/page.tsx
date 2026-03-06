@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
@@ -9,7 +10,6 @@ import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
 import { FrontendRegistration } from "~~/components/governance/FrontendRegistration";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
-import { ShareModal } from "~~/components/submit/ShareModal";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -34,6 +34,8 @@ import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter"
 import { publicEnv } from "~~/utils/env/public";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
+
+const ShareModal = dynamic(() => import("~~/components/submit/ShareModal").then(m => m.ShareModal), { ssr: false });
 
 type SubmissionType = "content" | "category" | "frontend";
 

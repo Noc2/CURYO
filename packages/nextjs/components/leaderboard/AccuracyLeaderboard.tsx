@@ -84,8 +84,8 @@ export function AccuracyLeaderboard() {
         <select
           className="select select-sm bg-base-200 text-base rounded-full"
           value={sortBy}
-          onChange={e => setSortBy(e.target.value as SortOption)}
           aria-label="Sort by"
+          onChange={e => setSortBy(e.target.value as SortOption)}
         >
           <option value="winRate">Win Rate</option>
           <option value="wins">Wins</option>
@@ -95,9 +95,9 @@ export function AccuracyLeaderboard() {
         {/* Min votes filter */}
         <select
           className="select select-sm bg-base-200 text-base rounded-full"
+          aria-label="Minimum votes"
           value={minVotes}
           onChange={e => setMinVotes(e.target.value as MinVotesOption)}
-          aria-label="Minimum votes"
         >
           <option value="3">Min 3 votes</option>
           <option value="5">Min 5 votes</option>

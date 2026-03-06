@@ -12,7 +12,6 @@ import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
-import { StakeSelector } from "~~/components/swipe/StakeSelector";
 import { SwipeCard } from "~~/components/swipe/SwipeCard";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
@@ -29,6 +28,14 @@ import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
+
+const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").then(m => m.StakeSelector), {
+  loading: () => (
+    <div className="flex items-center justify-center h-96">
+      <span className="loading loading-spinner loading-lg"></span>
+    </div>
+  ),
+});
 
 const ShareContentModal = dynamic(
   () => import("~~/components/shared/ShareContentModal").then(m => m.ShareContentModal),
