@@ -124,6 +124,12 @@ function loadConfig() {
     throw new Error(`Invalid bot configuration:\n- ${errors.join("\n- ")}`);
   }
 
+  const hasApiKey =
+    loadedConfig.tmdbApiKey || loadedConfig.youtubeApiKey || loadedConfig.twitchClientId || loadedConfig.rawgApiKey;
+  if (!hasApiKey) {
+    console.warn("[Bot] WARN: No content-source API keys configured — submissions will be skipped");
+  }
+
   return loadedConfig;
 }
 

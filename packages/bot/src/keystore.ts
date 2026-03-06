@@ -4,6 +4,7 @@
  */
 import crypto from "crypto";
 import { readFileSync } from "fs";
+import { homedir } from "os";
 import { join } from "path";
 import { keccak256 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -28,7 +29,7 @@ interface KeystoreV3 {
 }
 
 export function decryptKeystore(name: string, password: string): `0x${string}` {
-  const keystorePath = join(process.env.HOME ?? "~", ".foundry", "keystores", name);
+  const keystorePath = join(homedir(), ".foundry", "keystores", name);
   const raw = readFileSync(keystorePath, "utf-8");
   const keystore: KeystoreV3 = JSON.parse(raw);
 

@@ -6,8 +6,8 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 // Build exclusion set from all PONDER_*_ADDRESS env vars (deployed contracts + deployer)
 const excludedAddresses = new Set<string>(
   Object.entries(process.env)
-    .filter(([key]) => key.startsWith("PONDER_") && key.endsWith("_ADDRESS"))
-    .map(([, value]) => value!.toLowerCase()),
+    .filter(([key, value]) => key.startsWith("PONDER_") && key.endsWith("_ADDRESS") && value !== undefined)
+    .map(([, value]) => value.toLowerCase()),
 );
 
 ponder.on("CuryoReputation:Transfer", async ({ event, context }) => {
