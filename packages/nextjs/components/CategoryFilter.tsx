@@ -19,8 +19,10 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileDropdownRef = useRef<HTMLDivElement>(null);
   const [visibleCount, setVisibleCount] = useState(categories.length);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [pillWidths, setPillWidths] = useState<number[]>([]);
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +31,14 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
     dropdownRef,
     useCallback(() => {
       setDropdownOpen(false);
+      setSearch("");
+    }, []),
+  );
+
+  useOutsideClick(
+    mobileDropdownRef,
+    useCallback(() => {
+      setMobileOpen(false);
       setSearch("");
     }, []),
   );
@@ -105,7 +115,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
   };
 
   return (
-    <div ref={containerRef} className="flex-1 min-w-0 relative">
+    <div ref={containerRef} className="shrink-0 sm:flex-1 sm:min-w-0 relative">
       {/* Hidden measurement row */}
       <div ref={measureRef} className="flex gap-2 absolute invisible pointer-events-none h-0 overflow-hidden">
         {categories.map(category => (
@@ -115,22 +125,62 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
         ))}
       </div>
 
-      {/* Mobile: horizontal chip rail */}
-      <div className="flex gap-2 overflow-x-auto pb-1 sm:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {categories.map(category => {
-          const isActive = activeCategory === category;
-          const custom = pillClassName?.(category, isActive);
-          const defaultCls = isActive ? "pill-category" : "bg-base-200 text-white hover:bg-base-300";
-          return (
-            <button
-              key={category}
-              onClick={() => handleSelect(category)}
-              className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors shrink-0 ${custom ?? defaultCls}`}
-            >
-              {category}
-            </button>
-          );
-        })}
+      {/* Mobile: dropdown */}
+      <div ref={mobileDropdownRef} className="relative shrink-0 sm:hidden">
+        <button
+          onClick={() => {
+            setMobileOpen(prev => !prev);
+            setSearch("");
+          }}
+          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors ${
+            activeCategory !== categories[0] ? "pill-category" : "bg-base-200 text-white hover:bg-base-300"
+          }`}
+        >
+          {activeCategory}
+          <ChevronDownIcon className="w-3.5 h-3.5" />
+        </button>
+
+        {mobileOpen && (
+          <div className="absolute top-full mt-1 left-0 z-50 bg-base-200 rounded-box shadow-lg min-w-[200px] max-w-[280px]">
+            <div className="p-2">
+              <div className="relative">
+                <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/40" />
+                <input
+                  type="text"
+                  placeholder="Search categories..."
+                  aria-label="Search categories"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="input input-sm w-full pl-8 bg-base-300 border-none text-base"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <ul className="menu p-2 pt-0 max-h-[300px] overflow-y-auto">
+              {categories
+                .filter(c => c.toLowerCase().includes(search.toLowerCase()))
+                .map(category => {
+                  const isActive = activeCategory === category;
+                  return (
+                    <li key={category}>
+                      <button
+                        onClick={() => {
+                          handleSelect(category);
+                          setMobileOpen(false);
+                        }}
+                        className={`whitespace-nowrap ${isActive ? "active" : ""}`}
+                      >
+                        {category}
+                      </button>
+                    </li>
+                  );
+                })}
+              {categories.filter(c => c.toLowerCase().includes(search.toLowerCase())).length === 0 && (
+                <li className="text-base-content/40 text-sm px-3 py-2">No matches</li>
+              )}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* Desktop: measured pills with overflow */}

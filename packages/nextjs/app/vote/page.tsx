@@ -557,7 +557,7 @@ const HomeInner = () => {
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
       <div className="w-full max-w-5xl">
         <VotingGuide />
-        <div className="mb-4 flex items-start gap-3">
+        <div className="mb-4 flex items-center gap-2 sm:items-start sm:gap-3">
           <CategoryFilter
             categories={categories}
             activeCategory={activeCategory}
@@ -572,7 +572,7 @@ const HomeInner = () => {
           {address ? (
             <FeedScopeFilter value={scope} options={SCOPE_OPTIONS} onChange={value => setScope(value as ScopeOption)} />
           ) : null}
-          <div className="hidden shrink-0 items-center sm:flex">
+          <div className="shrink-0 flex items-center">
             <StreakCounter />
           </div>
         </div>
@@ -596,10 +596,6 @@ const HomeInner = () => {
             </select>
           </div>
         ) : null}
-
-        <div className="sm:hidden">
-          <StreakCounter />
-        </div>
 
         {/* Main content */}
         {isLoading || categoriesLoading || scopeLoading ? (
