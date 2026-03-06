@@ -62,8 +62,9 @@ const HowItWorks: NextPage = () => {
         <li>
           <strong>Resolve:</strong> Once at least 3 votes are revealed and all past-phase votes have been revealed (or
           the 60-minute reveal grace period has expired), the round can be resolved. The majority side wins. The losing
-          side&apos;s stakes become the reward pool. Content rating is updated by 1&ndash;5 points based on winning
-          stake size. Winners can then click Claim to collect their rewards.
+          side&apos;s stakes become the reward pool. Content rating is recalculated from the final revealed stake
+          imbalance, with small rounds pulled toward 50 by a fixed smoothing parameter. Winners can then click Claim to
+          collect their rewards.
         </li>
       </ol>
 
@@ -181,7 +182,7 @@ const HowItWorks: NextPage = () => {
               <td className="font-mono">82%</td>
             </tr>
             <tr>
-              <td>Agreement bonus reserve</td>
+              <td>Consensus subsidy reserve</td>
               <td className="font-mono">5%</td>
             </tr>
             <tr>
@@ -207,7 +208,7 @@ const HowItWorks: NextPage = () => {
         The <strong>82%</strong> voter share goes entirely to a <strong>content-specific pool</strong> distributed
         proportionally by <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase
         voters receive 100% reward weight, while open phase voters receive 25% &mdash; giving early voters a 4x
-        advantage per cREP staked. An additional <strong>5%</strong> goes to an agreement bonus reserve. Rewards become
+        advantage per cREP staked. An additional <strong>5%</strong> goes to a consensus subsidy reserve. Rewards become
         claimable immediately after the round is resolved. There is no global pool &mdash; each content round is
         self-contained.
       </p>
@@ -216,9 +217,9 @@ const HowItWorks: NextPage = () => {
       <p>
         Each content item has a rating from 0 to 100 (starting at 50). The rating{" "}
         <strong>only changes when a round is resolved</strong> &mdash; it stays unchanged while voting is ongoing. Once
-        resolution is triggered, the rating moves by 1&ndash;5 points toward the winning side based on the total winning
-        stake. The delta is also capped by the number of unique winning voters (1 voter = max 1 point, 2 voters = max 2
-        points, etc.), preventing a single actor from making large rating swings.
+        resolution is triggered, the contract recalculates rating from the final revealed UP and DOWN stake pools using{" "}
+        <code>50 +/- 50 * diff / (sum + 50 cREP)</code>, then clamps the result to 0&ndash;100. This keeps low-stake
+        rounds close to neutral while letting larger stake imbalances move rating further.
       </p>
       <p>
         If a round <strong>expires</strong> (7&nbsp;days pass without reaching the minimum 3 revealed voters) or ends in

@@ -807,7 +807,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Slashed submitter stakes and consensus subsidy contributions flow to the treasury (governance timelock). The treasury also receives a 1% fee from every round settlement. Treasury tokens can only be distributed through governance proposals  -- for grants, whistleblower rewards, and protocol development.",
+            text: "Slashed submitter stakes and the 1% treasury fee from round settlement flow to the treasury (governance timelock). The consensus subsidy reserve is separate: it is pre-funded at launch and replenished by 5% of losing pools from two-sided rounds. Treasury tokens can only be distributed through governance proposals  -- for grants, whistleblower rewards, and protocol development.",
           },
         ],
       },

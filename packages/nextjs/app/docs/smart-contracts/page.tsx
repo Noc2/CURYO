@@ -233,7 +233,8 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>updateRating(contentId, upWins, ratingDelta)</code> &mdash; Called by RoundVotingEngine after
-          settlement. Rating delta is 1&ndash;5 based on winning stake size, capped by winning voter count.
+          settlement. Rating is recalculated from the final revealed UP and DOWN stake pools using the protocol&apos;s
+          smoothed stake-imbalance formula.
         </li>
       </ul>
       <h3>Submitter Stake</h3>
@@ -254,7 +255,7 @@ const SmartContracts: NextPage = () => {
       <h2>RoundVotingEngine</h2>
       <p>
         Manages per-content voting rounds with tlock commit-reveal voting, epoch-weighted rewards, and deterministic
-        settlement. One-sided rounds (consensus) receive a subsidy from the agreement bonus reserve.
+        settlement. One-sided rounds (consensus) receive a subsidy from the consensus subsidy reserve.
       </p>
       <h3>Configuration</h3>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -279,7 +280,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">epochDuration</td>
-              <td>1 hour</td>
+              <td>20 minutes</td>
               <td>Duration of each reward tier</td>
             </tr>
             <tr>
@@ -509,8 +510,8 @@ const SmartContracts: NextPage = () => {
           from the content-specific pool. 100% of the voter share goes to the content-specific pool.
         </li>
         <li>
-          <code>calculateRatingDelta(winningStake, winningVoterCount)</code> &mdash; Returns 1&ndash;5 based on stake
-          size (10&ndash;100 cREP thresholds), capped by winning voter count.
+          <code>calculateRating(totalUpStake, totalDownStake)</code> &mdash; Returns the final 0&ndash;100 rating using
+          the protocol&apos;s smoothed stake-imbalance formula with a fixed 50 cREP parameter.
         </li>
       </ul>
       <h3>RoundLib</h3>

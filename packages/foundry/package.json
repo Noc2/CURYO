@@ -16,7 +16,7 @@
     "format": "make format",
     "postinstall": "shx cp -n .env.example .env",
     "lint": "make lint",
-    "test": "forge test",
+    "test": "forge test --offline",
     "verify": "make verify RPC_URL=${1:-localhost}",
     "slither": "make slither",
     "aderyn": "make aderyn",

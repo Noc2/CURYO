@@ -1,6 +1,8 @@
 .PHONY: build deploy generate-abis get-address account chain compile flatten fork format lint test verify verify-blockscout slither aderyn coverage
 
 DEPLOY_SCRIPT ?= script/Deploy.s.sol
+TEST_ARGS ?=
+COVERAGE_ARGS ?=
 
 # setup wallet for anvil
 setup-anvil-wallet:
@@ -53,7 +55,7 @@ lint:
 
 # Run tests
 test:
-	forge test
+	forge test --offline $(TEST_ARGS)
 
 # Verify contracts (Etherscan-compatible chains)
 verify:
@@ -73,5 +75,4 @@ aderyn:
 	aderyn .
 
 coverage:
-	forge coverage --ir-minimum
-
+	forge coverage --offline --ir-minimum $(COVERAGE_ARGS)
