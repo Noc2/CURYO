@@ -1685,6 +1685,30 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "roundRevealGracePeriodSnapshot",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "roundStakeWithApprovedFrontend",
     "inputs": [
       {
@@ -3198,6 +3222,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "SelfVote",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "StreakBonusDisabled",
     "inputs": []
   },
   {

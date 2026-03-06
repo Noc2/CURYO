@@ -4601,6 +4601,30 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "roundRevealGracePeriodSnapshot",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "roundStakeWithApprovedFrontend",
           inputs: [
             {
@@ -6118,6 +6142,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "StreakBonusDisabled",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "StreakTooShort",
           inputs: [],
         },
@@ -6172,6 +6201,7 @@ const deployedContracts = {
         addToConsensusReserve: "contracts/interfaces/IRoundVotingEngine.sol",
         claimFrontendFee: "contracts/interfaces/IRoundVotingEngine.sol",
         claimParticipationReward: "contracts/interfaces/IRoundVotingEngine.sol",
+        getActiveRoundId: "contracts/interfaces/IRoundVotingEngine.sol",
         getContentCommitCount: "contracts/interfaces/IRoundVotingEngine.sol",
         hasUnrevealedVotes: "contracts/interfaces/IRoundVotingEngine.sol",
         transferReward: "contracts/interfaces/IRoundVotingEngine.sol",
@@ -15391,6 +15421,30 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "roundRevealGracePeriodSnapshot",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "roundStakeWithApprovedFrontend",
           inputs: [
             {
@@ -16908,6 +16962,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "StreakBonusDisabled",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "StreakTooShort",
           inputs: [],
         },
@@ -16962,6 +17021,7 @@ const deployedContracts = {
         addToConsensusReserve: "contracts/interfaces/IRoundVotingEngine.sol",
         claimFrontendFee: "contracts/interfaces/IRoundVotingEngine.sol",
         claimParticipationReward: "contracts/interfaces/IRoundVotingEngine.sol",
+        getActiveRoundId: "contracts/interfaces/IRoundVotingEngine.sol",
         getContentCommitCount: "contracts/interfaces/IRoundVotingEngine.sol",
         hasUnrevealedVotes: "contracts/interfaces/IRoundVotingEngine.sol",
         transferReward: "contracts/interfaces/IRoundVotingEngine.sol",
