@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
-import { buildFollowProfileMessage, buildUnfollowProfileMessage } from "~~/lib/watchlist/messages";
 
 interface FollowedProfileItem {
   walletAddress: string;
@@ -112,17 +111,34 @@ export function useFollowedProfiles(address?: string) {
       updatePending(normalizedTargetAddress, true);
 
       try {
-        const message = isFollowing
-          ? buildUnfollowProfileMessage(normalizedTargetAddress)
-          : buildFollowProfileMessage(normalizedTargetAddress);
-        const signature = await signMessageAsync({ message });
+        const challengeRes = await fetch("/api/follows/profiles/challenge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address: normalizedAddress,
+            targetAddress: normalizedTargetAddress,
+            action: isFollowing ? "unfollow" : "follow",
+          }),
+        });
+
+        const challengeData = await challengeRes.json();
+        if (!challengeRes.ok) {
+          throw new Error(challengeData.error || "Failed to create signature challenge");
+        }
+
+        const signature = await signMessageAsync({ message: challengeData.message as string });
 
         setOptimisticState(normalizedTargetAddress, !isFollowing);
 
         const res = await fetch("/api/follows/profiles", {
           method: isFollowing ? "DELETE" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address: normalizedAddress, targetAddress: normalizedTargetAddress, signature }),
+          body: JSON.stringify({
+            address: normalizedAddress,
+            targetAddress: normalizedTargetAddress,
+            signature,
+            challengeId: challengeData.challengeId,
+          }),
         });
 
         if (!res.ok) {

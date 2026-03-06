@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyMessage } from "viem";
+import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
+import {
+  UNWATCH_CONTENT_ACTION,
+  WATCH_CONTENT_ACTION,
+  buildWatchlistChallengeMessage,
+  hashWatchlistChallengePayload,
+  normalizeWatchlistChallengeInput,
+} from "~~/lib/auth/watchlistChallenge";
+import { db } from "~~/lib/db";
 import {
   addWatchedContent,
   isValidWalletAddress,
   listWatchedContent,
-  normalizeContentId,
   normalizeWalletAddress,
   removeWatchedContent,
 } from "~~/lib/watchlist/contentWatch";
-import { buildUnwatchContentMessage, buildWatchContentMessage } from "~~/lib/watchlist/messages";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
@@ -38,27 +44,53 @@ export async function POST(request: NextRequest) {
   if (limited) return limited;
 
   try {
-    const { address, contentId, signature } = await request.json();
-    const normalizedContentId = normalizeContentId(contentId);
-
-    if (!address || !signature || !normalizedContentId || !isValidWalletAddress(address)) {
+    const { address, contentId, signature, challengeId } = await request.json();
+    if (!signature || !challengeId) {
       return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }
 
-    const normalizedAddress = normalizeWalletAddress(address);
-    const message = buildWatchContentMessage(normalizedContentId);
-    const isValid = await verifyMessage({
-      address: normalizedAddress,
-      message,
-      signature: signature as `0x${string}`,
-    });
-
-    if (!isValid) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    const normalized = normalizeWatchlistChallengeInput({ address, contentId });
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    await addWatchedContent(normalizedAddress, normalizedContentId);
-    return NextResponse.json({ ok: true, watched: true, contentId: normalizedContentId });
+    const payload = normalized.payload;
+    const payloadHash = hashWatchlistChallengePayload(payload);
+    await ensureSignedActionChallengeTable();
+
+    try {
+      await db.transaction(async tx => {
+        await verifyAndConsumeSignedActionChallenge(tx, {
+          challengeId: String(challengeId),
+          action: WATCH_CONTENT_ACTION,
+          walletAddress: payload.normalizedAddress,
+          payloadHash,
+          signature: signature as `0x${string}`,
+          buildMessage: ({ nonce, expiresAt }) =>
+            buildWatchlistChallengeMessage({
+              action: WATCH_CONTENT_ACTION,
+              address: payload.normalizedAddress,
+              payloadHash,
+              nonce,
+              expiresAt,
+            }),
+        });
+      });
+    } catch (error: any) {
+      if (error.message === "CHALLENGE_USED") {
+        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
+      }
+      if (error.message === "CHALLENGE_EXPIRED") {
+        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
+      }
+      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
+        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+      }
+      throw error;
+    }
+
+    await addWatchedContent(payload.normalizedAddress, payload.contentId);
+    return NextResponse.json({ ok: true, watched: true, contentId: payload.contentId });
   } catch (error) {
     console.error("Error watching content:", error);
     return NextResponse.json({ error: "Failed to watch content" }, { status: 500 });
@@ -70,27 +102,53 @@ export async function DELETE(request: NextRequest) {
   if (limited) return limited;
 
   try {
-    const { address, contentId, signature } = await request.json();
-    const normalizedContentId = normalizeContentId(contentId);
-
-    if (!address || !signature || !normalizedContentId || !isValidWalletAddress(address)) {
+    const { address, contentId, signature, challengeId } = await request.json();
+    if (!signature || !challengeId) {
       return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }
 
-    const normalizedAddress = normalizeWalletAddress(address);
-    const message = buildUnwatchContentMessage(normalizedContentId);
-    const isValid = await verifyMessage({
-      address: normalizedAddress,
-      message,
-      signature: signature as `0x${string}`,
-    });
-
-    if (!isValid) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    const normalized = normalizeWatchlistChallengeInput({ address, contentId });
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    await removeWatchedContent(normalizedAddress, normalizedContentId);
-    return NextResponse.json({ ok: true, watched: false, contentId: normalizedContentId });
+    const payload = normalized.payload;
+    const payloadHash = hashWatchlistChallengePayload(payload);
+    await ensureSignedActionChallengeTable();
+
+    try {
+      await db.transaction(async tx => {
+        await verifyAndConsumeSignedActionChallenge(tx, {
+          challengeId: String(challengeId),
+          action: UNWATCH_CONTENT_ACTION,
+          walletAddress: payload.normalizedAddress,
+          payloadHash,
+          signature: signature as `0x${string}`,
+          buildMessage: ({ nonce, expiresAt }) =>
+            buildWatchlistChallengeMessage({
+              action: UNWATCH_CONTENT_ACTION,
+              address: payload.normalizedAddress,
+              payloadHash,
+              nonce,
+              expiresAt,
+            }),
+        });
+      });
+    } catch (error: any) {
+      if (error.message === "CHALLENGE_USED") {
+        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
+      }
+      if (error.message === "CHALLENGE_EXPIRED") {
+        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
+      }
+      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
+        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+      }
+      throw error;
+    }
+
+    await removeWatchedContent(payload.normalizedAddress, payload.contentId);
+    return NextResponse.json({ ok: true, watched: false, contentId: payload.contentId });
   } catch (error) {
     console.error("Error unwatching content:", error);
     return NextResponse.json({ error: "Failed to unwatch content" }, { status: 500 });

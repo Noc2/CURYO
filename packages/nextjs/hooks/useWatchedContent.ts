@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
-import { buildUnwatchContentMessage, buildWatchContentMessage } from "~~/lib/watchlist/messages";
 
 interface WatchedContentItem {
   contentId: string;
@@ -104,15 +103,34 @@ export function useWatchedContent(address?: string) {
       updatePending(contentIdStr, true);
 
       try {
-        const message = isWatched ? buildUnwatchContentMessage(contentIdStr) : buildWatchContentMessage(contentIdStr);
-        const signature = await signMessageAsync({ message });
+        const challengeRes = await fetch("/api/watchlist/content/challenge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address,
+            contentId: contentIdStr,
+            action: isWatched ? "unwatch" : "watch",
+          }),
+        });
+
+        const challengeData = await challengeRes.json();
+        if (!challengeRes.ok) {
+          throw new Error(challengeData.error || "Failed to create signature challenge");
+        }
+
+        const signature = await signMessageAsync({ message: challengeData.message as string });
 
         setOptimisticState(contentIdStr, !isWatched);
 
         const res = await fetch("/api/watchlist/content", {
           method: isWatched ? "DELETE" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ address, contentId: contentIdStr, signature }),
+          body: JSON.stringify({
+            address,
+            contentId: contentIdStr,
+            signature,
+            challengeId: challengeData.challengeId,
+          }),
         });
 
         if (!res.ok) {
