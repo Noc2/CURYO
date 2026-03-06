@@ -54,7 +54,7 @@ export function FeedScopeFilter({ value, options, onChange, label = "Filter" }: 
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
         className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
-          isFiltered ? "pill-category" : "bg-success/20 text-success hover:bg-success/30"
+          isFiltered ? "pill-filter-active" : "pill-filter"
         }`}
         aria-haspopup="dialog"
         aria-expanded={isOpen}

@@ -365,6 +365,19 @@
   color: #000;
 }
 
+/* Feed scope filter pill — green */
+.pill-filter {
+  background: #03cea4;
+  color: #000;
+}
+.pill-filter:hover {
+  background: #02b890;
+}
+.pill-filter-active {
+  background: #03cea4;
+  color: #000;
+}
+
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
