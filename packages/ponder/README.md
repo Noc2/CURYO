@@ -6,6 +6,9 @@ On-chain event indexer built with [Ponder](https://ponder.sh/). Listens to smart
 
 ```bash
 # From the monorepo root:
+cp packages/ponder/.env.example packages/ponder/.env.local
+# Edit packages/ponder/.env.local with your RPC URL, contract addresses, and start blocks
+
 yarn ponder:dev     # Development mode with file watching + auto-recovery
 yarn ponder:start   # Production mode (no file watching)
 yarn ponder:codegen # Regenerate TypeScript types from schema
@@ -36,7 +39,9 @@ Within the package directory, additional scripts are available:
 | `PONDER_RPC_URL_31337` | RPC URL for local Hardhat/Anvil chain |
 | `PONDER_RPC_URL_11142220` | RPC URL for Celo Sepolia |
 | `PONDER_RPC_URL_42220` | RPC URL for Celo mainnet |
-| `CORS_ORIGIN` | Allowed origins (comma-separated; defaults to `*`) |
+| `PONDER_CONTENT_REGISTRY_ADDRESS` etc. | Deployed contract addresses for the selected network |
+| `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Start blocks for each indexed contract |
+| `CORS_ORIGIN` | Allowed origins (comma-separated; required in production) |
 
 ## Project Structure
 
