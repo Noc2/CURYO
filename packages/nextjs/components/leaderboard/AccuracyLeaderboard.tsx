@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { blo } from "blo";
 import { useAccount } from "wagmi";
+import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
@@ -25,6 +26,7 @@ export function AccuracyLeaderboard() {
   const [sortBy, setSortBy] = useState<SortOption>("winRate");
   const [minVotes, setMinVotes] = useState<MinVotesOption>("3");
   const [categoryId, setCategoryId] = useState<string>("");
+  const [scope, setScope] = useState<"all" | "following">("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +66,14 @@ export function AccuracyLeaderboard() {
   };
 
   const approvedCategories = categories.filter(c => c.status === 1);
+  const visibleItems = useMemo(() => {
+    return items.flatMap((entry, index) => {
+      if (scope === "following" && !followedWallets.has(entry.voter.toLowerCase())) {
+        return [];
+      }
+      return [{ entry, rank: index + 1 }];
+    });
+  }, [followedWallets, items, scope]);
 
   const handleToggleFollow = useCallback(
     async (targetAddress: string) => {
@@ -95,6 +105,8 @@ export function AccuracyLeaderboard() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
+        <FollowScopeToggle value={scope} onChange={setScope} />
+
         {/* Category filter */}
         <select
           className="select select-sm bg-base-200 text-base rounded-full"
@@ -148,6 +160,10 @@ export function AccuracyLeaderboard() {
         <div className="text-center py-12 text-base-content/50">
           <p>No voters with enough resolved votes yet</p>
         </div>
+      ) : scope === "following" && visibleItems.length === 0 ? (
+        <div className="text-center py-12 text-base-content/50">
+          <p>You aren&apos;t following any qualifying voters yet.</p>
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="table w-full">
@@ -162,8 +178,7 @@ export function AccuracyLeaderboard() {
               </tr>
             </thead>
             <tbody>
-              {items.map((entry, i) => {
-                const rank = i + 1;
+              {visibleItems.map(({ entry, rank }) => {
                 const isCurrentUser = connectedAddress?.toLowerCase() === entry.voter.toLowerCase();
                 const streak = entry.currentStreak;
                 const streakLabel =

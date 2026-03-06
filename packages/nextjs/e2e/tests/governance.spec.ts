@@ -31,6 +31,20 @@ test.describe("Governance page", () => {
     // Should have column headers
     const rankHeader = page.getByRole("columnheader", { name: "Rank" });
     await expect(rankHeader).toBeVisible({ timeout: 5_000 });
+
+    const followingOnlyToggle = page.getByRole("button", { name: "Following Only" }).first();
+    await expect(followingOnlyToggle).toBeVisible({ timeout: 5_000 });
+  });
+
+  test("accuracy tab shows following-only filter", async ({ connectedPage: page }) => {
+    await page.goto("/governance");
+
+    const accuracyTab = page.getByRole("button", { name: "Accuracy" });
+    await expect(accuracyTab).toBeVisible({ timeout: 15_000 });
+    await accuracyTab.click();
+
+    const followingOnlyToggle = page.getByRole("button", { name: "Following Only" }).first();
+    await expect(followingOnlyToggle).toBeVisible({ timeout: 10_000 });
   });
 
   test("profile tab shows form", async ({ connectedPage: page }) => {
