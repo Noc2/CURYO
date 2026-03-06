@@ -39,7 +39,9 @@ export function createSignedActionChallenge(params: {
   payloadHash: string;
   ttlMs?: number;
 }) {
-  const now = new Date();
+  // Truncate to whole seconds — SQLite stores timestamps as integer seconds,
+  // so the reconstructed message during verification must match the original.
+  const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   const expiresAt = new Date(now.getTime() + (params.ttlMs ?? SIGNED_ACTION_CHALLENGE_TTL_MS));
   const challengeId = randomBytes(16).toString("hex");
   const nonce = randomBytes(16).toString("hex");
