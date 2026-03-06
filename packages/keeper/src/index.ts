@@ -56,6 +56,8 @@ async function main() {
   // --- Run loop ---
   let isRunning = false;
 
+  const MIN_BALANCE = BigInt(config.minGasBalanceWei);
+
   async function tick() {
     if (isRunning) return;
     isRunning = true;
@@ -63,6 +65,20 @@ async function main() {
     const start = Date.now();
 
     try {
+      // Pre-flight: check wallet gas balance
+      try {
+        const balance = await publicClient.getBalance({ address: account.address });
+        setGauge("keeper_wallet_balance_wei", Number(balance));
+        if (balance < MIN_BALANCE) {
+          logger.warn("Keeper wallet balance low", {
+            balance: balance.toString(),
+            minRequired: MIN_BALANCE.toString(),
+          });
+        }
+      } catch (err: any) {
+        logger.warn("Failed to check wallet balance", { error: err.message });
+      }
+
       const result = await resolveRounds(publicClient, walletClient, chain, account, logger);
       const duration = Date.now() - start;
       recordRun(result, duration);

@@ -21,6 +21,7 @@ const gauges: Record<string, number> = {
   keeper_last_run_duration_seconds: 0,
   keeper_last_successful_run_timestamp: 0,
   keeper_is_running: 0,
+  keeper_wallet_balance_wei: 0,
 };
 
 const startTime = Date.now();
@@ -91,6 +92,7 @@ function renderMetrics(): string {
     keeper_last_run_duration_seconds: "Duration of the last keeper run in seconds",
     keeper_last_successful_run_timestamp: "Unix timestamp of last successful run",
     keeper_is_running: "Whether a keeper run is currently in progress",
+    keeper_wallet_balance_wei: "Keeper wallet native balance in wei",
   };
 
   for (const [name, value] of Object.entries(gauges)) {
@@ -118,6 +120,7 @@ function renderHealth(): { status: number; body: string } {
     consecutiveErrors,
     totalRuns: counters.keeper_runs_total,
     decryptFailures: counters.keeper_decrypt_failures_total,
+    walletBalanceWei: String(BigInt(Math.round(gauges.keeper_wallet_balance_wei))),
   });
   return { status: healthy ? 200 : 503, body };
 }
