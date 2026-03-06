@@ -441,10 +441,13 @@ contract RoundVotingEngine is
         // Content must be active
         if (!registry.isActive(contentId)) revert ContentNotActive();
 
-        // Time-based cooldown (24 hours)
-        uint256 lastVote = lastVoteTimestamp[contentId][msg.sender];
-        if (lastVote > 0) {
-            if (block.timestamp < lastVote + VOTE_COOLDOWN) revert CooldownActive();
+        // Time-based cooldown (24 hours) — per identity when VoterID is configured
+        if (address(voterIdNFT) != address(0) && voterId != 0) {
+            uint256 lastVote = lastVoteTimestampByToken[contentId][voterId];
+            if (lastVote > 0 && block.timestamp < lastVote + VOTE_COOLDOWN) revert CooldownActive();
+        } else {
+            uint256 lastVote = lastVoteTimestamp[contentId][msg.sender];
+            if (lastVote > 0 && block.timestamp < lastVote + VOTE_COOLDOWN) revert CooldownActive();
         }
 
         // Get or create active round
@@ -516,8 +519,11 @@ contract RoundVotingEngine is
             voterIdNFT.recordStake(contentId, roundId, voterId, stakeAmount);
         }
 
-        // Record cooldown
+        // Record cooldown (per identity + per address)
         lastVoteTimestamp[contentId][msg.sender] = block.timestamp;
+        if (address(voterIdNFT) != address(0) && voterId != 0) {
+            lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
+        }
 
         // Update voting streak
         _updateStreak(msg.sender);
@@ -1277,6 +1283,9 @@ contract RoundVotingEngine is
     mapping(address => uint256) public voterCurrentStreak; // consecutive days
     mapping(address => uint256) public voterLastMilestoneDay; // prevents double-payment, resets on streak break
 
+    // Per-identity cooldown: contentId => tokenId => timestamp (prevents cooldown bypass via delegation)
+    mapping(uint256 => mapping(uint256 => uint256)) public lastVoteTimestampByToken;
+
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[22] private __gap;
+    uint256[21] private __gap;
 }
