@@ -81,8 +81,9 @@ const DocsIntro: NextPage = () => {
       <h2>Content Rating</h2>
       <p>
         Every content item has a <strong>rating from 0 to 100</strong>, starting at 50. After each round is resolved,
-        the winning side moves the rating UP or DOWN by 1&ndash;5 points depending on the total stake and number of
-        voters.
+        the contract recalculates rating from the final revealed UP and DOWN stake pools using a smoothed
+        stake-imbalance formula, keeping small rounds close to neutral and letting larger imbalances move rating
+        further.
       </p>
       <p>
         Each category (platform) has a <strong>ranking question</strong> set by its creator &mdash; for example,
