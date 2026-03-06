@@ -250,8 +250,7 @@ contract StreakBonusTest is Test {
         vm.prank(voter1);
         votingEngine.claimStreakBonus(0);
 
-        (,, uint256 lastMilestoneDay) = votingEngine.getVoterStreakInfo(voter1);
-        assertEq(lastMilestoneDay, 7);
+        assertEq(votingEngine.voterLastMilestoneDay(voter1), 7);
     }
 
     function test_cannotClaimWithShortStreak() public {
@@ -310,32 +309,12 @@ contract StreakBonusTest is Test {
         assertEq(votingEngine.voterCurrentStreak(voter1), 2);
     }
 
-    function test_getVoterStreakInfo() public {
+    function test_voterStreakStateVariables() public {
         _voteOnDay(voter1, 1);
 
-        (uint256 currentStreak, uint256 lastActiveDay, uint256 lastMilestoneDay) =
-            votingEngine.getVoterStreakInfo(voter1);
-        assertEq(currentStreak, 1);
-        assertEq(lastActiveDay, block.timestamp / 86400);
-        assertEq(lastMilestoneDay, 0);
-    }
-
-    function test_getStreakMilestone() public view {
-        (uint256 days_, uint256 baseBonus) = votingEngine.getStreakMilestone(0);
-        assertEq(days_, 7);
-        assertEq(baseBonus, 10e6);
-
-        (days_, baseBonus) = votingEngine.getStreakMilestone(1);
-        assertEq(days_, 30);
-        assertEq(baseBonus, 50e6);
-
-        (days_, baseBonus) = votingEngine.getStreakMilestone(2);
-        assertEq(days_, 90);
-        assertEq(baseBonus, 200e6);
-    }
-
-    function test_getStreakMilestoneCount() public view {
-        assertEq(votingEngine.getStreakMilestoneCount(), 3);
+        assertEq(votingEngine.voterCurrentStreak(voter1), 1);
+        assertEq(votingEngine.voterLastActiveDay(voter1), block.timestamp / 86400);
+        assertEq(votingEngine.voterLastMilestoneDay(voter1), 0);
     }
 
     function test_invalidMilestoneIndexReverts() public {

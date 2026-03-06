@@ -146,7 +146,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         view
         returns (RoundLib.Commit memory)
     {
-        bytes32 commitHash = votingEngine.getVoterCommitHash(contentId, roundId, voter);
+        bytes32 commitHash = votingEngine.voterCommitHash(contentId, roundId, voter);
         if (commitHash == bytes32(0)) {
             return RoundLib.Commit(address(0), 0, "", address(0), 0, false, false, 0);
         }

@@ -822,7 +822,7 @@ contract RoundVotingEngineBranchesTest is Test {
         uint256 feesAfter = frontendRegistry.getAccumulatedFees(frontend1);
 
         assertGt(feesAfter - feesBefore, 0);
-        assertTrue(engine.isFrontendFeeClaimed(contentId, roundId, frontend1));
+        assertTrue(engine.frontendFeeClaimed(contentId, roundId, frontend1));
     }
 
     function test_FrontendFee_CannotClaimTwice() public {
@@ -1366,20 +1366,7 @@ contract RoundVotingEngineBranchesTest is Test {
         assertEq(keys.length, 2);
     }
 
-    function test_ComputeCurrentEpochEnd_NoRound_ReturnsEstimate() public {
-        uint256 contentId = _submitContent();
-        // No round yet
-        uint256 epochEnd = engine.computeCurrentEpochEnd(contentId);
-        assertApproxEqAbs(epochEnd, block.timestamp + EPOCH, 1);
-    }
-
-    function test_ComputeCurrentEpochEnd_WithRound_ReturnsCorrect() public {
-        uint256 contentId = _submitContent();
-        _commit(voter1, contentId, true, STAKE);
-
-        uint256 epochEnd = engine.computeCurrentEpochEnd(contentId);
-        assertEq(epochEnd, T0 + EPOCH); // round.startTime + epochDuration
-    }
+    // computeCurrentEpochEnd tests removed — function removed for contract size.
 
     function test_RevealUpdatesWeightedPools() public {
         uint256 contentId = _submitContent();

@@ -1415,14 +1415,14 @@ contract RoundIntegrationTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
         // Frontend pool should be set
-        uint256 frontendPool = votingEngine.getRoundFrontendPool(contentId, roundId);
+        uint256 frontendPool = votingEngine.roundFrontendPool(contentId, roundId);
         assertGt(frontendPool, 0, "Frontend pool should be > 0");
 
         // Claim frontend fee
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
         // Verify fee was credited
-        assertTrue(votingEngine.isFrontendFeeClaimed(contentId, roundId, frontendOp));
+        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
     }
 
     function test_ClaimFrontendFee_DoubleClaimReverts() public {
@@ -1460,7 +1460,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
-        assertTrue(votingEngine.isFrontendFeeClaimed(contentId, roundId, frontendOp));
+        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
         assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Re-registered frontend should still receive fees");
         assertFalse(frontendReg.isApproved(frontendOp), "Re-registration should not silently restore approval");
     }
@@ -1471,11 +1471,9 @@ contract RoundIntegrationTest is VotingTestBase {
 
         bytes32[] memory commitKeys = votingEngine.getRoundCommitHashes(contentId, roundId);
 
-        assertEq(votingEngine.getRoundCommitCount(contentId, roundId), 3);
         assertEq(commitKeys.length, 3);
-        assertEq(votingEngine.getRoundCommitHash(contentId, roundId, 0), commitKeys[0]);
-        assertEq(votingEngine.getRoundPerFrontendStake(contentId, roundId, frontendOp), STAKE * 3);
-        assertEq(votingEngine.getRoundStakeWithApprovedFrontend(contentId, roundId), STAKE * 3);
+        assertEq(votingEngine.roundPerFrontendStake(contentId, roundId, frontendOp), STAKE * 3);
+        assertEq(votingEngine.roundStakeWithApprovedFrontend(contentId, roundId), STAKE * 3);
     }
 
     function test_ClaimFrontendFee_NoApprovedFrontendRedirectsToVoterPool() public {
@@ -1494,7 +1492,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
         // No frontend pool — redirected to voter pool
-        assertEq(votingEngine.getRoundFrontendPool(contentId, roundId), 0);
+        assertEq(votingEngine.roundFrontendPool(contentId, roundId), 0);
 
         // Voter pool should include the frontend share
         uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
@@ -1534,7 +1532,7 @@ contract RoundIntegrationTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
 
         // Rate should be snapshotted
-        uint256 rate = votingEngine.getRoundParticipationRateBps(contentId, roundId);
+        uint256 rate = votingEngine.roundParticipationRateBps(contentId, roundId);
         assertEq(rate, 9000, "Rate should be 90% (tier 0)");
 
         // Claim participation reward
@@ -1545,7 +1543,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 expectedReward = STAKE * 9000 / 10000;
         assertEq(balAfter - balBefore, expectedReward, "Should receive 90% of stake as participation reward");
-        assertTrue(votingEngine.isParticipationRewardClaimed(contentId, roundId, voter1));
+        assertTrue(votingEngine.participationRewardClaimed(contentId, roundId, voter1));
     }
 
     function test_ClaimParticipationReward_DoubleClaimReverts() public {
@@ -1621,7 +1619,7 @@ contract RoundIntegrationTest is VotingTestBase {
         }
 
         assertTrue(foundFailureEvent, "participation rate failure should be logged");
-        assertEq(votingEngine.getRoundParticipationRateBps(contentId, roundId), 0);
+        assertEq(votingEngine.roundParticipationRateBps(contentId, roundId), 0);
 
         vm.prank(voter1);
         vm.expectRevert(RoundVotingEngine.NoParticipationRate.selector);

@@ -940,24 +940,8 @@ contract RoundVotingEngine is
         revert InvalidMilestoneIndex();
     }
 
-    /// @notice Get a voter's current streak info.
-    function getVoterStreakInfo(address voter)
-        external
-        view
-        returns (uint256 currentStreak, uint256 lastActiveDay, uint256 lastMilestoneDay_)
-    {
-        return (voterCurrentStreak[voter], voterLastActiveDay[voter], voterLastMilestoneDay[voter]);
-    }
-
-    /// @notice Get streak milestone config by index.
-    function getStreakMilestone(uint256 index) external pure returns (uint256 days_, uint256 baseBonus) {
-        return _getStreakMilestone(index);
-    }
-
-    /// @notice Get the number of streak milestones.
-    function getStreakMilestoneCount() external pure returns (uint256) {
-        return STREAK_MILESTONE_COUNT;
-    }
+    // Note: getVoterStreakInfo, getStreakMilestone, getStreakMilestoneCount removed to fit size limit.
+    // Use the public state variables (voterCurrentStreak, voterLastActiveDay, voterLastMilestoneDay) directly.
 
     // =========================================================================
     // UNREVEALED VOTE PROCESSING
@@ -1203,14 +1187,6 @@ contract RoundVotingEngine is
         return roundId;
     }
 
-    function getRoundCommitCount(uint256 contentId, uint256 roundId) external view returns (uint256) {
-        return roundCommitHashes[contentId][roundId].length;
-    }
-
-    function getRoundCommitHash(uint256 contentId, uint256 roundId, uint256 index) external view returns (bytes32) {
-        return roundCommitHashes[contentId][roundId][index];
-    }
-
     /// @notice Get all commit keys for a round (used by keeper for batch reveal).
     function getRoundCommitHashes(uint256 contentId, uint256 roundId) external view returns (bytes32[] memory) {
         return roundCommitHashes[contentId][roundId];
@@ -1236,45 +1212,13 @@ contract RoundVotingEngine is
         return commits[contentId][roundId][commitKey];
     }
 
-    function getVoterCommitHash(uint256 contentId, uint256 roundId, address voter) external view returns (bytes32) {
-        return voterCommitHash[contentId][roundId][voter];
-    }
-
     function getContentCommitCount(uint256 contentId) external view returns (uint256) {
         return contentCommitCount[contentId];
     }
 
-    function getRoundFrontendPool(uint256 contentId, uint256 roundId) external view returns (uint256) {
-        return roundFrontendPool[contentId][roundId];
-    }
-
-    function getRoundPerFrontendStake(uint256 contentId, uint256 roundId, address frontend)
-        external
-        view
-        returns (uint256)
-    {
-        return roundPerFrontendStake[contentId][roundId][frontend];
-    }
-
-    function getRoundStakeWithApprovedFrontend(uint256 contentId, uint256 roundId) external view returns (uint256) {
-        return roundStakeWithApprovedFrontend[contentId][roundId];
-    }
-
-    function isFrontendFeeClaimed(uint256 contentId, uint256 roundId, address frontend) external view returns (bool) {
-        return frontendFeeClaimed[contentId][roundId][frontend];
-    }
-
-    function isParticipationRewardClaimed(uint256 contentId, uint256 roundId, address voter)
-        external
-        view
-        returns (bool)
-    {
-        return participationRewardClaimed[contentId][roundId][voter];
-    }
-
-    function getRoundParticipationRateBps(uint256 contentId, uint256 roundId) external view returns (uint256) {
-        return roundParticipationRateBps[contentId][roundId];
-    }
+    // Note: getRoundFrontendPool, getRoundPerFrontendStake, getRoundStakeWithApprovedFrontend,
+    // isFrontendFeeClaimed, isParticipationRewardClaimed, getRoundParticipationRateBps
+    // removed — use auto-generated getters from the public mappings directly.
 
     function hasUnrevealedVotes(uint256 contentId) external view returns (bool) {
         uint256 roundId = currentRoundId[contentId];
@@ -1284,20 +1228,8 @@ contract RoundVotingEngine is
         return round.voteCount > round.revealedCount;
     }
 
-    /// @notice Compute the end timestamp of the current epoch for a content's active round.
-    /// @dev Used by the frontend to generate tlock ciphertext targeting the correct epoch.
-    function computeCurrentEpochEnd(uint256 contentId) external view returns (uint256) {
-        uint256 roundId = currentRoundId[contentId];
-        if (roundId == 0) {
-            // No active round: estimate from now (first commit will create round)
-            return block.timestamp + config.epochDuration;
-        }
-        RoundLib.Round storage round = rounds[contentId][roundId];
-        if (RoundLib.isTerminal(round)) {
-            return block.timestamp + config.epochDuration;
-        }
-        return RoundLib.computeEpochEnd(round, config.epochDuration, block.timestamp);
-    }
+    // Note: computeCurrentEpochEnd removed to fit size limit.
+    // Use config().epochDuration + getRound().startTime to compute off-chain.
 
     // --- Admin ---
 
