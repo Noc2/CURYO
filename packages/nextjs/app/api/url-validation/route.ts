@@ -87,6 +87,10 @@ interface ValidationResult {
   checkedAt: string;
 }
 
+function isNonNullString(value: string | null): value is string {
+  return value !== null;
+}
+
 function normalizeValidationUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
 
@@ -124,10 +128,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: `Too many URLs (max ${MAX_URLS_PER_REQUEST})` }, { status: 400 });
   }
 
-  const urls = rawUrls.map(normalizeValidationUrl);
-  if (urls.some(url => url === null)) {
+  const normalizedUrls = rawUrls.map(normalizeValidationUrl);
+  if (normalizedUrls.some(url => url === null)) {
     return NextResponse.json({ error: "Invalid URL list" }, { status: 400 });
   }
+
+  const urls = normalizedUrls.filter(isNonNullString);
 
   if (urls.length === 0) {
     return NextResponse.json({ results: {} });
@@ -181,10 +187,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Too many URLs (max ${MAX_URLS_PER_REQUEST})` }, { status: 400 });
   }
 
-  const urls = rawUrls.map(normalizeValidationUrl);
-  if (urls.some(url => url === null)) {
+  const normalizedUrls = rawUrls.map(normalizeValidationUrl);
+  if (normalizedUrls.some(url => url === null)) {
     return NextResponse.json({ error: "Invalid URL list" }, { status: 400 });
   }
+
+  const urls = normalizedUrls.filter(isNonNullString);
 
   // Fetch existing results
   const existing = await db.select().from(urlValidations).where(inArray(urlValidations.url, urls));
