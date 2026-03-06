@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
@@ -656,6 +656,16 @@ const ThumbnailCard = memo(function ThumbnailCard({
   watchPending: boolean;
 }) {
   const onClick = useCallback(() => onSelect(item.id, item.categoryId), [onSelect, item.id, item.categoryId]);
+  const onKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.target !== event.currentTarget) return;
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onClick();
+      }
+    },
+    [onClick],
+  );
   const platformInfo = detectPlatform(item.url);
   const rawStaticThumbnail = getThumbnailUrl(item.url);
   const staticThumbnail =
@@ -752,10 +762,13 @@ const ThumbnailCard = memo(function ThumbnailCard({
   };
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={onKeyDown}
       data-testid="content-thumbnail"
-      className="group text-left rounded-xl overflow-hidden transition-all surface-card hover:scale-[1.02] cursor-pointer"
+      className="group text-left rounded-xl overflow-hidden transition-all surface-card hover:scale-[1.02] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
     >
       {/* Thumbnail */}
       <div className="relative aspect-video bg-base-200 overflow-hidden">
@@ -806,17 +819,17 @@ const ThumbnailCard = memo(function ThumbnailCard({
             onClick={() => onToggleWatch(item.id)}
             variant="overlay"
           />
-          <div
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
+          <button
+            type="button"
+            className="p-1 rounded bg-black/60 backdrop-blur hover:bg-black/80 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
             onClick={e => {
               e.stopPropagation();
               setShowShare(true);
             }}
+            aria-label="Share content"
           >
-            <div className="p-1 rounded bg-black/60 backdrop-blur cursor-pointer hover:bg-black/80">
-              <ShareIcon className="w-4 h-4 text-white" />
-            </div>
-          </div>
+            <ShareIcon className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -847,7 +860,7 @@ const ThumbnailCard = memo(function ThumbnailCard({
       </div>
 
       {showShare && <ShareContentModal contentId={item.id} goal={item.goal} onClose={() => setShowShare(false)} />}
-    </button>
+    </div>
   );
 });
 
