@@ -19,21 +19,17 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Keeper
 
-- [ ] **drand decryption error handling**
-  `timelockDecrypt()` failures are caught and logged at debug level, but if the drand beacon is persistently unavailable, reveals silently stop and rounds never settle. There is no metric or alert for "decryption failures per tick" — operators won't know until users complain.
-  _Ref: `packages/keeper/src/keeper.ts:368-378`_
+- [x] **drand decryption error handling** _(fixed)_
+  The keeper now increments `keeper_decrypt_failures_total`, logs warnings on decrypt/decode failures, and exposes `decryptFailures` via `/health`. What remains is documenting concrete alert thresholds, tracked below under "Keeper metrics alert thresholds documented".
+  _Ref: `packages/keeper/src/keeper.ts:368-391`, `packages/keeper/src/metrics.ts:8-125`_
 
-  Fix: increment a `keeper_decrypt_failures_total` counter in the metrics, and document an alert threshold (e.g., > 10 failures in one interval).
+- [x] **Keeper wallet balance pre-flight check** _(fixed)_
+  The keeper now checks native gas balance at the start of each `tick()`, emits `keeper_wallet_balance_wei`, includes `walletBalanceWei` in `/health`, and warns when the balance drops below `MIN_BALANCE`.
+  _Ref: `packages/keeper/src/index.ts:60-80`, `packages/keeper/src/metrics.ts:20-125`_
 
-- [ ] **Keeper wallet balance pre-flight check**
-  The keeper sends `writeContract` calls without verifying it has sufficient gas. If the wallet drains, every tx silently fails (caught as a generic error). Add a balance check at the start of each `tick()` and expose it in `/health`.
-  _Ref: `packages/keeper/src/index.ts:59-89`_
-
-- [ ] **Graceful shutdown waits for in-flight tick**
-  `shutdown()` calls `process.exit(0)` immediately, which can interrupt a mid-flight `resolveRounds()` call. If a reveal tx was sent but the settlement tx hasn't been sent yet, the round is left in a partially-revealed state until the next tick.
-  _Ref: `packages/keeper/src/index.ts:98-103`_
-
-  Fix: set a flag, wait for `isRunning` to become false (with a timeout), then exit.
+- [x] **Graceful shutdown waits for in-flight tick** _(fixed)_
+  `shutdown()` now sets a `shuttingDown` flag, clears the interval, waits for the current tick to finish (up to 30 seconds), then exits.
+  _Ref: `packages/keeper/src/index.ts:114-139`_
 
 ### Ponder Indexer
 
@@ -57,9 +53,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Environment & Secrets
 
-- [ ] **Production Alchemy API key required**
-  In production, `alchemyApiKey` is `undefined` if `NEXT_PUBLIC_ALCHEMY_API_KEY` is not set (the hardcoded default is excluded). The app silently falls back to public RPCs, which may be rate-limited. Either require the key in production or document this as accepted.
-  _Ref: `packages/nextjs/utils/env/public.ts:114`_
+- [x] **Alchemy fallback behavior documented** _(documented)_
+  Production does not require `NEXT_PUBLIC_ALCHEMY_API_KEY`. On Celo the frontend can run without a dedicated Alchemy key, and `.env.example` now documents that the key is optional while the shared fallback is intended for local development only. Teams that want predictable RPC throughput should still provision their own provider key.
+  _Ref: `packages/nextjs/utils/env/public.ts:111-119`, `packages/nextjs/.env.example:10-13`_
 
 - [ ] **Rotate shared Alchemy key in source**
   `DEFAULT_ALCHEMY_API_KEY = "cR4WnXePioePZ5fFrnSiR"` is committed to git. This is a scaffold-eth shared key. If the repo goes public, it will be scraped and abused. Rotate it or accept it as a low-priority public fallback.
@@ -84,9 +80,13 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 - [ ] **Consensus reserve depletion monitoring**
   Same as above for `consensusReserve` (4M cREP initial). Unanimous rounds stop earning the 5% subsidy when exhausted.
 
+- [ ] **Tlock ciphertext binding documented or enforced**
+  `commitVote()` requires a non-empty ciphertext, but `revealVoteByCommitKey()` verifies only the plaintext commit hash and never proves that the stored ciphertext decrypts to the revealed payload. Today, permissionless reveal via drand is an off-chain convention rather than an on-chain guarantee. Either bind ciphertext to the reveal path or document this trust model explicitly before mainnet.
+  _Ref: `packages/foundry/contracts/RoundVotingEngine.sol:435-437`, `packages/foundry/contracts/RoundVotingEngine.sol:603-614`_
+
 - [ ] **ParticipationPool halving schedule transparency**
-  The pool uses a halving schedule (90% -> 45% -> 22.5% -> ... -> 1% floor). Users should see the current tier and projected reward rate in the UI before claiming.
-  _Ref: `packages/foundry/contracts/ParticipationPool.sol:118-128`_
+  The current participation reward rate is already surfaced in the app via `useParticipationRate()` (submission, staking, and streak/portfolio flows), but users still do not get a clear "current tier / next halving" status widget at claim time. If this matters for launch polish, add a shared component for the current tier and next threshold.
+  _Ref: `packages/foundry/contracts/ParticipationPool.sol:118-128`, `packages/nextjs/hooks/useParticipationRate.ts`, `packages/nextjs/components/swipe/StakeSelector.tsx`, `packages/nextjs/app/portfolio/page.tsx`_
 
 ### Keeper
 
@@ -95,8 +95,8 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   _Ref: `DEPLOYMENT.md:461-463`, `packages/keeper/src/index.ts:50-54`_
 
 - [ ] **Keeper metrics alert thresholds documented**
-  Prometheus metrics are exposed at `/metrics` but there's no guidance on what thresholds to set for alerts (e.g., `keeper_errors_total` > N, `keeper_run_duration_seconds` > M). Add recommended alerting rules to `DEPLOYMENT.md` or a separate `OPERATIONS.md`.
-  _Ref: `packages/keeper/src/metrics.ts`_
+  `DEPLOYMENT.md` already covers baseline monitoring (Keeper health, gas balance, bot balances, Ponder sync), but it still lacks concrete thresholds for `keeper_decrypt_failures_total`, `keeper_errors_total`, and abnormal run duration. Add copy-paste alert rules to `DEPLOYMENT.md` or a separate `OPERATIONS.md`.
+  _Ref: `packages/keeper/src/metrics.ts`, `docs/DEPLOYMENT.md:643-650`_
 
 ### Ponder Indexer
 
@@ -117,9 +117,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   The SSRF check resolves DNS separately from the fetch. A DNS rebinding attack could bypass private-IP checks. The code already documents this at line 66-67. For the current threat model (server-side validation of user-submitted URLs, not fetching sensitive resources), this is acceptable. If the server ever runs on AWS/GCP with instance metadata endpoints, revisit.
   _Ref: `packages/nextjs/app/api/url-validation/route.ts:65-76`_
 
-- [ ] **Image proxy redirect depth**
-  The image proxy follows one redirect and validates the target, but stops there. An attacker controlling an allowed domain could chain a 302 to a blocked domain. Low risk since `ALLOWED_HOSTS` is a curated set of trusted CDNs.
-  _Ref: `packages/nextjs/app/api/image-proxy/route.ts:56-81`_
+- [x] **Image proxy redirect handling** _(fixed)_
+  The image proxy validates the initial hostname, re-validates a single redirect target, and keeps both fetches at `redirect: "manual"`. Additional hops fail closed rather than bypassing the allowlist.
+  _Ref: `packages/nextjs/app/api/image-proxy/route.ts:56-80`_
 
 - [ ] **Frontend rate-limit cleanup race**
   Multiple Next.js server instances can trigger rate-limit cleanup concurrently (thundering herd on the DB). Low impact — cleanup is idempotent and Turso handles concurrent writes.
@@ -128,11 +128,11 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 ### Documentation
 
 - [ ] **Operations runbook**
-  `DEPLOYMENT.md` covers initial setup but not day-2 operations: monitoring health, handling degradation (Ponder falls behind, keeper wallet drained, drand outage), secrets rotation procedures, database backup/restore, update/rollback procedures.
+  `DEPLOYMENT.md` now covers monitoring, security checks, wallet-balance alerts, and secret rotation. What is still missing is a concise day-2 incident runbook for Ponder lag, prolonged drand outages, database backup/restore, deploy rollback, and manual keeper failover.
 
-- [ ] **Self.xyz dependency documented**
-  All sybil resistance depends on Self.xyz hub availability. If the hub goes down, no new users can claim Voter IDs. Document the dependency, uptime expectations, and emergency fallback (governance override?).
-  _Ref: `packages/foundry/contracts/HumanFaucet.sol` (SelfVerificationRoot dependency)_
+- [x] **Self.xyz dependency documented** _(documented)_
+  The mainnet deployment guide already documents the dependency, verification flow, cold-wallet identity requirements, and mainnet hub address. Public legal/docs pages also mention the third-party dependency. An emergency fallback policy is still a product/governance decision, but the dependency itself is documented.
+  _Ref: `docs/DEPLOYMENT.md:284-341`_
 
 ---
 
@@ -153,8 +153,8 @@ These areas were reviewed and found production-ready:
 | Dev-only gating | Debug routes redirect in production. Dev faucet double-gated. Localhost URLs rejected in production configs across all packages. |
 | Console output | All `console.error/warn` is legitimate error handling. Debug logging gated by `DEBUG` env var or `NODE_ENV`. No stray `console.log`. |
 | Cold wallet architecture | Delegation model keeps Voter IDs on cold wallets. Bot compromise only exposes operational cREP, not identity. |
-| Commit-reveal voting | Real tlock encryption via drand quicknet mainnet. Front-running prevented by design. |
+| Commit hash anti-front-running | Per-voter commit hashes and reveal verification prevent copied-commit front-running and preserve a blind voting phase. |
 | Security headers | HSTS, X-Frame-Options DENY, X-Content-Type-Options nosniff, Referrer-Policy, Permissions-Policy all set. |
 | SSRF protection | HTTPS-only, private IP rejection, localhost/link-local blocked, DNS resolution check, image proxy allowlist. |
 | Rate limiting | DB-backed per-IP rate limiting on all API routes. Ponder has in-memory rate limiting. |
-| CI | Lint + type-check on push/PR. Slither static analysis on push/PR. E2E on PR + weekly. |
+| CI | Lint + type-check on push/PR. Slither static analysis on push/PR. E2E on PR, push to `main`, and weekly. |
