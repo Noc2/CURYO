@@ -54,7 +54,7 @@ export function FeedScopeFilter({ value, options, onChange, label = "Filter" }: 
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
         className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
-          isFiltered ? "pill-category" : "bg-base-200 text-white hover:bg-base-300"
+          isFiltered ? "pill-category" : "bg-success/20 text-success hover:bg-success/30"
         }`}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
@@ -100,7 +100,7 @@ export function FeedScopeFilter({ value, options, onChange, label = "Filter" }: 
                       onChange(option.value);
                       setIsOpen(false);
                     }}
-                    className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm transition-colors sm:rounded-xl sm:px-3 sm:py-2 ${
+                    className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-base font-medium transition-colors sm:rounded-xl sm:px-3 sm:py-2 ${
                       isActive
                         ? "bg-primary/10 text-primary"
                         : "text-base-content/80 hover:bg-base-200 hover:text-base-content sm:hover:bg-base-300"

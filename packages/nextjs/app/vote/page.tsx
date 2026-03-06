@@ -572,7 +572,7 @@ const HomeInner = () => {
           {address ? (
             <FeedScopeFilter value={scope} options={SCOPE_OPTIONS} onChange={value => setScope(value as ScopeOption)} />
           ) : null}
-          <div className="hidden shrink-0 sm:flex">
+          <div className="hidden shrink-0 items-center sm:flex">
             <StreakCounter />
           </div>
         </div>
