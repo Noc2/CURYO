@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
@@ -34,7 +33,6 @@ function GovernancePageInner() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("leaderboard");
   const [referrer, setReferrer] = useState<string | null>(null);
-  const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/governance#profile";
 
   // Sync tab with URL hash (e.g. /governance#profile)
   const selectTab = useCallback((tab: GovernanceTab) => {
@@ -164,22 +162,6 @@ function GovernancePageInner() {
         {/* Profile Tab */}
         {activeTab === "profile" && (
           <>
-            <div className="surface-card rounded-2xl p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <h2 className="text-lg font-semibold">Your public profile</h2>
-                  <p className="text-base text-base-content/60">
-                    Your accuracy, streaks, category breakdown, and recent votes now live on your profile page.
-                  </p>
-                </div>
-                <Link
-                  href={publicProfileHref}
-                  className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
-                >
-                  Open public profile
-                </Link>
-              </div>
-            </div>
             <ProfileForm />
             <DelegationSection />
             <ReferralSection />

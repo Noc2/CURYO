@@ -99,6 +99,7 @@ export function ProfileForm() {
   const showNameStatus = nameInput.length >= 3 && !nameCheckLoading;
   const nameIsAvailable = showNameStatus && (!isNameTaken || isOwnName);
   const nameIsTaken = showNameStatus && isNameTaken && !isOwnName;
+  const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/governance#profile";
 
   if (profileLoading || voterIdLoading) {
     return (
@@ -134,7 +135,20 @@ export function ProfileForm() {
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-5">
-      <h1 className="text-2xl font-semibold">{hasProfile ? "Your Profile" : "Create Profile"}</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold">{hasProfile ? "Your Profile" : "Create Profile"}</h1>
+          <p className="text-base text-base-content/60">
+            Manage your public identity here, then open your profile page to see how it appears to others.
+          </p>
+        </div>
+        <Link
+          href={publicProfileHref}
+          className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
+        >
+          Open public profile
+        </Link>
+      </div>
 
       {/* Avatar Preview */}
       <div className="flex items-center gap-4">
