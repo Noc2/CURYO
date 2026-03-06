@@ -332,11 +332,9 @@ contract AdversarialTests is VotingTestBase {
         uint256 forfeitAmount = treasuryAfter1 - treasuryBefore;
         assertGt(forfeitAmount, 0, "Some amount should be forfeited");
 
-        // Process again — same range, should be a no-op (stakeAmount was zeroed)
+        // Process again — same range, reverts because nothing left to process (stakeAmount zeroed)
+        vm.expectRevert(RoundVotingEngine.NothingProcessed.selector);
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
-
-        uint256 treasuryAfter2 = crepToken.balanceOf(treasury);
-        assertEq(treasuryAfter2, treasuryAfter1, "Double process should not add more to treasury");
     }
 
     /// @notice Unrevealed voter from current epoch at settlement should be refunded, not forfeited
@@ -984,7 +982,8 @@ contract AdversarialTests is VotingTestBase {
         vm.prank(submitter);
         distributor.claimSubmitterReward(contentId, roundId);
 
-        // Process unrevealed (none in this case, but should be safe to call)
+        // Process unrevealed (none in this case — reverts to prevent no-op keeper reward drain)
+        vm.expectRevert(RoundVotingEngine.NothingProcessed.selector);
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
 
         uint256 engineBalance = crepToken.balanceOf(address(engine));

@@ -80,6 +80,8 @@ contract RoundVotingEngine is
     error StreakTooShort();
     error MilestoneAlreadyClaimed();
     error InvalidMilestoneIndex();
+    error NothingProcessed();
+    error NotWinningSide();
 
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -626,10 +628,13 @@ contract RoundVotingEngine is
 
         // Prevent selective revelation: all past-epoch commits must be revealed
         // (or their grace period must have expired) before settlement is allowed.
+        // Loop is bounded: votes can only be committed during maxDuration, so no
+        // epochUnrevealedCount entries exist beyond startTime + maxDuration + epochDuration.
         {
             uint256 _gracePeriod = revealGracePeriod;
             uint256 epochEnd = round.startTime + roundCfg.epochDuration;
-            while (epochEnd <= block.timestamp) {
+            uint256 maxEpochEnd = round.startTime + roundCfg.maxDuration + roundCfg.epochDuration;
+            while (epochEnd <= block.timestamp && epochEnd <= maxEpochEnd) {
                 if (epochUnrevealedCount[contentId][roundId][epochEnd] > 0
                     && block.timestamp < epochEnd + _gracePeriod) {
                     revert UnrevealedPastEpochVotes();
@@ -854,6 +859,10 @@ contract RoundVotingEngine is
         if (!commit.revealed) revert VoteNotRevealed();
         if (commit.stakeAmount == 0) revert NoStake();
 
+        // Only winning-side voters earn participation rewards (prevents self-opposition farming).
+        // In unanimous rounds (losingPool == 0), all voters are winners (upWins reflects the unanimous side).
+        if (commit.isUp != round.upWins) revert NotWinningSide();
+
         uint256 rateBps = roundParticipationRateBps[contentId][roundId];
         if (rateBps == 0) revert NoParticipationRate();
 
@@ -892,12 +901,14 @@ contract RoundVotingEngine is
         if (voterCurrentStreak[msg.sender] < mDays) revert StreakTooShort();
         if (voterLastMilestoneDay[msg.sender] >= mDays) revert MilestoneAlreadyClaimed();
 
-        voterLastMilestoneDay[msg.sender] = mDays;
-
         uint256 scaled = mBase * participationPool.getCurrentRateBps() / STREAK_INITIAL_RATE_BPS;
         if (scaled == 0) return;
 
         uint256 paid = participationPool.distributeReward(msg.sender, scaled);
+        if (paid == 0) revert PoolDepleted();
+
+        // Only consume milestone after successful payout
+        voterLastMilestoneDay[msg.sender] = mDays;
         emit StreakBonusClaimed(msg.sender, mDays, paid);
     }
 
@@ -969,7 +980,7 @@ contract RoundVotingEngine is
 
         bytes32[] storage commitKeys = roundCommitHashes[contentId][roundId];
         uint256 len = commitKeys.length;
-        if (startIndex > len) revert IndexOutOfBounds();
+        if (startIndex >= len) revert IndexOutOfBounds();
 
         uint256 endIndex = (count == 0 || startIndex + count > len) ? len : startIndex + count;
         uint256 forfeitedCrep = 0;
@@ -1015,6 +1026,8 @@ contract RoundVotingEngine is
             emit CurrentEpochRefunded(contentId, roundId, refundedCrep);
         }
 
+        // Only reward keeper when at least one commit was actually processed
+        if (forfeitedCrep == 0 && refundedCrep == 0) revert NothingProcessed();
         _rewardKeeper(OP_PROCESS_UNREVEALED);
     }
 

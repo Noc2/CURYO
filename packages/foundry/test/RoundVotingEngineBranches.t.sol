@@ -973,16 +973,13 @@ contract RoundVotingEngineBranchesTest is Test {
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
     }
 
-    function test_ProcessUnrevealed_AllRevealed_NoOp() public {
+    function test_ProcessUnrevealed_AllRevealed_Reverts() public {
         (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
-        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        // All votes revealed — NothingProcessed revert prevents no-op keeper reward drain
+        vm.expectRevert(RoundVotingEngine.NothingProcessed.selector);
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
-        uint256 treasuryAfter = crepToken.balanceOf(treasury);
-
-        // All votes revealed — nothing to process
-        assertEq(treasuryAfter, treasuryBefore);
     }
 
     function test_ProcessUnrevealed_IndexOutOfBounds_Reverts() public {
