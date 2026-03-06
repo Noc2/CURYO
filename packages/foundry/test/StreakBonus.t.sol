@@ -72,13 +72,11 @@ contract StreakBonusTest is Test {
         votingEngine.setTreasury(treasury);
         votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
-        // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
         crepToken.approve(address(votingEngine), reserveAmount);
         votingEngine.fundConsensusReserve(reserveAmount);
 
-        // Deploy and wire participation pool
         pool = new ParticipationPool(address(crepToken), owner);
         uint256 poolFund = 34_000_000e6;
         crepToken.mint(owner, poolFund);
@@ -87,16 +85,11 @@ contract StreakBonusTest is Test {
         pool.setAuthorizedCaller(address(votingEngine), true);
         votingEngine.setParticipationPool(address(pool));
 
-        // Mint cREP to test users
         crepToken.mint(submitter, 100_000e6);
         crepToken.mint(voter1, 100_000e6);
 
         vm.stopPrank();
     }
-
-    // =========================================================================
-    // HELPERS
-    // =========================================================================
 
     function _submitContentN(uint256 n) internal returns (uint256) {
         vm.startPrank(submitter);
@@ -118,48 +111,38 @@ contract StreakBonusTest is Test {
         vm.stopPrank();
     }
 
-    /// @dev Vote on a unique content each day to avoid 24h cooldown per content
     function _voteOnDay(address voter, uint256 dayIndex) internal {
         uint256 contentId = _submitContentN(dayIndex);
         _commitVote(voter, contentId, true, STAKE);
     }
 
-    // =========================================================================
-    // TESTS
-    // =========================================================================
-
     function test_streakIncrementsOnConsecutiveDays() public {
-        uint256 t0 = 100_000; // Start at a clean timestamp (day 1)
+        uint256 t0 = 100_000;
         vm.warp(t0);
 
-        // Day 1
         _voteOnDay(voter1, 1);
         assertEq(votingEngine.voterCurrentStreak(voter1), 1);
 
-        // Day 2
         vm.warp(t0 + 1 days);
         _voteOnDay(voter1, 2);
         assertEq(votingEngine.voterCurrentStreak(voter1), 2);
 
-        // Day 3
         vm.warp(t0 + 2 days);
         _voteOnDay(voter1, 3);
         assertEq(votingEngine.voterCurrentStreak(voter1), 3);
     }
 
     function test_streakResetsOnGap() public {
-        // Day 1
         _voteOnDay(voter1, 1);
         assertEq(votingEngine.voterCurrentStreak(voter1), 1);
 
-        // Skip a day (2 days later)
         vm.warp(block.timestamp + 2 days);
         _voteOnDay(voter1, 2);
         assertEq(votingEngine.voterCurrentStreak(voter1), 1);
+        assertEq(votingEngine.voterLastMilestoneDay(voter1), 0);
     }
 
     function test_streakNoDuplicateSameDay() public {
-        // Two votes same day on different content
         _submitContentN(1);
         _submitContentN(2);
 
@@ -170,140 +153,45 @@ contract StreakBonusTest is Test {
         assertEq(votingEngine.voterCurrentStreak(voter1), 1);
     }
 
-    function test_claimStreakBonus7Day() public {
-        // Build 7-day streak
+    function test_claimStreakBonusDisabledBeforeMilestone() public {
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.StreakBonusDisabled.selector);
+        votingEngine.claimStreakBonus(0);
+    }
+
+    function test_claimStreakBonusDisabledAfterSevenDayCommitStreak() public {
         for (uint256 i = 1; i <= 7; i++) {
             if (i > 1) vm.warp(block.timestamp + 1 days);
             _voteOnDay(voter1, i);
         }
+
         assertEq(votingEngine.voterCurrentStreak(voter1), 7);
-
         uint256 balBefore = crepToken.balanceOf(voter1);
 
         vm.prank(voter1);
-        votingEngine.claimStreakBonus(0); // milestone index 0 = 7-day
-
-        uint256 balAfter = crepToken.balanceOf(voter1);
-        // Base 10 cREP * 9000/9000 = 10 cREP at tier 0
-        assertEq(balAfter - balBefore, 10e6);
-    }
-
-    function test_claimStreakBonusAppliesHalving() public {
-        // Drain enough from pool to reach tier 1 (after 2M distributed, rate = 4500 BPS)
-        vm.startPrank(owner);
-        // Distribute 2M to push to tier 1
-        pool.setAuthorizedCaller(owner, true);
-        pool.distributeReward(owner, 2_000_000e6);
-        vm.stopPrank();
-
-        // Build 7-day streak
-        for (uint256 i = 1; i <= 7; i++) {
-            if (i > 1) vm.warp(block.timestamp + 1 days);
-            _voteOnDay(voter1, i);
-        }
-
-        uint256 balBefore = crepToken.balanceOf(voter1);
-        vm.prank(voter1);
-        votingEngine.claimStreakBonus(0);
-        uint256 balAfter = crepToken.balanceOf(voter1);
-
-        // Base 10 cREP * 4500/9000 = 5 cREP
-        assertEq(balAfter - balBefore, 5e6);
-    }
-
-    function test_cannotDoubleClaimMilestone() public {
-        // Build 7-day streak
-        for (uint256 i = 1; i <= 7; i++) {
-            if (i > 1) vm.warp(block.timestamp + 1 days);
-            _voteOnDay(voter1, i);
-        }
-
-        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.StreakBonusDisabled.selector);
         votingEngine.claimStreakBonus(0);
 
-        vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.MilestoneAlreadyClaimed.selector);
-        votingEngine.claimStreakBonus(0);
-    }
-
-    function test_milestoneResetsOnStreakBreak() public {
-        // Build 7-day streak and claim
-        for (uint256 i = 1; i <= 7; i++) {
-            if (i > 1) vm.warp(block.timestamp + 1 days);
-            _voteOnDay(voter1, i);
-        }
-        vm.prank(voter1);
-        votingEngine.claimStreakBonus(0);
-
-        // Break streak (skip 2 days)
-        vm.warp(block.timestamp + 2 days);
-        uint256 nextContent = 8;
-
-        // Rebuild 7-day streak
-        for (uint256 i = 0; i < 7; i++) {
-            if (i > 0) vm.warp(block.timestamp + 1 days);
-            _voteOnDay(voter1, nextContent + i);
-        }
-        assertEq(votingEngine.voterCurrentStreak(voter1), 7);
-
-        // Should be able to claim again since milestone was reset
-        vm.prank(voter1);
-        votingEngine.claimStreakBonus(0);
-
-        assertEq(votingEngine.voterLastMilestoneDay(voter1), 7);
-    }
-
-    function test_cannotClaimWithShortStreak() public {
-        // Build 5-day streak
-        for (uint256 i = 1; i <= 5; i++) {
-            if (i > 1) vm.warp(block.timestamp + 1 days);
-            _voteOnDay(voter1, i);
-        }
-        assertEq(votingEngine.voterCurrentStreak(voter1), 5);
-
-        vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.StreakTooShort.selector);
-        votingEngine.claimStreakBonus(0); // 7-day milestone
-    }
-
-    function test_claimMultipleMilestones() public {
-        // Build 30-day streak
-        for (uint256 i = 1; i <= 30; i++) {
-            if (i > 1) vm.warp(block.timestamp + 1 days);
-            _voteOnDay(voter1, i);
-        }
-        assertEq(votingEngine.voterCurrentStreak(voter1), 30);
-
-        uint256 balBefore = crepToken.balanceOf(voter1);
-
-        // Claim 7-day milestone
-        vm.prank(voter1);
-        votingEngine.claimStreakBonus(0);
-
-        // Claim 30-day milestone
-        vm.prank(voter1);
-        votingEngine.claimStreakBonus(1);
-
-        uint256 balAfter = crepToken.balanceOf(voter1);
-        // 10 + 50 = 60 cREP at full rate
-        assertEq(balAfter - balBefore, 60e6);
+        assertEq(crepToken.balanceOf(voter1), balBefore);
+        assertEq(votingEngine.voterLastMilestoneDay(voter1), 0);
     }
 
     function test_storageLayoutPreserved() public {
-        // Vote to create some state
         _voteOnDay(voter1, 1);
         assertEq(votingEngine.voterCurrentStreak(voter1), 1);
 
-        // Upgrade to a new implementation
         vm.startPrank(owner);
         RoundVotingEngine newImpl = new RoundVotingEngine();
         votingEngine.upgradeToAndCall(address(newImpl), "");
         vm.stopPrank();
 
-        // Verify state survived the upgrade
         assertEq(votingEngine.voterCurrentStreak(voter1), 1);
+        assertEq(votingEngine.voterLastMilestoneDay(voter1), 0);
 
-        // Verify existing functionality still works
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.StreakBonusDisabled.selector);
+        votingEngine.claimStreakBonus(0);
+
         vm.warp(block.timestamp + 1 days);
         _voteOnDay(voter1, 2);
         assertEq(votingEngine.voterCurrentStreak(voter1), 2);
@@ -315,11 +203,5 @@ contract StreakBonusTest is Test {
         assertEq(votingEngine.voterCurrentStreak(voter1), 1);
         assertEq(votingEngine.voterLastActiveDay(voter1), block.timestamp / 86400);
         assertEq(votingEngine.voterLastMilestoneDay(voter1), 0);
-    }
-
-    function test_invalidMilestoneIndexReverts() public {
-        vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.InvalidMilestoneIndex.selector);
-        votingEngine.claimStreakBonus(3);
     }
 }

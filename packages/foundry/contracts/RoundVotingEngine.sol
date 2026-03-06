@@ -80,6 +80,7 @@ contract RoundVotingEngine is
     error StreakTooShort();
     error MilestoneAlreadyClaimed();
     error InvalidMilestoneIndex();
+    error StreakBonusDisabled();
     error NothingProcessed();
     error NotWinningSide();
 
@@ -900,20 +901,8 @@ contract RoundVotingEngine is
     /// @notice Claim a streak milestone bonus. Pull-based: voter calls directly.
     /// @param milestoneIndex 0 = 7-day, 1 = 30-day, 2 = 90-day
     function claimStreakBonus(uint256 milestoneIndex) external nonReentrant {
-        if (address(participationPool) == address(0)) revert NoPool();
-        (uint256 mDays, uint256 mBase) = _getStreakMilestone(milestoneIndex);
-        if (voterCurrentStreak[msg.sender] < mDays) revert StreakTooShort();
-        if (voterLastMilestoneDay[msg.sender] >= mDays) revert MilestoneAlreadyClaimed();
-
-        uint256 scaled = mBase * participationPool.getCurrentRateBps() / STREAK_INITIAL_RATE_BPS;
-        if (scaled == 0) return;
-
-        uint256 paid = participationPool.distributeReward(msg.sender, scaled);
-        if (paid == 0) revert PoolDepleted();
-
-        // Only consume milestone after successful payout
-        voterLastMilestoneDay[msg.sender] = mDays;
-        emit StreakBonusClaimed(msg.sender, mDays, paid);
+        milestoneIndex;
+        revert StreakBonusDisabled();
     }
 
     /// @dev Update voter's daily voting streak. Called at end of _commitVote.
