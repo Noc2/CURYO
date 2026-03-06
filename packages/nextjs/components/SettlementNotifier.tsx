@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAccount } from "wagmi";
 import { useScaffoldWatchContractEvent } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { ponderApi } from "~~/services/ponder/client";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -15,6 +16,10 @@ export function SettlementNotifier() {
   const { address } = useAccount();
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
   const permissionRef = useRef<NotificationPermission>("default");
+  const activeKeysRef = useRef<Set<string>>(new Set());
+  const watchedContentIdsRef = useRef<Set<string>>(new Set());
+  const seenSettlementKeysRef = useRef<Set<string>>(new Set());
+  const { watchedContentIds } = useWatchedContent(address);
 
   // Request notification permission on mount (only if connected)
   useEffect(() => {
@@ -53,6 +58,14 @@ export function SettlementNotifier() {
     setActiveKeys(keys);
   }, [ponderResult]);
 
+  useEffect(() => {
+    activeKeysRef.current = activeKeys;
+  }, [activeKeys]);
+
+  useEffect(() => {
+    watchedContentIdsRef.current = watchedContentIds;
+  }, [watchedContentIds]);
+
   // Watch for RoundSettled events
   useScaffoldWatchContractEvent({
     contractName: "RoundVotingEngine" as any,
@@ -62,27 +75,43 @@ export function SettlementNotifier() {
         const args = log.args as { contentId?: bigint; roundId?: bigint };
         if (args.contentId === undefined || args.roundId === undefined) continue;
 
+        const contentId = args.contentId.toString();
         const key = `${args.contentId.toString()}-${args.roundId.toString()}`;
-        if (!activeKeys.has(key)) continue;
+        if (seenSettlementKeysRef.current.has(key)) continue;
 
-        // Remove from set to avoid duplicate notifications
-        setActiveKeys(prev => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
+        const votedRound = activeKeysRef.current.has(key);
+        const watchedContent = watchedContentIdsRef.current.has(contentId);
+        if (!votedRound && !watchedContent) continue;
+
+        seenSettlementKeysRef.current.add(key);
+
+        if (votedRound) {
+          // Remove from set to avoid duplicate notifications for voted rounds
+          setActiveKeys(prev => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+        }
+
+        const title = votedRound ? "Round Resolved!" : "Watched Content Resolved!";
+        const body = votedRound
+          ? `Content #${contentId} round resolved. Check your portfolio to claim rewards.`
+          : `Content #${contentId} just resolved. Open Curyo to see the latest result.`;
 
         // In-app toast (always fires)
         notification.success(
-          `Round resolved! Content #${args.contentId.toString()} round #${args.roundId.toString()}. Check your portfolio to claim rewards.`,
+          votedRound
+            ? `Round resolved! Content #${contentId} round #${args.roundId.toString()}. Check your portfolio to claim rewards.`
+            : `Watched content resolved! Content #${contentId} round #${args.roundId.toString()} is ready to review.`,
           { duration: 8000 },
         );
 
         // Browser notification (only if permitted)
         if (permissionRef.current === "granted") {
           try {
-            new Notification("Round Resolved!", {
-              body: `Content #${args.contentId.toString()} round resolved. Check your portfolio to claim rewards.`,
+            new Notification(title, {
+              body,
               icon: "/logo.svg",
             });
           } catch {

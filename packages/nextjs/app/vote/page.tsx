@@ -3,6 +3,7 @@
 import { Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { blo } from "blo";
 import { AnimatePresence, motion } from "framer-motion";
 import type { NextPage } from "next";
@@ -12,6 +13,7 @@ import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
+import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import { SwipeCard } from "~~/components/swipe/SwipeCard";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
@@ -23,7 +25,9 @@ import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUrlValidation } from "~~/hooks/useUrlValidation";
 import { useUserPreferences } from "~~/hooks/useUserPreferences";
+import { useVoteHistory } from "~~/hooks/useVoteHistory";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
+import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
@@ -46,6 +50,7 @@ const ALL_FILTER = "All";
 const BROKEN_FILTER = "Broken";
 const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 type SortOption = "for_you" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
+type ScopeOption = "all" | "watched" | "my_votes" | "my_submissions";
 
 const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "for_you", label: "For You" },
@@ -55,17 +60,32 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: "lowest_rated", label: "Lowest Rated" },
 ];
 
+const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "watched", label: "Watched" },
+  { value: "my_votes", label: "My Votes" },
+  { value: "my_submissions", label: "My Submissions" },
+];
+
 const HomeInner = () => {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("q") ?? "";
   const contentParam = searchParams.get("content");
 
   const { address } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
   const { feed, isLoading } = useContentFeed(address);
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
   const voteCounts = useCategoryPopularity(feed);
+  const { votes, isLoading: votesLoading } = useVoteHistory(address);
+  const {
+    watchedContentIds,
+    isLoading: watchedLoading,
+    toggleWatch,
+    isPending: isWatchPending,
+  } = useWatchedContent(address);
 
   // URL validation — async check for broken URLs
   const feedUrls = useMemo(() => feed.map(item => item.url), [feed]);
@@ -73,7 +93,12 @@ const HomeInner = () => {
 
   // Filter & sort state
   const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
+  const [scope, setScope] = useState<ScopeOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
+
+  const votedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
+  const scopeLoading =
+    (scope === "watched" && !!address && watchedLoading) || (scope === "my_votes" && !!address && votesLoading);
 
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback((name: string) => {
@@ -170,6 +195,20 @@ const HomeInner = () => {
       }
     }
 
+    switch (scope) {
+      case "watched":
+        items = items.filter(item => watchedContentIds.has(item.id.toString()));
+        break;
+      case "my_votes":
+        items = items.filter(item => votedContentIds.has(item.id.toString()));
+        break;
+      case "my_submissions":
+        items = items.filter(item => item.isOwnContent);
+        break;
+      default:
+        break;
+    }
+
     switch (sortBy) {
       case "for_you":
         if (hasPreferences && activeCategory === ALL_FILTER) {
@@ -216,6 +255,9 @@ const HomeInner = () => {
     categoryScores,
     hasPreferences,
     validationMap,
+    scope,
+    watchedContentIds,
+    votedContentIds,
   ]);
 
   // Fetch submitter profiles for all visible content
@@ -265,7 +307,7 @@ const HomeInner = () => {
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(20);
-  }, [searchQuery, activeCategory, sortBy]);
+  }, [searchQuery, activeCategory, scope, sortBy]);
 
   // Infinite scroll with Intersection Observer
   useEffect(() => {
@@ -346,6 +388,30 @@ const HomeInner = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  const handleToggleWatch = useCallback(
+    async (contentId: bigint) => {
+      const result = await toggleWatch(contentId);
+
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          notification.info("Connect your wallet to watch content.");
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason === "rejected") {
+          return;
+        }
+
+        notification.error(result.error || "Failed to update watchlist");
+        return;
+      }
+
+      notification.success(result.watched ? "Added to your watchlist" : "Removed from your watchlist");
+    },
+    [openConnectModal, toggleWatch],
+  );
+
   // Count broken URLs for the filter pill
   const brokenCount = useMemo(() => {
     return feed.filter(item => !isContentItemBlocked(item) && validationMap.get(item.url) === false).length;
@@ -376,6 +442,34 @@ const HomeInner = () => {
     return () => window.removeEventListener("hashchange", applyHash);
   }, [categories]);
 
+  const emptyStateMessage = useMemo(() => {
+    if (searchQuery) {
+      return `No results for "${searchQuery}"`;
+    }
+
+    if (scope === "watched") {
+      return address ? "You aren't watching any content yet." : "Connect your wallet to view watched content.";
+    }
+
+    if (scope === "my_votes") {
+      return address ? "You haven't voted on any content yet." : "Connect your wallet to view your votes.";
+    }
+
+    if (scope === "my_submissions") {
+      return address ? "You haven't submitted any content yet." : "Connect your wallet to view your submissions.";
+    }
+
+    if (activeCategory === BROKEN_FILTER) {
+      return "No broken URLs detected.";
+    }
+
+    if (activeCategory === ALL_FILTER) {
+      return "No content submitted yet. Be the first!";
+    }
+
+    return `No content found in "${activeCategory}".`;
+  }, [activeCategory, address, scope, searchQuery]);
+
   return (
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
       <div className="w-full max-w-5xl">
@@ -383,9 +477,23 @@ const HomeInner = () => {
         {/* Filter bar: sort + category pills */}
         <div className="flex items-center gap-3 mb-5">
           <select
+            value={scope}
+            onChange={e => setScope(e.target.value as ScopeOption)}
+            className="select bg-base-200 text-base font-medium border-none focus:outline-none shrink-0 w-auto"
+            aria-label="Content scope"
+          >
+            {SCOPE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          <select
             value={sortBy}
             onChange={e => setSortBy(e.target.value as SortOption)}
             className="select bg-base-200 text-base font-medium border-none focus:outline-none shrink-0 w-auto"
+            aria-label="Sort content"
           >
             {SORT_OPTIONS.map(opt => (
               <option key={opt.value} value={opt.value}>
@@ -412,20 +520,12 @@ const HomeInner = () => {
         </div>
 
         {/* Main content */}
-        {isLoading || categoriesLoading ? (
+        {isLoading || categoriesLoading || scopeLoading ? (
           <div className="flex justify-center py-16">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
         ) : displayFeed.length === 0 ? (
-          <div className="text-center py-16 text-base-content/30 text-base">
-            {searchQuery
-              ? `No results for "${searchQuery}"`
-              : activeCategory === BROKEN_FILTER
-                ? "No broken URLs detected."
-                : activeCategory === ALL_FILTER
-                  ? "No content submitted yet. Be the first!"
-                  : `No content found in "${activeCategory}".`}
-          </div>
+          <div className="text-center py-16 text-base-content/30 text-base">{emptyStateMessage}</div>
         ) : (
           <>
             {/* Featured card */}
@@ -465,6 +565,15 @@ const HomeInner = () => {
                           canVote={!!address}
                           standalone
                           embedded
+                          headerActions={
+                            <WatchContentButton
+                              watched={watchedContentIds.has(selectedItem.id.toString())}
+                              pending={isWatchPending(selectedItem.id)}
+                              onClick={() => {
+                                void handleToggleWatch(selectedItem.id);
+                              }}
+                            />
+                          }
                         />
                       </div>
 
@@ -498,6 +607,9 @@ const HomeInner = () => {
                       rating={ratingsMap.get(item.id.toString())}
                       submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
                       onSelect={handleSelectCard}
+                      onToggleWatch={handleToggleWatch}
+                      watched={watchedContentIds.has(item.id.toString())}
+                      watchPending={isWatchPending(item.id)}
                     />
                   ))}
                 </div>
@@ -531,11 +643,17 @@ const ThumbnailCard = memo(function ThumbnailCard({
   rating,
   submitterProfile,
   onSelect,
+  onToggleWatch,
+  watched,
+  watchPending,
 }: {
   item: ContentItem;
   rating?: number;
   submitterProfile?: SubmitterProfile;
   onSelect: (id: bigint, categoryId: bigint) => void;
+  onToggleWatch: (id: bigint) => void;
+  watched: boolean;
+  watchPending: boolean;
 }) {
   const onClick = useCallback(() => onSelect(item.id, item.categoryId), [onSelect, item.id, item.categoryId]);
   const platformInfo = detectPlatform(item.url);
@@ -680,16 +798,24 @@ const ThumbnailCard = memo(function ThumbnailCard({
             {displayRating}%
           </span>
         </div>
-        {/* Share button (visible on hover) */}
-        <div
-          className="absolute top-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={e => {
-            e.stopPropagation();
-            setShowShare(true);
-          }}
-        >
-          <div className="p-1 rounded bg-black/60 backdrop-blur cursor-pointer hover:bg-black/80">
-            <ShareIcon className="w-4 h-4 text-white" />
+        {/* Watch + share actions */}
+        <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
+          <WatchContentButton
+            watched={watched}
+            pending={watchPending}
+            onClick={() => onToggleWatch(item.id)}
+            variant="overlay"
+          />
+          <div
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={e => {
+              e.stopPropagation();
+              setShowShare(true);
+            }}
+          >
+            <div className="p-1 rounded bg-black/60 backdrop-blur cursor-pointer hover:bg-black/80">
+              <ShareIcon className="w-4 h-4 text-white" />
+            </div>
           </div>
         </div>
       </div>

@@ -32,6 +32,7 @@ interface SwipeCardProps {
   standalone?: boolean;
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
+  headerActions?: React.ReactNode;
 }
 
 /**
@@ -50,6 +51,7 @@ export function SwipeCard({
   rightActionBar,
   standalone,
   embedded,
+  headerActions,
 }: SwipeCardProps) {
   const [showShare, setShowShare] = useState(false);
   const x = useMotionValue(0);
@@ -109,13 +111,16 @@ export function SwipeCard({
                 size="sm"
               />
             )}
-            <button
-              onClick={() => setShowShare(true)}
-              className="btn btn-ghost btn-sm btn-circle text-base-content/50 hover:text-base-content"
-              aria-label="Share content"
-            >
-              <ShareIcon className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {headerActions}
+              <button
+                onClick={() => setShowShare(true)}
+                className="btn btn-ghost btn-sm btn-circle text-base-content/50 hover:text-base-content"
+                aria-label="Share content"
+              >
+                <ShareIcon className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           <GoalDisplay goal={content.goal} />
 

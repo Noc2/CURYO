@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const userProfiles = sqliteTable("user_profiles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -22,6 +22,22 @@ export const comments = sqliteTable("comments", {
 
 export type Comment = typeof comments.$inferSelect;
 export type NewComment = typeof comments.$inferInsert;
+
+export const watchedContent = sqliteTable(
+  "watched_content",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    walletAddress: text("wallet_address").notNull(),
+    contentId: text("content_id").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  table => ({
+    walletContentUnique: uniqueIndex("watched_content_wallet_content_unique").on(table.walletAddress, table.contentId),
+  }),
+);
+
+export type WatchedContent = typeof watchedContent.$inferSelect;
+export type NewWatchedContent = typeof watchedContent.$inferInsert;
 
 export const urlValidations = sqliteTable("url_validations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
