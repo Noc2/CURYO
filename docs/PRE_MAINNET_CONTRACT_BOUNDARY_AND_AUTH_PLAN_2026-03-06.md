@@ -1,470 +1,340 @@
 # Pre-Mainnet Contract Boundary And Auth Plan
 
-Status: **Draft** | Last updated: 2026-03-06
+Status: **Updated** | Last updated: 2026-03-07
 
-This document turns two pre-mainnet recommendations into an implementation plan:
+This document tracks the remaining refactor work after the first cleanup pass. The large structural pieces are already in place:
 
-1. Build a shared contract adapter + round snapshot layer, deduplicate ABI/address artifacts, and add end-to-end coverage around the shared layer.
-2. Make signed-write auth consistent by moving `comments` onto the same one-time challenge model already used by `username`, then reuse that framework for the other replayable endpoints.
+- `@curyo/contracts` is the shared contract artifact package.
+- keeper, bot, ponder, MCP, and Next.js already consume shared artifacts.
+- `useRoundSnapshot()` exists and the old `useRoundInfo()` / `useRoundPhase()` wrappers are gone.
+- comments, username, watchlist, and follows already use one-time signed challenges.
+- duplicate ABI outputs have already been removed.
+- the obsolete `packages/nextjs/contracts/deployedContracts.ts` artifact has now been deleted.
 
-The goal is to reduce transaction mistakes, frontend/keeper/indexer disagreement, and replayable signed writes before mainnet.
-
----
-
-## Scope
-
-### In scope
-
-- Shared frontend contract boundary for round state and vote submission helpers.
-- Single generated contract artifact package consumed by Next.js, keeper, bot, ponder, and MCP.
-- Playwright coverage for approve/write flows and round-state transitions.
-- One-time challenge flow for comment submission.
-- Reusable signed-action helpers for future migration of watchlist/follow endpoints.
-
-### Out of scope
-
-- Replacing wagmi/scaffold-eth hooks across the entire app.
-- Large UI rewrites or page decomposition.
-- Contract changes in `packages/foundry/contracts/`.
-- Full SIWE session auth.
+The remaining work is narrower and should focus on reducing duplication, tightening boundaries, and adding confidence tests before mainnet.
 
 ---
 
-## Why This Should Happen Before Mainnet
+## Remaining Goals
 
-### Shared contract boundary
+1. Consolidate the signed-action framework so route families stop carrying near-identical helper code.
+2. Finish the shared round adapter boundary so timing and vote-flow logic live in one place.
+3. Add high-signal tests around the shared contract boundary and the one-time challenge flow.
 
-Today, the round state is derived in multiple places:
+These are the highest-value remaining refactors because they reduce:
 
-- `packages/nextjs/hooks/useRoundInfo.ts`
-- `packages/nextjs/hooks/useRoundPhase.ts`
-- `packages/nextjs/hooks/useVotingConfig.ts`
-- `packages/nextjs/hooks/useRoundVote.ts`
-
-Those paths duplicate reads of `config()`, `getActiveRoundId()`, and `getRound()`, and they duplicate tuple decoding, timing math, and readiness rules. That creates three main risks:
-
-- the UI computes different round states in different screens
-- contract ABI shape changes break multiple hooks at once
-- write flows depend on duplicated ad hoc logic instead of one tested boundary
-
-### Signed-write auth
-
-`packages/nextjs/app/api/comments/route.ts` still accepts deterministic signed messages with no nonce, expiry, or one-time consumption. That is replayable. `username` already has the right direction of fix, but its helper is still specialized instead of reusable.
+- repeated auth logic across multiple API families
+- mismatches between screens that interpret round state
+- hidden regressions when contract artifacts or tuple shapes change
+- replay/race-condition regressions in signed-write routes
 
 ---
 
-## Workstream A: Shared Contract Boundary, Artifact Deduplication, And E2E Coverage
+## Current State
 
-## A1. Target Architecture
+### Already done
 
-### A1.1 Generated contract package
+- Shared contract metadata now lives in `packages/contracts`.
+- Legacy ABI copies in keeper, bot, and ponder are gone.
+- The old Next.js `deployedContracts.ts` artifact is gone.
+- Round snapshot derivation is centralized in:
+  - `packages/nextjs/lib/contracts/roundVotingEngine.ts`
+  - `packages/nextjs/hooks/useRoundSnapshot.ts`
+- Signed-action primitives are centralized in:
+  - `packages/nextjs/lib/auth/signedActions.ts`
+- The following route families already use one-time challenges:
+  - `packages/nextjs/app/api/comments/*`
+  - `packages/nextjs/app/api/username/*`
+  - `packages/nextjs/app/api/watchlist/content/*`
+  - `packages/nextjs/app/api/follows/profiles/*`
 
-Add a new workspace package:
+### What is still duplicated
 
-- `packages/contracts`
-- package name: `@curyo/contracts`
+#### Signed actions
 
-This package becomes the only generated source of truth for:
+The framework exists, but these files still repeat the same shape:
 
-- contract ABIs
-- deployed addresses by chain
-- lightweight metadata such as inherited functions or deployed block numbers if needed
+- `packages/nextjs/lib/auth/commentChallenge.ts`
+- `packages/nextjs/lib/auth/profileUpdateChallenge.ts`
+- `packages/nextjs/lib/auth/watchlistChallenge.ts`
+- `packages/nextjs/lib/auth/followProfileChallenge.ts`
 
-It should export:
+The matching route files also repeat:
 
-- `@curyo/contracts/abis`
-- `@curyo/contracts/addresses`
-- `@curyo/contracts/definitions`
+- challenge issuance flow
+- challenge verification flow
+- challenge error mapping
+- action-specific request parsing boilerplate
 
-Do not keep ABIs duplicated in:
+#### Round-state and vote-flow logic
 
-- `packages/keeper/src/abis/*`
-- `packages/bot/src/abis/*`
-- `packages/ponder/abis/*`
-
-Do not keep the huge mixed ABI+address output only in:
-
-- `packages/nextjs/contracts/deployedContracts.ts`
-
-The current generator in `packages/foundry/scripts-js/generateTsAbis.js` should remain the orchestrator for now. It already understands the repo’s deployment layout and proxy naming. The change is where it writes outputs, not a generator rewrite.
-
-### A1.2 Frontend adapter layer
-
-Create a dedicated adapter layer in Next.js, for example:
-
-- `packages/nextjs/lib/contracts/roundVotingEngine.ts`
-- `packages/nextjs/lib/contracts/curyoReputation.ts`
-- `packages/nextjs/lib/contracts/types.ts`
-
-This layer owns:
-
-- named-vs-positional tuple decoding
-- bigint-to-UI model normalization
-- round-state derivation
-- allowance and approve/commit request shaping
-- stable typed return models for hooks and components
-
-It should expose pure functions such as:
-
-- `parseVotingConfig(raw)`
-- `parseRound(raw)`
-- `deriveRoundSnapshot({ config, roundId, round, optimisticDelta, now })`
-- `needsApproval({ allowance, requiredStake })`
-- `buildCommitVoteParams({ contentId, isUp, salt, ciphertext, stakeWei, frontend })`
-
-### A1.3 Shared read hook
-
-Add a single low-level read hook:
+The read boundary is improved, but the round/timing surface is still split across:
 
 - `packages/nextjs/hooks/useRoundSnapshot.ts`
+- `packages/nextjs/hooks/useVotingConfig.ts`
+- `packages/nextjs/hooks/useRoundVote.ts`
+- `packages/nextjs/hooks/useActiveVotesWithDeadlines.ts`
 
-It should be the only hook that directly reads:
+This is now more of a maintainability issue than a correctness fire, but it is still worth finishing before mainnet.
 
-- `config()`
-- `getActiveRoundId(contentId)`
-- `getRound(contentId, roundId)`
+---
 
-Everything else becomes a selector over the shared snapshot:
+## Workstream A: Signed-Action Consolidation
 
-- `useRoundInfo()` becomes a light wrapper over `useRoundSnapshot()`
-- `useRoundPhase()` becomes a light wrapper over `useRoundSnapshot()`
-- `useActiveVotesWithDeadlines()` should reuse the same timing helpers for epoch math
+### Goal
 
-### A1.4 Shared write helpers
+Keep the one-time challenge model, but remove route-family copy-paste and make the framework clearly generic.
 
-Keep `useScaffoldWriteContract()` as the transport wrapper for now, but move vote-flow logic out of `useRoundVote()` where possible.
+### Target architecture
 
-`useRoundVote()` should retain:
+Keep the generic core in:
+
+- `packages/nextjs/lib/auth/signedActions.ts`
+
+Expand it so it owns:
+
+- challenge issuance
+- canonical message construction
+- common persistence
+- one-time consumption
+- common error mapping
+
+Reduce each action-specific file to only:
+
+- input normalization
+- payload serialization / hashing inputs
+- title + action constants
+
+### Proposed module split
+
+#### Generic core
+
+Keep or add in `signedActions.ts`:
+
+- `issueSignedActionChallenge(...)`
+- `verifyAndConsumeSignedActionChallenge(...)`
+- `mapSignedActionError(...)`
+- `hashSignedActionPayload(...)`
+- optional small helpers for normalizing addresses or building action definitions
+
+#### Action definitions
+
+Each action module should become a small definition file that exports:
+
+- action constants
+- input normalizer
+- payload serializer
+- message title
+
+That means the action-specific modules stop owning challenge creation wrappers when those wrappers only call the generic core.
+
+### Route refactor
+
+Each challenge route should become:
+
+1. rate limit
+2. parse + normalize
+3. call `issueSignedActionChallenge(...)`
+4. return `{ challengeId, message, expiresAt }`
+
+Each signed-write route should become:
+
+1. rate limit
+2. parse + normalize
+3. compute payload hash
+4. call `verifyAndConsumeSignedActionChallenge(...)` inside the write transaction
+5. map generic challenge errors with one shared helper
+
+### Concrete tasks
+
+1. Add `issueSignedActionChallenge()` to `packages/nextjs/lib/auth/signedActions.ts`.
+2. Add `mapSignedActionError()` to `packages/nextjs/lib/auth/signedActions.ts`.
+3. Refactor:
+   - `packages/nextjs/app/api/comments/challenge/route.ts`
+   - `packages/nextjs/app/api/username/challenge/route.ts`
+   - `packages/nextjs/app/api/watchlist/content/challenge/route.ts`
+   - `packages/nextjs/app/api/follows/profiles/challenge/route.ts`
+4. Refactor:
+   - `packages/nextjs/app/api/comments/route.ts`
+   - `packages/nextjs/app/api/username/route.ts`
+   - `packages/nextjs/app/api/watchlist/content/route.ts`
+   - `packages/nextjs/app/api/follows/profiles/route.ts`
+5. Remove any action-specific wrappers that only forward to generic helpers.
+
+### Acceptance criteria
+
+- Challenge routes differ only in payload normalization and action constants.
+- Signed-write routes share one challenge-error mapping path.
+- No route rebuilds generic challenge persistence logic inline.
+- Existing response shapes stay stable.
+
+---
+
+## Workstream B: Round Adapter Completion
+
+### Goal
+
+Keep contract reads and round/timing logic behind a small shared boundary so UI hooks stop carrying round-specific math.
+
+### Target architecture
+
+The shared round adapter should own:
+
+- tuple parsing
+- voting config normalization
+- round snapshot derivation
+- round timing derivation
+- vote-commit request shaping
+- allowance decision helpers
+
+The core files should be:
+
+- `packages/nextjs/lib/contracts/roundVotingEngine.ts`
+- `packages/nextjs/hooks/useRoundSnapshot.ts`
+
+### What should move
+
+#### From `useRoundVote.ts`
+
+Move into shared adapter helpers:
+
+- stake normalization
+- commit-hash input shaping
+- allowance decision logic
+- vote-parameter construction
+
+Keep in the hook:
 
 - wallet presence checks
 - terms acceptance
-- optimistic UI updates
-- error display
+- tx submission
+- optimistic query updates
+- user-facing error state
 
-The adapter layer should own:
+#### From `useActiveVotesWithDeadlines.ts`
 
-- stake normalization
-- commit hash construction inputs
-- allowance decision logic
-- commitVote argument construction
+Keep the Ponder fetch logic there, but reuse shared timing helpers for:
 
-## A2. Package-By-Package Tasks
+- epoch-1 end
+- round expiry
+- countdown derivation
 
-### `packages/foundry`
+If formatting remains local, that is fine. The important part is that timing math should not drift from the snapshot logic.
 
-- Update `scripts-js/generateTsAbis.js` to emit `@curyo/contracts` outputs.
-- Keep existing deploy-time behavior that updates Ponder env values.
-- Add a parity mode or snapshot test so generation failures are obvious.
+#### For `useVotingConfig.ts`
 
-### `packages/contracts`
+Either:
 
-- Create workspace package with generated files checked into git.
-- Export ABIs individually and through a barrel file.
-- Export chain-address maps in a small file that is safe for browser import.
-- Export a typed contract registry shape that Next.js can consume without re-defining `GenericContractsDeclaration`.
+- keep it as a tiny internal helper used by `useRoundSnapshot()` and vote-related hooks, or
+- fold it into a lower-level query helper and stop treating it as a feature hook
 
-### `packages/nextjs`
+Do not add more feature hooks that read `config()` independently.
 
-- Add `lib/contracts/*` pure adapters.
-- Add `hooks/useRoundSnapshot.ts`.
-- Refactor `useRoundInfo.ts`, `useRoundPhase.ts`, and `useVotingConfig.ts` to consume shared parsing/derivation.
-- Refactor `useRoundVote.ts` so it stops reading `config()` ad hoc and stops owning round-specific decoding rules.
-- Switch imports from local `contracts/deployedContracts.ts` to `@curyo/contracts`.
-- Update `e2e/helpers/contracts.ts` to read addresses from `@curyo/contracts`.
+### Concrete tasks
 
-### `packages/keeper`
+1. Add pure helpers to `packages/nextjs/lib/contracts/roundVotingEngine.ts` for:
+   - `needsApproval(...)`
+   - `buildCommitVoteParams(...)`
+   - `deriveVoteDeadlines(...)`
+2. Refactor `packages/nextjs/hooks/useRoundVote.ts` to consume those helpers.
+3. Refactor `packages/nextjs/hooks/useActiveVotesWithDeadlines.ts` to reuse shared timing helpers.
+4. Decide whether `useVotingConfig.ts` remains as a small internal adapter or gets folded into a lower-level query helper.
 
-- Replace local ABI imports with `@curyo/contracts`.
-- Keep keeper transaction logic unchanged.
-- Add one small startup assertion test that confirms expected contract names resolve from the shared package.
+### Acceptance criteria
 
-### `packages/bot`
-
-- Replace local ABI imports with `@curyo/contracts`.
-- Keep current CLI behavior unchanged.
-
-### `packages/ponder`
-
-- Replace `abis/*` imports in `ponder.config.ts` with `@curyo/contracts`.
-- Keep route and indexing behavior unchanged.
-- Remove `scripts/sync-abis.sh` once the migration is complete and verified.
-
-### `packages/mcp-server`
-
-- If any contract metadata is used directly later, import from `@curyo/contracts` instead of duplicating addresses.
-
-## A3. Implementation Order
-
-### Phase A0: Lock boundaries
-
-- Decide the package name and output shape for `@curyo/contracts`.
-- Decide whether browser-facing consumers import only addresses or addresses plus ABIs.
-- Decide whether ERC-1271 support is needed for signed writes before mainnet. This affects Workstream B, not the artifact package itself, but it should be decided once.
-
-### Phase A1: Artifact deduplication
-
-- Create `packages/contracts`.
-- Teach `generateTsAbis.js` to write the new package.
-- Keep old outputs temporarily.
-- Add parity tests comparing old and new data for one deployment snapshot.
-
-### Phase A2: Frontend read boundary
-
-- Add pure parsing and derivation helpers.
-- Add `useRoundSnapshot()`.
-- Migrate `useVotingConfig()`, `useRoundInfo()`, and `useRoundPhase()`.
-- Verify no UI behavior changes.
-
-### Phase A3: Frontend write boundary
-
-- Extract approval and commit argument helpers.
-- Refactor `useRoundVote()` to consume them.
-- Preserve the existing `disableSimulate` escape hatch in `useScaffoldWriteContract()`.
-
-### Phase A4: Consumer migration
-
-- Move keeper, bot, ponder, and MCP imports to `@curyo/contracts`.
-- Remove duplicated ABI files only after all consumers are green.
-
-### Phase A5: Cleanup
-
-- Delete legacy ABI copies.
-- Delete or reduce `packages/nextjs/contracts/deployedContracts.ts` if it is fully superseded.
-- Update README and package docs.
-
-## A4. Test Plan
-
-### Unit tests
-
-Add fast tests for pure helpers:
-
-- `parseVotingConfig()` accepts both named and positional tuples
-- `parseRound()` normalizes missing fields safely
-- `deriveRoundSnapshot()` computes `votersNeeded`, `isRoundFull`, `readyToSettle`, epoch-1 status, and countdowns consistently
-- `needsApproval()` handles equal, below, and above allowance cases
-
-### Integration tests
-
-Add targeted hook tests or adapter-level tests for:
-
-- `useRoundSnapshot()` with mocked contract responses
-- optimistic vote deltas merged into the snapshot
-- stale/undefined `contentId` and `roundId` handling
-
-### End-to-end tests
-
-Add Playwright scenarios that validate user-visible behavior, not internal implementation:
-
-- approve then commit vote on a fresh allowance
-- commit vote without re-approval when allowance is already sufficient
-- active round detection stays consistent across screens that use round state
-- epoch-1 countdown and transition behavior
-- settlement readiness once `minVoters` is reached
-- round-full behavior once `maxVoters` is reached
-
-### Artifact parity tests
-
-Add repo-level tests that fail if ABIs or addresses diverge between the generated package and consumers during migration.
-
-## A5. Acceptance Criteria
-
-- `@curyo/contracts` is the single source of truth for ABIs and addresses.
-- Next.js, keeper, bot, ponder, and MCP compile against `@curyo/contracts`.
-- `useRoundInfo()` and `useRoundPhase()` no longer read contracts independently.
-- Round timing and readiness math live in shared pure helpers with unit tests.
-- Playwright covers approve/write flow, active round detection, epoch timing, and settlement readiness.
-- Legacy duplicate ABI files are removed or explicitly marked transitional.
+- Round timing math lives in one shared module.
+- Vote-commit argument construction lives in one shared module.
+- No feature hook owns bespoke round math that is also needed elsewhere.
+- Future round-state changes require edits in one place instead of several hooks.
 
 ---
 
-## Workstream B: Signed-Action Auth Consistency
+## Workstream C: Test Coverage
 
-## B1. Target Architecture
+### Goal
 
-Move from per-route custom signing strings to a reusable one-time signed-action framework.
+Add small, high-signal tests around the shared boundary rather than broad UI churn.
 
-Add shared helpers under:
+### Unit tests
 
-- `packages/nextjs/lib/auth/signedActions.ts`
-- `packages/nextjs/lib/auth/commentChallenge.ts`
+Add or extend pure tests for:
 
-Move the table definition to:
-
-- `packages/nextjs/lib/db/schema.ts`
-
-The generic framework should own:
-
-- challenge issuance
-- nonce generation
-- payload hashing
-- canonical message construction
-- expiry checks
-- one-time consumption
-- race-safe update semantics
-
-The route-specific module should own:
-
-- request normalization
-- payload hashing fields for comments
-- response shaping
-
-## B2. Message Model
-
-Follow a SIWE-style anti-replay model without implementing full session auth:
-
-- action name
-- wallet address
-- payload hash
-- nonce
-- issued/created time
-- expiration time
-
-For comments, the payload hash should bind:
-
-- normalized `contentId`
-- normalized trimmed comment body
-
-This prevents reusing one signature for:
-
-- a different comment body
-- a different content item
-- a later replay of the same request
-
-## B3. Package-By-Package Tasks
-
-### `packages/nextjs/lib/db`
-
-- Move `signed_action_challenges` table ownership into `schema.ts`.
-- Add indexes for `expiresAt` and any common lookup path still needed.
-- Keep the migration compatible with the already-created table.
-
-### `packages/nextjs/lib/auth`
-
-- Extract generic helpers out of `profileUpdateChallenge.ts`.
-- Keep profile-specific validation logic in a profile module.
-- Add a comment-specific module with:
-  - input normalization
-  - payload hashing
-  - challenge message builder wrapper
-
-### `packages/nextjs/app/api/comments`
-
-- Add `app/api/comments/challenge/route.ts`.
-- Change `POST /api/comments` to require `challengeId + signature`.
-- Verify and consume the challenge inside the same transaction as the insert.
-- Preserve existing rate limiting and response shape.
-
-### `packages/nextjs/hooks`
-
-- Update `useComments.ts` to:
-  - request a challenge first
-  - sign the returned message
-  - submit `challengeId`
-  - preserve optimistic UI semantics
-
-### `packages/nextjs/e2e`
-
-- Replace the current simple comment-signature test with challenge-based tests.
-- Add replay and expiry coverage.
-
-### Follow-up endpoints
-
-After comments, migrate the same framework into:
-
-- `packages/nextjs/app/api/watchlist/content/route.ts`
-- `packages/nextjs/app/api/follows/profiles/route.ts`
-
-These are not the first priority, but they should use the same helper instead of keeping replayable signatures.
-
-## B4. Implementation Order
-
-### Phase B0: Generalize the helper
-
-- Split generic challenge logic from profile-specific validation.
-- Keep username behavior unchanged while refactoring internals.
-
-### Phase B1: Comments migration
-
-- Add comment challenge endpoint.
-- Update comment post route.
-- Update `useComments.ts`.
-- Add API and E2E coverage.
-
-### Phase B2: Endpoint family cleanup
-
-- Move watchlist and follows onto the shared framework.
-- Remove duplicate signature-building utilities where possible.
-
-## B5. Test Plan
+- `parseVotingConfig()`
+- `parseRound()`
+- `deriveRoundSnapshot()`
+- `deriveVoteDeadlines()`
+- `needsApproval()`
+- signed-action payload hashing helpers
+- signed-action error mapping helpers
 
 ### API tests
 
-Add or update API tests for:
+Add or extend tests for each signed-action route family:
 
-- challenge issuance succeeds for valid comment payload
-- fresh challenge + valid signature creates exactly one comment
-- replay of the same challenge returns `409`
+- challenge issuance succeeds for valid payload
+- valid challenge + valid signature succeeds once
+- replay returns `409`
 - payload mismatch returns `401`
 - expired challenge returns `401`
 - invalid signature returns `401`
 
 ### Concurrency tests
 
-Add a race test proving that two concurrent requests using the same `challengeId` cannot both insert a comment.
+Add a race test that proves one challenge cannot be consumed twice.
 
-### UI tests
+Target at least:
 
-Add one browser-level test that proves the comment composer still works end to end with wallet signing in the new two-step flow.
+- comments
+- username updates
 
-## B6. Acceptance Criteria
+### End-to-end tests
 
-- `POST /api/comments` is no longer replayable.
-- Comment challenge verification and consumption happen atomically with insert.
-- `useComments.ts` signs server-issued messages, not deterministic local strings.
-- The challenge framework is generic enough that watchlist/follows can migrate without copy-paste.
-- Existing `username` behavior still passes after the helper extraction.
+Add a small Playwright set for:
 
----
+- approve then commit vote on fresh allowance
+- no re-approval when allowance is already sufficient
+- consistent active round display across screens using shared round state
+- epoch-1 countdown transition
+- settlement readiness display once thresholds are met
 
-## Decisions To Lock Before Starting
+### Acceptance criteria
 
-- Keep the current generator and change outputs, rather than swapping to a new ABI generator before mainnet.
-- Keep wagmi/scaffold-eth as the transport layer for now.
-- Treat comments as the first signed-action migration because it is active security debt.
-- Defer full route-family migration for watchlist/follows until comments is complete.
-- Decide explicitly whether v1 signed-write endpoints support only EOAs or also ERC-1271 contract wallets.
-
----
-
-## Suggested Ticket Breakdown
-
-1. Create `@curyo/contracts` and generate ABIs/addresses into it.
-2. Migrate Next.js contract imports to `@curyo/contracts` without behavior changes.
-3. Add pure round parsing/derivation helpers.
-4. Add `useRoundSnapshot()` and migrate `useVotingConfig`, `useRoundInfo`, and `useRoundPhase`.
-5. Refactor `useRoundVote()` to consume shared write helpers.
-6. Migrate keeper, bot, ponder, and MCP to `@curyo/contracts`.
-7. Add Playwright scenarios for approve/write flow and round-state transitions.
-8. Extract generic signed-action challenge helpers.
-9. Migrate comments to one-time challenges.
-10. Add replay, expiry, mismatch, and concurrency tests.
-11. Migrate watchlist and follows onto the same framework.
+- The shared round adapter has unit coverage for parsing and timing.
+- One-time challenge replay protection is covered by API tests.
+- At least one concurrency test exists for challenge reuse.
+- Browser-level coverage exists for the critical vote flow.
 
 ---
 
-## Research Notes
+## Suggested Implementation Order
 
-- wagmi’s TypeScript guidance favors const-asserted ABIs and typed config over loose runtime objects.
-- viem’s contract-instance and message-verification utilities support a clean adapter boundary, but browser bundle cost and migration churn argue for retaining the current hook transport before mainnet.
-- Playwright recommends testing user-visible behavior and keeping scenarios isolated; that fits a small number of critical round-state and tx-flow tests better than broad UI regression suites.
-- EIP-4361 is useful here mainly as the anti-replay model: nonce, issuance time, and expiration time should be treated as required properties for signed actions.
+1. Finish signed-action consolidation first.
+   Reason: the security model is already correct, but the current duplication makes it easier to regress.
+2. Finish round adapter extraction next.
+   Reason: this reduces frontend/keeper/indexer disagreement risk before mainnet.
+3. Add the focused tests immediately after each refactor instead of leaving them to the end.
 
-Sources:
+---
 
-- https://wagmi.sh/react/typescript
-- https://viem.sh/docs/contract/getContract
-- https://wagmi.sh/cli/api/plugins/foundry
-- https://playwright.dev/docs/best-practices
-- https://playwright.dev/docs/api-testing
-- https://eips.ethereum.org/EIPS/eip-4361
-- https://viem.sh/docs/utilities/verifyMessage
+## Explicit Non-Goals
+
+- No large UI/page decomposition in this pass.
+- No swap away from wagmi/scaffold-eth before mainnet.
+- No Solidity refactor in this plan.
+- No full SIWE session auth in this plan.
+
+---
+
+## Ticket Breakdown
+
+1. Add shared signed-action issue/error helpers.
+2. Collapse challenge routes onto the shared helper path.
+3. Collapse signed-write routes onto the shared helper path.
+4. Remove redundant per-action wrappers after migration.
+5. Add round vote param helpers in `roundVotingEngine.ts`.
+6. Refactor `useRoundVote.ts` to consume shared helpers.
+7. Refactor `useActiveVotesWithDeadlines.ts` to consume shared timing helpers.
+8. Add unit tests for round helpers.
+9. Add API replay/mismatch/expiry tests for signed actions.
+10. Add concurrency coverage for challenge reuse.
+11. Add a small Playwright suite for critical vote flow and round timing.

@@ -1,8 +1,7 @@
-import { createHash } from "crypto";
 import {
   buildSignedActionMessage,
   createSignedActionChallenge,
-  ensureSignedActionChallengeTable,
+  hashSignedActionPayload,
 } from "~~/lib/auth/signedActions";
 
 export const PROFILE_UPDATE_CHALLENGE_ACTION = "profile-update";
@@ -22,10 +21,6 @@ export interface NormalizedProfileUpdatePayload {
   profileImageUrl?: string | null;
   hasUsername: boolean;
   hasProfileImage: boolean;
-}
-
-export async function ensureProfileUpdateChallengeTable() {
-  await ensureSignedActionChallengeTable();
 }
 
 function isValidAddress(address: string): address is `0x${string}` {
@@ -85,12 +80,10 @@ export function normalizeProfileUpdateInput(
 }
 
 export function hashProfileUpdatePayload(payload: NormalizedProfileUpdatePayload): string {
-  const serialized = [
+  return hashSignedActionPayload([
     `username:${payload.hasUsername ? (payload.username ?? "") : "__absent__"}`,
     `profileImageUrl:${payload.hasProfileImage ? (payload.profileImageUrl ?? "") : "__absent__"}`,
-  ].join("\n");
-
-  return createHash("sha256").update(serialized).digest("hex");
+  ]);
 }
 
 export function buildProfileUpdateChallengeMessage(params: {
