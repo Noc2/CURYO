@@ -4,7 +4,10 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
+import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
 import { FaucetSection } from "~~/components/governance/FaucetSection";
+import { FrontendRegistration } from "~~/components/governance/FrontendRegistration";
+import { GovernanceActionComposer } from "~~/components/governance/GovernanceActionComposer";
 import { GovernanceStats } from "~~/components/governance/GovernanceStats";
 import { PlatformProposals } from "~~/components/governance/PlatformProposals";
 import { ProposalList } from "~~/components/governance/ProposalList";
@@ -18,13 +21,15 @@ import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { ProfileForm } from "~~/components/profile/ProfileForm";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useGovernanceContracts } from "~~/hooks/useGovernance";
 
-type GovernanceTab = "leaderboard" | "profile" | "vote" | "faucet";
+type GovernanceTab = "leaderboard" | "profile" | "governance" | "faucet";
 
-const governanceTabs: GovernanceTab[] = ["leaderboard", "profile", "vote", "faucet"];
+const governanceTabs: GovernanceTab[] = ["leaderboard", "profile", "governance", "faucet"];
 
 function normalizeGovernanceHash(hash: string): GovernanceTab | null {
   if (hash === "accuracy") return "profile";
+  if (hash === "vote") return "governance";
   return governanceTabs.includes(hash as GovernanceTab) ? (hash as GovernanceTab) : null;
 }
 
@@ -33,6 +38,7 @@ function GovernancePageInner() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("leaderboard");
   const [referrer, setReferrer] = useState<string | null>(null);
+  const { hasGovernorContract } = useGovernanceContracts();
 
   // Sync tab with URL hash (e.g. /governance#profile)
   const selectTab = useCallback((tab: GovernanceTab) => {
@@ -136,12 +142,12 @@ function GovernancePageInner() {
                 Profile
               </button>
               <button
-                onClick={() => selectTab("vote")}
+                onClick={() => selectTab("governance")}
                 className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                  activeTab === "vote" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+                  activeTab === "governance" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
                 }`}
               >
-                Vote
+                Governance
               </button>
             </>
           )}
@@ -168,14 +174,27 @@ function GovernancePageInner() {
           </>
         )}
 
-        {/* Vote Tab */}
-        {activeTab === "vote" && (
+        {/* Governance Tab */}
+        {activeTab === "governance" && (
           <>
             <TokenManagement />
             <TreasuryBalance />
-            <PlatformProposals />
             <GovernanceStats />
+            <GovernanceActionComposer />
             <ProposalList />
+            <PlatformProposals />
+            {hasGovernorContract ? (
+              <CategorySubmissionForm />
+            ) : (
+              <div className="surface-card rounded-2xl p-6">
+                <h2 className="text-lg font-semibold mb-2">Category Submission</h2>
+                <p className="text-base text-base-content/60">
+                  Category submissions are disabled on this network because they create a live governance proposal under
+                  the hood, and no deployed <code>CuryoGovernor</code> was detected.
+                </p>
+              </div>
+            )}
+            <FrontendRegistration />
           </>
         )}
       </div>

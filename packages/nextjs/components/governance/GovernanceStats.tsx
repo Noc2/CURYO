@@ -3,17 +3,59 @@
 import Link from "next/link";
 import { ArrowTopRightOnSquareIcon, ClockIcon, ScaleIcon, UserGroupIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { useGovernanceStats } from "~~/hooks/useGovernance";
+
+function formatCRep(amount: bigint | undefined) {
+  if (amount === undefined) return "—";
+  return `${(Number(amount) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} cREP`;
+}
+
+function formatBlocks(blocks: bigint | undefined) {
+  if (blocks === undefined) return "—";
+  return `${blocks.toLocaleString()} blocks`;
+}
+
+function formatDelay(seconds: bigint | undefined) {
+  if (seconds === undefined) return "—";
+  const totalSeconds = Number(seconds);
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3_600);
+
+  if (days > 0 && hours > 0) return `${days}d ${hours}h`;
+  if (days > 0) return `${days} day${days === 1 ? "" : "s"}`;
+  if (hours > 0) return `${hours} hour${hours === 1 ? "" : "s"}`;
+  return `${Math.floor(totalSeconds / 60)} min`;
+}
 
 export const GovernanceStats = () => {
-  // These are the hardcoded values from CuryoGovernor.sol
-  // In production, these would be read from the contract
-  const stats = {
-    votingDelay: "7,200 blocks (~1 day)",
-    votingPeriod: "50,400 blocks (~1 week)",
-    proposalThreshold: "100 cREP",
-    quorum: "4% of circulating supply",
-    timelockDelay: "2 days",
-  };
+  const {
+    hasGovernorContract,
+    governorAddress,
+    votingDelay,
+    votingPeriod,
+    proposalThreshold,
+    quorumNumerator,
+    minimumQuorum,
+    currentQuorum,
+    timelockDelay,
+  } = useGovernanceStats();
+
+  if (!hasGovernorContract) {
+    return (
+      <div className="surface-card rounded-2xl p-6 space-y-3">
+        <h2 className="text-lg font-semibold">Governance Parameters</h2>
+        <p className="text-base text-base-content/70">
+          Live governor reads are not available on this network. This usually means you&apos;re on local dev, where
+          governance roles are wired directly to the deployer instead of a deployed <code>CuryoGovernor</code>.
+        </p>
+        {governorAddress && (
+          <p className="text-base text-base-content/50">
+            Token governor address: <span className="font-mono">{governorAddress}</span>
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="surface-card rounded-2xl p-6">
@@ -25,9 +67,9 @@ export const GovernanceStats = () => {
           <div>
             <div className="flex items-center gap-1">
               <p className="text-base font-medium">Voting Delay</p>
-              <InfoTooltip text="Time before voting starts after proposal creation" />
+              <InfoTooltip text="Blocks between proposal creation and the start of voting." />
             </div>
-            <p className="text-base text-base-content/60">{stats.votingDelay}</p>
+            <p className="text-base text-base-content/60">{formatBlocks(votingDelay)}</p>
           </div>
         </div>
 
@@ -36,9 +78,9 @@ export const GovernanceStats = () => {
           <div>
             <div className="flex items-center gap-1">
               <p className="text-base font-medium">Voting Period</p>
-              <InfoTooltip text="Duration of the voting window" />
+              <InfoTooltip text="Blocks during which votes can be cast." />
             </div>
-            <p className="text-base text-base-content/60">{stats.votingPeriod}</p>
+            <p className="text-base text-base-content/60">{formatBlocks(votingPeriod)}</p>
           </div>
         </div>
 
@@ -47,9 +89,9 @@ export const GovernanceStats = () => {
           <div>
             <div className="flex items-center gap-1">
               <p className="text-base font-medium">Proposal Threshold</p>
-              <InfoTooltip text="cREP needed to create proposals" />
+              <InfoTooltip text="Voting power required to create a proposal." />
             </div>
-            <p className="text-base text-base-content/60">{stats.proposalThreshold}</p>
+            <p className="text-base text-base-content/60">{formatCRep(proposalThreshold)}</p>
           </div>
         </div>
 
@@ -57,10 +99,14 @@ export const GovernanceStats = () => {
           <UserGroupIcon className="w-5 h-5 text-primary shrink-0 mt-0.5" />
           <div>
             <div className="flex items-center gap-1">
-              <p className="text-base font-medium">Quorum Required</p>
-              <InfoTooltip text="Minimum participation for valid vote" />
+              <p className="text-base font-medium">Current Quorum</p>
+              <InfoTooltip text="Live quorum at the current block using the governor's dynamic circulating-supply calculation." />
             </div>
-            <p className="text-base text-base-content/60">{stats.quorum} (min 10K cREP)</p>
+            <p className="text-base text-base-content/60">{formatCRep(currentQuorum)}</p>
+            <p className="text-base text-base-content/40">
+              {quorumNumerator ? `${quorumNumerator.toString()}% of circulating supply` : "—"} with floor{" "}
+              {formatCRep(minimumQuorum)}
+            </p>
           </div>
         </div>
 
@@ -69,9 +115,9 @@ export const GovernanceStats = () => {
           <div>
             <div className="flex items-center gap-1">
               <p className="text-base font-medium">Timelock Delay</p>
-              <InfoTooltip text="Waiting period before execution" />
+              <InfoTooltip text="Minimum delay between a queued proposal and execution." />
             </div>
-            <p className="text-base text-base-content/60">{stats.timelockDelay} before execution</p>
+            <p className="text-base text-base-content/60">{formatDelay(timelockDelay)}</p>
           </div>
         </div>
       </div>

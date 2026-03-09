@@ -147,7 +147,7 @@ export function PlatformProposals() {
           <li>A governance proposal is automatically created</li>
           <li>Community votes for 1 week (4% circulating supply quorum required)</li>
           <li>If approved, stake is returned and platform is added</li>
-          <li>If rejected, stake is forfeited to treasury</li>
+          <li>If rejected, stake is sent to the consensus reserve</li>
         </ol>
       </div>
     </div>
@@ -232,7 +232,10 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
       )}
 
       {/* Submitter */}
-      <p className="text-base text-base-content/50">Submitted by {formatAddress(category.submitter)}</p>
+      <div className="flex items-center justify-between gap-3 text-base text-base-content/50 flex-wrap">
+        <p>Submitted by {formatAddress(category.submitter)}</p>
+        {category.proposalId > 0n && <p>Proposal #{category.proposalId.toString()}</p>}
+      </div>
 
       {/* Ranking Question */}
       <p className="text-base text-base-content/70 italic">&quot;{category.rankingQuestion}&quot;</p>
