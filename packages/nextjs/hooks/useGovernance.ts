@@ -12,6 +12,7 @@ import {
   useTransactor,
 } from "~~/hooks/scaffold-eth";
 import { notification } from "~~/utils/scaffold-eth";
+import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
 export const governorAbi = parseAbi([
   "event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 voteStart, uint256 voteEnd, string description)",
@@ -135,14 +136,15 @@ export function useGovernanceContracts() {
     functionName: "governor" as any,
   });
 
-  const governorAddress = typeof governorRaw === "string" ? (governorRaw as Address) : undefined;
+  const governorAddress =
+    typeof governorRaw === "string" && governorRaw !== ZERO_ADDRESS ? (governorRaw as Address) : undefined;
 
   const { data: governorBytecode } = useQuery({
     queryKey: ["governor-bytecode", targetNetwork.id, governorAddress],
     enabled: !!publicClient && !!governorAddress,
     staleTime: 60_000,
     queryFn: async () => {
-      return publicClient!.getBytecode({ address: governorAddress! });
+      return (await publicClient!.getBytecode({ address: governorAddress! })) ?? null;
     },
   });
 
