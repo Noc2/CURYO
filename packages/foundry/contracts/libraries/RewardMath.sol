@@ -16,6 +16,7 @@ library RewardMath {
     uint256 internal constant PLATFORM_BPS = 200; // 2% (split 50/50: 1% frontend, 1% category)
     uint256 internal constant TREASURY_BPS = 100; // 1% treasury
     uint256 internal constant CONSENSUS_BPS = 500; // 5% consensus subsidy reserve
+    uint256 internal constant REVEALED_LOSER_REFUND_BPS = 500; // 5% rebate for revealed losing votes
     uint256 internal constant BPS_TOTAL = 10000;
 
     // Consensus subsidy: payout rate when losingPool == 0 (5% of total round stake)
@@ -66,6 +67,37 @@ library RewardMath {
     {
         if (totalWeightedWinningStake == 0) return 0;
         return (voterPool * effectiveStake) / totalWeightedWinningStake;
+    }
+
+    /// @notice Calculate the fixed rebate paid to a revealed losing vote.
+    /// @param losingStake The original stake of the revealed losing vote.
+    /// @return refund Amount of tokens the losing voter can reclaim.
+    function calculateRevealedLoserRefund(uint256 losingStake) internal pure returns (uint256 refund) {
+        refund = (losingStake * REVEALED_LOSER_REFUND_BPS) / BPS_TOTAL;
+    }
+
+    /// @notice Reserve loser rebates first, then split the remaining losing pool into protocol buckets.
+    /// @param losingPool Total tokens from the revealed losing side.
+    /// @return loserRefundShare 5% reserved for revealed losing voters.
+    /// @return voterShare 82% of the net losing pool for winning voters.
+    /// @return submitterShare 10% of the net losing pool for the content submitter.
+    /// @return platformShare 2% of the net losing pool for platform fees.
+    /// @return treasuryShare 1% of the net losing pool for the treasury.
+    /// @return consensusShare 5% of the net losing pool for the consensus reserve.
+    function splitPoolAfterLoserRefund(uint256 losingPool)
+        internal
+        pure
+        returns (
+            uint256 loserRefundShare,
+            uint256 voterShare,
+            uint256 submitterShare,
+            uint256 platformShare,
+            uint256 treasuryShare,
+            uint256 consensusShare
+        )
+    {
+        loserRefundShare = calculateRevealedLoserRefund(losingPool);
+        (voterShare, submitterShare, platformShare, treasuryShare, consensusShare) = splitPool(losingPool - loserRefundShare);
     }
 
     /// @notice Split the losing pool into the 5 reward buckets.

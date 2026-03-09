@@ -9,6 +9,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { VotingHandler } from "./handlers/VotingHandler.sol";
 
 /// @title InvariantSolvency
@@ -132,11 +133,16 @@ contract InvariantSolvency is Test {
             uint256 voterPool = engine.roundVoterPool(rec.contentId, rec.roundId);
             RoundLib.Round memory round = engine.getRound(rec.contentId, rec.roundId);
 
-            // Total claimed from voter pool = totalClaimed - sum of stake returns
-            // Winners get (stake + reward), so reward portion = totalClaimed - winning stakes
-            // But we can simply assert: totalClaimed <= all winning stakes + voterPool
+            uint256 losingRawPool = round.upWins ? round.downPool : round.upPool;
+            uint256 loserRefundPool = RewardMath.calculateRevealedLoserRefund(losingRawPool);
+
+            // Total claimed includes winner stake returns + winner pool rewards + loser rebates.
             uint256 winningRawPool = round.upWins ? round.upPool : round.downPool;
-            assertLe(rec.totalClaimed, winningRawPool + voterPool, "C-01: claimed exceeds winning stakes + voter pool");
+            assertLe(
+                rec.totalClaimed,
+                winningRawPool + voterPool + loserRefundPool,
+                "C-01: claimed exceeds winning stakes + voter pool + loser rebates"
+            );
         }
     }
 
@@ -192,11 +198,14 @@ contract InvariantSolvency is Test {
                 // Settled rounds: unclaimed voter rewards + unclaimed submitter rewards
                 uint256 voterPool = engine.roundVoterPool(rec.contentId, rec.roundId);
                 uint256 winningPool = round.upWins ? round.upPool : round.downPool;
+                uint256 losingPool = round.upWins ? round.downPool : round.upPool;
+                uint256 loserRefundPool = RewardMath.calculateRevealedLoserRefund(losingPool);
                 uint256 submitterPending = engine.pendingSubmitterReward(rec.contentId, rec.roundId);
 
-                // Upper bound on remaining obligations: all winning stakes + full voter pool + submitter
+                // Upper bound on remaining obligations: all winning stakes + full voter pool
+                // + loser rebates + submitter reward, minus amounts already claimed.
                 // minus what's already been claimed
-                uint256 maxRemaining = winningPool + voterPool + submitterPending;
+                uint256 maxRemaining = winningPool + voterPool + loserRefundPool + submitterPending;
                 if (maxRemaining > rec.totalClaimed + rec.submitterClaimed) {
                     obligations += maxRemaining - rec.totalClaimed - rec.submitterClaimed;
                 }

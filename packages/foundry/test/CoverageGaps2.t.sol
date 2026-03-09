@@ -1629,7 +1629,7 @@ contract RoundSettlementBranchTest is Test {
         vm.prank(voter2);
         distributor.claimReward(contentId, roundId);
 
-        // Loser gets nothing (no revert, just emits LoserNotified)
+        // Loser gets the fixed rebate and still marks the round claimed
         assertTrue(distributor.rewardClaimed(contentId, roundId, voter2));
     }
 

@@ -306,11 +306,11 @@ contract RoundIntegrationTest is VotingTestBase {
         rewardDistributor.claimReward(contentId, roundId);
         assertGt(crepToken.balanceOf(voter1), balBefore, "Winner should receive reward");
 
-        // Loser claims nothing
+        // Loser claims the fixed 5% rebate
         uint256 loserBal = crepToken.balanceOf(voter3);
         vm.prank(voter3);
         rewardDistributor.claimReward(contentId, roundId);
-        assertEq(crepToken.balanceOf(voter3), loserBal, "Loser should receive nothing");
+        assertEq(crepToken.balanceOf(voter3) - loserBal, STAKE / 20, "Loser should receive 5% rebate");
     }
 
     // =========================================================================
@@ -341,11 +341,11 @@ contract RoundIntegrationTest is VotingTestBase {
         rewardDistributor.claimReward(contentId, roundId);
         assertGt(crepToken.balanceOf(voter2), balBefore, "DOWN winner should receive reward");
 
-        // UP voter (loser) gets nothing
+        // UP voter (loser) gets the fixed 5% rebate
         uint256 upBal = crepToken.balanceOf(voter1);
         vm.prank(voter1);
         rewardDistributor.claimReward(contentId, roundId);
-        assertEq(crepToken.balanceOf(voter1), upBal, "UP loser should receive nothing");
+        assertEq(crepToken.balanceOf(voter1) - upBal, STAKE / 20, "UP loser should receive 5% rebate");
     }
 
     function test_MultipleVoters_BothWinnersClaimProportionally() public {
@@ -641,7 +641,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(crepToken.balanceOf(voter1) - balBefore, STAKE, "Voter should get full refund");
     }
 
-    function test_CancelExpiredRound_MultipleVotersRefund() public {
+    function test_CancelExpiredRound_MultipleVotersCannotCancelAfterCommitQuorum() public {
         uint256 contentId = _submitContent();
 
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
@@ -662,18 +662,8 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = votingEngine.getActiveRoundId(contentId);
 
         vm.warp(block.timestamp + 8 days);
+        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
         votingEngine.cancelExpiredRound(contentId, roundId);
-
-        // Both voters claim refunds
-        uint256 bal1Before = crepToken.balanceOf(voter1);
-        vm.prank(voter1);
-        votingEngine.claimCancelledRoundRefund(contentId, roundId);
-        assertEq(crepToken.balanceOf(voter1) - bal1Before, STAKE, "Voter1 should get full refund");
-
-        uint256 bal2Before = crepToken.balanceOf(voter2);
-        vm.prank(voter2);
-        votingEngine.claimCancelledRoundRefund(contentId, roundId);
-        assertEq(crepToken.balanceOf(voter2) - bal2Before, STAKE, "Voter2 should get full refund");
     }
 
     function test_CancelExpiredRound_DoubleRefundReverts() public {

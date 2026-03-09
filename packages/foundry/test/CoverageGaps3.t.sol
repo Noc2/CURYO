@@ -846,11 +846,11 @@ contract RoundSettlementEdgeCase3Test is Test {
         // Winner gets at least their stake back
         assertGe(winnerReward, 10e6);
 
-        // Loser gets nothing
+        // Loser gets the fixed 5% rebate
         uint256 loserBefore = crep.balanceOf(voter2);
         vm.prank(voter2);
         distributor.claimReward(contentId, roundId);
-        assertEq(crep.balanceOf(voter2), loserBefore);
+        assertEq(crep.balanceOf(voter2) - loserBefore, STAKE / 20);
     }
 
     // --- Submitter reward from two-sided round ---

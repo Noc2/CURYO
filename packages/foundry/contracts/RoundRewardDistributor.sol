@@ -102,7 +102,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // --- Voter Reward Claiming ---
 
     /// @notice Claim reward for a settled round.
-    /// @dev Returns stake + epoch-weighted-stake-proportional rewards from the voter pool.
+    /// @dev Winners receive stake + epoch-weighted-stake-proportional rewards from the voter pool.
+    ///      Revealed losers receive a fixed 5% rebate and unrevealed losers cannot claim.
     ///      Epoch-1 voters (blind) get 100% weight; epoch-2+ voters (informed) get 25% weight.
     ///      This creates a 4:1 reward ratio incentivizing early blind voting.
     /// @param contentId The content ID.
@@ -123,7 +124,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         bool voterWon = (commit.isUp == round.upWins);
 
         if (!voterWon) {
-            emit LoserNotified(contentId, roundId, msg.sender);
+            uint256 refund = RewardMath.calculateRevealedLoserRefund(commit.stakeAmount);
+            if (refund > 0) {
+                votingEngine.transferReward(msg.sender, refund);
+            }
+
+            emit RewardClaimed(contentId, roundId, msg.sender, 0, refund);
             return;
         }
 

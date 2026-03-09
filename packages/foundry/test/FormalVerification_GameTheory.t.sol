@@ -172,11 +172,11 @@ contract FormalVerification_GameTheoryTest is Test {
         // Directional check: honest winner profits
         assertGt(winnerPayout, 50e6, "Honest voting is profitable (payout > stake)");
 
-        // Loser gets nothing
+        // Loser gets the fixed 5% rebate
         uint256 bal3 = crepToken.balanceOf(v[3]);
         vm.prank(v[3]);
         distributor.claimReward(cid, rid);
-        assertEq(crepToken.balanceOf(v[3]), bal3, "Loser gets nothing");
+        assertEq(crepToken.balanceOf(v[3]) - bal3, 2_500_000, "Loser gets 5% rebate");
     }
 
     // ==================== Test 2: Proportional Rewards ====================
@@ -418,11 +418,11 @@ contract FormalVerification_GameTheoryTest is Test {
         RoundLib.Round memory round = engine.getRound(cid, rid);
         assertTrue(round.upWins, "Minnows outweigh whale (450 > 100)");
 
-        // Whale loses entire stake
+        // Whale gets only the fixed 5% revealed-loser rebate
         uint256 bal = crepToken.balanceOf(v[0]);
         vm.prank(v[0]);
         distributor.claimReward(cid, rid);
-        assertEq(crepToken.balanceOf(v[0]), bal, "Whale loses entire 100 cREP");
+        assertEq(crepToken.balanceOf(v[0]) - bal, 5e6, "Whale gets only the 5% loser rebate");
     }
 
     // ==================== Test 9: Manufactured Dissent Unprofitable ====================
@@ -448,7 +448,7 @@ contract FormalVerification_GameTheoryTest is Test {
         // Attacker wallet A (UP winner) claims
         vm.prank(v[0]);
         distributor.claimReward(cid, rid);
-        // Attacker wallet B (DOWN loser) gets nothing
+        // Attacker wallet B (DOWN loser) gets the fixed rebate
         vm.prank(v[1]);
         distributor.claimReward(cid, rid);
 
@@ -507,7 +507,7 @@ contract FormalVerification_GameTheoryTest is Test {
     function test_ConsensusSubsidyReplenishment() public {
         uint256 reserve = engine.consensusReserve(); // 100_000e6
 
-        // Round 1: contested (3 UP vs 2 DOWN, 50e6 each) -> +5e6 to reserve
+        // Round 1: contested (3 UP vs 2 DOWN, 50e6 each) -> +4.75e6 to reserve
         {
             uint256 cid = _submit();
             _vote(v[0], cid, true, 50e6);
@@ -517,8 +517,8 @@ contract FormalVerification_GameTheoryTest is Test {
             _vote(v[4], cid, false, 50e6);
             _forceSettle(cid);
         }
-        reserve += 5_000_000; // 5% of 100e6 losing pool
-        assertEq(engine.consensusReserve(), reserve, "Reserve +5 cREP after contested round");
+        reserve += 4_750_000; // 5% of the 95e6 net losing pool after loser rebates
+        assertEq(engine.consensusReserve(), reserve, "Reserve +4.75 cREP after contested round");
 
         // Round 2: unanimous (5 UP, 100e6 each) -> -25e6 from reserve
         {
@@ -532,8 +532,8 @@ contract FormalVerification_GameTheoryTest is Test {
         reserve -= 25_000_000; // 5% of 500e6 total stake
         assertEq(engine.consensusReserve(), reserve, "Reserve -25 cREP after unanimous round");
 
-        // Net after 1 contested + 1 unanimous = -20 cREP
-        assertEq(reserve, 100_000e6 - 20_000_000, "Net drain = 20 cREP");
+        // Net after 1 contested + 1 unanimous = -20.25 cREP
+        assertEq(reserve, 100_000e6 - 20_250_000, "Net drain = 20.25 cREP");
     }
 
     // ==================== Test 12: Settlement After Reveals ====================

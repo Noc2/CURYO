@@ -11,6 +11,18 @@ contract RewardMathHarness {
         return RewardMath.splitPool(losingPool);
     }
 
+    function calculateRevealedLoserRefund(uint256 losingStake) external pure returns (uint256) {
+        return RewardMath.calculateRevealedLoserRefund(losingStake);
+    }
+
+    function splitPoolAfterLoserRefund(uint256 losingPool)
+        external
+        pure
+        returns (uint256, uint256, uint256, uint256, uint256, uint256)
+    {
+        return RewardMath.splitPoolAfterLoserRefund(losingPool);
+    }
+
     function calculateConsensusSubsidy(uint256 totalStake, uint256 reserveBalance) external pure returns (uint256) {
         return RewardMath.calculateConsensusSubsidy(totalStake, reserveBalance);
     }
@@ -64,6 +76,29 @@ contract RewardMathTest is Test {
             losingPool,
             "Pool split must conserve total"
         );
+    }
+
+    function testFuzz_SplitPoolAfterLoserRefund_Conservation(uint256 losingPool) public view {
+        losingPool = bound(losingPool, 0, type(uint128).max);
+
+        (
+            uint256 loserRefundShare,
+            uint256 voterShare,
+            uint256 submitterShare,
+            uint256 platformShare,
+            uint256 treasuryShare,
+            uint256 consensusShare
+        ) = harness.splitPoolAfterLoserRefund(losingPool);
+
+        assertEq(
+            loserRefundShare + voterShare + submitterShare + platformShare + treasuryShare + consensusShare,
+            losingPool,
+            "Pool split with loser refund must conserve total"
+        );
+    }
+
+    function test_CalculateRevealedLoserRefund_FivePercent() public view {
+        assertEq(harness.calculateRevealedLoserRefund(10e6), 500_000, "Refund should equal 5% of losing stake");
     }
 
     function testFuzz_SplitPool_VoterShareDominates(uint256 losingPool) public view {

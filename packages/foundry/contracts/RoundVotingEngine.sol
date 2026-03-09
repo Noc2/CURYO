@@ -717,19 +717,23 @@ contract RoundVotingEngine is
         // Epoch-weighted winning stake — used for proportional reward distribution
         uint256 weightedWinningStake = upWins ? round.weightedUpPool : round.weightedDownPool;
 
-        // Raw losing pool — redistributed to winners, protocol, treasury, reserve
+        // Raw losing pool — 5% is reserved for revealed losers, the remainder is
+        // redistributed to winners, protocol, treasury, and the consensus reserve.
         uint256 losingPool = upWins ? round.downPool : round.upPool;
 
         if (losingPool > 0) {
             (
+                uint256 _loserRefundShare,
                 uint256 voterShare,
                 uint256 submitterShare,
                 uint256 platformShare,
                 uint256 treasuryShare,
                 uint256 consensusShare
-            ) = RewardMath.splitPool(losingPool);
+            ) = RewardMath.splitPoolAfterLoserRefund(losingPool);
+            _loserRefundShare;
 
-            // Store voter pool and weighted winning stake (used for proportional reward claims)
+            // Store voter pool and weighted winning stake (used for proportional reward claims).
+            // Loser rebates are paid directly from raw losing stake during claimReward().
             roundVoterPool[contentId][roundId] = voterShare;
             roundWinningStake[contentId][roundId] = weightedWinningStake;
 
@@ -777,6 +781,7 @@ contract RoundVotingEngine is
                     roundVoterPool[contentId][roundId] += treasuryShare;
                 }
             }
+
         } else {
             // Unanimous: losingPool == 0, pay from consensus reserve
             uint256 totalStake = round.upPool + round.downPool;

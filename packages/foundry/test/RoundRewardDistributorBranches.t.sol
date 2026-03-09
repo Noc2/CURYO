@@ -191,7 +191,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         rewardDistributor.claimReward(contentId, roundId);
     }
 
-    function test_ClaimReward_LoserGetsNothing() public {
+    function test_ClaimReward_LoserGetsFivePercentRefund() public {
         (uint256 contentId, uint256 roundId) = _setupSettledRound();
 
         uint256 balBefore = crepToken.balanceOf(voter3);
@@ -199,7 +199,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         rewardDistributor.claimReward(contentId, roundId);
         uint256 balAfter = crepToken.balanceOf(voter3);
 
-        assertEq(balAfter, balBefore); // loser gets 0
+        assertEq(balAfter - balBefore, STAKE / 20); // loser gets 5%
     }
 
     function test_ClaimReward_WinnerGetsReward() public {

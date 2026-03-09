@@ -200,8 +200,8 @@ contract AdversarialTests is VotingTestBase {
         assertLe(rewardOnly, voterPool, "Reward-only portion exceeds voter pool");
     }
 
-    /// @notice Loser calling claimReward should get nothing and not revert
-    function test_RewardExhaustion_LoserGetsNothing() public {
+    /// @notice Revealed losers get the fixed rebate and do not revert
+    function test_RewardExhaustion_LoserGetsRebate() public {
         uint256 contentId = _submitContent();
 
         // Asymmetric stakes to avoid tie
@@ -218,7 +218,7 @@ contract AdversarialTests is VotingTestBase {
         distributor.claimReward(contentId, roundId);
         uint256 balAfter = crepToken.balanceOf(voter2);
 
-        assertEq(balAfter, balBefore, "Loser should receive nothing");
+        assertEq(balAfter - balBefore, 500_000, "Loser should receive the 5% rebate");
     }
 
     // =========================================================================
@@ -667,7 +667,7 @@ contract AdversarialTests is VotingTestBase {
         vm.prank(attacker);
         distributor.claimReward(contentId, roundId);
         vm.prank(sybil);
-        distributor.claimReward(contentId, roundId); // loser, gets nothing
+        distributor.claimReward(contentId, roundId); // loser, gets fixed rebate
 
         uint256 attackerNet = crepToken.balanceOf(attacker) - attackerBefore;
         uint256 sybilNet = crepToken.balanceOf(sybil) - sybilBefore;
@@ -978,7 +978,7 @@ contract AdversarialTests is VotingTestBase {
         vm.prank(voter3);
         distributor.claimReward(contentId, roundId);
         vm.prank(voter2);
-        distributor.claimReward(contentId, roundId); // loser, no-op
+        distributor.claimReward(contentId, roundId); // loser, gets fixed rebate
         vm.prank(submitter);
         distributor.claimSubmitterReward(contentId, roundId);
 

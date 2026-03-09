@@ -690,10 +690,10 @@ contract SettlementEdgeCasesTest is Test {
     }
 
     // =========================================================================
-    // 19. REWARD CLAIM: loser gets nothing (only event)
+    // 19. REWARD CLAIM: revealed loser gets a small rebate
     // =========================================================================
 
-    function test_RewardClaim_Loser_GetsNothing() public {
+    function test_RewardClaim_Loser_GetsRefund() public {
         (uint256 contentId, uint256 roundId) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
@@ -704,8 +704,7 @@ contract SettlementEdgeCasesTest is Test {
         rewardDistributor.claimReward(contentId, roundId);
 
         uint256 balanceAfter = crepToken.balanceOf(voter3);
-        // Loser gets nothing — balance unchanged
-        assertEq(balanceAfter, balanceBefore);
+        assertEq(balanceAfter - balanceBefore, STAKE / 20);
     }
 
     // =========================================================================
