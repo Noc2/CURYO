@@ -12,6 +12,7 @@ import { config } from "./config.js";
 import { createLogger } from "./logger.js";
 import { publicClient, getWalletClient, getAccount, chain } from "./client.js";
 import { resolveRounds } from "./keeper.js";
+import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import {
   startMetricsServer,
   setHealthThreshold,
@@ -59,6 +60,53 @@ async function main() {
 
   const MIN_BALANCE = BigInt(config.minGasBalanceWei);
 
+  async function updateOperationalGauges() {
+    const [balanceResult, consensusReserveResult, keeperRewardPoolResult] = await Promise.allSettled([
+      publicClient.getBalance({ address: account.address }),
+      publicClient.readContract({
+        address: config.contracts.votingEngine,
+        abi: RoundVotingEngineAbi,
+        functionName: "consensusReserve",
+      }),
+      publicClient.readContract({
+        address: config.contracts.votingEngine,
+        abi: RoundVotingEngineAbi,
+        functionName: "keeperRewardPool",
+      }),
+    ]);
+
+    if (balanceResult.status === "fulfilled") {
+      const balance = balanceResult.value;
+      setGauge("keeper_wallet_balance_wei", Number(balance));
+      if (balance < MIN_BALANCE) {
+        logger.warn("Keeper wallet balance low", {
+          balance: balance.toString(),
+          minRequired: MIN_BALANCE.toString(),
+        });
+      }
+    } else {
+      logger.warn("Failed to check wallet balance", {
+        error: balanceResult.reason?.message || String(balanceResult.reason),
+      });
+    }
+
+    if (consensusReserveResult.status === "fulfilled") {
+      setGauge("keeper_consensus_reserve_wei", Number(consensusReserveResult.value));
+    } else {
+      logger.warn("Failed to read consensus reserve", {
+        error: consensusReserveResult.reason?.message || String(consensusReserveResult.reason),
+      });
+    }
+
+    if (keeperRewardPoolResult.status === "fulfilled") {
+      setGauge("keeper_reward_pool_wei", Number(keeperRewardPoolResult.value));
+    } else {
+      logger.warn("Failed to read keeper reward pool", {
+        error: keeperRewardPoolResult.reason?.message || String(keeperRewardPoolResult.reason),
+      });
+    }
+  }
+
   async function tick() {
     if (isRunning || shuttingDown) return;
     isRunning = true;
@@ -66,19 +114,7 @@ async function main() {
     const start = Date.now();
 
     try {
-      // Pre-flight: check wallet gas balance
-      try {
-        const balance = await publicClient.getBalance({ address: account.address });
-        setGauge("keeper_wallet_balance_wei", Number(balance));
-        if (balance < MIN_BALANCE) {
-          logger.warn("Keeper wallet balance low", {
-            balance: balance.toString(),
-            minRequired: MIN_BALANCE.toString(),
-          });
-        }
-      } catch (err: any) {
-        logger.warn("Failed to check wallet balance", { error: err.message });
-      }
+      await updateOperationalGauges();
 
       const result = await resolveRounds(publicClient, walletClient, chain, account, logger);
       const duration = Date.now() - start;
