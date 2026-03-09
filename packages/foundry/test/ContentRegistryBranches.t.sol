@@ -534,6 +534,52 @@ contract ContentRegistryBranchesTest is Test {
         assertEq(uint256(c2.status), uint256(ContentRegistry.ContentStatus.Active));
     }
 
+    function test_ReviveContent_ReservesUrlAgain() public {
+        string memory url = "https://example.com/revive-url";
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent(url, "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 31 days);
+        registry.markDormant(1);
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(registry), 5e6);
+        registry.reviveContent(1);
+        vm.stopPrank();
+
+        vm.startPrank(voter2);
+        crepToken.approve(address(registry), 10e6);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent(url, "goal2", "tags2", 0);
+        vm.stopPrank();
+    }
+
+    function test_ReviveContent_RevertsWhenUrlWasResubmitted() public {
+        string memory url = "https://example.com/revive-conflict";
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent(url, "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 31 days);
+        registry.markDormant(1);
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent(url, "goal2", "tags2", 0);
+        vm.stopPrank();
+
+        vm.startPrank(voter2);
+        crepToken.approve(address(registry), 5e6);
+        vm.expectRevert("URL already submitted");
+        registry.reviveContent(1);
+        vm.stopPrank();
+    }
+
     // =========================================================================
     // slashSubmitterStake BRANCHES
     // =========================================================================

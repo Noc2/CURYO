@@ -313,6 +313,12 @@ contract ContentRegistry is
         require(c.status == ContentStatus.Dormant, "Not dormant");
         require(c.dormantCount < MAX_REVIVALS, "Max revivals reached");
 
+        bytes32 urlHash = contentUrlHash[contentId];
+        if (urlHash != bytes32(0)) {
+            require(!urlSubmitted[urlHash], "URL already submitted");
+            urlSubmitted[urlHash] = true;
+        }
+
         crepToken.safeTransferFrom(msg.sender, address(this), REVIVAL_STAKE);
 
         c.status = ContentStatus.Active;
