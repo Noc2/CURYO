@@ -180,7 +180,7 @@ export const SECTIONS: Section[] = [
               "Commit (any time during the round): Choose UP or DOWN. The UI encrypts your direction and stake with tlock (commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress)). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               "Epoch ends (every 20 minutes): The drand beacon publishes a randomness value. The keeper fetches it and calls revealVoteByCommitKey() for each unrevealed commit, decrypting the direction on-chain.",
               "Settlement: After at least 3 votes are revealed and all past-epoch votes are revealed (or the 60-minute reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.",
-              "Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the losing pool. Losers' stakes are distributed. Content submitters may claim a separate submitter reward.",
+              "Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed 5% rebate. Content submitters may claim a separate submitter reward.",
             ],
           },
         ],
@@ -249,18 +249,19 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Recipient", "Share"],
               rows: [
-                ["Winning voters (content-specific)", "82%"],
-                ["Content submitter", "10%"],
-                ["Consensus subsidy reserve", "5%"],
-                ["Frontend operators", "1%"],
-                ["Category submitter", "1%"],
-                ["Treasury", "1%"],
+                ["Revealed losing voters", "5% of raw losing stake"],
+                ["Winning voters (content-specific)", "82% of the remaining 95%"],
+                ["Content submitter", "10% of the remaining 95%"],
+                ["Consensus subsidy reserve", "5% of the remaining 95%"],
+                ["Frontend operators", "1% of the remaining 95%"],
+                ["Category submitter", "1% of the remaining 95%"],
+                ["Treasury", "1% of the remaining 95%"],
               ],
             },
           },
           {
             type: "paragraph",
-            text: "The 82% voter share goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have 25% weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The 5% consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool).",
+            text: "A revealed losing vote can reclaim 5% of its original stake. The remaining losing pool then feeds the content-specific reward split: the 82% voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have 25% weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The 5% consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool).",
           },
         ],
       },
@@ -269,7 +270,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo's parimutuel voting mechanism can be modeled as a game. Let N voters each choose a direction d_i in {UP, DOWN}, a stake s_i in [1, 100], and an epoch tier t_i in {1, 2+}. Each voter has an epoch-weighted effective stake: e_i = s_i when t_i = 1 (Tier 1, blind epoch), or e_i = s_i * 0.25 when t_i >= 2 (Tier 2+, saw prior results). The win condition uses weighted pools: upWins iff sum(e_i : d_i = UP) > sum(e_i : d_i = DOWN). Let W_e denote the total effective stake on the winning side and L the total raw stake on the losing side. The voter pool receives 82% of the losing stake, distributed proportionally by e_i / W_e.",
+            text: "Curyo's parimutuel voting mechanism can be modeled as a game. Let N voters each choose a direction d_i in {UP, DOWN}, a stake s_i in [1, 100], and an epoch tier t_i in {1, 2+}. Each voter has an epoch-weighted effective stake: e_i = s_i when t_i = 1 (Tier 1, blind epoch), or e_i = s_i * 0.25 when t_i >= 2 (Tier 2+, saw prior results). The win condition uses weighted pools: upWins iff sum(e_i : d_i = UP) > sum(e_i : d_i = DOWN). Let W_e denote the total effective stake on the winning side and L the total raw stake on the losing side. Revealed losers reclaim 5% of L, and the voter pool receives 82% of the remaining 95% of L, distributed proportionally by e_i / W_e.",
           },
           {
             type: "sub_heading",
@@ -363,7 +364,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's 41 cREP (82% of 50 cREP) while the loser forfeits their stake. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately 4x the reward per cREP compared to each Tier-2 voter, confirming the 4:1 weight ratio. The epoch-weighted win condition test: 1 Tier-1 DOWN voter (100 cREP, effectiveStake 100) beats 3 Tier-2 UP voters (100 cREP each, effectiveStake 25 each = 75 total) -- DOWN wins despite raw majority being UP.",
+            text: "Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38.95 cREP reward pool (82% of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately 4x the reward per cREP compared to each Tier-2 voter, confirming the 4:1 weight ratio. The epoch-weighted win condition test: 1 Tier-1 DOWN voter (100 cREP, effectiveStake 100) beats 3 Tier-2 UP voters (100 cREP each, effectiveStake 25 each = 75 total) -- DOWN wins despite raw majority being UP.",
           },
           {
             type: "sub_heading",
@@ -516,9 +517,9 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Voter", "Direction", "Stake", "Tier", "Effective Stake", "Reward share (UP wins)"],
               rows: [
-                ["Alice (Tier 1)", "UP", "50 cREP", "1", "50 cREP", "50 / W_e of 82% losing pool"],
-                ["Bob (Tier 1)", "UP", "50 cREP", "1", "50 cREP", "50 / W_e of 82% losing pool"],
-                ["Carol (Tier 2)", "UP", "50 cREP", "2", "12.5 cREP", "12.5 / W_e of 82% losing pool"],
+                ["Alice (Tier 1)", "UP", "50 cREP", "1", "50 cREP", "50 / W_e of 82% of the post-rebate pool"],
+                ["Bob (Tier 1)", "UP", "50 cREP", "1", "50 cREP", "50 / W_e of 82% of the post-rebate pool"],
+                ["Carol (Tier 2)", "UP", "50 cREP", "2", "12.5 cREP", "12.5 / W_e of 82% of the post-rebate pool"],
               ],
             },
           },
@@ -834,7 +835,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The 82% voter share goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (100% of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn 25% weight. This 4:1 ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The 5% consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The 1% treasury fee goes to the governance timelock.",
+            text: "A revealed losing vote first recovers a fixed 5% rebate. The 82% voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (100% of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn 25% weight. This 4:1 ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The 5% consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The 1% treasury fee goes to the governance timelock.",
           },
         ],
       },
@@ -888,7 +889,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "For the attack to succeed, the attacker must control the majority stake. If L_honest is the honest voters' stake on the losing side, the attacker's total winning payoff (beyond recovering stakes) is 0.82 x L_honest (the 82% voter share of the losing pool). The total cost is K x c (identity acquisition). The attack is profitable only when:",
+            text: "For the attack to succeed, the attacker must control the majority stake. If L_honest is the honest voters' stake on the losing side, the attacker's total winning payoff (beyond recovering stakes) is 0.779 x L_honest (82% of the post-rebate losing pool). The total cost is K x c (identity acquisition). The attack is profitable only when:",
           },
           {
             type: "formula",
@@ -1103,7 +1104,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "A coalition of C colluders coordinates to vote in the same direction on target content. Each colluder stakes s_c (up to 100 cREP). Their combined stake is S_C = C x s_c. Let S_H denote honest voters' stake on the opposite side. The coalition wins if S_C > S_H. Coalition profit (beyond recovering stakes) is 0.82 x S_H (the 82% voter share), shared among C members. Per-member profit:",
+            text: "A coalition of C colluders coordinates to vote in the same direction on target content. Each colluder stakes s_c (up to 100 cREP). Their combined stake is S_C = C x s_c. Let S_H denote honest voters' stake on the opposite side. The coalition wins if S_C > S_H. Coalition profit (beyond recovering stakes) is 0.779 x S_H (82% of the post-rebate losing pool), shared among C members. Per-member profit:",
           },
           {
             type: "formula",

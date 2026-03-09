@@ -1,6 +1,6 @@
 import { RoundData } from "~~/types/votingTypes";
 
-export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "none";
+export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "revealFailed" | "none";
 
 export interface VotingConfig {
   epochDuration: number;
@@ -197,6 +197,8 @@ function deriveRoundPhase(state: number, hasRound: boolean): RoundPhase {
       return "cancelled";
     case 3:
       return "tied";
+    case 4:
+      return "revealFailed";
     default:
       return "none";
   }

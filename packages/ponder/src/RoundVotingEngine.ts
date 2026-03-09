@@ -15,7 +15,7 @@ import {
   voterStreak,
 } from "ponder:schema";
 
-// Round states: Open(0), Settled(1), Cancelled(2), Tied(3)
+// Round states: Open(0), Settled(1), Cancelled(2), Tied(3), RevealFailed(4)
 
 ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
   const { contentId, roundId, voter, commitHash, stake } = event.args;
@@ -363,6 +363,30 @@ ponder.on("RoundVotingEngine:RoundTied", async ({ event, context }) => {
       contentId,
       roundId,
       state: 3, // Tied
+      voteCount: 0,
+      revealedCount: 0,
+      totalStake: 0n,
+      upPool: 0n,
+      downPool: 0n,
+      upCount: 0,
+      downCount: 0,
+    });
+  }
+});
+
+ponder.on("RoundVotingEngine:RoundRevealFailed", async ({ event, context }) => {
+  const { contentId, roundId } = event.args;
+  const roundKey = `${contentId}-${roundId}`;
+
+  const existingRound = await context.db.find(round, { id: roundKey });
+  if (existingRound) {
+    await context.db.update(round, { id: roundKey }).set({ state: 4 }); // RevealFailed
+  } else {
+    await context.db.insert(round).values({
+      id: roundKey,
+      contentId,
+      roundId,
+      state: 4, // RevealFailed
       voteCount: 0,
       revealedCount: 0,
       totalStake: 0n,

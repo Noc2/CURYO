@@ -39,7 +39,7 @@ export type ContentRound = {
   id: string;
   contentId: string;
   roundId: string;
-  state: number; // 0=Open, 1=Settled, 2=Cancelled, 3=Tied
+  state: number; // 0=Open, 1=Settled, 2=Cancelled, 3=Tied, 4=RevealFailed
   voteCount: string;
   upPool: string;
   downPool: string;

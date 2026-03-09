@@ -3,12 +3,13 @@
 import { useState } from "react";
 
 const SLICES = [
-  { label: "Voter pool (content-specific)", value: 82, color: "#359EEE" },
-  { label: "Consensus subsidy reserve", value: 5, color: "#F97316" },
-  { label: "Content submitter", value: 10, color: "#FFC43D" },
-  { label: "Frontend operators", value: 1, color: "#EF476F" },
-  { label: "Category submitters", value: 1, color: "#2B7FCC" },
-  { label: "Treasury", value: 1, color: "#029B7B" },
+  { label: "Revealed loser rebate", value: 5, color: "#8B5E34" },
+  { label: "Voter pool (content-specific)", value: 77.9, color: "#359EEE" },
+  { label: "Consensus subsidy reserve", value: 4.75, color: "#F97316" },
+  { label: "Content submitter", value: 9.5, color: "#FFC43D" },
+  { label: "Frontend operators", value: 0.95, color: "#EF476F" },
+  { label: "Category submitters", value: 0.95, color: "#2B7FCC" },
+  { label: "Treasury", value: 0.95, color: "#029B7B" },
 ];
 
 const SIZE = 200;
@@ -28,7 +29,7 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
 }
 
 /**
- * Static SVG pie chart showing the reward pool split (82/5/10/1/1/1).
+ * Static SVG pie chart showing the effective split of the raw losing pool.
  */
 export function RewardSplitChart() {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -41,6 +42,11 @@ export function RewardSplitChart() {
     currentAngle = endAngle;
     return { ...slice, startAngle, endAngle, index: i };
   });
+
+  const formatValue = (value: number) => {
+    if (Number.isInteger(value)) return `${value}%`;
+    return `${value.toFixed(2).replace(/\.?0+$/, "")}%`;
+  };
 
   return (
     <div className="flex items-center gap-6 my-4">
@@ -71,7 +77,8 @@ export function RewardSplitChart() {
           >
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
             <span className="text-base-content/70">
-              <span className="font-mono font-medium text-base-content/90">{slice.value}%</span> {slice.label}
+              <span className="font-mono font-medium text-base-content/90">{formatValue(slice.value)}</span>{" "}
+              {slice.label}
             </span>
           </div>
         ))}

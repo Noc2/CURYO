@@ -59,6 +59,7 @@ function getVoteOutcome(vote: PonderVoteItem) {
 
   if (vote.roundState === 2) return { label: "Cancelled", className: "text-base-content/50" };
   if (vote.roundState === 3) return { label: "Tied", className: "text-warning" };
+  if (vote.roundState === 4) return { label: "Reveal failed", className: "text-warning" };
   if (!vote.revealed) return { label: "Committed", className: "text-base-content/50" };
   return { label: "Open", className: "text-primary" };
 }

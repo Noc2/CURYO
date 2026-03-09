@@ -41,7 +41,7 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Contributor Rewards"
-          description="Content submitters receive 10%, category submitters 1%, and frontend operators 1% of the losing stakes."
+          description="After a 5% rebate for revealed losers, the remaining losing stake funds submitter, category, frontend, and winner rewards."
         />
       </div>
 

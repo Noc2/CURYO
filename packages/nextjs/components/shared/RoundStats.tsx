@@ -153,6 +153,16 @@ export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
           <InfoTooltip text="The round ended in a tie. All stakes are returned to voters." position="bottom" />
         </div>
       )}
+
+      {phase === "revealFailed" && (
+        <div className="flex items-center gap-1 text-warning/80">
+          <span>Reveal failed — only revealed votes can refund</span>
+          <InfoTooltip
+            text="Commit quorum was reached, but not enough votes were revealed before the final reveal grace deadline. Revealed voters can claim refunds; unrevealed votes forfeit."
+            position="bottom"
+          />
+        </div>
+      )}
     </div>
   );
 }

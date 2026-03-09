@@ -5,7 +5,7 @@ import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 /**
- * Hook for claiming rewards from settled rounds and tie refunds.
+ * Hook for claiming settled-round payouts and round refunds.
  */
 export function useClaimReward() {
   const [isClaiming, setIsClaiming] = useState(false);

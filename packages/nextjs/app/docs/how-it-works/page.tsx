@@ -116,9 +116,9 @@ const HowItWorks: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Resolved</span>
               </td>
-              <td>&ldquo;Claim X cREP&rdquo; (winners) or &ldquo;Lost X cREP&rdquo; (losers)</td>
+              <td>&ldquo;Claim X cREP&rdquo; (winners) or &ldquo;Claim 5% rebate&rdquo; (revealed losers)</td>
               <td className="font-mono">After min 3 revealed</td>
-              <td>Winners click Claim</td>
+              <td>Revealed voters click Claim</td>
             </tr>
           </tbody>
         </table>
@@ -178,39 +178,44 @@ const HowItWorks: NextPage = () => {
           </thead>
           <tbody>
             <tr>
+              <td>Revealed losing voters (rebate)</td>
+              <td className="font-mono">5% of raw losing stake</td>
+            </tr>
+            <tr>
               <td>Content-specific voter pool</td>
-              <td className="font-mono">82%</td>
+              <td className="font-mono">82% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Consensus subsidy reserve</td>
-              <td className="font-mono">5%</td>
+              <td className="font-mono">5% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Content submitter</td>
-              <td className="font-mono">10%</td>
+              <td className="font-mono">10% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Frontend operators</td>
-              <td className="font-mono">1%</td>
+              <td className="font-mono">1% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Category submitter</td>
-              <td className="font-mono">1%</td>
+              <td className="font-mono">1% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Treasury</td>
-              <td className="font-mono">1%</td>
+              <td className="font-mono">1% of the remaining 95%</td>
             </tr>
           </tbody>
         </table>
       </div>
       <p>
-        The <strong>82%</strong> voter share goes entirely to a <strong>content-specific pool</strong> distributed
-        proportionally by <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase
-        voters receive 100% reward weight, while open phase voters receive 25% &mdash; giving early voters a 4x
-        advantage per cREP staked. An additional <strong>5%</strong> goes to a consensus subsidy reserve. Rewards become
-        claimable immediately after the round is resolved. There is no global pool &mdash; each content round is
-        self-contained.
+        A revealed losing vote can still recover <strong>5%</strong> of its original stake. The remaining losing pool is
+        then split so the <strong>82%</strong> voter share goes entirely to a <strong>content-specific pool</strong>{" "}
+        distributed proportionally by <strong>phase-weighted effective stake</strong> to winning voters on that content.
+        Blind phase voters receive 100% reward weight, while open phase voters receive 25% &mdash; giving early voters a
+        4x advantage per cREP staked. An additional <strong>5%</strong> of the remaining pool goes to a consensus
+        subsidy reserve. Rewards become claimable immediately after the round is resolved. There is no global pool
+        &mdash; each content round is self-contained.
       </p>
 
       <h2>Content Rating</h2>

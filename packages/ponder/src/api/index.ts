@@ -291,7 +291,7 @@ app.get("/voting-stakes", async (c) => {
   const voterAddr = voter.toLowerCase() as `0x${string}`;
 
   // Active voting stakes: votes in open rounds (state = 0)
-  // Round states: Open(0), Settled(1), Cancelled(2), Tied(3)
+  // Round states: Open(0), Settled(1), Cancelled(2), Tied(3), RevealFailed(4)
   const [activeResult] = await db
     .select({
       total: sql<string>`coalesce(sum(${vote.stake}), 0)`,

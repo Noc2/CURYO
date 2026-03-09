@@ -349,7 +349,8 @@ const SmartContracts: NextPage = () => {
           without reaching the minimum voter threshold. Full refund to all participants.
         </li>
         <li>
-          <code>claimCancelledRoundRefund(contentId, roundId)</code> &mdash; Claim refund for a cancelled or tied round.
+          <code>claimCancelledRoundRefund(contentId, roundId)</code> &mdash; Claim refund for a cancelled, tied, or
+          reveal-failed round.
         </li>
       </ul>
 
@@ -361,7 +362,8 @@ const SmartContracts: NextPage = () => {
       </p>
       <ul>
         <li>
-          <code>claimReward(contentId, roundId)</code> &mdash; Claim voter rewards (stake + winnings).
+          <code>claimReward(contentId, roundId)</code> &mdash; Claim settled-round voter payouts. Winners receive stake
+          plus winnings; revealed losers receive a fixed 5% rebate.
         </li>
         <li>
           <code>claimSubmitterReward(contentId, roundId)</code> &mdash; Claim submitter&apos;s 10% share.
@@ -543,8 +545,9 @@ const SmartContracts: NextPage = () => {
       <h3>RewardMath</h3>
       <ul>
         <li>
-          <code>splitPool(losingPool)</code> &mdash; Split into 82% voters / 5% consensus subsidy / 10% submitter / 2%
-          platform (1% frontend + 1% category) / 1% treasury.
+          <code>splitPoolAfterLoserRefund(losingPool)</code> &mdash; Reserve a 5% rebate for revealed losers, then split
+          the remaining pool into 82% voters / 5% consensus subsidy / 10% submitter / 2% platform (1% frontend + 1%
+          category) / 1% treasury.
         </li>
         <li>
           <code>calculateVoterReward(shares, totalWinningShares, voterPool)</code> &mdash; Share-proportional reward
@@ -557,8 +560,8 @@ const SmartContracts: NextPage = () => {
       </ul>
       <h3>RoundLib</h3>
       <p>
-        Helpers for round state management: tracks round lifecycle (Open, Settled, Cancelled, Tied) and settlement
-        logic.
+        Helpers for round state management: tracks round lifecycle (Open, Settled, Cancelled, Tied, RevealFailed) and
+        settlement logic.
       </p>
 
       <hr />

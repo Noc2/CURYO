@@ -10,11 +10,12 @@ export interface ClaimableItem {
   contentId: bigint;
   epochId: bigint; // roundId (kept as epochId for backwards compat with ClaimAll)
   reward: bigint;
-  isTie: boolean;
+  claimType: "reward" | "refund";
 }
 
 // RoundState enum (matching Solidity)
-const RoundState = { Open: 0, Settled: 1, Cancelled: 2, Tied: 3 } as const;
+const RoundState = { Open: 0, Settled: 1, Cancelled: 2, Tied: 3, RevealFailed: 4 } as const;
+const REVEALED_LOSER_REFUND_BPS = 500n;
 
 // epochWeightBps: epoch-1 = 10000 (100%), epoch-2+ = 2500 (25%)
 function epochWeightBps(epochIndex: number): number {
@@ -44,11 +45,12 @@ export function useAllClaimableRewards() {
 
   const votes = useMemo(() => ponderResult?.data ?? [], [ponderResult?.data]);
 
-  // --- Step 2: Filter to terminal rounds only (Settled+revealed, Cancelled, Tied) ---
+  // --- Step 2: Filter to terminal rounds only ---
   const terminalVotes = useMemo(() => {
     return votes.filter(v => {
       const state = v.roundState;
-      if (state === RoundState.Cancelled || state === RoundState.Tied) return true;
+      if (state === RoundState.Cancelled) return true;
+      if ((state === RoundState.Tied || state === RoundState.RevealFailed) && v.revealed) return true;
       if (state === RoundState.Settled && v.revealed && v.isUp !== null) return true;
       return false;
     });
@@ -59,14 +61,15 @@ export function useAllClaimableRewards() {
   const { data: engineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" as any });
 
   const claimedContracts = useMemo(() => {
-    if (!distributorInfo || !address || terminalVotes.length === 0) return [];
+    if (!distributorInfo || !engineInfo || !address || terminalVotes.length === 0) return [];
     return terminalVotes.map(v => ({
-      address: distributorInfo.address,
-      abi: distributorInfo.abi,
-      functionName: "rewardClaimed" as const,
+      address: v.roundState === RoundState.Settled ? distributorInfo.address : engineInfo.address,
+      abi: v.roundState === RoundState.Settled ? distributorInfo.abi : engineInfo.abi,
+      functionName:
+        v.roundState === RoundState.Settled ? ("rewardClaimed" as const) : ("cancelledRoundRefundClaimed" as const),
       args: [BigInt(v.contentId), BigInt(v.roundId), address],
     }));
-  }, [distributorInfo, address, terminalVotes]);
+  }, [distributorInfo, engineInfo, address, terminalVotes]);
 
   const {
     data: claimedResults,
@@ -77,7 +80,7 @@ export function useAllClaimableRewards() {
     query: { enabled: claimedContracts.length > 0 },
   });
 
-  // --- Step 4: Classify unclaimed votes into wins and ties ---
+  // --- Step 4: Classify unclaimed votes into reward-path and refund-path claims ---
   const unclaimedVotes = useMemo(() => {
     if (!claimedResults || claimedResults.length !== terminalVotes.length) return [];
     return terminalVotes.filter((_, i) => {
@@ -86,26 +89,33 @@ export function useAllClaimableRewards() {
     });
   }, [terminalVotes, claimedResults]);
 
-  // Separate winners and ties/cancelled (losses are not claimable)
-  const { winners, ties } = useMemo(() => {
-    const w: typeof unclaimedVotes = [];
-    const t: typeof unclaimedVotes = [];
+  const { rewardVotes, refundVotes } = useMemo(() => {
+    const rewards: typeof unclaimedVotes = [];
+    const refunds: typeof unclaimedVotes = [];
     for (const v of unclaimedVotes) {
       const state = v.roundState;
-      if (state === RoundState.Cancelled || state === RoundState.Tied) {
-        t.push(v);
-      } else if (state === RoundState.Settled && v.isUp === v.roundUpWins) {
-        w.push(v);
+      if (state === RoundState.Cancelled || state === RoundState.Tied || state === RoundState.RevealFailed) {
+        refunds.push(v);
+      } else if (state === RoundState.Settled) {
+        rewards.push(v);
       }
-      // losses: not claimable, skip
     }
-    return { winners: w, ties: t };
+    return { rewardVotes: rewards, refundVotes: refunds };
   }, [unclaimedVotes]);
+
+  const settledWinners = useMemo(
+    () => rewardVotes.filter(v => v.isUp !== null && v.roundUpWins !== null && v.isUp === v.roundUpWins),
+    [rewardVotes],
+  );
+  const settledLosers = useMemo(
+    () => rewardVotes.filter(v => v.isUp !== null && v.roundUpWins !== null && v.isUp !== v.roundUpWins),
+    [rewardVotes],
+  );
 
   // --- Step 5: Multicall roundVoterPool + roundWinningStake for winners ---
   const rewardContracts = useMemo(() => {
-    if (!engineInfo || winners.length === 0) return [];
-    return winners.flatMap(v => [
+    if (!engineInfo || settledWinners.length === 0) return [];
+    return settledWinners.flatMap(v => [
       {
         address: engineInfo.address,
         abi: engineInfo.abi,
@@ -119,7 +129,7 @@ export function useAllClaimableRewards() {
         args: [BigInt(v.contentId), BigInt(v.roundId)],
       },
     ]);
-  }, [engineInfo, winners]);
+  }, [engineInfo, settledWinners]);
 
   const { data: rewardResults, isLoading: rewardsLoading } = useReadContracts({
     contracts: rewardContracts,
@@ -140,22 +150,22 @@ export function useAllClaimableRewards() {
       }
     };
 
-    // Add ties/cancelled (refund = stake)
-    for (const v of ties) {
+    // Add cancelled / tied / reveal-failed refunds.
+    for (const v of refundVotes) {
       const stake = safeBigInt(v.stake);
       items.push({
         contentId: safeBigInt(v.contentId),
         epochId: safeBigInt(v.roundId),
         reward: stake,
-        isTie: true,
+        claimType: "refund",
       });
       total += stake;
     }
 
-    // Add winners (calculated reward)
-    if (rewardResults && rewardResults.length === winners.length * 2) {
-      for (let i = 0; i < winners.length; i++) {
-        const v = winners[i];
+    // Add settled winners (stake + weighted share of the winner pool).
+    if (rewardResults && rewardResults.length === settledWinners.length * 2) {
+      for (let i = 0; i < settledWinners.length; i++) {
+        const v = settledWinners[i];
         const stake = safeBigInt(v.stake);
         const poolResult = rewardResults[i * 2];
         const winStakeResult = rewardResults[i * 2 + 1];
@@ -176,10 +186,23 @@ export function useAllClaimableRewards() {
           contentId: safeBigInt(v.contentId),
           epochId: safeBigInt(v.roundId),
           reward,
-          isTie: false,
+          claimType: "reward",
         });
         total += reward;
       }
+    }
+
+    // Add settled losers (fixed 5% rebate for revealed losing votes).
+    for (const v of settledLosers) {
+      const stake = safeBigInt(v.stake);
+      const reward = (stake * REVEALED_LOSER_REFUND_BPS) / 10000n;
+      items.push({
+        contentId: safeBigInt(v.contentId),
+        epochId: safeBigInt(v.roundId),
+        reward,
+        claimType: "reward",
+      });
+      total += reward;
     }
 
     // Active stake = sum of stakes in open rounds
@@ -191,7 +214,7 @@ export function useAllClaimableRewards() {
     }
 
     return { claimableItems: items, totalClaimable: total, activeStake: active };
-  }, [ties, winners, rewardResults, votes]);
+  }, [refundVotes, settledWinners, settledLosers, rewardResults, votes]);
 
   const isLoading = claimedLoading || rewardsLoading;
 

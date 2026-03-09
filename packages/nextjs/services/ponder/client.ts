@@ -213,7 +213,7 @@ export interface PonderVoteItem {
   committedAt: string;
   revealedAt: string | null;
   roundStartTime: string | null;
-  roundState: number | null;
+  roundState: number | null; // 0=Open, 1=Settled, 2=Cancelled, 3=Tied, 4=RevealFailed
   roundUpWins: boolean | null;
 }
 

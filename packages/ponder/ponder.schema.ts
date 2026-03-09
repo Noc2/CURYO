@@ -51,7 +51,7 @@ export const round = onchainTable(
     id: t.text().primaryKey(), // `${contentId}-${roundId}`
     contentId: t.bigint().notNull(),
     roundId: t.bigint().notNull(),
-    state: t.integer().notNull(), // 0=Open, 1=Settled, 2=Cancelled, 3=Tied
+    state: t.integer().notNull(), // 0=Open, 1=Settled, 2=Cancelled, 3=Tied, 4=RevealFailed
     voteCount: t.integer().notNull(),   // total commits
     revealedCount: t.integer().notNull().default(0), // revealed votes
     totalStake: t.bigint().notNull(),

@@ -31,7 +31,7 @@ function formatDays(seconds: number): string {
  * - Blind phase: Full reward weight (100%) — votes encrypted, direction hidden
  * - Open phase: Reduced reward weight (25%) — blind phase results now visible
  *
- * Terminal states: Resolved / Cancelled / Tied
+ * Terminal states: Resolved / Cancelled / Tied / Reveal failed
  */
 export function RoundProgress({ contentId }: RoundProgressProps) {
   const {
@@ -101,6 +101,23 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
             <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
           </svg>
           Tied — stakes returned
+        </span>
+      </div>
+    );
+  }
+
+  if (phase === "revealFailed") {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="badge badge-warning badge-sm gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fillRule="evenodd"
+              d="M8.257 3.099c.765-1.36 2.72-1.36 3.485 0l5.58 9.92c.75 1.334-.213 2.981-1.742 2.981H4.42c-1.53 0-2.492-1.647-1.742-2.98l5.58-9.92zM11 13a1 1 0 10-2 0 1 1 0 002 0zm-1-6a1 1 0 00-1 1v3a1 1 0 102 0V8a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Reveal failed — only revealed votes refund
         </span>
       </div>
     );

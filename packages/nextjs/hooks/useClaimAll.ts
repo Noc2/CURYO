@@ -33,10 +33,10 @@ export function useClaimAll() {
     try {
       for (let i = 0; i < items.length; i++) {
         setProgress({ current: i + 1, total: items.length });
-        const { contentId, epochId, isTie } = items[i];
+        const { contentId, epochId, claimType } = items[i];
 
         try {
-          if (isTie) {
+          if (claimType === "refund") {
             await (writeVotingEngine as any)({
               functionName: "claimCancelledRoundRefund",
               args: [contentId, epochId],

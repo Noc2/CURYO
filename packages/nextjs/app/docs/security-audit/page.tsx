@@ -1439,7 +1439,8 @@ const SecurityAudit: NextPage = () => {
           remains in contract).
         </li>
         <li>
-          <strong>Round state transitions:</strong> Open &rarr; Settled/Cancelled/Tied only. No backwards transitions.
+          <strong>Round state transitions:</strong> Open &rarr; Settled/Cancelled/Tied/RevealFailed only. No backwards
+          transitions.
         </li>
         <li>
           <strong>Double-claim prevention:</strong> rewardClaimed mapping checked before payout in
@@ -1766,7 +1767,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>INV-05</td>
               <td>
-                <strong>Round state finality.</strong> Once Settled/Cancelled/Tied, state never changes
+                <strong>Round state finality.</strong> Once Settled/Cancelled/Tied/RevealFailed, state never changes
               </td>
               <td>High</td>
               <td>

@@ -352,20 +352,24 @@ const Tokenomics = () => {
           </thead>
           <tbody>
             <tr>
+              <td>Revealed losing voters (rebate)</td>
+              <td className="font-mono">5% of raw losing stake</td>
+            </tr>
+            <tr>
               <td>Voter pool (content-specific)</td>
-              <td className="font-mono">82%</td>
+              <td className="font-mono">82% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Consensus subsidy reserve</td>
-              <td className="font-mono">5%</td>
+              <td className="font-mono">5% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Content submitter</td>
-              <td className="font-mono">10%</td>
+              <td className="font-mono">10% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Frontend operators</td>
-              <td className="font-mono">1%</td>
+              <td className="font-mono">1% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Category submitters</td>
@@ -380,11 +384,12 @@ const Tokenomics = () => {
       </div>
 
       <p>
-        The 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
+        Revealed losers can reclaim <strong>5%</strong> of their original stake. The remaining losing pool is split so
+        the 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
         <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase voters earn 4x
-        more per cREP than open phase voters. An additional 5% goes to a consensus subsidy reserve. Because each content
-        item has independent rounds that resolve on their own timeline, rewards are claimable immediately after
-        resolution. The 1% treasury fee goes to the governance timelock.
+        more per cREP than open phase voters. An additional 5% of the remaining pool goes to a consensus subsidy
+        reserve. Because each content item has independent rounds that resolve on their own timeline, rewards are
+        claimable immediately after resolution. The 1% treasury fee goes to the governance timelock.
       </p>
 
       <hr />
