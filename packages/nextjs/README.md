@@ -43,6 +43,10 @@ Key environment variables (see `.env.example` for the full list):
 | `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                 |
 | `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                        |
 
+Notes:
+
+- Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or `rpcOverrides[1]`. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
+
 ## Project Structure
 
 ```

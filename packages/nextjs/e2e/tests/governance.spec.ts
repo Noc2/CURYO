@@ -1,4 +1,5 @@
 import { expect, test } from "../fixtures/wallet";
+import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 
 test.describe("Governance page", () => {
   test("page loads and shows tabs", async ({ connectedPage: page }) => {
@@ -63,6 +64,17 @@ test.describe("Governance page", () => {
     // Profile tab should show input fields or profile content
     const profileContent = page.locator("main").getByText(/display name|delegation|referral|profile/i);
     await expect(profileContent.first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("manage profile keeps the governance profile tab open", async ({ connectedPage: page }) => {
+    await page.goto(`/profiles/${ANVIL_ACCOUNTS.account2.address}`);
+
+    const manageProfileLink = page.getByRole("link", { name: "Manage profile" });
+    await expect(manageProfileLink).toBeVisible({ timeout: 15_000 });
+    await manageProfileLink.click();
+
+    await expect(page).toHaveURL(/\/governance#profile$/);
+    await expect(page.getByRole("heading", { name: /your profile|create profile/i })).toBeVisible({ timeout: 15_000 });
   });
 
   test("vote tab shows governance content", async ({ connectedPage: page }) => {

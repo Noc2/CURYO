@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getRevertReason, isExpectedRevert } from "../keeper.js";
+import { getRevertReason, isExpectedRevert } from "../revert-utils.js";
 
 describe("isExpectedRevert", () => {
   const benign = [

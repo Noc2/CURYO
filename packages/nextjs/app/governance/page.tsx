@@ -82,22 +82,32 @@ function GovernancePageInner() {
   }, [searchParams]);
 
   // Check cREP balance
-  const { data: crepBalance } = useScaffoldReadContract({
+  const { data: crepBalance, isLoading: crepBalanceLoading } = useScaffoldReadContract({
     contractName: "CuryoReputation",
     functionName: "balanceOf",
     args: [address],
+    query: { enabled: !!address },
   });
 
-  const hasZeroBalance = !crepBalance || crepBalance === 0n;
+  const hasResolvedBalance = !!address && !crepBalanceLoading && crepBalance !== undefined;
+  const hasZeroBalance = hasResolvedBalance && crepBalance === 0n;
 
   // Update tab when balance changes
   useEffect(() => {
-    if (hasZeroBalance && activeTab !== "faucet") {
-      setActiveTab("faucet");
-    } else if (!hasZeroBalance && activeTab === "faucet") {
-      setActiveTab("leaderboard");
+    if (!hasResolvedBalance) {
+      return;
     }
-  }, [hasZeroBalance, activeTab]);
+
+    if (hasZeroBalance && activeTab !== "faucet") {
+      selectTab("faucet");
+      return;
+    }
+
+    if (!hasZeroBalance && activeTab === "faucet") {
+      const hashTab = normalizeGovernanceHash(window.location.hash.replace(/^#/, ""));
+      selectTab(hashTab && hashTab !== "faucet" ? hashTab : "leaderboard");
+    }
+  }, [hasResolvedBalance, hasZeroBalance, activeTab, selectTab]);
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {

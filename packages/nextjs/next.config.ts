@@ -16,7 +16,6 @@ const cspDirectives = [
     ponderUrl,
     // RPC & blockchain
     "https://*.g.alchemy.com",
-    "https://mainnet.rpc.buidlguidl.com",
     // drand (tlock encryption)
     "https://api.drand.sh",
     "https://mainnet.drand.sh",

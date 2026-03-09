@@ -25,7 +25,7 @@ const scaffoldConfig = {
   // The key is the chain ID, and the value is the HTTP RPC URL
   rpcOverrides: {
     // Example:
-    // [1]: "https://mainnet.rpc.buidlguidl.com",
+    // [1]: "https://eth-mainnet.g.alchemy.com/v2/your-api-key",
   },
   // Your WalletConnect project ID — get one at https://cloud.walletconnect.com
   walletConnectProjectId: publicEnv.walletConnectProjectId,

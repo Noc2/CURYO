@@ -6,28 +6,31 @@ import scaffoldConfig, { ScaffoldConfig } from "~~/scaffold.config";
 import { getAlchemyHttpUrl } from "~~/utils/scaffold-eth";
 
 const { targetNetworks } = scaffoldConfig;
+const rpcOverrides = scaffoldConfig.rpcOverrides as ScaffoldConfig["rpcOverrides"];
+const targetHasMainnet = targetNetworks.some((network: Chain) => network.id === mainnet.id);
+const mainnetRpcUrls = [rpcOverrides?.[mainnet.id], getAlchemyHttpUrl(mainnet.id)].filter(
+  (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index,
+);
 
-// We always want to have mainnet enabled (ENS resolution, ETH price, etc). But only once.
-export const enabledChains = targetNetworks.find((network: Chain) => network.id === 1)
+// Only add mainnet automatically when we have an explicit RPC for it.
+// Otherwise RainbowKit/Wagmi will probe viem's public defaults in the browser,
+// which can violate CSP or hit unreliable third-party endpoints.
+export const enabledChains = targetHasMainnet
   ? targetNetworks
-  : ([...targetNetworks, mainnet] as const);
+  : mainnetRpcUrls.length > 0
+    ? ([...targetNetworks, mainnet] as const)
+    : targetNetworks;
 
 export const wagmiConfig = createConfig({
   chains: enabledChains,
   connectors: wagmiConnectors(),
   ssr: true,
   client: ({ chain }) => {
-    const mainnetFallbackWithDefaultRPC = [http("https://mainnet.rpc.buidlguidl.com")];
-    let rpcFallbacks = [...(chain.id === mainnet.id ? mainnetFallbackWithDefaultRPC : []), http()];
-    const rpcOverrideUrl = (scaffoldConfig.rpcOverrides as ScaffoldConfig["rpcOverrides"])?.[chain.id];
-    if (rpcOverrideUrl) {
-      rpcFallbacks = [http(rpcOverrideUrl), ...rpcFallbacks];
-    } else {
-      const alchemyHttpUrl = getAlchemyHttpUrl(chain.id);
-      if (alchemyHttpUrl) {
-        rpcFallbacks = [http(alchemyHttpUrl), ...rpcFallbacks];
-      }
-    }
+    const rpcUrls = [rpcOverrides?.[chain.id], getAlchemyHttpUrl(chain.id)].filter(
+      (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index,
+    );
+    const rpcFallbacks = rpcUrls.length > 0 ? rpcUrls.map(url => http(url)) : [http()];
+
     return createClient({
       chain,
       transport: fallback(rpcFallbacks),
