@@ -6,6 +6,10 @@ type KeeperClientOptions = {
   privateKey?: `0x${string}` | undefined;
 };
 
+function mockPrivateKeyAccount(address: `0x${string}`): PrivateKeyAccount {
+  return { address } as unknown as PrivateKeyAccount;
+}
+
 async function loadKeeperClient(options: KeeperClientOptions = {}) {
   vi.resetModules();
 
@@ -58,9 +62,7 @@ afterEach(() => {
 
 describe("keeper client", () => {
   it("prefers the keystore account when one is available", async () => {
-    const keystoreAccount = {
-      address: "0x1111111111111111111111111111111111111111",
-    } as PrivateKeyAccount;
+    const keystoreAccount = mockPrivateKeyAccount("0x1111111111111111111111111111111111111111");
     const clientModule = await loadKeeperClient({
       keystoreAccount,
       privateKey: `0x${"22".repeat(32)}`,
@@ -91,9 +93,7 @@ describe("keeper client", () => {
   });
 
   it("builds the wallet client from the resolved account", async () => {
-    const keystoreAccount = {
-      address: "0x4444444444444444444444444444444444444444",
-    } as PrivateKeyAccount;
+    const keystoreAccount = mockPrivateKeyAccount("0x4444444444444444444444444444444444444444");
     const clientModule = await loadKeeperClient({ keystoreAccount });
 
     clientModule.getWalletClient();
