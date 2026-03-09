@@ -962,6 +962,36 @@ export async function settleRoundDirect(
 }
 
 /**
+ * Finalize a round that hit commit quorum but never reached reveal quorum.
+ * Calls finalizeRevealFailedRound(contentId, roundId).
+ */
+export async function finalizeRevealFailedRound(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "finalizeRevealFailedRound",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "finalizeRevealFailedRound",
+    args: [BigInt(contentId), BigInt(roundId)],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
  * Process unrevealed votes after settlement.
  * Calls processUnrevealedVotes(contentId, roundId, startIndex, count).
  * Forfeits past-epoch stakes to treasury, refunds current-epoch stakes.
@@ -999,7 +1029,7 @@ export async function processUnrevealedVotes(
 /**
  * Claim refund from a cancelled round.
  * Calls claimCancelledRoundRefund(contentId, roundId).
- * Any voter who committed to the round can claim their full stake back.
+ * All voters can refund cancelled/tied rounds; reveal-failed rounds require a revealed vote.
  */
 export async function claimCancelledRoundRefund(
   contentId: number | bigint,
