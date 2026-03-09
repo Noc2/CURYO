@@ -1,9 +1,10 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { createPublicClient, createWalletClient, defineChain, http, stringToHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ContentRegistryAbi, CuryoReputationAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { buildCommitHash } from "@curyo/contracts/voting";
-import deployedContracts from "@curyo/contracts/deployedContracts";
 
 const LOCAL_RPC_URL = process.env.KEEPER_INTEGRATION_RPC_URL || "http://127.0.0.1:8545";
 const CHAIN = defineChain({
@@ -45,11 +46,56 @@ vi.mock("tlock-js", () => ({
 
 import { resolveRounds } from "../keeper.js";
 
-const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
+const DEPLOY_BROADCAST_PATH = resolve(
+  process.cwd(),
+  "..",
+  "foundry",
+  "broadcast",
+  "Deploy.s.sol",
+  "31337",
+  "run-latest.json",
+);
+
+function readLocalDeploymentAddresses() {
+  let broadcastRaw: string;
+  try {
+    broadcastRaw = readFileSync(DEPLOY_BROADCAST_PATH, "utf8");
+  } catch {
+    return {
+      CuryoReputation: undefined,
+      ContentRegistry: undefined,
+      RoundVotingEngine: undefined,
+    };
+  }
+
+  const broadcast = JSON.parse(broadcastRaw) as {
+    transactions?: Array<{
+      contractName?: string;
+      contractAddress?: string;
+    }>;
+  };
+  const addresses = new Map<string, `0x${string}`>();
+  for (const tx of broadcast.transactions ?? []) {
+    if (!tx.contractName || !tx.contractAddress) {
+      continue;
+    }
+    if (!addresses.has(tx.contractName)) {
+      addresses.set(tx.contractName, tx.contractAddress as `0x${string}`);
+    }
+  }
+
+  return {
+    CuryoReputation: addresses.get("CuryoReputation"),
+    ContentRegistry: addresses.get("ContentRegistry"),
+    RoundVotingEngine: addresses.get("RoundVotingEngine"),
+  };
+}
+
+const localDeployment = readLocalDeploymentAddresses();
 const CONTRACTS = {
-  crep: chain31337.CuryoReputation.address,
-  contentRegistry: chain31337.ContentRegistry.address,
-  roundVotingEngine: chain31337.RoundVotingEngine.address,
+  crep: localDeployment.CuryoReputation ?? "0x0000000000000000000000000000000000000000",
+  contentRegistry: localDeployment.ContentRegistry ?? "0x0000000000000000000000000000000000000000",
+  roundVotingEngine: localDeployment.RoundVotingEngine ?? "0x0000000000000000000000000000000000000000",
 } as const;
 
 const ACCOUNTS = {
