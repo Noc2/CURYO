@@ -28,7 +28,7 @@ vi.mock("tlock-js", () => ({
   mainnetClient: vi.fn(() => ({})),
 }));
 
-import { resolveRounds } from "../keeper.js";
+import { resolveRounds, resetKeeperStateForTests } from "../keeper.js";
 
 type RoundStateValue = 0 | 1 | 2 | 3 | 4;
 
@@ -229,6 +229,7 @@ describe("resolveRounds", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockConfig.cleanupBatchSize = 25;
+    resetKeeperStateForTests();
   });
 
   it("finalizes reveal-failed rounds and cleans up unrevealed stake", async () => {
@@ -252,7 +253,7 @@ describe("resolveRounds", () => {
       },
       revealGracePeriod: 60n,
       lastCommitRevealableAfter: 100n,
-      now: 1_000n,
+      now: 605_000n,
     });
     const logger = makeLogger();
 
@@ -352,7 +353,7 @@ describe("resolveRounds", () => {
     });
     const logger = makeLogger();
 
-    const result = await resolveRounds(
+    const firstResult = await resolveRounds(
       publicClient as any,
       walletClient as any,
       {} as any,
@@ -360,7 +361,7 @@ describe("resolveRounds", () => {
       logger as any,
     );
 
-    expect(result.cleanupBatchesProcessed).toBe(2);
+    expect(firstResult.cleanupBatchesProcessed).toBe(1);
     expect(walletClient.writeContract).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
@@ -368,6 +369,16 @@ describe("resolveRounds", () => {
         args: [1n, 1n, 0n, 1n],
       }),
     );
+
+    const secondResult = await resolveRounds(
+      publicClient as any,
+      walletClient as any,
+      {} as any,
+      { address: ACCOUNT } as any,
+      logger as any,
+    );
+
+    expect(secondResult.cleanupBatchesProcessed).toBe(1);
     expect(walletClient.writeContract).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
@@ -416,7 +427,7 @@ describe("resolveRounds", () => {
     );
   });
 
-  it("does not finalize reveal-failed early when the latest commit was already revealed", async () => {
+  it("does not finalize reveal-failed before maxDuration even when reveal grace has passed", async () => {
     timelockDecrypt.mockRejectedValue(new Error("beacon unavailable"));
 
     const round = makeRound({
@@ -428,6 +439,12 @@ describe("resolveRounds", () => {
       activeRoundId: 1n,
       latestRoundId: 1n,
       round,
+      roundConfig: {
+        epochDuration: 1200n,
+        maxDuration: 5_000n,
+        minVoters: 3n,
+        maxVoters: 1000n,
+      },
       commitKeys: [COMMIT_KEY_1],
       commits: {
         [COMMIT_KEY_1]: makeCommit({ revealableAfter: 100n }),

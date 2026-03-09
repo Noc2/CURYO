@@ -71,6 +71,17 @@ interface RoundData {
   thresholdReachedAt: bigint;
 }
 
+interface CleanupCursor {
+  contentId: bigint;
+  roundId: bigint;
+  nextIndex: number;
+}
+
+const MAX_CLEANUP_BATCHES_PER_TICK = 4;
+const cleanupQueue = new Map<string, CleanupCursor>();
+const cleanupCompletedRounds = new Set<string>();
+const cleanupDiscoveryRoundByContent = new Map<bigint, bigint>();
+
 function emptyResult(): KeeperResult {
   return {
     roundsSettled: 0,
@@ -83,6 +94,39 @@ function emptyResult(): KeeperResult {
 }
 
 export { getRevertReason, isExpectedRevert } from "./revert-utils.js";
+
+export function resetKeeperStateForTests(): void {
+  cleanupQueue.clear();
+  cleanupCompletedRounds.clear();
+  cleanupDiscoveryRoundByContent.clear();
+}
+
+function cleanupRoundKey(contentId: bigint, roundId: bigint): string {
+  return `${contentId}:${roundId}`;
+}
+
+function isCleanupEligibleRoundState(state: number): boolean {
+  return state === RoundState.Settled || state === RoundState.Tied || state === RoundState.RevealFailed;
+}
+
+function enqueueRoundForCleanup(contentId: bigint, roundId: bigint, startIndex = 0): void {
+  const key = cleanupRoundKey(contentId, roundId);
+  if (cleanupCompletedRounds.has(key)) return;
+
+  const existing = cleanupQueue.get(key);
+  if (existing) {
+    existing.nextIndex = Math.min(existing.nextIndex, startIndex);
+    return;
+  }
+
+  cleanupQueue.set(key, { contentId, roundId, nextIndex: startIndex });
+}
+
+function markCleanupCompleted(contentId: bigint, roundId: bigint): void {
+  const key = cleanupRoundKey(contentId, roundId);
+  cleanupQueue.delete(key);
+  cleanupCompletedRounds.add(key);
+}
 
 export async function assertContractDeployed(
   publicClient: Pick<PublicClient, "getCode">,
@@ -192,6 +236,35 @@ async function readRoundRevealGracePeriod(
     functionName: "revealGracePeriod",
     args: [],
   })) as bigint;
+}
+
+async function discoverCleanupCandidate(
+  publicClient: Pick<PublicClient, "readContract">,
+  engineAddr: `0x${string}`,
+  contentId: bigint,
+  latestRoundId: bigint,
+): Promise<void> {
+  if (latestRoundId == 0n) {
+    cleanupDiscoveryRoundByContent.delete(contentId);
+    return;
+  }
+
+  let roundId = cleanupDiscoveryRoundByContent.get(contentId) ?? 1n;
+  if (roundId > latestRoundId) {
+    roundId = 1n;
+  }
+
+  cleanupDiscoveryRoundByContent.set(contentId, roundId >= latestRoundId ? 1n : roundId + 1n);
+
+  const key = cleanupRoundKey(contentId, roundId);
+  if (cleanupCompletedRounds.has(key) || cleanupQueue.has(key)) {
+    return;
+  }
+
+  const round = await readRound(publicClient, engineAddr, contentId, roundId);
+  if (isCleanupEligibleRoundState(round.state)) {
+    enqueueRoundForCleanup(contentId, roundId);
+  }
 }
 
 /**
@@ -309,7 +382,7 @@ export async function resolveRounds(
         // --- 2. SETTLE: If threshold reached (enough votes revealed) ---
         if (round.state === RoundState.Open && round.revealedCount >= roundConfig.minVoters) {
           try {
-            await walletClient.writeContract({
+            await writeContractAndConfirm(publicClient, walletClient, {
               chain,
               account,
               address: engineAddr,
@@ -322,6 +395,7 @@ export async function resolveRounds(
               roundId: Number(activeRoundId),
             });
             result.roundsSettled++;
+            enqueueRoundForCleanup(contentId, activeRoundId);
           } catch (err: unknown) {
             const reason = getRevertReason(err);
             if (!isExpectedRevert(reason)) {
@@ -351,8 +425,13 @@ export async function resolveRounds(
               readRoundRevealGracePeriod(publicClient, engineAddr, contentId, activeRoundId),
             ]);
 
-            if (lastCommitRevealableAfter > 0n && now >= lastCommitRevealableAfter + revealGracePeriod) {
-              await walletClient.writeContract({
+            const revealFailedEligibleAt =
+              lastCommitRevealableAfter > round.startTime + roundConfig.maxDuration
+                ? lastCommitRevealableAfter + revealGracePeriod
+                : round.startTime + roundConfig.maxDuration + revealGracePeriod;
+
+            if (lastCommitRevealableAfter > 0n && now >= revealFailedEligibleAt) {
+              await writeContractAndConfirm(publicClient, walletClient, {
                 chain,
                 account,
                 address: engineAddr,
@@ -365,6 +444,7 @@ export async function resolveRounds(
                 roundId: Number(activeRoundId),
               });
               result.roundsRevealFailedFinalized++;
+              enqueueRoundForCleanup(contentId, activeRoundId);
             }
           } catch (err: unknown) {
             const reason = getRevertReason(err);
@@ -386,7 +466,7 @@ export async function resolveRounds(
           now >= round.startTime + roundConfig.maxDuration
         ) {
           try {
-            await walletClient.writeContract({
+            await writeContractAndConfirm(publicClient, walletClient, {
               chain,
               account,
               address: engineAddr,
@@ -412,35 +492,14 @@ export async function resolveRounds(
         }
       }
 
-      // --- 5. TERMINAL CLEANUP: settled/tied/reveal-failed rounds with unrevealed stake ---
-      for (let roundId = 1n; roundId <= latestRoundId; roundId++) {
-        try {
-          const round = await readRound(publicClient, engineAddr, contentId, roundId);
-          if (
-            round.state !== RoundState.Settled &&
-            round.state !== RoundState.Tied &&
-            round.state !== RoundState.RevealFailed
-          ) {
-            continue;
-          }
-
-          result.cleanupBatchesProcessed += await _processRoundCleanup(
-            publicClient,
-            walletClient,
-            chain,
-            account,
-            logger,
-            engineAddr,
-            contentId,
-            roundId,
-          );
-        } catch (err: unknown) {
-          logger.debug("Could not process round cleanup", {
-            contentId: Number(contentId),
-            roundId: Number(roundId),
-            error: getRevertReason(err),
-          });
-        }
+      // --- 5. CLEANUP DISCOVERY: inspect at most one historical round per content ---
+      try {
+        await discoverCleanupCandidate(publicClient, engineAddr, contentId, latestRoundId);
+      } catch (err: unknown) {
+        logger.debug("Could not discover cleanup candidate", {
+          contentId: Number(contentId),
+          error: getRevertReason(err),
+        });
       }
 
       // --- 6. Dormancy sweep ---
@@ -453,7 +512,7 @@ export async function resolveRounds(
         })) as { status: number; lastActivityAt: bigint };
 
         if (content.status === 0 && now > content.lastActivityAt + config.dormancyPeriod) {
-          await walletClient.writeContract({
+          await writeContractAndConfirm(publicClient, walletClient, {
             chain,
             account,
             address: registryAddr,
@@ -481,7 +540,32 @@ export async function resolveRounds(
     }
   }
 
+  result.cleanupBatchesProcessed += await _processQueuedCleanupRounds(
+    publicClient,
+    walletClient,
+    chain,
+    account,
+    logger,
+    engineAddr,
+  );
+
   return result;
+}
+
+async function writeContractAndConfirm(
+  publicClient: Pick<PublicClient, "waitForTransactionReceipt">,
+  walletClient: WalletClient,
+  request: Parameters<WalletClient["writeContract"]>[0],
+): Promise<`0x${string}`> {
+  const hash = await walletClient.writeContract(request);
+
+  const waitForReceipt = (publicClient as { waitForTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<unknown> })
+    .waitForTransactionReceipt;
+  if (waitForReceipt) {
+    await waitForReceipt.call(publicClient, { hash });
+  }
+
+  return hash;
 }
 
 /**
@@ -556,7 +640,7 @@ async function _revealCommits(
 
       // Submit reveal to chain
       try {
-        await walletClient.writeContract({
+        await writeContractAndConfirm(publicClient, walletClient, {
           chain,
           account,
           address: engineAddr,
@@ -594,7 +678,63 @@ async function _revealCommits(
   return revealed;
 }
 
-async function _processRoundCleanup(
+async function _processQueuedCleanupRounds(
+  publicClient: PublicClient,
+  walletClient: WalletClient,
+  chain: Chain,
+  account: Account,
+  logger: Logger,
+  engineAddr: `0x${string}`,
+): Promise<number> {
+  let batchesProcessed = 0;
+
+  for (const cursor of Array.from(cleanupQueue.values())) {
+    if (batchesProcessed >= MAX_CLEANUP_BATCHES_PER_TICK) {
+      break;
+    }
+
+    let round: RoundData;
+    try {
+      round = await readRound(publicClient, engineAddr, cursor.contentId, cursor.roundId);
+    } catch (err: unknown) {
+      logger.debug("Could not refresh cleanup round", {
+        contentId: Number(cursor.contentId),
+        roundId: Number(cursor.roundId),
+        error: getRevertReason(err),
+      });
+      continue;
+    }
+
+    if (!isCleanupEligibleRoundState(round.state)) {
+      cleanupQueue.delete(cleanupRoundKey(cursor.contentId, cursor.roundId));
+      continue;
+    }
+
+    const cleanupResult = await _processRoundCleanupBatch(
+      publicClient,
+      walletClient,
+      chain,
+      account,
+      logger,
+      engineAddr,
+      cursor.contentId,
+      cursor.roundId,
+      cursor.nextIndex,
+    );
+
+    batchesProcessed += cleanupResult.batchesProcessed;
+
+    if (cleanupResult.done) {
+      markCleanupCompleted(cursor.contentId, cursor.roundId);
+    } else {
+      cursor.nextIndex = cleanupResult.nextIndex;
+    }
+  }
+
+  return batchesProcessed;
+}
+
+async function _processRoundCleanupBatch(
   publicClient: PublicClient,
   walletClient: WalletClient,
   chain: Chain,
@@ -603,7 +743,8 @@ async function _processRoundCleanup(
   engineAddr: `0x${string}`,
   contentId: bigint,
   roundId: bigint,
-): Promise<number> {
+  startIndex: number,
+): Promise<{ batchesProcessed: number; done: boolean; nextIndex: number }> {
   let commitKeys: readonly `0x${string}`[];
   try {
     commitKeys = (await publicClient.readContract({
@@ -613,62 +754,72 @@ async function _processRoundCleanup(
       args: [contentId, roundId],
     })) as readonly `0x${string}`[];
   } catch {
-    return 0;
+    return { batchesProcessed: 0, done: false, nextIndex: startIndex };
   }
 
   if (commitKeys.length === 0) {
-    return 0;
+    return { batchesProcessed: 0, done: true, nextIndex: startIndex };
   }
 
-  let batchesProcessed = 0;
-  let startIndex = 0;
+  const pendingIndex = await _findNextPendingCleanupIndex(
+    publicClient,
+    engineAddr,
+    contentId,
+    roundId,
+    commitKeys,
+    startIndex,
+  );
+  if (pendingIndex < 0) {
+    return { batchesProcessed: 0, done: true, nextIndex: startIndex };
+  }
 
-  while (startIndex < commitKeys.length) {
-    const pendingIndex = await _findNextPendingCleanupIndex(
+  try {
+    await writeContractAndConfirm(publicClient, walletClient, {
+      chain,
+      account,
+      address: engineAddr,
+      abi: RoundVotingEngineAbi,
+      functionName: "processUnrevealedVotes",
+      args: [contentId, roundId, BigInt(pendingIndex), BigInt(config.cleanupBatchSize)],
+    });
+    logger.info("Processed unrevealed vote cleanup", {
+      contentId: Number(contentId),
+      roundId: Number(roundId),
+      startIndex: pendingIndex,
+      batchSize: config.cleanupBatchSize,
+    });
+    return {
+      batchesProcessed: 1,
+      done: pendingIndex + config.cleanupBatchSize >= commitKeys.length,
+      nextIndex: pendingIndex + config.cleanupBatchSize,
+    };
+  } catch (err: unknown) {
+    const reason = getRevertReason(err);
+    if (!isExpectedRevert(reason)) {
+      logger.warn("Failed to process unrevealed votes", {
+        contentId: Number(contentId),
+        roundId: Number(roundId),
+        startIndex: pendingIndex,
+        batchSize: config.cleanupBatchSize,
+        error: reason,
+      });
+      return { batchesProcessed: 0, done: false, nextIndex: pendingIndex };
+    }
+
+    const nextPendingIndex = await _findNextPendingCleanupIndex(
       publicClient,
       engineAddr,
       contentId,
       roundId,
       commitKeys,
-      startIndex,
+      pendingIndex,
     );
-    if (pendingIndex < 0) {
-      break;
-    }
-
-    try {
-      await walletClient.writeContract({
-        chain,
-        account,
-        address: engineAddr,
-        abi: RoundVotingEngineAbi,
-        functionName: "processUnrevealedVotes",
-        args: [contentId, roundId, BigInt(pendingIndex), BigInt(config.cleanupBatchSize)],
-      });
-      logger.info("Processed unrevealed vote cleanup", {
-        contentId: Number(contentId),
-        roundId: Number(roundId),
-        startIndex: pendingIndex,
-        batchSize: config.cleanupBatchSize,
-      });
-      batchesProcessed++;
-    } catch (err: unknown) {
-      const reason = getRevertReason(err);
-      if (!isExpectedRevert(reason)) {
-        logger.warn("Failed to process unrevealed votes", {
-          contentId: Number(contentId),
-          roundId: Number(roundId),
-          startIndex: pendingIndex,
-          batchSize: config.cleanupBatchSize,
-          error: reason,
-        });
-      }
-    }
-
-    startIndex = pendingIndex + config.cleanupBatchSize;
+    return {
+      batchesProcessed: 0,
+      done: nextPendingIndex < 0,
+      nextIndex: nextPendingIndex < 0 ? pendingIndex : nextPendingIndex,
+    };
   }
-
-  return batchesProcessed;
 }
 
 async function _findNextPendingCleanupIndex(

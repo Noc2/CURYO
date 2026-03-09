@@ -1,9 +1,8 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { createPublicClient, createWalletClient, defineChain, http, stringToHex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { ContentRegistryAbi, CuryoReputationAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
+import deployedContracts from "@curyo/contracts/deployedContracts";
 import { buildCommitHash } from "@curyo/contracts/voting";
 
 const LOCAL_RPC_URL = process.env.KEEPER_INTEGRATION_RPC_URL || "http://127.0.0.1:8545";
@@ -44,58 +43,13 @@ vi.mock("tlock-js", () => ({
   mainnetClient: vi.fn(() => ({})),
 }));
 
-import { resolveRounds } from "../keeper.js";
+import { resetKeeperStateForTests, resolveRounds } from "../keeper.js";
 
-const DEPLOY_BROADCAST_PATH = resolve(
-  process.cwd(),
-  "..",
-  "foundry",
-  "broadcast",
-  "Deploy.s.sol",
-  "31337",
-  "run-latest.json",
-);
-
-function readLocalDeploymentAddresses() {
-  let broadcastRaw: string;
-  try {
-    broadcastRaw = readFileSync(DEPLOY_BROADCAST_PATH, "utf8");
-  } catch {
-    return {
-      CuryoReputation: undefined,
-      ContentRegistry: undefined,
-      RoundVotingEngine: undefined,
-    };
-  }
-
-  const broadcast = JSON.parse(broadcastRaw) as {
-    transactions?: Array<{
-      contractName?: string;
-      contractAddress?: string;
-    }>;
-  };
-  const addresses = new Map<string, `0x${string}`>();
-  for (const tx of broadcast.transactions ?? []) {
-    if (!tx.contractName || !tx.contractAddress) {
-      continue;
-    }
-    if (!addresses.has(tx.contractName)) {
-      addresses.set(tx.contractName, tx.contractAddress as `0x${string}`);
-    }
-  }
-
-  return {
-    CuryoReputation: addresses.get("CuryoReputation"),
-    ContentRegistry: addresses.get("ContentRegistry"),
-    RoundVotingEngine: addresses.get("RoundVotingEngine"),
-  };
-}
-
-const localDeployment = readLocalDeploymentAddresses();
+const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
 const CONTRACTS = {
-  crep: localDeployment.CuryoReputation ?? "0x0000000000000000000000000000000000000000",
-  contentRegistry: localDeployment.ContentRegistry ?? "0x0000000000000000000000000000000000000000",
-  roundVotingEngine: localDeployment.RoundVotingEngine ?? "0x0000000000000000000000000000000000000000",
+  crep: chain31337?.CuryoReputation?.address ?? "0x0000000000000000000000000000000000000000",
+  contentRegistry: chain31337?.ContentRegistry?.address ?? "0x0000000000000000000000000000000000000000",
+  roundVotingEngine: chain31337?.RoundVotingEngine?.address ?? "0x0000000000000000000000000000000000000000",
 } as const;
 
 const ACCOUNTS = {
@@ -104,7 +58,6 @@ const ACCOUNTS = {
   voter1: privateKeyToAccount("0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6"),
   voter2: privateKeyToAccount("0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a"),
   voter3: privateKeyToAccount("0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"),
-  deployer: privateKeyToAccount("0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6"),
 } as const;
 
 const STAKE = 10n * 10n ** 6n;
@@ -144,10 +97,11 @@ describe("resolveRounds integration", () => {
   let voter1Client: ReturnType<typeof createWalletClient>;
   let voter2Client: ReturnType<typeof createWalletClient>;
   let voter3Client: ReturnType<typeof createWalletClient>;
-  let deployerClient: ReturnType<typeof createWalletClient>;
   let integrationReady = false;
+  let integrationIssue = "integration test not initialized";
 
   beforeAll(async () => {
+    resetKeeperStateForTests();
     publicClient = createPublicClient({
       chain: CHAIN,
       transport: http(LOCAL_RPC_URL),
@@ -177,11 +131,6 @@ describe("resolveRounds integration", () => {
       chain: CHAIN,
       transport: http(LOCAL_RPC_URL),
     });
-    deployerClient = createWalletClient({
-      account: ACCOUNTS.deployer,
-      chain: CHAIN,
-      transport: http(LOCAL_RPC_URL),
-    });
 
     try {
       const [chainId, engineCode, registryCode] = await Promise.all([
@@ -193,30 +142,31 @@ describe("resolveRounds integration", () => {
       if (integrationReady) {
         mockConfig.contracts.votingEngine = CONTRACTS.roundVotingEngine;
         mockConfig.contracts.contentRegistry = CONTRACTS.contentRegistry;
+        integrationIssue = "";
+      } else {
+        integrationIssue = `readiness failed: chainId=${chainId}, engine=${engineCode}, registry=${registryCode}`;
       }
-    } catch {
+    } catch (error) {
       integrationReady = false;
+      integrationIssue = `readiness threw: ${error instanceof Error ? error.message : String(error)}`;
     }
   });
 
   it("reveals and settles a real local round via the keeper", async ({ skip }) => {
     if (!integrationReady) {
+      if (process.env.KEEPER_INTEGRATION_REQUIRE_LOCALHOST === "1") {
+        throw new Error(integrationIssue);
+      }
       skip();
     }
 
     const logger = makeLogger();
-    const epochDuration = 300n;
-    const maxDuration = 86_400n;
-
-    await waitForReceipt(
-      publicClient,
-      await deployerClient.writeContract({
-        address: CONTRACTS.roundVotingEngine,
-        abi: RoundVotingEngineAbi,
-        functionName: "setConfig",
-        args: [epochDuration, maxDuration, 3n, 100n],
-      }),
-    );
+    const [epochDuration] = (await publicClient.readContract({
+      address: CONTRACTS.roundVotingEngine,
+      abi: RoundVotingEngineAbi,
+      functionName: "config",
+      args: [],
+    })) as readonly [bigint, bigint, bigint, bigint];
 
     const nextContentId = (await publicClient.readContract({
       address: CONTRACTS.contentRegistry,
