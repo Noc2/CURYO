@@ -78,10 +78,6 @@ contract RoundVotingEngine is
     error IndexOutOfBounds();
     error IdentityAlreadyCommitted();
     error UnrevealedPastEpochVotes();
-    error StreakTooShort();
-    error MilestoneAlreadyClaimed();
-    error InvalidMilestoneIndex();
-    error StreakBonusDisabled();
     error NothingProcessed();
     error NotWinningSide();
 
@@ -96,16 +92,6 @@ contract RoundVotingEngine is
     uint256 public constant MAX_STAKE = 100e6; // 100 cREP (6 decimals)
     uint256 public constant VOTE_COOLDOWN = 24 hours; // Time-based cooldown per content per voter
     uint256 public constant MAX_CIPHERTEXT_SIZE = 10_240; // 10 KB max ciphertext to prevent storage bloat
-
-    // --- Streak Milestone Constants ---
-    uint256 private constant STREAK_M1_DAYS = 7;
-    uint256 private constant STREAK_M1_BASE = 10e6; // 10 cREP
-    uint256 private constant STREAK_M2_DAYS = 30;
-    uint256 private constant STREAK_M2_BASE = 50e6; // 50 cREP
-    uint256 private constant STREAK_M3_DAYS = 90;
-    uint256 private constant STREAK_M3_BASE = 200e6; // 200 cREP
-    uint256 private constant STREAK_INITIAL_RATE_BPS = 9000;
-    uint256 private constant STREAK_MILESTONE_COUNT = 3;
 
     // --- State ---
     IERC20 public crepToken;
@@ -182,19 +168,19 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => address))) private __deprecated_commitHashToVoter;
 
     // Frontend fee aggregation (computed incrementally during revealVote for O(1) settlement)
-    mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithApprovedFrontend;
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public roundPerFrontendStake;
-    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendPool;
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public frontendFeeClaimed;
-    mapping(uint256 => mapping(uint256 => uint256)) public roundApprovedFrontendCount;
-    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedCount;
-    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedAmount;
+    mapping(uint256 => mapping(uint256 => uint256)) internal roundStakeWithApprovedFrontend;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) internal roundPerFrontendStake;
+    mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendPool;
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal frontendFeeClaimed;
+    mapping(uint256 => mapping(uint256 => uint256)) internal roundApprovedFrontendCount;
+    mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendClaimedCount;
+    mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendClaimedAmount;
 
     // Participation reward pull-based claiming (rate snapshotted at settlement)
-    mapping(uint256 => mapping(uint256 => address)) public roundParticipationPool;
-    mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRateBps;
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public participationRewardClaimed;
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public participationRewardPaid;
+    mapping(uint256 => mapping(uint256 => address)) internal roundParticipationPool;
+    mapping(uint256 => mapping(uint256 => uint256)) internal roundParticipationRateBps;
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal participationRewardClaimed;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) internal participationRewardPaid;
 
     // --- Events ---
     event VoteCommitted(
@@ -245,8 +231,6 @@ contract RoundVotingEngine is
     uint8 internal constant OP_CANCEL = 1;
     uint8 internal constant OP_SETTLE = 2;
     uint8 internal constant OP_PROCESS_UNREVEALED = 3;
-    event StreakBonusClaimed(address indexed voter, uint256 milestoneDays, uint256 amount);
-
     /// @dev Only callable by this contract itself (for try-catch external wrappers).
     modifier onlySelf() {
         if (msg.sender != address(this)) revert Unauthorized();
@@ -557,9 +541,6 @@ contract RoundVotingEngine is
 
         // Vote commits count as content activity for dormancy tracking.
         registry.updateActivity(contentId);
-
-        // Update voting streak
-        _updateStreak(msg.sender);
 
         emit VoteCommitted(contentId, roundId, msg.sender, commitHash, stakeAmount);
     }
@@ -927,48 +908,6 @@ contract RoundVotingEngine is
     }
 
     // =========================================================================
-    // STREAK BONUSES
-    // =========================================================================
-
-    /// @notice Claim a streak milestone bonus. Pull-based: voter calls directly.
-    /// @param milestoneIndex 0 = 7-day, 1 = 30-day, 2 = 90-day
-    function claimStreakBonus(uint256 milestoneIndex) external nonReentrant {
-        milestoneIndex;
-        revert StreakBonusDisabled();
-    }
-
-    /// @dev Update voter's daily voting streak. Called at end of _commitVote.
-    function _updateStreak(address voter) internal {
-        uint256 today = block.timestamp / 86400;
-        uint256 lastDay = voterLastActiveDay[voter];
-        uint256 currentStreak = voterCurrentStreak[voter];
-
-        // Already counted today (but not first-ever vote where both are 0)
-        if (lastDay == today && currentStreak > 0) return;
-
-        if (currentStreak > 0 && lastDay == today - 1) {
-            voterCurrentStreak[voter] = currentStreak + 1;
-        } else {
-            voterCurrentStreak[voter] = 1;
-            if (currentStreak > 0) {
-                voterLastMilestoneDay[voter] = 0; // reset milestones on streak break
-            }
-        }
-        voterLastActiveDay[voter] = today;
-    }
-
-    /// @dev Returns (milestoneDays, baseBonus) for a given milestone index.
-    function _getStreakMilestone(uint256 index) internal pure returns (uint256 days_, uint256 baseBonus) {
-        if (index == 0) return (STREAK_M1_DAYS, STREAK_M1_BASE);
-        if (index == 1) return (STREAK_M2_DAYS, STREAK_M2_BASE);
-        if (index == 2) return (STREAK_M3_DAYS, STREAK_M3_BASE);
-        revert InvalidMilestoneIndex();
-    }
-
-    // Note: getVoterStreakInfo, getStreakMilestone, getStreakMilestoneCount removed to fit size limit.
-    // Use the public state variables (voterCurrentStreak, voterLastActiveDay, voterLastMilestoneDay) directly.
-
-    // =========================================================================
     // UNREVEALED VOTE PROCESSING
     // =========================================================================
 
@@ -1243,9 +1182,9 @@ contract RoundVotingEngine is
         return contentCommitCount[contentId];
     }
 
-    // Note: getRoundFrontendPool, getRoundPerFrontendStake, getRoundStakeWithApprovedFrontend,
-    // isFrontendFeeClaimed, isParticipationRewardClaimed, getRoundParticipationRateBps
-    // removed — use auto-generated getters from the public mappings directly.
+    // Note: frontend/participation bookkeeping getters are intentionally omitted to keep the
+    // engine deployable under the EIP-170 contract size limit. Tests and indexers should assert
+    // behavior from claims/events instead of depending on internal accounting getters.
 
     function hasUnrevealedVotes(uint256 contentId) external view returns (bool) {
         uint256 roundId = currentRoundId[contentId];
@@ -1281,10 +1220,11 @@ contract RoundVotingEngine is
     // One vote per identity per round
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public hasTokenIdCommitted;
 
-    // --- Streak Tracking ---
-    mapping(address => uint256) public voterLastActiveDay; // unix day number
-    mapping(address => uint256) public voterCurrentStreak; // consecutive days
-    mapping(address => uint256) public voterLastMilestoneDay; // prevents double-payment, resets on streak break
+    // --- Deprecated streak tracking ---
+    // Preserved as inert storage slots for upgrade safety. The product streak UI is indexed off VoteCommitted events.
+    mapping(address => uint256) internal __deprecated_voterLastActiveDay;
+    mapping(address => uint256) internal __deprecated_voterCurrentStreak;
+    mapping(address => uint256) internal __deprecated_voterLastMilestoneDay;
 
     // Per-identity cooldown: contentId => tokenId => timestamp (prevents cooldown bypass via delegation)
     mapping(uint256 => mapping(uint256 => uint256)) public lastVoteTimestampByToken;

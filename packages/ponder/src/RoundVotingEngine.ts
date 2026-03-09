@@ -453,55 +453,6 @@ ponder.on("RoundVotingEngine:ParticipationRewardClaimed", async ({ event, contex
     }));
 });
 
-ponder.on("RoundVotingEngine:StreakBonusClaimed", async ({ event, context }) => {
-  const { voter, milestoneDays, amount } = event.args;
-
-  await context.db
-    .insert(rewardClaim)
-    .values({
-      id: `streak-${voter}-${milestoneDays}-${event.block.number}`,
-      contentId: 0n,
-      roundId: 0n,
-      epochId: null,
-      source: "streak",
-      voter,
-      stakeReturned: 0n,
-      crepReward: amount,
-      claimedAt: event.block.timestamp,
-    })
-    .onConflictDoNothing();
-
-  const existingProfile = await context.db.find(profile, { address: voter });
-  if (existingProfile) {
-    await context.db
-      .update(profile, { address: voter })
-      .set((row) => ({ totalRewardsClaimed: row.totalRewardsClaimed + amount }));
-  }
-
-  await context.db
-    .insert(globalStats)
-    .values({
-      id: "global",
-      totalContent: 0,
-      totalVotes: 0,
-      totalRoundsSettled: 0,
-      totalRewardsClaimed: amount,
-      totalProfiles: 0,
-      totalVoterIds: 0,
-    })
-    .onConflictDoUpdate((row) => ({
-      totalRewardsClaimed: row.totalRewardsClaimed + amount,
-    }));
-
-  // Update voter streak milestone tracking
-  const existingStreak = await context.db.find(voterStreak, { voter });
-  if (existingStreak) {
-    await context.db.update(voterStreak, { voter }).set({
-      lastMilestoneDay: Number(milestoneDays),
-    });
-  }
-});
-
 ponder.on("RoundVotingEngine:CategorySubmitterRewarded", async ({ event, context }) => {
   const { contentId, categoryId, submitter, amount } = event.args;
 

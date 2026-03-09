@@ -789,14 +789,12 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
 
-        // Frontend stake tracked using the commit-time approval snapshot
-        uint256 fStake = engine.roundStakeWithApprovedFrontend(contentId, roundId);
-        assertEq(fStake, STAKE); // only voter1 used approved frontend
-
         engine.settleRound(contentId, roundId);
+        uint256 feesBefore = frontendRegistry.getAccumulatedFees(frontend1);
+        engine.claimFrontendFee(contentId, roundId, frontend1);
+        uint256 feesAfter = frontendRegistry.getAccumulatedFees(frontend1);
 
-        uint256 frontendPool = engine.roundFrontendPool(contentId, roundId);
-        assertGt(frontendPool, 0);
+        assertGt(feesAfter - feesBefore, 0);
     }
 
     function test_FrontendFee_ClaimSucceeds() public {
@@ -822,7 +820,6 @@ contract RoundVotingEngineBranchesTest is Test {
         uint256 feesAfter = frontendRegistry.getAccumulatedFees(frontend1);
 
         assertGt(feesAfter - feesBefore, 0);
-        assertTrue(engine.frontendFeeClaimed(contentId, roundId, frontend1));
     }
 
     function test_FrontendFee_CannotClaimTwice() public {
@@ -849,14 +846,6 @@ contract RoundVotingEngineBranchesTest is Test {
         engine.claimFrontendFee(contentId, roundId, frontend1);
     }
 
-    function test_FrontendFee_NoApprovedFrontends_PoolIsZero() public {
-        (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
-        engine.settleRound(contentId, roundId);
-
-        uint256 frontendPool = engine.roundFrontendPool(contentId, roundId);
-        assertEq(frontendPool, 0);
-    }
-
     function test_FrontendFee_UnapprovedFrontend_NotTracked() public {
         // Register but do NOT approve
         vm.startPrank(frontend1);
@@ -867,13 +856,19 @@ contract RoundVotingEngineBranchesTest is Test {
         uint256 contentId = _submitContent();
 
         (bytes32 ck1, bytes32 s1) = _commitWithFrontend(voter1, contentId, true, STAKE, frontend1);
+        (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
+        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
         uint256 roundId = engine.getActiveRoundId(contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
+        _reveal(contentId, roundId, ck2, true, s2);
+        _reveal(contentId, roundId, ck3, false, s3);
 
-        uint256 fStake = engine.roundStakeWithApprovedFrontend(contentId, roundId);
-        assertEq(fStake, 0);
+        engine.settleRound(contentId, roundId);
+
+        vm.expectRevert(RoundVotingEngine.NoPool.selector);
+        engine.claimFrontendFee(contentId, roundId, frontend1);
     }
 
     function test_FrontendFee_ClaimReverts_RoundNotSettled() public {

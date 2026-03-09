@@ -1412,18 +1412,15 @@ contract RoundIntegrationTest is VotingTestBase {
     }
 
     function test_ClaimFrontendFee_HappyPath() public {
-        (, address frontendOp) = _setupFrontendRegistry();
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
-        // Frontend pool should be set
-        uint256 frontendPool = votingEngine.roundFrontendPool(contentId, roundId);
-        assertGt(frontendPool, 0, "Frontend pool should be > 0");
+        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
 
         // Claim frontend fee
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
-        // Verify fee was credited
-        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
+        assertGt(frontendReg.getAccumulatedFees(frontendOp) - feesBefore, 0, "Frontend fee should be credited");
     }
 
     function test_ClaimFrontendFee_DoubleClaimReverts() public {
@@ -1441,18 +1438,17 @@ contract RoundIntegrationTest is VotingTestBase {
     function test_ClaimFrontendFee_PaysDeregisteredFrontendDirectly() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
-        uint256 expectedFee = votingEngine.roundFrontendPool(contentId, roundId);
 
         vm.prank(frontendOp);
         frontendReg.deregister();
         _completeFrontendExit(frontendReg, frontendOp);
 
+        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
-        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
-        assertEq(crepToken.balanceOf(frontendOp) - frontendBalanceBefore, expectedFee);
-        assertEq(frontendReg.getAccumulatedFees(frontendOp), 0, "deregistered frontend should bypass fee crediting");
+        assertGt(crepToken.balanceOf(frontendOp) - frontendBalanceBefore, 0);
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "deregistered frontend should bypass fee crediting");
     }
 
     function test_ClaimFrontendFee_RevertsWhileFrontendIsSlashed() public {
@@ -1481,10 +1477,14 @@ contract RoundIntegrationTest is VotingTestBase {
         frontendReg.register();
         vm.stopPrank();
 
+        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
-        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
-        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Re-registered frontend should still receive fees");
+        assertGt(
+            frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
+            0,
+            "Re-registered frontend should still receive fees"
+        );
         assertFalse(frontendReg.isApproved(frontendOp), "Re-registration should not silently restore approval");
     }
 
@@ -1497,10 +1497,14 @@ contract RoundIntegrationTest is VotingTestBase {
         frontendReg.unslashFrontend(frontendOp);
         vm.stopPrank();
 
+        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
-        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
-        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Unslashed frontend should receive preserved fees");
+        assertGt(
+            frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
+            0,
+            "Unslashed frontend should receive preserved fees"
+        );
         assertFalse(frontendReg.isApproved(frontendOp), "Unslashing should not silently restore approval");
     }
 
@@ -1539,8 +1543,6 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
-
-        assertEq(votingEngine.roundStakeWithApprovedFrontend(contentId, roundId), STAKE * 3);
 
         votingEngine.settleRound(contentId, roundId);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
@@ -1587,21 +1589,21 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
 
-        assertEq(votingEngine.roundStakeWithApprovedFrontend(contentId, roundId), 0);
-
         votingEngine.settleRound(contentId, roundId);
-        assertEq(votingEngine.roundFrontendPool(contentId, roundId), 0);
+        vm.expectRevert(RoundVotingEngine.NoPool.selector);
+        votingEngine.claimFrontendFee(contentId, roundId, address(0xBEEF));
     }
 
-    function test_FrontendTrackingGetters_ReturnCommittedStakeAndKeys() public {
-        (, address frontendOp) = _setupFrontendRegistry();
+    function test_FrontendTracking_KeepsCommitKeysAccessible() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
         bytes32[] memory commitKeys = votingEngine.getRoundCommitHashes(contentId, roundId);
 
         assertEq(commitKeys.length, 3);
-        assertEq(votingEngine.roundPerFrontendStake(contentId, roundId, frontendOp), STAKE * 3);
-        assertEq(votingEngine.roundStakeWithApprovedFrontend(contentId, roundId), STAKE * 3);
+
+        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Frontend fee claim should still succeed");
     }
 
     function test_ClaimFrontendFee_NoApprovedFrontendRedirectsToVoterPool() public {
@@ -1619,12 +1621,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
-        // No frontend pool — redirected to voter pool
-        assertEq(votingEngine.roundFrontendPool(contentId, roundId), 0);
-
         // Voter pool should include the frontend share
         uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
         assertGt(voterPool, 0);
+
+        vm.expectRevert(RoundVotingEngine.NoPool.selector);
+        votingEngine.claimFrontendFee(contentId, roundId, address(0xBEEF));
     }
 
     function _completeFrontendExit(FrontendRegistry frontendReg, address frontendOp) internal {
@@ -1665,10 +1667,6 @@ contract RoundIntegrationTest is VotingTestBase {
     function test_ClaimParticipationReward_HappyPath() public {
         (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
 
-        // Rate should be snapshotted
-        uint256 rate = votingEngine.roundParticipationRateBps(contentId, roundId);
-        assertEq(rate, 9000, "Rate should be 90% (tier 0)");
-
         // Claim participation reward
         uint256 balBefore = crepToken.balanceOf(voter1);
         vm.prank(voter1);
@@ -1677,7 +1675,6 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 expectedReward = STAKE * 9000 / 10000;
         assertEq(balAfter - balBefore, expectedReward, "Should receive 90% of stake as participation reward");
-        assertTrue(votingEngine.participationRewardClaimed(contentId, roundId, voter1));
     }
 
     function test_ClaimParticipationReward_UsesSettledRoundPoolAfterRotation() public {
@@ -1708,8 +1705,6 @@ contract RoundIntegrationTest is VotingTestBase {
         dirs[2] = false;
 
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
-
-        assertEq(votingEngine.roundParticipationPool(contentId, roundId), address(pool1));
 
         vm.prank(owner);
         votingEngine.setParticipationPool(address(pool2));
@@ -1798,8 +1793,6 @@ contract RoundIntegrationTest is VotingTestBase {
         }
 
         assertTrue(foundFailureEvent, "participation rate failure should be logged");
-        assertEq(votingEngine.roundParticipationRateBps(contentId, roundId), 0);
-
         vm.prank(voter1);
         vm.expectRevert(RoundVotingEngine.NoParticipationRate.selector);
         votingEngine.claimParticipationReward(contentId, roundId);
