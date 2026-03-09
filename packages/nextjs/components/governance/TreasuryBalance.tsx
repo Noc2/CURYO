@@ -11,7 +11,7 @@ function formatBalance(balance: bigint | undefined) {
 
 type PoolStatProps = {
   title: string;
-  description: string;
+  description?: string;
   tooltip: string;
   value: bigint | undefined;
   isLoading: boolean;
@@ -27,7 +27,7 @@ function PoolStat({ title, description, tooltip, value, isLoading, Icon }: PoolS
             <p className="font-medium">{title}</p>
             <InfoTooltip text={tooltip} className="[&>svg]:opacity-50" />
           </div>
-          <p className="text-base text-base-content/50 mt-1">{description}</p>
+          {description ? <p className="text-base text-base-content/50 mt-1">{description}</p> : null}
         </div>
         <Icon className="w-5 h-5 text-primary shrink-0 mt-0.5" />
       </div>
@@ -90,15 +90,10 @@ export const TreasuryBalance = () => {
           className="[&>svg]:opacity-60"
         />
       </div>
-      <p className="text-base text-base-content/60 mt-2">
-        Treasury, participation rewards, faucet reserves, and the RoundVotingEngine&apos;s internal keeper and consensus
-        buckets.
-      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
         <PoolStat
           title="Treasury"
-          description="Timelock-controlled balance used for governance spending."
           tooltip="Funded by the 1% settlement fee, forfeited submitter stakes, and forfeited votes."
           value={treasuryBalanceRaw}
           isLoading={treasuryLoading}
@@ -106,7 +101,6 @@ export const TreasuryBalance = () => {
         />
         <PoolStat
           title="Consensus Reserve"
-          description="Subsidy reserve for unanimous rounds."
           tooltip="Tracked inside RoundVotingEngine and replenished by 5% of losing pools from two-sided rounds."
           value={consensusReserve}
           isLoading={consensusReserveLoading}
@@ -114,7 +108,6 @@ export const TreasuryBalance = () => {
         />
         <PoolStat
           title="Keeper Reward Pool"
-          description="Best-effort cREP rewards for keeper operations."
           tooltip="Tracked inside RoundVotingEngine and decremented when keeper actions are rewarded."
           value={keeperRewardPool}
           isLoading={keeperRewardPoolLoading}
@@ -122,7 +115,6 @@ export const TreasuryBalance = () => {
         />
         <PoolStat
           title="Participation Pool"
-          description="Remaining balance for vote and submission rewards."
           tooltip="Internal remaining-balance accounting held by ParticipationPool."
           value={participationPoolBalance}
           isLoading={participationPoolLoading}
