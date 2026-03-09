@@ -1044,8 +1044,8 @@ export async function mineBlocks(count: number): Promise<void> {
 }
 
 /**
- * Claim voter reward for a settled round.
- * Only winning voters get a payout; losing voters are notified.
+ * Claim a settled-round voter payout.
+ * Winners receive stake plus winnings; revealed losers receive the fixed rebate.
  */
 export async function claimVoterReward(
   contentId: number | bigint,

@@ -5,8 +5,8 @@ import {
   claimVoterReward,
   commitVoteDirect,
   evmIncreaseTime,
-  processUnrevealedVotes,
   getActiveRoundId,
+  processUnrevealedVotes,
   revealVoteDirect,
   setTestConfig,
   settleRoundDirect,
@@ -30,7 +30,7 @@ import { expect, test } from "@playwright/test";
  * Account allocation (exclusive to this file for voting):
  * - Account #2 — submits fresh content (also used for submitter reward tests)
  * - Accounts #3, #4 — vote UP (winning side)
- * - Account #7 — votes DOWN (losing side, tests reward absence)
+ * - Account #7 — votes DOWN (losing side, tests 5% rebate claims)
  * - Account #1 (keeper) — reveals votes and settles
  *
  * Tests run serially: submit → commit+reveal+settle → verify → claim → submitter claim.
@@ -42,6 +42,7 @@ test.describe("Reward claim lifecycle", () => {
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const STAKE = BigInt(10e6); // 10 cREP (above MIN_STAKE_FOR_RATING threshold)
+  const LOSER_REBATE = STAKE / 20n; // 5%
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const EPOCH_DURATION = 300; // 5 min — contract minimum is 5 minutes
 
@@ -259,10 +260,16 @@ test.describe("Reward claim lifecycle", () => {
     expect(claim!.submitter.toLowerCase()).toBe(submitter.toLowerCase());
   });
 
-  test("losing voter has no reward for the settled round", async () => {
-    test.skip(!settledContentId, "No settled content from previous test");
+  test("losing voter claims the fixed rebate for the settled round", async () => {
+    test.skip(!settledContentId || roundId === 0n, "No settled content from previous test");
+    test.setTimeout(60_000);
 
-    const loserAddress = ANVIL_ACCOUNTS.account7.address.toLowerCase();
+    const REWARD_DISTRIBUTOR = CONTRACT_ADDRESSES.RoundRewardDistributor;
+    const loser = ANVIL_ACCOUNTS.account7;
+    const loserAddress = loser.address.toLowerCase();
+
+    const success = await claimVoterReward(BigInt(settledContentId!), roundId, loser.address, REWARD_DISTRIBUTOR);
+    expect(success, "Revealed losing voter should be able to claim the 5% rebate").toBe(true);
 
     const data = await ponderGet(`/content/${settledContentId}`);
     const settledRound = data.rounds?.find((r: { state: number }) => r.state === 1);
@@ -272,14 +279,27 @@ test.describe("Reward claim lifecycle", () => {
       return;
     }
 
-    if (settledRound.upWins) {
+    const indexed = await waitForPonderIndexed(async () => {
       const rewards = await ponderGet(`/rewards?voter=${loserAddress}`);
-      const loserReward = rewards.items?.find(
+      return rewards.items?.some(
         (r: { contentId: string; roundId: string }) =>
           r.contentId === settledContentId && r.roundId === settledRound.roundId,
       );
-      expect(loserReward).toBeFalsy();
+    });
+
+    if (!indexed) {
+      test.skip(true, "Ponder not indexing loser rebate claim — on-chain tx succeeded");
+      return;
     }
+
+    const rewards = await ponderGet(`/rewards?voter=${loserAddress}`);
+    const loserReward = rewards.items?.find(
+      (r: { contentId: string; roundId: string }) =>
+        r.contentId === settledContentId && r.roundId === settledRound.roundId,
+    );
+    expect(loserReward).toBeTruthy();
+    expect(loserReward.crepReward).toBe(LOSER_REBATE.toString());
+    expect(loserReward.stakeReturned).toBe("0");
   });
 
   test("winning voter claims participation reward, double claim reverts", async () => {
@@ -315,7 +335,14 @@ test.describe("Reward claim lifecycle", () => {
     test.setTimeout(60_000);
 
     const keeper = ANVIL_ACCOUNTS.account1;
-    const result = await processUnrevealedVotes(BigInt(settledContentId!), roundId, 0, 10, keeper.address, VOTING_ENGINE);
+    const result = await processUnrevealedVotes(
+      BigInt(settledContentId!),
+      roundId,
+      0,
+      10,
+      keeper.address,
+      VOTING_ENGINE,
+    );
     expect(result, "processUnrevealedVotes should revert with NothingProcessed when all votes revealed").toBe(false);
   });
 });
