@@ -495,7 +495,7 @@ contract RoundVotingEngine is
             address resolved = voterIdNFT.resolveHolder(msg.sender);
             if (resolved != address(0)) effectiveVoter = resolved;
         }
-        if (effectiveVoter == registry.getSubmitter(contentId)) revert SelfVote();
+        if (effectiveVoter == registry.getSubmitterIdentity(contentId)) revert SelfVote();
 
         // Content must be active
         if (!registry.isActive(contentId)) revert ContentNotActive();

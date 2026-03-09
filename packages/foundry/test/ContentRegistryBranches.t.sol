@@ -75,6 +75,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     address public keeper = address(9);
     address public treasury = address(100);
     address public bonusPool = address(101);
+    address public delegate = address(102);
 
     uint256 public constant T0 = 1000;
     uint256 public constant STAKE = 5e6;
@@ -138,7 +139,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(votingEngine), 500_000e6);
         votingEngine.fundConsensusReserve(500_000e6);
 
-        address[5] memory users = [submitter, voter1, voter2, voter3, keeper];
+        address[6] memory users = [submitter, voter1, voter2, voter3, keeper, delegate];
         for (uint256 i = 0; i < users.length; i++) {
             crepToken.mint(users[i], 10_000e6);
         }
@@ -186,6 +187,58 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 id = registry.submitContent("https://example.com/1", "goal", "tags", 0);
         vm.stopPrank();
         assertEq(id, 1);
+    }
+
+    function test_SubmitContent_SnapshotsCanonicalSubmitterIdentityForDelegate() public {
+        vm.prank(owner);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+
+        mockVoterIdNFT.setHolder(submitter);
+        vm.prank(submitter);
+        mockVoterIdNFT.setDelegate(delegate);
+
+        vm.startPrank(delegate);
+        crepToken.approve(address(registry), 10e6);
+        uint256 id = registry.submitContent("https://example.com/delegate-submit", "goal", "tags", 0);
+        vm.stopPrank();
+
+        assertEq(registry.getSubmitter(id), delegate, "raw submitter should remain delegate wallet");
+        assertEq(registry.getSubmitterIdentity(id), submitter, "submitter identity should snapshot the holder");
+    }
+
+    function test_GetSubmitterIdentity_ResolvesLegacyRawSubmitterViaCurrentDelegateMapping() public {
+        vm.startPrank(delegate);
+        crepToken.approve(address(registry), 10e6);
+        uint256 id = registry.submitContent("https://example.com/legacy-delegate-submit", "goal", "tags", 0);
+        vm.stopPrank();
+
+        assertEq(registry.getSubmitterIdentity(id), delegate, "legacy content should default to raw submitter");
+
+        vm.prank(owner);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+        mockVoterIdNFT.setHolder(submitter);
+        vm.prank(submitter);
+        mockVoterIdNFT.setDelegate(delegate);
+
+        assertEq(registry.getSubmitterIdentity(id), submitter, "current delegate mapping should refine legacy identity");
+    }
+
+    function test_BackfillSubmitterIdentity_OverridesLegacyRawIdentity() public {
+        vm.startPrank(delegate);
+        crepToken.approve(address(registry), 10e6);
+        uint256 id = registry.submitContent("https://example.com/backfill-submit", "goal", "tags", 0);
+        vm.stopPrank();
+
+        assertEq(registry.getSubmitterIdentity(id), delegate, "legacy content should start with raw identity");
+
+        vm.prank(owner);
+        registry.backfillSubmitterIdentity(id, submitter);
+
+        assertEq(registry.getSubmitterIdentity(id), submitter, "governance backfill should pin canonical identity");
+
+        vm.prank(owner);
+        vm.expectRevert("Submitter identity already set");
+        registry.backfillSubmitterIdentity(id, delegate);
     }
 
     function test_SubmitContent_VoterIdNotConfigured_Succeeds() public {

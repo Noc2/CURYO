@@ -37,11 +37,17 @@ contract MockVoterIdNFT is IVoterIdNFT {
     }
 
     function hasVoterId(address holder) external view returns (bool) {
-        return holders[holder];
+        if (holders[holder]) return true;
+        address delegator = delegateToHolder[holder];
+        return delegator != address(0) && holders[delegator];
     }
 
     function getTokenId(address holder) external view returns (uint256) {
-        return tokenIds[holder];
+        uint256 tokenId = tokenIds[holder];
+        if (tokenId != 0) return tokenId;
+        address delegator = delegateToHolder[holder];
+        if (delegator != address(0)) return tokenIds[delegator];
+        return 0;
     }
 
     function getHolder(uint256 tokenId) external view returns (address) {

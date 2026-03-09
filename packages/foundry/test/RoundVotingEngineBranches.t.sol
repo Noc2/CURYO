@@ -1252,6 +1252,46 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
     }
 
+    function test_Commit_SelfVote_DelegateSubmittedContentRevertsForHolderAndDelegate() public {
+        vm.prank(owner);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+        vm.prank(owner);
+        engine.setVoterIdNFT(address(mockVoterIdNFT));
+
+        mockVoterIdNFT.setHolder(submitter);
+        vm.prank(submitter);
+        mockVoterIdNFT.setDelegate(delegate1);
+
+        uint256 contentId;
+        vm.startPrank(delegate1);
+        crepToken.approve(address(registry), 10e6);
+        contentId = registry.submitContent("https://example.com/delegate-self-vote", "goal", "tags", 0);
+        vm.stopPrank();
+
+        bytes32 saltDelegate = keccak256(abi.encodePacked(delegate1, block.timestamp, "delegate"));
+        bytes memory ciphertextDelegate = _testCiphertext(false, saltDelegate, contentId);
+        bytes32 commitHashDelegate = _commitHash(false, saltDelegate, contentId, ciphertextDelegate);
+
+        vm.prank(delegate1);
+        crepToken.approve(address(engine), STAKE);
+        vm.prank(delegate1);
+        vm.expectRevert(RoundVotingEngine.SelfVote.selector);
+        engine.commitVote(contentId, commitHashDelegate, ciphertextDelegate, STAKE, address(0));
+
+        vm.prank(submitter);
+        mockVoterIdNFT.removeDelegate();
+
+        bytes32 saltHolder = keccak256(abi.encodePacked(submitter, block.timestamp, "holder"));
+        bytes memory ciphertextHolder = _testCiphertext(true, saltHolder, contentId);
+        bytes32 commitHashHolder = _commitHash(true, saltHolder, contentId, ciphertextHolder);
+
+        vm.prank(submitter);
+        crepToken.approve(address(engine), STAKE);
+        vm.prank(submitter);
+        vm.expectRevert(RoundVotingEngine.SelfVote.selector);
+        engine.commitVote(contentId, commitHashHolder, ciphertextHolder, STAKE, address(0));
+    }
+
     function test_Commit_CooldownActive_Reverts() public {
         uint256 contentId = _submitContent();
 

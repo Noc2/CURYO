@@ -86,8 +86,11 @@ contract ContentRegistry is
     /// @notice URL hash per content ID (for clearing urlSubmitted on cancel)
     mapping(uint256 => bytes32) internal contentUrlHash;
 
+    /// @notice Canonical submitter identity snapshot (holder address if submitted through a delegate).
+    mapping(uint256 => address) internal contentSubmitterIdentity;
+
     /// @dev Reserved storage gap for future upgrades
-    uint256[49] private __gap;
+    uint256[48] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -104,6 +107,7 @@ contract ContentRegistry is
     event ContentRevived(uint256 indexed contentId, address indexed reviver);
     event SubmitterStakeReturned(uint256 indexed contentId, uint256 amount);
     event SubmitterStakeSlashed(uint256 indexed contentId, uint256 slashedAmount);
+    event SubmitterIdentityBackfilled(uint256 indexed contentId, address indexed submitterIdentity);
     event RatingUpdated(uint256 indexed contentId, uint256 oldRating, uint256 newRating);
     event VoterIdNFTUpdated(address voterIdNFT);
 
@@ -212,11 +216,13 @@ contract ContentRegistry is
         urlSubmitted[urlHash] = true;
 
         bytes32 contentHash = keccak256(abi.encode(url, goal, tags));
+        address submitterIdentity = _resolveSubmitterIdentity(msg.sender);
 
         crepToken.safeTransferFrom(msg.sender, address(this), MIN_SUBMITTER_STAKE);
 
         uint256 contentId = nextContentId++;
         contentUrlHash[contentId] = urlHash;
+        contentSubmitterIdentity[contentId] = submitterIdentity;
         contents[contentId] = Content({
             id: contentId,
             contentHash: contentHash,
@@ -381,6 +387,19 @@ contract ContentRegistry is
         emit SubmitterStakeSlashed(contentId, slashAmount);
     }
 
+    /// @notice Backfill canonical submitter identity for legacy content created before identity snapshots existed.
+    function backfillSubmitterIdentity(uint256 contentId, address submitterIdentity) external onlyRole(CONFIG_ROLE) {
+        require(submitterIdentity != address(0), "Invalid address");
+        Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
+
+        address currentIdentity = contentSubmitterIdentity[contentId];
+        require(currentIdentity == address(0) || currentIdentity == c.submitter, "Submitter identity already set");
+
+        contentSubmitterIdentity[contentId] = submitterIdentity;
+        emit SubmitterIdentityBackfilled(contentId, submitterIdentity);
+    }
+
     // --- View functions ---
 
     function getContent(uint256 contentId) external view returns (Content memory) {
@@ -389,6 +408,18 @@ contract ContentRegistry is
 
     function getSubmitter(uint256 contentId) external view returns (address) {
         return contents[contentId].submitter;
+    }
+
+    function getSubmitterIdentity(uint256 contentId) external view returns (address) {
+        address submitterIdentity = contentSubmitterIdentity[contentId];
+        address submitter = contents[contentId].submitter;
+        if (submitter == address(0)) return address(0);
+
+        address resolvedSubmitter = _resolveSubmitterIdentity(submitter);
+        if (submitterIdentity == address(0) || submitterIdentity == submitter) {
+            return resolvedSubmitter;
+        }
+        return submitterIdentity;
     }
 
     function isActive(uint256 contentId) external view returns (bool) {
@@ -414,6 +445,17 @@ contract ContentRegistry is
 
     function getCategoryId(uint256 contentId) external view returns (uint256) {
         return contents[contentId].categoryId;
+    }
+
+    function _resolveSubmitterIdentity(address submitter) internal view returns (address) {
+        if (submitter == address(0)) return address(0);
+        if (address(voterIdNFT) != address(0)) {
+            address resolved = voterIdNFT.resolveHolder(submitter);
+            if (resolved != address(0)) {
+                return resolved;
+            }
+        }
+        return submitter;
     }
 
     // --- Admin ---
