@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { Vm } from "forge-std/Test.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Vm} from "forge-std/Test.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
 
 contract RevertingParticipationPool {
     function getCurrentRateBps() external pure returns (uint256) {
@@ -1445,6 +1445,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.prank(frontendOp);
         frontendReg.deregister();
+        _completeFrontendExit(frontendReg, frontendOp);
 
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
@@ -1471,6 +1472,11 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.startPrank(frontendOp);
         frontendReg.deregister();
+        vm.stopPrank();
+
+        _completeFrontendExit(frontendReg, frontendOp);
+
+        vm.startPrank(frontendOp);
         crepToken.approve(address(frontendReg), 1000e6);
         frontendReg.register();
         vm.stopPrank();
@@ -1496,6 +1502,95 @@ contract RoundIntegrationTest is VotingTestBase {
         assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
         assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Unslashed frontend should receive preserved fees");
         assertFalse(frontendReg.isApproved(frontendOp), "Unslashing should not silently restore approval");
+    }
+
+    function test_ClaimFrontendFee_UsesCommitTimeApprovalSnapshot() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        uint256 contentId = _submitContent();
+
+        bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
+        bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
+        bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(2)));
+        bytes32 ch1 = _commitHash(true, s1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, contentId);
+        bytes32 ch3 = _commitHash(false, s3, contentId);
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, frontendOp);
+        vm.stopPrank();
+
+        vm.startPrank(voter2);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, frontendOp);
+        vm.stopPrank();
+
+        vm.startPrank(voter3);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, frontendOp);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        frontendReg.revokeFrontend(frontendOp);
+
+        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
+
+        assertEq(votingEngine.roundStakeWithApprovedFrontend(contentId, roundId), STAKE * 3);
+
+        votingEngine.settleRound(contentId, roundId);
+        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+
+        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "commit-time approval should remain eligible");
+    }
+
+    function test_ClaimFrontendFee_IgnoresFrontendApprovedAfterCommit() public {
+        (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
+        vm.prank(owner);
+        frontendReg.revokeFrontend(frontendOp);
+
+        uint256 contentId = _submitContent();
+
+        bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
+        bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(1)));
+        bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(2)));
+        bytes32 ch1 = _commitHash(true, s1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, contentId);
+        bytes32 ch3 = _commitHash(false, s3, contentId);
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, frontendOp);
+        vm.stopPrank();
+
+        vm.startPrank(voter2);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, frontendOp);
+        vm.stopPrank();
+
+        vm.startPrank(voter3);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, frontendOp);
+        vm.stopPrank();
+
+        vm.prank(owner);
+        frontendReg.approveFrontend(frontendOp);
+
+        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
+
+        assertEq(votingEngine.roundStakeWithApprovedFrontend(contentId, roundId), 0);
+
+        votingEngine.settleRound(contentId, roundId);
+        assertEq(votingEngine.roundFrontendPool(contentId, roundId), 0);
     }
 
     function test_FrontendTrackingGetters_ReturnCommittedStakeAndKeys() public {
@@ -1530,6 +1625,12 @@ contract RoundIntegrationTest is VotingTestBase {
         // Voter pool should include the frontend share
         uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
         assertGt(voterPool, 0);
+    }
+
+    function _completeFrontendExit(FrontendRegistry frontendReg, address frontendOp) internal {
+        vm.warp(block.timestamp + frontendReg.UNBONDING_PERIOD() + 1);
+        vm.prank(frontendOp);
+        frontendReg.completeDeregister();
     }
 
     // =========================================================================

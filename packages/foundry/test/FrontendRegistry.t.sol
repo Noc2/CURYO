@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test, console } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
+import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
 
 /// @title Mock RoundVotingEngine for testing FrontendRegistry
 contract MockVotingEngine is IRoundVotingEngine {
@@ -27,9 +28,9 @@ contract MockVotingEngine is IRoundVotingEngine {
         return false;
     }
 
-    function transferReward(address, uint256) external override { }
-    function claimFrontendFee(uint256, uint256, address) external override { }
-    function claimParticipationReward(uint256, uint256) external override { }
+    function transferReward(address, uint256) external override {}
+    function claimFrontendFee(uint256, uint256, address) external override {}
+    function claimParticipationReward(uint256, uint256) external override {}
 }
 
 /// @title FrontendRegistry Test Suite
@@ -129,10 +130,14 @@ contract FrontendRegistryTest is Test {
         registry.register();
         vm.stopPrank();
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
-
         vm.prank(frontend1);
         registry.deregister();
+
+        uint256 availableAt = registry.frontendExitAvailableAt(frontend1);
+        assertEq(availableAt, block.timestamp + registry.UNBONDING_PERIOD());
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        _completeDeregister(frontend1);
 
         uint256 balanceAfter = crepToken.balanceOf(frontend1);
         assertEq(balanceAfter - balanceBefore, STAKE);
@@ -173,10 +178,11 @@ contract FrontendRegistryTest is Test {
         vm.prank(feeCreditor);
         registry.creditFees(frontend1, 200e6);
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
-
         vm.prank(frontend1);
         registry.deregister();
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        _completeDeregister(frontend1);
 
         // Should receive stake + pending fees
         uint256 balanceAfter = crepToken.balanceOf(frontend1);
@@ -186,13 +192,34 @@ contract FrontendRegistryTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
+    function test_RevertClaimFeesWhileExitPending() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        vm.prank(frontend1);
+        registry.deregister();
+
+        vm.prank(frontend1);
+        vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);
+        registry.claimFees();
+    }
+
     function test_ReregisterAfterDeregister() public {
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
         registry.deregister();
+        vm.stopPrank();
+
+        _completeDeregister(frontend1);
 
         // Should be able to register again
+        vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
@@ -213,9 +240,11 @@ contract FrontendRegistryTest is Test {
         registry.unslashFrontend(frontend1);
         vm.stopPrank();
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
         vm.prank(frontend1);
         registry.deregister();
+
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        _completeDeregister(frontend1);
 
         // Should return remaining 500e6 (half was slashed)
         uint256 balanceAfter = crepToken.balanceOf(frontend1);
@@ -259,6 +288,20 @@ contract FrontendRegistryTest is Test {
         vm.expectRevert("Frontend is slashed");
         registry.approveFrontend(frontend1);
         vm.stopPrank();
+    }
+
+    function test_RevertApproveFrontendWhileExitPending() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(frontend1);
+        registry.deregister();
+
+        vm.prank(admin);
+        vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);
+        registry.approveFrontend(frontend1);
     }
 
     function test_RevokeFrontend() public {
@@ -501,5 +544,11 @@ contract FrontendRegistryTest is Test {
         vm.prank(newCreditor);
         vm.expectRevert();
         registry.creditFees(frontend1, 100e6);
+    }
+
+    function _completeDeregister(address frontend) internal {
+        vm.warp(block.timestamp + registry.UNBONDING_PERIOD() + 1);
+        vm.prank(frontend);
+        registry.completeDeregister();
     }
 }

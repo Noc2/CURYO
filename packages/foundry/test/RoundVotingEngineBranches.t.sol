@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 
 // =========================================================================
 // TEST CONTRACT
@@ -789,7 +789,7 @@ contract RoundVotingEngineBranchesTest is Test {
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
 
-        // Frontend stake tracked at reveal time
+        // Frontend stake tracked using the commit-time approval snapshot
         uint256 fStake = engine.roundStakeWithApprovedFrontend(contentId, roundId);
         assertEq(fStake, STAKE); // only voter1 used approved frontend
 
@@ -931,6 +931,12 @@ contract RoundVotingEngineBranchesTest is Test {
     }
 
     function test_ProcessUnrevealed_RefundsCurrentEpochVotes() public {
+        vm.startPrank(owner);
+        crepToken.approve(address(engine), 100e6);
+        engine.fundKeeperRewardPool(100e6);
+        engine.setKeeperReward(10e6);
+        vm.stopPrank();
+
         uint256 contentId = _submitContent();
 
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
@@ -957,11 +963,53 @@ contract RoundVotingEngineBranchesTest is Test {
         engine.settleRound(contentId, roundId);
 
         uint256 voter4BalBefore = crepToken.balanceOf(voter4);
+        uint256 keeperBalBefore = crepToken.balanceOf(keeper);
+        vm.prank(keeper);
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
         uint256 voter4BalAfter = crepToken.balanceOf(voter4);
+        uint256 keeperBalAfter = crepToken.balanceOf(keeper);
 
         // voter4 committed in epoch 3; their epoch hadn't ended at settlement => refunded
         assertEq(voter4BalAfter - voter4BalBefore, STAKE);
+        assertEq(keeperBalAfter, keeperBalBefore, "refund-only cleanup must not pay keeper rewards");
+    }
+
+    function test_ProcessUnrevealed_ForfeitureRewardPaidOnlyOncePerRound() public {
+        vm.startPrank(owner);
+        crepToken.approve(address(engine), 100e6);
+        engine.fundKeeperRewardPool(100e6);
+        engine.setKeeperReward(10e6);
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        _commit(voter1, contentId, true, STAKE);
+        _commit(voter2, contentId, false, STAKE);
+        (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, true, STAKE);
+        (bytes32 ck4, bytes32 s4) = _commit(voter4, contentId, true, STAKE);
+        (bytes32 ck5, bytes32 s5) = _commit(voter5, contentId, false, STAKE);
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        vm.warp(round.startTime + EPOCH + engine.revealGracePeriod() + 1);
+        _reveal(contentId, roundId, ck3, true, s3);
+        _reveal(contentId, roundId, ck4, true, s4);
+        _reveal(contentId, roundId, ck5, false, s5);
+        engine.settleRound(contentId, roundId);
+
+        uint256 keeperBalBefore = crepToken.balanceOf(keeper);
+
+        vm.prank(keeper);
+        engine.processUnrevealedVotes(contentId, roundId, 0, 1);
+        uint256 afterFirstBatch = crepToken.balanceOf(keeper);
+
+        vm.prank(keeper);
+        engine.processUnrevealedVotes(contentId, roundId, 1, 1);
+        uint256 afterSecondBatch = crepToken.balanceOf(keeper);
+
+        assertEq(afterFirstBatch - keeperBalBefore, 10e6, "first forfeiture batch should pay keeper");
+        assertEq(afterSecondBatch, afterFirstBatch, "later batches in same round must not repay keeper");
+        assertTrue(engine.roundCleanupRewarded(contentId, roundId));
     }
 
     function test_ProcessUnrevealed_RevertsIfRoundOpen() public {

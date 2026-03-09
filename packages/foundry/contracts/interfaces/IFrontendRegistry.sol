@@ -5,6 +5,7 @@ pragma solidity ^0.8.20;
 /// @notice Interface for the FrontendRegistry contract that manages frontend operator registration and fees
 interface IFrontendRegistry {
     error FrontendIsSlashed();
+    error FrontendExitPending();
 
     /// @notice Check if a frontend address is approved to earn fees
     /// @param frontend The frontend address to check

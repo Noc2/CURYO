@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
-import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
-import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
+import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
 
 /// @title FrontendRegistry
 /// @notice Manages frontend operator registration (fixed 1,000 cREP stake) and fee distribution.
@@ -35,6 +35,9 @@ contract FrontendRegistry is
     /// @notice Fixed cREP stake required for frontend registration (1,000 cREP with 6 decimals)
     uint256 public constant STAKE_AMOUNT = 1000e6;
 
+    /// @notice Slashable cooldown before a frontend can complete a voluntary exit.
+    uint256 public constant UNBONDING_PERIOD = 14 days;
+
     // --- Structs ---
     struct Frontend {
         address operator;
@@ -53,14 +56,16 @@ contract FrontendRegistry is
     mapping(address => Frontend) public frontends;
     address[] public registeredFrontends;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
+    mapping(address => uint256) public frontendExitAvailableAt;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     // --- Events ---
     event FrontendRegistered(address indexed frontend, address indexed operator, uint256 stakedAmount);
     event FrontendApproved(address indexed frontend);
     event FrontendSlashed(address indexed frontend, uint256 amount, string reason);
+    event FrontendExitRequested(address indexed frontend, uint256 availableAt);
     event FrontendDeregistered(address indexed frontend);
     event FeesCredited(address indexed frontend, uint256 crepAmount);
     event FeesClaimed(address indexed frontend, uint256 crepAmount);
@@ -184,11 +189,24 @@ contract FrontendRegistry is
         emit FrontendRegistered(msg.sender, msg.sender, STAKE_AMOUNT);
     }
 
-    /// @notice Voluntarily deregister and reclaim stake + pending fees (if not slashed)
+    /// @notice Start voluntary deregistration. Stake remains slashable during unbonding.
+    function requestDeregister() external nonReentrant {
+        _requestDeregister(msg.sender);
+    }
+
+    /// @notice Backward-compatible alias for requestDeregister().
     function deregister() external nonReentrant {
+        _requestDeregister(msg.sender);
+    }
+
+    /// @notice Complete deregistration after the unbonding window has elapsed.
+    function completeDeregister() external nonReentrant {
         Frontend storage f = frontends[msg.sender];
         require(f.operator != address(0), "Not registered");
         require(!f.slashed, "Frontend is slashed");
+        uint256 availableAt = frontendExitAvailableAt[msg.sender];
+        require(availableAt != 0, "Exit not requested");
+        require(block.timestamp >= availableAt, "Unbonding period active");
 
         uint256 refund = f.stakedAmount;
         uint256 pendingFees = f.crepFees;
@@ -196,6 +214,7 @@ contract FrontendRegistry is
         f.crepFees = 0;
         f.approved = false;
         f.operator = address(0); // Allow re-registration
+        delete frontendExitAvailableAt[msg.sender];
 
         uint256 total = refund + pendingFees;
         if (total > 0) {
@@ -213,6 +232,7 @@ contract FrontendRegistry is
         Frontend storage f = frontends[msg.sender];
         require(f.operator != address(0), "Not registered");
         if (f.slashed) revert FrontendIsSlashed();
+        if (frontendExitAvailableAt[msg.sender] != 0) revert FrontendExitPending();
 
         uint256 crepAmount = f.crepFees;
 
@@ -245,6 +265,7 @@ contract FrontendRegistry is
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
+        if (frontendExitAvailableAt[frontend] != 0) revert FrontendExitPending();
 
         f.approved = true;
 
@@ -326,5 +347,19 @@ contract FrontendRegistry is
         _revokeRole(FEE_CREDITOR_ROLE, creditor);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+
+    function _requestDeregister(address frontend) internal {
+        Frontend storage f = frontends[frontend];
+        require(f.operator != address(0), "Not registered");
+        require(!f.slashed, "Frontend is slashed");
+        if (frontendExitAvailableAt[frontend] != 0) revert FrontendExitPending();
+
+        f.approved = false;
+
+        uint256 availableAt = block.timestamp + UNBONDING_PERIOD;
+        frontendExitAvailableAt[frontend] = availableAt;
+
+        emit FrontendExitRequested(frontend, availableAt);
+    }
 }

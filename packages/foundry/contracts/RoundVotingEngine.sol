@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
-import { ContentRegistry } from "./ContentRegistry.sol";
-import { RoundLib } from "./libraries/RoundLib.sol";
-import { RewardMath } from "./libraries/RewardMath.sol";
-import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
-import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
-import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
-import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
-import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
+import {ContentRegistry} from "./ContentRegistry.sol";
+import {RoundLib} from "./libraries/RoundLib.sol";
+import {RewardMath} from "./libraries/RewardMath.sol";
+import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
+import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
+import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
+import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
+import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
 
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with tlock commit-reveal and epoch-weighted rewards.
@@ -281,7 +281,7 @@ contract RoundVotingEngine is
         registry = ContentRegistry(_registry);
 
         // Default config: 20-minute epochs, 7-day max, 3 min voters
-        config = RoundLib.RoundConfig({ epochDuration: 20 minutes, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
+        config = RoundLib.RoundConfig({epochDuration: 20 minutes, maxDuration: 7 days, minVoters: 3, maxVoters: 1000});
 
         // Default reveal grace period: 60 minutes (3 epochs)
         revealGracePeriod = 60 minutes;
@@ -424,8 +424,8 @@ contract RoundVotingEngine is
         bytes32 s,
         address frontend
     ) external nonReentrant whenNotPaused {
-        try IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s) { }
-            catch { }
+        try IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s) {}
+            catch {}
         _commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend);
     }
 
@@ -515,6 +515,16 @@ contract RoundVotingEngine is
             epochIndex: epochIdx
         });
         commitHashByKey[contentId][roundId][commitKey] = commitHash;
+
+        if (frontend != address(0) && address(frontendRegistry) != address(0)) {
+            try frontendRegistry.isApproved(frontend) returns (bool approved) {
+                if (approved) {
+                    frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
+                }
+            } catch {
+                // Frontend registry call failed — treat as ineligible
+            }
+        }
 
         // Track for iteration
         roundCommitHashes[contentId][roundId].push(commitKey);
@@ -643,8 +653,8 @@ contract RoundVotingEngine is
             uint256 epochEnd = round.startTime + roundCfg.epochDuration;
             uint256 maxEpochEnd = round.startTime + roundCfg.maxDuration + roundCfg.epochDuration;
             while (epochEnd <= block.timestamp && epochEnd <= maxEpochEnd) {
-                if (epochUnrevealedCount[contentId][roundId][epochEnd] > 0
-                    && block.timestamp < epochEnd + _gracePeriod) {
+                if (epochUnrevealedCount[contentId][roundId][epochEnd] > 0 && block.timestamp < epochEnd + _gracePeriod)
+                {
                     revert UnrevealedPastEpochVotes();
                 }
                 epochEnd += roundCfg.epochDuration;
@@ -707,7 +717,7 @@ contract RoundVotingEngine is
                 }
 
                 if (categorySubmitterShare > 0) {
-                    try this.distributeCategoryFeeExternal(contentId, roundId, categorySubmitterShare) { }
+                    try this.distributeCategoryFeeExternal(contentId, roundId, categorySubmitterShare) {}
                     catch {
                         roundVoterPool[contentId][roundId] += categorySubmitterShare;
                         emit SettlementSideEffectFailed(contentId, roundId, REASON_CATEGORY_FEE);
@@ -747,12 +757,12 @@ contract RoundVotingEngine is
 
         // Update content rating using raw revealed pools (accurate crowd opinion)
         uint16 newRating = RewardMath.calculateRating(round.upPool, round.downPool);
-        try registry.updateRatingDirect(contentId, newRating) { }
+        try registry.updateRatingDirect(contentId, newRating) {}
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_UPDATE_RATING);
         }
 
-        try registry.updateActivity(contentId) { }
+        try registry.updateActivity(contentId) {}
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_UPDATE_ACTIVITY);
         }
@@ -769,7 +779,7 @@ contract RoundVotingEngine is
         }
 
         // Check submitter stake return/slash conditions
-        try this.checkSubmitterStakeExternal(contentId) { }
+        try this.checkSubmitterStakeExternal(contentId) {}
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_SUBMITTER_STAKE);
         }
@@ -844,7 +854,7 @@ contract RoundVotingEngine is
         address frontendOperator;
         bool frontendSlashed;
         if (fee > 0) {
-            (frontendOperator,, , frontendSlashed) = frontendRegistry.getFrontendInfo(frontend);
+            (frontendOperator,,, frontendSlashed) = frontendRegistry.getFrontendInfo(frontend);
             if (frontendSlashed) revert IFrontendRegistry.FrontendIsSlashed();
         }
 
@@ -1025,9 +1035,11 @@ contract RoundVotingEngine is
             emit CurrentEpochRefunded(contentId, roundId, refundedCrep);
         }
 
-        // Only reward keeper when at least one commit was actually processed
         if (forfeitedCrep == 0 && refundedCrep == 0) revert NothingProcessed();
-        _rewardKeeper(OP_PROCESS_UNREVEALED);
+        if (forfeitedCrep > 0 && !roundCleanupRewarded[contentId][roundId]) {
+            roundCleanupRewarded[contentId][roundId] = true;
+            _rewardKeeper(OP_PROCESS_UNREVEALED);
+        }
     }
 
     // =========================================================================
@@ -1123,19 +1135,13 @@ contract RoundVotingEngine is
         // Track voter for settlement iteration
         roundVoters[contentId][roundId].push(commit.voter);
 
-        // Aggregate frontend fee data for O(1) settlement
-        if (commit.frontend != address(0) && address(frontendRegistry) != address(0)) {
-            try frontendRegistry.isApproved(commit.frontend) returns (bool approved) {
-                if (approved) {
-                    roundStakeWithApprovedFrontend[contentId][roundId] += commit.stakeAmount;
-                    if (roundPerFrontendStake[contentId][roundId][commit.frontend] == 0) {
-                        roundApprovedFrontendCount[contentId][roundId]++;
-                    }
-                    roundPerFrontendStake[contentId][roundId][commit.frontend] += commit.stakeAmount;
-                }
-            } catch {
-                // Frontend registry call failed — treat as not approved
+        // Aggregate frontend fee data using commit-time eligibility, not reveal-time status.
+        if (commit.frontend != address(0) && frontendEligibleAtCommit[contentId][roundId][commitKey]) {
+            roundStakeWithApprovedFrontend[contentId][roundId] += commit.stakeAmount;
+            if (roundPerFrontendStake[contentId][roundId][commit.frontend] == 0) {
+                roundApprovedFrontendCount[contentId][roundId]++;
             }
+            roundPerFrontendStake[contentId][roundId][commit.frontend] += commit.stakeAmount;
         }
 
         emit VoteRevealed(contentId, roundId, commit.voter, isUp);
@@ -1262,7 +1268,7 @@ contract RoundVotingEngine is
         _unpause();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
 
     // =========================================================================
     // POST-UPGRADE STORAGE — UUPS LAYOUT COMPATIBILITY
@@ -1294,6 +1300,12 @@ contract RoundVotingEngine is
     // Per-round reveal grace period snapshot for governance consistency across open rounds.
     mapping(uint256 => mapping(uint256 => uint256)) public roundRevealGracePeriodSnapshot;
 
+    // Commit-time frontend approval snapshot to prevent retroactive fee eligibility changes.
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) public frontendEligibleAtCommit;
+
+    // Keeper cleanup rewards can only be paid once per round, and only when actual forfeitures occur.
+    mapping(uint256 => mapping(uint256 => bool)) public roundCleanupRewarded;
+
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[17] private __gap;
+    uint256[15] private __gap;
 }

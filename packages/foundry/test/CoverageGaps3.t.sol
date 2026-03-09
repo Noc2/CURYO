@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test, Vm } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { HumanFaucet } from "../contracts/HumanFaucet.sol";
-import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { RewardMath } from "../contracts/libraries/RewardMath.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
-import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
-import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
+import {Test, Vm} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {HumanFaucet} from "../contracts/HumanFaucet.sol";
+import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import {ISelfVerificationRoot} from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {RewardMath} from "../contracts/libraries/RewardMath.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
+import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
 
 // =========================================================================
 // MOCKS
@@ -39,9 +39,9 @@ contract MockVotingEngine3 is IRoundVotingEngine {
     function hasUnrevealedVotes(uint256) external pure override returns (bool) {
         return false;
     }
-    function transferReward(address, uint256) external override { }
-    function claimFrontendFee(uint256, uint256, address) external override { }
-    function claimParticipationReward(uint256, uint256) external override { }
+    function transferReward(address, uint256) external override {}
+    function claimFrontendFee(uint256, uint256, address) external override {}
+    function claimParticipationReward(uint256, uint256) external override {}
 }
 
 // =========================================================================
@@ -189,9 +189,10 @@ contract FrontendRegistryEdgeCaseTest is Test {
     function test_DeregisterZeroFees_RefundsStakeOnly() public {
         _registerFrontend(frontend1);
 
-        uint256 balBefore = crep.balanceOf(frontend1);
         vm.prank(frontend1);
         reg.deregister();
+        uint256 balBefore = crep.balanceOf(frontend1);
+        _completeDeregister(frontend1);
         assertEq(crep.balanceOf(frontend1) - balBefore, STAKE);
     }
 
@@ -203,11 +204,13 @@ contract FrontendRegistryEdgeCaseTest is Test {
         vm.prank(creditor);
         reg.creditFees(frontend1, 500e6);
 
+        vm.prank(frontend1);
+        reg.deregister();
+
         vm.expectEmit(true, false, false, true);
         emit FrontendRegistry.FeesClaimed(frontend1, 500e6);
 
-        vm.prank(frontend1);
-        reg.deregister();
+        _completeDeregister(frontend1);
     }
 
     function test_DeregisterWithoutFees_NoFeesClaimedEvent() public {
@@ -216,6 +219,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
         vm.recordLogs();
         vm.prank(frontend1);
         reg.deregister();
+        _completeDeregister(frontend1);
 
         // Check that FeesClaimed was NOT emitted
         Vm.Log[] memory logs = vm.getRecordedLogs();
@@ -238,6 +242,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
 
         vm.prank(frontend1);
         reg.deregister();
+        _completeDeregister(frontend1);
 
         // Re-register
         vm.startPrank(frontend1);
@@ -273,6 +278,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
 
         vm.prank(frontend1);
         reg.deregister();
+        _completeDeregister(frontend1);
 
         vm.prank(frontend1);
         vm.expectRevert("Not registered");
@@ -330,6 +336,12 @@ contract FrontendRegistryEdgeCaseTest is Test {
         crep.approve(address(reg), STAKE);
         reg.register();
         vm.stopPrank();
+    }
+
+    function _completeDeregister(address fe) internal {
+        vm.warp(block.timestamp + reg.UNBONDING_PERIOD() + 1);
+        vm.prank(fe);
+        reg.completeDeregister();
     }
 
     function _getFrontendFull(address fe) internal view returns (address, uint256, bool, bool, uint256) {
@@ -1270,13 +1282,13 @@ contract RoundSettlementEdgeCase3Test is Test {
                 assembly {
                     salt := mload(add(ct, 33))
                 }
-                try engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }
+                try engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) {} catch {}
             }
         }
 
         RoundLib.Round memory r2 = engine.getRound(contentId, roundId);
         if (r2.thresholdReachedAt > 0) {
-            try engine.settleRound(contentId, roundId) { } catch { }
+            try engine.settleRound(contentId, roundId) {} catch {}
         }
     }
 

@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { HumanFaucet } from "../contracts/HumanFaucet.sol";
-import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVerificationHub.sol";
-import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
-import { ContentRegistry } from "../contracts/ContentRegistry.sol";
-import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
-import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
-import { ParticipationPool } from "../contracts/ParticipationPool.sol";
-import { RoundLib } from "../contracts/libraries/RoundLib.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
-import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
-import { IParticipationPool } from "../contracts/interfaces/IParticipationPool.sol";
-import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {HumanFaucet} from "../contracts/HumanFaucet.sol";
+import {MockIdentityVerificationHub} from "../contracts/mocks/MockIdentityVerificationHub.sol";
+import {ISelfVerificationRoot} from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
+import {ContentRegistry} from "../contracts/ContentRegistry.sol";
+import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
+import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
+import {ParticipationPool} from "../contracts/ParticipationPool.sol";
+import {RoundLib} from "../contracts/libraries/RoundLib.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
+import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
+import {IParticipationPool} from "../contracts/interfaces/IParticipationPool.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 // =========================================================================
 // SHARED MOCKS
@@ -40,9 +40,9 @@ contract MockVotingEngineForFR2 is IRoundVotingEngine {
     function hasUnrevealedVotes(uint256) external pure override returns (bool) {
         return false;
     }
-    function transferReward(address, uint256) external override { }
-    function claimFrontendFee(uint256, uint256, address) external override { }
-    function claimParticipationReward(uint256, uint256) external override { }
+    function transferReward(address, uint256) external override {}
+    function claimFrontendFee(uint256, uint256, address) external override {}
+    function claimParticipationReward(uint256, uint256) external override {}
 }
 
 // =========================================================================
@@ -153,6 +153,8 @@ contract FrontendRegistryBranchTest is Test {
         vm.prank(frontend1);
         reg.deregister();
 
+        _completeDeregister(frontend1);
+
         (address op,,,) = reg.getFrontendInfo(frontend1);
         assertEq(op, address(0));
 
@@ -173,9 +175,10 @@ contract FrontendRegistryBranchTest is Test {
         vm.prank(creditor);
         reg.creditFees(frontend1, 500e6);
 
-        uint256 balBefore = crep.balanceOf(frontend1);
         vm.prank(frontend1);
         reg.deregister();
+        uint256 balBefore = crep.balanceOf(frontend1);
+        _completeDeregister(frontend1);
         uint256 balAfter = crep.balanceOf(frontend1);
 
         // Should get stake + fees
@@ -328,6 +331,12 @@ contract FrontendRegistryBranchTest is Test {
         crep.approve(address(reg), STAKE);
         reg.register();
         vm.stopPrank();
+    }
+
+    function _completeDeregister(address fe) internal {
+        vm.warp(block.timestamp + reg.UNBONDING_PERIOD() + 1);
+        vm.prank(fe);
+        reg.completeDeregister();
     }
 }
 

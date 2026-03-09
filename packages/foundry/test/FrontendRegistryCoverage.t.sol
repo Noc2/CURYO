@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { CuryoReputation } from "../contracts/CuryoReputation.sol";
-import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
-import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
-import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import {Test} from "forge-std/Test.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import {CuryoReputation} from "../contracts/CuryoReputation.sol";
+import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
+import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
+import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 
 // =========================================================================
 // MOCKS
@@ -32,9 +32,9 @@ contract MockVotingEngine_FR is IRoundVotingEngine {
         return false;
     }
 
-    function transferReward(address, uint256) external override { }
-    function claimFrontendFee(uint256, uint256, address) external override { }
-    function claimParticipationReward(uint256, uint256) external override { }
+    function transferReward(address, uint256) external override {}
+    function claimFrontendFee(uint256, uint256, address) external override {}
+    function claimParticipationReward(uint256, uint256) external override {}
 }
 
 // =========================================================================
@@ -357,9 +357,10 @@ contract FrontendRegistryCoverageTest is Test {
         registry.unslashFrontend(frontend1);
         vm.stopPrank();
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
         vm.prank(frontend1);
         registry.deregister();
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+        _completeDeregister(frontend1);
         uint256 balanceAfter = crepToken.balanceOf(frontend1);
 
         // No stake to return, no fees
@@ -376,7 +377,8 @@ contract FrontendRegistryCoverageTest is Test {
         vm.stopPrank();
 
         vm.prank(frontend1);
-        registry.deregister(); // Should not revert even with total=0
+        registry.deregister();
+        _completeDeregister(frontend1); // Should not revert even with total=0
 
         (address operator,,,) = registry.getFrontendInfo(frontend1);
         assertEq(operator, address(0));
@@ -526,7 +528,7 @@ contract FrontendRegistryCoverageTest is Test {
         vm.prank(frontend1);
         registry.deregister();
 
-        // frontend1 is still in the list (just has operator=0)
+        // frontend1 is still in the list while unbonding
         address[] memory frontends = registry.getRegisteredFrontends();
         assertEq(frontends.length, 2);
     }
@@ -615,9 +617,11 @@ contract FrontendRegistryCoverageTest is Test {
         _registerFrontend(frontend1);
 
         vm.prank(frontend1);
+        registry.deregister();
+
         vm.expectEmit(true, false, false, false);
         emit FrontendRegistry.FrontendDeregistered(frontend1);
-        registry.deregister();
+        _completeDeregister(frontend1);
     }
 
     function test_Deregister_WithFees_EmitsFeesClaimed() public {
@@ -627,9 +631,11 @@ contract FrontendRegistryCoverageTest is Test {
         registry.creditFees(frontend1, 200e6);
 
         vm.prank(frontend1);
+        registry.deregister();
+
         vm.expectEmit(true, false, false, true);
         emit FrontendRegistry.FeesClaimed(frontend1, 200e6);
-        registry.deregister();
+        _completeDeregister(frontend1);
     }
 
     function test_Slash_EmitsFrontendSlashed() public {
@@ -717,7 +723,7 @@ contract FrontendRegistryCoverageTest is Test {
         vm.prank(frontend1);
         registry.deregister();
 
-        // frontend1 still in array (just has operator=0), total unchanged
+        // frontend1 still in array while unbonding, total unchanged
         (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);
         assertEq(total, 2);
         assertEq(addrs.length, 2);
@@ -733,5 +739,11 @@ contract FrontendRegistryCoverageTest is Test {
         crepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
+    }
+
+    function _completeDeregister(address fe) internal {
+        vm.warp(block.timestamp + registry.UNBONDING_PERIOD() + 1);
+        vm.prank(fe);
+        registry.completeDeregister();
     }
 }
