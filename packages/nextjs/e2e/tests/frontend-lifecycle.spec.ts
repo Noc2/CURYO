@@ -1,7 +1,9 @@
 import {
   approveCREP,
   approveFrontend,
+  completeDeregisterFrontend,
   deregisterFrontend,
+  evmIncreaseTime,
   getFrontendInfoOnChain,
   registerFrontend,
   slashFrontend,
@@ -42,11 +44,14 @@ test.describe("Frontend lifecycle", () => {
     // Check on-chain if already registered from a prior test run
     const info = await getFrontendInfoOnChain(OPERATOR, FRONTEND_REGISTRY);
     if (info.registered) {
-      // Clean up: unslash if needed, then deregister
+      // Clean up: unslash if needed, then deregister with full unbonding cycle
       if (info.slashed) {
         await unslashFrontend(OPERATOR, DEPLOYER.address, FRONTEND_REGISTRY);
       }
       await deregisterFrontend(OPERATOR, FRONTEND_REGISTRY);
+      // Fast-forward past the 14-day unbonding period
+      await evmIncreaseTime(14 * 86400 + 1);
+      await completeDeregisterFrontend(OPERATOR, FRONTEND_REGISTRY);
       // Wait for Ponder to index the deregistration
       await waitForPonderIndexed(async () => {
         const chainInfo = await getFrontendInfoOnChain(OPERATOR, FRONTEND_REGISTRY);
@@ -143,14 +148,22 @@ test.describe("Frontend lifecycle", () => {
 
   test("operator deregisters frontend and Ponder indexes deregistration", async () => {
     test.skip(!slashed, "Frontend not slashed in previous test");
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
     // deregister() requires !slashed — unslash first
     const unslashOk = await unslashFrontend(OPERATOR, DEPLOYER.address, FRONTEND_REGISTRY);
     expect(unslashOk, "Unslashing frontend should succeed").toBe(true);
 
+    // Start deregistration (begins 14-day unbonding)
     const success = await deregisterFrontend(OPERATOR, FRONTEND_REGISTRY);
     expect(success).toBe(true);
+
+    // Fast-forward past the 14-day unbonding period
+    await evmIncreaseTime(14 * 86400 + 1);
+
+    // Complete the deregistration
+    const completed = await completeDeregisterFrontend(OPERATOR, FRONTEND_REGISTRY);
+    expect(completed, "completeDeregister should succeed after unbonding").toBe(true);
 
     const indexed = await waitForPonderIndexed(async () => {
       try {

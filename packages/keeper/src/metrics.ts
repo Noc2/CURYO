@@ -22,6 +22,8 @@ const gauges: Record<string, number> = {
   keeper_last_successful_run_timestamp: 0,
   keeper_is_running: 0,
   keeper_wallet_balance_wei: 0,
+  keeper_consensus_reserve_wei: 0,
+  keeper_reward_pool_wei: 0,
 };
 
 const startTime = Date.now();
@@ -93,6 +95,8 @@ function renderMetrics(): string {
     keeper_last_successful_run_timestamp: "Unix timestamp of last successful run",
     keeper_is_running: "Whether a keeper run is currently in progress",
     keeper_wallet_balance_wei: "Keeper wallet native balance in wei",
+    keeper_consensus_reserve_wei: "RoundVotingEngine consensus reserve balance in cREP base units",
+    keeper_reward_pool_wei: "RoundVotingEngine keeper reward pool balance in cREP base units",
   };
 
   for (const [name, value] of Object.entries(gauges)) {
@@ -102,6 +106,10 @@ function renderMetrics(): string {
   }
 
   return lines.join("\n") + "\n";
+}
+
+export function getMetricsText(): string {
+  return renderMetrics();
 }
 
 // --- Health check ---
@@ -121,8 +129,14 @@ function renderHealth(): { status: number; body: string } {
     totalRuns: counters.keeper_runs_total,
     decryptFailures: counters.keeper_decrypt_failures_total,
     walletBalanceWei: String(BigInt(Math.round(gauges.keeper_wallet_balance_wei))),
+    consensusReserveWei: String(BigInt(Math.round(gauges.keeper_consensus_reserve_wei))),
+    keeperRewardPoolWei: String(BigInt(Math.round(gauges.keeper_reward_pool_wei))),
   });
   return { status: healthy ? 200 : 503, body };
+}
+
+export function getHealthSnapshot(): { status: number; body: string } {
+  return renderHealth();
 }
 
 // --- HTTP server ---

@@ -358,6 +358,28 @@ export async function deregisterFrontend(fromAddress: string, contractAddress: s
 }
 
 /**
+ * Complete a pending frontend deregistration after the unbonding period.
+ * Calls FrontendRegistry.completeDeregister().
+ */
+export async function completeDeregisterFrontend(fromAddress: string, contractAddress: string): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "completeDeregister",
+        type: "function",
+        inputs: [],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "completeDeregister",
+    args: [],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
  * Slash a registered frontend's stake.
  * Calls FrontendRegistry.slashFrontend(address, uint256, string).
  * Requires GOVERNANCE_ROLE (deployer has it in local dev).
@@ -426,6 +448,29 @@ export async function evmIncreaseTime(seconds: number): Promise<void> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", method: "evm_increaseTime", params: [seconds], id: 1 }),
+  });
+  await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "evm_mine", params: [], id: 2 }),
+  });
+}
+
+/**
+ * Set the chain timestamp to an absolute value and mine a block.
+ * Useful for syncing chain time back to real time in tests that
+ * called evmIncreaseTime many times.
+ */
+export async function evmSetTimestamp(timestampSeconds: number): Promise<void> {
+  await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "evm_setNextBlockTimestamp",
+      params: [`0x${Math.floor(timestampSeconds).toString(16)}`],
+      id: 1,
+    }),
   });
   await fetch(ANVIL_RPC, {
     method: "POST",

@@ -1,6 +1,8 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
+  getHealthSnapshot,
   incrementCounter,
+  getMetricsText,
   setGauge,
   recordRun,
   recordError,
@@ -57,5 +59,21 @@ describe("metrics", () => {
     expect(getConsecutiveErrors()).toBe(1);
     recordError();
     expect(getConsecutiveErrors()).toBe(2);
+  });
+
+  it("renders pool balance gauges in metrics and health responses", async () => {
+    setGauge("keeper_consensus_reserve_wei", 4_000_000_000_000);
+    setGauge("keeper_reward_pool_wei", 250_000_000_000);
+
+    const metricsBody = getMetricsText();
+    expect(metricsBody).toContain("keeper_consensus_reserve_wei 4000000000000");
+    expect(metricsBody).toContain("keeper_reward_pool_wei 250000000000");
+
+    const health = getHealthSnapshot();
+    expect([200, 503]).toContain(health.status);
+    expect(JSON.parse(health.body)).toMatchObject({
+      consensusReserveWei: "4000000000000",
+      keeperRewardPoolWei: "250000000000",
+    });
   });
 });

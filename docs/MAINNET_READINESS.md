@@ -147,7 +147,7 @@ These areas were reviewed and found production-ready:
 | Initialization | `_disableInitializers()` in all UUPS constructors. Two-stage init (deployer + governance). |
 | Input validation | Zero-address checks, stake bounds (1-100 cREP), ciphertext size limits (10KB), URL length limits (2048). |
 | Custom errors | No require strings — gas-efficient custom errors throughout. |
-| Test coverage | 38 top-level Foundry test files: invariant solvency, game theory, governance lifecycle, branch coverage, edge cases, and security/adversarial suites. |
+| Test coverage | 38 top-level Foundry test files plus fast Vitest unit suites for `packages/keeper` and `packages/bot` covering config validation, account/client wiring, metrics/revert helpers, decrypt handling, timeout handling, strategies, and shared tlock commit helpers. |
 | .gitignore | `.env` and `.env.*` properly excluded. No secrets in tracked files. Anvil test keys are well-known deterministic values. |
 | Dev-only gating | Debug routes redirect in production. Dev faucet double-gated. Localhost URLs rejected in production configs across all packages. |
 | Console output | All `console.error/warn` is legitimate error handling. Debug logging gated by `DEBUG` env var or `NODE_ENV`. No stray `console.log`. |
