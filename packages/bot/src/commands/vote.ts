@@ -1,10 +1,10 @@
+import { createTlockVoteCommit } from "@curyo/contracts/voting";
 import { encodePacked, keccak256 } from "viem";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
 import { ponder } from "../ponder.js";
 import { getStrategy } from "../strategies/index.js";
-import { tlockEncryptVote } from "../tlock.js";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string}`;
 
@@ -127,10 +127,12 @@ export async function runVote() {
       })) as readonly [bigint, bigint, bigint, bigint];
       const epochDuration = Number(configResult[0]);
 
-      const ciphertext = await tlockEncryptVote(isUp, salt, epochDuration);
-      const commitHash = keccak256(
-        encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]),
-      );
+      const { ciphertext, commitHash } = await createTlockVoteCommit({
+        isUp,
+        salt,
+        contentId,
+        epochDurationSeconds: epochDuration,
+      });
 
       const voteTx = await wallet.writeContract({
         ...contractConfig.votingEngine,

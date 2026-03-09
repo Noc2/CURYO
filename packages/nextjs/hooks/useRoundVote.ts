@@ -1,15 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { createTlockVoteCommit } from "@curyo/contracts/voting";
 import { useQueryClient } from "@tanstack/react-query";
-import { encodePacked, keccak256 } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import scaffoldConfig from "~~/scaffold.config";
-import { tlockEncryptVote } from "~~/utils/tlock";
 
 interface RoundVoteParams {
   contentId: bigint;
@@ -95,12 +94,12 @@ export function useRoundVote() {
         .map(b => b.toString(16).padStart(2, "0"))
         .join("")}` as `0x${string}`;
 
-      // tlock-encrypt vote direction + salt to current epoch's drand round
-      const ciphertext = await tlockEncryptVote(isUp, salt, epochDuration);
-      // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))
-      const commitHash = keccak256(
-        encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]),
-      );
+      const { ciphertext, commitHash } = await createTlockVoteCommit({
+        isUp,
+        salt,
+        contentId,
+        epochDurationSeconds: epochDuration,
+      });
 
       // Approve tokens if needed
       if (publicClient && crepInfo) {

@@ -1,56 +1,100 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Mock tlock-js before importing
-vi.mock("tlock-js", () => ({
-  timelockEncrypt: vi.fn().mockResolvedValue("FAKE-ARMORED-AGE-STRING"),
-  mainnetClient: () => ({
-    chain: () => ({
-      info: vi.fn().mockResolvedValue({
-        period: 3,
-        genesis_time: 1677685200,
-        hash: "abc123",
-      }),
+import {
+  buildCommitHash,
+  buildCommitKey,
+  createTlockVoteCommit,
+  decodeVotePlaintext,
+  encodeVotePlaintext,
+  tlockEncryptVote,
+} from "@curyo/contracts/voting";
+
+const fakeClient = {
+  chain: () => ({
+    info: vi.fn().mockResolvedValue({
+      period: 3,
+      genesis_time: 1677685200,
+      hash: "abc123",
     }),
   }),
-  roundAt: vi.fn().mockReturnValue(12345),
-}));
+} as any;
 
-import { tlockEncryptVote } from "../tlock.js";
+const fakeNow = () => 1677685200 * 1000;
 
 describe("tlockEncryptVote", () => {
   it("produces a 0x-prefixed hex string", async () => {
+    const encryptFn = vi.fn().mockResolvedValue("FAKE-ARMORED-AGE-STRING");
     const result = await tlockEncryptVote(
       true,
       "0x" + "ab".repeat(32) as `0x${string}`,
       1200,
+      { client: fakeClient, encryptFn, now: fakeNow },
     );
     expect(result).toMatch(/^0x[0-9a-f]+$/);
   });
 
   it("encodes the armored string as hex bytes", async () => {
+    const encryptFn = vi.fn().mockResolvedValue("FAKE-ARMORED-AGE-STRING");
     const result = await tlockEncryptVote(
       false,
       "0x" + "cd".repeat(32) as `0x${string}`,
       1200,
+      { client: fakeClient, encryptFn, now: fakeNow },
     );
-    // Decode the hex back to utf-8 and verify it matches the mock
-    const decoded = Buffer.from(result.slice(2), "hex").toString("utf-8");
-    expect(decoded).toBe("FAKE-ARMORED-AGE-STRING");
+    expect(result).toBe("0x46414b452d41524d4f5245442d4147452d535452494e47");
   });
 
   it("calls timelockEncrypt with correct plaintext length", async () => {
-    const { timelockEncrypt } = await import("tlock-js");
-    vi.mocked(timelockEncrypt).mockClear();
+    const encryptFn = vi.fn().mockResolvedValue("FAKE-ARMORED-AGE-STRING");
 
     await tlockEncryptVote(
       true,
       "0x" + "00".repeat(32) as `0x${string}`,
       1200,
+      { client: fakeClient, encryptFn, now: fakeNow },
     );
 
-    expect(timelockEncrypt).toHaveBeenCalledOnce();
-    const [, plaintext] = vi.mocked(timelockEncrypt).mock.calls[0];
+    expect(encryptFn).toHaveBeenCalledOnce();
+    const [, plaintext] = encryptFn.mock.calls[0];
     // Plaintext should be 33 bytes: 1 byte direction + 32 bytes salt
-    expect((plaintext as Buffer).length).toBe(33);
+    expect((plaintext as Uint8Array).length).toBe(33);
+  });
+});
+
+describe("shared voting helpers", () => {
+  it("round-trips the vote plaintext shape", () => {
+    const salt = "0x" + "11".repeat(32) as `0x${string}`;
+    const plaintext = encodeVotePlaintext(true, salt);
+    expect(decodeVotePlaintext(plaintext)).toEqual({ isUp: true, salt });
+  });
+
+  it("builds stable commit hashes and keys", () => {
+    const salt = "0x" + "22".repeat(32) as `0x${string}`;
+    const ciphertext = "0x1234" as `0x${string}`;
+    const commitHash = buildCommitHash(false, salt, 42n, ciphertext);
+    const commitKey = buildCommitKey("0x1111111111111111111111111111111111111111", commitHash);
+
+    expect(commitHash).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(commitKey).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(buildCommitHash(false, salt, 42n, ciphertext)).toBe(commitHash);
+    expect(buildCommitKey("0x1111111111111111111111111111111111111111", commitHash)).toBe(commitKey);
+  });
+
+  it("creates matching commit artifacts", async () => {
+    const salt = "0x" + "33".repeat(32) as `0x${string}`;
+    const voter = "0x2222222222222222222222222222222222222222" as const;
+    const encryptFn = vi.fn().mockResolvedValue("FAKE-ARMORED-AGE-STRING");
+
+    const commit = await createTlockVoteCommit({
+      voter,
+      isUp: true,
+      salt,
+      contentId: 7n,
+      epochDurationSeconds: 1200,
+    }, { client: fakeClient, encryptFn, now: fakeNow });
+
+    expect(commit.ciphertext).toBe("0x46414b452d41524d4f5245442d4147452d535452494e47");
+    expect(commit.commitHash).toBe(buildCommitHash(true, salt, 7n, commit.ciphertext));
+    expect(commit.commitKey).toBe(buildCommitKey(voter, commit.commitHash));
   });
 });

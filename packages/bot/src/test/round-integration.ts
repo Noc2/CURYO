@@ -14,6 +14,7 @@
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { buildCommitHash, buildCommitKey } from "@curyo/contracts/voting";
 import {
   createPublicClient,
   createWalletClient,
@@ -118,25 +119,6 @@ function mockCiphertext(isUp: boolean, salt: `0x${string}`, contentId: bigint): 
 }
 
 /**
- * commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))
- */
-function commitHash(
-  isUp: boolean,
-  salt: `0x${string}`,
-  contentId: bigint,
-  ciphertext: `0x${string}` = mockCiphertext(isUp, salt, contentId),
-): `0x${string}` {
-  return keccak256(encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]));
-}
-
-/**
- * commitKey = keccak256(abi.encodePacked(voter, commitHash))
- */
-function commitKey(voter: Address, ch: `0x${string}`): `0x${string}` {
-  return keccak256(encodePacked(["address", "bytes32"], [voter, ch]));
-}
-
-/**
  * Commit a vote in test mode.
  */
 async function commitVote(
@@ -146,8 +128,8 @@ async function commitVote(
   saltSeed: number,
 ): Promise<{ salt: `0x${string}`; ck: `0x${string}` }> {
   const salt = keccak256(encodePacked(["address", "uint256"], [voter.address, BigInt(saltSeed)]));
-  const ch = commitHash(isUp, salt, contentId);
   const ct = mockCiphertext(isUp, salt, contentId);
+  const ch = buildCommitHash(isUp, salt, contentId, ct);
 
   const client = walletClient(voter);
   await client.writeContract({
@@ -164,7 +146,7 @@ async function commitVote(
   });
   await publicClient.waitForTransactionReceipt({ hash });
 
-  return { salt, ck: commitKey(voter.address, ch) };
+  return { salt, ck: buildCommitKey(voter.address, ch) };
 }
 
 /**

@@ -7,10 +7,15 @@
     ".": "./src/index.ts",
     "./abis": "./src/abis/index.ts",
     "./deployedContracts": "./src/deployedContracts.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./voting": "./src/voting.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "tlock-js": "^0.9.0",
+    "viem": "2.39.0"
   },
   "devDependencies": {
     "@types/node": "~18.19.50",

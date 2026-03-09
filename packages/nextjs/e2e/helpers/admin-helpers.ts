@@ -786,9 +786,8 @@ export async function commitVoteDirect(
   contractAddress: string,
   epochDurationSeconds = 1200,
 ): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
+  const { createTlockVoteCommit } = await import("@curyo/contracts/voting");
   const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
-  const { timelockEncrypt, mainnetClient, roundAt } = await import("tlock-js");
-  const { Buffer } = await import("buffer");
 
   // Generate deterministic salt from voter + contentId + timestamp
   const salt = keccak256(
@@ -798,24 +797,17 @@ export async function commitVoteDirect(
     ),
   );
 
-  // commitKey = keccak256(abi.encodePacked(voter, commitHash))
-  // tlock encrypt: 33-byte plaintext = [uint8 direction, bytes32 salt]
-  const plaintext = Buffer.alloc(33);
-  plaintext[0] = isUp ? 1 : 0;
-  Buffer.from(salt.slice(2), "hex").copy(plaintext, 1);
-
-  const client = mainnetClient();
-  const chainInfo = await client.chain().info();
-  const targetRound = roundAt(Date.now() + epochDurationSeconds * 1000, chainInfo);
-  const armored = await timelockEncrypt(targetRound, plaintext, client);
-  const ciphertext = `0x${Buffer.from(armored, "utf-8").toString("hex")}` as `0x${string}`;
-  // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))
-  const chash = keccak256(
-    encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, BigInt(contentId), keccak256(ciphertext)]),
-  );
-
-  // commitKey = keccak256(abi.encodePacked(voter, commitHash))
-  const ckey = keccak256(encodePacked(["address", "bytes32"], [fromAddress as `0x${string}`, chash]));
+  const {
+    ciphertext,
+    commitHash: chash,
+    commitKey: ckey,
+  } = await createTlockVoteCommit({
+    voter: fromAddress as `0x${string}`,
+    isUp,
+    salt,
+    contentId: BigInt(contentId),
+    epochDurationSeconds,
+  });
 
   const data = encodeFunctionData({
     abi: [
@@ -838,7 +830,7 @@ export async function commitVoteDirect(
   });
 
   const success = await sendTx(fromAddress, contractAddress, data);
-  return { success, commitKey: ckey, isUp, salt };
+  return { success, commitKey: ckey!, isUp, salt };
 }
 
 /**

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { buildCommitKey, decryptTlockCiphertext } from "@curyo/contracts/voting";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Address, encodePacked, keccak256, zeroHash } from "viem";
+import { Address, zeroHash } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -11,7 +12,6 @@ import { ponderApi } from "~~/services/ponder/client";
 import { CommitData } from "~~/types/votingTypes";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
 import { notification } from "~~/utils/scaffold-eth/notification";
-import { decryptTlockCiphertext } from "~~/utils/tlock";
 
 export interface ManualRevealVote {
   contentId: bigint;
@@ -29,10 +29,6 @@ export interface ManualRevealVote {
 }
 
 const BENIGN_REVEAL_ERRORS = ["AlreadyRevealed", "RoundNotOpen", "EpochNotEnded", "Transaction reverted"];
-
-function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${string}` {
-  return keccak256(encodePacked(["address", "bytes32"], [voter, commitHash]));
-}
 
 function isBenignRevealError(message: string): boolean {
   const lower = message.toLowerCase();
