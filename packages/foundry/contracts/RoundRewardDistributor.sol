@@ -21,6 +21,20 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // --- Access Control Roles ---
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
+    // --- Custom Errors ---
+    error Unauthorized();
+    error RoundNotSettled();
+    error AlreadyClaimed();
+    error NoPool();
+    error NoStake();
+    error NoApprovedStake();
+    error PoolExhausted();
+    error PoolDepleted();
+    error VoteNotRevealed();
+    error NotWinningSide();
+    error NoParticipationRate();
+    error NoCommit();
+
     // --- State ---
     IERC20 public crepToken;
     RoundVotingEngine public votingEngine;
@@ -31,6 +45,17 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
     // Track submitter reward claims: contentId => roundId => claimed
     mapping(uint256 => mapping(uint256 => bool)) public submitterRewardClaimed;
+
+    // Track frontend fee claims: contentId => roundId => frontend => claimed
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public frontendFeeClaimed;
+
+    // Track aggregate frontend fee claim progress so the final claimant receives the dust remainder.
+    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedCount;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedAmount;
+
+    // Track participation reward claims: contentId => roundId => voter => claimed/paid
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public participationRewardClaimed;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public participationRewardPaid;
 
     // --- Events ---
     event RewardClaimed(
@@ -48,6 +73,11 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
+    }
+
+    modifier onlyVotingEngine() {
+        if (msg.sender != address(votingEngine)) revert Unauthorized();
+        _;
     }
 
     function initialize(address _governance, address _crepToken, address _votingEngine, address _registry)
@@ -138,6 +168,91 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         emit SubmitterRewardClaimed(contentId, roundId, submitter, crepAmount);
     }
 
+    // --- Delegated claim handling for RoundVotingEngine wrappers ---
+
+    /// @notice Claim frontend fees for a settled round. Only callable via RoundVotingEngine.
+    function claimFrontendFee(uint256 contentId, uint256 roundId, address frontend)
+        external
+        onlyVotingEngine
+        nonReentrant
+        returns (uint256 fee)
+    {
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+        if (frontendFeeClaimed[contentId][roundId][frontend]) revert AlreadyClaimed();
+
+        (
+            uint256 totalFrontendPool,
+            uint256 frontendStake,
+            uint256 totalApprovedStake,
+            uint256 totalFrontendClaimants
+        ) = votingEngine.getFrontendFeeSnapshot(contentId, roundId, frontend);
+
+        if (totalFrontendPool == 0) revert NoPool();
+        if (frontendStake == 0) revert NoStake();
+        if (totalApprovedStake == 0) revert NoApprovedStake();
+        if (totalFrontendClaimants == 0) revert NoPool();
+
+        uint256 claimedCount = roundFrontendClaimedCount[contentId][roundId];
+        uint256 claimedAmount = roundFrontendClaimedAmount[contentId][roundId];
+        if (claimedAmount > totalFrontendPool) revert PoolExhausted();
+
+        if (claimedCount + 1 == totalFrontendClaimants) {
+            fee = totalFrontendPool - claimedAmount;
+        } else {
+            fee = (totalFrontendPool * frontendStake) / totalApprovedStake;
+        }
+
+        frontendFeeClaimed[contentId][roundId][frontend] = true;
+        roundFrontendClaimedCount[contentId][roundId] = claimedCount + 1;
+        roundFrontendClaimedAmount[contentId][roundId] = claimedAmount + fee;
+
+        votingEngine.payoutFrontendFee(frontend, fee);
+    }
+
+    /// @notice Claim a participation reward for a voter. Only callable via RoundVotingEngine.
+    function claimParticipationRewardFor(address voter, uint256 contentId, uint256 roundId)
+        external
+        onlyVotingEngine
+        nonReentrant
+        returns (uint256 paidReward)
+    {
+        if (participationRewardClaimed[contentId][roundId][voter]) revert AlreadyClaimed();
+
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+
+        (address rewardPoolAddress, uint256 rateBps) = votingEngine.getParticipationRewardSnapshot(contentId, roundId);
+        if (rewardPoolAddress == address(0)) revert NoPool();
+
+        RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, voter);
+        if (commit.voter != voter) revert NoCommit();
+        if (!commit.revealed) revert VoteNotRevealed();
+        if (commit.stakeAmount == 0) revert NoStake();
+
+        if (commit.isUp != round.upWins) revert NotWinningSide();
+        if (rateBps == 0) revert NoParticipationRate();
+
+        uint256 reward = commit.stakeAmount * rateBps / 10000;
+        if (reward == 0) {
+            participationRewardClaimed[contentId][roundId][voter] = true;
+            return 0;
+        }
+
+        uint256 alreadyPaid = participationRewardPaid[contentId][roundId][voter];
+        if (alreadyPaid >= reward) revert AlreadyClaimed();
+
+        uint256 remainingReward = reward - alreadyPaid;
+        paidReward = votingEngine.distributeParticipationReward(rewardPoolAddress, voter, remainingReward);
+        if (paidReward == 0) revert PoolDepleted();
+
+        uint256 totalPaid = alreadyPaid + paidReward;
+        participationRewardPaid[contentId][roundId][voter] = totalPaid;
+        if (totalPaid == reward) {
+            participationRewardClaimed[contentId][roundId][voter] = true;
+        }
+    }
+
     // --- Internal ---
 
     /// @dev Find a voter's commit using the O(1) voter-to-commitHash mapping.
@@ -159,5 +274,5 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
 
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[50] private __gap;
+    uint256[45] private __gap;
 }

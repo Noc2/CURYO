@@ -3197,19 +3197,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "claimStreakBonus",
-          inputs: [
-            {
-              name: "milestoneIndex",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "commitHashByKey",
           inputs: [
             {
@@ -3504,6 +3491,35 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "distributeParticipationReward",
+          inputs: [
+            {
+              name: "rewardPoolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "voter",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rewardAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "paidReward",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "epochUnrevealedCount",
           inputs: [
             {
@@ -3549,35 +3565,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "frontendFeeClaimed",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
             },
           ],
           outputs: [
@@ -3731,6 +3718,79 @@ const deployedContracts = {
           outputs: [
             {
               name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getFrontendFeeSnapshot",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "totalFrontendPool",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "frontendStake",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalApprovedStake",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalFrontendClaimants",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getParticipationRewardSnapshot",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "rewardPoolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rateBps",
               type: "uint256",
               internalType: "uint256",
             },
@@ -4230,64 +4290,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "participationRewardClaimed",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "participationRewardPaid",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "pause",
           inputs: [],
           outputs: [],
@@ -4305,6 +4307,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "payoutFrontendFee",
+          inputs: [
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "fee",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -4481,30 +4501,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "roundApprovedFrontendCount",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "roundCleanupRewarded",
           inputs: [
             {
@@ -4529,180 +4525,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "roundFrontendClaimedAmount",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundFrontendClaimedCount",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundFrontendPool",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundParticipationPool",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundParticipationRateBps",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundPerFrontendStake",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "roundRevealGracePeriodSnapshot",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundStakeWithApprovedFrontend",
           inputs: [
             {
               name: "",
@@ -5164,25 +4987,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "voterCurrentStreak",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -5190,44 +4994,6 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract IVoterIdNFT",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "voterLastActiveDay",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "voterLastMilestoneDay",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -5780,31 +5546,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "StreakBonusClaimed",
-          inputs: [
-            {
-              name: "voter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "milestoneDays",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "TreasuryFeeDistributed",
           inputs: [
             {
@@ -6098,22 +5839,12 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "InvalidMilestoneIndex",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "InvalidStake",
           inputs: [],
         },
         {
           type: "error",
           name: "MaxVotersReached",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "MilestoneAlreadyClaimed",
           inputs: [],
         },
         {
@@ -6225,16 +5956,6 @@ const deployedContracts = {
         {
           type: "error",
           name: "SelfVote",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "StreakBonusDisabled",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "StreakTooShort",
           inputs: [],
         },
         {
@@ -6365,6 +6086,64 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "claimFrontendFee",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "fee",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "claimParticipationRewardFor",
+          inputs: [
+            {
+              name: "voter",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "paidReward",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "claimReward",
           inputs: [
             {
@@ -6408,6 +6187,35 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract IERC20",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "frontendFeeClaimed",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -6503,6 +6311,64 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "participationRewardClaimed",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "participationRewardPaid",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "proxiableUUID",
           inputs: [],
           outputs: [
@@ -6588,6 +6454,54 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundFrontendClaimedAmount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundFrontendClaimedCount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -6894,6 +6808,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "AlreadyClaimed",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "ERC1967InvalidImplementation",
           inputs: [
             {
@@ -6920,12 +6839,57 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "NoApprovedStake",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoCommit",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoParticipationRate",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoPool",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoStake",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "NotInitializing",
           inputs: [],
         },
         {
           type: "error",
+          name: "NotWinningSide",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PoolDepleted",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PoolExhausted",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "ReentrancyGuardReentrantCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RoundNotSettled",
           inputs: [],
         },
         {
@@ -6943,6 +6907,16 @@ const deployedContracts = {
               internalType: "bytes32",
             },
           ],
+        },
+        {
+          type: "error",
+          name: "Unauthorized",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "VoteNotRevealed",
+          inputs: [],
         },
       ],
       inheritedFunctions: {
@@ -14799,19 +14773,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "claimStreakBonus",
-          inputs: [
-            {
-              name: "milestoneIndex",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "commitHashByKey",
           inputs: [
             {
@@ -15106,6 +15067,35 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "distributeParticipationReward",
+          inputs: [
+            {
+              name: "rewardPoolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "voter",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rewardAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "paidReward",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "epochUnrevealedCount",
           inputs: [
             {
@@ -15151,35 +15141,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "frontendFeeClaimed",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
             },
           ],
           outputs: [
@@ -15333,6 +15294,79 @@ const deployedContracts = {
           outputs: [
             {
               name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getFrontendFeeSnapshot",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "totalFrontendPool",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "frontendStake",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalApprovedStake",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "totalFrontendClaimants",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getParticipationRewardSnapshot",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "rewardPoolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rateBps",
               type: "uint256",
               internalType: "uint256",
             },
@@ -15832,64 +15866,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "participationRewardClaimed",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "participationRewardPaid",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "pause",
           inputs: [],
           outputs: [],
@@ -15907,6 +15883,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "payoutFrontendFee",
+          inputs: [
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "fee",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -16083,30 +16077,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "roundApprovedFrontendCount",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "roundCleanupRewarded",
           inputs: [
             {
@@ -16131,180 +16101,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "roundFrontendClaimedAmount",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundFrontendClaimedCount",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundFrontendPool",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundParticipationPool",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundParticipationRateBps",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundPerFrontendStake",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "roundRevealGracePeriodSnapshot",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundStakeWithApprovedFrontend",
           inputs: [
             {
               name: "",
@@ -16766,25 +16563,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "voterCurrentStreak",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -16792,44 +16570,6 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract IVoterIdNFT",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "voterLastActiveDay",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "voterLastMilestoneDay",
-          inputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -17382,31 +17122,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "StreakBonusClaimed",
-          inputs: [
-            {
-              name: "voter",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "milestoneDays",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "TreasuryFeeDistributed",
           inputs: [
             {
@@ -17700,22 +17415,12 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "InvalidMilestoneIndex",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "InvalidStake",
           inputs: [],
         },
         {
           type: "error",
           name: "MaxVotersReached",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "MilestoneAlreadyClaimed",
           inputs: [],
         },
         {
@@ -17827,16 +17532,6 @@ const deployedContracts = {
         {
           type: "error",
           name: "SelfVote",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "StreakBonusDisabled",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "StreakTooShort",
           inputs: [],
         },
         {
@@ -22017,6 +21712,64 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "claimFrontendFee",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "frontend",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "fee",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "claimParticipationRewardFor",
+          inputs: [
+            {
+              name: "voter",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "paidReward",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "claimReward",
           inputs: [
             {
@@ -22060,6 +21813,35 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "contract IERC20",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "frontendFeeClaimed",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -22155,6 +21937,64 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "participationRewardClaimed",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "participationRewardPaid",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "proxiableUUID",
           inputs: [],
           outputs: [
@@ -22240,6 +22080,54 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundFrontendClaimedAmount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundFrontendClaimedCount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -22546,6 +22434,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "AlreadyClaimed",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "ERC1967InvalidImplementation",
           inputs: [
             {
@@ -22572,12 +22465,57 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "NoApprovedStake",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoCommit",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoParticipationRate",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoPool",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NoStake",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "NotInitializing",
           inputs: [],
         },
         {
           type: "error",
+          name: "NotWinningSide",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PoolDepleted",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "PoolExhausted",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "ReentrancyGuardReentrantCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RoundNotSettled",
           inputs: [],
         },
         {
@@ -22595,6 +22533,16 @@ const deployedContracts = {
               internalType: "bytes32",
             },
           ],
+        },
+        {
+          type: "error",
+          name: "Unauthorized",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "VoteNotRevealed",
+          inputs: [],
         },
       ],
       inheritedFunctions: {

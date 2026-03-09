@@ -15,6 +15,7 @@ import {RoundLib} from "./libraries/RoundLib.sol";
 import {RewardMath} from "./libraries/RewardMath.sol";
 import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
 import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
+import {IRoundRewardDistributor} from "./interfaces/IRoundRewardDistributor.sol";
 import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
 import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
 import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
@@ -171,12 +172,13 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) internal roundStakeWithApprovedFrontend;
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) internal roundPerFrontendStake;
     mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendPool;
+    // Deprecated claim-tracking slots preserved for upgrade safety. RoundRewardDistributor now owns claim state.
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal frontendFeeClaimed;
     mapping(uint256 => mapping(uint256 => uint256)) internal roundApprovedFrontendCount;
     mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendClaimedCount;
     mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendClaimedAmount;
 
-    // Participation reward pull-based claiming (rate snapshotted at settlement)
+    // Participation reward snapshots (claim state now lives in RoundRewardDistributor)
     mapping(uint256 => mapping(uint256 => address)) internal roundParticipationPool;
     mapping(uint256 => mapping(uint256 => uint256)) internal roundParticipationRateBps;
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal participationRewardClaimed;
@@ -371,6 +373,34 @@ contract RoundVotingEngine is
         if (crepAmount > 0) {
             crepToken.safeTransfer(recipient, crepAmount);
         }
+    }
+
+    /// @notice Credit or directly pay a frontend fee. Only callable by RewardDistributor.
+    function payoutFrontendFee(address frontend, uint256 fee) external {
+        if (msg.sender != rewardDistributor) revert Unauthorized();
+        if (fee == 0) return;
+
+        address frontendOperator;
+        bool frontendSlashed;
+        (frontendOperator,,, frontendSlashed) = frontendRegistry.getFrontendInfo(frontend);
+        if (frontendSlashed) revert IFrontendRegistry.FrontendIsSlashed();
+
+        if (frontendOperator == address(0)) {
+            crepToken.safeTransfer(frontend, fee);
+        } else {
+            crepToken.safeTransfer(address(frontendRegistry), fee);
+            frontendRegistry.creditFees(frontend, fee);
+        }
+    }
+
+    /// @notice Distribute a participation reward from the configured pool snapshot. Only callable by RewardDistributor.
+    function distributeParticipationReward(address rewardPoolAddress, address voter, uint256 rewardAmount)
+        external
+        returns (uint256 paidReward)
+    {
+        if (msg.sender != rewardDistributor) revert Unauthorized();
+        if (rewardPoolAddress == address(0)) revert NoPool();
+        return IParticipationPool(rewardPoolAddress).distributeReward(voter, rewardAmount);
     }
 
     // =========================================================================
@@ -804,106 +834,16 @@ contract RoundVotingEngine is
     // =========================================================================
 
     /// @notice Frontend operator claims fees for a settled round. Pull-based, permissionless.
-    function claimFrontendFee(uint256 contentId, uint256 roundId, address frontend) external nonReentrant {
-        RoundLib.Round storage round = rounds[contentId][roundId];
-        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
-        if (frontendFeeClaimed[contentId][roundId][frontend]) revert AlreadyClaimed();
-
-        uint256 totalFrontendPool = roundFrontendPool[contentId][roundId];
-        if (totalFrontendPool == 0) revert NoPool();
-
-        uint256 frontendStake = roundPerFrontendStake[contentId][roundId][frontend];
-        if (frontendStake == 0) revert NoStake();
-
-        uint256 totalApprovedStake = roundStakeWithApprovedFrontend[contentId][roundId];
-        if (totalApprovedStake == 0) revert NoApprovedStake();
-
-        uint256 totalFrontendClaimants = roundApprovedFrontendCount[contentId][roundId];
-        if (totalFrontendClaimants == 0) revert NoPool();
-
-        uint256 claimedCount = roundFrontendClaimedCount[contentId][roundId];
-        uint256 claimedAmount = roundFrontendClaimedAmount[contentId][roundId];
-        if (claimedAmount > totalFrontendPool) revert PoolExhausted();
-
-        uint256 fee;
-        if (claimedCount + 1 == totalFrontendClaimants) {
-            fee = totalFrontendPool - claimedAmount;
-        } else {
-            fee = (totalFrontendPool * frontendStake) / totalApprovedStake;
-        }
-
-        address frontendOperator;
-        bool frontendSlashed;
-        if (fee > 0) {
-            (frontendOperator,,, frontendSlashed) = frontendRegistry.getFrontendInfo(frontend);
-            if (frontendSlashed) revert IFrontendRegistry.FrontendIsSlashed();
-        }
-
-        frontendFeeClaimed[contentId][roundId][frontend] = true;
-        roundFrontendClaimedCount[contentId][roundId] = claimedCount + 1;
-        roundFrontendClaimedAmount[contentId][roundId] = claimedAmount + fee;
-
-        if (fee > 0) {
-            if (frontendOperator == address(0)) {
-                crepToken.safeTransfer(frontend, fee);
-            } else {
-                crepToken.safeTransfer(address(frontendRegistry), fee);
-                frontendRegistry.creditFees(frontend, fee);
-            }
-        }
-
+    function claimFrontendFee(uint256 contentId, uint256 roundId, address frontend) external {
+        uint256 fee = IRoundRewardDistributor(rewardDistributor).claimFrontendFee(contentId, roundId, frontend);
         emit FrontendFeeClaimed(contentId, roundId, frontend, fee);
     }
 
     /// @notice Claim participation reward for a settled round. Pull-based.
-    function claimParticipationReward(uint256 contentId, uint256 roundId) external nonReentrant {
-        if (participationRewardClaimed[contentId][roundId][msg.sender]) revert AlreadyClaimed();
-
-        RoundLib.Round storage round = rounds[contentId][roundId];
-        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
-
-        address rewardPoolAddress = roundParticipationPool[contentId][roundId];
-        if (rewardPoolAddress == address(0)) {
-            rewardPoolAddress = address(participationPool);
-        }
-        if (rewardPoolAddress == address(0)) revert NoPool();
-        IParticipationPool rewardPool = IParticipationPool(rewardPoolAddress);
-
-        bytes32 commitHash = voterCommitHash[contentId][roundId][msg.sender];
-        if (commitHash == bytes32(0)) revert NoCommit();
-        bytes32 commitKey = _buildCommitKey(msg.sender, commitHash);
-
-        RoundLib.Commit storage commit = commits[contentId][roundId][commitKey];
-        if (!commit.revealed) revert VoteNotRevealed();
-        if (commit.stakeAmount == 0) revert NoStake();
-
-        // Only winning-side voters earn participation rewards (prevents self-opposition farming).
-        // In unanimous rounds (losingPool == 0), all voters are winners (upWins reflects the unanimous side).
-        if (commit.isUp != round.upWins) revert NotWinningSide();
-
-        uint256 rateBps = roundParticipationRateBps[contentId][roundId];
-        if (rateBps == 0) revert NoParticipationRate();
-
-        uint256 reward = commit.stakeAmount * rateBps / 10000;
-        if (reward == 0) {
-            participationRewardClaimed[contentId][roundId][msg.sender] = true;
-            emit ParticipationRewardClaimed(contentId, roundId, msg.sender, 0);
-            return;
-        }
-
-        uint256 alreadyPaid = participationRewardPaid[contentId][roundId][msg.sender];
-        if (alreadyPaid >= reward) revert AlreadyClaimed();
-
-        uint256 remainingReward = reward - alreadyPaid;
-        uint256 paidReward = rewardPool.distributeReward(msg.sender, remainingReward);
-        if (paidReward == 0) revert PoolDepleted();
-
-        uint256 totalPaid = alreadyPaid + paidReward;
-        participationRewardPaid[contentId][roundId][msg.sender] = totalPaid;
-        if (totalPaid == reward) {
-            participationRewardClaimed[contentId][roundId][msg.sender] = true;
-        }
-
+    function claimParticipationReward(uint256 contentId, uint256 roundId) external {
+        uint256 paidReward = IRoundRewardDistributor(rewardDistributor).claimParticipationRewardFor(
+            msg.sender, contentId, roundId
+        );
         emit ParticipationRewardClaimed(contentId, roundId, msg.sender, paidReward);
     }
 
@@ -1182,9 +1122,37 @@ contract RoundVotingEngine is
         return contentCommitCount[contentId];
     }
 
-    // Note: frontend/participation bookkeeping getters are intentionally omitted to keep the
-    // engine deployable under the EIP-170 contract size limit. Tests and indexers should assert
-    // behavior from claims/events instead of depending on internal accounting getters.
+    /// @notice Return the fee-claim snapshot needed by RewardDistributor.
+    function getFrontendFeeSnapshot(uint256 contentId, uint256 roundId, address frontend)
+        external
+        view
+        returns (
+            uint256 totalFrontendPool,
+            uint256 frontendStake,
+            uint256 totalApprovedStake,
+            uint256 totalFrontendClaimants
+        )
+    {
+        return (
+            roundFrontendPool[contentId][roundId],
+            roundPerFrontendStake[contentId][roundId][frontend],
+            roundStakeWithApprovedFrontend[contentId][roundId],
+            roundApprovedFrontendCount[contentId][roundId]
+        );
+    }
+
+    /// @notice Return the snapshotted participation reward pool and rate for a settled round.
+    function getParticipationRewardSnapshot(uint256 contentId, uint256 roundId)
+        external
+        view
+        returns (address rewardPoolAddress, uint256 rateBps)
+    {
+        rewardPoolAddress = roundParticipationPool[contentId][roundId];
+        if (rewardPoolAddress == address(0)) {
+            rewardPoolAddress = address(participationPool);
+        }
+        rateBps = roundParticipationRateBps[contentId][roundId];
+    }
 
     function hasUnrevealedVotes(uint256 contentId) external view returns (bool) {
         uint256 roundId = currentRoundId[contentId];
