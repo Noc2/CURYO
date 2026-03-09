@@ -1011,6 +1011,55 @@ contract RoundIntegrationTest is VotingTestBase {
         assertGt(crepToken.balanceOf(voter1), balBefore, "Voter should receive consensus subsidy");
     }
 
+    function test_SubmitterStake_SlashesLowRatedFirstSettlementAfterFourDays() public {
+        uint256 contentId = _submitContent();
+        uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
+        uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
+
+        vm.prank(owner);
+        registry.setTreasury(treasury);
+
+        vm.warp(block.timestamp + 4 days + 1);
+
+        address[] memory voters = new address[](2);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        bool[] memory dirs = new bool[](2);
+        dirs[0] = false;
+        dirs[1] = false;
+
+        _settleRoundWith(voters, contentId, dirs, 100e6);
+
+        assertLt(registry.getRating(contentId), registry.SLASH_RATING_THRESHOLD(), "round should be slashable");
+        assertTrue(registry.isSubmitterStakeReturned(contentId), "submitter stake should be resolved");
+        assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter stake should not be returned");
+        assertEq(
+            crepToken.balanceOf(treasury) - treasuryBalanceBefore, 10e6, "slash amount should be sent to treasury"
+        );
+    }
+
+    function test_SubmitterStake_ReturnsHealthyFirstSettlementAfterFourDays() public {
+        uint256 contentId = _submitContent();
+        uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
+        uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
+
+        vm.warp(block.timestamp + 4 days + 1);
+
+        address[] memory voters = new address[](2);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        bool[] memory dirs = new bool[](2);
+        dirs[0] = true;
+        dirs[1] = true;
+
+        _settleRoundWith(voters, contentId, dirs, 100e6);
+
+        assertGe(registry.getRating(contentId), registry.SLASH_RATING_THRESHOLD(), "round should not be slashable");
+        assertTrue(registry.isSubmitterStakeReturned(contentId), "submitter stake should be resolved");
+        assertEq(crepToken.balanceOf(submitter) - submitterBalanceBefore, 10e6, "submitter stake should be returned");
+        assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a slash");
+    }
+
     // =========================================================================
     // CONFIG SNAPSHOT PER-ROUND
     // =========================================================================

@@ -1096,16 +1096,16 @@ contract RoundVotingEngine is
         uint256 contentCreatedAt = registry.getCreatedAt(contentId);
         uint256 elapsed = block.timestamp - contentCreatedAt;
 
-        if (elapsed >= 4 days) {
-            registry.returnSubmitterStake(contentId);
-            return;
-        }
-
         if (elapsed >= 24 hours) {
             uint256 rating = registry.getRating(contentId);
             if (rating < registry.SLASH_RATING_THRESHOLD()) {
                 registry.slashSubmitterStake(contentId);
+                return;
             }
+        }
+
+        if (elapsed >= 4 days) {
+            registry.returnSubmitterStake(contentId);
         }
     }
 
