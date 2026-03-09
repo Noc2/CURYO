@@ -93,20 +93,39 @@ export async function readProfileRegistryProfiles(
     return profiles;
   }
 
-  const results = await publicClient.multicall({
-    allowFailure: true,
-    contracts: normalizedAddresses.map(address => ({
-      address: profileRegistry.address,
-      abi: profileRegistry.abi,
-      functionName: "getProfile",
-      args: [address],
-    })),
-  });
+  try {
+    const results = await publicClient.multicall({
+      allowFailure: true,
+      contracts: normalizedAddresses.map(address => ({
+        address: profileRegistry.address,
+        abi: profileRegistry.abi,
+        functionName: "getProfile",
+        args: [address],
+      })),
+    });
 
-  results.forEach((result, index) => {
-    const address = normalizedAddresses[index];
-    profiles[address] = result.status === "success" ? parseProfile(result.result) : EMPTY_PROFILE;
-  });
+    results.forEach((result, index) => {
+      const address = normalizedAddresses[index];
+      profiles[address] = result.status === "success" ? parseProfile(result.result) : EMPTY_PROFILE;
+    });
+  } catch {
+    // Fallback to individual calls when multicall3 is unavailable (e.g. local Anvil)
+    await Promise.all(
+      normalizedAddresses.map(async address => {
+        try {
+          const result = await publicClient.readContract({
+            address: profileRegistry.address,
+            abi: profileRegistry.abi,
+            functionName: "getProfile",
+            args: [address],
+          });
+          profiles[address] = parseProfile(result);
+        } catch {
+          profiles[address] = EMPTY_PROFILE;
+        }
+      }),
+    );
+  }
 
   return profiles;
 }
