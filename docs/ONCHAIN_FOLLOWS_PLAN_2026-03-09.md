@@ -1,6 +1,6 @@
 # On-Chain Follows Plan
 
-Status: **Draft** | Last updated: 2026-03-09
+Status: **Implemented locally and verified in tests / pending live deployment** | Last updated: 2026-03-09
 
 This document covers the next step after making `ProfileRegistry` the first-class profile source of truth: moving the follow graph on-chain.
 
@@ -16,15 +16,22 @@ Profiles are now first-class on-chain data:
 - Ponder indexes `ProfileRegistry` events
 - the old DB-backed `/api/username` write flow is removed
 
-Follows are still off-chain:
+Follows are now implemented on-chain in the codebase:
 
-- write path: `packages/nextjs/app/api/follows/profiles/route.ts`
-- challenge issuance: `packages/nextjs/app/api/follows/profiles/challenge/route.ts`
-- storage: `packages/nextjs/lib/social/profileFollows.ts`
-- local table: `followed_profiles`
+- contract: `packages/foundry/contracts/FollowRegistry.sol`
+- interface: `packages/foundry/contracts/interfaces/IFollowRegistry.sol`
+- indexer: `packages/ponder/src/FollowRegistry.ts`
 - frontend hook: `packages/nextjs/hooks/useFollowedProfiles.ts`
 
-That means follows are not portable across frontends today.
+That means the canonical follow graph is no longer tied to a shared application database.
+
+Local verification completed:
+
+- Foundry: `test/FollowRegistry.t.sol`
+- Foundry: `test/UpgradeTest.t.sol`
+- Playwright API: follow graph endpoints
+- Playwright browser: public profile follow toggle
+- Playwright browser: follow / unfollow lifecycle indexed through Ponder
 
 ---
 
@@ -186,13 +193,7 @@ With a contract-based flow:
 - read `isFollowing(viewer, target)` from contract or from indexed follow state
 - write `follow(target)` / `unfollow(target)` via wallet transaction
 
-Delete after migration:
-
-- `packages/nextjs/app/api/follows/profiles/route.ts`
-- `packages/nextjs/app/api/follows/profiles/challenge/route.ts`
-- `packages/nextjs/lib/social/profileFollows.ts`
-- `followed_profiles` table from `packages/nextjs/lib/db/schema.ts`
-- follow-specific signed-action helper usage
+The old signed-message follow API and local `followed_profiles` table have been removed from the main app path.
 
 ### Ponder
 
@@ -268,11 +269,9 @@ Add coverage for:
 ## Rollout Order
 
 1. Ship the profile unification first.
-2. Add `FollowRegistry` and Foundry tests.
-3. Add Ponder indexing and read APIs.
-4. Switch `useFollowedProfiles` to on-chain reads/writes.
-5. Remove DB-backed follow APIs and schema.
-6. Decide whether to keep a temporary migration UI for legacy follows.
+2. Deploy `FollowRegistry` on each live network.
+3. Re-run ABI/deployment generation and sync Ponder envs.
+4. Decide whether to keep a temporary migration UI for legacy follows.
 
 ---
 

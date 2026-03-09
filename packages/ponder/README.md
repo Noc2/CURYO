@@ -55,6 +55,7 @@ src/
 ├── RoundRewardDistributor.ts # Reward distribution events
 ├── CategoryRegistry.ts       # Category registration events
 ├── ProfileRegistry.ts        # Profile update events
+├── FollowRegistry.ts         # On-chain follow graph events
 ├── FrontendRegistry.ts       # Frontend fee events
 ├── VoterIdNFT.ts             # NFT minting events
 ├── CuryoReputation.ts        # Token transfer events
@@ -77,6 +78,9 @@ The REST API is built with Hono. Key routes:
 | `GET /content/by-url?url=...` | Look up a single content item by URL |
 | `GET /votes` | List votes with filters |
 | `GET /profile/:address` | User profile and reputation |
+| `GET /following/:address` | Addresses followed by a wallet |
+| `GET /followers/:address` | Followers for a wallet |
+| `GET /follow-state` | Canonical follow edge lookup |
 | `GET /category` | List content categories |
 
 Routes `/health` and `/status` are reserved by Ponder.

@@ -143,7 +143,7 @@ yarn deploy --network celo --keystore deployer
 This will:
 1. Deploy `TimelockController` (2-day delay) + `CuryoGovernor`
 2. Deploy `CuryoReputation` (cREP token, 100M max supply)
-3. Deploy all UUPS proxy contracts (ContentRegistry, RoundVotingEngine, RoundRewardDistributor, ProfileRegistry, FrontendRegistry) and non-upgradeable contracts (CategoryRegistry, VoterIdNFT, ParticipationPool, HumanFaucet)
+3. Deploy all UUPS proxy contracts (ContentRegistry, RoundVotingEngine, RoundRewardDistributor, ProfileRegistry, FollowRegistry, FrontendRegistry) and non-upgradeable contracts (CategoryRegistry, VoterIdNFT, ParticipationPool, HumanFaucet)
 4. Wire cross-contract references
 5. Seed 11 content categories
 6. Mint token allocations: 52M→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 10M→Treasury

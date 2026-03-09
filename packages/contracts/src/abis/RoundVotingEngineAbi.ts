@@ -617,6 +617,35 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "frontendEligibleAtCommit",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "frontendFeeClaimed",
     "inputs": [
       {
@@ -1560,6 +1589,30 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "roundCleanupRewarded",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "roundFrontendClaimedAmount",
     "inputs": [
       {
@@ -1626,6 +1679,30 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundParticipationPool",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -3065,6 +3142,11 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
+    "name": "FrontendIsSlashed",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "HashMismatch",
     "inputs": []
   },
@@ -3176,6 +3258,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RewardDistributorLocked",
     "inputs": []
   },
   {

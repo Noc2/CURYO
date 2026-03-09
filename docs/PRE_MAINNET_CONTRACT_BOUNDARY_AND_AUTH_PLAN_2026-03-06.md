@@ -1,15 +1,16 @@
 # Pre-Mainnet Contract Boundary And Auth Plan
 
-Status: **Updated** | Last updated: 2026-03-07
+Status: **Updated** | Last updated: 2026-03-09
 
 This document tracks the remaining refactor work after the first cleanup pass. The large structural pieces are already in place:
 
 - `@curyo/contracts` is the shared contract artifact package.
 - keeper, bot, ponder, MCP, and Next.js already consume shared artifacts.
 - `useRoundSnapshot()` exists and the old `useRoundInfo()` / `useRoundPhase()` wrappers are gone.
-- comments, username, watchlist, and follows already use one-time signed challenges.
+- comments, username, and watchlist already use one-time signed challenges.
 - duplicate ABI outputs have already been removed.
 - the obsolete `packages/nextjs/contracts/deployedContracts.ts` artifact has now been deleted.
+- follows now live on-chain via `FollowRegistry` and no longer use signed API routes.
 
 The remaining work is narrower and should focus on reducing duplication, tightening boundaries, and adding confidence tests before mainnet.
 
@@ -46,7 +47,10 @@ These are the highest-value remaining refactors because they reduce:
   - `packages/nextjs/app/api/comments/*`
   - `packages/nextjs/app/api/username/*`
   - `packages/nextjs/app/api/watchlist/content/*`
-  - `packages/nextjs/app/api/follows/profiles/*`
+- Follows now use:
+  - `packages/foundry/contracts/FollowRegistry.sol`
+  - `packages/ponder/src/FollowRegistry.ts`
+  - `packages/nextjs/hooks/useFollowedProfiles.ts`
 
 ### What is still duplicated
 
@@ -56,7 +60,6 @@ The framework exists, but these files still repeat the same shape:
 
 - `packages/nextjs/lib/auth/commentChallenge.ts`
 - `packages/nextjs/lib/auth/watchlistChallenge.ts`
-- `packages/nextjs/lib/auth/followProfileChallenge.ts`
 
 The matching route files also repeat:
 
@@ -151,12 +154,10 @@ Each signed-write route should become:
 3. Refactor:
    - `packages/nextjs/app/api/comments/challenge/route.ts`
    - `packages/nextjs/app/api/watchlist/content/challenge/route.ts`
-   - `packages/nextjs/app/api/follows/profiles/challenge/route.ts`
 4. Refactor:
    - `packages/nextjs/app/api/comments/route.ts`
    - `packages/nextjs/app/api/username/route.ts`
    - `packages/nextjs/app/api/watchlist/content/route.ts`
-   - `packages/nextjs/app/api/follows/profiles/route.ts`
 5. Remove any action-specific wrappers that only forward to generic helpers.
 
 ### Acceptance criteria

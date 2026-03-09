@@ -64,6 +64,11 @@ const SmartContracts: NextPage = () => {
               <td>UUPS</td>
             </tr>
             <tr>
+              <td className="font-mono text-[#EF476F]">FollowRegistry</td>
+              <td>On-chain curator follow graph shared across all Curyo frontends</td>
+              <td>UUPS</td>
+            </tr>
+            <tr>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>Sybil-resistant token distribution via Self.xyz passport verification</td>
               <td>No</td>
@@ -430,6 +435,40 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>getAddressByName(name)</code> &mdash; Reverse lookup: name to owner address.
+        </li>
+      </ul>
+
+      <hr />
+
+      <h2>FollowRegistry</h2>
+      <p>
+        Canonical on-chain follow graph for curator discovery. Follows live on-chain so different Curyo frontends can
+        read the same social graph without sharing a centralized database.
+      </p>
+      <h3>Design Notes</h3>
+      <ul>
+        <li>
+          <strong>Portable social graph:</strong> any frontend or indexer can reconstruct the same follow edges from
+          contract events.
+        </li>
+        <li>
+          <strong>Gas-first storage:</strong> the contract stores only follow membership; enumeration is reconstructed
+          by Ponder instead of being mirrored in contract arrays.
+        </li>
+        <li>
+          <strong>No profile dependency:</strong> addresses can be followed even before they set a profile.
+        </li>
+      </ul>
+      <h3>Key Functions</h3>
+      <ul>
+        <li>
+          <code>follow(target)</code> &mdash; Follow a target address.
+        </li>
+        <li>
+          <code>unfollow(target)</code> &mdash; Remove an existing follow edge.
+        </li>
+        <li>
+          <code>isFollowing(follower, target)</code> &mdash; Read canonical follow state.
         </li>
       </ul>
 

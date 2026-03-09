@@ -7,7 +7,7 @@
  */
 import deployedContracts from "@curyo/contracts/deployedContracts";
 
-const chain31337 = (deployedContracts as Record<number, any>)[31337];
+const chain31337 = (deployedContracts as Record<number, Record<string, { address: string }>>)[31337];
 
 export const CONTRACT_ADDRESSES = {
   CuryoReputation: chain31337.CuryoReputation.address,
@@ -15,6 +15,7 @@ export const CONTRACT_ADDRESSES = {
   RoundVotingEngine: chain31337.RoundVotingEngine.address,
   RoundRewardDistributor: chain31337.RoundRewardDistributor.address,
   FrontendRegistry: chain31337.FrontendRegistry.address,
+  FollowRegistry: chain31337.FollowRegistry.address,
   CategoryRegistry: chain31337.CategoryRegistry.address,
   VoterIdNFT: chain31337.VoterIdNFT.address,
   ParticipationPool: chain31337.ParticipationPool.address,

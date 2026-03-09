@@ -11,11 +11,11 @@ setup-anvil-wallet:
 
 # Start local chain
 chain: setup-anvil-wallet
-	anvil
+	anvil --code-size-limit 30000
 
 # Start a fork
 fork: setup-anvil-wallet
-	anvil --fork-url ${FORK_URL} --chain-id 31337
+	anvil --fork-url ${FORK_URL} --chain-id 31337 --code-size-limit 30000
 
 # Deploy the contracts
 deploy:

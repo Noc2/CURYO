@@ -73,6 +73,24 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
   return false;
 }
 
+async function readCall(to: string, data: `0x${string}`): Promise<`0x${string}`> {
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error) {
+    throw new Error(json.error.message || "eth_call failed");
+  }
+  return json.result as `0x${string}`;
+}
+
 /**
  * Approve a pending category via the timelock.
  * Calls CategoryRegistry.approveCategory(uint256 categoryId).
@@ -155,6 +173,78 @@ export async function registerFrontend(fromAddress: string, contractAddress: str
     args: [],
   });
   return sendTx(fromAddress, contractAddress, data);
+}
+
+export async function followProfile(
+  targetAddress: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "follow",
+        type: "function",
+        inputs: [{ name: "target", type: "address" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "follow",
+    args: [targetAddress as `0x${string}`],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+export async function unfollowProfile(
+  targetAddress: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "unfollow",
+        type: "function",
+        inputs: [{ name: "target", type: "address" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "unfollow",
+    args: [targetAddress as `0x${string}`],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+export async function isFollowingOnChain(
+  followerAddress: string,
+  targetAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "isFollowing",
+      type: "function",
+      inputs: [
+        { name: "follower", type: "address" },
+        { name: "target", type: "address" },
+      ],
+      outputs: [{ name: "", type: "bool" }],
+      stateMutability: "view",
+    },
+  ] as const;
+
+  const data = encodeFunctionData({
+    abi,
+    functionName: "isFollowing",
+    args: [followerAddress as `0x${string}`, targetAddress as `0x${string}`],
+  });
+  const result = await readCall(contractAddress, data);
+  return decodeFunctionResult({ abi, functionName: "isFollowing", data: result });
 }
 
 /**

@@ -1460,7 +1460,7 @@ const deployedContracts = {
       },
     },
     ContentRegistry: {
-      address: "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
+      address: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
       abi: [
         {
           type: "constructor",
@@ -2913,7 +2913,7 @@ const deployedContracts = {
       },
     },
     RoundVotingEngine: {
-      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
+      address: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
       abi: [
         {
           type: "constructor",
@@ -3527,6 +3527,35 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "frontendEligibleAtCommit",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -4476,6 +4505,30 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "roundCleanupRewarded",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "roundFrontendClaimedAmount",
           inputs: [
             {
@@ -4542,6 +4595,30 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundParticipationPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -5981,6 +6058,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "FrontendIsSlashed",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "HashMismatch",
           inputs: [],
         },
@@ -6092,6 +6174,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "ReentrancyGuardReentrantCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RewardDistributorLocked",
           inputs: [],
         },
         {
@@ -6230,7 +6317,7 @@ const deployedContracts = {
       },
     },
     RoundRewardDistributor: {
-      address: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
+      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
       abi: [
         {
           type: "constructor",
@@ -6882,7 +6969,7 @@ const deployedContracts = {
       },
     },
     FrontendRegistry: {
-      address: "0x0C8E79F3534B00D9a3D4a856B665Bf4eBC22f2ba",
+      address: "0xeD1DB453C3156Ff3155a97AD217b3087D5Dc5f6E",
       abi: [
         {
           type: "constructor",
@@ -6969,6 +7056,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "UNBONDING_PERIOD",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "UPGRADER_ROLE",
           inputs: [],
           outputs: [
@@ -7028,6 +7128,13 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "completeDeregister",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "creditFees",
           inputs: [
             {
@@ -7063,6 +7170,25 @@ const deployedContracts = {
           inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "frontendExitAvailableAt",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -7391,6 +7517,13 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "requestDeregister",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "revokeFrontend",
           inputs: [
             {
@@ -7605,6 +7738,25 @@ const deployedContracts = {
               type: "address",
               indexed: true,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "FrontendExitRequested",
+          inputs: [
+            {
+              name: "frontend",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "availableAt",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -7828,6 +7980,16 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "FrontendExitPending",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FrontendIsSlashed",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "InvalidInitialization",
           inputs: [],
         },
@@ -7896,8 +8058,548 @@ const deployedContracts = {
           "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
+    FollowRegistry: {
+      address: "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "UPGRADER_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "UPGRADE_INTERFACE_VERSION",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "follow",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "getRoleAdmin",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "grantRole",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "hasRole",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "initialize",
+          inputs: [
+            {
+              name: "_admin",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_governance",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "isFollowing",
+          inputs: [
+            {
+              name: "follower",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "proxiableUUID",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "renounceRole",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "callerConfirmation",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "revokeRole",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "supportsInterface",
+          inputs: [
+            {
+              name: "interfaceId",
+              type: "bytes4",
+              internalType: "bytes4",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "unfollow",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "upgradeToAndCall",
+          inputs: [
+            {
+              name: "newImplementation",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [],
+          stateMutability: "payable",
+        },
+        {
+          type: "event",
+          name: "Initialized",
+          inputs: [
+            {
+              name: "version",
+              type: "uint64",
+              indexed: false,
+              internalType: "uint64",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "ProfileFollowed",
+          inputs: [
+            {
+              name: "follower",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "followed",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "ProfileUnfollowed",
+          inputs: [
+            {
+              name: "follower",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "followed",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RoleAdminChanged",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "previousAdminRole",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "newAdminRole",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RoleGranted",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sender",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RoleRevoked",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sender",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "Upgraded",
+          inputs: [
+            {
+              name: "implementation",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "error",
+          name: "AccessControlBadConfirmation",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "AccessControlUnauthorizedAccount",
+          inputs: [
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "neededRole",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "AddressEmptyCode",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "AlreadyFollowing",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ERC1967InvalidImplementation",
+          inputs: [
+            {
+              name: "implementation",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1967NonPayable",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FailedCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidAddress",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidInitialization",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotFollowing",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotInitializing",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "SelfFollow",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "UUPSUnauthorizedCallContext",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "UUPSUnsupportedProxiableUUID",
+          inputs: [
+            {
+              name: "slot",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+        },
+      ],
+      inheritedFunctions: {
+        follow: "contracts/interfaces/IFollowRegistry.sol",
+        isFollowing: "contracts/interfaces/IFollowRegistry.sol",
+        unfollow: "contracts/interfaces/IFollowRegistry.sol",
+        DEFAULT_ADMIN_ROLE:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        getRoleAdmin:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        grantRole:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        hasRole:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        renounceRole:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        revokeRole:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        supportsInterface:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        UPGRADE_INTERFACE_VERSION:
+          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        proxiableUUID:
+          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+        upgradeToAndCall:
+          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+      },
+    },
     ProfileRegistry: {
-      address: "0xeD1DB453C3156Ff3155a97AD217b3087D5Dc5f6E",
+      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
       abi: [
         {
           type: "constructor",
@@ -8624,7 +9326,7 @@ const deployedContracts = {
       },
     },
     ERC1967Proxy: {
-      address: "0x0c8e79f3534b00d9a3d4a856b665bf4ebc22f2ba",
+      address: "0xed1db453c3156ff3155a97ad217b3087d5dc5f6e",
       abi: [
         {
           type: "constructor",
@@ -8698,10 +9400,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 7,
+      deployedOnBlock: 8,
     },
     CategoryRegistry: {
-      address: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
+      address: "0x05B4CB126885fb10464fdD12666FEb25E2563B76",
       abi: [
         {
           type: "constructor",
@@ -9689,7 +10391,7 @@ const deployedContracts = {
       },
     },
     VoterIdNFT: {
-      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
+      address: "0x2a264F26859166C5BF3868A54593eE716AeBC848",
       abi: [
         {
           type: "constructor",
@@ -10922,7 +11624,7 @@ const deployedContracts = {
       },
     },
     ParticipationPool: {
-      address: "0xc8c25Aab3eeA991E083d2d0240eE4D693c59bDAC",
+      address: "0xDC88b5FEffD566bfA016B6B9268Ea29929E7AdF1",
       abi: [
         {
           type: "constructor",
@@ -11339,7 +12041,7 @@ const deployedContracts = {
       },
     },
     MockIdentityVerificationHub: {
-      address: "0xc624801dd98bef87c0718ddb43ad3a566cc51ecc",
+      address: "0xd3497ab25da369b3ee5a239890348ea542b0f479",
       abi: [
         {
           type: "function",
@@ -11709,10 +12411,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 61,
+      deployedOnBlock: 63,
     },
     HumanFaucet: {
-      address: "0x5D1ce2A19Aa885765aBcef89b7590E213422a8b9",
+      address: "0x49EA5126fD67f877b62dDC0144DBeb42591DF7bb",
       abi: [
         {
           type: "constructor",
@@ -12627,6 +13329,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "AddressAlreadyClaimed",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "AgeTooYoung",
           inputs: [],
         },
@@ -12805,6 +13512,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "UNBONDING_PERIOD",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "UPGRADER_ROLE",
           inputs: [],
           outputs: [
@@ -12864,6 +13584,13 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "completeDeregister",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "creditFees",
           inputs: [
             {
@@ -12899,6 +13626,25 @@ const deployedContracts = {
           inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "frontendExitAvailableAt",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -13227,6 +13973,13 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "requestDeregister",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "revokeFrontend",
           inputs: [
             {
@@ -13447,6 +14200,25 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "FrontendExitRequested",
+          inputs: [
+            {
+              name: "frontend",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "availableAt",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "FrontendRegistered",
           inputs: [
             {
@@ -13660,6 +14432,16 @@ const deployedContracts = {
         {
           type: "error",
           name: "FailedCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FrontendExitPending",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FrontendIsSlashed",
           inputs: [],
         },
         {
@@ -14347,6 +15129,35 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "frontendEligibleAtCommit",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
             },
           ],
           stateMutability: "view",
@@ -15296,6 +16107,30 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "roundCleanupRewarded",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "roundFrontendClaimedAmount",
           inputs: [
             {
@@ -15362,6 +16197,30 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundParticipationPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -16801,6 +17660,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "FrontendIsSlashed",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "HashMismatch",
           inputs: [],
         },
@@ -16912,6 +17776,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "ReentrancyGuardReentrantCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "RewardDistributorLocked",
           inputs: [],
         },
         {
@@ -23652,6 +24521,11 @@ const deployedContracts = {
             },
           ],
           anonymous: false,
+        },
+        {
+          type: "error",
+          name: "AddressAlreadyClaimed",
+          inputs: [],
         },
         {
           type: "error",

@@ -12,6 +12,7 @@ import {
   globalStats,
   ratingChange,
   frontend,
+  profileFollow,
   voterId,
   tokenHolder,
   tokenTransfer,
@@ -411,6 +412,91 @@ app.get("/profile/:address", async (c) => {
     .limit(20);
 
   return jsonBig(c, { profile: item, recentVotes, recentRewards });
+});
+
+app.get("/following/:address", async (c) => {
+  const address = c.req.param("address").toLowerCase() as `0x${string}`;
+  if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
+
+  const limit = safeLimit(c.req.query("limit"), 100, 200);
+  const offset = safeOffset(c.req.query("offset"));
+
+  const items = await db
+    .select({
+      walletAddress: profileFollow.followed,
+      createdAt: profileFollow.createdAt,
+      profileName: profile.name,
+      profileImageUrl: profile.imageUrl,
+    })
+    .from(profileFollow)
+    .leftJoin(profile, eq(profileFollow.followed, profile.address))
+    .where(eq(profileFollow.follower, address))
+    .orderBy(desc(profileFollow.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(profileFollow)
+    .where(eq(profileFollow.follower, address));
+
+  return jsonBig(c, {
+    items,
+    total: countResult?.count ?? 0,
+    limit,
+    offset,
+  });
+});
+
+app.get("/followers/:address", async (c) => {
+  const address = c.req.param("address").toLowerCase() as `0x${string}`;
+  if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
+
+  const limit = safeLimit(c.req.query("limit"), 100, 200);
+  const offset = safeOffset(c.req.query("offset"));
+
+  const items = await db
+    .select({
+      walletAddress: profileFollow.follower,
+      createdAt: profileFollow.createdAt,
+      profileName: profile.name,
+      profileImageUrl: profile.imageUrl,
+    })
+    .from(profileFollow)
+    .leftJoin(profile, eq(profileFollow.follower, profile.address))
+    .where(eq(profileFollow.followed, address))
+    .orderBy(desc(profileFollow.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(profileFollow)
+    .where(eq(profileFollow.followed, address));
+
+  return jsonBig(c, {
+    items,
+    total: countResult?.count ?? 0,
+    limit,
+    offset,
+  });
+});
+
+app.get("/follow-state", async (c) => {
+  const follower = c.req.query("follower")?.toLowerCase() as `0x${string}` | undefined;
+  const target = c.req.query("target")?.toLowerCase() as `0x${string}` | undefined;
+
+  if (!follower || !target || !isValidAddress(follower) || !isValidAddress(target)) {
+    return c.json({ error: "Invalid follower or target address" }, 400);
+  }
+
+  const [item] = await db
+    .select({ id: profileFollow.id })
+    .from(profileFollow)
+    .where(eq(profileFollow.id, `${follower}-${target}`))
+    .limit(1);
+
+  return c.json({ follower, target, following: Boolean(item) });
 });
 
 // ============================================================

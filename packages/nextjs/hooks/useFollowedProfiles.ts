@@ -1,17 +1,14 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSignMessage } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
+import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { PonderFollowResponse, ponderApi } from "~~/services/ponder/client";
 
 interface FollowedProfileItem {
   walletAddress: string;
   createdAt: string;
-}
-
-interface FollowedProfilesResponse {
-  items: FollowedProfileItem[];
-  count: number;
 }
 
 interface ToggleFollowResult {
@@ -21,41 +18,53 @@ interface ToggleFollowResult {
   error?: string;
 }
 
-function isSignatureRejected(error: unknown): boolean {
+function isTransactionRejected(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   return message.includes("rejected") || message.includes("denied") || message.includes("declined");
 }
 
 const EMPTY_FOLLOWED_PROFILES: FollowedProfileItem[] = [];
+const EMPTY_RESPONSE: PonderFollowResponse = {
+  items: [],
+  total: 0,
+  limit: 200,
+  offset: 0,
+};
+
+type FollowQueryData = {
+  data: PonderFollowResponse;
+  source: "ponder" | "rpc";
+};
 
 export function useFollowedProfiles(address?: string) {
-  const { signMessageAsync } = useSignMessage();
   const queryClient = useQueryClient();
-  const [pendingAddresses, setPendingAddresses] = useState<Set<string>>(new Set());
   const normalizedAddress = address?.toLowerCase();
-
+  const [pendingAddresses, setPendingAddresses] = useState<Set<string>>(new Set());
   const queryKey = useMemo(() => ["followedProfiles", normalizedAddress] as const, [normalizedAddress]);
+  const { data: followRegistry } = useDeployedContractInfo({ contractName: "FollowRegistry" as any });
+  const { writeContractAsync } = useScaffoldWriteContract({ contractName: "FollowRegistry" as any });
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = usePonderQuery<PonderFollowResponse, PonderFollowResponse>({
     queryKey,
-    queryFn: async () => {
+    ponderFn: async () => {
       if (!normalizedAddress) {
-        return { items: [], count: 0 } satisfies FollowedProfilesResponse;
+        return EMPTY_RESPONSE;
       }
 
-      const res = await fetch(`/api/follows/profiles?address=${encodeURIComponent(normalizedAddress)}`);
-      if (!res.ok) {
-        throw new Error("Failed to fetch followed profiles");
-      }
-
-      return (await res.json()) as FollowedProfilesResponse;
+      return ponderApi.getFollowing(normalizedAddress, { limit: "200" });
     },
+    rpcFn: async () => EMPTY_RESPONSE,
     enabled: Boolean(normalizedAddress),
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
 
-  const followedItems = data?.items ?? EMPTY_FOLLOWED_PROFILES;
+  const followedItems =
+    data?.data.items.map(item => ({
+      walletAddress: item.walletAddress,
+      createdAt: item.createdAt,
+    })) ?? EMPTY_FOLLOWED_PROFILES;
+
   const followedWallets = useMemo(
     () => new Set(followedItems.map(item => item.walletAddress.toLowerCase())),
     [followedItems],
@@ -75,20 +84,40 @@ export function useFollowedProfiles(address?: string) {
 
   const setOptimisticState = useCallback(
     (walletAddress: string, following: boolean) => {
-      queryClient.setQueryData(queryKey, (old: FollowedProfilesResponse | undefined) => {
-        const items = old?.items ?? [];
+      queryClient.setQueryData(["ponder-fallback", ...queryKey], (old: FollowQueryData | undefined) => {
+        const current = old?.data ?? EMPTY_RESPONSE;
+        const items = current.items.map(item => ({
+          walletAddress: item.walletAddress,
+          createdAt: item.createdAt,
+          profileName: item.profileName ?? null,
+          profileImageUrl: item.profileImageUrl ?? null,
+        }));
 
         if (following) {
           if (items.some(item => item.walletAddress.toLowerCase() === walletAddress)) {
-            return old ?? { items, count: items.length };
+            return old ?? { data: current, source: "rpc" as const };
           }
 
-          const nextItems = [{ walletAddress, createdAt: new Date().toISOString() }, ...items];
-          return { items: nextItems, count: nextItems.length };
+          const nextItems = [
+            {
+              walletAddress,
+              createdAt: new Date().toISOString(),
+              profileName: null,
+              profileImageUrl: null,
+            },
+            ...items,
+          ];
+          return {
+            data: { ...current, items: nextItems, total: nextItems.length },
+            source: old?.source ?? ("rpc" as const),
+          };
         }
 
         const nextItems = items.filter(item => item.walletAddress.toLowerCase() !== walletAddress);
-        return { items: nextItems, count: nextItems.length };
+        return {
+          data: { ...current, items: nextItems, total: nextItems.length },
+          source: old?.source ?? ("rpc" as const),
+        };
       });
     },
     [queryClient, queryKey],
@@ -105,53 +134,31 @@ export function useFollowedProfiles(address?: string) {
         return { ok: false, reason: "self_follow" };
       }
 
-      const isFollowing = followedWallets.has(normalizedTargetAddress);
-      const previous = queryClient.getQueryData<FollowedProfilesResponse>(queryKey);
+      if (!followRegistry) {
+        return {
+          ok: false,
+          reason: "request_failed",
+          error: "FollowRegistry is not deployed on the current network yet.",
+        };
+      }
 
+      const isFollowing = followedWallets.has(normalizedTargetAddress);
+      const previous = queryClient.getQueryData(["ponder-fallback", ...queryKey]);
       updatePending(normalizedTargetAddress, true);
 
       try {
-        const challengeRes = await fetch("/api/follows/profiles/challenge", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            address: normalizedAddress,
-            targetAddress: normalizedTargetAddress,
-            action: isFollowing ? "unfollow" : "follow",
-          }),
-        });
-
-        const challengeData = await challengeRes.json();
-        if (!challengeRes.ok) {
-          throw new Error(challengeData.error || "Failed to create signature challenge");
-        }
-
-        const signature = await signMessageAsync({ message: challengeData.message as string });
-
         setOptimisticState(normalizedTargetAddress, !isFollowing);
 
-        const res = await fetch("/api/follows/profiles", {
-          method: isFollowing ? "DELETE" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            address: normalizedAddress,
-            targetAddress: normalizedTargetAddress,
-            signature,
-            challengeId: challengeData.challengeId,
-          }),
+        await (writeContractAsync as any)({
+          functionName: isFollowing ? "unfollow" : "follow",
+          args: [normalizedTargetAddress],
         });
-
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as { error?: string } | null;
-          throw new Error(body?.error || "Request failed");
-        }
 
         return { ok: true, following: !isFollowing };
       } catch (error) {
-        queryClient.setQueryData(queryKey, previous);
-        await refetch();
+        queryClient.setQueryData(["ponder-fallback", ...queryKey], previous);
 
-        if (isSignatureRejected(error)) {
+        if (isTransactionRejected(error)) {
           return { ok: false, reason: "rejected" };
         }
 
@@ -166,13 +173,13 @@ export function useFollowedProfiles(address?: string) {
     },
     [
       normalizedAddress,
+      followRegistry,
       followedWallets,
       queryClient,
       queryKey,
-      refetch,
       setOptimisticState,
-      signMessageAsync,
       updatePending,
+      writeContractAsync,
     ],
   );
 

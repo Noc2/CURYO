@@ -107,6 +107,20 @@ export interface PonderProfile {
   totalRewardsClaimed: string;
 }
 
+export interface PonderFollowItem {
+  walletAddress: string;
+  createdAt: string;
+  profileName: string | null;
+  profileImageUrl: string | null;
+}
+
+export interface PonderFollowResponse {
+  items: PonderFollowItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface PonderSubmissionStakes {
   activeCount: number;
   submitter: string;
@@ -216,9 +230,7 @@ export type PonderVoterStatsBatch = Record<string, PonderVoterStats>;
 
 const PONDER_PAGE_LIMIT = 200;
 
-async function getAllPages<TItem>(
-  fetchPage: (offset: number) => Promise<{ items: TItem[] }>,
-): Promise<TItem[]> {
+async function getAllPages<TItem>(fetchPage: (offset: number) => Promise<{ items: TItem[] }>): Promise<TItem[]> {
   const items: TItem[] = [];
   let offset = 0;
 
@@ -279,6 +291,21 @@ export const ponderApi = {
       recentVotes: any[];
       recentRewards: any[];
     }>(`/profile/${address}`);
+  },
+
+  getFollowing(address: string, params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderFollowResponse>(`/following/${address}`, params);
+  },
+
+  getFollowers(address: string, params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderFollowResponse>(`/followers/${address}`, params);
+  },
+
+  getFollowState(follower: string, target: string) {
+    return ponderGet<{ follower: string; target: string; following: boolean }>("/follow-state", {
+      follower,
+      target,
+    });
   },
 
   getLeaderboard(type?: string, limit?: string) {
@@ -361,12 +388,7 @@ export const ponderApi = {
     return ponderGet<{ items: PonderVoteItem[] }>("/votes", params);
   },
 
-  async getAllVotes(params?: {
-    voter?: string;
-    contentId?: string;
-    roundId?: string;
-    state?: string;
-  }) {
+  async getAllVotes(params?: { voter?: string; contentId?: string; roundId?: string; state?: string }) {
     return getAllPages(offset =>
       this.getVotes({
         ...params,

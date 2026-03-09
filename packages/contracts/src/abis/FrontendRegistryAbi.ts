@@ -84,6 +84,19 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "UNBONDING_PERIOD",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "UPGRADER_ROLE",
     "inputs": [],
     "outputs": [
@@ -143,6 +156,13 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "completeDeregister",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "creditFees",
     "inputs": [
       {
@@ -178,6 +198,25 @@ export const FrontendRegistryAbi = [
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "frontendExitAvailableAt",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -506,6 +545,13 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "requestDeregister",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "revokeFrontend",
     "inputs": [
       {
@@ -726,6 +772,25 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "event",
+    "name": "FrontendExitRequested",
+    "inputs": [
+      {
+        "name": "frontend",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "availableAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "FrontendRegistered",
     "inputs": [
       {
@@ -939,6 +1004,16 @@ export const FrontendRegistryAbi = [
   {
     "type": "error",
     "name": "FailedCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FrontendExitPending",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "FrontendIsSlashed",
     "inputs": []
   },
   {

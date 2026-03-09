@@ -1,5 +1,5 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { getContentById, getContentList, getStats, ponderGet } from "../helpers/ponder-api";
+import { getContentById, getContentList, getFollowState, getFollowing, getStats, ponderGet } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -121,6 +121,21 @@ test.describe("Ponder API endpoints", () => {
     const data = await ponderGet("/votes?limit=5");
     expect(data).toHaveProperty("items");
     expect(Array.isArray(data.items)).toBe(true);
+  });
+
+  test("GET /following and /follow-state return follow graph structures", async () => {
+    const follower = ANVIL_ACCOUNTS.account2.address.toLowerCase();
+    const target = ANVIL_ACCOUNTS.account8.address.toLowerCase();
+
+    const following = await getFollowing(follower);
+    expect(following).toHaveProperty("items");
+    expect(following).toHaveProperty("total");
+    expect(Array.isArray(following.items)).toBe(true);
+
+    const state = await getFollowState(follower, target);
+    expect(state.follower).toBe(follower);
+    expect(state.target).toBe(target);
+    expect(typeof state.following).toBe("boolean");
   });
 
   test("GET /submitter-rewards returns reward data for submitter", async () => {
