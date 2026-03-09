@@ -77,16 +77,16 @@ test.describe("Governance page", () => {
     await expect(page.getByRole("heading", { name: /your profile|create profile/i })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("vote tab shows governance content", async ({ connectedPage: page }) => {
+  test("governance tab shows governance content", async ({ connectedPage: page }) => {
     await page.goto("/governance");
 
-    // Click Vote tab
-    const voteTabBtn = page.getByRole("button", { name: "Vote" });
-    await expect(voteTabBtn).toBeVisible({ timeout: 15_000 });
-    await voteTabBtn.click();
+    // Click Governance tab (was previously "Vote", renamed in the tab UI)
+    const governanceTabBtn = page.getByRole("button", { name: "Governance" });
+    await expect(governanceTabBtn).toBeVisible({ timeout: 15_000 });
+    await governanceTabBtn.click();
 
-    // Vote tab shows TokenManagement, TreasuryBalance, PlatformProposals, etc.
-    const voteContent = page.locator("main").getByText(/treasury|proposal|platform|delegate|token/i);
-    await expect(voteContent.first()).toBeVisible({ timeout: 15_000 });
+    // Governance tab shows TokenManagement, TreasuryBalance, PlatformProposals, etc.
+    const govContent = page.locator("main").getByText(/treasury|proposal|platform|delegate|token/i);
+    await expect(govContent.first()).toBeVisible({ timeout: 15_000 });
   });
 });
