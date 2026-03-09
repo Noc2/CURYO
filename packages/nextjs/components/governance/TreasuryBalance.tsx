@@ -122,7 +122,6 @@ export const TreasuryBalance = () => {
         />
         <PoolStat
           title="Human Faucet"
-          description="Unclaimed cREP still available to verified humans."
           tooltip="Remaining faucet balance available for future claims."
           value={faucetBalance}
           isLoading={faucetBalanceLoading}
