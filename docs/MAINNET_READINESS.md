@@ -110,8 +110,8 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 - [x] **robots.txt** _(fixed)_
   Added `public/robots.txt` blocking `/api/` and `/debug/` routes. Sitemap deferred — all routes are dynamic/app-generated content.
 
-- [ ] **URL validation TOCTOU window (documented)**
-  The SSRF check resolves DNS separately from the fetch. A DNS rebinding attack could bypass private-IP checks. The code already documents this at line 66-67. For the current threat model (server-side validation of user-submitted URLs, not fetching sensitive resources), this is acceptable. If the server ever runs on AWS/GCP with instance metadata endpoints, revisit.
+- [x] **URL validation TOCTOU window** _(accepted risk)_
+  Re-checked the current `generic` URL validation path: the SSRF check still resolves DNS separately from the later `HEAD` fetch, so a DNS rebinding attack could theoretically bypass the private-IP filter. For the current threat model this remains acceptable because the route is validating user-submitted URLs rather than fetching sensitive internal resources, and redirects are revalidated before the second request. If this service is ever deployed on AWS/GCP or into an environment with reachable metadata/internal HTTP endpoints, revisit and harden this path.
   _Ref: `packages/nextjs/app/api/url-validation/route.ts:65-76`_
 
 - [x] **Image proxy redirect handling** _(fixed)_
