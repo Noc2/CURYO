@@ -841,13 +841,24 @@ contract RoundVotingEngine is
             fee = (totalFrontendPool * frontendStake) / totalApprovedStake;
         }
 
+        address frontendOperator;
+        bool frontendSlashed;
+        if (fee > 0) {
+            (frontendOperator,, , frontendSlashed) = frontendRegistry.getFrontendInfo(frontend);
+            if (frontendSlashed) revert IFrontendRegistry.FrontendIsSlashed();
+        }
+
         frontendFeeClaimed[contentId][roundId][frontend] = true;
         roundFrontendClaimedCount[contentId][roundId] = claimedCount + 1;
         roundFrontendClaimedAmount[contentId][roundId] = claimedAmount + fee;
 
         if (fee > 0) {
-            crepToken.safeTransfer(address(frontendRegistry), fee);
-            frontendRegistry.creditFees(frontend, fee);
+            if (frontendOperator == address(0)) {
+                crepToken.safeTransfer(frontend, fee);
+            } else {
+                crepToken.safeTransfer(address(frontendRegistry), fee);
+                frontendRegistry.creditFees(frontend, fee);
+            }
         }
 
         emit FrontendFeeClaimed(contentId, roundId, frontend, fee);

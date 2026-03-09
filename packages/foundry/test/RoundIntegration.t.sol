@@ -1438,15 +1438,20 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
     }
 
-    function test_ClaimFrontendFee_RevertsWhileFrontendIsDeregistered() public {
+    function test_ClaimFrontendFee_PaysDeregisteredFrontendDirectly() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+        uint256 expectedFee = votingEngine.roundFrontendPool(contentId, roundId);
 
         vm.prank(frontendOp);
         frontendReg.deregister();
 
-        vm.expectRevert("Frontend not registered");
+        uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+
+        assertTrue(votingEngine.frontendFeeClaimed(contentId, roundId, frontendOp));
+        assertEq(crepToken.balanceOf(frontendOp) - frontendBalanceBefore, expectedFee);
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), 0, "deregistered frontend should bypass fee crediting");
     }
 
     function test_ClaimFrontendFee_RevertsWhileFrontendIsSlashed() public {
@@ -1456,7 +1461,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(owner);
         frontendReg.slashFrontend(frontendOp, 100e6, "test");
 
-        vm.expectRevert(FrontendRegistry.FrontendIsSlashed.selector);
+        vm.expectRevert(IFrontendRegistry.FrontendIsSlashed.selector);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
     }
 

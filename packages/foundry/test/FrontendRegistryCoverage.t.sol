@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
@@ -277,7 +278,7 @@ contract FrontendRegistryCoverageTest is Test {
         registry.slashFrontend(frontend1, 100e6, "test");
 
         vm.prank(feeCreditor);
-        vm.expectRevert(FrontendRegistry.FrontendIsSlashed.selector);
+        vm.expectRevert(IFrontendRegistry.FrontendIsSlashed.selector);
         registry.creditFees(frontend1, 100e6);
 
         assertEq(registry.getAccumulatedFees(frontend1), 0);
@@ -564,7 +565,7 @@ contract FrontendRegistryCoverageTest is Test {
         registry.slashFrontend(frontend1, 100e6, "test");
 
         vm.prank(frontend1);
-        vm.expectRevert(FrontendRegistry.FrontendIsSlashed.selector);
+        vm.expectRevert(IFrontendRegistry.FrontendIsSlashed.selector);
         registry.claimFees();
 
         assertEq(registry.getAccumulatedFees(frontend1), 500e6);

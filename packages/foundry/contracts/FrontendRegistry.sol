@@ -66,8 +66,6 @@ contract FrontendRegistry is
     event FeesClaimed(address indexed frontend, uint256 crepAmount);
     event VoterIdNFTUpdated(address voterIdNFT);
 
-    error FrontendIsSlashed();
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
