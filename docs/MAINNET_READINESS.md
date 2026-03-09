@@ -1,6 +1,6 @@
 # Mainnet Readiness Checklist
 
-Status: **Draft** | Last updated: 2026-03-06
+Status: **Draft** | Last updated: 2026-03-09
 
 This document tracks every item that must be resolved (BLOCKING) or should be resolved (NON-BLOCKING) before deploying Curyo to Celo Mainnet (chain ID 42220).
 
@@ -11,7 +11,7 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 ### Smart Contracts
 
 - [ ] **External audit completed and findings addressed**
-  No third-party audit report found in the repository. The codebase has internal test coverage (32 test files including invariant/solvency tests) and Slither static analysis in CI, but no formal external audit trail.
+  No third-party audit report found in the repository. The codebase has internal test coverage (38 top-level Foundry test files including invariant/solvency/adversarial suites) and Slither static analysis in CI, but no formal external audit trail.
 
 - [ ] **Post-deployment role verification automated**
   `DEPLOYMENT.md` Step 2e shows manual `cast call` checks to confirm the deployer renounced all roles. Automate this as a script that fails loudly if the deployer retains any role — human error here is catastrophic.
@@ -47,9 +47,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   Added a comprehensive CSP header restricting `script-src`, `connect-src`, `frame-src`, `img-src`, `font-src`, `style-src`, `object-src`, `base-uri`, and `form-action` to known origins. Dev-only localhost origins are conditionally included. Production Ponder URL injected via `NEXT_PUBLIC_PONDER_URL` at build time.
   _Ref: `packages/nextjs/next.config.ts:8-56`_
 
-- [ ] **Database migration strategy documented**
-  Drizzle + Turso is configured, and `DEPLOYMENT.md` shows `yarn db:push`, but there is no rollback procedure, no migration versioning, and no pre-deploy dry-run step. A failed migration on a production Turso database could corrupt user data (profiles, cached metadata, rate-limit state).
-  _Ref: `packages/nextjs/drizzle.config.ts`, `DEPLOYMENT.md:266-269`_
+- [ ] **Database migration rollout / rollback documented**
+  Versioned Drizzle migrations now exist (`packages/nextjs/drizzle/`, `yarn db:generate`, `yarn db:push`), so schema versioning is in place. What is still missing is a production runbook for pre-deploy dry-runs, backups, rollback/restore, and how to apply migrations safely against Turso.
+  _Ref: `packages/nextjs/drizzle/`, `packages/nextjs/package.json:18-20`, `docs/DEPLOYMENT.md:254-269`_
 
 ### Environment & Secrets
 
@@ -77,7 +77,7 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   Same as above for `consensusReserve` (4M cREP initial). Unanimous rounds stop earning the 5% subsidy when exhausted.
 
 - [ ] **Tlock ciphertext binding documented or enforced**
-  `commitVote()` requires a non-empty ciphertext, but `revealVoteByCommitKey()` verifies only the plaintext commit hash and never proves that the stored ciphertext decrypts to the revealed payload. Today, permissionless reveal via drand is an off-chain convention rather than an on-chain guarantee. Either bind ciphertext to the reveal path or document this trust model explicitly before mainnet.
+  `commitVote()` requires a non-empty ciphertext, but `revealVoteByCommitKey()` verifies only the plaintext commit hash and never proves that the stored ciphertext decrypts to the revealed payload. Today, permissionless reveal via drand is an off-chain convention rather than an on-chain guarantee, and some public docs describe a stronger property than the contract actually enforces. Either bind ciphertext to the reveal path or document this trust model explicitly before mainnet.
   _Ref: `packages/foundry/contracts/RoundVotingEngine.sol:435-437`, `packages/foundry/contracts/RoundVotingEngine.sol:603-614`_
 
 - [ ] **ParticipationPool halving schedule transparency**
@@ -144,7 +144,7 @@ These areas were reviewed and found production-ready:
 | Initialization | `_disableInitializers()` in all UUPS constructors. Two-stage init (deployer + governance). |
 | Input validation | Zero-address checks, stake bounds (1-100 cREP), ciphertext size limits (10KB), URL length limits (2048). |
 | Custom errors | No require strings — gas-efficient custom errors throughout. |
-| Test coverage | 32 test files: invariant solvency, game theory, governance lifecycle, branch coverage, edge cases, security tests. |
+| Test coverage | 38 top-level Foundry test files: invariant solvency, game theory, governance lifecycle, branch coverage, edge cases, and security/adversarial suites. |
 | .gitignore | `.env` and `.env.*` properly excluded. No secrets in tracked files. Anvil test keys are well-known deterministic values. |
 | Dev-only gating | Debug routes redirect in production. Dev faucet double-gated. Localhost URLs rejected in production configs across all packages. |
 | Console output | All `console.error/warn` is legitimate error handling. Debug logging gated by `DEBUG` env var or `NODE_ENV`. No stray `console.log`. |
