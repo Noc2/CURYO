@@ -25,6 +25,7 @@ test.describe("RevealFailed lifecycle", () => {
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const STAKE = BigInt(10e6);
   const EPOCH_DURATION = 300;
+  const MAX_DURATION = 86400; // 1 day — minimum allowed by contract
   const REVEAL_GRACE_PERIOD = 3600;
 
   test.beforeAll(async () => {
@@ -107,7 +108,9 @@ test.describe("RevealFailed lifecycle", () => {
       expect(revealed, `Reveal failed for voter ${i}`).toBe(true);
     }
 
-    await evmIncreaseTime(REVEAL_GRACE_PERIOD + 1);
+    // Advance past maxDuration + revealGracePeriod from round start.
+    // We already advanced EPOCH_DURATION + 1, so advance the remainder.
+    await evmIncreaseTime(MAX_DURATION + REVEAL_GRACE_PERIOD - EPOCH_DURATION + 1);
     await waitForPonderSync();
 
     const finalized = await finalizeRevealFailedRound(BigInt(contentId!), roundId, keeper.address, VOTING_ENGINE);
