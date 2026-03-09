@@ -24,6 +24,9 @@ const cspDirectives = [
     "wss://*.walletconnect.com",
     "https://*.walletconnect.com",
     "https://*.walletconnect.org",
+    "https://api.web3modal.org",
+    // Coinbase Wallet SDK
+    "https://cca-lite.coinbase.com",
     // Content metadata APIs (platform handlers)
     "https://en.wikipedia.org",
     "https://api.themoviedb.org",
