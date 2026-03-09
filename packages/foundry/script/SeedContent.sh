@@ -11,6 +11,7 @@ DEPLOY_JSON="$SCRIPT_DIR/../deployments/31337.json"
 RPC="http://127.0.0.1:8545"
 SUBMITTER_STAKE="10000000" # 10 cREP in 6 decimals (MIN_SUBMITTER_STAKE)
 VOTE_STAKE="5000000" # 5 cREP for votes
+EPOCH_DURATION_SECONDS="${EPOCH_DURATION_SECONDS:-1200}"
 
 # Check if localhost deployment exists
 if [ ! -f "$DEPLOY_JSON" ]; then
@@ -209,34 +210,28 @@ done
 
 # Vote on content items 1, 2, and 3 using commitVote (tlock commit-reveal).
 # commitVote(uint256 contentId, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)
-# The contract only checks ciphertext length > 0 && <= 10KB; any bytes work for seeding.
-# commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
+# commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))
 #
 # Voter 1 (account #9) votes UP on content 1 and 2
 # Voter 2 (account #10) votes DOWN on content 1, UP on content 3
 
-# Helper: generate commitHash and submit commitVote
+# Helper: generate tlock ciphertext and submit commitVote
 # Usage: seed_commit <contentId> <isUp:true|false> <salt_hex> <private_key>
 seed_commit() {
   local contentId="$1"
   local isUp="$2"
   local salt="$3"
   local privKey="$4"
-
-  # isUp: true=01, false=00 (1 byte)
-  local isUpByte
-  if [ "$isUp" = "true" ]; then isUpByte="01"; else isUpByte="00"; fi
-
-  # commitHash = keccak256(abi.encodePacked(bool isUp, bytes32 salt, uint256 contentId))
-  # encodePacked: 1 byte bool + 32 bytes salt + 32 bytes contentId
-  local contentIdHex
-  contentIdHex=$(printf '%064x' "$contentId")
-  local packed="${isUpByte}${salt}${contentIdHex}"
   local commitHash
-  commitHash=$(cast keccak "0x${packed}")
-
-  # Use a dummy ciphertext (contract only checks length > 0)
-  local ciphertext="0xdeadbeef"
+  local ciphertext
+  local artifacts
+  artifacts=$(node "$SCRIPT_DIR/../scripts-js/generateTlockCommit.js" \
+    "$contentId" "$isUp" "0x${salt}" "$EPOCH_DURATION_SECONDS") || {
+    echo "  (Failed to build tlock ciphertext)"
+    return 1
+  }
+  commitHash=$(printf '%s\n' "$artifacts" | sed -n '1p')
+  ciphertext=$(printf '%s\n' "$artifacts" | sed -n '2p')
 
   cast send "$TOKEN" "approve(address,uint256)" "$VOTING_ENGINE" "$VOTE_STAKE" \
     --private-key "$privKey" --rpc-url "$RPC" > /dev/null 2>&1
