@@ -556,10 +556,6 @@ export function GovernanceActionComposer() {
             <Cog6ToothIcon className="w-6 h-6 text-primary" />
             <h2 className="text-lg font-semibold">Governance Action Composer</h2>
           </div>
-          <p className="text-base text-base-content/60">
-            Choose a typed governance action, review the target call, and sign either a governor proposal or a direct
-            registry transaction.
-          </p>
         </div>
 
         <label className="inline-flex items-center gap-2 text-base text-base-content/70">
