@@ -1326,7 +1326,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Although the keeper reveals votes automatically in the background, voters who want immediate control over their reveal must store their direction and salt client-side after committing. If a voter loses this data (e.g., cleared browser storage), they cannot self-reveal. The stake is not permanently lost  -- the keeper will reveal it automatically after the epoch ends using the on-chain ciphertext and the drand beacon  -- but if the keeper also fails and the voter has lost their salt, the vote cannot be revealed and will be forfeited at settlement. The frontend mitigates this by persisting the reveal data in localStorage and offering a manual reveal option.",
+            text: "Although the keeper reveals votes automatically in the background, the protocol-level reveal function is permissionless: a voter may also reveal their own vote after the epoch ends if they know the plaintext `(isUp, salt)`. The current default UX remains keeper-driven automatic reveal, and the production UI does not yet expose a dedicated manual-reveal page. A safer fallback design is to decrypt the on-chain ciphertext locally after epoch end rather than persist reveal secrets in browser storage by default, because long-lived localStorage copies would increase the blast radius of any frontend XSS bug.",
           },
         ],
       },

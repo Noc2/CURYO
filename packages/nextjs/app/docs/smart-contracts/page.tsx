@@ -325,8 +325,9 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
-          committed vote after the epoch ends. Called by the keeper using the drand beacon to decrypt tlock ciphertexts.
-          Also permissionless &mdash; anyone can reveal any vote after the epoch ends.
+          committed vote after the epoch ends. Normally called by the keeper using the drand beacon to decrypt tlock
+          ciphertexts, but also permissionless &mdash; the voter or any third party can reveal any vote after the epoch
+          ends.
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
