@@ -16,6 +16,8 @@ export interface RateLimitConfig {
 }
 
 const CLEANUP_INTERVAL_MS = 60_000;
+const CLEANUP_LEASE_MS = 15_000;
+const CLEANUP_ROW_KEY = "cleanup";
 
 let initPromise: Promise<void> | null = null;
 let lastCleanup = 0;
@@ -34,6 +36,13 @@ async function ensureRateLimitTable() {
       await dbClient.execute(`
         CREATE INDEX IF NOT EXISTS api_rate_limits_expires_at_idx
         ON api_rate_limits (expires_at)
+      `);
+      await dbClient.execute(`
+        CREATE TABLE IF NOT EXISTS api_rate_limit_maintenance (
+          name TEXT PRIMARY KEY,
+          last_cleanup_started_at INTEGER NOT NULL,
+          lease_expires_at INTEGER NOT NULL
+        )
       `);
     })();
   }
@@ -67,6 +76,23 @@ function getClientIp(request: NextRequest): string {
 async function cleanupExpiredEntries(now: number) {
   if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
   lastCleanup = now;
+
+  const leaseExpiresAt = now + CLEANUP_LEASE_MS;
+  const cleanupLease = await dbClient.execute({
+    sql: `
+      INSERT INTO api_rate_limit_maintenance (name, last_cleanup_started_at, lease_expires_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT(name) DO UPDATE SET
+        last_cleanup_started_at = excluded.last_cleanup_started_at,
+        lease_expires_at = excluded.lease_expires_at
+      WHERE api_rate_limit_maintenance.lease_expires_at <= ?
+        AND api_rate_limit_maintenance.last_cleanup_started_at <= ?
+      RETURNING name
+    `,
+    args: [CLEANUP_ROW_KEY, now, leaseExpiresAt, now, now - CLEANUP_INTERVAL_MS],
+  });
+
+  if (cleanupLease.rows.length === 0) return;
 
   await dbClient.execute({
     sql: "DELETE FROM api_rate_limits WHERE expires_at <= ?",

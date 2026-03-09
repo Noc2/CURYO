@@ -118,8 +118,8 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   The image proxy validates the initial hostname, re-validates a single redirect target, and keeps both fetches at `redirect: "manual"`. Additional hops fail closed rather than bypassing the allowlist.
   _Ref: `packages/nextjs/app/api/image-proxy/route.ts:56-80`_
 
-- [ ] **Frontend rate-limit cleanup race**
-  Multiple Next.js server instances can trigger rate-limit cleanup concurrently (thundering herd on the DB). Low impact — cleanup is idempotent and Turso handles concurrent writes.
+- [x] **Frontend rate-limit cleanup race** _(fixed)_
+  Added a small DB-backed cleanup lease so only one Next.js instance performs expired rate-limit row cleanup per interval. Other instances skip cleanup work instead of issuing concurrent `DELETE` queries.
   _Ref: `packages/nextjs/utils/rateLimit.ts`_
 
 ### Documentation
