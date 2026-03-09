@@ -376,6 +376,21 @@ contract RoundVotingEngineBranchesTest is Test {
         engine.cancelExpiredRound(contentId, roundId);
     }
 
+    function test_CancelExpired_RevertsIfCommitQuorumReachedWithoutReveals() public {
+        uint256 contentId = _submitContent();
+
+        _commit(voter1, contentId, true, STAKE);
+        _commit(voter2, contentId, false, STAKE);
+        _commit(voter3, contentId, true, STAKE);
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+
+        vm.warp(block.timestamp + 7 days + 1);
+
+        vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
+        engine.cancelExpiredRound(contentId, roundId);
+    }
+
     function test_CancelExpired_RevertsIfRoundNotOpen() public {
         (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
@@ -1034,8 +1049,8 @@ contract RoundVotingEngineBranchesTest is Test {
         engine.processUnrevealedVotes(contentId, roundId, 999, 1);
     }
 
-    function test_ProcessUnrevealed_TiedRound_RefundsUnrevealed() public {
-        // Set up a tied round; any unrevealed votes should be refunded in tied state
+    function test_ProcessUnrevealed_TiedRound_ForfeitsExpiredUnrevealed() public {
+        // Set up a tied round; unrevealed votes from past epochs should now forfeit.
         uint256 contentId = _submitContent();
 
         // voter4 will commit but NOT reveal
@@ -1061,12 +1076,92 @@ contract RoundVotingEngineBranchesTest is Test {
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
 
-        uint256 voter4BalBefore = crepToken.balanceOf(voter4);
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
-        uint256 voter4BalAfter = crepToken.balanceOf(voter4);
+        uint256 treasuryAfter = crepToken.balanceOf(treasury);
 
-        // In tied rounds, all unrevealed votes are refunded
-        assertEq(voter4BalAfter - voter4BalBefore, STAKE);
+        assertEq(treasuryAfter - treasuryBefore, STAKE, "expired unrevealed tied-round stake forfeits");
+    }
+
+    function test_FinalizeRevealFailedRound_SucceedsAfterFinalRevealGrace() public {
+        uint256 contentId = _submitContent();
+
+        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
+        _commit(voter2, contentId, false, STAKE);
+        _commit(voter3, contentId, true, STAKE);
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        uint256 finalDeadline = round.startTime + EPOCH + engine.revealGracePeriod();
+
+        vm.warp(finalDeadline - 1);
+        vm.expectRevert(RoundVotingEngine.RevealGraceActive.selector);
+        engine.finalizeRevealFailedRound(contentId, roundId);
+
+        vm.warp(finalDeadline);
+        engine.finalizeRevealFailedRound(contentId, roundId);
+
+        RoundLib.Round memory failedRound = engine.getRound(contentId, roundId);
+        assertEq(uint256(failedRound.state), uint256(RoundLib.RoundState.RevealFailed));
+
+        uint256 voter1BalBefore = crepToken.balanceOf(voter1);
+        vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
+        _reveal(contentId, roundId, ck1, true, s1);
+
+        vm.expectRevert(RoundVotingEngine.VoteNotRevealed.selector);
+        vm.prank(voter1);
+        engine.claimCancelledRoundRefund(contentId, roundId);
+        assertEq(crepToken.balanceOf(voter1), voter1BalBefore, "late reveals are not accepted after reveal failure");
+    }
+
+    function test_RevealFailed_RefundsRevealedAndForfeitsUnrevealed() public {
+        uint256 contentId = _submitContent();
+
+        (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
+        _commit(voter2, contentId, false, STAKE);
+        _commit(voter3, contentId, true, STAKE);
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        vm.warp(round.startTime + EPOCH + 1);
+        _reveal(contentId, roundId, ck1, true, s1);
+
+        uint256 finalDeadline = round.startTime + EPOCH + engine.revealGracePeriod() + 1;
+        vm.warp(finalDeadline);
+        engine.finalizeRevealFailedRound(contentId, roundId);
+
+        uint256 voter1BalBefore = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        engine.claimCancelledRoundRefund(contentId, roundId);
+        assertEq(crepToken.balanceOf(voter1) - voter1BalBefore, STAKE, "revealed voters recover stake");
+
+        vm.expectRevert(RoundVotingEngine.VoteNotRevealed.selector);
+        vm.prank(voter2);
+        engine.claimCancelledRoundRefund(contentId, roundId);
+
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        engine.processUnrevealedVotes(contentId, roundId, 0, 0);
+        uint256 treasuryAfter = crepToken.balanceOf(treasury);
+        assertEq(treasuryAfter - treasuryBefore, STAKE * 2, "all unrevealed reveal-failed stakes forfeit");
+    }
+
+    function test_CommitAfterRevealFailedGrace_StartsNewRound() public {
+        uint256 contentId = _submitContent();
+
+        _commit(voter1, contentId, true, STAKE);
+        _commit(voter2, contentId, false, STAKE);
+        _commit(voter3, contentId, true, STAKE);
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        vm.warp(round.startTime + EPOCH + engine.revealGracePeriod() + 1);
+
+        _commit(voter4, contentId, true, STAKE);
+
+        RoundLib.Round memory failedRound = engine.getRound(contentId, roundId);
+        uint256 newRoundId = engine.getActiveRoundId(contentId);
+        assertEq(uint256(failedRound.state), uint256(RoundLib.RoundState.RevealFailed));
+        assertEq(newRoundId, roundId + 1, "new commits roll into a fresh round after reveal failure");
     }
 
     // =========================================================================

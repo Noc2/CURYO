@@ -59,6 +59,7 @@ contract RoundVotingEngine is
     error RoundNotSettledOrTied();
     error RoundNotCancelledOrTied();
     error ThresholdReached();
+    error RevealGraceActive();
 
     error NotEnoughVotes();
     error AlreadyCommitted();
@@ -192,6 +193,7 @@ contract RoundVotingEngine is
     event RoundSettled(uint256 indexed contentId, uint256 indexed roundId, bool upWins, uint256 losingPool);
     event RoundCancelled(uint256 indexed contentId, uint256 indexed roundId);
     event RoundTied(uint256 indexed contentId, uint256 indexed roundId);
+    event RoundRevealFailed(uint256 indexed contentId, uint256 indexed roundId);
     event CancelledRoundRefundClaimed(
         uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 amount
     );
@@ -546,6 +548,9 @@ contract RoundVotingEngine is
 
         // Track unrevealed count per epoch (selective revelation prevention)
         epochUnrevealedCount[contentId][roundId][epochEnd]++;
+        if (epochEnd > lastCommitRevealableAfter[contentId][roundId]) {
+            lastCommitRevealableAfter[contentId][roundId] = epochEnd;
+        }
         voterCommitHash[contentId][roundId][msg.sender] = commitHash;
         contentCommitCount[contentId]++;
 
@@ -582,6 +587,14 @@ contract RoundVotingEngine is
         // If there's an active round, use it
         if (roundId > 0) {
             RoundLib.Round storage existingRound = rounds[contentId][roundId];
+            if (
+                existingRound.state == RoundLib.RoundState.Open
+                    && _canFinalizeRevealFailedRound(contentId, roundId, existingRound)
+            ) {
+                existingRound.state = RoundLib.RoundState.RevealFailed;
+                existingRound.settledAt = block.timestamp;
+                emit RoundRevealFailed(contentId, roundId);
+            }
             if (!RoundLib.isTerminal(existingRound)) {
                 return roundId;
             }
@@ -612,13 +625,28 @@ contract RoundVotingEngine is
         if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         if (!RoundLib.isExpired(round, roundCfg.maxDuration)) revert RoundNotExpired();
-        // Cannot cancel if settlement threshold was reached
-        if (round.thresholdReachedAt != 0) revert ThresholdReached();
+        // Cannot cancel once the round has meaningful commit quorum.
+        if (round.voteCount >= roundCfg.minVoters) revert ThresholdReached();
 
         round.state = RoundLib.RoundState.Cancelled;
 
         emit RoundCancelled(contentId, roundId);
         _rewardKeeper(OP_CANCEL);
+    }
+
+    /// @notice Finalize a round whose reveal quorum never materialized after commit quorum was already reached.
+    function finalizeRevealFailedRound(uint256 contentId, uint256 roundId) external nonReentrant whenNotPaused {
+        RoundLib.Round storage round = rounds[contentId][roundId];
+        if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
+        RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
+        if (round.voteCount < roundCfg.minVoters) revert NotEnoughVotes();
+        if (round.revealedCount >= roundCfg.minVoters) revert ThresholdReached();
+        if (!_canFinalizeRevealFailedRound(contentId, roundId, round)) revert RevealGraceActive();
+
+        round.state = RoundLib.RoundState.RevealFailed;
+        round.settledAt = block.timestamp;
+
+        emit RoundRevealFailed(contentId, roundId);
     }
 
     // =========================================================================
@@ -800,15 +828,18 @@ contract RoundVotingEngine is
     }
 
     // =========================================================================
-    // REFUNDS (cancelled/tied rounds)
+    // REFUNDS (cancelled/tied/reveal-failed rounds)
     // =========================================================================
 
-    /// @notice Claim refund for a cancelled or tied round. Pull-based.
-    /// @dev AUDIT NOTE (I-7): No forfeiture deadline is intentional — cancelled/tied round stakes
+    /// @notice Claim refund for a cancelled, tied, or reveal-failed round. Pull-based.
+    /// @dev AUDIT NOTE (I-7): No forfeiture deadline is intentional — refundable terminal-round stakes
     ///      belong to voters indefinitely. Adding a deadline would create a governance extraction vector.
     function claimCancelledRoundRefund(uint256 contentId, uint256 roundId) external nonReentrant {
         RoundLib.Round storage round = rounds[contentId][roundId];
-        if (round.state != RoundLib.RoundState.Cancelled && round.state != RoundLib.RoundState.Tied) {
+        if (
+            round.state != RoundLib.RoundState.Cancelled && round.state != RoundLib.RoundState.Tied
+                && round.state != RoundLib.RoundState.RevealFailed
+        ) {
             revert RoundNotCancelledOrTied();
         }
         if (cancelledRoundRefundClaimed[contentId][roundId][msg.sender]) revert AlreadyClaimed();
@@ -819,6 +850,7 @@ contract RoundVotingEngine is
 
         RoundLib.Commit storage commit = commits[contentId][roundId][commitKey];
         if (commit.stakeAmount == 0) revert NoStake();
+        if (round.state != RoundLib.RoundState.Cancelled && !commit.revealed) revert VoteNotRevealed();
 
         uint256 refundAmount = commit.stakeAmount;
         commit.stakeAmount = 0;
@@ -852,9 +884,9 @@ contract RoundVotingEngine is
     // =========================================================================
 
     /// @notice Process unrevealed votes in batches after settlement. Permissionless.
-    /// @dev For settled/tied rounds: unrevealed votes from past epochs (revealableAfter < settledAt)
-    ///      are forfeited to treasury. Unrevealed votes from the current/future epoch at settlement
-    ///      time are refunded to voters since they had no chance to be revealed.
+    /// @dev For settled/tied rounds: unrevealed votes from past epochs are forfeited to treasury.
+    ///      Current/future-epoch votes at settlement/tie time are refunded because they had no chance.
+    ///      For reveal-failed rounds: all unrevealed votes are forfeited because the final reveal grace has passed.
     function processUnrevealedVotes(uint256 contentId, uint256 roundId, uint256 startIndex, uint256 count)
         external
         nonReentrant
@@ -862,7 +894,10 @@ contract RoundVotingEngine is
     {
         RoundLib.Round storage round = rounds[contentId][roundId];
 
-        if (round.state != RoundLib.RoundState.Settled && round.state != RoundLib.RoundState.Tied) {
+        if (
+            round.state != RoundLib.RoundState.Settled && round.state != RoundLib.RoundState.Tied
+                && round.state != RoundLib.RoundState.RevealFailed
+        ) {
             revert RoundNotSettledOrTied();
         }
 
@@ -880,13 +915,7 @@ contract RoundVotingEngine is
                 uint256 amount = commit.stakeAmount;
                 commit.stakeAmount = 0;
 
-                if (round.state == RoundLib.RoundState.Tied) {
-                    try this.transferTokenExternal(commit.voter, amount) {
-                        refundedCrep += amount;
-                    } catch {
-                        forfeitedCrep += amount;
-                    }
-                } else if (commit.revealableAfter <= round.settledAt) {
+                if (round.state == RoundLib.RoundState.RevealFailed || commit.revealableAfter <= round.settledAt) {
                     // Past epoch: ciphertext was decryptable but voter/keeper didn't reveal
                     forfeitedCrep += amount;
                 } else {
@@ -949,6 +978,23 @@ contract RoundVotingEngine is
 
     function _buildCommitKey(address voter, bytes32 commitHash) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(voter, commitHash));
+    }
+
+    function _canFinalizeRevealFailedRound(uint256 contentId, uint256 roundId, RoundLib.Round storage round)
+        internal
+        view
+        returns (bool)
+    {
+        if (round.state != RoundLib.RoundState.Open) return false;
+
+        RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
+        if (round.voteCount < roundCfg.minVoters) return false;
+        if (round.revealedCount >= roundCfg.minVoters) return false;
+
+        uint256 lastRevealableAt = lastCommitRevealableAfter[contentId][roundId];
+        if (lastRevealableAt == 0) return false;
+
+        return block.timestamp >= lastRevealableAt + _getRoundRevealGracePeriod(contentId, roundId);
     }
 
     function _revealVoteInternal(
@@ -1208,6 +1254,9 @@ contract RoundVotingEngine is
     // Per-round reveal grace period snapshot for governance consistency across open rounds.
     mapping(uint256 => mapping(uint256 => uint256)) public roundRevealGracePeriodSnapshot;
 
+    // Latest revealableAfter timestamp among all commits in a round.
+    mapping(uint256 => mapping(uint256 => uint256)) public lastCommitRevealableAfter;
+
     // Commit-time frontend approval snapshot to prevent retroactive fee eligibility changes.
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) public frontendEligibleAtCommit;
 
@@ -1215,5 +1264,5 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => bool)) public roundCleanupRewarded;
 
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[15] private __gap;
+    uint256[14] private __gap;
 }

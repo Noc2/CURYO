@@ -15,8 +15,9 @@ library RoundLib {
     enum RoundState {
         Open, // Accepting votes in 20-minute epochs; reveals happen after each epoch
         Settled, // ≥3 votes revealed, rewards distributed
-        Cancelled, // Expired (1 week) without ≥3 votes, or no reveals — full refund
-        Tied // Equal weighted pools after ≥3 votes — refund revealed voters
+        Cancelled, // Expired with commit count below minVoters — full refund
+        Tied, // Equal weighted pools after ≥3 reveals — revealed voters refund, unrevealed cleaned separately
+        RevealFailed // Commit quorum reached, but reveal quorum never did before the final reveal grace deadline
     }
 
     // --- Structs ---
@@ -78,7 +79,8 @@ library RoundLib {
     /// @notice Check if a round is in a terminal state.
     function isTerminal(Round storage round) internal view returns (bool) {
         return
-            round.state == RoundState.Settled || round.state == RoundState.Cancelled || round.state == RoundState.Tied;
+            round.state == RoundState.Settled || round.state == RoundState.Cancelled || round.state == RoundState.Tied
+                || round.state == RoundState.RevealFailed;
     }
 
     /// @notice Check if a round accepts new votes (Open and not expired).

@@ -633,6 +633,24 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "finalizeRevealFailedRound",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "frontendEligibleAtCommit",
     "inputs": [
       {
@@ -1283,6 +1301,30 @@ export const RoundVotingEngineAbi = [
     "type": "function",
     "name": "keeperRewardPool",
     "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "lastCommitRevealableAfter",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
     "outputs": [
       {
         "name": "",
@@ -2555,6 +2597,25 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
+    "name": "RoundRevealFailed",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "RoundSettled",
     "inputs": [
       {
@@ -2989,6 +3050,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "RevealGraceActive",
     "inputs": []
   },
   {
