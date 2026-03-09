@@ -479,7 +479,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Curyo uses tlock (time-lock encryption based on the drand randomness beacon) to achieve commit-reveal without the reveal burden. When a voter commits, the direction is encrypted to a future timestamp -- the end of the current 20-minute epoch. After the epoch ends, the drand beacon publishes a verifiable random value that enables decryption. The keeper fetches the beacon and calls revealVoteByCommitKey() on-chain, automatically decrypting all unrevealed votes. In normal use, no voter needs to take any additional action after their initial commit, although the app also exposes a small manual fallback if an auto-reveal appears delayed.",
+            text: "Curyo uses tlock (time-lock encryption based on the drand randomness beacon) to reduce the reveal burden. When a voter commits, the direction is encrypted to a future timestamp -- the end of the current 20-minute epoch. After the epoch ends, the drand beacon publishes a verifiable random value that enables off-chain decryption. The keeper normally fetches that beacon data and calls revealVoteByCommitKey() on-chain for unrevealed votes it can decrypt. In normal use, most voters do not need to take any additional action after their initial commit, although the app also exposes a small manual fallback if an auto-reveal appears delayed.",
           },
         ],
       },

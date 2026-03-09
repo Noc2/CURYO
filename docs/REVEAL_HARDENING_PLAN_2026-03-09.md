@@ -31,7 +31,7 @@ This is the best balance between:
 
 ## Non-Goals
 
-- This does not close the ciphertext-binding trust gap by itself.
+- This does not add an on-chain proof that a committed ciphertext was honestly decryptable.
 - This does not add delegated reveal signatures, relayers, or meta-transactions.
 - This does not attempt zk verification before mainnet.
 - This does not turn manual self-reveal into a default user journey.
