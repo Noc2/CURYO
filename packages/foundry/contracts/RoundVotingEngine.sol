@@ -191,6 +191,7 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendClaimedAmount;
 
     // Participation reward pull-based claiming (rate snapshotted at settlement)
+    mapping(uint256 => mapping(uint256 => address)) public roundParticipationPool;
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRateBps;
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public participationRewardClaimed;
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public participationRewardPaid;
@@ -757,8 +758,10 @@ contract RoundVotingEngine is
         }
 
         // Snapshot participation rate for pull-based claiming
-        if (address(participationPool) != address(0)) {
-            try participationPool.getCurrentRateBps() returns (uint256 rate) {
+        IParticipationPool currentParticipationPool = participationPool;
+        if (address(currentParticipationPool) != address(0)) {
+            roundParticipationPool[contentId][roundId] = address(currentParticipationPool);
+            try currentParticipationPool.getCurrentRateBps() returns (uint256 rate) {
                 roundParticipationRateBps[contentId][roundId] = rate;
             } catch {
                 emit SettlementSideEffectFailed(contentId, roundId, REASON_PARTICIPATION_RATE);
@@ -852,11 +855,17 @@ contract RoundVotingEngine is
 
     /// @notice Claim participation reward for a settled round. Pull-based.
     function claimParticipationReward(uint256 contentId, uint256 roundId) external nonReentrant {
-        if (address(participationPool) == address(0)) revert NoPool();
         if (participationRewardClaimed[contentId][roundId][msg.sender]) revert AlreadyClaimed();
 
         RoundLib.Round storage round = rounds[contentId][roundId];
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+
+        address rewardPoolAddress = roundParticipationPool[contentId][roundId];
+        if (rewardPoolAddress == address(0)) {
+            rewardPoolAddress = address(participationPool);
+        }
+        if (rewardPoolAddress == address(0)) revert NoPool();
+        IParticipationPool rewardPool = IParticipationPool(rewardPoolAddress);
 
         bytes32 commitHash = voterCommitHash[contentId][roundId][msg.sender];
         if (commitHash == bytes32(0)) revert NoCommit();
@@ -884,7 +893,7 @@ contract RoundVotingEngine is
         if (alreadyPaid >= reward) revert AlreadyClaimed();
 
         uint256 remainingReward = reward - alreadyPaid;
-        uint256 paidReward = participationPool.distributeReward(msg.sender, remainingReward);
+        uint256 paidReward = rewardPool.distributeReward(msg.sender, remainingReward);
         if (paidReward == 0) revert PoolDepleted();
 
         uint256 totalPaid = alreadyPaid + paidReward;
@@ -1275,5 +1284,5 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) public roundRevealGracePeriodSnapshot;
 
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[18] private __gap;
+    uint256[17] private __gap;
 }

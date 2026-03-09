@@ -1574,6 +1574,51 @@ contract RoundIntegrationTest is VotingTestBase {
         assertTrue(votingEngine.participationRewardClaimed(contentId, roundId, voter1));
     }
 
+    function test_ClaimParticipationReward_UsesSettledRoundPoolAfterRotation() public {
+        ParticipationPool pool1 = new ParticipationPool(address(crepToken), owner);
+        ParticipationPool pool2 = new ParticipationPool(address(crepToken), owner);
+
+        pool1.setAuthorizedCaller(address(votingEngine), true);
+        pool2.setAuthorizedCaller(address(votingEngine), true);
+        vm.prank(owner);
+        crepToken.mint(address(this), 2_000_000e6);
+        crepToken.approve(address(pool1), 1_000_000e6);
+        pool1.depositPool(1_000_000e6);
+        crepToken.approve(address(pool2), 1_000_000e6);
+        pool2.depositPool(1_000_000e6);
+        vm.startPrank(owner);
+        votingEngine.setParticipationPool(address(pool1));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        assertEq(votingEngine.roundParticipationPool(contentId, roundId), address(pool1));
+
+        vm.prank(owner);
+        votingEngine.setParticipationPool(address(pool2));
+
+        uint256 expectedReward = STAKE * 9000 / 10000;
+        uint256 pool1Before = crepToken.balanceOf(address(pool1));
+        uint256 pool2Before = crepToken.balanceOf(address(pool2));
+
+        vm.prank(voter1);
+        votingEngine.claimParticipationReward(contentId, roundId);
+
+        assertEq(crepToken.balanceOf(address(pool1)), pool1Before - expectedReward);
+        assertEq(crepToken.balanceOf(address(pool2)), pool2Before);
+    }
+
     function test_ClaimParticipationReward_DoubleClaimReverts() public {
         (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
 
