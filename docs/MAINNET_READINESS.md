@@ -76,10 +76,12 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 - [ ] **Consensus reserve depletion monitoring**
   Same as above for `consensusReserve` (4M cREP initial). Unanimous rounds stop earning the 5% subsidy when exhausted.
 
-- [ ] **Tlock ciphertext binding documented or enforced**
-  `commitVote()` requires a non-empty ciphertext, but `revealVoteByCommitKey()` verifies only the plaintext commit hash and never proves that the stored ciphertext decrypts to the revealed payload. Today, permissionless reveal via drand is an off-chain convention rather than an on-chain guarantee, and some public docs describe a stronger property than the contract actually enforces. Either bind ciphertext to the reveal path or document this trust model explicitly before mainnet.
-  The near-term mitigation and economic hardening plan in `docs/REVEAL_HARDENING_PLAN_2026-03-09.md` is now implemented, but it does not close the ciphertext-binding gap by itself.
-  _Ref: `packages/foundry/contracts/RoundVotingEngine.sol:435-437`, `packages/foundry/contracts/RoundVotingEngine.sol:603-614`_
+- [x] **Tlock reveal trust model documented**
+  `commitHash` is bound to `keccak256(ciphertext)`, so reveals are tied to the exact ciphertext bytes that were
+  committed. The reveal path still verifies commit consistency rather than proving on-chain that the ciphertext was
+  honestly decryptable, so public docs now describe reveal as a keeper/drand-assisted off-chain decryption flow with a
+  manual fallback for users who know the plaintext.
+  _Ref: `packages/foundry/contracts/RoundVotingEngine.sol`, `packages/nextjs/app/docs/how-it-works/page.tsx`, `packages/nextjs/app/docs/smart-contracts/page.tsx`_
 
 - [ ] **ParticipationPool halving schedule transparency**
   The current participation reward rate is already surfaced in the app via `useParticipationRate()` (submission, staking, and streak/portfolio flows), but users still do not get a clear "current tier / next halving" status widget at claim time. If this matters for launch polish, add a shared component for the current tier and next threshold.

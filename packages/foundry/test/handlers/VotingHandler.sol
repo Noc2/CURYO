@@ -7,11 +7,12 @@ import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../../contracts/RoundRewardDistributor.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { RoundLib } from "../../contracts/libraries/RoundLib.sol";
+import { VotingTestBase } from "../helpers/VotingTestHelpers.sol";
 
 /// @title VotingHandler
 /// @notice Invariant-test handler wrapping all user-facing voting actions into bounded, state-valid operations.
 /// @dev Ghost variables track all token flows for solvency assertions.
-contract VotingHandler is Test {
+contract VotingHandler is VotingTestBase {
     // --- External contracts ---
     RoundVotingEngine public engine;
     RoundRewardDistributor public distributor;
@@ -118,8 +119,8 @@ contract VotingHandler is Test {
         if (roundId > 0 && engine.hasCommitted(contentId, roundId, voter)) return;
 
         bytes32 salt = keccak256(abi.encodePacked(voter, contentId, isUp, block.timestamp, commitCount));
-        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
 
         vm.startPrank(voter);
         crepToken.approve(address(engine), stakeAmount);

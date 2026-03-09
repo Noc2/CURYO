@@ -8,12 +8,13 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 /// @title SelectiveRevelationTest
 /// @notice Tests for the selective vote revelation (front-running keeper) fix.
 ///         Validates that the epochUnrevealedCount counter + revealGracePeriod
 ///         prevents attackers from selectively revealing votes and settling.
-contract SelectiveRevelationTest is Test {
+contract SelectiveRevelationTest is VotingTestBase {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
@@ -101,8 +102,8 @@ contract SelectiveRevelationTest is Test {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
-        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.prank(voter);
         crepToken.approve(address(engine), stake);
         vm.prank(voter);

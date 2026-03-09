@@ -9,11 +9,12 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 /// @title Formal Verification: Parimutuel Game Theory (Public Vote + Random Settlement)
 /// @notice 14 scenarios verifying honest voting profitability, collusion resistance,
 ///         consensus subsidy mechanics, settlement timing, and tied rounds.
-contract FormalVerification_GameTheoryTest is Test {
+contract FormalVerification_GameTheoryTest is VotingTestBase {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine engine;
@@ -115,8 +116,8 @@ contract FormalVerification_GameTheoryTest is Test {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, cid));
-        bytes32 commitHash = keccak256(abi.encodePacked(up, salt, cid));
-        bytes memory ciphertext = abi.encodePacked(uint8(up ? 1 : 0), salt, cid);
+        bytes memory ciphertext = _testCiphertext(up, salt, cid);
+        bytes32 commitHash = _commitHash(up, salt, cid, ciphertext);
         vm.prank(voter);
         crepToken.approve(address(engine), stake);
         vm.prank(voter);

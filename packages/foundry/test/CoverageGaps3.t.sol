@@ -16,6 +16,7 @@ import {CuryoReputation} from "../contracts/CuryoReputation.sol";
 import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
 import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
 
 // =========================================================================
 // MOCKS
@@ -649,7 +650,7 @@ contract HumanFaucetTierEdgeCaseTest is Test {
 // 3. ROUND SETTLEMENT — EDGE CASES
 // =========================================================================
 
-contract RoundSettlementEdgeCase3Test is Test {
+contract RoundSettlementEdgeCase3Test is VotingTestBase {
     CuryoReputation public crep;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
@@ -914,7 +915,7 @@ contract RoundSettlementEdgeCase3Test is Test {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
         crep.approve(address(engine), 100e6);
@@ -927,7 +928,7 @@ contract RoundSettlementEdgeCase3Test is Test {
 
     function test_CommitOnInactiveContent_Reverts() public {
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, uint256(999)));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, uint256(999)));
+        bytes32 commitHash = _commitHash(true, salt, uint256(999));
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, uint256(999));
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
@@ -1187,7 +1188,7 @@ contract RoundSettlementEdgeCase3Test is Test {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
         crep.approve(address(engine), STAKE);
@@ -1246,8 +1247,8 @@ contract RoundSettlementEdgeCase3Test is Test {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.prank(voter);
         crep.approve(address(engine), stake);
         vm.prank(voter);

@@ -9,6 +9,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 // ============================================================================
 // Section 1 — Reentrancy Tests
@@ -52,7 +53,7 @@ contract MaliciousToken is ERC20 {
     }
 }
 
-contract SecurityReentrancyTest is Test {
+contract SecurityReentrancyTest is VotingTestBase {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine votingEngine;
@@ -122,8 +123,8 @@ contract SecurityReentrancyTest is Test {
 
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey) {
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
@@ -218,7 +219,7 @@ contract SecurityReentrancyTest is Test {
 // Section 2 — ERC20Permit Tests
 // ============================================================================
 
-contract SecurityPermitTest is Test {
+contract SecurityPermitTest is VotingTestBase {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine votingEngine;
@@ -304,7 +305,7 @@ contract SecurityPermitTest is Test {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
 
         uint256 deadline = block.timestamp + 1 hours;
@@ -326,7 +327,7 @@ contract SecurityPermitTest is Test {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
 
         uint256 deadline = block.timestamp - 1;
@@ -350,7 +351,7 @@ contract SecurityPermitTest is Test {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
 
         uint256 deadline = block.timestamp + 1 hours;
@@ -368,7 +369,7 @@ contract SecurityPermitTest is Test {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
 
         uint256 deadline = block.timestamp + 1 hours;
@@ -386,7 +387,7 @@ contract SecurityPermitTest is Test {
         vm.stopPrank();
 
         bytes32 salt2 = keccak256(abi.encodePacked(voter, block.timestamp, uint256(2)));
-        bytes32 commitHash2 = keccak256(abi.encodePacked(true, salt2, uint256(2)));
+        bytes32 commitHash2 = _commitHash(true, salt2, uint256(2));
         bytes memory ciphertext2 = abi.encodePacked(uint8(1), salt2, uint256(2));
 
         // Second use of same signature should revert (nonce consumed)
@@ -400,7 +401,7 @@ contract SecurityPermitTest is Test {
         uint256 contentId = _submitContent();
 
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
 
         uint256 deadline = block.timestamp + 1 hours;
@@ -419,7 +420,7 @@ contract SecurityPermitTest is Test {
 // Section 3 — Settlement Timing Tests
 // ============================================================================
 
-contract SecuritySettlementTimingTest is Test {
+contract SecuritySettlementTimingTest is VotingTestBase {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine votingEngine;
@@ -488,8 +489,8 @@ contract SecuritySettlementTimingTest is Test {
 
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey) {
         bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.startPrank(voter);
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));

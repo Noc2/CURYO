@@ -10,13 +10,14 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 /// @title Self-Opposition Profitability Analysis (Post-Fix)
 /// @notice Verifies that the NotWinningSide fix blocks self-opposition attacks.
 ///         Previously, an attacker controlling two wallets could vote both sides and
 ///         harvest participation rewards from both, making the attack profitable.
 ///         Now, only winning-side voters can claim participation rewards.
-contract SelfOppositionProfitabilityTest is Test {
+contract SelfOppositionProfitabilityTest is VotingTestBase {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine engine;
@@ -126,8 +127,8 @@ contract SelfOppositionProfitabilityTest is Test {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, cid));
-        bytes32 commitHash = keccak256(abi.encodePacked(up, salt, cid));
-        bytes memory ciphertext = abi.encodePacked(uint8(up ? 1 : 0), salt, cid);
+        bytes memory ciphertext = _testCiphertext(up, salt, cid);
+        bytes32 commitHash = _commitHash(up, salt, cid, ciphertext);
         vm.prank(voter);
         crepToken.approve(address(engine), stake);
         vm.prank(voter);

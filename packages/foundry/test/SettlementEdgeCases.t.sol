@@ -10,6 +10,7 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 // =========================================================================
 // TEST CONTRACT: Settlement Edge Cases
@@ -19,7 +20,7 @@ import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 /// @notice Tests for settlement edge cases: double-settle, cancel timing boundaries,
 ///         settle on already-settled, treasury=address(0), consensus reserve depletion,
 ///         small losing pool rounding, cancel after tie, state machine transitions.
-contract SettlementEdgeCasesTest is Test {
+contract SettlementEdgeCasesTest is VotingTestBase {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
@@ -131,8 +132,8 @@ contract SettlementEdgeCasesTest is Test {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
-        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.prank(voter);
         crepToken.approve(address(engine), stakeAmt);
         vm.prank(voter);
@@ -510,7 +511,7 @@ contract SettlementEdgeCasesTest is Test {
 
         // Commit 3 unanimous votes
         bytes32 s1 = keccak256(abi.encodePacked(voter1, block.timestamp));
-        bytes32 ch1 = keccak256(abi.encodePacked(true, s1, contentId));
+        bytes32 ch1 = _commitHash(true, s1, contentId);
         bytes memory ct1 = abi.encodePacked(uint8(1), s1, contentId);
         vm.prank(voter1);
         crepToken2.approve(address(engine2), STAKE);
@@ -519,7 +520,7 @@ contract SettlementEdgeCasesTest is Test {
 
         vm.warp(block.timestamp + 1); // offset for unique salt
         bytes32 s2 = keccak256(abi.encodePacked(voter2, block.timestamp));
-        bytes32 ch2 = keccak256(abi.encodePacked(true, s2, contentId));
+        bytes32 ch2 = _commitHash(true, s2, contentId);
         bytes memory ct2 = abi.encodePacked(uint8(1), s2, contentId);
         vm.prank(voter2);
         crepToken2.approve(address(engine2), STAKE);
@@ -528,7 +529,7 @@ contract SettlementEdgeCasesTest is Test {
 
         vm.warp(block.timestamp + 1);
         bytes32 s3 = keccak256(abi.encodePacked(voter3, block.timestamp));
-        bytes32 ch3 = keccak256(abi.encodePacked(true, s3, contentId));
+        bytes32 ch3 = _commitHash(true, s3, contentId);
         bytes memory ct3 = abi.encodePacked(uint8(1), s3, contentId);
         vm.prank(voter3);
         crepToken2.approve(address(engine2), STAKE);

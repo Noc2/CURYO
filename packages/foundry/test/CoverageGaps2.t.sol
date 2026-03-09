@@ -17,6 +17,7 @@ import {MockVoterIdNFT} from "./mocks/MockVoterIdNFT.sol";
 import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
 import {IParticipationPool} from "../contracts/interfaces/IParticipationPool.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
 
 // =========================================================================
 // SHARED MOCKS
@@ -1435,7 +1436,7 @@ contract CuryoReputationCoverageTest is Test {
 // RoundVotingEngine Settlement Branch Tests (62.5% → target 80%+)
 // =========================================================================
 
-contract RoundSettlementBranchTest is Test {
+contract RoundSettlementBranchTest is VotingTestBase {
     CuryoReputation public crep;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
@@ -1612,7 +1613,7 @@ contract RoundSettlementBranchTest is Test {
     function test_CommitWithZeroStakeReverts() public {
         uint256 contentId = _submitContent();
         bytes32 salt = keccak256("salt1");
-        bytes32 commitHash = keccak256(abi.encodePacked(true, salt, contentId));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
         bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
         vm.startPrank(voter1);
         vm.expectRevert(RoundVotingEngine.InvalidStake.selector);
@@ -1797,8 +1798,8 @@ contract RoundSettlementBranchTest is Test {
         returns (bytes32 commitKey, bytes32 salt)
     {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         vm.prank(voter);
         crep.approve(address(engine), amount);
         vm.prank(voter);

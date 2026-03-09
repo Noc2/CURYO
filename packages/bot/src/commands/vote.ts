@@ -120,8 +120,6 @@ export async function runVote() {
 
       // tlock commit-reveal: encrypt vote direction to epoch's drand round
       const salt = keccak256(encodePacked(["address", "uint256", "uint256"], [account.address, contentId, BigInt(Date.now())]));
-      const commitHash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentId]));
-
       // Read epoch duration from contract config
       const configResult = (await publicClient.readContract({
         ...contractConfig.votingEngine,
@@ -130,6 +128,9 @@ export async function runVote() {
       const epochDuration = Number(configResult[0]);
 
       const ciphertext = await tlockEncryptVote(isUp, salt, epochDuration);
+      const commitHash = keccak256(
+        encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]),
+      );
 
       const voteTx = await wallet.writeContract({
         ...contractConfig.votingEngine,

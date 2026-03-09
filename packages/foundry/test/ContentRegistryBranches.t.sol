@@ -11,6 +11,7 @@ import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { ICategoryRegistry } from "../contracts/interfaces/ICategoryRegistry.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 // =========================================================================
 // MOCKS
@@ -57,7 +58,7 @@ contract MockCategoryRegistry is ICategoryRegistry {
 // TEST CONTRACT
 // =========================================================================
 
-contract ContentRegistryBranchesTest is Test {
+contract ContentRegistryBranchesTest is VotingTestBase {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
@@ -152,8 +153,8 @@ contract ContentRegistryBranchesTest is Test {
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {
         vm.startPrank(voter);
         salt = keccak256(abi.encodePacked(voter, block.timestamp));
-        bytes32 commitHash = keccak256(abi.encodePacked(isUp, salt, contentId));
-        bytes memory ciphertext = abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
         crepToken.approve(address(votingEngine), STAKE);
         votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();

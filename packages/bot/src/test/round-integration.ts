@@ -118,10 +118,15 @@ function mockCiphertext(isUp: boolean, salt: `0x${string}`, contentId: bigint): 
 }
 
 /**
- * commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
+ * commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))
  */
-function commitHash(isUp: boolean, salt: `0x${string}`, contentId: bigint): `0x${string}` {
-  return keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentId]));
+function commitHash(
+  isUp: boolean,
+  salt: `0x${string}`,
+  contentId: bigint,
+  ciphertext: `0x${string}` = mockCiphertext(isUp, salt, contentId),
+): `0x${string}` {
+  return keccak256(encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]));
 }
 
 /**

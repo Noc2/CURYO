@@ -91,7 +91,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
-              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each 20-minute epoch ends. After each epoch the keeper reveals votes automatically. Settlement occurs after at least 3 votes are revealed and the epoch delay has passed.",
+              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each 20-minute epoch ends. After each epoch the keeper normally reveals eligible votes automatically, and connected users can self-reveal if needed. Settlement occurs after at least 3 votes are revealed and the reveal conditions are satisfied.",
               "Contributor Rewards  -- Content submitters receive 10%, category submitters 1%, and frontend operators 1% of the losing pool.",
             ],
           },
@@ -109,7 +109,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Commit: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress). The vote direction is encrypted with tlock -- hidden until the epoch ends.",
               "Accumulate: More voters commit during the 20-minute epoch. No one can see anyone else's vote direction until the epoch ends.",
-              "Reveal: After the epoch ends, the keeper automatically decrypts and reveals all votes. The rating does not change yet -- it updates only when the round later settles.",
+              "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
               "Settle: Once at least 3 votes are revealed and all past-epoch votes are revealed (or the 60-minute reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.",
               "Claim: Winners receive their original stake back plus an epoch-weighted share of the losing pool (Tier 1 = 4x reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.",
             ],
@@ -178,7 +178,7 @@ export const SECTIONS: Section[] = [
             type: "ordered",
             items: [
               "Commit (any time during the round): Choose UP or DOWN. The UI encrypts your direction and stake with tlock (commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress)). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
-              "Epoch ends (every 20 minutes): The drand beacon publishes a randomness value. The keeper fetches it and calls revealVoteByCommitKey() for each unrevealed commit, decrypting the direction on-chain.",
+              "Epoch ends (every 20 minutes): The drand beacon publishes a randomness value. The keeper fetches it, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.",
               "Settlement: After at least 3 votes are revealed and all past-epoch votes are revealed (or the 60-minute reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.",
               "Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed 5% rebate. Content submitters may claim a separate submitter reward.",
             ],
@@ -217,16 +217,17 @@ export const SECTIONS: Section[] = [
                 ],
                 [
                   "Epoch ended",
-                  "Keeper reveals votes automatically via drand",
+                  "Keeper normally reveals votes automatically via drand",
                   "~20 min per epoch",
                   "None  -- keeper handles reveal",
                 ],
                 ["Settled", "Rewards calculated and claimable", "--", "Revealed voters claim rewards or rebates"],
+                ["Cancelled", "Round expired below commit quorum  -- refundable to participants", "--", "Claim refund"],
                 [
-                  "Cancelled",
-                  "Round expired below commit quorum  -- refundable to all participants",
+                  "RevealFailed",
+                  "Commit quorum reached, but reveal quorum never did by the final grace deadline",
                   "--",
-                  "Claim refund",
+                  "Revealed votes claim refunds; unrevealed stakes are forfeited in cleanup",
                 ],
               ],
             },
@@ -543,7 +544,11 @@ export const SECTIONS: Section[] = [
               rows: [
                 ["epochDuration", "20 minutes", "Duration of each reward tier"],
                 ["minVoters", "3", "Minimum revealed votes required for settlement"],
-                ["maxDuration", "7 days", "Maximum round lifetime  -- expired rounds are cancelled"],
+                [
+                  "maxDuration",
+                  "7 days",
+                  "Maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
+                ],
                 [
                   "revealGracePeriod",
                   "60 minutes",
@@ -584,7 +589,7 @@ export const SECTIONS: Section[] = [
               "Cryptographic anti-herding: tlock ensures votes are provably hidden until the epoch ends, enforced by the drand randomness beacon. No voter can see others' directions during epoch 1.",
               "Economic anti-herding: Tier 2 voters (who saw epoch-1 results) earn only 25% reward weight per cREP. Herding is economically unattractive regardless of information advantage.",
               "Epoch-weighted win condition: A flood of late Tier-2 voters cannot flip a Tier-1 consensus  -- 3 Tier-2 voters at 100 cREP each (effective stake 25 each = 75 total) cannot override 1 Tier-1 voter at 100 cREP (effective stake 100). Even 4 Tier-2 voters at 100 cREP each (effective 100 total) only produce a tie.",
-              "Keeper is not trusted: The reveal step (decrypting and calling revealVoteByCommitKey) is permissionless  -- any party can call it. The keeper is a convenience, not a gatekeeper.",
+              "Keeper is not trusted: The reveal transaction is open to any caller who knows the plaintext `(isUp, salt)`. In practice the keeper derives that plaintext off-chain after epoch end. The keeper is a convenience, not a gatekeeper.",
               "Anti-selective-revelation: The contract tracks unrevealed vote counts per epoch. Settlement is blocked during the reveal grace period (60 minutes) if any past-epoch votes remain unrevealed, forcing the keeper to reveal all votes before anyone can settle. After the grace period, any unrevealed votes are forfeited (past epoch) or refunded (current epoch) post-settlement.",
               "Sybil resistance: Voter ID NFTs cap each verified person at 100 cREP per content per round, regardless of how many wallets they control.",
               "Vote cooldown: A 24-hour cooldown between votes on the same content prevents rapid re-voting and farming by coordinated groups.",
@@ -601,7 +606,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Rounds require a minimum of 3 voters (minVoters) to settle as contested. With fewer than 3 revealed votes after 7 days, the round is cancelled and all stakes are refunded. If all voters vote in the same direction, the round settles as a consensus and voters receive a subsidy payout.",
+            text: "Rounds require a minimum of 3 revealed votes (minVoters) to settle as contested. If 7 days pass below commit quorum, the round is cancelled and refundable. If commit quorum was reached but reveal quorum still never materializes by the final reveal grace deadline, the round can finalize as RevealFailed: revealed votes remain refundable, while unrevealed stakes are forfeited in cleanup. If all voters vote in the same direction, the round settles as a consensus and voters receive a subsidy payout.",
           },
           {
             type: "sub_heading",
@@ -609,7 +614,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The reveal step is permissionless -- anyone can call revealVoteByCommitKey() once the epoch ends. The drand beacon is a decentralized network with high availability. Even if the keeper is down, any other participant (another keeper, the voter themselves, a third party) can perform the reveal. If the keeper is offline, settlement is delayed by the reveal grace period (60 minutes). After the grace period, settlement can proceed with whatever votes have been revealed; unrevealed past-epoch votes are forfeited post-settlement.",
+            text: "The reveal transaction is open to any caller who knows the plaintext `(isUp, salt)` for a commit. In normal operation the keeper derives that plaintext off-chain from the tlock ciphertext after epoch end. Connected users can also self-reveal from the fallback flow. If the keeper is offline, settlement is delayed until an honest party reveals the needed votes or the reveal grace period expires. Below commit quorum the round can still cancel; after commit quorum, missing reveal quorum can end in RevealFailed and unrevealed stakes are forfeited during cleanup.",
           },
           {
             type: "sub_heading",
@@ -617,7 +622,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The on-chain commitment is commitHash = keccak256(isUp, salt, contentId) where salt is a 32-byte random value chosen by the voter. Guessing the direction requires finding a preimage of keccak256, which is computationally infeasible. The tlock ciphertext additionally encrypts the direction to the epoch-end timestamp, providing a second layer of confidentiality.",
+            text: "The on-chain commitment is commitHash = keccak256(isUp, salt, contentId, keccak256(ciphertext)) where salt is a 32-byte random value chosen by the voter and ciphertext is the exact timelock payload submitted on-chain. Guessing the direction requires finding a preimage of keccak256, which is computationally infeasible. The tlock ciphertext additionally encrypts the direction to the epoch-end timestamp, providing a second layer of confidentiality.",
           },
           {
             type: "sub_heading",
@@ -633,7 +638,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "No. Because revealVoteByCommitKey() is permissionless, an attacker could in theory decrypt all tlock ciphertexts after an epoch ends and reveal only votes favoring their side. The contract prevents this via the epochUnrevealedCount mechanism: each epoch tracks how many commits remain unrevealed, and settlement is blocked during the reveal grace period if any past-epoch votes have not been revealed. The keeper (or any honest party) reveals all votes within minutes of each epoch ending, well within the 60-minute grace window. An attacker cannot atomically reveal a subset and settle in one transaction.",
+            text: "Not in the normal settlement flow. The contract tracks unrevealed vote counts per epoch, and settlement is blocked during the reveal grace period if any past-epoch votes remain unrevealed. That prevents a caller from revealing only a favorable subset and settling immediately. In practice the keeper reveals all eligible votes within minutes of each epoch ending, and connected users can self-reveal if the keeper appears delayed.",
           },
         ],
       },
@@ -808,7 +813,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Slashed submitter stakes and the 1% treasury fee from round settlement flow to the treasury (governance timelock). The consensus subsidy reserve is separate: it is pre-funded at launch and replenished by 5% of losing pools from two-sided rounds. Treasury tokens can only be distributed through governance proposals  -- for grants, whistleblower rewards, and protocol development.",
+            text: "Slashed submitter stakes, the 1% treasury fee on contested settlements, and forfeited past-epoch unrevealed stakes all flow to the treasury (governance timelock). The consensus subsidy reserve is separate: it is pre-funded at launch and replenished by 5% of losing pools from two-sided rounds. Treasury tokens can only be distributed through governance proposals  -- for grants, whistleblower rewards, and protocol development.",
           },
         ],
       },
@@ -968,8 +973,8 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["State", "Description"],
               rows: [
-                ["Pending", "Created. Waiting for voting delay (1 day)."],
-                ["Active", "Voting open (1 week). Cast: For, Against, or Abstain."],
+                ["Pending", "Created. Waiting for voting delay (~1 day / 7,200 blocks)."],
+                ["Active", "Voting open (~1 week / 50,400 blocks). Cast: For, Against, or Abstain."],
                 ["Queued", "Passed. In timelock queue (2 days)."],
                 ["Executed", "Changes are live."],
               ],
@@ -986,8 +991,8 @@ export const SECTIONS: Section[] = [
               headers: ["Parameter", "Value"],
               rows: [
                 ["Proposal threshold", "100 cREP"],
-                ["Voting delay", "1 day"],
-                ["Voting period", "1 week"],
+                ["Voting delay", "~1 day (7,200 blocks)"],
+                ["Voting period", "~1 week (50,400 blocks)"],
                 ["Quorum", "4% of circulating supply (min 10K cREP)"],
                 ["Timelock delay", "2 days"],
                 ["Governance lock", "7 days (voting power locked after voting or proposing)"],
@@ -1016,7 +1021,7 @@ export const SECTIONS: Section[] = [
                 [
                   "maxDuration",
                   "7 days",
-                  "Maximum round lifetime  -- expired rounds are cancelled and stakes refunded",
+                  "Maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
                 ],
                 ["minVoters", "3", "Minimum revealed votes required before settlement is allowed"],
                 ["maxVoters", "1,000", "Per-round cap on total commits"],
@@ -1037,13 +1042,14 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The governance treasury is held by the timelock controller and starts with 10M cREP. It grows over time through two primary token inflow sources:",
+            text: "The governance treasury is held by the timelock controller and starts with 10M cREP. It grows over time through three primary ongoing inflow sources:",
           },
           {
             type: "bullets",
             items: [
-              "1% settlement fee  -- 1% of every losing pool is sent to the treasury when rounds settle.",
+              "1% settlement fee  -- 1% of contested losing pools is sent to the treasury when rounds settle.",
               "Slashed submitter stakes  -- when content is flagged for policy violations or receives unfavorable ratings, the submitter's 10 cREP stake is slashed to the treasury.",
+              "Forfeited unrevealed votes  -- past-epoch unrevealed stakes are swept to treasury during post-settlement cleanup.",
             ],
           },
           {
@@ -1095,7 +1101,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Sybil resistance  -- 1 person = 1 Voter ID via passport verification (Self.xyz).",
               "Stake caps  -- maximum 100 cREP per content per round limits single-voter influence.",
-              "Vote cooldowns  -- 24-hour cooldown prevents rapid re-voting on the same content.",
+              "Vote cooldowns  -- a 24-hour cooldown on the same content prevents rapid re-voting and is enforced per effective Voter ID.",
               "Permanent revocation  -- losing your Voter ID is irreversible and eliminates voting ability.",
             ],
           },
@@ -1319,7 +1325,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "tlock encryption relies on the drand randomness beacon network to produce the decryption key after each epoch ends. If the drand network experiences downtime, newly committed votes cannot be revealed until drand resumes. In practice, drand operates across a globally distributed set of nodes (the League of Entropy) and has maintained high availability since 2019. Additionally, the reveal step is permissionless: any party who knows the voter's direction and salt (the voter's own client, a backup keeper, or a third party) can manually call revealVoteByCommitKey() once the epoch ends, bypassing drand entirely. Rounds are not cancelled due to drand downtime  -- they simply wait for reveals and settle once conditions are met.",
+            text: "tlock encryption relies on the drand randomness beacon network to produce the decryption key after each epoch ends. If the drand network experiences downtime, newly committed votes cannot be revealed until drand resumes. In practice, drand operates across a globally distributed set of nodes (the League of Entropy) and has maintained high availability since 2019. Additionally, any party who already knows the plaintext `(isUp, salt)` for a commit can manually call revealVoteByCommitKey() once the epoch ends; connected users can do this from the fallback UI. Rounds are not cancelled due to drand downtime  -- they simply wait for reveals and settle once conditions are met.",
           },
         ],
       },
@@ -1328,7 +1334,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Although the keeper reveals votes automatically in the background, the protocol-level reveal function is permissionless: a voter may also reveal their own vote after the epoch ends if they know the plaintext `(isUp, salt)`. The current default UX remains keeper-driven automatic reveal, but the production UI now exposes a small fallback page for connected users. That page decrypts the on-chain ciphertext locally after epoch end rather than persisting reveal secrets in browser storage by default, because long-lived localStorage copies would increase the blast radius of any frontend XSS bug.",
+            text: "Although the keeper reveals votes automatically in the background, the protocol-level reveal function can also be called directly by a voter who knows the plaintext `(isUp, salt)` for their commit. The current default UX remains keeper-driven automatic reveal, but the production UI now exposes a small fallback page for connected users. That page decrypts the on-chain ciphertext locally after epoch end rather than persisting reveal secrets in browser storage by default, because long-lived localStorage copies would increase the blast radius of any frontend XSS bug.",
           },
         ],
       },

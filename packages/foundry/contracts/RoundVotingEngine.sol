@@ -435,7 +435,7 @@ contract RoundVotingEngine is
 
     /// @notice Commit a blind vote on content. Direction is hidden via tlock encryption.
     /// @param contentId The content being voted on.
-    /// @param commitHash keccak256(abi.encodePacked(isUp, salt, contentId)).
+    /// @param commitHash keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext))).
     /// @param ciphertext Tlock-encrypted payload (decryptable after epoch end via drand).
     /// @param stakeAmount Amount of cREP tokens to stake (1-100).
     /// @param frontend Address of frontend operator for fee distribution.
@@ -1046,7 +1046,7 @@ contract RoundVotingEngine is
         if (block.timestamp < commit.revealableAfter) revert EpochNotEnded();
 
         // Verify commit hash
-        bytes32 expectedHash = keccak256(abi.encodePacked(isUp, salt, contentId));
+        bytes32 expectedHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(commit.ciphertext)));
         if (commitHash != expectedHash) revert HashMismatch();
 
         // Mark as revealed

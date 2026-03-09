@@ -798,12 +798,7 @@ export async function commitVoteDirect(
     ),
   );
 
-  // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
-  const chash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, BigInt(contentId)]));
-
   // commitKey = keccak256(abi.encodePacked(voter, commitHash))
-  const ckey = keccak256(encodePacked(["address", "bytes32"], [fromAddress as `0x${string}`, chash]));
-
   // tlock encrypt: 33-byte plaintext = [uint8 direction, bytes32 salt]
   const plaintext = Buffer.alloc(33);
   plaintext[0] = isUp ? 1 : 0;
@@ -814,6 +809,13 @@ export async function commitVoteDirect(
   const targetRound = roundAt(Date.now() + epochDurationSeconds * 1000, chainInfo);
   const armored = await timelockEncrypt(targetRound, plaintext, client);
   const ciphertext = `0x${Buffer.from(armored, "utf-8").toString("hex")}` as `0x${string}`;
+  // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))
+  const chash = keccak256(
+    encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, BigInt(contentId), keccak256(ciphertext)]),
+  );
+
+  // commitKey = keccak256(abi.encodePacked(voter, commitHash))
+  const ckey = keccak256(encodePacked(["address", "bytes32"], [fromAddress as `0x${string}`, chash]));
 
   const data = encodeFunctionData({
     abi: [

@@ -198,12 +198,6 @@ yarn ponder:dev`}</code>
           <strong>Generate salt:</strong> Create a random 32-byte salt.
         </li>
         <li>
-          <strong>Compute commit hash:</strong>
-          <pre>
-            <code>{`commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))`}</code>
-          </pre>
-        </li>
-        <li>
           <strong>Encrypt via tlock:</strong> Build a 33-byte plaintext <code>[uint8 isUp, bytes32 salt]</code>, encrypt
           to a future drand round using <code>timelockEncrypt()</code>, then hex-encode the result.
           <pre>
@@ -214,6 +208,12 @@ const chainInfo = await client.chain().info();
 const targetRound = roundAt(Date.now() + epochDurationMs, chainInfo);
 const armored = await timelockEncrypt(targetRound, plaintext, client);
 const ciphertext = "0x" + Buffer.from(armored, "utf-8").toString("hex");`}</code>
+          </pre>
+        </li>
+        <li>
+          <strong>Compute commit hash:</strong>
+          <pre>
+            <code>{`commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))`}</code>
           </pre>
         </li>
         <li>
@@ -375,8 +375,8 @@ cp .env.example .env
       <h2>Constraints</h2>
       <ul>
         <li>
-          <strong>One vote per content per voter</strong> &mdash; each address can vote once per content item (24-hour
-          cooldown between votes on different content).
+          <strong>Voting limits are enforced per Voter ID</strong> &mdash; one effective identity can commit once per
+          round on a content item, and must wait 24 hours before voting on that same content again.
         </li>
         <li>
           <strong>Voter ID NFT required</strong> &mdash; soulbound, issued through human-verification (Self.xyz
@@ -396,7 +396,8 @@ cp .env.example .env
         </li>
         <li>
           <strong>Minimum 3 revealed voters per round</strong> &mdash; rounds require at least 3 revealed votes to
-          settle. Below that, rounds may be cancelled and stakes refunded.
+          settle. Below commit quorum they can be cancelled and refunded; after commit quorum, missing reveal quorum can
+          end in RevealFailed instead.
         </li>
       </ul>
 

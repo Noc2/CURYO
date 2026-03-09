@@ -95,12 +95,12 @@ export function useRoundVote() {
         .map(b => b.toString(16).padStart(2, "0"))
         .join("")}` as `0x${string}`;
 
-      // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId))
-      // This matches: keccak256(abi.encodePacked(isUp, salt, contentId)) in RoundVotingEngine
-      const commitHash = keccak256(encodePacked(["bool", "bytes32", "uint256"], [isUp, salt, contentId]));
-
       // tlock-encrypt vote direction + salt to current epoch's drand round
       const ciphertext = await tlockEncryptVote(isUp, salt, epochDuration);
+      // commitHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(ciphertext)))
+      const commitHash = keccak256(
+        encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]),
+      );
 
       // Approve tokens if needed
       if (publicClient && crepInfo) {
