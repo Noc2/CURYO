@@ -55,7 +55,6 @@ These are the highest-value remaining refactors because they reduce:
 The framework exists, but these files still repeat the same shape:
 
 - `packages/nextjs/lib/auth/commentChallenge.ts`
-- `packages/nextjs/lib/auth/profileUpdateChallenge.ts`
 - `packages/nextjs/lib/auth/watchlistChallenge.ts`
 - `packages/nextjs/lib/auth/followProfileChallenge.ts`
 
@@ -151,7 +150,6 @@ Each signed-write route should become:
 2. Add `mapSignedActionError()` to `packages/nextjs/lib/auth/signedActions.ts`.
 3. Refactor:
    - `packages/nextjs/app/api/comments/challenge/route.ts`
-   - `packages/nextjs/app/api/username/challenge/route.ts`
    - `packages/nextjs/app/api/watchlist/content/challenge/route.ts`
    - `packages/nextjs/app/api/follows/profiles/challenge/route.ts`
 4. Refactor:

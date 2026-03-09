@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { asc, count, eq, inArray } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import {
   COMMENT_CHALLENGE_ACTION,
   buildCommentChallengeMessage,
@@ -8,7 +8,8 @@ import {
 } from "~~/lib/auth/commentChallenge";
 import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { db } from "~~/lib/db";
-import { comments, userProfiles } from "~~/lib/db/schema";
+import { comments } from "~~/lib/db/schema";
+import { readProfileRegistryProfile, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 }; // 60 req/min per IP
@@ -42,15 +43,7 @@ export async function GET(request: NextRequest) {
 
     // Batch-fetch user profiles for all commenters
     const addresses = [...new Set(rows.map(r => r.walletAddress))];
-    const profiles =
-      addresses.length > 0
-        ? await db.select().from(userProfiles).where(inArray(userProfiles.walletAddress, addresses))
-        : [];
-
-    const profileMap: Record<string, { username: string | null; profileImageUrl: string | null }> = {};
-    for (const p of profiles) {
-      profileMap[p.walletAddress] = { username: p.username, profileImageUrl: p.profileImageUrl };
-    }
+    const profileMap = await readProfileRegistryProfiles(addresses);
 
     const enrichedComments = rows.map(row => ({
       id: row.id,
@@ -58,8 +51,8 @@ export async function GET(request: NextRequest) {
       walletAddress: row.walletAddress,
       body: row.body,
       createdAt: row.createdAt.toISOString(),
-      username: profileMap[row.walletAddress]?.username || null,
-      profileImageUrl: profileMap[row.walletAddress]?.profileImageUrl || null,
+      username: profileMap[row.walletAddress.toLowerCase()]?.username || null,
+      profileImageUrl: profileMap[row.walletAddress.toLowerCase()]?.profileImageUrl || null,
     }));
 
     return NextResponse.json({ comments: enrichedComments, count: enrichedComments.length, totalCount, limit, offset });
@@ -135,11 +128,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch profile for response enrichment
-    const profile = await db
-      .select()
-      .from(userProfiles)
-      .where(eq(userProfiles.walletAddress, payload.normalizedAddress))
-      .limit(1);
+    const profile = await readProfileRegistryProfile(payload.normalizedAddress);
 
     if (!inserted) {
       throw new Error("COMMENT_INSERT_FAILED");
@@ -152,8 +141,8 @@ export async function POST(request: NextRequest) {
         walletAddress: inserted.walletAddress,
         body: inserted.body,
         createdAt: inserted.createdAt.toISOString(),
-        username: profile[0]?.username || null,
-        profileImageUrl: profile[0]?.profileImageUrl || null,
+        username: profile.username,
+        profileImageUrl: profile.profileImageUrl,
       },
     });
   } catch (error) {

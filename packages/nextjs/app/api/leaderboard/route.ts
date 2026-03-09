@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "~~/lib/db";
-import { userProfiles } from "~~/lib/db/schema";
+import { listRegisteredProfileAddresses, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
 import { isPonderAvailable, ponderApi } from "~~/services/ponder/client";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -9,7 +8,7 @@ const ALLOWED_TYPES = ["voters", "content", "rewards"];
 const MAX_LIMIT = 100;
 
 // GET: Fetch leaderboard data
-// Uses Ponder when available for richer data (vote counts, rewards), falls back to local DB
+// Uses Ponder when available for richer data (vote counts, rewards), falls back to direct ProfileRegistry reads
 export async function GET(request: NextRequest) {
   const limited = await checkRateLimit(request, RATE_LIMIT);
   if (limited) return limited;
@@ -44,18 +43,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fallback: local database (user profiles only)
-    const profiles = await db.select().from(userProfiles).limit(Number(limit));
+    // Fallback: direct on-chain ProfileRegistry reads
+    const { addresses, total } = await listRegisteredProfileAddresses({ limit: Number(limit) });
+    const profiles = await readProfileRegistryProfiles(addresses);
 
-    const entries = profiles.map(profile => ({
-      address: profile.walletAddress,
-      username: profile.username,
-      profileImageUrl: profile.profileImageUrl || null,
+    const entries = addresses.map(address => ({
+      address,
+      username: profiles[address]?.username || null,
+      profileImageUrl: profiles[address]?.profileImageUrl || null,
     }));
 
     return NextResponse.json({
       users: entries,
-      totalCount: entries.length,
+      totalCount: total,
       source: "rpc",
     });
   } catch (error) {

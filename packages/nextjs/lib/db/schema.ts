@@ -1,17 +1,5 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-export const userProfiles = sqliteTable("user_profiles", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  walletAddress: text("wallet_address").notNull().unique(), // lowercase address
-  username: text("username").notNull().unique(), // 3-20 alphanumeric chars
-  profileImageUrl: text("profile_image_url"), // optional external image URL
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
-});
-
-export type UserProfile = typeof userProfiles.$inferSelect;
-export type NewUserProfile = typeof userProfiles.$inferInsert;
-
 export const comments = sqliteTable("comments", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   contentId: text("content_id").notNull(),
