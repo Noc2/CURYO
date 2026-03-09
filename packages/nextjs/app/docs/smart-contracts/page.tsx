@@ -349,7 +349,8 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>finalizeRevealFailedRound(contentId, roundId)</code> &mdash; Finalize a round that reached commit
-          quorum, but still failed to reach reveal quorum before the final reveal grace deadline.
+          quorum, but still failed to reach reveal quorum after voting closed and the final reveal grace deadline
+          passed.
         </li>
         <li>
           <code>claimCancelledRoundRefund(contentId, roundId)</code> &mdash; Claim refund for a cancelled, tied, or

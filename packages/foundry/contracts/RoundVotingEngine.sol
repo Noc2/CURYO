@@ -27,7 +27,8 @@ import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
 ///      Rounds accumulate votes across 20-minute epochs. After each epoch, tlock ciphertexts
 ///      become decryptable via drand and any caller that knows the plaintext can call revealVote().
 ///      If 1 week passes below commit quorum the round cancels with refunds; once commit quorum exists,
-///      missing reveal quorum can finalize as RevealFailed after the last reveal grace deadline.
+///      missing reveal quorum can finalize as RevealFailed only after the round stops accepting votes
+///      and the final reveal grace deadline has passed.
 ///      Epoch-weighting: epoch-1 (blind) = 100% reward weight; epoch-2+ (informed) = 25%.
 ///      Win condition uses weighted pools, not raw stake, preventing late-voter herding.
 contract RoundVotingEngine is
@@ -1011,6 +1012,20 @@ contract RoundVotingEngine is
         return keccak256(abi.encodePacked(voter, commitHash));
     }
 
+    function _getRevealFailedFinalizationTime(uint256 contentId, uint256 roundId, RoundLib.Round storage round)
+        internal
+        view
+        returns (uint256)
+    {
+        RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
+        uint256 lastRevealableAt = lastCommitRevealableAfter[contentId][roundId];
+        if (lastRevealableAt == 0) return 0;
+
+        uint256 votingWindowEnd = round.startTime + roundCfg.maxDuration;
+        uint256 revealBase = lastRevealableAt > votingWindowEnd ? lastRevealableAt : votingWindowEnd;
+        return revealBase + _getRoundRevealGracePeriod(contentId, roundId);
+    }
+
     function _canFinalizeRevealFailedRound(uint256 contentId, uint256 roundId, RoundLib.Round storage round)
         internal
         view
@@ -1022,10 +1037,10 @@ contract RoundVotingEngine is
         if (round.voteCount < roundCfg.minVoters) return false;
         if (round.revealedCount >= roundCfg.minVoters) return false;
 
-        uint256 lastRevealableAt = lastCommitRevealableAfter[contentId][roundId];
-        if (lastRevealableAt == 0) return false;
+        uint256 finalizationTime = _getRevealFailedFinalizationTime(contentId, roundId, round);
+        if (finalizationTime == 0) return false;
 
-        return block.timestamp >= lastRevealableAt + _getRoundRevealGracePeriod(contentId, roundId);
+        return block.timestamp >= finalizationTime;
     }
 
     function _revealVoteInternal(

@@ -158,7 +158,8 @@ const HowItWorks: NextPage = () => {
               <td>7 days</td>
               <td>
                 Maximum round lifetime. Rounds below commit quorum cancel with refunds; rounds that hit commit quorum
-                but miss reveal quorum can finalize as RevealFailed after the last reveal grace deadline.
+                but miss reveal quorum can finalize as RevealFailed only after voting closes and the final reveal grace
+                deadline passes.
               </td>
             </tr>
             <tr>
@@ -235,10 +236,10 @@ const HowItWorks: NextPage = () => {
       </p>
       <p>
         If a round <strong>expires</strong> below commit quorum, it is cancelled and refundable. If it reached commit
-        quorum but still misses reveal quorum after the final reveal grace window, it can finalize as{" "}
-        <strong>RevealFailed</strong>: revealed votes remain refundable, while unrevealed votes are later forfeited in
-        cleanup. Tied rounds also leave the rating unchanged, with revealed votes refundable and unrevealed votes
-        handled by the same cleanup rules. Only a decisive resolution with a clear majority updates the rating.
+        quorum but still misses reveal quorum after <code>maxDuration</code> and the final reveal grace window, it can
+        finalize as <strong>RevealFailed</strong>: revealed votes remain refundable, while unrevealed votes are later
+        forfeited in cleanup. Tied rounds also leave the rating unchanged, with revealed votes refundable and unrevealed
+        votes handled by the same cleanup rules. Only a decisive resolution with a clear majority updates the rating.
       </p>
 
       <h2>Content Inactivity &amp; Revival</h2>

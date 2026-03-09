@@ -397,8 +397,8 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
 
     // ==================== Test 10: Late Vote Placement and Round Expiry ====================
 
-    /// @notice Once final reveal grace has passed, a late vote rotates into a fresh round instead of reviving the old one.
-    function test_LateVotePlacement_AfterRevealGrace_StartsNewRound() public {
+    /// @notice Even if the first reveal grace window has passed, the round keeps accepting votes until maxDuration ends.
+    function test_LateVotePlacement_BeforeMaxDuration_StaysInExistingRound() public {
         uint256 cid = _submit();
 
         _vote(v[0], cid, true, 50e6);
@@ -407,27 +407,23 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         uint256 rid1 = engine.getActiveRoundId(cid);
         RoundLib.Round memory round1 = engine.getRound(cid, rid1);
 
-        // Long after the old commits became revealable, but before maxDuration:
-        // the stale round should auto-finalize as RevealFailed when a new vote arrives.
+        // Long after the old commits became revealable, but still before maxDuration:
+        // the round should remain open so additional voters can still rescue it.
         vm.warp(round1.startTime + MAX_DURATION - 1);
         _vote(v[2], cid, true, 50e6);
 
         uint256 rid2 = engine.getActiveRoundId(cid);
-        assertEq(rid2, rid1 + 1, "Late vote started a new round");
+        assertEq(rid2, rid1, "Late vote should stay in the same round");
 
-        RoundLib.Round memory finalized = engine.getRound(cid, rid1);
-        assertEq(uint256(finalized.state), uint256(RoundLib.RoundState.RevealFailed), "Old round finalized");
-        assertEq(finalized.voteCount, 2, "Old round kept original commits");
-
-        RoundLib.Round memory newRound = engine.getRound(cid, rid2);
-        assertEq(uint256(newRound.state), uint256(RoundLib.RoundState.Open), "New round is open");
-        assertEq(newRound.voteCount, 1, "Late vote counted in new round");
+        RoundLib.Round memory sameRound = engine.getRound(cid, rid1);
+        assertEq(uint256(sameRound.state), uint256(RoundLib.RoundState.Open), "Round remains open");
+        assertEq(sameRound.voteCount, 3, "Late vote counted in the existing round");
     }
 
     // ==================== Test 11: RevealFailed Refund Flow ====================
 
     /// @notice Once commit quorum exists, a round that never reaches reveal quorum finalizes as
-    ///         RevealFailed after the final grace deadline. Revealed votes stay refundable.
+    ///         RevealFailed only after maxDuration and the final grace deadline. Revealed votes stay refundable.
     function test_RevealFailed_RefundsOnlyRevealedVotes() public {
         vm.prank(owner);
         engine.setConfig(EPOCH_DURATION, MAX_DURATION, 3, 200);
@@ -444,7 +440,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
 
-        vm.warp(round.startTime + EPOCH_DURATION + engine.revealGracePeriod());
+        vm.warp(round.startTime + MAX_DURATION + engine.revealGracePeriod());
         engine.finalizeRevealFailedRound(cid, rid);
 
         RoundLib.Round memory failed = engine.getRound(cid, rid);

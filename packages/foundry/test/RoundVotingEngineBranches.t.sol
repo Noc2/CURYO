@@ -1115,7 +1115,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
-        uint256 finalDeadline = round.startTime + EPOCH + engine.revealGracePeriod();
+        uint256 finalDeadline = round.startTime + 7 days + engine.revealGracePeriod();
 
         vm.warp(finalDeadline - 1);
         vm.expectRevert(RoundVotingEngine.RevealGraceActive.selector);
@@ -1149,7 +1149,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.warp(round.startTime + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
 
-        uint256 finalDeadline = round.startTime + EPOCH + engine.revealGracePeriod() + 1;
+        uint256 finalDeadline = round.startTime + 7 days + engine.revealGracePeriod() + 1;
         vm.warp(finalDeadline);
         engine.finalizeRevealFailedRound(contentId, roundId);
 
@@ -1177,7 +1177,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
-        vm.warp(round.startTime + EPOCH + engine.revealGracePeriod() + 1);
+        vm.warp(round.startTime + 7 days + engine.revealGracePeriod() + 1);
 
         _commit(voter4, contentId, true, STAKE);
 
@@ -1185,6 +1185,27 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 newRoundId = engine.getActiveRoundId(contentId);
         assertEq(uint256(failedRound.state), uint256(RoundLib.RoundState.RevealFailed));
         assertEq(newRoundId, roundId + 1, "new commits roll into a fresh round after reveal failure");
+    }
+
+    function test_RoundKeepsAcceptingVotesBeforeMaxDurationEvenIfEarlyRevealGracePassed() public {
+        uint256 contentId = _submitContent();
+
+        _commit(voter1, contentId, true, STAKE);
+        _commit(voter2, contentId, false, STAKE);
+        _commit(voter3, contentId, true, STAKE);
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+
+        vm.warp(round.startTime + EPOCH + engine.revealGracePeriod() + 1);
+
+        _commit(voter4, contentId, true, STAKE);
+
+        uint256 activeRoundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory sameRound = engine.getRound(contentId, roundId);
+        assertEq(activeRoundId, roundId, "round should stay open until maxDuration ends");
+        assertEq(uint256(sameRound.state), uint256(RoundLib.RoundState.Open), "round remains open");
+        assertEq(sameRound.voteCount, 4, "late vote should join the existing round");
     }
 
     // =========================================================================
