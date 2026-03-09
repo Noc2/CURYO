@@ -1759,6 +1759,81 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(crepToken.balanceOf(address(pool2)), pool2Before);
     }
 
+    function test_ClaimParticipationReward_LegacyRoundRequiresBackfill() public {
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        vm.prank(voter1);
+        vm.expectRevert(RoundVotingEngine.NoPool.selector);
+        votingEngine.claimParticipationReward(contentId, roundId);
+
+        ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
+        pool.setAuthorizedCaller(address(votingEngine), true);
+        vm.prank(owner);
+        crepToken.mint(address(this), 1_000_000e6);
+        crepToken.approve(address(pool), 1_000_000e6);
+        pool.depositPool(1_000_000e6);
+
+        uint256 expectedReward = STAKE * 9000 / 10000;
+        uint256 poolBefore = crepToken.balanceOf(address(pool));
+        uint256 balanceBefore = crepToken.balanceOf(voter1);
+
+        uint256 rateBps = pool.getCurrentRateBps();
+        vm.prank(owner);
+        votingEngine.backfillParticipationRewardSnapshot(contentId, roundId, address(pool), rateBps);
+
+        vm.prank(voter1);
+        votingEngine.claimParticipationReward(contentId, roundId);
+
+        assertEq(crepToken.balanceOf(voter1) - balanceBefore, expectedReward);
+        assertEq(crepToken.balanceOf(address(pool)), poolBefore - expectedReward);
+    }
+
+    function test_BackfillParticipationRewardSnapshot_CannotOverwriteExistingSnapshot() public {
+        ParticipationPool pool1 = new ParticipationPool(address(crepToken), owner);
+        ParticipationPool pool2 = new ParticipationPool(address(crepToken), owner);
+
+        pool1.setAuthorizedCaller(address(votingEngine), true);
+        pool2.setAuthorizedCaller(address(votingEngine), true);
+        vm.prank(owner);
+        crepToken.mint(address(this), 2_000_000e6);
+        crepToken.approve(address(pool1), 1_000_000e6);
+        pool1.depositPool(1_000_000e6);
+        crepToken.approve(address(pool2), 1_000_000e6);
+        pool2.depositPool(1_000_000e6);
+        vm.startPrank(owner);
+        votingEngine.setParticipationPool(address(pool1));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        uint256 replacementRateBps = pool2.getCurrentRateBps();
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.SnapshotAlreadySet.selector);
+        votingEngine.backfillParticipationRewardSnapshot(contentId, roundId, address(pool2), replacementRateBps);
+    }
+
     function test_ClaimParticipationReward_DoubleClaimReverts() public {
         (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
 

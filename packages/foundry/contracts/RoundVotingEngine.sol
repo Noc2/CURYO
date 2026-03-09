@@ -82,6 +82,7 @@ contract RoundVotingEngine is
     error UnrevealedPastEpochVotes();
     error NothingProcessed();
     error NotWinningSide();
+    error SnapshotAlreadySet();
 
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -323,6 +324,29 @@ contract RoundVotingEngine is
     function setParticipationPool(address _participationPool) external onlyRole(CONFIG_ROLE) {
         if (_participationPool == address(0)) revert InvalidAddress();
         participationPool = IParticipationPool(_participationPool);
+    }
+
+    /// @notice One-time governance backfill for settled legacy rounds that lack a pool snapshot.
+    function backfillParticipationRewardSnapshot(
+        uint256 contentId,
+        uint256 roundId,
+        address rewardPoolAddress,
+        uint256 rateBps
+    ) external onlyRole(CONFIG_ROLE) {
+        if (rewardPoolAddress == address(0)) revert InvalidAddress();
+        if (rateBps == 0) revert NoParticipationRate();
+
+        RoundLib.Round storage round = rounds[contentId][roundId];
+        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+        if (roundParticipationPool[contentId][roundId] != address(0)) revert SnapshotAlreadySet();
+
+        uint256 existingRateBps = roundParticipationRateBps[contentId][roundId];
+        if (existingRateBps != 0 && existingRateBps != rateBps) revert InvalidConfig();
+
+        roundParticipationPool[contentId][roundId] = rewardPoolAddress;
+        if (existingRateBps == 0) {
+            roundParticipationRateBps[contentId][roundId] = rateBps;
+        }
     }
 
     function setConfig(uint256 _epochDuration, uint256 _maxDuration, uint256 _minVoters, uint256 _maxVoters)
@@ -1199,9 +1223,6 @@ contract RoundVotingEngine is
         returns (address rewardPoolAddress, uint256 rateBps)
     {
         rewardPoolAddress = roundParticipationPool[contentId][roundId];
-        if (rewardPoolAddress == address(0)) {
-            rewardPoolAddress = address(participationPool);
-        }
         rateBps = roundParticipationRateBps[contentId][roundId];
     }
 
