@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Link from "next/link";
 import { NetworkOptions } from "./NetworkOptions";
 import { getAddress } from "viem";
 import { Address } from "viem";
@@ -194,7 +195,17 @@ export const AddressInfoDropdown = ({
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      <div className="text-base text-base-content text-left px-4 pl-12">{crepFormatted} cREP</div>
+      <div className="text-base text-base-content text-left px-4 pl-12">
+        {crepFormatted} cREP
+        {hasPendingReveals ? (
+          <Link
+            href="/vote/reveal"
+            className="ml-2 text-xs text-base-content/50 hover:text-base-content underline underline-offset-2"
+          >
+            Reveal my vote
+          </Link>
+        ) : null}
+      </div>
       {totalStaked > 0 && (
         <div className="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12">
           {stakedFormatted} Staked

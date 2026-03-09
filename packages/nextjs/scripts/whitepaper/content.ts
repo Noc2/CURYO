@@ -477,7 +477,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Curyo uses tlock (time-lock encryption based on the drand randomness beacon) to achieve commit-reveal without the reveal burden. When a voter commits, the direction is encrypted to a future timestamp -- the end of the current 20-minute epoch. After the epoch ends, the drand beacon publishes a verifiable random value that enables decryption. The keeper fetches the beacon and calls revealVoteByCommitKey() on-chain, automatically decrypting all unrevealed votes. No voter needs to take any additional action after their initial commit.",
+            text: "Curyo uses tlock (time-lock encryption based on the drand randomness beacon) to achieve commit-reveal without the reveal burden. When a voter commits, the direction is encrypted to a future timestamp -- the end of the current 20-minute epoch. After the epoch ends, the drand beacon publishes a verifiable random value that enables decryption. The keeper fetches the beacon and calls revealVoteByCommitKey() on-chain, automatically decrypting all unrevealed votes. In normal use, no voter needs to take any additional action after their initial commit, although the app also exposes a small manual fallback if an auto-reveal appears delayed.",
           },
         ],
       },
@@ -1326,7 +1326,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Although the keeper reveals votes automatically in the background, the protocol-level reveal function is permissionless: a voter may also reveal their own vote after the epoch ends if they know the plaintext `(isUp, salt)`. The current default UX remains keeper-driven automatic reveal, and the production UI does not yet expose a dedicated manual-reveal page. A safer fallback design is to decrypt the on-chain ciphertext locally after epoch end rather than persist reveal secrets in browser storage by default, because long-lived localStorage copies would increase the blast radius of any frontend XSS bug.",
+            text: "Although the keeper reveals votes automatically in the background, the protocol-level reveal function is permissionless: a voter may also reveal their own vote after the epoch ends if they know the plaintext `(isUp, salt)`. The current default UX remains keeper-driven automatic reveal, but the production UI now exposes a small fallback page for connected users. That page decrypts the on-chain ciphertext locally after epoch end rather than persisting reveal secrets in browser storage by default, because long-lived localStorage copies would increase the blast radius of any frontend XSS bug.",
           },
         ],
       },

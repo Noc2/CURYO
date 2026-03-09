@@ -1,5 +1,5 @@
 import { Buffer } from "buffer";
-import { mainnetClient, roundAt, timelockEncrypt } from "tlock-js";
+import { mainnetClient, roundAt, timelockDecrypt, timelockEncrypt } from "tlock-js";
 
 const client = mainnetClient();
 
@@ -35,4 +35,22 @@ export async function tlockEncryptVote(
   // Encode armored string as hex bytes for on-chain storage
   const armoredBytes = Buffer.from(armored, "utf-8");
   return `0x${armoredBytes.toString("hex")}` as `0x${string}`;
+}
+
+/**
+ * Decrypt an on-chain tlock ciphertext after the target epoch has ended.
+ * Returns null if the payload shape is invalid.
+ */
+export async function decryptTlockCiphertext(
+  ciphertext: `0x${string}`,
+): Promise<{ isUp: boolean; salt: `0x${string}` } | null> {
+  const hex = ciphertext.startsWith("0x") ? ciphertext.slice(2) : ciphertext;
+  const armored = Buffer.from(hex, "hex").toString("utf-8");
+  const plaintext = await timelockDecrypt(armored, client);
+
+  if (plaintext.length !== 33) return null;
+
+  const isUp = plaintext[0] === 1;
+  const salt = `0x${plaintext.subarray(1, 33).toString("hex")}` as `0x${string}`;
+  return { isUp, salt };
 }

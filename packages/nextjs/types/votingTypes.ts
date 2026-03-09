@@ -20,7 +20,10 @@ export interface RoundData {
 export interface CommitData {
   voter: string;
   stakeAmount: bigint;
-  epochIndex: number;
+  ciphertext: `0x${string}`;
+  frontend: string;
+  revealableAfter: bigint;
   revealed: boolean;
   isUp: boolean;
+  epochIndex: number;
 }

@@ -327,7 +327,8 @@ const SmartContracts: NextPage = () => {
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
           committed vote after the epoch ends. Normally called by the keeper using the drand beacon to decrypt tlock
           ciphertexts, but also permissionless &mdash; the voter or any third party can reveal any vote after the epoch
-          ends.
+          ends. The production UI keeps this mostly hidden, but connected users also have a small manual fallback link
+          if an auto-reveal appears delayed.
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
