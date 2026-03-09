@@ -78,7 +78,7 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 - [ ] **Tlock ciphertext binding documented or enforced**
   `commitVote()` requires a non-empty ciphertext, but `revealVoteByCommitKey()` verifies only the plaintext commit hash and never proves that the stored ciphertext decrypts to the revealed payload. Today, permissionless reveal via drand is an off-chain convention rather than an on-chain guarantee, and some public docs describe a stronger property than the contract actually enforces. Either bind ciphertext to the reveal path or document this trust model explicitly before mainnet.
-  A separate near-term mitigation plan for user control and keeper fallback is documented in `docs/SELF_REVEAL_FALLBACK_PLAN_2026-03-09.md`, but that plan does not close the ciphertext-binding gap by itself.
+  A separate near-term mitigation and economic hardening plan is documented in `docs/REVEAL_HARDENING_PLAN_2026-03-09.md`, but that plan does not close the ciphertext-binding gap by itself.
   _Ref: `packages/foundry/contracts/RoundVotingEngine.sol:435-437`, `packages/foundry/contracts/RoundVotingEngine.sol:603-614`_
 
 - [ ] **ParticipationPool halving schedule transparency**
