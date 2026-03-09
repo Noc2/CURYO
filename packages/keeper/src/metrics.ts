@@ -9,7 +9,9 @@ import type { KeeperResult } from "./keeper.js";
 const counters: Record<string, number> = {
   keeper_rounds_settled_total: 0,
   keeper_rounds_cancelled_total: 0,
+  keeper_rounds_reveal_failed_finalized_total: 0,
   keeper_votes_revealed_total: 0,
+  keeper_unrevealed_cleanup_batches_total: 0,
   keeper_content_marked_dormant_total: 0,
   keeper_runs_total: 0,
   keeper_errors_total: 0,
@@ -56,7 +58,9 @@ export function recordRun(result: KeeperResult, durationMs: number) {
   counters.keeper_runs_total++;
   counters.keeper_rounds_settled_total += result.roundsSettled;
   counters.keeper_rounds_cancelled_total += result.roundsCancelled;
+  counters.keeper_rounds_reveal_failed_finalized_total += result.roundsRevealFailedFinalized;
   counters.keeper_votes_revealed_total += result.votesRevealed;
+  counters.keeper_unrevealed_cleanup_batches_total += result.cleanupBatchesProcessed;
   counters.keeper_content_marked_dormant_total += result.contentMarkedDormant;
   gauges.keeper_last_run_duration_seconds = durationMs / 1000;
   gauges.keeper_last_successful_run_timestamp = Date.now() / 1000;
@@ -77,7 +81,9 @@ function renderMetrics(): string {
   const counterHelp: Record<string, string> = {
     keeper_rounds_settled_total: "Total rounds settled by keeper",
     keeper_rounds_cancelled_total: "Total rounds cancelled by keeper",
+    keeper_rounds_reveal_failed_finalized_total: "Total rounds finalized as RevealFailed by keeper",
     keeper_votes_revealed_total: "Total votes revealed by keeper",
+    keeper_unrevealed_cleanup_batches_total: "Total unrevealed-vote cleanup batches processed by keeper",
     keeper_content_marked_dormant_total: "Total content items marked dormant",
     keeper_runs_total: "Total keeper run cycles",
     keeper_errors_total: "Total keeper run errors",
@@ -127,6 +133,8 @@ function renderHealth(): { status: number; body: string } {
     lastRunDuration: gauges.keeper_last_run_duration_seconds,
     consecutiveErrors,
     totalRuns: counters.keeper_runs_total,
+    roundsRevealFailedFinalized: counters.keeper_rounds_reveal_failed_finalized_total,
+    cleanupBatchesProcessed: counters.keeper_unrevealed_cleanup_batches_total,
     decryptFailures: counters.keeper_decrypt_failures_total,
     walletBalanceWei: String(BigInt(Math.round(gauges.keeper_wallet_balance_wei))),
     consensusReserveWei: String(BigInt(Math.round(gauges.keeper_consensus_reserve_wei))),

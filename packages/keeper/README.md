@@ -1,6 +1,6 @@
 # Curyo — Keeper (Round Resolution Service)
 
-Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles rounds via `settleRound()`, cancels expired rounds, and marks dormant content. The reveal-then-settle flow is the core of the tlock commit-reveal system. Designed for horizontal scaling — multiple instances run independently for redundancy.
+Stateless service that reveals committed votes via `revealVoteByCommitKey()` after each epoch, settles eligible rounds via `settleRound()`, finalizes `RevealFailed` rounds after the last grace deadline, sweeps unrevealed-vote cleanup via `processUnrevealedVotes()`, cancels expired rounds, and marks dormant content. Designed for horizontal scaling — multiple instances run independently for redundancy.
 
 ## Quick Start
 
@@ -11,7 +11,7 @@ cp .env.example .env.local
 
 # From the monorepo root:
 yarn keeper:dev    # Development mode (with file watching)
-yarn keeper:start  # Production mode (one-shot)
+yarn keeper:start  # Production mode (long-running service)
 ```
 
 ## Scripts
@@ -37,6 +37,7 @@ Copy `.env.example` to `.env.local` and configure:
 | `KEEPER_PRIVATE_KEY` | — | Raw private key fallback if no keystore is configured |
 | `KEEPER_INTERVAL_MS` | `30000` | Resolution loop frequency (ms) |
 | `KEEPER_STARTUP_JITTER_MS` | `0` | Random startup delay for multi-instance staggering |
+| `KEEPER_CLEANUP_BATCH_SIZE` | `25` | Max commit window processed per `processUnrevealedVotes()` batch |
 | `METRICS_ENABLED` | `true` | Enable Prometheus metrics server |
 | `METRICS_PORT` | `9090` | Metrics server port |
 | `LOG_FORMAT` | `json` | Log format: `json` (production) or `text` (development) |
@@ -54,14 +55,14 @@ docker run --env-file .env curyo-keeper
 - **Prometheus metrics:** `http://localhost:9090/metrics`
 - **Health check:** `http://localhost:9090/health`
 
-Key metrics: `keeper_is_running` (gauge), `keeper_rounds_settled_total` (counter), `keeper_rounds_cancelled_total` (counter), `keeper_consensus_reserve_wei` (gauge), `keeper_reward_pool_wei` (gauge).
+Key metrics: `keeper_is_running` (gauge), `keeper_rounds_settled_total` (counter), `keeper_rounds_cancelled_total` (counter), `keeper_rounds_reveal_failed_finalized_total` (counter), `keeper_unrevealed_cleanup_batches_total` (counter), `keeper_consensus_reserve_wei` (gauge), `keeper_reward_pool_wei` (gauge).
 
 ## Project Structure
 
 ```
 src/
 ├── index.ts      # Main entry point & event loop
-├── keeper.ts     # Core logic (reveal votes, settle rounds, cancel, dormancy)
+├── keeper.ts     # Core logic (reveal, settle, RevealFailed, cleanup, dormancy)
 ├── config.ts     # Configuration from environment
 ├── client.ts     # viem public & wallet clients
 ├── keystore.ts   # Foundry keystore decryption
@@ -74,4 +75,4 @@ Dockerfile        # Production container image
 
 ## Redundancy
 
-Run 2+ instances with different wallet addresses and set `KEEPER_STARTUP_JITTER_MS=15000` to stagger execution cycles. Duplicate settle transactions revert harmlessly — already-settled rounds fail silently on-chain.
+Run 2+ instances with different wallet addresses and set `KEEPER_STARTUP_JITTER_MS=15000` to stagger execution cycles. Duplicate settle/finalize/cleanup transactions revert harmlessly — already-processed rounds fail silently on-chain.

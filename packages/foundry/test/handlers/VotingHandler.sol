@@ -46,6 +46,7 @@ contract VotingHandler is VotingTestBase {
         bool settled;
         bool cancelled;
         bool tied;
+        bool revealFailed;
     }
 
     RoundRecord[] public roundRecords;
@@ -71,6 +72,9 @@ contract VotingHandler is VotingTestBase {
     uint256 public commitCount;
     uint256 public revealCount;
     uint256 public settleCount;
+    uint256 public cancelCount;
+    uint256 public revealFailedCount;
+    uint256 public processCount;
     uint256 public claimCount;
     uint256 public submitterClaimCount;
     uint256 public refundCount;
@@ -318,7 +322,14 @@ contract VotingHandler is VotingTestBase {
 
         uint256 roundId = record.roundId;
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
-        if (round.state != RoundLib.RoundState.Cancelled && round.state != RoundLib.RoundState.Tied) return;
+        if (round.state == RoundLib.RoundState.Cancelled) {
+            // Full refunds are allowed for all committed votes.
+        } else if (round.state == RoundLib.RoundState.Tied || round.state == RoundLib.RoundState.RevealFailed) {
+            // Only revealed votes can claim through the cancelled/tied refund path here.
+            if (!record.revealed) return;
+        } else {
+            return;
+        }
 
         // Check if already refunded on-chain
         if (engine.cancelledRoundRefundClaimed(contentId, roundId, voter)) return;
@@ -350,6 +361,95 @@ contract VotingHandler is VotingTestBase {
         uint256 delta = bound(timeSeed, 1 minutes, 2 hours);
         vm.warp(block.timestamp + delta);
         timeAdvanceCount++;
+    }
+
+    // =========================================================================
+    // ACTION 8: cancelExpiredRound
+    // =========================================================================
+
+    function cancelExpiredRound(uint256 contentSeed) external {
+        uint256 contentId = contentIds[contentSeed % contentIds.length];
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        if (roundId == 0) return;
+
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        if (round.state != RoundLib.RoundState.Open) return;
+
+        try engine.cancelExpiredRound(contentId, roundId) {
+            cancelCount++;
+            _ensureRoundRecord(contentId, roundId);
+            uint256 idx = roundRecordIndex[contentId][roundId] - 1;
+            roundRecords[idx].cancelled = true;
+        } catch {
+            // Expiry path not available
+        }
+    }
+
+    // =========================================================================
+    // ACTION 9: finalizeRevealFailedRound
+    // =========================================================================
+
+    function finalizeRevealFailedRound(uint256 contentSeed) external {
+        uint256 contentId = contentIds[contentSeed % contentIds.length];
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        if (roundId == 0) return;
+
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        if (round.state != RoundLib.RoundState.Open) return;
+
+        try engine.finalizeRevealFailedRound(contentId, roundId) {
+            revealFailedCount++;
+            _ensureRoundRecord(contentId, roundId);
+            uint256 idx = roundRecordIndex[contentId][roundId] - 1;
+            roundRecords[idx].revealFailed = true;
+        } catch {
+            // Reveal-failed path not available
+        }
+    }
+
+    // =========================================================================
+    // ACTION 10: processUnrevealedVotes
+    // =========================================================================
+
+    function processUnrevealedVotes(uint256 roundSeed, uint256 startSeed, uint256 countSeed) external {
+        uint256 recordCount = roundRecords.length;
+        if (recordCount == 0) return;
+
+        RoundRecord memory rec = roundRecords[roundSeed % recordCount];
+        RoundLib.Round memory round = engine.getRound(rec.contentId, rec.roundId);
+        if (
+            round.state != RoundLib.RoundState.Settled && round.state != RoundLib.RoundState.Tied
+                && round.state != RoundLib.RoundState.RevealFailed
+        ) {
+            return;
+        }
+
+        bytes32[] memory commitKeys = engine.getRoundCommitHashes(rec.contentId, rec.roundId);
+        uint256 len = commitKeys.length;
+        if (len == 0) return;
+
+        uint256 startIndex = bound(startSeed, 0, len - 1);
+        uint256 maxCount = len - startIndex;
+        uint256 count = bound(countSeed, 0, maxCount);
+
+        uint256 voterBalancesBefore = _sumTrackedVoterBalances();
+
+        try engine.processUnrevealedVotes(rec.contentId, rec.roundId, startIndex, count) {
+            uint256 voterBalancesAfter = _sumTrackedVoterBalances();
+            uint256 idx = roundRecordIndex[rec.contentId][rec.roundId] - 1;
+
+            if (voterBalancesAfter > voterBalancesBefore) {
+                uint256 refundDelta = voterBalancesAfter - voterBalancesBefore;
+                ghost_totalRefunded += refundDelta;
+                roundRecords[idx].totalRefunded += refundDelta;
+            }
+
+            processCount++;
+
+            _markProcessedVotes(rec.contentId, rec.roundId, commitKeys, startIndex, count);
+        } catch {
+            // Cleanup not available for this range/state
+        }
     }
 
     // =========================================================================
@@ -388,10 +488,38 @@ contract VotingHandler is VotingTestBase {
                     totalRefunded: 0,
                     settled: false,
                     cancelled: false,
-                    tied: false
+                    tied: false,
+                    revealFailed: false
                 })
             );
             roundRecordIndex[contentId][roundId] = roundRecords.length; // 1-indexed
+        }
+    }
+
+    function _sumTrackedVoterBalances() internal view returns (uint256 total) {
+        for (uint256 i = 0; i < voters.length; i++) {
+            total += crepToken.balanceOf(voters[i]);
+        }
+    }
+
+    function _markProcessedVotes(
+        uint256 contentId,
+        uint256 roundId,
+        bytes32[] memory commitKeys,
+        uint256 startIndex,
+        uint256 count
+    ) internal {
+        uint256 endIndex = (count == 0 || startIndex + count > commitKeys.length)
+            ? commitKeys.length
+            : startIndex + count;
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            RoundLib.Commit memory commit = engine.getCommit(contentId, roundId, commitKeys[i]);
+            if (commit.voter == address(0) || commit.stakeAmount != 0) continue;
+
+            VoteRecord storage record = voteRecords[commit.voter][contentId];
+            if (record.roundId == roundId) {
+                record.claimed = true;
+            }
         }
     }
 }

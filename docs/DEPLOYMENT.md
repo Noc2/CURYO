@@ -25,7 +25,7 @@ You need **seven** wallets across three security tiers. Never reuse keys across 
 | **Cold Wallet B** | Paper / hardware wallet | Voter ID + bulk cREP | Private key NEVER touches a computer; delegates to rate-bot |
 | **submit-bot** | Foundry keystore (hot) | Small cREP + gas | Delegate of Cold Wallet A; daily operations |
 | **rate-bot** | Foundry keystore (hot) | Small cREP + gas | Delegate of Cold Wallet B; daily operations |
-| **keeper** | Foundry keystore (hot) | Gas only (no cREP) | Resolves rounds, cancels expired content |
+| **keeper** | Foundry keystore (hot) | Gas only (no cREP) | Reveals votes, progresses round state, cleans up unrevealed stake |
 | **server** | Foundry keystore (hot) | Gas only | Next.js server operations |
 
 ### 1a. Create the Deployer key
@@ -100,7 +100,7 @@ cast wallet new
 cast wallet import keeper --private-key <PRIVATE_KEY>
 ```
 
-Fund with a small amount of CELO for gas (~0.1 CELO — the keeper only sends resolve/cancel/inactive-marking transactions).
+Fund with a small amount of CELO for gas (~0.1 CELO to start — the keeper sends reveal, settle, reveal-failed, cleanup, cancel, and inactive-marking transactions).
 
 ### 1e. Create the Server key
 
@@ -396,7 +396,7 @@ Keep the bulk of cREP on the cold wallets. Bot wallets should only hold what the
 
 ## 7. Deploy the Keeper
 
-The Keeper is a stateless service that resolves rounds, cancels stale content, and marks inactive items. It needs only a funded wallet for gas.
+The Keeper is a stateless service that reveals votes, settles eligible rounds, finalizes `RevealFailed` rounds, sweeps unrevealed-vote cleanup, cancels stale rounds, and marks inactive content. It needs only a funded wallet for gas.
 
 ### 7a. Configure
 
@@ -410,6 +410,7 @@ KEYSTORE_ACCOUNT=keeper
 KEYSTORE_PASSWORD=<keeper-keystore-password>
 KEEPER_INTERVAL_MS=30000
 KEEPER_STARTUP_JITTER_MS=0
+KEEPER_CLEANUP_BATCH_SIZE=25
 METRICS_ENABLED=true
 METRICS_PORT=9090
 LOG_FORMAT=json
@@ -544,7 +545,7 @@ The rating bot will:
 4. Determine vote direction: score >= `VOTE_THRESHOLD` → UP, otherwise → DOWN
 5. Commit the vote on-chain via `commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend)` — the vote direction is encrypted with tlock timelock encryption and hidden until reveal (up to `MAX_VOTES_PER_RUN`)
 
-After each blind phase ends, the Keeper service reveals committed votes using `revealVoteByCommitKey()` and then resolves rounds. Each content item is voted on only once (the bot tracks previous votes).
+After each blind phase ends, the Keeper service reveals committed votes using `revealVoteByCommitKey()`, settles or finalizes rounds once eligible, and sweeps unrevealed-vote cleanup on terminal rounds. Each content item is voted on only once (the bot tracks previous votes).
 
 ### 8e. Verify the full loop
 
@@ -644,10 +645,81 @@ These parameters can be updated via governance proposal (2-day timelock delay). 
 
 - [ ] Set up alerts on Keeper health endpoint (e.g., UptimeRobot, Betterstack)
 - [ ] Monitor Keeper gas balance — alert if below 0.05 CELO
+- [ ] Monitor `keeperRewardPool` — warning below 25,000 cREP, critical below 10,000 cREP
+- [ ] Monitor `consensusReserve` — warning below 1,000,000 cREP, critical below 250,000 cREP
 - [ ] Monitor bot wallet cREP balances — a sudden drain indicates compromise
 - [ ] Monitor Ponder sync status — alert if it falls behind chain head
 - [ ] Watch for unusual governance proposals (TimelockController events)
 - [ ] Monitor for unexpected transactions from bot or cold wallet addresses (Blockscout watch)
+
+#### Protocol pool monitoring
+
+The governance page now exposes a **Protocol Pools** panel with live balances for Treasury, Consensus Reserve, Keeper
+Reward Pool, Participation Pool, and Human Faucet. Use this as the fastest operator sanity check, but do **not** rely
+on the UI alone for alerting.
+
+For machine monitoring, poll the `RoundVotingEngine` pool balances directly:
+
+```bash
+# Raw values use 6 decimals (1 cREP = 1_000_000)
+cast call <RoundVotingEngine> "keeperRewardPool()(uint256)" \
+  --rpc-url https://forno.celo.org
+
+cast call <RoundVotingEngine> "consensusReserve()(uint256)" \
+  --rpc-url https://forno.celo.org
+```
+
+Suggested thresholds:
+
+- **Keeper Reward Pool** — initial funding is **100,000 cREP**
+  - Warning: **25,000 cREP** (`25_000_000_000`)
+  - Critical: **10,000 cREP** (`10_000_000_000`)
+- **Consensus Reserve** — initial funding is **4,000,000 cREP**
+  - Warning: **1,000,000 cREP** (`1_000_000_000_000`)
+  - Critical: **250,000 cREP** (`250_000_000_000`)
+
+Interpretation:
+
+- `keeperRewardPool` depletion does **not** halt reveals/settlement, but it removes the direct cREP incentive to run
+  keeper infrastructure.
+- `consensusReserve` depletion does **not** halt contested rounds, but unanimous / one-sided rounds stop receiving the
+  5% consensus subsidy until refilled.
+
+At minimum, set one alert that fires on the **warning** threshold and pages on the **critical** threshold. If you do
+not yet have dedicated Prometheus/Grafana coverage for these balances, schedule a small periodic RPC check (Betterstack,
+cron + webhook, GitHub Action, etc.) around the `cast call` commands above.
+
+#### Protocol pool refill runbook
+
+Both pool top-up functions on `RoundVotingEngine` pull tokens with `safeTransferFrom(msg.sender, ...)`, so a treasury
+refill must include **both** an ERC-20 approval and the funding call in the **same governance proposal execution
+batch**.
+
+1. Confirm the low balance in two places:
+   - Governance UI → **Governance** tab → **Protocol Pools**
+   - Direct on-chain check via `cast call`
+2. Decide the target restoration level:
+   - Default target for `keeperRewardPool`: restore to **100,000 cREP**
+   - Default target for `consensusReserve`: restore to **4,000,000 cREP**
+3. Calculate the refill amount as `target - currentBalance`.
+4. Create a governance proposal executed by the timelock with these calls, in order:
+   - `CuryoReputation.approve(<RoundVotingEngine>, amount)`
+   - `RoundVotingEngine.fundKeeperRewardPool(amount)`
+   - or `RoundVotingEngine.fundConsensusReserve(amount)`
+5. Vote, queue, and execute the proposal after the standard **2-day timelock**.
+6. Verify the refill:
+   - Governance UI pool balances updated
+   - `cast call` returns the new balance
+   - Keeper / operator notes record the refill date, amount, and proposal ID
+
+If both pools are low, batch all three calls into a single proposal:
+
+1. `approve(<RoundVotingEngine>, keeperAmount + reserveAmount)`
+2. `fundKeeperRewardPool(keeperAmount)`
+3. `fundConsensusReserve(reserveAmount)`
+
+This keeps the approval scope minimal and avoids leaving a large standing allowance from the treasury to
+`RoundVotingEngine`.
 
 ### 9g. Secrets rotation plan
 

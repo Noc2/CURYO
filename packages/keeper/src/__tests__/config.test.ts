@@ -40,6 +40,7 @@ describe("keeper config", () => {
 
     expect(config.chainId).toBe(11142220);
     expect(config.chainName).toBe("Celo Sepolia");
+    expect(config.cleanupBatchSize).toBe(25);
   });
 
   it("accepts a private key when no keystore account is configured", async () => {
@@ -72,5 +73,13 @@ describe("keeper config", () => {
         RPC_URL: "http://localhost:8545",
       }),
     ).rejects.toThrow("RPC_URL must not point to localhost in production");
+  });
+
+  it("validates cleanup batch size as a positive integer", async () => {
+    await expect(
+      loadKeeperConfig({
+        KEEPER_CLEANUP_BATCH_SIZE: "0",
+      }),
+    ).rejects.toThrow("KEEPER_CLEANUP_BATCH_SIZE must be a positive integer");
   });
 });

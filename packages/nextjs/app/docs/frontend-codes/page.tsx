@@ -5,7 +5,7 @@ const FrontendCodes: NextPage = () => {
     <article className="prose max-w-none">
       <h1>Frontend Codes</h1>
       <p className="lead text-base-content/60 text-lg">
-        Build interfaces for Curyo and receive reputation from votes made through your frontend.
+        Build interfaces for Curyo and earn cREP frontend fees from votes made through your frontend.
       </p>
 
       <h2>Overview</h2>
@@ -20,7 +20,7 @@ const FrontendCodes: NextPage = () => {
           <strong>Stake 1,000 cREP</strong> to the FrontendRegistry contract.
         </li>
         <li>
-          <strong>Await governance approval</strong> before you can start receiving reputation.
+          <strong>Await governance approval</strong> before you can start earning frontend fees.
         </li>
         <li>
           <strong>Integrate:</strong> Pass your registered address as the <code>frontend</code> parameter when calling{" "}
@@ -53,7 +53,7 @@ const FrontendCodes: NextPage = () => {
       <h2>Running a Resolution Service</h2>
       <p>
         Every frontend operator should also run a <strong>resolution service</strong> &mdash; a background service that
-        keeps the protocol moving. It performs two critical tasks:
+        keeps the protocol moving. It performs three critical tasks:
       </p>
       <ol>
         <li>
@@ -68,13 +68,21 @@ const FrontendCodes: NextPage = () => {
           <code>settleRound(contentId, roundId)</code> to finalize the round, update the content rating, and open
           rewards for claiming.
         </li>
+        <li>
+          <strong>Finalizing and cleanup:</strong> If commit quorum was reached but reveal quorum never materializes by
+          the final grace deadline, the service can call <code>finalizeRevealFailedRound(contentId, roundId)</code>.
+          After terminal states, it should also batch{" "}
+          <code>processUnrevealedVotes(contentId, roundId, startIndex, count)</code> so unrevealed stakes are swept or
+          refunded.
+        </li>
       </ol>
       <p>
         Without resolution services, votes would never be revealed and rounds would never resolve. Running one alongside
         your frontend ensures a smooth experience for your users and contributes to the health of the network. Since
-        both <code>revealVoteByCommitKey()</code> and <code>settleRound()</code> are permissionless, anyone can run a
-        resolution service &mdash; no secret data needed (the drand beacon is public). The more independent services
-        running, the more resilient the network becomes.
+        these actions are permissionless, anyone can run a resolution service. Reveal still relies on off-chain drand
+        decryption rather than an on-chain proof that the stored ciphertext was honestly decryptable, so the keeper is a
+        trust-minimized convenience layer rather than a cryptographic gatekeeper. The more independent services running,
+        the more resilient the network becomes.
       </p>
 
       <h2>Running an Indexer / Back-End</h2>
@@ -149,7 +157,7 @@ const FrontendCodes: NextPage = () => {
       <p>Frontend operators are subject to governance control:</p>
       <ul>
         <li>
-          <strong>Approval required</strong> before receiving reputation.
+          <strong>Approval required</strong> before earning frontend fees.
         </li>
         <li>
           <strong>Slashing</strong> &mdash; Governance can slash staked cREP for abuse.

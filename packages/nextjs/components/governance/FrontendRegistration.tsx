@@ -18,6 +18,7 @@ export function FrontendRegistration() {
   const { address } = useAccount();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDeregistering, setIsDeregistering] = useState(false);
+  const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
 
   // Contract info
@@ -34,6 +35,12 @@ export function FrontendRegistration() {
   const { data: accumulatedFees, refetch: refetchFees } = useScaffoldReadContract({
     contractName: "FrontendRegistry",
     functionName: "getAccumulatedFees",
+    args: [address],
+  });
+
+  const { data: exitAvailableAtRaw, refetch: refetchExitAvailableAt } = useScaffoldReadContract({
+    contractName: "FrontendRegistry",
+    functionName: "frontendExitAvailableAt",
     args: [address],
   });
 
@@ -59,6 +66,9 @@ export function FrontendRegistration() {
   const stakedAmount = frontendInfo ? Number(frontendInfo[1]) / 1e6 : 0;
   const isApproved = frontendInfo ? frontendInfo[2] : false;
   const isSlashed = frontendInfo ? frontendInfo[3] : false;
+  const exitAvailableAt = exitAvailableAtRaw ? Number(exitAvailableAtRaw) : 0;
+  const isExitPending = exitAvailableAt > 0;
+  const exitAvailableAtLabel = isExitPending ? new Date(exitAvailableAt * 1000).toLocaleString() : "";
 
   // Parse fees (cREP only)
   const curyoFees = accumulatedFees ? Number(accumulatedFees) / 1e6 : 0;
@@ -116,8 +126,9 @@ export function FrontendRegistration() {
         functionName: "deregister",
       });
 
-      notification.success("Deregistered! Stake returned.");
+      notification.success("Deregistration started. Complete it after the 14-day unbonding period.");
       refetchFrontendInfo();
+      refetchExitAvailableAt();
       refetchFees();
       refetchCuryo();
     } catch (e: any) {
@@ -125,6 +136,28 @@ export function FrontendRegistration() {
       notification.error(e?.shortMessage || "Failed to deregister");
     } finally {
       setIsDeregistering(false);
+    }
+  };
+
+  const handleCompleteDeregister = async () => {
+    if (!address) return;
+
+    setIsCompletingDeregister(true);
+    try {
+      await writeFrontendRegistry({
+        functionName: "completeDeregister",
+      });
+
+      notification.success("Deregistration completed. Stake and pending fees withdrawn.");
+      refetchFrontendInfo();
+      refetchExitAvailableAt();
+      refetchFees();
+      refetchCuryo();
+    } catch (e: any) {
+      console.error("Complete deregister failed:", e);
+      notification.error(e?.shortMessage || "Failed to complete deregistration");
+    } finally {
+      setIsCompletingDeregister(false);
     }
   };
 
@@ -141,7 +174,7 @@ export function FrontendRegistration() {
       refetchFees();
     } catch (e: any) {
       console.error("Claim failed:", e);
-      notification.error(e?.shortMessage || "Failed to claim points");
+      notification.error(e?.shortMessage || "Failed to claim fees");
     } finally {
       setIsClaiming(false);
     }
@@ -151,6 +184,9 @@ export function FrontendRegistration() {
   const getStatusBadge = () => {
     if (isSlashed) {
       return <span className="px-2 py-0.5 rounded-full text-base font-medium bg-error/20 text-error">Penalized</span>;
+    }
+    if (isExitPending) {
+      return <span className="px-2 py-0.5 rounded-full text-base font-medium bg-info/20 text-info">Exit Pending</span>;
     }
     if (isApproved) {
       return (
@@ -173,7 +209,7 @@ export function FrontendRegistration() {
       </div>
 
       <p className="text-base text-base-content/60">
-        Build frontends or integrations for Curyo and receive reputation.{" "}
+        Build frontends or integrations for Curyo and earn frontend fees.{" "}
         <Link href="/docs/frontend-codes" className="link link-primary">
           Learn more →
         </Link>
@@ -246,35 +282,62 @@ export function FrontendRegistration() {
 
           {/* Accumulated Fees */}
           <div className="bg-primary/10 rounded-xl p-4">
-            <p className="font-medium mb-3">Accumulated Points</p>
+            <p className="font-medium mb-3">Accumulated Fees</p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-base text-base-content/60">cREP</p>
                 <p className="text-lg font-bold text-primary">{curyoFees.toFixed(2)}</p>
               </div>
-              <button className="btn btn-submit btn-sm" onClick={handleClaimFees} disabled={isClaiming || !hasFees}>
+              <button
+                className="btn btn-submit btn-sm"
+                onClick={handleClaimFees}
+                disabled={isClaiming || !hasFees || isExitPending}
+              >
                 {isClaiming ? <span className="loading loading-spinner loading-xs" /> : "Claim"}
               </button>
             </div>
+            {isExitPending && (
+              <p className="text-sm text-base-content/50 mt-2">Fee withdrawals stay locked until exit is completed.</p>
+            )}
           </div>
 
           {/* Deregister */}
           {!isSlashed && (
             <div className="pt-2 border-t border-base-300">
-              <button
-                className="btn btn-outline btn-error btn-sm w-full"
-                onClick={handleDeregister}
-                disabled={isDeregistering}
-              >
-                {isDeregistering ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : (
-                  "Deregister & Reclaim Stake"
-                )}
-              </button>
-              <p className="text-sm text-base-content/50 mt-1">
-                Returns your {stakedAmount.toLocaleString()} cREP stake and any pending fees.
-              </p>
+              {isExitPending ? (
+                <>
+                  <button
+                    className="btn btn-outline btn-error btn-sm w-full"
+                    onClick={handleCompleteDeregister}
+                    disabled={isCompletingDeregister}
+                  >
+                    {isCompletingDeregister ? (
+                      <span className="loading loading-spinner loading-xs" />
+                    ) : (
+                      "Complete Deregistration"
+                    )}
+                  </button>
+                  <p className="text-sm text-base-content/50 mt-1">
+                    Exit requested. Complete it after the unbonding period to withdraw your{" "}
+                    {stakedAmount.toLocaleString()} cREP stake and any pending fees.
+                    {exitAvailableAtLabel ? ` Available after ${exitAvailableAtLabel}.` : ""}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="btn btn-outline btn-error btn-sm w-full"
+                    onClick={handleDeregister}
+                    disabled={isDeregistering}
+                  >
+                    {isDeregistering ? <span className="loading loading-spinner loading-xs" /> : "Start Deregistration"}
+                  </button>
+                  <p className="text-sm text-base-content/50 mt-1">
+                    Starts a 14-day unbonding period. After that, you can complete deregistration to withdraw your{" "}
+                    {stakedAmount.toLocaleString()} cREP stake and any pending fees.
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>

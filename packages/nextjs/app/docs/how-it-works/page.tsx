@@ -53,11 +53,13 @@ const HowItWorks: NextPage = () => {
         </li>
         <li>
           <strong>Accumulate:</strong> Votes accumulate within the round. Directions are hidden during the blind phase
-          (~20&nbsp;min). After the blind phase ends, the system reveals all votes automatically.
+          (~20&nbsp;min). After the blind phase ends, the keeper normally reveals eligible votes automatically in the
+          background.
         </li>
         <li>
-          <strong>Reveal:</strong> The system automatically reveals votes after each blind phase. Revealing is also open
-          &mdash; anyone can reveal any vote after its blind phase ends.
+          <strong>Reveal:</strong> The keeper normally decrypts the tlock ciphertext off-chain after epoch end and
+          submits the reveal on-chain. Connected users can also self-reveal from the fallback flow if they know the
+          plaintext for their vote.
         </li>
         <li>
           <strong>Resolve:</strong> Once at least 3 votes are revealed and all past-phase votes have been revealed (or
@@ -108,7 +110,7 @@ const HowItWorks: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Revealed</span>
               </td>
-              <td>System reveals votes after blind phase ends &mdash; directions now visible</td>
+              <td>Keeper submits reveal after epoch end &mdash; directions now visible</td>
               <td className="font-mono">Automatic</td>
               <td>None</td>
             </tr>
@@ -124,11 +126,12 @@ const HowItWorks: NextPage = () => {
         </table>
       </div>
       <p>
-        After the blind phase ends, the system reveals votes automatically in the background. If that keeper flow looks
-        delayed, connected users can also use the hidden manual reveal fallback. Once at least 3 votes are revealed and
-        all past-phase votes have been revealed (or the 60-minute reveal grace period has expired), resolution can be
-        triggered. Resolution is fully open &mdash; anyone can trigger it. Winners receive their original stake plus a
-        phase-weighted share of the losing stakes, while revealed losers can later claim a fixed 5% rebate.
+        After the blind phase ends, the keeper normally reveals votes automatically in the background. If that flow
+        looks delayed, connected users can also use the hidden manual reveal fallback. Once at least 3 votes are
+        revealed and all past-phase votes have been revealed (or the 60-minute reveal grace period has expired),
+        resolution can be triggered. Resolution is fully open &mdash; anyone can trigger it. Winners receive their
+        original stake plus a phase-weighted share of the losing stakes, while revealed losers can later claim a fixed
+        5% rebate.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
@@ -231,9 +234,11 @@ const HowItWorks: NextPage = () => {
         rounds close to neutral while letting larger stake imbalances move rating further.
       </p>
       <p>
-        If a round <strong>expires</strong> (7&nbsp;days pass without reaching the minimum 3 revealed voters) or ends in
-        a <strong>tie</strong>, the rating does not change and all stakes are refunded. Only a decisive resolution with
-        a clear majority updates the rating.
+        If a round <strong>expires</strong> below commit quorum, it is cancelled and refundable. If it reached commit
+        quorum but still misses reveal quorum after the final reveal grace window, it can finalize as{" "}
+        <strong>RevealFailed</strong>: revealed votes remain refundable, while unrevealed votes are later forfeited in
+        cleanup. Tied rounds also leave the rating unchanged, with revealed votes refundable and unrevealed votes
+        handled by the same cleanup rules. Only a decisive resolution with a clear majority updates the rating.
       </p>
 
       <h2>Content Inactivity &amp; Revival</h2>

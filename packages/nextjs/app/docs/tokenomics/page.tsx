@@ -116,7 +116,8 @@ const Tokenomics = () => {
               <td className="font-medium">Keeper Reward Pool</td>
               <td className="font-mono">100,000 cREP</td>
               <td>
-                Dedicated flat rewards for settle/cancel housekeeping so keeper incentives do not drain user stakes
+                Dedicated flat rewards for settlement, expiry cancellation, and unrevealed-vote cleanup so keeper
+                incentives do not drain user stakes
               </td>
             </tr>
             <tr>
@@ -272,10 +273,14 @@ const Tokenomics = () => {
         <FaucetHalvingChart />
       </div>
 
-      <h3>Streak Bonuses</h3>
+      <h3>Streak Bonuses (Currently Inactive)</h3>
       <p>
         Daily voting streaks are still tracked in the product, but direct on-chain streak bonus claims are currently
         disabled while the reward model is being redesigned to avoid low-risk farming paths.
+      </p>
+      <p>
+        The milestone table below is kept only as historical tokenomics context. These payouts are not currently
+        claimable on-chain.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
@@ -324,10 +329,11 @@ const Tokenomics = () => {
 
       <h3>Treasury</h3>
       <p>
-        The governance treasury starts with <strong>10M cREP</strong> and grows over time through two inflow sources: a
-        1% fee from every round resolution and forfeited submitter deposits (when content rating drops below 25).
-        Treasury tokens are distributed exclusively via governance proposals &mdash; for grants, whistleblower rewards,
-        and protocol development.
+        The governance treasury starts with <strong>10M cREP</strong> and grows over time through three main ongoing
+        inflow sources: a 1% treasury fee on contested losing pools, forfeited submitter deposits (when content rating
+        drops below 25), and forfeited unrevealed past-epoch votes swept during settlement cleanup. Treasury tokens are
+        distributed exclusively via governance proposals &mdash; for grants, whistleblower rewards, and protocol
+        development.
       </p>
 
       <hr />

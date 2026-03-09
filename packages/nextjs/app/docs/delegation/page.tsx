@@ -152,8 +152,8 @@ const DelegationDocs: NextPage = () => {
           to the delegate address. If the holder votes directly, rewards go to the holder.
         </li>
         <li>
-          <strong>Cooldowns are per-address</strong> &mdash; both holder and delegate can independently vote on the same
-          content, but total stake is capped by the shared Voter ID.
+          <strong>Cooldowns are shared per Voter ID</strong> &mdash; holder and delegate resolve to the same effective
+          identity, so they also share the 24-hour cooldown on the same content.
         </li>
         <li>
           <strong>Revocation clears delegation</strong> &mdash; if the Voter ID is revoked via governance, the

@@ -149,6 +149,34 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "backfillParticipationRewardSnapshot",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPoolAddress",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "rateBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "cancelExpiredRound",
     "inputs": [
       {
@@ -3106,6 +3134,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "SelfVote",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SnapshotAlreadySet",
     "inputs": []
   },
   {

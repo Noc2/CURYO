@@ -6,6 +6,10 @@
 **Methodology:** 7-phase audit (static analysis → access control review → manual code review → threat modeling → off-chain boundary review → test gap analysis → report)
 **Test Suite Post-Audit:** 1193 tests passing (1177 original + 16 new)
 
+This report is a point-in-time audit snapshot for the code reviewed on 2026-03-09. Later repository changes may add
+features or alter off-chain responsibilities, so operational docs and current contract sources should be treated as the
+live reference.
+
 ---
 
 ## Findings Summary

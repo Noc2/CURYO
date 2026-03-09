@@ -39,7 +39,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go UP or DOWN and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each 20-minute epoch ends, preventing herding. After the epoch, votes are automatically revealed by the keeper. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn 25% weight, creating a 4:1 incentive to vote early.",
+    text: "Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go UP or DOWN and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each 20-minute epoch ends, preventing herding. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn 25% weight, creating a 4:1 incentive to vote early.",
   },
   {
     type: "paragraph",
@@ -217,9 +217,9 @@ export const SECTIONS: Section[] = [
                 ],
                 [
                   "Epoch ended",
-                  "Keeper normally reveals votes automatically via drand",
+                  "Keeper normally reveals votes via drand; users can self-reveal if needed",
                   "~20 min per epoch",
-                  "None  -- keeper handles reveal",
+                  "Usually none  -- fallback reveal exists",
                 ],
                 ["Settled", "Rewards calculated and claimable", "--", "Revealed voters claim rewards or rebates"],
                 ["Cancelled", "Round expired below commit quorum  -- refundable to participants", "--", "Claim refund"],
@@ -234,7 +234,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement requires at least 3 voters revealed (minVoters threshold). It is only allowed once all past-epoch votes are revealed or their 60-minute reveal grace period has expired. A lightweight keeper service handles both reveal and settlement automatically, but connected users also have a small manual fallback page if keeper reveal appears delayed. Winners receive their original stake plus an epoch-weighted share of the losing pool, and revealed losers can later reclaim a fixed 5% rebate.",
+            text: "Settlement requires at least 3 voters revealed (minVoters threshold). It is only allowed once all past-epoch votes are revealed or their 60-minute reveal grace period has expired. A lightweight keeper service normally handles reveal, settlement, reveal-failed finalization, and cleanup automatically, but connected users also have a small manual fallback page if keeper reveal appears delayed. Winners receive their original stake plus an epoch-weighted share of the losing pool, and revealed losers can later reclaim a fixed 5% rebate.",
           },
         ],
       },
@@ -720,7 +720,7 @@ export const SECTIONS: Section[] = [
                 [
                   "Keeper Reward Pool",
                   "100,000 cREP",
-                  "Flat per-operation rewards for keeper housekeeping (settle, cancel), funded separately from user stakes",
+                  "Flat per-operation rewards for keeper housekeeping (settlement, cancellation, cleanup), funded separately from user stakes",
                 ],
                 ["Category Registry", "100 cREP", "Initial reserve for the category proposal mechanism"],
               ],
@@ -796,15 +796,15 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform two tasks: (1) revealing tlock votes after each epoch ends by fetching the drand beacon and calling revealVoteByCommitKey(), and (2) calling settleRound() once the minVoters threshold is reached and all past-epoch votes have been revealed. The contract enforces a reveal grace period (60 minutes) during which all past-epoch votes must be revealed before settlement is allowed, preventing selective revelation attacks. Both operations are permissionless  -- any account can call them.",
+            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform reveal, settlement, reveal-failed finalization, and post-settlement cleanup work. The contract enforces a reveal grace period (60 minutes) during which all past-epoch votes must be revealed before settlement is allowed, preventing selective revelation attacks. Round finalization and cleanup remain permissionless  -- any account can call the relevant functions.",
           },
           {
             type: "paragraph",
-            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters), and marking dormant content. Since the drand randomness beacon is a public decentralized network, no special keys or trusted dependencies are required  -- the system is fully trustless.",
+            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters) and marking dormant content. The drand randomness beacon is public, so anyone can run the off-chain decryption flow, but the current protocol verifies commit consistency rather than proving on-chain that the stored ciphertext was honestly decryptable. In practice the reveal path is a keeper/drand-assisted off-chain flow with a user fallback, not a fully trustless ciphertext proof system.",
           },
           {
             type: "paragraph",
-            text: "To incentivize keeper operation, the protocol allocates a dedicated 100,000 cREP keeper reward pool, funded separately from user stakes. Keepers earn a flat 0.1 cREP per housekeeping operation (settle, cancel). At this rate, the pool funds up to 1,000,000 operations. Rewards are best-effort: if the pool is depleted, operations still succeed but no reward is paid. The keeper reward amount is governance-configurable.",
+            text: "To incentivize keeper operation, the protocol allocates a dedicated 100,000 cREP keeper reward pool, funded separately from user stakes. Keepers currently earn a flat 0.1 cREP for rewarded housekeeping operations such as settlement, expiry cancellation, and unrevealed-vote cleanup. At this rate, the pool funds up to 1,000,000 rewarded operations. Rewards are best-effort: if the pool is depleted, operations still succeed but no reward is paid. The keeper reward amount is governance-configurable.",
           },
         ],
       },

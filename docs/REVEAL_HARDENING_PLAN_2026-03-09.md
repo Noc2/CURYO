@@ -506,8 +506,8 @@ Required changes:
 
 Important:
 
-- the ciphertext-binding readiness item still remains open
-- this plan improves liveness and economics but does not cryptographically bind ciphertext to the reveal path
+- the ciphertext byte-binding gap has since been closed in code and `docs/MAINNET_READINESS.md`
+- this plan still improves liveness and economics, but it does not add an on-chain proof that the stored ciphertext was honestly decryptable
 
 ## Implementation Phases
 

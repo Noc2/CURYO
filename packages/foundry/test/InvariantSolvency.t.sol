@@ -33,6 +33,7 @@ contract InvariantSolvency is Test {
     uint256[] public contentIds;
 
     uint256 public initialTotalSupply;
+    uint256 public initialKeeperRewardPool;
 
     function setUp() public {
         vm.warp(1000);
@@ -84,9 +85,13 @@ contract InvariantSolvency is Test {
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(engine), reserveAmount);
+        uint256 keeperPoolAmount = 100_000e6;
+        crepToken.mint(owner, reserveAmount + keeperPoolAmount);
+        crepToken.approve(address(engine), reserveAmount + keeperPoolAmount);
         engine.fundConsensusReserve(reserveAmount);
+        engine.setKeeperReward(1e6);
+        engine.fundKeeperRewardPool(keeperPoolAmount);
+        initialKeeperRewardPool = keeperPoolAmount;
 
         // Create voters
         for (uint256 i = 0; i < NUM_VOTERS; i++) {
@@ -151,14 +156,14 @@ contract InvariantSolvency is Test {
     // =========================================================================
 
     function invariant_C02_TokenConservation() public view {
-        // All tokens that went IN to the engine = ghost_totalStaked + initial consensus reserve
-        // All tokens that came OUT = ghost_totalClaimed + ghost_totalSubmitterClaimed
-        //   + treasury balance change + consensus reserve change + refunds + open round stakes
+        // All stake-derived tokens that left the engine = voter claims + submitter claims
+        //   + refunds + treasury balance growth.
+        // Keeper rewards are funded from keeperRewardPool and are checked separately below.
         // With rounding dust tolerance
 
         uint256 totalIn = handler.ghost_totalStaked();
-        uint256 totalClaimedOut =
-            handler.ghost_totalClaimed() + handler.ghost_totalSubmitterClaimed() + handler.ghost_totalRefunded();
+        uint256 totalClaimedOut = handler.ghost_totalClaimed() + handler.ghost_totalSubmitterClaimed()
+            + handler.ghost_totalRefunded() + crepToken.balanceOf(treasury);
 
         // totalIn >= totalClaimedOut (can't pay out more than staked, ignoring consensus subsidy)
         // Allow for consensus subsidy which adds extra tokens from the reserve
@@ -209,15 +214,41 @@ contract InvariantSolvency is Test {
                 if (maxRemaining > rec.totalClaimed + rec.submitterClaimed) {
                     obligations += maxRemaining - rec.totalClaimed - rec.submitterClaimed;
                 }
-            } else if (round.state == RoundLib.RoundState.Cancelled || round.state == RoundLib.RoundState.Tied) {
-                // Cancelled/tied: unclaimed refunds
-                if (round.totalStake > rec.totalRefunded) {
-                    obligations += round.totalStake - rec.totalRefunded;
-                }
+                obligations += _pendingRefundObligations(rec.contentId, rec.roundId, round);
+            } else if (
+                round.state == RoundLib.RoundState.Cancelled || round.state == RoundLib.RoundState.Tied
+                    || round.state == RoundLib.RoundState.RevealFailed
+            ) {
+                obligations += _pendingRefundObligations(rec.contentId, rec.roundId, round);
             }
         }
 
         assertGe(engineBalance, obligations, "C-03: engine balance < obligations");
+    }
+
+    // =========================================================================
+    // C-04: Keeper rewards — payouts are bounded by funded pool and rewardable operations
+    // =========================================================================
+
+    function invariant_C04_KeeperRewardAccounting() public view {
+        uint256 handlerBalance = crepToken.balanceOf(address(handler));
+        assertEq(handlerBalance, initialKeeperRewardPool - engine.keeperRewardPool(), "keeper payout != pool delta");
+
+        uint256 cleanupRewardedRounds = 0;
+        uint256 recordCount = handler.getRoundRecordCount();
+        for (uint256 i = 0; i < recordCount; i++) {
+            VotingHandler.RoundRecord memory rec = handler.getRoundRecord(i);
+            if (engine.roundCleanupRewarded(rec.contentId, rec.roundId)) {
+                cleanupRewardedRounds++;
+            }
+        }
+
+        uint256 maxRewardableOps = handler.settleCount() + handler.cancelCount() + cleanupRewardedRounds;
+        assertLe(
+            handlerBalance,
+            engine.keeperReward() * maxRewardableOps,
+            "keeper paid more than rewardable operations allow"
+        );
     }
 
     // =========================================================================
@@ -252,5 +283,33 @@ contract InvariantSolvency is Test {
 
     function invariant_TokenSupplyConserved() public view {
         assertEq(crepToken.totalSupply(), initialTotalSupply, "Token supply changed during invariant test");
+    }
+
+    function _pendingRefundObligations(uint256 contentId, uint256 roundId, RoundLib.Round memory round)
+        internal
+        view
+        returns (uint256 pending)
+    {
+        bytes32[] memory commitKeys = engine.getRoundCommitHashes(contentId, roundId);
+        for (uint256 i = 0; i < commitKeys.length; i++) {
+            RoundLib.Commit memory commit = engine.getCommit(contentId, roundId, commitKeys[i]);
+            if (commit.stakeAmount == 0) continue;
+
+            if (round.state == RoundLib.RoundState.Cancelled) {
+                pending += commit.stakeAmount;
+            } else if (round.state == RoundLib.RoundState.Tied) {
+                if (commit.revealed || commit.revealableAfter > round.settledAt) {
+                    pending += commit.stakeAmount;
+                }
+            } else if (round.state == RoundLib.RoundState.RevealFailed) {
+                if (commit.revealed) {
+                    pending += commit.stakeAmount;
+                }
+            } else if (round.state == RoundLib.RoundState.Settled) {
+                if (!commit.revealed && commit.revealableAfter > round.settledAt) {
+                    pending += commit.stakeAmount;
+                }
+            }
+        }
     }
 }

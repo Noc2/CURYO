@@ -311,7 +311,7 @@ const SmartContracts: NextPage = () => {
             <tr>
               <td className="font-mono">VOTE_COOLDOWN</td>
               <td>24 hours</td>
-              <td>Time before same user can re-vote on same content</td>
+              <td>Time before the same effective voter ID can vote on the same content again</td>
             </tr>
           </tbody>
         </table>
@@ -325,10 +325,9 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
-          committed vote after the epoch ends. Normally called by the keeper using the drand beacon to decrypt tlock
-          ciphertexts, but also permissionless &mdash; the voter or any third party can reveal any vote after the epoch
-          ends. The production UI keeps this mostly hidden, but connected users also have a small manual fallback link
-          if an auto-reveal appears delayed.
+          committed vote after the epoch ends. Normally called by the keeper after off-chain drand/tlock decryption, but
+          any caller that knows the plaintext <code>(isUp, salt)</code> can submit it. The production UI keeps this
+          mostly hidden, but connected users also have a small manual fallback link if an auto-reveal appears delayed.
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
@@ -346,7 +345,11 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (7 days)
-          without reaching the minimum voter threshold. Full refund to all participants.
+          without reaching commit quorum (<code>minVoters</code> total commits). Refundable to participants.
+        </li>
+        <li>
+          <code>finalizeRevealFailedRound(contentId, roundId)</code> &mdash; Finalize a round that reached commit
+          quorum, but still failed to reach reveal quorum before the final reveal grace deadline.
         </li>
         <li>
           <code>claimCancelledRoundRefund(contentId, roundId)</code> &mdash; Claim refund for a cancelled, tied, or
@@ -383,7 +386,8 @@ const SmartContracts: NextPage = () => {
           <code>register()</code> &mdash; Register as frontend operator (fixed 1,000 cREP stake). Requires Voter ID.
         </li>
         <li>
-          <code>deregister()</code> &mdash; Voluntarily deregister and reclaim stake + pending fees.
+          <code>deregister()</code> / <code>completeDeregister()</code> &mdash; Start voluntary exit, then withdraw
+          stake + pending fees after the unbonding window elapses.
         </li>
         <li>
           <code>approveFrontend(address)</code> / <code>revokeFrontend(address)</code> &mdash; Governance controls

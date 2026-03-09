@@ -19,6 +19,7 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
+import { useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 import { getTargetNetworks } from "~~/utils/scaffold-eth";
@@ -131,6 +132,8 @@ export const AddressInfoDropdown = ({
   const { activeStaked: votingStaked } = useVotingStakes(address);
   const { claimAll, isClaiming, progress } = useClaimAll();
   const { earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
+  const { readyCount: manualRevealReadyCount } = useManualRevealVotes(address);
+  const showManualRevealLink = manualRevealReadyCount > 0;
 
   const claimableFormatted =
     totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
@@ -166,7 +169,7 @@ export const AddressInfoDropdown = ({
   if (votingStaked > 0) {
     let votingLabel = `${votingStaked} cREP voting`;
     if (earliestReveal) votingLabel += ` · reveals in ${earliestReveal}`;
-    else if (hasPendingReveals) votingLabel += ` · pending reveal`;
+    else if (showManualRevealLink || hasPendingReveals) votingLabel += ` · pending reveal`;
     stakeParts.push(votingLabel);
   }
   if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
@@ -197,7 +200,7 @@ export const AddressInfoDropdown = ({
       </div>
       <div className="text-base text-base-content text-left px-4 pl-12">
         {crepFormatted} cREP
-        {hasPendingReveals ? (
+        {showManualRevealLink ? (
           <Link
             href="/vote/reveal"
             className="ml-2 text-xs text-base-content/50 hover:text-base-content underline underline-offset-2"

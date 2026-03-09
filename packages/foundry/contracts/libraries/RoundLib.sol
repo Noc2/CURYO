@@ -4,10 +4,11 @@ pragma solidity ^0.8.20;
 /// @title RoundLib
 /// @notice Helpers for per-content round state transitions and timing.
 /// @dev Rounds replace global epochs. Each content item has independent rounds that
-///      accumulate votes across 1-hour tlock epochs. Settlement triggers when ≥3
-///      votes are revealed. If 1 week passes without ≥3 votes, the round cancels with full refunds.
+///      accumulate votes across 20-minute tlock epochs. Settlement triggers when ≥3
+///      votes are revealed. If 1 week passes below commit quorum the round cancels with refunds;
+///      once commit quorum exists, failure to reach reveal quorum can finalize as RevealFailed.
 ///      Tlock is the primary reveal mechanism — votes are encrypted to the epoch end time
-///      and become decryptable via drand after each 1-hour window.
+///      and become decryptable via drand after each epoch window.
 ///      Epoch-weighting: epoch-1 (blind) = 100% reward weight; epoch-2+ (informed) = 25%.
 library RoundLib {
     // --- Enums ---

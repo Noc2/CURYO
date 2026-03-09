@@ -1,17 +1,17 @@
 /**
  * Curyo Keeper — standalone stateless round settlement service.
  *
- * Iterates on-chain content, reveals tlock votes and calls settleRound() for active rounds,
- * cancels expired rounds, and sweeps dormant content.
+ * Iterates on-chain content, reveals tlock votes, settles or reveal-fails eligible rounds,
+ * cleans up unrevealed terminal-round commits, cancels expired rounds, and sweeps dormant content.
  *
  * Usage:
- *   npx tsx src/index.ts        # one-shot start
+ *   npx tsx src/index.ts        # start the keeper loop
  *   npx tsx watch src/index.ts  # restart on file changes (dev)
  */
 import { config } from "./config.js";
 import { createLogger } from "./logger.js";
 import { publicClient, getWalletClient, getAccount, chain } from "./client.js";
-import { resolveRounds } from "./keeper.js";
+import { resolveRounds, validateKeeperContracts } from "./keeper.js";
 import { RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import {
   startMetricsServer,
@@ -30,9 +30,14 @@ async function main() {
     chain: config.chainName,
     chainId: config.chainId,
     account: account.address,
+    votingEngine: config.contracts.votingEngine,
+    contentRegistry: config.contracts.contentRegistry,
     intervalMs: config.intervalMs,
     metricsEnabled: config.metricsEnabled,
   });
+
+  await validateKeeperContracts(publicClient, config.contracts.votingEngine, config.contracts.contentRegistry);
+  logger.info("Keeper contract connectivity verified");
 
   const walletClient = getWalletClient();
 
@@ -85,9 +90,7 @@ async function main() {
         });
       }
     } else {
-      logger.warn("Failed to check wallet balance", {
-        error: balanceResult.reason?.message || String(balanceResult.reason),
-      });
+      logger.warn("Failed to check wallet balance", { error: balanceResult.reason?.message || String(balanceResult.reason) });
     }
 
     if (consensusReserveResult.status === "fulfilled") {

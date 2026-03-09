@@ -201,6 +201,24 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "backfillSubmitterIdentity",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "submitterIdentity",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "bonusPool",
     "inputs": [],
     "outputs": [
@@ -485,6 +503,25 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "getSubmitter",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getSubmitterIdentity",
     "inputs": [
       {
         "name": "contentId",
@@ -1234,6 +1271,25 @@ export const ContentRegistryAbi = [
       },
       {
         "name": "sender",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubmitterIdentityBackfilled",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "submitterIdentity",
         "type": "address",
         "indexed": true,
         "internalType": "address"

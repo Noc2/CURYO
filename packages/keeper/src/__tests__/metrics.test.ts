@@ -14,7 +14,9 @@ function makeResult(overrides: Partial<KeeperResult> = {}): KeeperResult {
   return {
     roundsSettled: 0,
     roundsCancelled: 0,
+    roundsRevealFailedFinalized: 0,
     votesRevealed: 0,
+    cleanupBatchesProcessed: 0,
     contentMarkedDormant: 0,
     ...overrides,
   };
@@ -62,16 +64,27 @@ describe("metrics", () => {
   });
 
   it("renders pool balance gauges in metrics and health responses", async () => {
+    recordRun(
+      makeResult({
+        roundsRevealFailedFinalized: 2,
+        cleanupBatchesProcessed: 3,
+      }),
+      75,
+    );
     setGauge("keeper_consensus_reserve_wei", 4_000_000_000_000);
     setGauge("keeper_reward_pool_wei", 250_000_000_000);
 
     const metricsBody = getMetricsText();
+    expect(metricsBody).toContain("keeper_rounds_reveal_failed_finalized_total 2");
+    expect(metricsBody).toContain("keeper_unrevealed_cleanup_batches_total 3");
     expect(metricsBody).toContain("keeper_consensus_reserve_wei 4000000000000");
     expect(metricsBody).toContain("keeper_reward_pool_wei 250000000000");
 
     const health = getHealthSnapshot();
     expect([200, 503]).toContain(health.status);
     expect(JSON.parse(health.body)).toMatchObject({
+      roundsRevealFailedFinalized: 2,
+      cleanupBatchesProcessed: 3,
       consensusReserveWei: "4000000000000",
       keeperRewardPoolWei: "250000000000",
     });

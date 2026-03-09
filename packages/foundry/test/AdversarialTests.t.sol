@@ -556,8 +556,8 @@ contract AdversarialTests is VotingTestBase {
 
         // Unanimous votes
         bytes32 salt1 = keccak256(abi.encodePacked(voter1, block.timestamp, uint256(1)));
-        bytes32 ch1 = keccak256(abi.encodePacked(true, salt1, uint256(1)));
-        bytes memory ct1 = abi.encodePacked(uint8(1), salt1, uint256(1));
+        bytes memory ct1 = _testCiphertext(true, salt1, 1);
+        bytes32 ch1 = _commitHash(true, salt1, 1, ct1);
 
         vm.startPrank(voter1);
         token2.approve(address(eng2), STAKE);
@@ -565,16 +565,16 @@ contract AdversarialTests is VotingTestBase {
         vm.stopPrank();
 
         bytes32 salt2 = keccak256(abi.encodePacked(voter2, block.timestamp, uint256(1)));
-        bytes32 ch2 = keccak256(abi.encodePacked(true, salt2, uint256(1)));
-        bytes memory ct2 = abi.encodePacked(uint8(1), salt2, uint256(1));
+        bytes memory ct2 = _testCiphertext(true, salt2, 1);
+        bytes32 ch2 = _commitHash(true, salt2, 1, ct2);
 
         vm.startPrank(voter2);
         token2.approve(address(eng2), STAKE);
         eng2.commitVote(1, ch2, ct2, STAKE, address(0));
         vm.stopPrank();
 
-        bytes32 ck1 = keccak256(abi.encodePacked(voter1, ch1));
-        bytes32 ck2 = keccak256(abi.encodePacked(voter2, ch2));
+        bytes32 ck1 = _commitKey(voter1, ch1);
+        bytes32 ck2 = _commitKey(voter2, ch2);
 
         RoundLib.Round memory round = eng2.getRound(1, 1);
         vm.warp(round.startTime + EPOCH_DURATION + 1);

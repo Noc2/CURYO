@@ -160,15 +160,6 @@ export function DelegationSection() {
           <p className="text-error text-base">{error}</p>
         </div>
       )}
-
-      {/* Info box */}
-      <div className="rounded-2xl p-4" style={{ background: "#112840" }}>
-        <p className="text-base text-white/80">
-          <strong>Cold/hot wallet security:</strong> Keep your Voter ID on a hardware wallet (cold) and delegate to a
-          secondary key (hot). The delegate can vote and submit content, but cannot transfer your Voter ID. You can
-          revoke the delegate at any time from this page.
-        </p>
-      </div>
     </div>
   );
 }

@@ -57,6 +57,28 @@ function requireIntEnv(name: string, errors: string[]): number {
   return parsed;
 }
 
+function readPositiveIntEnv(name: string, fallback: string, errors: string[]): number {
+  const value = readEnv(name) || fallback;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    errors.push(`${name} must be a positive integer`);
+    return Number.parseInt(fallback, 10);
+  }
+
+  return parsed;
+}
+
+function readNonNegativeIntEnv(name: string, fallback: string, errors: string[]): number {
+  const value = readEnv(name) || fallback;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    errors.push(`${name} must be a non-negative integer`);
+    return Number.parseInt(fallback, 10);
+  }
+
+  return parsed;
+}
+
 function requireAddressEnv(name: string, errors: string[]): `0x${string}` {
   const value = readEnv(name);
   if (!value) {
@@ -100,8 +122,9 @@ function loadConfig() {
     privateKey,
 
     // Keeper behavior
-    intervalMs: Number.parseInt(process.env.KEEPER_INTERVAL_MS || "30000", 10),
-    startupJitterMs: Number.parseInt(process.env.KEEPER_STARTUP_JITTER_MS || "0", 10),
+    intervalMs: readPositiveIntEnv("KEEPER_INTERVAL_MS", "30000", errors),
+    startupJitterMs: readNonNegativeIntEnv("KEEPER_STARTUP_JITTER_MS", "0", errors),
+    cleanupBatchSize: readPositiveIntEnv("KEEPER_CLEANUP_BATCH_SIZE", "25", errors),
 
     // Tuning
     dormancyPeriod: BigInt(process.env.DORMANCY_PERIOD || String(30 * 24 * 60 * 60)),

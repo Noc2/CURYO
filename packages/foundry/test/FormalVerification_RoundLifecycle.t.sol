@@ -193,13 +193,12 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
 
     // ==================== Test 3: Round Expiry at Exact maxDuration Boundary ====================
 
-    /// @notice Round can be cancelled at exactly startTime + maxDuration.
-    function test_Expiry_AtExactMaxDuration() public {
+    /// @notice Below commit quorum, a round can be cancelled at exactly startTime + maxDuration.
+    function test_Expiry_AtExactMaxDuration_BelowCommitQuorumCancels() public {
         uint256 cid = _submit();
 
-        // 2 votes (enough to meet minVoters but we expire instead of settling)
+        // Stay below commit quorum so expiry uses the cancellation path.
         _vote(v[0], cid, true, 10e6);
-        _vote(v[1], cid, true, 10e6);
 
         uint256 rid = engine.getActiveRoundId(cid);
         RoundLib.Round memory round = engine.getRound(cid, rid);
@@ -398,32 +397,70 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
 
     // ==================== Test 10: Late Vote Placement and Round Expiry ====================
 
-    /// @notice Vote placed near expiry is included in the round; after expiry the round can be cancelled.
-    function test_LateVotePlacement_AndExpiry() public {
+    /// @notice Once final reveal grace has passed, a late vote rotates into a fresh round instead of reviving the old one.
+    function test_LateVotePlacement_AfterRevealGrace_StartsNewRound() public {
         uint256 cid = _submit();
 
         _vote(v[0], cid, true, 50e6);
         _vote(v[1], cid, false, 50e6);
 
+        uint256 rid1 = engine.getActiveRoundId(cid);
+        RoundLib.Round memory round1 = engine.getRound(cid, rid1);
+
+        // Long after the old commits became revealable, but before maxDuration:
+        // the stale round should auto-finalize as RevealFailed when a new vote arrives.
+        vm.warp(round1.startTime + MAX_DURATION - 1);
+        _vote(v[2], cid, true, 50e6);
+
+        uint256 rid2 = engine.getActiveRoundId(cid);
+        assertEq(rid2, rid1 + 1, "Late vote started a new round");
+
+        RoundLib.Round memory finalized = engine.getRound(cid, rid1);
+        assertEq(uint256(finalized.state), uint256(RoundLib.RoundState.RevealFailed), "Old round finalized");
+        assertEq(finalized.voteCount, 2, "Old round kept original commits");
+
+        RoundLib.Round memory newRound = engine.getRound(cid, rid2);
+        assertEq(uint256(newRound.state), uint256(RoundLib.RoundState.Open), "New round is open");
+        assertEq(newRound.voteCount, 1, "Late vote counted in new round");
+    }
+
+    // ==================== Test 11: RevealFailed Refund Flow ====================
+
+    /// @notice Once commit quorum exists, a round that never reaches reveal quorum finalizes as
+    ///         RevealFailed after the final grace deadline. Revealed votes stay refundable.
+    function test_RevealFailed_RefundsOnlyRevealedVotes() public {
+        vm.prank(owner);
+        engine.setConfig(EPOCH_DURATION, MAX_DURATION, 3, 200);
+
+        uint256 cid = _submit();
+
+        (bytes32 ck0, bytes32 s0) = _vote(v[0], cid, true, 10e6);
+        _vote(v[1], cid, false, 20e6);
+        _vote(v[2], cid, true, 30e6);
+
         uint256 rid = engine.getActiveRoundId(cid);
         RoundLib.Round memory round = engine.getRound(cid, rid);
 
-        // Late vote 1 second before expiry
-        vm.warp(round.startTime + MAX_DURATION - 1);
-        _vote(v[2], cid, true, 50e6);
+        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
 
-        RoundLib.Round memory afterLate = engine.getRound(cid, rid);
-        assertEq(afterLate.voteCount, 3, "Late vote counted");
+        vm.warp(round.startTime + EPOCH_DURATION + engine.revealGracePeriod());
+        engine.finalizeRevealFailedRound(cid, rid);
 
-        // Now expire
-        vm.warp(round.startTime + MAX_DURATION);
-        engine.cancelExpiredRound(cid, rid);
+        RoundLib.Round memory failed = engine.getRound(cid, rid);
+        assertEq(uint256(failed.state), uint256(RoundLib.RoundState.RevealFailed), "RevealFailed finalized");
 
-        RoundLib.Round memory cancelled = engine.getRound(cid, rid);
-        assertEq(uint256(cancelled.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled after expiry");
+        uint256 voter0Before = crepToken.balanceOf(v[0]);
+        vm.prank(v[0]);
+        engine.claimCancelledRoundRefund(cid, rid);
+        assertEq(crepToken.balanceOf(v[0]) - voter0Before, 10e6, "revealed voter refunded");
+
+        vm.prank(v[1]);
+        vm.expectRevert(RoundVotingEngine.VoteNotRevealed.selector);
+        engine.claimCancelledRoundRefund(cid, rid);
     }
 
-    // ==================== Test 11: Post-Settlement Round Creation ====================
+    // ==================== Test 12: Post-Settlement Round Creation ====================
 
     /// @notice After settling round 1, a new vote (after cooldown) creates round 2.
     function test_RoundTransition_NewRoundAfterSettlement() public {
@@ -455,10 +492,13 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         assertEq(newRound.voteCount, 1, "New round has 1 vote");
     }
 
-    // ==================== Test 12: Refund Flow on Cancelled Round ====================
+    // ==================== Test 13: Refund Flow on Cancelled Round ====================
 
-    /// @notice After cancelling an expired round, all voters can claim full refunds.
+    /// @notice After cancelling an expired round that stayed below commit quorum, all voters can claim full refunds.
     function test_RefundFlow_CancelledRound() public {
+        vm.prank(owner);
+        engine.setConfig(EPOCH_DURATION, MAX_DURATION, 4, 200);
+
         uint256 cid = _submit();
 
         uint256 bal0Before = crepToken.balanceOf(v[0]);

@@ -186,7 +186,7 @@ yarn ponder:dev`}</code>
       <h2>Voting &mdash; Commit-Reveal Flow</h2>
       <p>
         Voting uses a tlock commit-reveal scheme. The agent commits an encrypted vote direction and stake, then the
-        keeper service automatically reveals votes after each epoch using the drand beacon.
+        keeper service normally reveals votes after each epoch using the drand beacon.
       </p>
       <h3>Step-by-Step</h3>
       <ol>
@@ -224,8 +224,9 @@ const ciphertext = "0x" + Buffer.from(armored, "utf-8").toString("hex");`}</code
           Pass <code>0x0000...0000</code> as <code>frontendAddress</code> if not associated with a registered frontend.
         </li>
         <li>
-          <strong>Keeper reveals:</strong> The keeper service automatically decrypts and reveals votes after each epoch.
-          Your agent does not need to handle the reveal step.
+          <strong>Keeper reveals:</strong> The keeper service normally decrypts and reveals votes after each epoch. For
+          stronger operational guarantees, your agent can also monitor reveal status and call{" "}
+          <code>revealVoteByCommitKey()</code> directly if auto-reveal looks delayed.
         </li>
       </ol>
       <p>

@@ -41,13 +41,13 @@ const GovernanceDocs: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Pending</span>
               </td>
-              <td>Created. Waiting for voting delay (1 day).</td>
+              <td>Created. Waiting for voting delay (~1 day / 7,200 blocks).</td>
             </tr>
             <tr>
               <td>
                 <span className="badge badge-secondary badge-sm">Active</span>
               </td>
-              <td>Voting open (1 week). Cast: For, Against, or Abstain.</td>
+              <td>Voting open (~1 week / 50,400 blocks). Cast: For, Against, or Abstain.</td>
             </tr>
             <tr>
               <td>
@@ -81,11 +81,11 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Voting delay</td>
-              <td>1 day</td>
+              <td>~1 day (7,200 blocks)</td>
             </tr>
             <tr>
               <td className="font-mono">Voting period</td>
-              <td>1 week</td>
+              <td>~1 week (50,400 blocks)</td>
             </tr>
             <tr>
               <td className="font-mono">Quorum</td>
@@ -147,8 +147,9 @@ const GovernanceDocs: NextPage = () => {
               <td className="font-mono">Max round duration</td>
               <td>7 days</td>
               <td>
-                Maximum time before a round expires. If the minimum voter threshold is not reached within this period,
-                the round is cancelled and all stakes are refunded.
+                Maximum time before a round expires. Below commit quorum the round is cancelled and refundable. At or
+                above commit quorum, missing reveal quorum after the last reveal grace window can finalize as
+                RevealFailed instead.
               </td>
             </tr>
             <tr>
@@ -178,16 +179,20 @@ const GovernanceDocs: NextPage = () => {
       <h2>Treasury</h2>
       <p>
         The governance treasury is held by the timelock controller and starts with 10M cREP. It grows over time through
-        two token inflow sources:
+        three main ongoing inflow sources:
       </p>
       <ul>
         <li>
-          <strong>1% resolution fee</strong> &mdash; 1% of every losing stakes pool is sent to the treasury when rounds
-          are resolved.
+          <strong>1% treasury fee</strong> &mdash; 1% of contested losing pools is sent to the treasury when rounds
+          settle.
         </li>
         <li>
           <strong>Forfeited submitter deposits</strong> &mdash; when content is flagged for policy violations or
           receives unfavorable ratings, the submitter&apos;s 10 cREP stake is forfeited to the treasury.
+        </li>
+        <li>
+          <strong>Forfeited unrevealed votes</strong> &mdash; unrevealed past-epoch stakes that miss the reveal window
+          are swept to treasury during post-settlement cleanup.
         </li>
       </ul>
       <p>

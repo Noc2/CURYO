@@ -337,7 +337,7 @@ export async function cancelContent(
 
 /**
  * Deregister a frontend (operator only — must call from the registered address).
- * Calls FrontendRegistry.deregister(). Returns stake + pending fees to caller.
+ * Calls FrontendRegistry.deregister(). This only starts the unbonding period.
  */
 export async function deregisterFrontend(fromAddress: string, contractAddress: string): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
@@ -359,7 +359,7 @@ export async function deregisterFrontend(fromAddress: string, contractAddress: s
 
 /**
  * Complete a pending frontend deregistration after the unbonding period.
- * Calls FrontendRegistry.completeDeregister().
+ * Calls FrontendRegistry.completeDeregister() to withdraw stake + pending fees.
  */
 export async function completeDeregisterFrontend(fromAddress: string, contractAddress: string): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");

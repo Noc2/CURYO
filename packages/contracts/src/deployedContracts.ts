@@ -1664,6 +1664,24 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "backfillSubmitterIdentity",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "submitterIdentity",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "bonusPool",
           inputs: [],
           outputs: [
@@ -1948,6 +1966,25 @@ const deployedContracts = {
         {
           type: "function",
           name: "getSubmitter",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSubmitterIdentity",
           inputs: [
             {
               name: "contentId",
@@ -2706,6 +2743,25 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "SubmitterIdentityBackfilled",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "submitterIdentity",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "SubmitterStakeReturned",
           inputs: [
             {
@@ -3056,6 +3112,34 @@ const deployedContracts = {
           inputs: [
             {
               name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "backfillParticipationRewardSnapshot",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPoolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rateBps",
               type: "uint256",
               internalType: "uint256",
             },
@@ -6022,6 +6106,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "SelfVote",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "SnapshotAlreadySet",
           inputs: [],
         },
         {
@@ -12030,6 +12119,25 @@ const deployedContracts = {
           anonymous: false,
         },
         {
+          type: "event",
+          name: "PoolWithdrawal",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "error",
           name: "OwnableInvalidOwner",
           inputs: [
@@ -14698,6 +14806,34 @@ const deployedContracts = {
           inputs: [
             {
               name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "backfillParticipationRewardSnapshot",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "roundId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPoolAddress",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rateBps",
               type: "uint256",
               internalType: "uint256",
             },
@@ -17668,6 +17804,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "SnapshotAlreadySet",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "ThresholdReached",
           inputs: [],
         },
@@ -18102,6 +18243,25 @@ const deployedContracts = {
           type: "event",
           name: "PoolDeposit",
           inputs: [
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "PoolWithdrawal",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
             {
               name: "amount",
               type: "uint256",
@@ -20547,6 +20707,24 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "backfillSubmitterIdentity",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "submitterIdentity",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "bonusPool",
           inputs: [],
           outputs: [
@@ -20831,6 +21009,25 @@ const deployedContracts = {
         {
           type: "function",
           name: "getSubmitter",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getSubmitterIdentity",
           inputs: [
             {
               name: "contentId",
@@ -21580,6 +21777,25 @@ const deployedContracts = {
             },
             {
               name: "sender",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SubmitterIdentityBackfilled",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "submitterIdentity",
               type: "address",
               indexed: true,
               internalType: "address",
