@@ -137,11 +137,6 @@ export const TreasuryBalance = () => {
           Icon={GiftIcon}
         />
       </div>
-
-      <p className="text-base text-base-content/45 mt-4">
-        Treasury, ParticipationPool, and HumanFaucet are wallet balances. Consensus Reserve and Keeper Reward Pool are
-        logical reserves tracked inside <code>RoundVotingEngine</code>.
-      </p>
     </div>
   );
 };
