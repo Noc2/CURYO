@@ -6,12 +6,41 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ponderDir = join(__dirname, "..");
 const pgliteDir = join(ponderDir, ".ponder", "pglite");
+const LOCALHOST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
-function shouldRecover(output) {
+function isLocalHardhatRpc(env = process.env) {
+  const network = env.PONDER_NETWORK ?? "hardhat";
+  if (network !== "hardhat") return false;
+
+  const rpcUrl = env.PONDER_RPC_URL_31337 ?? "http://127.0.0.1:8545";
+
+  try {
+    const { hostname } = new URL(rpcUrl);
+    return LOCALHOST_HOSTNAMES.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isRecoverableLocalReset(output, env = process.env) {
+  return isLocalHardhatRpc(env) && output.includes("BlockNotFoundError") && output.includes("could not be found");
+}
+
+export function getRecoveryReason(output, env = process.env) {
   const hasWalRecovery = output.includes("InitWalRecovery");
   const hasPgliteAbort =
     output.includes("RuntimeError: Aborted()") && output.includes("@electric-sql/pglite");
-  return hasWalRecovery || hasPgliteAbort;
+  if (hasWalRecovery || hasPgliteAbort) {
+    return "corrupted PGlite state";
+  }
+  if (isRecoverableLocalReset(output, env)) {
+    return "stale local Ponder sync state after the hardhat/anvil chain was reset";
+  }
+  return null;
+}
+
+export function shouldRecover(output, env = process.env) {
+  return getRecoveryReason(output, env) !== null;
 }
 
 function runDevRaw() {
@@ -72,7 +101,8 @@ function resetPgliteIfPresent() {
 
 async function main() {
   const firstRun = await runDevRaw();
-  if (firstRun.code === 0 || !shouldRecover(firstRun.output)) {
+  const recoveryReason = getRecoveryReason(firstRun.output, process.env);
+  if (firstRun.code === 0 || !recoveryReason) {
     process.exit(firstRun.code);
   }
 
@@ -81,12 +111,16 @@ async function main() {
     process.exit(firstRun.code);
   }
 
-  console.warn("\nWarning: Detected corrupted PGlite state. Resetting packages/ponder/.ponder/pglite and retrying once...\n");
+  console.warn(
+    `\nWarning: Detected ${recoveryReason}. Resetting packages/ponder/.ponder/pglite and retrying once...\n`,
+  );
   const secondRun = await runDevRaw();
   process.exit(secondRun.code);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

@@ -87,7 +87,9 @@ Routes `/health` and `/status` are reserved by Ponder.
 
 ## Troubleshooting
 
-**PGlite corruption:** If Ponder crashes or behaves unexpectedly after a crash, clear the local state:
+**Local chain rewind / reset:** `yarn ponder:dev` now auto-recovers once if the local hardhat/anvil chain was reset and the persisted Ponder checkpoint points at a block that no longer exists. It clears `packages/ponder/.ponder/pglite` and retries automatically.
+
+**PGlite corruption or unrecoverable local state:** If Ponder still crashes or behaves unexpectedly after the retry, clear the local state manually:
 
 ```bash
 rm -rf packages/ponder/.ponder
