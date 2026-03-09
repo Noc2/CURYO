@@ -43,6 +43,7 @@ contract RoundVotingEngine is
     error InvalidStake();
     error ZeroAmount();
     error Unauthorized();
+    error RewardDistributorLocked();
     error VoterIdRequired();
     error SelfVote();
     error ContentNotActive();
@@ -291,6 +292,7 @@ contract RoundVotingEngine is
 
     function setRewardDistributor(address _rewardDistributor) external onlyRole(CONFIG_ROLE) {
         if (_rewardDistributor == address(0)) revert InvalidAddress();
+        if (rewardDistributor != address(0)) revert RewardDistributorLocked();
         rewardDistributor = _rewardDistributor;
     }
 

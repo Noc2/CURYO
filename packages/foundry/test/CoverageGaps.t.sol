@@ -851,6 +851,12 @@ contract RoundSettlementEdgeCaseTest is Test {
         engine.setRewardDistributor(address(0));
     }
 
+    function test_SetRewardDistributorSecondCallReverts() public {
+        vm.prank(owner);
+        vm.expectRevert(RoundVotingEngine.RewardDistributorLocked.selector);
+        engine.setRewardDistributor(address(0xBEEF));
+    }
+
     function test_SetFrontendRegistryZeroReverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
