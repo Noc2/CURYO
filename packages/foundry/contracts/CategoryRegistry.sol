@@ -30,9 +30,9 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     uint256 public constant MAX_SUBCATEGORY_LENGTH = 32;
 
     // --- State ---
-    IERC20 public token;
-    IGovernor public governor;
-    address public timelock;
+    IERC20 public immutable token;
+    IGovernor public immutable governor;
+    address public immutable timelock;
     IRoundVotingEngine public votingEngine;
 
     uint256 public nextCategoryId;
