@@ -22,10 +22,12 @@ import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
 
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with tlock commit-reveal and epoch-weighted rewards.
-/// @dev Flow: commitVote (tlock-encrypted to epoch end) → epoch ends → revealVote (anyone decrypts via drand) → settleRound (≥3 votes).
+/// @dev Flow: commitVote (tlock-encrypted to epoch end) → epoch ends → revealVote (caller supplies plaintext consistent
+///      with the committed ciphertext) → settleRound (≥3 revealed votes) or finalizeRevealFailedRound().
 ///      Rounds accumulate votes across 20-minute epochs. After each epoch, tlock ciphertexts
-///      become decryptable and anyone can call revealVote(). Settlement triggers when ≥3 votes
-///      are revealed. If 1 week passes without ≥3 revealed votes, the round cancels with full refunds.
+///      become decryptable via drand and any caller that knows the plaintext can call revealVote().
+///      If 1 week passes below commit quorum the round cancels with refunds; once commit quorum exists,
+///      missing reveal quorum can finalize as RevealFailed after the last reveal grace deadline.
 ///      Epoch-weighting: epoch-1 (blind) = 100% reward weight; epoch-2+ (informed) = 25%.
 ///      Win condition uses weighted pools, not raw stake, preventing late-voter herding.
 contract RoundVotingEngine is
