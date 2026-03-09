@@ -4,6 +4,8 @@ Status: **Draft** | Last updated: 2026-03-09
 
 This document covers the next step after making `ProfileRegistry` the first-class profile source of truth: moving the follow graph on-chain.
 
+This revision folds in a gas-focused design review. The earlier draft stored both follower and following arrays on-chain. That is not the cheapest design for Curyo's actual product needs.
+
 ---
 
 ## Current State
@@ -41,6 +43,25 @@ Use a dedicated on-chain `FollowRegistry` contract instead of extending `Profile
 
 It is possible to append follow mappings to `ProfileRegistry`, but that couples profile metadata and social graph state into one upgrade path. For mainnet, that is a larger blast radius than necessary.
 
+### Gas-first conclusion
+
+If the goal is to make follows portable across frontends, you do not need to store the full graph twice on-chain.
+
+The cheapest practical design for Curyo is:
+
+- store only the follow edge membership on-chain
+- emit follow/unfollow events
+- let Ponder reconstruct follower lists, following lists, and counts off-chain
+
+That still gives every frontend a shared on-chain source of truth for writes, without paying to persist both sides of the graph in contract storage.
+
+The current product mainly needs:
+
+- `isFollowing(viewer, target)` for button state
+- the viewer's followed set for "Following Only" filters
+
+Those do not require mirrored `followers[]` and `following[]` arrays in contract storage.
+
 ---
 
 ## Target Contract Surface
@@ -52,15 +73,36 @@ Add a new upgradeable registry, for example:
 
 ### Core state
 
+#### Recommended v1
+
 - `mapping(address => mapping(address => bool)) private _isFollowing;`
+
+That is the minimum state required for on-chain truth and replay-safe follow writes.
+
+Do not store in v1:
+
+- `followers[]`
+- `following[]`
+- follower index mappings
+- following index mappings
+- on-chain follower/following counters
+- timestamps per follow edge
+
+Instead:
+
+- emit events for every follow/unfollow
+- let Ponder maintain the enumerated graph and counts
+
+#### Optional v2, only if direct on-chain pagination becomes necessary
+
+If you later decide that wallets/frontends must enumerate a user's followed set directly via RPC, add only:
+
 - `mapping(address => address[]) private _following;`
 - `mapping(address => mapping(address => uint256)) private _followingIndexPlusOne;`
-- `mapping(address => address[]) private _followers;`
-- `mapping(address => mapping(address => uint256)) private _followersIndexPlusOne;`
-- `mapping(address => uint256) public followingCount;`
-- `mapping(address => uint256) public followerCount;`
 
-The index-plus-one mappings are needed for O(1) unfollow via swap-and-pop.
+Use `indexPlusOne != 0` as membership and remove the separate `_isFollowing` mapping entirely in that variant.
+
+Do not mirror `followers[]` on-chain unless another on-chain contract truly needs follower enumeration.
 
 ### Core events
 
@@ -79,10 +121,23 @@ The index-plus-one mappings are needed for O(1) unfollow via swap-and-pop.
 - `function follow(address target) external;`
 - `function unfollow(address target) external;`
 - `function isFollowing(address follower, address target) external view returns (bool);`
-- `function getFollowingCount(address follower) external view returns (uint256);`
-- `function getFollowerCount(address target) external view returns (uint256);`
+
+Do not add pagination functions in v1. Frontends should read enumerated follow data from Ponder.
+
+Optional v2 only if you add on-chain `following[]` storage:
+
 - `function getFollowingPaginated(address follower, uint256 offset, uint256 limit) external view returns (address[] memory addresses, uint256 total);`
-- `function getFollowersPaginated(address target, uint256 offset, uint256 limit) external view returns (address[] memory addresses, uint256 total);`
+
+Avoid `getFollowersPaginated()` unless you intentionally accept the extra storage cost of mirroring the graph.
+
+### Contract implementation notes
+
+- Prefer custom errors over revert strings.
+- Prefer `external` functions and `calldata` parameters where possible.
+- Do not inherit `ReentrancyGuard` if follow/unfollow make no external calls.
+- If the contract only needs one governance owner plus UUPS upgrade authorization, `Ownable2StepUpgradeable` is leaner than `AccessControlUpgradeable`. Use `AccessControlUpgradeable` only if you genuinely need multiple runtime roles.
+- If you later add on-chain `following[]` pagination, use swap-and-pop on unfollow.
+- Avoid OpenZeppelin `EnumerableSet` for the hot path unless benchmarking shows the convenience is worth it. Its set copies for `values()` are explicitly unbounded.
 
 ---
 
@@ -127,7 +182,8 @@ Replace the current signed-message API flow in:
 
 With a contract-based flow:
 
-- read `isFollowing` / `getFollowingPaginated` via Ponder-first or RPC fallback
+- read the viewer's followed set from Ponder
+- read `isFollowing(viewer, target)` from contract or from indexed follow state
 - write `follow(target)` / `unfollow(target)` via wallet transaction
 
 Delete after migration:
@@ -155,6 +211,8 @@ Add API endpoints such as:
 - `GET /following/:address`
 - `GET /followers/:address`
 - optional `GET /follow-state?follower=...&target=...`
+
+This is the main enumeration layer. It replaces the need to persist follower and following arrays in contract storage.
 
 ### MCP
 
@@ -190,10 +248,9 @@ Add Foundry coverage for:
 - duplicate follow reverts
 - unfollow succeeds
 - unfollow missing edge reverts
-- counts update correctly
-- paginated follower/following reads work
-- swap-and-pop removal preserves set integrity
 - upgrade preserves follow graph state if the contract is UUPS
+
+Only add pagination and swap-and-pop tests if you choose the optional v2 enumerable design.
 
 ---
 
@@ -224,7 +281,33 @@ Add coverage for:
 Do not launch on-chain follows unless all of the following are true:
 
 - contract storage layout is reviewed
-- follow/unfollow pagination behavior is tested
+- the storage design is explicitly chosen:
+  - minimal mapping-only v1, or
+  - enumerable `following[]` v2
+- if enumerable `following[]` is chosen, pagination behavior is tested
 - Ponder indexing is live and stable
 - the UI no longer depends on `followed_profiles`
 - the migration/reset decision is explicit
+
+---
+
+## Why this is the gas-efficient choice
+
+The EVM cost model strongly favors avoiding unnecessary storage writes:
+
+- a new storage slot written from zero to non-zero is expensive
+- cold storage accesses are extra expensive on first touch in a transaction
+- storage clears no longer refund enough gas to justify writing duplicate state and deleting it later
+
+That means the biggest optimization is architectural:
+
+- do not write the same follow edge into multiple arrays, counters, and reverse indexes unless on-chain consumers truly need them
+
+References:
+
+- Solidity storage layout: https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html
+- Solidity mappings are not iterable: https://docs.soliditylang.org/en/latest/types.html#mapping-types
+- EIP-2200 `SSTORE` metering: https://eips.ethereum.org/EIPS/eip-2200
+- EIP-2929 cold storage access costs: https://eips.ethereum.org/EIPS/eip-2929
+- EIP-3529 reduced refunds: https://eips.ethereum.org/EIPS/eip-3529
+- OpenZeppelin `EnumerableSet` notes: https://docs.openzeppelin.com/contracts/5.x/api/utils#EnumerableSet
