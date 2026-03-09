@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  cleanupSignedActionChallenges,
-  ensureSignedActionChallengeTable,
-  persistSignedActionChallenge,
-} from "~~/lib/auth/signedActions";
+import { issueSignedActionChallenge } from "~~/lib/auth/signedActions";
 import {
   UNWATCH_CONTENT_ACTION,
+  WATCHLIST_CHALLENGE_TITLE,
   WATCH_CONTENT_ACTION,
-  createWatchlistChallenge,
+  hashWatchlistChallengePayload,
   normalizeWatchlistChallengeInput,
 } from "~~/lib/auth/watchlistChallenge";
 import { checkRateLimit } from "~~/utils/rateLimit";
@@ -31,25 +28,14 @@ export async function POST(request: NextRequest) {
     }
 
     const action = body.action === "unwatch" ? UNWATCH_CONTENT_ACTION : WATCH_CONTENT_ACTION;
-    await ensureSignedActionChallengeTable();
-
-    const challenge = createWatchlistChallenge(normalized.payload, action);
-    await cleanupSignedActionChallenges();
-    await persistSignedActionChallenge({
-      challengeId: challenge.challengeId,
+    const challenge = await issueSignedActionChallenge({
+      title: WATCHLIST_CHALLENGE_TITLE,
       action,
       walletAddress: normalized.payload.normalizedAddress,
-      payloadHash: challenge.payloadHash,
-      nonce: challenge.nonce,
-      expiresAt: challenge.expiresAt,
-      createdAt: challenge.createdAt,
+      payloadHash: hashWatchlistChallengePayload(normalized.payload),
     });
 
-    return NextResponse.json({
-      challengeId: challenge.challengeId,
-      message: challenge.message,
-      expiresAt: challenge.expiresAt.toISOString(),
-    });
+    return NextResponse.json(challenge);
   } catch (error) {
     console.error("Error creating watchlist challenge:", error);
     return NextResponse.json({ error: "Failed to create challenge" }, { status: 500 });

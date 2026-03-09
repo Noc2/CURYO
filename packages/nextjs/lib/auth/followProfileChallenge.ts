@@ -1,8 +1,4 @@
-import {
-  buildSignedActionMessage,
-  createSignedActionChallenge,
-  hashSignedActionPayload,
-} from "~~/lib/auth/signedActions";
+import { buildSignedActionMessage, hashSignedActionPayload } from "~~/lib/auth/signedActions";
 import { isValidWalletAddress, normalizeWalletAddress } from "~~/lib/social/profileFollows";
 
 export const FOLLOW_PROFILE_ACTION = "follow-profile";
@@ -64,19 +60,5 @@ export function buildFollowProfileChallengeMessage(params: {
     payloadHash: params.payloadHash,
     nonce: params.nonce,
     expiresAt: params.expiresAt,
-  });
-}
-
-export function createFollowProfileChallenge(
-  payload: NormalizedFollowProfileChallengePayload,
-  action: typeof FOLLOW_PROFILE_ACTION | typeof UNFOLLOW_PROFILE_ACTION,
-) {
-  const payloadHash = hashFollowProfileChallengePayload(payload);
-
-  return createSignedActionChallenge({
-    title: FOLLOW_PROFILE_CHALLENGE_TITLE,
-    action,
-    address: payload.normalizedAddress,
-    payloadHash,
   });
 }

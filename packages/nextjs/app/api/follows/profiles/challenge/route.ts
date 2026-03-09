@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   FOLLOW_PROFILE_ACTION,
+  FOLLOW_PROFILE_CHALLENGE_TITLE,
   UNFOLLOW_PROFILE_ACTION,
-  createFollowProfileChallenge,
+  hashFollowProfileChallengePayload,
   normalizeFollowProfileChallengeInput,
 } from "~~/lib/auth/followProfileChallenge";
-import {
-  cleanupSignedActionChallenges,
-  ensureSignedActionChallengeTable,
-  persistSignedActionChallenge,
-} from "~~/lib/auth/signedActions";
+import { issueSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 20, windowMs: 60_000 };
@@ -31,25 +28,14 @@ export async function POST(request: NextRequest) {
     }
 
     const action = body.action === "unfollow" ? UNFOLLOW_PROFILE_ACTION : FOLLOW_PROFILE_ACTION;
-    await ensureSignedActionChallengeTable();
-
-    const challenge = createFollowProfileChallenge(normalized.payload, action);
-    await cleanupSignedActionChallenges();
-    await persistSignedActionChallenge({
-      challengeId: challenge.challengeId,
+    const challenge = await issueSignedActionChallenge({
+      title: FOLLOW_PROFILE_CHALLENGE_TITLE,
       action,
       walletAddress: normalized.payload.normalizedAddress,
-      payloadHash: challenge.payloadHash,
-      nonce: challenge.nonce,
-      expiresAt: challenge.expiresAt,
-      createdAt: challenge.createdAt,
+      payloadHash: hashFollowProfileChallengePayload(normalized.payload),
     });
 
-    return NextResponse.json({
-      challengeId: challenge.challengeId,
-      message: challenge.message,
-      expiresAt: challenge.expiresAt.toISOString(),
-    });
+    return NextResponse.json(challenge);
   } catch (error) {
     console.error("Error creating follow challenge:", error);
     return NextResponse.json({ error: "Failed to create challenge" }, { status: 500 });

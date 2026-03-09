@@ -32,7 +32,7 @@ export function buildSignedActionMessage(params: {
   ].join("\n");
 }
 
-export function createSignedActionChallenge(params: {
+function createSignedActionChallenge(params: {
   title: string;
   action: string;
   address: `0x${string}`;
@@ -61,6 +61,39 @@ export function createSignedActionChallenge(params: {
     expiresAt,
     createdAt: now,
     message,
+  };
+}
+
+export async function issueSignedActionChallenge(params: {
+  title: string;
+  action: string;
+  walletAddress: `0x${string}`;
+  payloadHash: string;
+  ttlMs?: number;
+}) {
+  const challenge = createSignedActionChallenge({
+    title: params.title,
+    action: params.action,
+    address: params.walletAddress,
+    payloadHash: params.payloadHash,
+    ttlMs: params.ttlMs,
+  });
+
+  await cleanupSignedActionChallenges(challenge.createdAt);
+  await persistSignedActionChallenge({
+    challengeId: challenge.challengeId,
+    action: params.action,
+    walletAddress: params.walletAddress,
+    payloadHash: challenge.payloadHash,
+    nonce: challenge.nonce,
+    expiresAt: challenge.expiresAt,
+    createdAt: challenge.createdAt,
+  });
+
+  return {
+    challengeId: challenge.challengeId,
+    message: challenge.message,
+    expiresAt: challenge.expiresAt.toISOString(),
   };
 }
 

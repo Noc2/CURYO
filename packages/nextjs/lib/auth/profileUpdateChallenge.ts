@@ -1,8 +1,4 @@
-import {
-  buildSignedActionMessage,
-  createSignedActionChallenge,
-  hashSignedActionPayload,
-} from "~~/lib/auth/signedActions";
+import { buildSignedActionMessage, hashSignedActionPayload } from "~~/lib/auth/signedActions";
 
 export const PROFILE_UPDATE_CHALLENGE_ACTION = "profile-update";
 export const PROFILE_UPDATE_CHALLENGE_TITLE = "Curyo profile update authorization";
@@ -99,15 +95,5 @@ export function buildProfileUpdateChallengeMessage(params: {
     payloadHash: params.payloadHash,
     nonce: params.nonce,
     expiresAt: params.expiresAt,
-  });
-}
-
-export function createProfileUpdateChallenge(payload: NormalizedProfileUpdatePayload) {
-  const payloadHash = hashProfileUpdatePayload(payload);
-  return createSignedActionChallenge({
-    title: PROFILE_UPDATE_CHALLENGE_TITLE,
-    action: PROFILE_UPDATE_CHALLENGE_ACTION,
-    address: payload.normalizedAddress,
-    payloadHash,
   });
 }

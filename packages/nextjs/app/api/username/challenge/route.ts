@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   PROFILE_UPDATE_CHALLENGE_ACTION,
-  createProfileUpdateChallenge,
+  PROFILE_UPDATE_CHALLENGE_TITLE,
+  hashProfileUpdatePayload,
   normalizeProfileUpdateInput,
 } from "~~/lib/auth/profileUpdateChallenge";
-import {
-  cleanupSignedActionChallenges,
-  ensureSignedActionChallengeTable,
-  persistSignedActionChallenge,
-} from "~~/lib/auth/signedActions";
+import { issueSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 10, windowMs: 60_000 };
@@ -29,25 +26,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    await ensureSignedActionChallengeTable();
-
-    const challenge = createProfileUpdateChallenge(normalized.payload);
-    await cleanupSignedActionChallenges();
-    await persistSignedActionChallenge({
-      challengeId: challenge.challengeId,
+    const challenge = await issueSignedActionChallenge({
+      title: PROFILE_UPDATE_CHALLENGE_TITLE,
       action: PROFILE_UPDATE_CHALLENGE_ACTION,
       walletAddress: normalized.payload.normalizedAddress,
-      payloadHash: challenge.payloadHash,
-      nonce: challenge.nonce,
-      expiresAt: challenge.expiresAt,
-      createdAt: challenge.createdAt,
+      payloadHash: hashProfileUpdatePayload(normalized.payload),
     });
 
-    return NextResponse.json({
-      challengeId: challenge.challengeId,
-      message: challenge.message,
-      expiresAt: challenge.expiresAt.toISOString(),
-    });
+    return NextResponse.json(challenge);
   } catch (error) {
     console.error("Error creating profile update challenge:", error);
     return NextResponse.json({ error: "Failed to create challenge" }, { status: 500 });

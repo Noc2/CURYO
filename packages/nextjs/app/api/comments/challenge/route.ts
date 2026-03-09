@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   COMMENT_CHALLENGE_ACTION,
-  createCommentChallenge,
+  COMMENT_CHALLENGE_TITLE,
+  hashCommentChallengePayload,
   normalizeCommentChallengeInput,
 } from "~~/lib/auth/commentChallenge";
-import {
-  cleanupSignedActionChallenges,
-  ensureSignedActionChallengeTable,
-  persistSignedActionChallenge,
-} from "~~/lib/auth/signedActions";
+import { issueSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 10, windowMs: 60_000 };
@@ -29,25 +26,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    await ensureSignedActionChallengeTable();
-
-    const challenge = createCommentChallenge(normalized.payload);
-    await cleanupSignedActionChallenges();
-    await persistSignedActionChallenge({
-      challengeId: challenge.challengeId,
+    const challenge = await issueSignedActionChallenge({
+      title: COMMENT_CHALLENGE_TITLE,
       action: COMMENT_CHALLENGE_ACTION,
       walletAddress: normalized.payload.normalizedAddress,
-      payloadHash: challenge.payloadHash,
-      nonce: challenge.nonce,
-      expiresAt: challenge.expiresAt,
-      createdAt: challenge.createdAt,
+      payloadHash: hashCommentChallengePayload(normalized.payload),
     });
 
-    return NextResponse.json({
-      challengeId: challenge.challengeId,
-      message: challenge.message,
-      expiresAt: challenge.expiresAt.toISOString(),
-    });
+    return NextResponse.json(challenge);
   } catch (error) {
     console.error("Error creating comment challenge:", error);
     return NextResponse.json({ error: "Failed to create challenge" }, { status: 500 });

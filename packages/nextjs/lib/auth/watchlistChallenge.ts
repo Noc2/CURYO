@@ -1,8 +1,4 @@
-import {
-  buildSignedActionMessage,
-  createSignedActionChallenge,
-  hashSignedActionPayload,
-} from "~~/lib/auth/signedActions";
+import { buildSignedActionMessage, hashSignedActionPayload } from "~~/lib/auth/signedActions";
 import { isValidWalletAddress, normalizeContentId, normalizeWalletAddress } from "~~/lib/watchlist/contentWatch";
 
 export const WATCH_CONTENT_ACTION = "watch-content";
@@ -58,19 +54,5 @@ export function buildWatchlistChallengeMessage(params: {
     payloadHash: params.payloadHash,
     nonce: params.nonce,
     expiresAt: params.expiresAt,
-  });
-}
-
-export function createWatchlistChallenge(
-  payload: NormalizedWatchlistChallengePayload,
-  action: typeof WATCH_CONTENT_ACTION | typeof UNWATCH_CONTENT_ACTION,
-) {
-  const payloadHash = hashWatchlistChallengePayload(payload);
-
-  return createSignedActionChallenge({
-    title: WATCHLIST_CHALLENGE_TITLE,
-    action,
-    address: payload.normalizedAddress,
-    payloadHash,
   });
 }

@@ -1,8 +1,4 @@
-import {
-  buildSignedActionMessage,
-  createSignedActionChallenge,
-  hashSignedActionPayload,
-} from "~~/lib/auth/signedActions";
+import { buildSignedActionMessage, hashSignedActionPayload } from "~~/lib/auth/signedActions";
 
 export const COMMENT_CHALLENGE_ACTION = "comment-create";
 export const COMMENT_CHALLENGE_TITLE = "Curyo comment authorization";
@@ -67,16 +63,5 @@ export function buildCommentChallengeMessage(params: {
     payloadHash: params.payloadHash,
     nonce: params.nonce,
     expiresAt: params.expiresAt,
-  });
-}
-
-export function createCommentChallenge(payload: NormalizedCommentChallengePayload) {
-  const payloadHash = hashCommentChallengePayload(payload);
-
-  return createSignedActionChallenge({
-    title: COMMENT_CHALLENGE_TITLE,
-    action: COMMENT_CHALLENGE_ACTION,
-    address: payload.normalizedAddress,
-    payloadHash,
   });
 }
