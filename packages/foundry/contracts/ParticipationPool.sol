@@ -55,6 +55,9 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Emitted when tokens are deposited into the pool
     event PoolDeposit(uint256 amount);
 
+    /// @notice Emitted when tokens are withdrawn from the pool
+    event PoolWithdrawal(address indexed to, uint256 amount);
+
     // --- Modifiers ---
 
     modifier onlyAuthorized() {
@@ -108,6 +111,7 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         require(withdrawAmount > 0, "Nothing to withdraw");
         poolBalance -= withdrawAmount;
         crepToken.safeTransfer(to, withdrawAmount);
+        emit PoolWithdrawal(to, withdrawAmount);
     }
 
     // --- View Functions ---
