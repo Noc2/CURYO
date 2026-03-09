@@ -38,14 +38,14 @@ This is the best balance between:
 
 ## Current Problems
 
-### 1. Keeper fallback exists at the protocol layer but not in the product
+### 1. Keeper fallback existed at the protocol layer before the product caught up
 
 `revealVoteByCommitKey()` is already permissionless in `packages/foundry/contracts/RoundVotingEngine.sol`, so a user can reveal their own vote after epoch end.
 
-The missing piece is the app:
+The missing piece was the app:
 
-- the production Next.js frontend does not currently expose a manual reveal flow
-- the current public docs overstated that this already exists and persists reveal data client-side
+- the production Next.js frontend now exposes a hidden manual reveal flow
+- the public docs now describe that fallback without claiming reveal secrets are persisted client-side by default
 
 ### 2. Quorum-withholding / cancel-for-refund
 
@@ -498,7 +498,7 @@ Required changes:
 - explain that keeper reveal remains the default UX
 - explain that self-reveal is available as an advanced fallback
 - explain that unrevealed losing votes are penalized more heavily than revealed losing votes
-- explain the new `RevealFailed` behavior if this ships
+- explain the shipped `RevealFailed` behavior
 
 ### Mainnet readiness
 

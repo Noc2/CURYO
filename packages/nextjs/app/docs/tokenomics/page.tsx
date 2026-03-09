@@ -373,11 +373,11 @@ const Tokenomics = () => {
             </tr>
             <tr>
               <td>Category submitters</td>
-              <td className="font-mono">1%</td>
+              <td className="font-mono">1% of the remaining 95%</td>
             </tr>
             <tr>
               <td>Treasury</td>
-              <td className="font-mono">1%</td>
+              <td className="font-mono">1% of the remaining 95%</td>
             </tr>
           </tbody>
         </table>

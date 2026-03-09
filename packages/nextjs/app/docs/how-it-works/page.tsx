@@ -124,10 +124,11 @@ const HowItWorks: NextPage = () => {
         </table>
       </div>
       <p>
-        After the blind phase ends, the system reveals all votes automatically. Once at least 3 votes are revealed and
+        After the blind phase ends, the system reveals votes automatically in the background. If that keeper flow looks
+        delayed, connected users can also use the hidden manual reveal fallback. Once at least 3 votes are revealed and
         all past-phase votes have been revealed (or the 60-minute reveal grace period has expired), resolution can be
-        triggered. Resolution is fully open &mdash; anyone can trigger it. An automated service handles this
-        automatically. Winners receive their original stake plus a phase-weighted share of the losing stakes.
+        triggered. Resolution is fully open &mdash; anyone can trigger it. Winners receive their original stake plus a
+        phase-weighted share of the losing stakes, while revealed losers can later claim a fixed 5% rebate.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
@@ -152,7 +153,10 @@ const HowItWorks: NextPage = () => {
             <tr>
               <td className="font-mono">maxDuration</td>
               <td>7 days</td>
-              <td>Maximum round lifetime. Expired rounds are cancelled and all stakes refunded.</td>
+              <td>
+                Maximum round lifetime. Rounds below commit quorum cancel with refunds; rounds that hit commit quorum
+                but miss reveal quorum can finalize as RevealFailed after the last reveal grace deadline.
+              </td>
             </tr>
             <tr>
               <td className="font-mono">Reveal grace period</td>

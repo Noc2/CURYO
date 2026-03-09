@@ -125,8 +125,9 @@ const GovernanceDocs: NextPage = () => {
               <td>3</td>
               <td>
                 Minimum revealed votes required before a round becomes eligible to settle. Past-epoch reveal checks may
-                still delay settlement. Rounds that don&apos;t reach this threshold within the maximum round duration
-                are cancelled with full refunds.
+                still delay settlement. Rounds that stay below commit quorum within the maximum round duration are
+                cancelled with refunds; rounds that hit commit quorum but miss reveal quorum can finalize as
+                RevealFailed after grace.
               </td>
             </tr>
             <tr>
