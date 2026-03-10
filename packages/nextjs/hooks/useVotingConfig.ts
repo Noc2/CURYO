@@ -11,7 +11,11 @@ export function useVotingConfig(): VotingConfig {
   const { data: rawConfig } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
     functionName: "config" as any,
-    query: { refetchInterval: 60_000 },
+    watch: false,
+    query: {
+      staleTime: 300_000,
+      refetchInterval: 300_000,
+    },
   } as any);
 
   return rawConfig ? parseVotingConfig(rawConfig) : DEFAULT_VOTING_CONFIG;

@@ -231,17 +231,23 @@ export function useGovernanceStats() {
   const { targetNetwork, governorAddress, hasGovernorContract, timelockAddress } = useGovernanceContracts();
   const { data: latestBlock } = useBlockNumber({
     chainId: targetNetwork.id,
-    watch: hasGovernorContract,
+    watch: false,
+    query: {
+      enabled: hasGovernorContract,
+      staleTime: 30_000,
+      refetchInterval: 30_000,
+    },
   });
 
+  const staticGovernanceQuery = {
+    enabled: hasGovernorContract,
+    staleTime: 300_000,
+  };
   const governorReadConfig = {
     address: governorAddress,
     abi: governorAbi,
     chainId: targetNetwork.id,
-    query: {
-      enabled: hasGovernorContract,
-      refetchInterval: 30_000,
-    },
+    query: staticGovernanceQuery,
   };
 
   const { data: votingDelay } = useReadContract({
@@ -275,7 +281,7 @@ export function useGovernanceStats() {
     args: [latestBlock ?? 0n],
     query: {
       enabled: hasGovernorContract && latestBlock !== undefined,
-      refetchInterval: 30_000,
+      staleTime: 30_000,
     },
   } as any);
 
@@ -286,7 +292,7 @@ export function useGovernanceStats() {
     chainId: targetNetwork.id,
     query: {
       enabled: !!timelockAddress,
-      refetchInterval: 30_000,
+      staleTime: 300_000,
     },
   } as any);
 

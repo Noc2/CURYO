@@ -146,7 +146,11 @@ export const AddressInfoDropdown = ({
     contractName: "CuryoReputation",
     functionName: "balanceOf",
     args: [address],
-    query: { refetchInterval: 5000 },
+    watch: false,
+    query: {
+      staleTime: 30_000,
+      refetchInterval: 30_000,
+    },
   });
   const crepFormatted =
     crepBalance != null ? (Number(crepBalance) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—";
