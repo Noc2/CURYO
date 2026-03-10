@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { getNotificationDeliverySecret } from "~~/lib/env/server";
 import { deliverNotificationEmails } from "~~/lib/notifications/emailDelivery";
+
+function constantTimeEquals(left: string, right: string): boolean {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(leftBuffer, rightBuffer);
+}
 
 function isAuthorized(request: NextRequest) {
   const secret = getNotificationDeliverySecret();
@@ -10,10 +21,8 @@ function isAuthorized(request: NextRequest) {
 
   const authHeader = request.headers.get("authorization");
   const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null;
-  const querySecret = request.nextUrl.searchParams.get("secret");
-  const provided = bearerToken || querySecret;
 
-  if (!provided || provided !== secret) {
+  if (!bearerToken || !constantTimeEquals(bearerToken, secret)) {
     return { ok: false as const, reason: "unauthorized" };
   }
 
