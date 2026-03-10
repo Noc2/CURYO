@@ -61,6 +61,25 @@ export const notificationPreferences = sqliteTable("notification_preferences", {
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
 export type NewNotificationPreferences = typeof notificationPreferences.$inferInsert;
 
+export const followedCategories = sqliteTable(
+  "followed_categories",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    walletAddress: text("wallet_address").notNull(),
+    categoryId: text("category_id").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+  },
+  table => ({
+    walletCategoryUnique: uniqueIndex("followed_categories_wallet_category_unique").on(
+      table.walletAddress,
+      table.categoryId,
+    ),
+  }),
+);
+
+export type FollowedCategory = typeof followedCategories.$inferSelect;
+export type NewFollowedCategory = typeof followedCategories.$inferInsert;
+
 export const urlValidations = sqliteTable("url_validations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   url: text("url").notNull().unique(),

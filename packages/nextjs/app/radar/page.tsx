@@ -229,7 +229,7 @@ function NotificationPreferenceToggle({
 export default function RadarPage() {
   const { address } = useAccount();
   const { openConnectModal } = useConnectModal();
-  const { radar, isLoading, watchedCount } = useRadarFeed(address);
+  const { radar, isLoading, watchedCount, followedCategoryCount } = useRadarFeed(address);
   const { followedWallets, toggleFollow, isPending } = useFollowedProfiles(address);
   const { preferences, isSaving, updatePreference } = useNotificationPreferences(address);
 
@@ -328,6 +328,9 @@ export default function RadarPage() {
                 {watchedCount} watched
               </div>
               <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base text-base-content/60">
+                {followedCategoryCount} categories
+              </div>
+              <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base text-base-content/60">
                 {radar.settlingSoon.length} settling soon
               </div>
             </div>
@@ -374,6 +377,26 @@ export default function RadarPage() {
                 </div>
               ) : (
                 <EmptyModule message="Follow a few curators from profiles or leaderboards to turn this into a live activity stream." />
+              )}
+            </ModuleCard>
+
+            <ModuleCard
+              title="From Categories You Follow"
+              description="New content arriving in the topics you explicitly care about."
+            >
+              {radar.followedCategoryContent.length > 0 ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {radar.followedCategoryContent.map(item => (
+                    <ContentCard
+                      key={`${item.categoryId}-${item.contentId}`}
+                      item={item}
+                      eyebrow="Followed category"
+                      meta={formatRelativeTime(item.createdAt)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyModule message="Follow a category from Discover to see new items from that topic here." />
               )}
             </ModuleCard>
 

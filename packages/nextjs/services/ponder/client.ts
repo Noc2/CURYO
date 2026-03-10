@@ -178,6 +178,7 @@ export interface PonderRadarResponse {
   followingCount: number;
   settlingSoon: PonderRadarSettlingItem[];
   followedSubmissions: PonderRadarSubmissionItem[];
+  followedCategoryContent: PonderRadarSubmissionItem[];
   followedResolutions: PonderRadarResolutionItem[];
   suggestedCurators: PonderRadarSuggestedCurator[];
   recommendedContent: PonderRadarSubmissionItem[];
@@ -370,7 +371,7 @@ export const ponderApi = {
     });
   },
 
-  getRadar(address: string, params?: { watched?: string }) {
+  getRadar(address: string, params?: { watched?: string; categories?: string }) {
     return ponderGet<PonderRadarResponse>(`/radar/${address}`, params);
   },
 

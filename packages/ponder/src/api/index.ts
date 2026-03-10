@@ -551,6 +551,7 @@ app.get("/radar/:address", async (c) => {
   if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
 
   const watchedContentIds = parseBigIntList(c.req.query("watched"), 100);
+  const followedCategoryIds = parseBigIntList(c.req.query("categories"), 100);
 
   const followedRows = await db
     .select({ followed: profileFollow.followed })
@@ -676,6 +677,25 @@ app.get("/radar/:address", async (c) => {
         .orderBy(desc(content.createdAt))
         .limit(RADAR_MODULE_LIMIT);
 
+  const followedCategoryContent = followedCategoryIds.length === 0
+    ? []
+    : await db
+        .select({
+          contentId: content.id,
+          goal: content.goal,
+          url: content.url,
+          createdAt: content.createdAt,
+          categoryId: content.categoryId,
+          submitter: content.submitter,
+          profileName: profile.name,
+          profileImageUrl: profile.imageUrl,
+        })
+        .from(content)
+        .leftJoin(profile, eq(content.submitter, profile.address))
+        .where(and(eq(content.status, 0), inArray(content.categoryId, followedCategoryIds)))
+        .orderBy(desc(content.createdAt))
+        .limit(RADAR_MODULE_LIMIT);
+
   const followedResolutions = followedAddresses.length === 0
     ? []
     : await db
@@ -768,6 +788,7 @@ app.get("/radar/:address", async (c) => {
     followingCount: followedAddresses.length,
     settlingSoon: settlingSoonItems,
     followedSubmissions,
+    followedCategoryContent,
     followedResolutions: followedResolutions.map(item => ({
       ...item,
       outcome: getRadarResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),

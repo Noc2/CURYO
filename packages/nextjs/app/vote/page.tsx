@@ -22,6 +22,7 @@ import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
+import { useFollowedCategories } from "~~/hooks/useFollowedCategories";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useRoundVote } from "~~/hooks/useRoundVote";
@@ -112,6 +113,11 @@ const HomeInner = () => {
     isPending: isWatchPending,
   } = useWatchedContent(address);
   const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(address);
+  const {
+    followedCategoryIds,
+    toggleCategoryFollow,
+    isPending: isCategoryFollowPending,
+  } = useFollowedCategories(address);
 
   // URL validation — async check for broken URLs
   const feedUrls = useMemo(() => feed.map(item => item.url), [feed]);
@@ -618,6 +624,37 @@ const HomeInner = () => {
     return `No content found in "${activeCategory}".`;
   }, [activeCategory, address, scope, searchQuery]);
 
+  const selectedCategoryId =
+    activeCategory !== ALL_FILTER && activeCategory !== BROKEN_FILTER
+      ? categoryNameToId.get(activeCategory)
+      : undefined;
+  const isSelectedCategoryFollowed =
+    selectedCategoryId !== undefined && followedCategoryIds.has(selectedCategoryId.toString());
+
+  const handleToggleCategoryFollow = useCallback(
+    async (categoryId: bigint) => {
+      const result = await toggleCategoryFollow(categoryId);
+
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          notification.info("Connect your wallet to follow categories.");
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason === "rejected") {
+          return;
+        }
+
+        notification.error(result.error || "Failed to update category follows");
+        return;
+      }
+
+      notification.success(result.following ? "Following category" : "Unfollowed category");
+    },
+    [openConnectModal, toggleCategoryFollow],
+  );
+
   return (
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
       <div className="w-full max-w-5xl">
@@ -641,6 +678,27 @@ const HomeInner = () => {
             <StreakCounter />
           </div>
         </div>
+
+        {address && selectedCategoryId !== undefined ? (
+          <div className="mb-5 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void handleToggleCategoryFollow(selectedCategoryId);
+              }}
+              disabled={isCategoryFollowPending(selectedCategoryId)}
+              className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
+                isSelectedCategoryFollowed ? "pill-filter-active" : "pill-filter"
+              }`}
+            >
+              {isCategoryFollowPending(selectedCategoryId)
+                ? "Saving..."
+                : isSelectedCategoryFollowed
+                  ? `Following ${activeCategory}`
+                  : `Follow ${activeCategory}`}
+            </button>
+          </div>
+        ) : null}
 
         {isSearchMode ? (
           <div className="mb-5 flex flex-wrap items-center gap-2">
