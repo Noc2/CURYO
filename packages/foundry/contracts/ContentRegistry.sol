@@ -199,6 +199,7 @@ contract ContentRegistry is
 
         require(bytes(url).length > 0, "URL required");
         require(bytes(url).length <= MAX_URL_LENGTH, "URL too long");
+        require(_isValidSubmissionUrl(url), "Invalid URL");
         require(bytes(goal).length > 0, "Goal required");
         require(bytes(goal).length <= MAX_GOAL_LENGTH, "Goal too long");
         require(bytes(tags).length > 0, "Tags required");
@@ -281,6 +282,29 @@ contract ContentRegistry is
         }
 
         emit ContentCancelled(contentId);
+    }
+
+    function _isValidSubmissionUrl(string calldata url) internal pure returns (bool) {
+        bytes memory urlBytes = bytes(url);
+        bytes memory prefix = bytes("https://");
+        if (urlBytes.length < prefix.length) {
+            return false;
+        }
+
+        for (uint256 i = 0; i < prefix.length; i++) {
+            if (urlBytes[i] != prefix[i]) {
+                return false;
+            }
+        }
+
+        for (uint256 i = 0; i < urlBytes.length; i++) {
+            bytes1 char = urlBytes[i];
+            if (char <= 0x20 || char == 0x7F) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// @notice Mark content as dormant if it hasn't reached milestone 0 within DORMANCY_PERIOD.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface RawgEmbedProps {
@@ -89,10 +90,8 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
   // Error state or not found
   if (!game) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -104,17 +103,15 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
           <p className="text-base font-medium truncate">Game not found</p>
           <p className="text-base text-base-content/50 mt-0.5">View on RAWG</p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
   // No image available — show link card
   if (!game.backgroundImage || imageError) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -128,7 +125,7 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
             {game.description?.slice(0, 100) || "View on RAWG"}
           </p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
@@ -139,7 +136,7 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
         compact ? "max-w-[200px] mx-auto" : "max-w-[350px] mx-auto"
       }`}
     >
-      <a href={info.url} target="_blank" rel="noopener noreferrer" className="block relative group">
+      <SafeExternalLink href={info.url} className="block relative group">
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-base-200">
             <span className="loading loading-spinner loading-md text-primary"></span>
@@ -168,7 +165,7 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
             <p className="text-white/70 text-base text-center mt-0.5 line-clamp-2">{game.description.slice(0, 150)}</p>
           )}
         </div>
-      </a>
+      </SafeExternalLink>
       {/* RAWG Attribution — required by RAWG ToS */}
       <div className="flex items-center justify-center gap-2 py-2 px-3 bg-base-300/50 rounded-b-xl">
         <GamepadIcon className="w-4 h-4 text-base-content/50" />

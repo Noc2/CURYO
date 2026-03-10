@@ -1,6 +1,7 @@
 "use client";
 
 import { LinkIcon } from "@heroicons/react/24/outline";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 
 interface GenericLinkCardProps {
   url: string;
@@ -16,10 +17,8 @@ export function GenericLinkCard({ url, compact }: GenericLinkCardProps) {
   }
 
   return (
-    <a
+    <SafeExternalLink
       href={url}
-      target="_blank"
-      rel="noopener noreferrer"
       className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
         compact ? "p-3" : "p-5"
       }`}
@@ -31,6 +30,6 @@ export function GenericLinkCard({ url, compact }: GenericLinkCardProps) {
         <p className="text-base font-medium truncate">{hostname}</p>
         <p className="text-base text-base-content/50 mt-0.5">Click to view content</p>
       </div>
-    </a>
+    </SafeExternalLink>
   );
 }

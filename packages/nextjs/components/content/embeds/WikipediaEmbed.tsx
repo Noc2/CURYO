@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface WikipediaEmbedProps {
@@ -83,10 +84,8 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
   // Error state or not found
   if (!person) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -98,17 +97,15 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
           <p className="text-base font-medium truncate">Article not found</p>
           <p className="text-base text-base-content/50 mt-0.5">View on Wikipedia</p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
   // No image available — show link card with bio
   if (!person.imageUrl || imageError) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -122,7 +119,7 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
             {person.description || person.extract || "View on Wikipedia"}
           </p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
@@ -133,7 +130,7 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
         compact ? "max-w-[200px] mx-auto" : "max-w-[350px] mx-auto"
       }`}
     >
-      <a href={info.url} target="_blank" rel="noopener noreferrer" className="block relative group">
+      <SafeExternalLink href={info.url} className="block relative group">
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-base-200">
             <span className="loading loading-spinner loading-md text-primary"></span>
@@ -155,7 +152,7 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
             <p className="text-white/70 text-base text-center mt-0.5 line-clamp-1">{person.description}</p>
           )}
         </div>
-      </a>
+      </SafeExternalLink>
       {/* Wikipedia Attribution */}
       <div className="flex items-center justify-center gap-2 py-2 px-3 bg-base-300/50 rounded-b-xl">
         <WikipediaIcon className="w-4 h-4 text-base-content/50" />

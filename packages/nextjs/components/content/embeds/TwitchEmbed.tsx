@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface TwitchEmbedProps {
@@ -18,10 +19,8 @@ function TwitchIcon({ className }: { className?: string }) {
 
 function TwitchFallbackCard({ url, compact }: { url: string; compact?: boolean }) {
   return (
-    <a
+    <SafeExternalLink
       href={url}
-      target="_blank"
-      rel="noopener noreferrer"
       className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
         compact ? "p-3" : "p-5"
       }`}
@@ -33,7 +32,7 @@ function TwitchFallbackCard({ url, compact }: { url: string; compact?: boolean }
         <p className="text-base font-medium truncate">Twitch Video</p>
         <p className="text-base text-base-content/50 mt-0.5">Click to view on Twitch</p>
       </div>
-    </a>
+    </SafeExternalLink>
   );
 }
 

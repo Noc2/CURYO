@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface ScryfallEmbedProps {
@@ -32,10 +33,8 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
 
   if (!info.thumbnailUrl || imageError) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -47,15 +46,13 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
           <p className="text-base font-medium truncate">{formattedName}</p>
           <p className="text-base text-base-content/50 mt-0.5">View on Scryfall</p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
   return (
-    <a
+    <SafeExternalLink
       href={info.url}
-      target="_blank"
-      rel="noopener noreferrer"
       className={`block w-full overflow-hidden rounded-xl bg-base-200 relative group ${
         compact ? "max-w-[200px] mx-auto" : "max-w-[350px] mx-auto"
       }`}
@@ -79,6 +76,6 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
         <p className="text-white text-base font-bold text-center">{formattedName}</p>
         <p className="text-white/70 text-base text-center mt-0.5">View on Scryfall</p>
       </div>
-    </a>
+    </SafeExternalLink>
   );
 }

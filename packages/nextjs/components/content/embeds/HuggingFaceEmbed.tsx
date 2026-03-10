@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface HuggingFaceEmbedProps {
@@ -83,10 +84,8 @@ export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
 
   if (!model) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -98,17 +97,15 @@ export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
           <p className="text-base font-medium truncate">Model not found</p>
           <p className="text-base text-base-content/50 mt-0.5">View on Hugging Face</p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
   // No image — show link card with metadata
   if (!model.imageUrl || imageError) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -122,19 +119,14 @@ export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
             {model.description || "View on Hugging Face"}
           </p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
   // Image card with org avatar and metadata
   return (
     <div className="block w-full overflow-hidden rounded-xl bg-base-200 relative h-full flex flex-col">
-      <a
-        href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex-1 flex items-center justify-center relative group"
-      >
+      <SafeExternalLink href={info.url} className="flex-1 flex items-center justify-center relative group">
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-base-200">
             <span className="loading loading-spinner loading-md text-primary"></span>
@@ -154,7 +146,7 @@ export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
             onError={() => setImageError(true)}
           />
         </div>
-      </a>
+      </SafeExternalLink>
       {/* HuggingFace Attribution */}
       <div className="flex items-center justify-center gap-2 py-2 px-3 bg-base-300/50 rounded-b-xl">
         <HuggingFaceIcon className="w-4 h-4 text-base-content/50" />

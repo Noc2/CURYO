@@ -32,6 +32,7 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { ponderApi } from "~~/services/ponder/client";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { publicEnv } from "~~/utils/env/public";
+import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -228,37 +229,39 @@ const SubmitPage: NextPage = () => {
       return;
     }
 
-    try {
-      new URL(value);
-
-      // Check for prohibited content in URL
-      const urlCheck = containsBlockedUrl(value);
-      if (urlCheck.blocked) {
-        setUrlError("This URL contains prohibited content and cannot be submitted");
-        return;
-      }
-
-      // Check against approved platforms from CategoryRegistry
-      if (domainToCategoryId.size > 0) {
-        // Use dynamic category validation
-        const categoryId = getCategoryIdFromUrl(value, domainToCategoryId);
-        if (categoryId === 0n) {
-          const platformNames = websiteCategories.map(c => c.name).join(", ");
-          setUrlError(`Please enter a URL from an approved platform (${platformNames})`);
-        } else {
-          setUrlError(null);
-        }
-      } else {
-        // Fallback to static validation if categories not loaded
-        if (!isSupportedVideoPlatform(value)) {
-          setUrlError("Please enter a URL from YouTube or Twitch");
-        } else {
-          setUrlError(null);
-        }
-      }
-    } catch {
-      setUrlError("Please enter a valid URL");
+    const sanitizedUrl = sanitizeExternalUrl(value);
+    if (!sanitizedUrl) {
+      setUrlError("Please enter a valid HTTPS URL");
+      return;
     }
+
+    // Check for prohibited content in URL
+    const urlCheck = containsBlockedUrl(sanitizedUrl);
+    if (urlCheck.blocked) {
+      setUrlError("This URL contains prohibited content and cannot be submitted");
+      return;
+    }
+
+    // Check against approved platforms from CategoryRegistry
+    if (domainToCategoryId.size > 0) {
+      // Use dynamic category validation
+      const categoryId = getCategoryIdFromUrl(sanitizedUrl, domainToCategoryId);
+      if (categoryId === 0n) {
+        const platformNames = websiteCategories.map(c => c.name).join(", ");
+        setUrlError(`Please enter a URL from an approved platform (${platformNames})`);
+      } else {
+        setUrlError(null);
+      }
+      return;
+    }
+
+    // Fallback to static validation if categories not loaded
+    if (!isSupportedVideoPlatform(sanitizedUrl)) {
+      setUrlError("Please enter a URL from YouTube or Twitch");
+      return;
+    }
+
+    setUrlError(null);
   };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {

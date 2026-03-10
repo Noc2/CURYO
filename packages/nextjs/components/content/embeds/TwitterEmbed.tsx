@@ -1,6 +1,7 @@
 "use client";
 
 import { Tweet } from "react-tweet";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface TwitterEmbedProps {
@@ -22,10 +23,8 @@ export function TwitterEmbed({ info, compact }: TwitterEmbedProps) {
 
   if (!tweetId) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -37,7 +36,7 @@ export function TwitterEmbed({ info, compact }: TwitterEmbedProps) {
           <p className="text-base font-medium truncate">Tweet not found</p>
           <p className="text-base text-base-content/50 mt-0.5">View on X</p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 

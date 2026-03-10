@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface CoinGeckoEmbedProps {
@@ -83,10 +84,8 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
   // Error state or not found
   if (!token) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -98,17 +97,15 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
           <p className="text-base font-medium truncate">Token not found</p>
           <p className="text-base text-base-content/50 mt-0.5">View on CoinGecko</p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
   // No image available — show link card
   if (!token.imageUrl || imageError) {
     return (
-      <a
+      <SafeExternalLink
         href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
         className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
@@ -124,19 +121,14 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
             {token.marketCapRank ? `#${token.marketCapRank} by market cap` : "View on CoinGecko"}
           </p>
         </div>
-      </a>
+      </SafeExternalLink>
     );
   }
 
   // Image card with coin logo and metadata
   return (
     <div className="block w-full overflow-hidden rounded-xl bg-base-200 relative h-full flex flex-col">
-      <a
-        href={info.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex-1 flex items-center justify-center relative group"
-      >
+      <SafeExternalLink href={info.url} className="flex-1 flex items-center justify-center relative group">
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-base-200">
             <span className="loading loading-spinner loading-md text-primary"></span>
@@ -156,7 +148,7 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
             onError={() => setImageError(true)}
           />
         </div>
-      </a>
+      </SafeExternalLink>
       {/* CoinGecko Attribution */}
       <div className="flex items-center justify-center gap-2 py-2 px-3 bg-base-300/50 rounded-b-xl">
         <CoinGeckoIcon className="w-4 h-4 text-base-content/50" />

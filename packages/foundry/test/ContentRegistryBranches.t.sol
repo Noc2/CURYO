@@ -250,6 +250,22 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(id, 1);
     }
 
+    function test_SubmitContent_NonHttpsUrl_Reverts() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid URL");
+        registry.submitContent("javascript:alert(1)", "goal", "tags", 0);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_UrlWithWhitespace_Reverts() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Invalid URL");
+        registry.submitContent("https://example.com/ bad", "goal", "tags", 0);
+        vm.stopPrank();
+    }
+
     function test_SubmitContent_CategoryNotApproved_Reverts() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
