@@ -12,8 +12,13 @@ import {
 import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { db } from "~~/lib/db";
 import { getOptionalAppUrl } from "~~/lib/env/server";
-import { getEmailNotificationSettings, upsertEmailNotificationSettings } from "~~/lib/notifications/emailSettings";
-import { sendNotificationVerificationEmail } from "~~/lib/notifications/resend";
+import {
+  getEmailNotificationSettings,
+  getEmailNotificationSubscription,
+  restoreEmailNotificationSubscription,
+  upsertEmailNotificationSettings,
+} from "~~/lib/notifications/emailSettings";
+import { isResendConfigured, sendNotificationVerificationEmail } from "~~/lib/notifications/resend";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 30, windowMs: 60_000 };
@@ -105,6 +110,25 @@ export async function PUT(request: NextRequest) {
     }
 
     const payload = normalized.payload;
+    const existingSubscription = await getEmailNotificationSubscription(payload.normalizedAddress);
+    const requiresVerification =
+      Boolean(payload.email) &&
+      (!existingSubscription ||
+        existingSubscription.email !== payload.email ||
+        existingSubscription.verifiedAt === null);
+    const appUrl = getOptionalAppUrl();
+
+    if (requiresVerification && !appUrl) {
+      return NextResponse.json(
+        { error: "Email notifications are missing an application URL for verification links" },
+        { status: 503 },
+      );
+    }
+
+    if (requiresVerification && !isResendConfigured()) {
+      return NextResponse.json({ error: "Email notifications are not configured on this deployment" }, { status: 503 });
+    }
+
     const payloadHash = hashNotificationEmailPayload(payload);
     await ensureSignedActionChallengeTable();
 
@@ -140,16 +164,9 @@ export async function PUT(request: NextRequest) {
 
     try {
       const { settings, verificationToken } = await upsertEmailNotificationSettings(payload.normalizedAddress, payload);
-      const appUrl = getOptionalAppUrl();
       let verificationSent = false;
 
       if (verificationToken && payload.email) {
-        if (!appUrl) {
-          return NextResponse.json(
-            { error: "Email notifications are missing an application URL for verification links" },
-            { status: 503 },
-          );
-        }
         const verifyUrl = new URL("/api/notifications/email/verify", appUrl);
         verifyUrl.searchParams.set("token", verificationToken);
         await sendNotificationVerificationEmail({
@@ -161,6 +178,9 @@ export async function PUT(request: NextRequest) {
 
       return NextResponse.json({ ok: true, settings, verificationSent });
     } catch (error: any) {
+      if (payload.email) {
+        await restoreEmailNotificationSubscription(payload.normalizedAddress, existingSubscription);
+      }
       if (error.message === "EMAIL_IN_USE") {
         return NextResponse.json({ error: "Email address already belongs to another wallet" }, { status: 409 });
       }

@@ -108,6 +108,18 @@ export interface PonderContentResponse {
   offset: number;
 }
 
+export interface PonderContentQuery {
+  [key: string]: string | undefined;
+  categoryId?: string;
+  contentIds?: string;
+  limit?: string;
+  offset?: string;
+  search?: string;
+  sortBy?: string;
+  status?: string;
+  submitter?: string;
+}
+
 export interface PonderRatingChange {
   id: string;
   contentId: string;
@@ -385,7 +397,7 @@ async function getAllPages<TItem>(fetchPage: (offset: number) => Promise<{ items
 }
 
 export const ponderApi = {
-  getContent(params?: { categoryId?: string; status?: string; sortBy?: string; limit?: string; offset?: string }) {
+  getContent(params?: PonderContentQuery) {
     return ponderGet<PonderContentResponse>("/content", params);
   },
 
@@ -397,7 +409,42 @@ export const ponderApi = {
     }>(`/content/${id}`);
   },
 
-  async getAllContent(params?: { categoryId?: string; status?: string; sortBy?: string }) {
+  async getContentWindow(params?: PonderContentQuery) {
+    const requestedLimit = Number(params?.limit ?? PONDER_PAGE_LIMIT);
+    const safeRequestedLimit = Number.isFinite(requestedLimit)
+      ? Math.max(1, Math.floor(requestedLimit))
+      : PONDER_PAGE_LIMIT;
+    const initialOffset = Number(params?.offset ?? 0);
+    let offset = Number.isFinite(initialOffset) ? Math.max(0, Math.floor(initialOffset)) : 0;
+    let total = 0;
+    const items: PonderContentItem[] = [];
+
+    while (items.length < safeRequestedLimit) {
+      const remaining = safeRequestedLimit - items.length;
+      const page = await this.getContent({
+        ...params,
+        limit: String(Math.min(PONDER_PAGE_LIMIT, remaining)),
+        offset: String(offset),
+      });
+
+      items.push(...page.items);
+      total = page.total;
+      offset += page.items.length;
+
+      if (page.items.length === 0 || offset >= page.total) {
+        break;
+      }
+    }
+
+    return {
+      items,
+      total,
+      limit: safeRequestedLimit,
+      offset: Number.isFinite(initialOffset) ? Math.max(0, Math.floor(initialOffset)) : 0,
+    } satisfies PonderContentResponse;
+  },
+
+  async getAllContent(params?: Omit<PonderContentQuery, "limit" | "offset">) {
     return getAllPages(offset =>
       this.getContent({
         ...params,

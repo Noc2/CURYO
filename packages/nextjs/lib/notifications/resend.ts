@@ -8,6 +8,11 @@ interface ResendEmailParams {
   text: string;
 }
 
+export function isResendConfigured() {
+  const { apiKey, fromEmail } = getResendConfig();
+  return Boolean(apiKey && fromEmail);
+}
+
 export async function sendResendEmail(params: ResendEmailParams) {
   const { apiKey, fromEmail } = getResendConfig();
 

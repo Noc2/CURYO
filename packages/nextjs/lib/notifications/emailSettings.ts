@@ -2,7 +2,7 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import "server-only";
 import { type NotificationEmailPayload } from "~~/lib/auth/notificationEmails";
 import { db } from "~~/lib/db";
-import { notificationEmailSubscriptions } from "~~/lib/db/schema";
+import { type NotificationEmailSubscription, notificationEmailSubscriptions } from "~~/lib/db/schema";
 import {
   DEFAULT_EMAIL_NOTIFICATION_SETTINGS,
   type EmailNotificationSettingsState,
@@ -63,6 +63,20 @@ export async function getEmailNotificationSettings(walletAddress: `0x${string}`)
     .limit(1);
 
   return toState(row);
+}
+
+export async function getEmailNotificationSubscription(
+  walletAddress: `0x${string}`,
+): Promise<NotificationEmailSubscription | null> {
+  await ensureNotificationEmailSubscriptionsTable();
+
+  const [row] = await db
+    .select()
+    .from(notificationEmailSubscriptions)
+    .where(eq(notificationEmailSubscriptions.walletAddress, walletAddress))
+    .limit(1);
+
+  return row ?? null;
 }
 
 export async function upsertEmailNotificationSettings(walletAddress: `0x${string}`, payload: NotificationEmailPayload) {
@@ -149,6 +163,25 @@ export async function upsertEmailNotificationSettings(walletAddress: `0x${string
     } satisfies EmailNotificationSettingsState,
     verificationToken,
   };
+}
+
+export async function restoreEmailNotificationSubscription(
+  walletAddress: `0x${string}`,
+  snapshot: NotificationEmailSubscription | null,
+) {
+  await ensureNotificationEmailSubscriptionsTable();
+
+  if (!snapshot) {
+    await db
+      .delete(notificationEmailSubscriptions)
+      .where(eq(notificationEmailSubscriptions.walletAddress, walletAddress));
+    return;
+  }
+
+  await db.insert(notificationEmailSubscriptions).values(snapshot).onConflictDoUpdate({
+    target: notificationEmailSubscriptions.walletAddress,
+    set: snapshot,
+  });
 }
 
 export async function verifyEmailNotificationToken(token: string) {
