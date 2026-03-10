@@ -326,6 +326,22 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(balAfter - balBefore, 9e6, "healthy submitter should net the deferred participation reward");
     }
 
+    function test_ResolveSubmitterStake_RevertsWhileRoundActive() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _commit(voter1, 1, true);
+
+        vm.warp(T0 + 4 days + 1);
+
+        vm.expectRevert(RoundVotingEngine.ActiveRoundExists.selector);
+        votingEngine.resolveSubmitterStake(1);
+
+        assertFalse(registry.isSubmitterStakeReturned(1), "submitter stake should remain locked while round is open");
+    }
+
     function test_SubmitContent_NoParticipationPool_NoReward() public {
         // Don't set participation pool — reward is skipped
         uint256 balBefore = crepToken.balanceOf(submitter);

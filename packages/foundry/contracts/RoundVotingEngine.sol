@@ -1,24 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
-import {ContentRegistry} from "./ContentRegistry.sol";
-import {RoundLib} from "./libraries/RoundLib.sol";
-import {RewardMath} from "./libraries/RewardMath.sol";
-import {IFrontendRegistry} from "./interfaces/IFrontendRegistry.sol";
-import {ICategoryRegistry} from "./interfaces/ICategoryRegistry.sol";
-import {IRoundRewardDistributor} from "./interfaces/IRoundRewardDistributor.sol";
-import {IVoterIdNFT} from "./interfaces/IVoterIdNFT.sol";
-import {IRoundVotingEngine} from "./interfaces/IRoundVotingEngine.sol";
-import {IParticipationPool} from "./interfaces/IParticipationPool.sol";
+import { ContentRegistry } from "./ContentRegistry.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
+import { RewardMath } from "./libraries/RewardMath.sol";
+import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
+import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
+import { IRoundRewardDistributor } from "./interfaces/IRoundRewardDistributor.sol";
+import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
+import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
+import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with tlock commit-reveal and epoch-weighted rewards.
@@ -62,6 +62,7 @@ contract RoundVotingEngine is
     error RoundNotSettledOrTied();
     error RoundNotCancelledOrTied();
     error ContentNotFound();
+    error ActiveRoundExists();
     error ThresholdReached();
     error RevealGraceActive();
 
@@ -274,7 +275,7 @@ contract RoundVotingEngine is
         registry = ContentRegistry(_registry);
 
         // Default config: 20-minute epochs, 7-day max, 3 min voters
-        config = RoundLib.RoundConfig({epochDuration: 20 minutes, maxDuration: 7 days, minVoters: 3, maxVoters: 1000});
+        config = RoundLib.RoundConfig({ epochDuration: 20 minutes, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
 
         // Default reveal grace period: 60 minutes (3 epochs)
         revealGracePeriod = 60 minutes;
@@ -419,10 +420,7 @@ contract RoundVotingEngine is
         IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
 
         try snapshotRegistry.getFrontendInfo(frontend) returns (
-            address frontendOperator,
-            uint256,
-            bool,
-            bool frontendSlashed
+            address frontendOperator, uint256, bool, bool frontendSlashed
         ) {
             if (frontendOperator == address(0) || frontendSlashed) {
                 if (frontendOperator == address(0)) {
@@ -487,8 +485,8 @@ contract RoundVotingEngine is
         bytes32 s,
         address frontend
     ) external nonReentrant whenNotPaused {
-        try IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s) {}
-            catch {}
+        try IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s) { }
+            catch { }
         _commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend);
     }
 
@@ -808,7 +806,7 @@ contract RoundVotingEngine is
                 }
 
                 if (categorySubmitterShare > 0) {
-                    try this.distributeCategoryFeeExternal(contentId, roundId, categorySubmitterShare) {}
+                    try this.distributeCategoryFeeExternal(contentId, roundId, categorySubmitterShare) { }
                     catch {
                         roundVoterPool[contentId][roundId] += categorySubmitterShare;
                         emit SettlementSideEffectFailed(contentId, roundId, REASON_CATEGORY_FEE);
@@ -829,7 +827,6 @@ contract RoundVotingEngine is
                     roundVoterPool[contentId][roundId] += treasuryShare;
                 }
             }
-
         } else {
             // Unanimous: losingPool == 0, pay from consensus reserve
             uint256 totalStake = round.upPool + round.downPool;
@@ -849,12 +846,12 @@ contract RoundVotingEngine is
 
         // Update content rating using raw revealed pools (accurate crowd opinion)
         uint16 newRating = RewardMath.calculateRating(round.upPool, round.downPool);
-        try registry.updateRatingDirect(contentId, newRating) {}
+        try registry.updateRatingDirect(contentId, newRating) { }
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_UPDATE_RATING);
         }
 
-        try registry.updateActivity(contentId) {}
+        try registry.updateActivity(contentId) { }
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_UPDATE_ACTIVITY);
         }
@@ -871,7 +868,7 @@ contract RoundVotingEngine is
         }
 
         // Check submitter stake return/slash conditions
-        try this.checkSubmitterStakeExternal(contentId) {}
+        try this.checkSubmitterStakeExternal(contentId) { }
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_SUBMITTER_STAKE);
         }
@@ -926,9 +923,8 @@ contract RoundVotingEngine is
 
     /// @notice Claim participation reward for a settled round. Pull-based.
     function claimParticipationReward(uint256 contentId, uint256 roundId) external {
-        uint256 paidReward = IRoundRewardDistributor(rewardDistributor).claimParticipationRewardFor(
-            msg.sender, contentId, roundId
-        );
+        uint256 paidReward =
+            IRoundRewardDistributor(rewardDistributor).claimParticipationRewardFor(msg.sender, contentId, roundId);
         emit ParticipationRewardClaimed(contentId, roundId, msg.sender, paidReward);
     }
 
@@ -1163,6 +1159,12 @@ contract RoundVotingEngine is
 
         uint256 contentCreatedAt = registry.getCreatedAt(contentId);
         if (contentCreatedAt == 0) revert ContentNotFound();
+
+        uint256 activeRoundId = currentRoundId[contentId];
+        if (activeRoundId != 0 && !RoundLib.isTerminal(rounds[contentId][activeRoundId])) {
+            revert ActiveRoundExists();
+        }
+
         uint256 elapsed = block.timestamp - contentCreatedAt;
 
         if (elapsed >= 24 hours) {
@@ -1292,7 +1294,7 @@ contract RoundVotingEngine is
         _unpause();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
 
     // =========================================================================
     // POST-UPGRADE STORAGE — UUPS LAYOUT COMPATIBILITY
