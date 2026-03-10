@@ -7,7 +7,6 @@ import {
   getActiveRoundId,
   getFrontendAccumulatedFees,
   mintVoterId,
-  readTokenBalance,
   registerFrontend,
   revealVoteDirect,
   setTestConfig,
@@ -219,7 +218,6 @@ test.describe("Frontend fee claim lifecycle", () => {
     expect(slashOk, "Frontend slash should succeed").toBe(true);
 
     const feesBefore = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
-    const balanceBefore = await readTokenBalance(frontendAddress, CREP_TOKEN);
     const claimed = await claimFrontendFee(
       BigInt(contentId),
       roundId,
@@ -241,6 +239,7 @@ test.describe("Frontend fee claim lifecycle", () => {
       VOTING_ENGINE,
     );
     expect(claimedAfterUnslash, "Frontend fee claim should succeed after unslash").toBe(true);
-    expect(await readTokenBalance(frontendAddress, CREP_TOKEN)).toBeGreaterThan(balanceBefore);
+    // claimFrontendFee credits fees to FrontendRegistry (pull-based), not directly to the wallet.
+    expect(await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY)).toBeGreaterThan(feesBefore);
   });
 });
