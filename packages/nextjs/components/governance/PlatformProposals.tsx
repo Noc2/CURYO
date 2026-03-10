@@ -42,7 +42,6 @@ export function PlatformProposals() {
   const { data: categoryEvents, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "CategoryRegistry",
     eventName: "CategorySubmitted",
-    fromBlock: 0n,
     watch: rpcFallbackEnabled,
     enabled: rpcFallbackEnabled,
   });

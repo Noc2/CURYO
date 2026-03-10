@@ -18,7 +18,6 @@ export function useCategoryPopularity(feed: ContentItem[]): Map<string, number> 
   const { data: voteEvents } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "VoteCommitted",
-    fromBlock: 0n,
     watch: rpcFallbackEnabled,
     enabled: rpcFallbackEnabled,
   } as any);

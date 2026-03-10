@@ -24,7 +24,6 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
   } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
     eventName: "RatingUpdated",
-    fromBlock: 0n,
     filters: { contentId },
     watch: rpcFallbackEnabled,
     enabled: rpcFallbackEnabled,
