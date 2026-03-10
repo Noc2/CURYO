@@ -6,8 +6,6 @@ import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { QueryClient } from "@tanstack/react-query";
 import { type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 
-const RECENT_USER_VOTES_LIMIT = "200";
-
 export function getRecentUserVotesQueryKey(voter?: string) {
   return ["ponder-fallback", "recentUserVotes", voter] as const;
 }
@@ -25,8 +23,7 @@ export function useRecentUserVotes(voter?: string) {
     queryKey: ["recentUserVotes", voter],
     ponderFn: async () => {
       if (!voter) return [] as PonderVoteItem[];
-      const response = await ponderApi.getVotes({ voter, limit: RECENT_USER_VOTES_LIMIT });
-      return response.items ?? [];
+      return ponderApi.getAllVotes({ voter });
     },
     rpcFn: async () => [] as PonderVoteItem[],
     enabled: !!voter,
