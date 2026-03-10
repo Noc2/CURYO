@@ -63,6 +63,9 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
   { value: "lowest_rated", label: "Lowest Rated" },
 ];
 
+const FEED_PAGE_SIZE = 20;
+const FEED_PREFETCH_BUFFER = 20;
+
 const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
   { value: "all", label: "All" },
   { value: "watched", label: "Watched" },
@@ -78,7 +81,25 @@ const HomeInner = () => {
   const { address } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
-  const { feed, isLoading } = useContentFeed(address);
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
+  const [scope, setScope] = useState<ScopeOption>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("for_you");
+  const [selectedId, setSelectedId] = useState<bigint | null>(null);
+  const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
+  const isSearchMode = searchQuery.trim().length > 0;
+  const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
+  const shouldUsePagedFeed = !contentParam && !isSearchMode && scope === "all" && activeCategory === ALL_FILTER;
+  const feedRequestLimit = shouldUsePagedFeed
+    ? Math.max(FEED_PAGE_SIZE * 2, visibleCount + FEED_PREFETCH_BUFFER + 1)
+    : undefined;
+  const {
+    feed,
+    isLoading,
+    hasMore: hasMoreFeed,
+  } = useContentFeed(address, {
+    limit: feedRequestLimit,
+    sortBy: "newest",
+  });
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
   const voteCounts = useCategoryPopularity(feed);
@@ -97,12 +118,6 @@ const HomeInner = () => {
   const { validationMap } = useUrlValidation(feedUrls);
 
   // Filter & sort state
-  const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
-  const [scope, setScope] = useState<ScopeOption>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("for_you");
-  const isSearchMode = searchQuery.trim().length > 0;
-  const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
-
   const votedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
   const watchedOrderMap = useMemo(() => {
     const order = new Map<string, number>();
@@ -140,9 +155,6 @@ const HomeInner = () => {
     history.replaceState(null, "", hash || window.location.pathname + window.location.search);
   }, []);
 
-  // Selected content for featured card
-  const [selectedId, setSelectedId] = useState<bigint | null>(null);
-
   // Deep link: select content from ?content= query param
   useEffect(() => {
     if (contentParam && feed.length > 0) {
@@ -157,8 +169,6 @@ const HomeInner = () => {
     }
   }, [contentParam, feed]);
 
-  // Infinite scroll state
-  const [visibleCount, setVisibleCount] = useState(20);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Voting state
@@ -169,35 +179,13 @@ const HomeInner = () => {
     categoryId: bigint;
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
   const { commitVote, isCommitting, error: voteError } = useRoundVote();
+  const needsRatingSort =
+    isSearchMode && (effectiveSearchSortBy === "highest_rated" || effectiveSearchSortBy === "lowest_rated");
 
   // Batch-fetch ratings via multicall
   const { data: registryInfo } = useDeployedContractInfo({ contractName: "ContentRegistry" });
-  const ratingCalls = useMemo(() => {
-    if (!registryInfo || feed.length === 0) return [];
-    return feed.map(item => ({
-      address: registryInfo.address,
-      abi: registryInfo.abi,
-      functionName: "getRating" as const,
-      args: [item.id],
-    }));
-  }, [registryInfo, feed]);
-
-  const { data: ratingsData } = useReadContracts({ contracts: ratingCalls });
-
-  const ratingsMap = useMemo(() => {
-    const map = new Map<string, number>();
-    if (!ratingsData) return map;
-    feed.forEach((item, i) => {
-      const result = ratingsData[i];
-      if (result?.status === "success") {
-        map.set(item.id.toString(), Number(result.result));
-      }
-    });
-    return map;
-  }, [ratingsData, feed]);
-
-  // Apply search, category filter, and sort
-  const displayFeed = useMemo(() => {
+  // Apply search, category filter, and scope before sorting
+  const filteredFeed = useMemo(() => {
     let items = feed.filter(item => !isContentItemBlocked(item));
 
     // Broken URL filter: show only broken when selected, exclude broken otherwise
@@ -242,6 +230,16 @@ const HomeInner = () => {
         break;
     }
 
+    return items;
+  }, [feed, searchQuery, activeCategory, categoryNameToId, validationMap, scope, watchedContentIds, votedContentIds]);
+
+  const preRatedDisplayFeed = useMemo(() => {
+    const items = [...filteredFeed];
+
+    if (needsRatingSort) {
+      return items;
+    }
+
     if (isSearchMode) {
       switch (effectiveSearchSortBy) {
         case "newest":
@@ -251,18 +249,7 @@ const HomeInner = () => {
           items.sort((a, b) => Number(a.id - b.id));
           break;
         case "highest_rated":
-          items.sort((a, b) => {
-            const rA = ratingsMap.get(a.id.toString()) ?? 50;
-            const rB = ratingsMap.get(b.id.toString()) ?? 50;
-            return rB - rA;
-          });
-          break;
         case "lowest_rated":
-          items.sort((a, b) => {
-            const rA = ratingsMap.get(a.id.toString()) ?? 50;
-            const rB = ratingsMap.get(b.id.toString()) ?? 50;
-            return rA - rB;
-          });
           break;
       }
       return items;
@@ -302,47 +289,91 @@ const HomeInner = () => {
 
     return items;
   }, [
-    feed,
-    searchQuery,
+    filteredFeed,
     isSearchMode,
+    needsRatingSort,
     activeCategory,
     effectiveSearchSortBy,
-    ratingsMap,
-    categoryNameToId,
     categoryScores,
     hasPreferences,
-    validationMap,
     scope,
     watchedOrderMap,
     voteOrderMap,
-    watchedContentIds,
-    votedContentIds,
   ]);
 
-  // Fetch submitter profiles for all visible content
-  const submitterAddresses = useMemo(() => {
-    return displayFeed.map(item => item.submitter);
-  }, [displayFeed]);
-
-  const { profiles: submitterProfiles } = useSubmitterProfiles(submitterAddresses);
-
-  // Fetch voter accuracy stats and merge into profiles
-  const { statsMap: accuracyMap } = useVoterAccuracyBatch(submitterAddresses);
-
-  const enrichedProfiles = useMemo(() => {
-    const result: Record<string, SubmitterProfile> = {};
-    for (const [addr, profile] of Object.entries(submitterProfiles)) {
-      const stats = accuracyMap[addr];
-      result[addr] = {
-        ...profile,
-        winRate: stats?.winRate,
-        totalSettledVotes: stats?.totalSettledVotes,
-      };
+  const preSelectedItem = useMemo(() => {
+    if (needsRatingSort || preRatedDisplayFeed.length === 0) return null;
+    if (selectedId !== null) {
+      const found = preRatedDisplayFeed.find(item => item.id === selectedId);
+      if (found) return found;
     }
-    return result;
-  }, [submitterProfiles, accuracyMap]);
+    return preRatedDisplayFeed[0];
+  }, [needsRatingSort, preRatedDisplayFeed, selectedId]);
 
-  // Selected item (defaults to first in filtered list)
+  const preGridItems = useMemo(() => {
+    if (needsRatingSort) return [];
+    if (!preSelectedItem) return preRatedDisplayFeed;
+    return preRatedDisplayFeed.filter(item => item.id !== preSelectedItem.id);
+  }, [needsRatingSort, preRatedDisplayFeed, preSelectedItem]);
+
+  const preVisibleGridItems = useMemo(() => {
+    if (needsRatingSort) return [];
+    return preGridItems.slice(0, visibleCount);
+  }, [needsRatingSort, preGridItems, visibleCount]);
+
+  const ratingTargets = useMemo(() => {
+    const items = needsRatingSort
+      ? filteredFeed
+      : [...(preSelectedItem ? [preSelectedItem] : []), ...preVisibleGridItems];
+    const seen = new Set<string>();
+
+    return items.filter(item => {
+      const key = item.id.toString();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [needsRatingSort, filteredFeed, preSelectedItem, preVisibleGridItems]);
+
+  const ratingCalls = useMemo(() => {
+    if (!registryInfo || ratingTargets.length === 0) return [];
+    return ratingTargets.map(item => ({
+      address: registryInfo.address,
+      abi: registryInfo.abi,
+      functionName: "getRating" as const,
+      args: [item.id],
+    }));
+  }, [registryInfo, ratingTargets]);
+
+  const { data: ratingsData } = useReadContracts({ contracts: ratingCalls });
+
+  const ratingsMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!ratingsData) return map;
+    ratingTargets.forEach((item, i) => {
+      const result = ratingsData[i];
+      if (result?.status === "success") {
+        map.set(item.id.toString(), Number(result.result));
+      }
+    });
+    return map;
+  }, [ratingsData, ratingTargets]);
+
+  const displayFeed = useMemo(() => {
+    if (!needsRatingSort) {
+      return preRatedDisplayFeed;
+    }
+
+    const items = [...filteredFeed];
+    items.sort((a, b) => {
+      const rA = ratingsMap.get(a.id.toString()) ?? 50;
+      const rB = ratingsMap.get(b.id.toString()) ?? 50;
+      return effectiveSearchSortBy === "highest_rated" ? rB - rA : rA - rB;
+    });
+    return items;
+  }, [needsRatingSort, preRatedDisplayFeed, filteredFeed, ratingsMap, effectiveSearchSortBy]);
+
+  // Fetch submitter profiles only for cards currently rendered on screen.
   const selectedItem = useMemo(() => {
     if (displayFeed.length === 0) return null;
     if (selectedId !== null) {
@@ -363,17 +394,51 @@ const HomeInner = () => {
     return gridItems.slice(0, visibleCount);
   }, [gridItems, visibleCount]);
 
+  const renderedItems = useMemo(() => {
+    const seen = new Set<string>();
+    return [...(selectedItem ? [selectedItem] : []), ...visibleGridItems].filter(item => {
+      const key = item.id.toString();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [selectedItem, visibleGridItems]);
+
+  const submitterAddresses = useMemo(() => {
+    return renderedItems.map(item => item.submitter);
+  }, [renderedItems]);
+
+  const { profiles: submitterProfiles } = useSubmitterProfiles(submitterAddresses);
+
+  // Fetch voter accuracy stats and merge into profiles
+  const { statsMap: accuracyMap } = useVoterAccuracyBatch(submitterAddresses);
+
+  const enrichedProfiles = useMemo(() => {
+    const result: Record<string, SubmitterProfile> = {};
+    for (const [addr, profile] of Object.entries(submitterProfiles)) {
+      const stats = accuracyMap[addr];
+      result[addr] = {
+        ...profile,
+        winRate: stats?.winRate,
+        totalSettledVotes: stats?.totalSettledVotes,
+      };
+    }
+    return result;
+  }, [submitterProfiles, accuracyMap]);
+
+  const canLoadMore = visibleCount < gridItems.length || (shouldUsePagedFeed && hasMoreFeed);
+
   // Reset visible count when filters change
   useEffect(() => {
-    setVisibleCount(20);
+    setVisibleCount(FEED_PAGE_SIZE);
   }, [searchQuery, activeCategory, scope, sortBy]);
 
   // Infinite scroll with Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && visibleCount < gridItems.length) {
-          setVisibleCount(prev => Math.min(prev + 20, gridItems.length));
+        if (entries[0].isIntersecting && canLoadMore) {
+          setVisibleCount(prev => prev + FEED_PAGE_SIZE);
         }
       },
       { threshold: 0.1 },
@@ -389,7 +454,7 @@ const HomeInner = () => {
         observer.unobserve(currentRef);
       }
     };
-  }, [visibleCount, gridItems.length]);
+  }, [canLoadMore]);
 
   // Vote handlers
   const handleSwipe = useCallback(
@@ -707,7 +772,7 @@ const HomeInner = () => {
                   ))}
                 </div>
                 {/* Load more trigger */}
-                {visibleCount < gridItems.length && (
+                {canLoadMore && (
                   <div ref={loadMoreRef} className="flex justify-center py-8">
                     <span className="loading loading-spinner loading-md text-primary"></span>
                   </div>

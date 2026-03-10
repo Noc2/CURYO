@@ -18,12 +18,64 @@ export interface ContentItem {
   categoryId: bigint;
 }
 
+type FeedSort = "newest" | "oldest" | "highest_rated" | "lowest_rated" | "most_votes";
+
+interface UseContentFeedOptions {
+  limit?: number;
+  sortBy?: FeedSort;
+}
+
+function mapContentItem(
+  item: {
+    id: string;
+    url: string;
+    goal: string;
+    tags: string;
+    submitter: string;
+    contentHash: string;
+    categoryId: string;
+  },
+  voterAddress?: string,
+): ContentItem {
+  return {
+    id: BigInt(item.id),
+    url: item.url,
+    goal: item.goal,
+    tags: parseTags(item.tags),
+    submitter: item.submitter,
+    contentHash: item.contentHash,
+    isOwnContent: !!voterAddress && item.submitter.toLowerCase() === voterAddress.toLowerCase(),
+    categoryId: BigInt(item.categoryId),
+  };
+}
+
+function sortRpcFeed(feed: ContentItem[], sortBy: FeedSort): ContentItem[] {
+  const items = [...feed];
+
+  switch (sortBy) {
+    case "oldest":
+      items.sort((a, b) => Number(a.id - b.id));
+      break;
+    case "newest":
+    case "highest_rated":
+    case "lowest_rated":
+    case "most_votes":
+    default:
+      items.sort((a, b) => Number(b.id - a.id));
+      break;
+  }
+
+  return items;
+}
+
 /**
  * Fetch the content feed.
  * Uses Ponder API when available, falls back to on-chain event scanning.
  */
-export function useContentFeed(voterAddress?: string) {
+export function useContentFeed(voterAddress?: string, options: UseContentFeedOptions = {}) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
+  const sortBy = options.sortBy ?? "newest";
 
   // --- RPC fallback: get content submitted events ---
   const { data: events, isLoading: eventsLoading } = useScaffoldEventHistory({
@@ -72,37 +124,52 @@ export function useContentFeed(voterAddress?: string) {
       .filter((item): item is ContentItem => item !== null);
   }, [events, voterAddress]);
 
+  const sortedRpcFeed = useMemo(() => sortRpcFeed(rpcFeed, sortBy), [rpcFeed, sortBy]);
+  const limitedRpcFeed = useMemo(() => {
+    if (limit === undefined) return sortedRpcFeed;
+    return sortedRpcFeed.slice(0, limit);
+  }, [sortedRpcFeed, limit]);
+  const rpcTotalContent = nextContentId ? Number(nextContentId) - 1 : sortedRpcFeed.length;
+
   // --- Ponder-first with RPC fallback ---
   const { data: result, isLoading: ponderLoading } = usePonderQuery({
-    queryKey: ["contentFeed", voterAddress],
+    queryKey: ["contentFeed", voterAddress, sortBy, limit ?? "all"],
     ponderFn: async () => {
-      const response = await ponderApi.getContent({ status: "all" });
+      if (limit !== undefined) {
+        const response = await ponderApi.getContent({
+          status: "all",
+          sortBy,
+          limit: String(limit),
+          offset: "0",
+        });
+        return {
+          feed: response.items.map(item => mapContentItem(item, voterAddress)),
+          totalContent: response.total,
+        };
+      }
+
+      const items = await ponderApi.getAllContent({ status: "all", sortBy });
       return {
-        feed: response.items.map(item => ({
-          id: BigInt(item.id),
-          url: item.url,
-          goal: item.goal,
-          tags: parseTags(item.tags),
-          submitter: item.submitter,
-          contentHash: item.contentHash,
-          isOwnContent: !!voterAddress && item.submitter.toLowerCase() === voterAddress.toLowerCase(),
-          categoryId: BigInt(item.categoryId),
-        })),
-        totalContent: response.total,
+        feed: items.map(item => mapContentItem(item, voterAddress)),
+        totalContent: items.length,
       };
     },
     rpcFn: async () => ({
-      feed: rpcFeed,
-      totalContent: nextContentId ? Number(nextContentId) - 1 : 0,
+      feed: limitedRpcFeed,
+      totalContent: rpcTotalContent,
     }),
     rpcEnabled: rpcFallbackEnabled,
     staleTime: 15_000,
     refetchInterval: 30_000,
   });
 
+  const feed = result?.data?.feed ?? limitedRpcFeed;
+  const totalContent = result?.data?.totalContent ?? rpcTotalContent;
+
   return {
-    feed: result?.data?.feed ?? rpcFeed,
+    feed,
     isLoading: ponderLoading && eventsLoading,
-    totalContent: result?.data?.totalContent ?? (nextContentId ? Number(nextContentId) - 1 : 0),
+    totalContent,
+    hasMore: totalContent > feed.length,
   };
 }
