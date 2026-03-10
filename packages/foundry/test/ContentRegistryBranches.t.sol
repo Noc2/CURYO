@@ -295,7 +295,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(id, 1);
     }
 
-    function test_SubmitContent_ParticipationPool_RewardGiven() public {
+    function test_SubmitContent_ParticipationPool_DoesNotRewardImmediately() public {
         vm.prank(owner);
         registry.setParticipationPool(address(participationPool));
 
@@ -305,10 +305,25 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.submitContent("https://example.com/1", "goal", "tags", 0);
         vm.stopPrank();
 
-        // Submitter got participation reward (balance = before - 10e6 stake + reward)
         uint256 balAfter = crepToken.balanceOf(submitter);
-        // The reward should partially offset the stake
-        assertGt(balAfter, balBefore - 10e6);
+        assertEq(balAfter, balBefore - 10e6, "submission should only lock stake until healthy resolution");
+    }
+
+    function test_ResolveSubmitterStake_HealthyPath_PaysParticipationReward() public {
+        vm.prank(owner);
+        registry.setParticipationPool(address(participationPool));
+
+        uint256 balBefore = crepToken.balanceOf(submitter);
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 4 days + 1);
+        votingEngine.resolveSubmitterStake(1);
+
+        uint256 balAfter = crepToken.balanceOf(submitter);
+        assertEq(balAfter - balBefore, 9e6, "healthy submitter should net the deferred participation reward");
     }
 
     function test_SubmitContent_NoParticipationPool_NoReward() public {
@@ -602,6 +617,29 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         // New content created with same URL
         ContentRegistry.Content memory c2 = registry.getContent(2);
         assertEq(uint256(c2.status), uint256(ContentRegistry.ContentStatus.Active));
+    }
+
+    function test_MarkDormant_LowRatedContent_SlashesUnresolvedStake() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/dormant-slash", "goal", "tags", 0);
+        vm.stopPrank();
+
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 submitterBefore = crepToken.balanceOf(submitter);
+
+        vm.prank(address(votingEngine));
+        registry.updateRatingDirect(1, 10);
+
+        vm.warp(T0 + 31 days);
+        registry.markDormant(1);
+
+        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, 10e6, "low-rated dormant content should be slashed");
+        assertEq(
+            crepToken.balanceOf(submitter),
+            submitterBefore,
+            "submitter should not recover stake after low-rated content goes dormant"
+        );
     }
 
     function test_ReviveContent_ReservesUrlAgain() public {

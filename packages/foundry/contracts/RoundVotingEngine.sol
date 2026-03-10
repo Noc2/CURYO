@@ -61,6 +61,7 @@ contract RoundVotingEngine is
     error RoundNotSettled();
     error RoundNotSettledOrTied();
     error RoundNotCancelledOrTied();
+    error ContentNotFound();
     error ThresholdReached();
     error RevealGraceActive();
 
@@ -911,6 +912,12 @@ contract RoundVotingEngine is
         emit ParticipationRewardClaimed(contentId, roundId, msg.sender, paidReward);
     }
 
+    /// @notice Resolve submitter stake once the slash or healthy-return window has elapsed.
+    /// @dev Permissionless so idle content cannot bypass the submitter stake policy.
+    function resolveSubmitterStake(uint256 contentId) external nonReentrant whenNotPaused {
+        _checkSubmitterStake(contentId);
+    }
+
     // =========================================================================
     // UNREVEALED VOTE PROCESSING
     // =========================================================================
@@ -1135,6 +1142,7 @@ contract RoundVotingEngine is
         if (registry.isSubmitterStakeReturned(contentId)) return;
 
         uint256 contentCreatedAt = registry.getCreatedAt(contentId);
+        if (contentCreatedAt == 0) revert ContentNotFound();
         uint256 elapsed = block.timestamp - contentCreatedAt;
 
         if (elapsed >= 24 hours) {

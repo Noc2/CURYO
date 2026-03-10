@@ -241,11 +241,6 @@ contract ContentRegistry is
 
         emit ContentSubmitted(contentId, msg.sender, contentHash, url, goal, tags, categoryId);
 
-        // Participation reward (if pool is configured)
-        if (address(participationPool) != address(0)) {
-            participationPool.rewardSubmission(msg.sender, MIN_SUBMITTER_STAKE);
-        }
-
         return contentId;
     }
 
@@ -326,11 +321,18 @@ contract ContentRegistry is
             urlSubmitted[urlHash] = false;
         }
 
-        // Return submitter stake if not already returned
+        // Low-rated content should still be slashed if nobody resolved the submitter stake earlier.
         if (!c.submitterStakeReturned) {
-            c.submitterStakeReturned = true;
-            crepToken.safeTransfer(c.submitter, c.submitterStake);
-            emit SubmitterStakeReturned(contentId, c.submitterStake);
+            if (block.timestamp >= c.createdAt + 24 hours && c.rating < SLASH_RATING_THRESHOLD) {
+                require(treasury != address(0), "Treasury not set");
+                c.submitterStakeReturned = true;
+                crepToken.safeTransfer(treasury, c.submitterStake);
+                emit SubmitterStakeSlashed(contentId, c.submitterStake);
+            } else {
+                c.submitterStakeReturned = true;
+                crepToken.safeTransfer(c.submitter, c.submitterStake);
+                emit SubmitterStakeReturned(contentId, c.submitterStake);
+            }
         }
 
         emit ContentDormant(contentId);
@@ -391,6 +393,12 @@ contract ContentRegistry is
 
         c.submitterStakeReturned = true;
         crepToken.safeTransfer(c.submitter, c.submitterStake);
+
+        // Submission participation rewards are only earned once the stake resolves on the healthy path.
+        if (address(participationPool) != address(0)) {
+            try participationPool.rewardSubmission(c.submitter, c.submitterStake) {} catch { }
+        }
+
         emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
 
