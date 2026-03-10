@@ -11,6 +11,7 @@
     "chain": "make chain",
     "clean": "forge clean",
     "compile": "make compile",
+    "compile:all": "make compile-all",
     "deploy": "node scripts-js/parseArgs.js",
     "flatten": "make flatten",
     "fork": "make fork FORK_URL=${1:-mainnet}",

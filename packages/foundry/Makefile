@@ -1,4 +1,4 @@
-.PHONY: build deploy generate-abis get-address account chain compile flatten fork format lint test verify verify-blockscout slither aderyn coverage
+.PHONY: build deploy generate-abis get-address account chain compile compile-all flatten fork format lint test verify verify-blockscout slither aderyn coverage
 
 DEPLOY_SCRIPT ?= script/Deploy.s.sol
 TEST_ARGS ?=
@@ -39,6 +39,9 @@ get-address:
 
 # Compile contracts
 compile:
+	forge compile --skip test script
+
+compile-all:
 	forge compile
 
 # Flatten contracts
