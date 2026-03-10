@@ -3,7 +3,7 @@
 import { Address } from "viem";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useClaimReward } from "~~/hooks/useClaimReward";
-import { useVoteHistory } from "~~/hooks/useVoteHistory";
+import { usePaginatedVoteHistory } from "~~/hooks/usePaginatedVoteHistory";
 import { notification } from "~~/utils/scaffold-eth";
 
 type PortfolioModalProps = {
@@ -13,8 +13,7 @@ type PortfolioModalProps = {
 
 export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
   const { claimReward, isClaiming } = useClaimReward();
-  const { votes, totalVotes, settledVoteCount, hasMore, loadMore, isLoading } = useVoteHistory(address, {
-    paginated: true,
+  const { votes, totalVotes, settledVoteCount, hasMore, loadMore, isLoading } = usePaginatedVoteHistory(address, {
     pageSize: 20,
   });
 

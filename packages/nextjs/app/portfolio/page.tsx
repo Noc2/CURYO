@@ -5,7 +5,7 @@ import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { formatTimeRemaining, useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useClaimReward } from "~~/hooks/useClaimReward";
-import { useVoteHistory } from "~~/hooks/useVoteHistory";
+import { usePaginatedVoteHistory } from "~~/hooks/usePaginatedVoteHistory";
 import { useVoterStreak } from "~~/hooks/useVoterStreak";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -13,8 +13,7 @@ export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
   const { claimReward, isClaiming } = useClaimReward();
 
-  const { votes, totalVotes, settledVoteCount, hasMore, loadMore, isLoading } = useVoteHistory(address, {
-    paginated: true,
+  const { votes, totalVotes, settledVoteCount, hasMore, loadMore, isLoading } = usePaginatedVoteHistory(address, {
     pageSize: 50,
   });
 
