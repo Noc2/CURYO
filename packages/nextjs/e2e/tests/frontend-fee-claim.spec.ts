@@ -7,8 +7,8 @@ import {
   getActiveRoundId,
   getFrontendAccumulatedFees,
   mintVoterId,
-  registerFrontend,
   readTokenBalance,
+  registerFrontend,
   revealVoteDirect,
   setTestConfig,
   settleRoundDirect,
@@ -52,6 +52,18 @@ test.describe("Frontend fee claim lifecycle", () => {
   }
 
   async function setupApprovedFrontend(frontendAddress: `0x${string}`, nullifier: bigint): Promise<void> {
+    // Fund the impersonated frontend address with ETH for gas
+    await fetch("http://localhost:8545", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "anvil_setBalance",
+        params: [frontendAddress, "0x21E19E0C9BAB2400000"], // 10,000 ETH
+        id: Date.now(),
+      }),
+    });
+
     const minted = await mintVoterId(frontendAddress, nullifier, ANVIL_ACCOUNTS.account0.address, VOTER_ID_NFT);
     expect(minted, `Failed to mint Voter ID for ${frontendAddress}`).toBe(true);
 
@@ -68,7 +80,10 @@ test.describe("Frontend fee claim lifecycle", () => {
     expect(governanceApproved, `Failed to approve frontend ${frontendAddress}`).toBe(true);
   }
 
-  async function settleRoundWithFrontend(frontendAddress: `0x${string}`, uniqueId: number): Promise<{
+  async function settleRoundWithFrontend(
+    frontendAddress: `0x${string}`,
+    uniqueId: number,
+  ): Promise<{
     contentId: string;
     roundId: bigint;
   }> {
@@ -142,7 +157,12 @@ test.describe("Frontend fee claim lifecycle", () => {
     }
 
     await evmIncreaseTime(EPOCH_DURATION + 1);
-    const settled = await settleRoundDirect(BigInt(contentId!), roundId, ANVIL_ACCOUNTS.account1.address, VOTING_ENGINE);
+    const settled = await settleRoundDirect(
+      BigInt(contentId!),
+      roundId,
+      ANVIL_ACCOUNTS.account1.address,
+      VOTING_ENGINE,
+    );
     expect(settled, "Frontend-fee round did not settle").toBe(true);
 
     return { contentId: contentId!, roundId };
