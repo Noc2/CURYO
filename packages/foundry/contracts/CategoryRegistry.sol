@@ -156,15 +156,36 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     {
         Category storage cat = _categories[categoryId];
         require(cat.id != 0, "Category does not exist");
+        require(cat.submitter == msg.sender, "Not submitter");
         require(cat.status == CategoryStatus.Pending, "Not pending");
         require(cat.proposalId == 0, "Proposal already linked");
         require(block.timestamp <= cat.createdAt + SPONSORSHIP_WINDOW, "Sponsorship window expired");
 
         proposalId = getApprovalProposalId(categoryId, descriptionHash);
         require(governor.proposalProposer(proposalId) != address(0), "Proposal not found");
+        require(_isLinkableProposalState(governor.state(proposalId)), "Proposal not linkable");
 
         cat.proposalId = proposalId;
         emit CategoryProposalLinked(categoryId, proposalId, descriptionHash);
+    }
+
+    /// @notice Clear a linked approval proposal after the sponsor canceled it or it expired.
+    /// @dev This lets the submitter either relink a fresh proposal before the sponsorship window ends
+    ///      or reclaim stake via cancelUnlinkedCategory() after the window has passed.
+    function clearApprovalProposal(uint256 categoryId) external nonReentrant {
+        Category storage cat = _categories[categoryId];
+        require(cat.id != 0, "Category does not exist");
+        require(cat.submitter == msg.sender, "Not submitter");
+        require(cat.status == CategoryStatus.Pending, "Not pending");
+        require(cat.proposalId != 0, "Proposal not linked");
+
+        IGovernor.ProposalState proposalState = governor.state(cat.proposalId);
+        require(
+            proposalState == IGovernor.ProposalState.Canceled || proposalState == IGovernor.ProposalState.Expired,
+            "Proposal not clearable"
+        );
+
+        cat.proposalId = 0;
     }
 
     /// @notice Cancel an unsponsored category after the sponsorship window and reclaim the submitter stake.
@@ -207,8 +228,8 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         emit CategoryApproved(categoryId);
     }
 
-    /// @notice Reject a category after governance vote fails
-    /// @dev Can be called by anyone after the proposal is defeated or expired
+    /// @notice Reject a category after governance vote is defeated
+    /// @dev Can be called by anyone after the linked proposal is defeated
     function rejectCategory(uint256 categoryId) external nonReentrant {
         Category storage cat = _categories[categoryId];
         require(cat.id != 0, "Category does not exist");
@@ -217,11 +238,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
         // Check that the governance proposal has failed
         IGovernor.ProposalState proposalState = governor.state(cat.proposalId);
-        require(
-            proposalState == IGovernor.ProposalState.Defeated || proposalState == IGovernor.ProposalState.Expired
-                || proposalState == IGovernor.ProposalState.Canceled,
-            "Proposal not failed"
-        );
+        require(proposalState == IGovernor.ProposalState.Defeated, "Proposal not defeated");
 
         cat.status = CategoryStatus.Rejected;
 
@@ -382,6 +399,11 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     }
 
     // --- Internal Helpers ---
+
+    function _isLinkableProposalState(IGovernor.ProposalState proposalState) internal pure returns (bool) {
+        return proposalState == IGovernor.ProposalState.Pending || proposalState == IGovernor.ProposalState.Active
+            || proposalState == IGovernor.ProposalState.Succeeded || proposalState == IGovernor.ProposalState.Queued;
+    }
 
     /// @dev Normalize domain: strip protocol, www., path/query/fragment, trailing dot, and lowercase.
     function _normalizeDomain(string memory domain) internal pure returns (string memory) {

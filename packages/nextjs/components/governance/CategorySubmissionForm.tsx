@@ -131,7 +131,7 @@ export const CategorySubmissionForm = () => {
       });
 
       notification.success(
-        "Platform submitted. Next: sponsor an approval proposal from Governance. If nobody links one within 7 days, you can cancel and reclaim your stake.",
+        "Platform submitted. Next: have a sponsor create an approval proposal, then link it from this same wallet. If no proposal is linked within 7 days, you can cancel and reclaim your stake.",
       );
 
       // Reset form

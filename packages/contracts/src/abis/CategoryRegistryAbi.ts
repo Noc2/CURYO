@@ -222,6 +222,19 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "clearApprovalProposal",
+    "inputs": [
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "getApprovalProposalId",
     "inputs": [
       {

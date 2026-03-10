@@ -145,11 +145,14 @@ export function PlatformProposals() {
         <ol className="text-base text-base-content/60 space-y-1 list-decimal list-inside">
           <li>Submit a platform on the Submit page (100 cREP stake)</li>
           <li>Sponsor an approval proposal from the Governance composer</li>
-          <li>The composer links the resulting proposal back to the registry automatically</li>
+          <li>The original submitter links the sponsored proposal from the same wallet that posted the stake</li>
           <li>Community votes for 1 week (4% circulating supply quorum required)</li>
           <li>If approved, stake is returned and platform is added</li>
           <li>If rejected, stake is sent to the consensus reserve</li>
-          <li>If no proposal is linked within 7 days, the submitter can cancel and reclaim the stake</li>
+          <li>
+            If the sponsor proposal is canceled or expires, the submitter can clear it, retry within 7 days, or cancel
+            and reclaim the stake after 7 days
+          </li>
         </ol>
       </div>
     </div>

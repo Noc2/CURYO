@@ -117,7 +117,7 @@ contract CategoryRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function _linkApprovalProposal(uint256 categoryId, string memory description) internal returns (uint256 proposalId) {
+    function _createApprovalProposal(uint256 categoryId, string memory description) internal returns (uint256 proposalId) {
         address[] memory targets = new address[](1);
         targets[0] = address(registry);
 
@@ -129,7 +129,12 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(user2);
         proposalId = governor.propose(targets, values, calldatas, description);
+    }
 
+    function _linkApprovalProposal(uint256 categoryId, string memory description) internal returns (uint256 proposalId) {
+        proposalId = _createApprovalProposal(categoryId, description);
+
+        vm.prank(user1);
         registry.linkApprovalProposal(categoryId, keccak256(bytes(description)));
     }
 
@@ -353,7 +358,7 @@ contract CategoryRegistryTest is Test {
         _linkApprovalProposal(categoryId, "Approve category #1");
 
         // Proposal is still Pending
-        vm.expectRevert("Proposal not failed");
+        vm.expectRevert("Proposal not defeated");
         registry.rejectCategory(categoryId);
     }
 
@@ -376,8 +381,114 @@ contract CategoryRegistryTest is Test {
     function test_RevertLinkApprovalProposal_ProposalMissing() public {
         uint256 categoryId = _submitCategory("missing-proposal.test");
 
+        vm.prank(user1);
         vm.expectRevert("Proposal not found");
         registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #1")));
+    }
+
+    function test_RevertLinkApprovalProposal_NotSubmitter() public {
+        uint256 categoryId = _submitCategory("submitter-only-link.test");
+        _createApprovalProposal(categoryId, "Approve category #1");
+
+        vm.prank(user2);
+        vm.expectRevert("Not submitter");
+        registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #1")));
+    }
+
+    function test_RevertLinkApprovalProposal_ProposalNotLinkableWhenCanceled() public {
+        uint256 categoryId = _submitCategory("canceled-link.test");
+        uint256 proposalId = _createApprovalProposal(categoryId, "Approve category #1");
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Canceled);
+
+        vm.prank(user1);
+        vm.expectRevert("Proposal not linkable");
+        registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #1")));
+    }
+
+    function test_RevertLinkApprovalProposal_ProposalNotLinkableWhenDefeated() public {
+        uint256 categoryId = _submitCategory("defeated-link.test");
+        uint256 proposalId = _createApprovalProposal(categoryId, "Approve category #1");
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Defeated);
+
+        vm.prank(user1);
+        vm.expectRevert("Proposal not linkable");
+        registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #1")));
+    }
+
+    function test_ClearApprovalProposalAllowsRetryWithinWindow() public {
+        uint256 categoryId = _submitCategory("retry-link.test");
+        uint256 firstProposalId = _linkApprovalProposal(categoryId, "Approve category #1");
+        governor.setProposalState(firstProposalId, IGovernor.ProposalState.Canceled);
+
+        vm.prank(user1);
+        registry.clearApprovalProposal(categoryId);
+
+        ICategoryRegistry.Category memory cleared = registry.getCategory(categoryId);
+        assertEq(cleared.proposalId, 0);
+        assertEq(uint256(cleared.status), uint256(ICategoryRegistry.CategoryStatus.Pending));
+
+        uint256 secondProposalId = _createApprovalProposal(categoryId, "Approve category #2");
+        vm.prank(user1);
+        registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #2")));
+
+        ICategoryRegistry.Category memory relinked = registry.getCategory(categoryId);
+        assertEq(relinked.proposalId, secondProposalId);
+    }
+
+    function test_ClearApprovalProposalAllowsCancelAfterWindow() public {
+        uint256 categoryId = _submitCategory("clear-then-cancel.test");
+        uint256 proposalId = _linkApprovalProposal(categoryId, "Approve category #1");
+
+        vm.warp(block.timestamp + registry.SPONSORSHIP_WINDOW() + 1);
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Expired);
+
+        vm.prank(user1);
+        registry.clearApprovalProposal(categoryId);
+
+        uint256 balanceBefore = token.balanceOf(user1);
+        vm.prank(user1);
+        registry.cancelUnlinkedCategory(categoryId);
+
+        ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
+        assertEq(uint256(cat.status), uint256(ICategoryRegistry.CategoryStatus.Canceled));
+        assertEq(token.balanceOf(user1), balanceBefore + STAKE);
+    }
+
+    function test_RevertClearApprovalProposal_NotSubmitter() public {
+        uint256 categoryId = _submitCategory("not-submitter-clear.test");
+        uint256 proposalId = _linkApprovalProposal(categoryId, "Approve category #1");
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Canceled);
+
+        vm.prank(user2);
+        vm.expectRevert("Not submitter");
+        registry.clearApprovalProposal(categoryId);
+    }
+
+    function test_RevertClearApprovalProposal_ProposalNotClearable() public {
+        uint256 categoryId = _submitCategory("not-clearable.test");
+        _linkApprovalProposal(categoryId, "Approve category #1");
+
+        vm.prank(user1);
+        vm.expectRevert("Proposal not clearable");
+        registry.clearApprovalProposal(categoryId);
+    }
+
+    function test_RevertRejectCategory_CanceledProposal() public {
+        uint256 categoryId = _submitCategory("canceled-reject.test");
+        uint256 proposalId = _linkApprovalProposal(categoryId, "Approve category #1");
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Canceled);
+
+        vm.expectRevert("Proposal not defeated");
+        registry.rejectCategory(categoryId);
+    }
+
+    function test_RevertRejectCategory_ExpiredProposal() public {
+        uint256 categoryId = _submitCategory("expired-reject.test");
+        uint256 proposalId = _linkApprovalProposal(categoryId, "Approve category #1");
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Expired);
+
+        vm.expectRevert("Proposal not defeated");
+        registry.rejectCategory(categoryId);
     }
 
     function test_RevertRejectCategory_WithoutLinkedProposal() public {

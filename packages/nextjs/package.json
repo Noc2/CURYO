@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "analyze": "ANALYZE=true next build",
-    "build": "next build",
+    "analyze": "ANALYZE=true yarn build",
+    "build": "rm -rf .next && next build",
     "check-types": "next typegen && tsc --noEmit --incremental",
     "dev": "next dev",
     "format": "prettier --write . '!(node_modules|.next|contracts)/**/*'",

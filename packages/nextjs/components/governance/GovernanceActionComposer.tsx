@@ -3,7 +3,7 @@
 import { type FormEvent, useMemo, useState } from "react";
 import { CategoryRegistryAbi } from "@curyo/contracts/abis";
 import { useQueryClient } from "@tanstack/react-query";
-import { Address, encodeFunctionData, isAddress, keccak256, parseUnits, stringToHex } from "viem";
+import { Address, encodeFunctionData, isAddress, parseUnits } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { ArrowsRightLeftIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
@@ -102,7 +102,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     contractName: "CategoryRegistry",
     functionName: "approveCategory",
     description: "Create a governor proposal to sponsor and approve a pending category submission.",
-    note: "After the proposal transaction confirms, the app automatically links it back to the CategoryRegistry.",
+    note: "After the proposal confirms, the original category submitter must link it from the same wallet that staked the category.",
     fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
     buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
     buildDescription: values => `Approve category #${values.categoryId || "0"}`,
@@ -116,7 +116,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     functionName: "linkApprovalProposal",
     description:
       "Directly link an existing governor proposal to a pending category when the proposal was created outside this composer.",
-    note: "Only needed for externally created governor proposals. Composer-created approval proposals are linked automatically.",
+    note: "Must be called by the original category submitter from the wallet that posted the stake.",
     advanced: true,
     fields: [
       { key: "categoryId", label: "Category ID", type: "uint", required: true },
@@ -134,14 +134,27 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     ],
   },
   {
+    id: "category-clear-approval",
+    group: "Category Registry",
+    label: "Clear canceled or expired approval",
+    mode: "direct",
+    contractName: "CategoryRegistry",
+    functionName: "clearApprovalProposal",
+    description:
+      "Clear a linked approval proposal after it was canceled or expired so the submitter can retry within 7 days or cancel and reclaim stake afterward.",
+    note: "Must be called by the original category submitter.",
+    advanced: true,
+    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
+    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
+  },
+  {
     id: "category-reject",
     group: "Category Registry",
     label: "Reject failed category",
     mode: "direct",
     contractName: "CategoryRegistry",
     functionName: "rejectCategory",
-    description:
-      "Directly reject a category whose linked governance proposal has already failed, expired, or been canceled.",
+    description: "Directly reject a category whose linked governance proposal has been defeated.",
     fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
     buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
   },
@@ -430,7 +443,11 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
   },
 ];
 
-const CATEGORY_REGISTRY_EXTENDED_FUNCTIONS = new Set(["linkApprovalProposal", "cancelUnlinkedCategory"]);
+const CATEGORY_REGISTRY_EXTENDED_FUNCTIONS = new Set([
+  "linkApprovalProposal",
+  "clearApprovalProposal",
+  "cancelUnlinkedCategory",
+]);
 
 function formatVotingPower(amount: bigint | undefined) {
   if (amount === undefined) return "—";
@@ -587,15 +604,6 @@ export function GovernanceActionComposer() {
         if (!txHash) return;
 
         await waitForTransactionReceipt(wagmiConfig, { hash: txHash });
-
-        if (selectedTemplate.id === "category-approve") {
-          await writeContractAsync({
-            address: targetContract.address,
-            abi: CategoryRegistryAbi,
-            functionName: "linkApprovalProposal",
-            args: [args[0] as bigint, keccak256(stringToHex(effectiveDescription))],
-          });
-        }
       } else {
         const txHash = await writeContractAsync({
           address: targetContract.address,
