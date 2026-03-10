@@ -23,7 +23,6 @@ import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useRadarFeed } from "~~/hooks/useRadarFeed";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
-import { useUrlValidation } from "~~/hooks/useUrlValidation";
 import { useUserPreferences } from "~~/hooks/useUserPreferences";
 import { useVoteHistory } from "~~/hooks/useVoteHistory";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
@@ -221,10 +220,6 @@ const HomeInner = () => {
   const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
   const voteCounts = useCategoryPopularity(feed);
 
-  // URL validation — async check for broken URLs
-  const feedUrls = useMemo(() => feed.map(item => item.url), [feed]);
-  const { validationMap } = useUrlValidation(feedUrls);
-
   // Filter & sort state
   const votedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
   const watchedOrderMap = useMemo(() => {
@@ -323,9 +318,9 @@ const HomeInner = () => {
 
     // Broken URL filter: show only broken when selected, exclude broken otherwise
     if (activeCategory === BROKEN_FILTER) {
-      items = items.filter(item => validationMap.get(item.url) === false);
+      items = items.filter(item => item.isValidUrl === false);
     } else {
-      items = items.filter(item => validationMap.get(item.url) !== false);
+      items = items.filter(item => item.isValidUrl !== false);
     }
 
     if (searchQuery.trim()) {
@@ -368,7 +363,6 @@ const HomeInner = () => {
     searchQuery,
     activeCategory,
     activeCategoryId,
-    validationMap,
     scope,
     watchedContentIds,
     votedContentIds,
@@ -615,8 +609,8 @@ const HomeInner = () => {
 
   // Count broken URLs for the filter pill
   const brokenCount = useMemo(() => {
-    return feed.filter(item => !isContentItemBlocked(item) && validationMap.get(item.url) === false).length;
-  }, [feed, validationMap]);
+    return feed.filter(item => !isContentItemBlocked(item) && item.isValidUrl === false).length;
+  }, [feed]);
 
   // Build category filter list sorted by popularity (vote count)
   const categories = useMemo(() => {
@@ -902,48 +896,8 @@ const FeedQueueCard = memo(function FeedQueueCard({
   submitterProfile?: SubmitterProfile;
 }) {
   const platform = detectPlatform(item.url);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(platform.thumbnailUrl);
-  const [isThumbnailLoading, setIsThumbnailLoading] = useState(!platform.thumbnailUrl);
   const [imageError, setImageError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    setThumbnailUrl(platform.thumbnailUrl);
-    setImageError(false);
-
-    if (platform.thumbnailUrl) {
-      setIsThumbnailLoading(false);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    setIsThumbnailLoading(true);
-
-    fetch(`/api/thumbnail?url=${encodeURIComponent(item.url)}`)
-      .then(response => (response.ok ? response.json() : null))
-      .then(data => {
-        if (!cancelled) {
-          setThumbnailUrl(data?.imageUrl ?? data?.thumbnailUrl ?? null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setThumbnailUrl(null);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsThumbnailLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [item.url, platform.thumbnailUrl]);
-
+  const thumbnailUrl = item.thumbnailUrl ?? platform.thumbnailUrl;
   const thumbnailSrc = thumbnailUrl ? getThumbnailImageSrc(thumbnailUrl) : null;
 
   return (
@@ -962,10 +916,6 @@ const FeedQueueCard = memo(function FeedQueueCard({
             loading="lazy"
             onError={() => setImageError(true)}
           />
-        ) : isThumbnailLoading ? (
-          <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.16),_transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))]">
-            <span className="loading loading-spinner loading-md text-primary/60" />
-          </div>
         ) : (
           <div className="flex h-full w-full items-end bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.16),_transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-3">
             <div>

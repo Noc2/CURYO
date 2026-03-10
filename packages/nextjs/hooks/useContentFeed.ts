@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { parseTags } from "~~/constants/categories";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
@@ -16,6 +17,8 @@ export interface ContentItem {
   contentHash: string;
   isOwnContent: boolean;
   categoryId: bigint;
+  isValidUrl: boolean | null;
+  thumbnailUrl: string | null;
 }
 
 type FeedSort = "newest" | "oldest" | "highest_rated" | "lowest_rated" | "most_votes";
@@ -51,6 +54,8 @@ function mapContentItem(
     contentHash: item.contentHash,
     isOwnContent: !!voterAddress && item.submitter.toLowerCase() === voterAddress.toLowerCase(),
     categoryId: BigInt(item.categoryId),
+    isValidUrl: null,
+    thumbnailUrl: null,
   };
 }
 
@@ -134,7 +139,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
     if (!events || events.length === 0) return [];
 
     return events
-      .map(event => {
+      .map((event): ContentItem | null => {
         const args = event.args as {
           contentId?: bigint;
           submitter?: string;
@@ -157,7 +162,9 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
           contentHash: args.contentHash || "",
           isOwnContent: !!voterAddress && submitter.toLowerCase() === voterAddress.toLowerCase(),
           categoryId: args.categoryId ?? 0n,
-        } satisfies ContentItem;
+          isValidUrl: null,
+          thumbnailUrl: null,
+        };
       })
       .filter((item): item is ContentItem => item !== null);
   }, [events, voterAddress]);
@@ -230,9 +237,74 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
     refetchInterval: 30_000,
   });
 
-  const feed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);
+  const baseFeed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);
   const totalContent = result?.source === "rpc" ? rpcTotalContent : (result?.data?.totalContent ?? rpcTotalContent);
   const isLoading = ponderLoading || (rpcFallbackEnabled && eventsLoading && result?.source !== "ponder");
+  const feedUrls = useMemo(() => [...new Set(baseFeed.map(item => item.url))], [baseFeed]);
+  const feedUrlsKey = useMemo(() => feedUrls.join(","), [feedUrls]);
+
+  const { data: metadataResult } = useQuery({
+    queryKey: ["contentFeedMetadata", feedUrlsKey],
+    enabled: feedUrls.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const thumbnailMap: Record<string, string | null> = {};
+      const validationMap: Record<string, boolean | null> = {};
+
+      const thumbnailBatchSize = 40;
+      for (let i = 0; i < feedUrls.length; i += thumbnailBatchSize) {
+        const batch = feedUrls.slice(i, i + thumbnailBatchSize);
+        try {
+          const response = await fetch("/api/thumbnails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ urls: batch }),
+          });
+          if (!response.ok) continue;
+          const data = (await response.json()) as {
+            items?: Record<string, { thumbnailUrl?: string | null; imageUrl?: string | null }>;
+          };
+          for (const [url, item] of Object.entries(data.items ?? {})) {
+            thumbnailMap[url] = item.thumbnailUrl ?? item.imageUrl ?? null;
+          }
+        } catch {
+          // Metadata is optional; keep rendering even when enrichment fails.
+        }
+      }
+
+      const validationBatchSize = 10;
+      for (let i = 0; i < feedUrls.length; i += validationBatchSize) {
+        const batch = feedUrls.slice(i, i + validationBatchSize);
+        try {
+          const response = await fetch("/api/url-validation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ urls: batch }),
+          });
+          if (!response.ok) continue;
+          const data = (await response.json()) as { results?: Record<string, { isValid: boolean }> };
+          for (const [url, result] of Object.entries(data.results ?? {})) {
+            validationMap[url] = result.isValid;
+          }
+        } catch {
+          // Treat failures as unknown validity and keep rendering.
+        }
+      }
+
+      return { thumbnailMap, validationMap };
+    },
+  });
+
+  const feed = useMemo(() => {
+    const thumbnailMap = metadataResult?.thumbnailMap ?? {};
+    const validationMap = metadataResult?.validationMap ?? {};
+
+    return baseFeed.map(item => ({
+      ...item,
+      isValidUrl: validationMap[item.url] ?? item.isValidUrl,
+      thumbnailUrl: thumbnailMap[item.url] ?? item.thumbnailUrl,
+    }));
+  }, [baseFeed, metadataResult]);
 
   return {
     feed,
