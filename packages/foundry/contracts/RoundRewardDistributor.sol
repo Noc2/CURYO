@@ -213,7 +213,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         roundFrontendClaimedCount[contentId][roundId] = claimedCount + 1;
         roundFrontendClaimedAmount[contentId][roundId] = claimedAmount + fee;
 
-        votingEngine.payoutFrontendFee(frontend, fee);
+        votingEngine.payoutFrontendFee(contentId, roundId, frontend, fee);
     }
 
     /// @notice Claim a participation reward for a voter. Only callable via RoundVotingEngine.

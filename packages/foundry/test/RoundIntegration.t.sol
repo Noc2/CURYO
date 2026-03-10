@@ -1490,15 +1490,23 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "deregistered frontend should bypass fee crediting");
     }
 
-    function test_ClaimFrontendFee_RevertsWhileFrontendIsSlashed() public {
+    function test_ClaimFrontendFee_PaysDirectlyWhileFrontendIsSlashed() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
         vm.prank(owner);
         frontendReg.slashFrontend(frontendOp, 100e6, "test");
 
-        vm.expectRevert(IFrontendRegistry.FrontendIsSlashed.selector);
+        uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
+        uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+
+        assertGt(
+            crepToken.balanceOf(frontendOp) - frontendBalanceBefore,
+            0,
+            "historical fees should pay directly after slashing"
+        );
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend should bypass fee crediting");
     }
 
     function test_ClaimFrontendFee_SucceedsAfterFrontendReregistersWithoutReapproval() public {
@@ -1643,6 +1651,42 @@ contract RoundIntegrationTest is VotingTestBase {
 
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
         assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Frontend fee claim should still succeed");
+    }
+
+    function test_ClaimFrontendFee_UsesSnapshotRegistryAfterRegistryReplacement() public {
+        (FrontendRegistry originalRegistry, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        vm.startPrank(owner);
+        FrontendRegistry replacementImpl = new FrontendRegistry();
+        FrontendRegistry replacementRegistry = FrontendRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(replacementImpl),
+                    abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                )
+            )
+        );
+        votingEngine.setFrontendRegistry(address(replacementRegistry));
+        replacementRegistry.setVotingEngine(address(votingEngine));
+        replacementRegistry.addFeeCreditor(address(votingEngine));
+        vm.stopPrank();
+
+        uint256 originalFeesBefore = originalRegistry.getAccumulatedFees(frontendOp);
+        uint256 replacementFeesBefore = replacementRegistry.getAccumulatedFees(frontendOp);
+
+        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+
+        assertGt(
+            originalRegistry.getAccumulatedFees(frontendOp) - originalFeesBefore,
+            0,
+            "historical fees should credit the settlement-time registry"
+        );
+        assertEq(
+            replacementRegistry.getAccumulatedFees(frontendOp),
+            replacementFeesBefore,
+            "replacement registry should not capture historical fees"
+        );
     }
 
     function test_ClaimFrontendFee_NoApprovedFrontendRedirectsToVoterPool() public {

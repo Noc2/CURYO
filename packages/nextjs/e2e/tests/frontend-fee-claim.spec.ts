@@ -8,6 +8,7 @@ import {
   getFrontendAccumulatedFees,
   mintVoterId,
   registerFrontend,
+  readTokenBalance,
   revealVoteDirect,
   setTestConfig,
   settleRoundDirect,
@@ -178,7 +179,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     expect(doubleClaim, "Frontend fee should not be claimable twice").toBe(false);
   });
 
-  test("slashed frontend cannot claim already-earned fees", async () => {
+  test("slashed frontend still receives already-earned fees", async () => {
     test.setTimeout(180_000);
 
     const uniqueId = Date.now() + 1;
@@ -197,6 +198,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     expect(slashOk, "Frontend slash should succeed").toBe(true);
 
     const feesBefore = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
+    const balanceBefore = await readTokenBalance(frontendAddress, CREP_TOKEN);
     const claimed = await claimFrontendFee(
       BigInt(contentId),
       roundId,
@@ -204,7 +206,8 @@ test.describe("Frontend fee claim lifecycle", () => {
       DEPLOYER.address,
       VOTING_ENGINE,
     );
-    expect(claimed, "Slashed frontend fee claim should revert").toBe(false);
+    expect(claimed, "Slashed frontend fee claim should still succeed").toBe(true);
     expect(await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY)).toBe(feesBefore);
+    expect(await readTokenBalance(frontendAddress, CREP_TOKEN)).toBeGreaterThan(balanceBefore);
   });
 });

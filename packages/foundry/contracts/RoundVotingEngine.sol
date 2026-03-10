@@ -406,20 +406,36 @@ contract RoundVotingEngine is
     }
 
     /// @notice Credit or directly pay a frontend fee. Only callable by RewardDistributor.
-    function payoutFrontendFee(address frontend, uint256 fee) external {
+    function payoutFrontendFee(uint256 contentId, uint256 roundId, address frontend, uint256 fee) external {
         if (msg.sender != rewardDistributor) revert Unauthorized();
         if (fee == 0) return;
 
-        address frontendOperator;
-        bool frontendSlashed;
-        (frontendOperator,,, frontendSlashed) = frontendRegistry.getFrontendInfo(frontend);
-        if (frontendSlashed) revert IFrontendRegistry.FrontendIsSlashed();
-
-        if (frontendOperator == address(0)) {
+        address snapshotRegistryAddress = roundFrontendRegistrySnapshot[contentId][roundId];
+        if (snapshotRegistryAddress == address(0)) {
             crepToken.safeTransfer(frontend, fee);
-        } else {
-            crepToken.safeTransfer(address(frontendRegistry), fee);
-            frontendRegistry.creditFees(frontend, fee);
+            return;
+        }
+
+        IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
+
+        try snapshotRegistry.getFrontendInfo(frontend) returns (
+            address frontendOperator,
+            uint256,
+            bool,
+            bool frontendSlashed
+        ) {
+            if (frontendOperator == address(0) || frontendSlashed) {
+                crepToken.safeTransfer(frontend, fee);
+                return;
+            }
+
+            try snapshotRegistry.creditFees(frontend, fee) {
+                crepToken.safeTransfer(snapshotRegistryAddress, fee);
+            } catch {
+                crepToken.safeTransfer(frontend, fee);
+            }
+        } catch {
+            crepToken.safeTransfer(frontend, fee);
         }
     }
 
@@ -782,6 +798,7 @@ contract RoundVotingEngine is
                 if (frontendShare > 0) {
                     if (roundStakeWithApprovedFrontend[contentId][roundId] > 0) {
                         roundFrontendPool[contentId][roundId] = frontendShare;
+                        roundFrontendRegistrySnapshot[contentId][roundId] = address(frontendRegistry);
                     } else {
                         roundVoterPool[contentId][roundId] += frontendShare;
                     }
@@ -1314,6 +1331,9 @@ contract RoundVotingEngine is
     // Keeper cleanup rewards can only be paid once per round, and only when actual forfeitures occur.
     mapping(uint256 => mapping(uint256 => bool)) public roundCleanupRewarded;
 
+    // Frontend registry snapshot per round so historical fee claims do not depend on live registry replacement.
+    mapping(uint256 => mapping(uint256 => address)) internal roundFrontendRegistrySnapshot;
+
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[14] private __gap;
+    uint256[13] private __gap;
 }
