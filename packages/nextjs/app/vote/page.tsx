@@ -1,15 +1,13 @@
 "use client";
 
-import { type KeyboardEvent, Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { AnimatePresence, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount, useReadContracts } from "wagmi";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
-import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FeaturedTodayPanel, SettlingSoonPanel, SuggestedCuratorsPanel } from "~~/components/discover/DiscoverPanels";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
@@ -37,7 +35,7 @@ import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
-import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
+import { detectPlatform } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
 
 const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").then(m => m.StakeSelector), {
@@ -47,11 +45,6 @@ const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").
     </div>
   ),
 });
-
-const ShareContentModal = dynamic(
-  () => import("~~/components/shared/ShareContentModal").then(m => m.ShareContentModal),
-  { ssr: false },
-);
 
 const ALL_FILTER = "All";
 const BROKEN_FILTER = "Broken";
@@ -78,13 +71,6 @@ const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
   { value: "settling_soon", label: "Settling Soon" },
   { value: "followed_curators", label: "Curators You Follow" },
 ];
-
-function toThumbnailSrc(url: string | null | undefined) {
-  if (!url) return null;
-  return url.startsWith("http://") || url.startsWith("https://")
-    ? `/api/image-proxy?url=${encodeURIComponent(url)}`
-    : url;
-}
 
 const HomeInner = () => {
   const searchParams = useSearchParams();
@@ -228,7 +214,6 @@ const HomeInner = () => {
     contentId: bigint;
     categoryId: bigint;
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
-  const [thumbnailMap, setThumbnailMap] = useState<Record<string, string | null>>({});
   const { commitVote, isCommitting, error: voteError } = useRoundVote();
   const needsRatingSort =
     isSearchMode && (effectiveSearchSortBy === "highest_rated" || effectiveSearchSortBy === "lowest_rated");
@@ -385,30 +370,8 @@ const HomeInner = () => {
     followedCuratorOrderMap,
   ]);
 
-  const preSelectedItem = useMemo(() => {
-    if (needsRatingSort || preRatedDisplayFeed.length === 0) return null;
-    if (selectedId !== null) {
-      const found = preRatedDisplayFeed.find(item => item.id === selectedId);
-      if (found) return found;
-    }
-    return preRatedDisplayFeed[0];
-  }, [needsRatingSort, preRatedDisplayFeed, selectedId]);
-
-  const preGridItems = useMemo(() => {
-    if (needsRatingSort) return [];
-    if (!preSelectedItem) return preRatedDisplayFeed;
-    return preRatedDisplayFeed.filter(item => item.id !== preSelectedItem.id);
-  }, [needsRatingSort, preRatedDisplayFeed, preSelectedItem]);
-
-  const preVisibleGridItems = useMemo(() => {
-    if (needsRatingSort) return [];
-    return preGridItems.slice(0, visibleCount);
-  }, [needsRatingSort, preGridItems, visibleCount]);
-
   const ratingTargets = useMemo(() => {
-    const items = needsRatingSort
-      ? filteredFeed
-      : [...(preSelectedItem ? [preSelectedItem] : []), ...preVisibleGridItems];
+    const items = needsRatingSort ? filteredFeed : preRatedDisplayFeed.slice(0, visibleCount);
     const seen = new Set<string>();
 
     return items.filter(item => {
@@ -417,7 +380,7 @@ const HomeInner = () => {
       seen.add(key);
       return true;
     });
-  }, [needsRatingSort, filteredFeed, preSelectedItem, preVisibleGridItems]);
+  }, [needsRatingSort, filteredFeed, preRatedDisplayFeed, visibleCount]);
 
   const ratingCalls = useMemo(() => {
     if (!registryInfo || ratingTargets.length === 0) return [];
@@ -457,40 +420,21 @@ const HomeInner = () => {
     return items;
   }, [needsRatingSort, preRatedDisplayFeed, filteredFeed, ratingsMap, effectiveSearchSortBy]);
 
-  // Fetch submitter profiles only for cards currently rendered on screen.
-  const selectedItem = useMemo(() => {
-    if (displayFeed.length === 0) return null;
-    if (selectedId !== null) {
-      const found = displayFeed.find(i => i.id === selectedId);
-      if (found) return found;
-    }
-    return displayFeed[0];
+  const orderedDisplayFeed = useMemo(() => {
+    if (selectedId === null) return displayFeed;
+
+    const selectedIndex = displayFeed.findIndex(item => item.id === selectedId);
+    if (selectedIndex === -1) return displayFeed;
+
+    const selectedItem = displayFeed[selectedIndex];
+    return [selectedItem, ...displayFeed.filter((_, index) => index !== selectedIndex)];
   }, [displayFeed, selectedId]);
 
-  // Thumbnail grid items (everything except the selected item)
-  const gridItems = useMemo(() => {
-    if (!selectedItem) return displayFeed;
-    return displayFeed.filter(i => i.id !== selectedItem.id);
-  }, [displayFeed, selectedItem]);
-
-  // Visible grid items for infinite scroll
-  const visibleGridItems = useMemo(() => {
-    return gridItems.slice(0, visibleCount);
-  }, [gridItems, visibleCount]);
-
-  const renderedItems = useMemo(() => {
-    const seen = new Set<string>();
-    return [...(selectedItem ? [selectedItem] : []), ...visibleGridItems].filter(item => {
-      const key = item.id.toString();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [selectedItem, visibleGridItems]);
+  const visibleFeedItems = useMemo(() => orderedDisplayFeed.slice(0, visibleCount), [orderedDisplayFeed, visibleCount]);
 
   const submitterAddresses = useMemo(() => {
-    return renderedItems.map(item => item.submitter);
-  }, [renderedItems]);
+    return visibleFeedItems.map(item => item.submitter);
+  }, [visibleFeedItems]);
 
   const { profiles: submitterProfiles } = useSubmitterProfiles(submitterAddresses);
 
@@ -510,69 +454,12 @@ const HomeInner = () => {
     return result;
   }, [submitterProfiles, accuracyMap]);
 
-  const canLoadMore = visibleCount < gridItems.length || (shouldUsePagedFeed && hasMoreFeed);
-  const thumbnailRequestUrls = useMemo(() => {
-    const urls = new Set<string>();
-    for (const item of visibleGridItems) {
-      if (getThumbnailUrl(item.url)) continue;
-      if (thumbnailMap[item.url] !== undefined) continue;
-      urls.add(item.url);
-    }
-    return [...urls];
-  }, [thumbnailMap, visibleGridItems]);
+  const canLoadMore = visibleCount < orderedDisplayFeed.length || (shouldUsePagedFeed && hasMoreFeed);
 
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(FEED_PAGE_SIZE);
   }, [searchQuery, activeCategory, scope, sortBy]);
-
-  useEffect(() => {
-    if (thumbnailRequestUrls.length === 0) return;
-
-    let cancelled = false;
-
-    void fetch("/api/thumbnails", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ urls: thumbnailRequestUrls }),
-    })
-      .then(response => (response.ok ? response.json() : null))
-      .then(data => {
-        if (cancelled) return;
-
-        setThumbnailMap(prev => {
-          const next = { ...prev };
-          for (const url of thumbnailRequestUrls) {
-            next[url] = null;
-          }
-
-          const items = data?.items as Record<string, { thumbnailUrl?: string | null }> | undefined;
-          if (!items) return next;
-
-          for (const [url, metadata] of Object.entries(items)) {
-            next[url] = toThumbnailSrc(metadata?.thumbnailUrl ?? null);
-          }
-
-          return next;
-        });
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setThumbnailMap(prev => {
-          const next = { ...prev };
-          for (const url of thumbnailRequestUrls) {
-            next[url] = null;
-          }
-          return next;
-        });
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [thumbnailRequestUrls]);
 
   // Infinite scroll with Intersection Observer
   useEffect(() => {
@@ -598,47 +485,35 @@ const HomeInner = () => {
   }, [canLoadMore]);
 
   // Vote handlers
-  const handleSwipe = useCallback(
-    (direction: "left" | "right") => {
-      if (!selectedItem) return;
-      const isUp = direction === "right";
-      setStakeModal({ isOpen: true, isUp, contentId: selectedItem.id, categoryId: selectedItem.categoryId });
+  const handleSwipe = useCallback((item: ContentItem, direction: "left" | "right") => {
+    const isUp = direction === "right";
+    setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
+  }, []);
+
+  const handleButtonVote = useCallback((item: ContentItem, isUp: boolean) => {
+    setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
+  }, []);
+
+  const handleConfirmStake = useCallback(
+    async (stakeAmount: number) => {
+      const item = displayFeed.find(i => i.id === stakeModal.contentId);
+      const success = await commitVote({
+        contentId: stakeModal.contentId,
+        isUp: stakeModal.isUp,
+        stakeAmount,
+        submitter: item?.submitter,
+      });
+      setStakeModal(prev => ({ ...prev, isOpen: false }));
+      if (success) {
+        notification.success(`Vote committed! Stake: ${stakeAmount} cREP`);
+        if (isFirstVote) {
+          markVoteCompleted();
+          notification.info("Great first vote! Keep going to build your reputation.", { duration: 5000 });
+        }
+      }
     },
-    [selectedItem],
+    [commitVote, displayFeed, isFirstVote, markVoteCompleted, stakeModal],
   );
-
-  const handleButtonVote = (isUp: boolean) => {
-    if (!selectedItem) return;
-    setStakeModal({ isOpen: true, isUp, contentId: selectedItem.id, categoryId: selectedItem.categoryId });
-  };
-
-  const handleConfirmStake = async (stakeAmount: number) => {
-    const item = displayFeed.find(i => i.id === stakeModal.contentId);
-    const success = await commitVote({
-      contentId: stakeModal.contentId,
-      isUp: stakeModal.isUp,
-      stakeAmount,
-      submitter: item?.submitter,
-    });
-    setStakeModal(prev => ({ ...prev, isOpen: false }));
-    if (success) {
-      notification.success(`Vote committed! Stake: ${stakeAmount} cREP`);
-      if (isFirstVote) {
-        markVoteCompleted();
-        notification.info("Great first vote! Keep going to build your reputation.", { duration: 5000 });
-      }
-      // Advance to next item
-      if (selectedItem && displayFeed.length > 1) {
-        const currentIdx = displayFeed.findIndex(i => i.id === selectedItem.id);
-        const nextIdx = (currentIdx + 1) % displayFeed.length;
-        const nextId = displayFeed[nextIdx].id;
-        setSelectedId(nextId);
-        const url = new URL(window.location.href);
-        url.searchParams.set("content", nextId.toString());
-        history.replaceState(null, "", url.toString());
-      }
-    }
-  };
 
   const handleCancelStake = () => {
     setStakeModal(prev => ({ ...prev, isOpen: false }));
@@ -918,118 +793,43 @@ const HomeInner = () => {
             ) : displayFeed.length === 0 ? (
               <div className="text-center py-16 text-base-content/30 text-base">{emptyStateMessage}</div>
             ) : (
-              <>
-                {/* Featured card */}
-                {selectedItem && (
-                  <div className="mb-8">
-                    {isCommitting && (
-                      <div className="flex items-center justify-center mb-2">
-                        <span className="text-base text-base-content/50">
-                          <span className="loading loading-spinner loading-xs mr-1.5"></span>
-                          Committing...
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Unified content + voting card */}
-                    <AnimatePresence mode="wait">
-                      <motion.div
-                        key={selectedItem.id.toString()}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.2 }}
-                        className="surface-card rounded-2xl p-3 mb-4"
-                      >
-                        <div className="flex flex-col lg:flex-row gap-3 items-stretch">
-                          {/* Content sub-card */}
-                          <div
-                            className="w-full lg:w-3/5 rounded-2xl overflow-hidden"
-                            style={{ background: "var(--color-base-300)" }}
-                          >
-                            <SwipeCard
-                              content={selectedItem}
-                              submitterProfile={enrichedProfiles[selectedItem.submitter.toLowerCase()]}
-                              onSwipe={handleSwipe}
-                              isTop={true}
-                              index={0}
-                              canVote={!!address}
-                              standalone
-                              embedded
-                              submitterAction={
-                                normalizedAddress &&
-                                selectedItem.submitter.toLowerCase() === normalizedAddress ? null : (
-                                  <FollowProfileButton
-                                    following={followedWallets.has(selectedItem.submitter.toLowerCase())}
-                                    pending={isFollowPending(selectedItem.submitter)}
-                                    onClick={() => {
-                                      void handleToggleFollow(selectedItem.submitter);
-                                    }}
-                                  />
-                                )
-                              }
-                              headerActions={
-                                <WatchContentButton
-                                  watched={watchedContentIds.has(selectedItem.id.toString())}
-                                  pending={isWatchPending(selectedItem.id)}
-                                  onClick={() => {
-                                    void handleToggleWatch(selectedItem.id);
-                                  }}
-                                />
-                              }
-                            />
-                          </div>
-
-                          {/* Voting sub-card */}
-                          <div className="w-full lg:w-2/5 rounded-2xl" style={{ background: "var(--color-base-300)" }}>
-                            <VotingQuestionCard
-                              contentId={selectedItem.id}
-                              categoryId={selectedItem.categoryId}
-                              onVote={handleButtonVote}
-                              isCommitting={isCommitting}
-                              address={address}
-                              error={voteError}
-                              isOwnContent={selectedItem.isOwnContent}
-                              embedded
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    </AnimatePresence>
+              <div className="space-y-5">
+                {isCommitting ? (
+                  <div className="flex items-center justify-center">
+                    <span className="text-base text-base-content/50">
+                      <span className="loading loading-spinner loading-xs mr-1.5"></span>
+                      Committing...
+                    </span>
                   </div>
-                )}
+                ) : null}
 
-                {/* Thumbnail grid with infinite scroll */}
-                {gridItems.length > 0 && (
-                  <div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {visibleGridItems.map(item => (
-                        <ThumbnailCard
-                          key={item.id.toString()}
-                          item={item}
-                          rating={ratingsMap.get(item.id.toString())}
-                          submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
-                          onSelect={handleSelectCard}
-                          onToggleWatch={handleToggleWatch}
-                          onToggleFollow={handleToggleFollow}
-                          watched={watchedContentIds.has(item.id.toString())}
-                          watchPending={isWatchPending(item.id)}
-                          following={followedWallets.has(item.submitter.toLowerCase())}
-                          followPending={isFollowPending(item.submitter)}
-                          isOwnSubmitter={normalizedAddress === item.submitter.toLowerCase()}
-                          thumbnailUrl={thumbnailMap[item.url]}
-                        />
-                      ))}
-                    </div>
-                    {/* Load more trigger */}
-                    {canLoadMore && (
-                      <div ref={loadMoreRef} className="flex justify-center py-8">
-                        <span className="loading loading-spinner loading-md text-primary"></span>
-                      </div>
-                    )}
+                {visibleFeedItems.map((item, index) => (
+                  <FeedVoteCard
+                    key={item.id.toString()}
+                    item={item}
+                    submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                    onSwipe={handleSwipe}
+                    onVote={handleButtonVote}
+                    onToggleWatch={handleToggleWatch}
+                    onToggleFollow={handleToggleFollow}
+                    watched={watchedContentIds.has(item.id.toString())}
+                    watchPending={isWatchPending(item.id)}
+                    following={followedWallets.has(item.submitter.toLowerCase())}
+                    followPending={isFollowPending(item.submitter)}
+                    normalizedAddress={normalizedAddress}
+                    isCommitting={isCommitting}
+                    voteError={voteError}
+                    address={address}
+                    isPrimary={index === 0 && selectedId !== null}
+                  />
+                ))}
+
+                {canLoadMore ? (
+                  <div ref={loadMoreRef} className="flex justify-center py-8">
+                    <span className="loading loading-spinner loading-md text-primary"></span>
                   </div>
-                )}
-              </>
+                ) : null}
+              </div>
             )}
           </div>
 
@@ -1076,207 +876,92 @@ const HomeInner = () => {
   );
 };
 
-const ThumbnailCard = memo(function ThumbnailCard({
+const FeedVoteCard = memo(function FeedVoteCard({
   item,
-  rating,
   submitterProfile,
-  onSelect,
+  onSwipe,
+  onVote,
   onToggleWatch,
   onToggleFollow,
   watched,
   watchPending,
   following,
   followPending,
-  isOwnSubmitter,
-  thumbnailUrl,
+  normalizedAddress,
+  isCommitting,
+  voteError,
+  address,
+  isPrimary,
 }: {
   item: ContentItem;
-  rating?: number;
   submitterProfile?: SubmitterProfile;
-  onSelect: (id: bigint, categoryId: bigint) => void;
+  onSwipe: (item: ContentItem, direction: "left" | "right") => void;
+  onVote: (item: ContentItem, isUp: boolean) => void;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
   watched: boolean;
   watchPending: boolean;
   following: boolean;
   followPending: boolean;
-  isOwnSubmitter: boolean;
-  thumbnailUrl?: string | null;
+  normalizedAddress?: string;
+  isCommitting: boolean;
+  voteError?: string | null;
+  address?: string;
+  isPrimary: boolean;
 }) {
-  const onClick = useCallback(() => onSelect(item.id, item.categoryId), [onSelect, item.id, item.categoryId]);
-  const onKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLDivElement>) => {
-      if (event.target !== event.currentTarget) return;
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        onClick();
-      }
-    },
-    [onClick],
-  );
-  const platformInfo = detectPlatform(item.url);
-  const thumbnail = thumbnailUrl ?? toThumbnailSrc(getThumbnailUrl(item.url));
-
-  const [showShare, setShowShare] = useState(false);
-
-  const isVideo = ["youtube", "twitch"].includes(platformInfo.type);
-  const displayRating = rating ?? 50;
-  const ratingColor =
-    displayRating >= 60 ? "text-success" : displayRating <= 40 ? "text-error" : "text-base-content/60";
-
-  // Platform badge component
-  const PlatformBadge = () => {
-    switch (platformInfo.type) {
-      case "youtube":
-        return (
-          <svg className="w-4 h-4 text-[#FF0000]" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-          </svg>
-        );
-      case "twitch":
-        return (
-          <svg className="w-4 h-4 text-[#9146FF]" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
-          </svg>
-        );
-      default: {
-        const domain = (() => {
-          try {
-            return new URL(item.url).hostname.replace(/^(www\.|en\.)/, "");
-          } catch {
-            return null;
-          }
-        })();
-        return domain ? (
-          <img
-            src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
-            alt={`${domain} icon`}
-            className="w-4 h-4 rounded-sm"
-            loading="lazy"
-          />
-        ) : (
-          <svg
-            className="w-4 h-4 text-base-content/40"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-3.02a4.5 4.5 0 00-1.242-7.244l-4.5-4.5a4.5 4.5 0 00-6.364 6.364L4.343 8.05"
-            />
-          </svg>
-        );
-      }
-    }
-  };
-
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={onKeyDown}
-      data-testid="content-thumbnail"
-      className="group text-left rounded-xl overflow-hidden transition-all surface-card hover:scale-[1.02] cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-    >
-      {/* Thumbnail */}
-      <div className="relative aspect-video bg-base-200 overflow-hidden">
-        {thumbnail ? (
-          <img
-            src={thumbnail}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={e => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <PlatformBadge />
-          </div>
-        )}
-        {/* Play icon overlay for video platforms */}
-        {isVideo && thumbnail && (
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-8 h-8 rounded-full bg-black/60 flex items-center justify-center">
-              <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </div>
-          </div>
-        )}
-        {/* Platform badge */}
-        <div className="absolute bottom-1.5 left-1.5">
-          <div className="px-1.5 py-0.5 rounded bg-black/60 backdrop-blur">
-            <PlatformBadge />
-          </div>
-        </div>
-        {/* Rating badge */}
-        <div className="absolute top-1.5 right-1.5">
-          <span
-            className={`px-1.5 py-0.5 rounded-full bg-base-100/80 backdrop-blur text-base font-semibold tabular-nums ${ratingColor}`}
-          >
-            {displayRating}%
+    <div className={`surface-card rounded-2xl p-3 ${isPrimary ? "ring-1 ring-primary/20" : ""}`}>
+      <div className="mb-3 flex items-center justify-between gap-3 text-sm text-base-content/45">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-base-content/[0.05] px-2.5 py-1 font-medium text-base-content/60">
+            {detectPlatform(item.url).type}
           </span>
+          {item.tags[0] ? <span className="text-base-content/35">#{item.tags[0]}</span> : null}
         </div>
-        {/* Watch + share actions */}
-        <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
-          <WatchContentButton
-            watched={watched}
-            pending={watchPending}
-            onClick={() => onToggleWatch(item.id)}
-            variant="overlay"
+        {isPrimary ? (
+          <span className="rounded-full bg-primary/12 px-2.5 py-1 font-medium text-primary">Selected</span>
+        ) : null}
+      </div>
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+        <div className="w-full overflow-hidden rounded-2xl lg:w-3/5" style={{ background: "var(--color-base-300)" }}>
+          <SwipeCard
+            content={item}
+            submitterProfile={submitterProfile}
+            onSwipe={direction => onSwipe(item, direction)}
+            isTop={isPrimary}
+            index={0}
+            canVote={!!address}
+            standalone
+            embedded
+            submitterAction={
+              normalizedAddress && item.submitter.toLowerCase() === normalizedAddress ? null : (
+                <FollowProfileButton
+                  following={following}
+                  pending={followPending}
+                  onClick={() => onToggleFollow(item.submitter)}
+                />
+              )
+            }
+            headerActions={
+              <WatchContentButton watched={watched} pending={watchPending} onClick={() => onToggleWatch(item.id)} />
+            }
           />
-          <button
-            type="button"
-            className="p-1 rounded bg-black/60 backdrop-blur hover:bg-black/80 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-            onClick={e => {
-              e.stopPropagation();
-              setShowShare(true);
-            }}
-            aria-label="Share content"
-          >
-            <ShareIcon className="w-4 h-4" />
-          </button>
+        </div>
+
+        <div className="w-full rounded-2xl lg:w-2/5" style={{ background: "var(--color-base-300)" }}>
+          <VotingQuestionCard
+            contentId={item.id}
+            categoryId={item.categoryId}
+            onVote={isUp => onVote(item, isUp)}
+            isCommitting={isCommitting}
+            address={address}
+            error={voteError}
+            isOwnContent={item.isOwnContent}
+            embedded
+          />
         </div>
       </div>
-
-      {/* Card body */}
-      <div className="p-2.5 space-y-1.5">
-        {/* Submitter info */}
-        <SubmitterBadge
-          address={item.submitter}
-          username={submitterProfile?.username}
-          profileImageUrl={submitterProfile?.profileImageUrl}
-          winRate={submitterProfile?.winRate}
-          totalSettledVotes={submitterProfile?.totalSettledVotes}
-          action={
-            isOwnSubmitter ? null : (
-              <FollowProfileButton
-                following={following}
-                pending={followPending}
-                onClick={() => onToggleFollow(item.submitter)}
-              />
-            )
-          }
-        />
-        <p className="text-base font-medium line-clamp-2 leading-snug">{item.goal}</p>
-        {item.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {item.tags.slice(0, 2).map(tag => (
-              <span key={tag} className="px-1.5 py-0.5 bg-primary/10 text-primary text-base font-medium rounded-full">
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {showShare && <ShareContentModal contentId={item.id} goal={item.goal} onClose={() => setShowShare(false)} />}
     </div>
   );
 });
