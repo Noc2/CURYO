@@ -45,6 +45,39 @@ const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").
 const ALL_FILTER = "All";
 const BROKEN_FILTER = "Broken";
 const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
+const getDomainLabel = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+};
+const PROXYABLE_THUMBNAIL_HOSTS = new Set([
+  "coin-images.coingecko.com",
+  "assets.coingecko.com",
+  "covers.openlibrary.org",
+  "image.tmdb.org",
+  "upload.wikimedia.org",
+  "cdn-avatars.huggingface.co",
+  "pbs.twimg.com",
+  "media.rawg.io",
+  "avatars.githubusercontent.com",
+  "api.scryfall.com",
+  "cards.scryfall.io",
+  "img.youtube.com",
+  "i.ytimg.com",
+]);
+const getThumbnailImageSrc = (thumbnailUrl: string) => {
+  try {
+    const parsed = new URL(thumbnailUrl);
+    if (parsed.protocol === "https:" && PROXYABLE_THUMBNAIL_HOSTS.has(parsed.hostname)) {
+      return `/api/image-proxy?url=${encodeURIComponent(thumbnailUrl)}`;
+    }
+  } catch {
+    return thumbnailUrl;
+  }
+  return thumbnailUrl;
+};
 type SortOption = "for_you" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
 type SearchSortOption = Exclude<SortOption, "for_you">;
 type ScopeOption = "all" | "watched" | "my_votes" | "my_submissions" | "settling_soon" | "followed_curators";
@@ -421,6 +454,8 @@ const HomeInner = () => {
   }, [displayFeed, selectedId]);
 
   const visibleFeedItems = useMemo(() => orderedDisplayFeed.slice(0, visibleCount), [orderedDisplayFeed, visibleCount]);
+  const primaryItem = visibleFeedItems[0];
+  const queueItems = useMemo(() => visibleFeedItems.slice(1), [visibleFeedItems]);
 
   const submitterAddresses = useMemo(() => {
     return visibleFeedItems.map(item => item.submitter);
@@ -704,26 +739,37 @@ const HomeInner = () => {
                 </div>
               ) : null}
 
-              {visibleFeedItems.map((item, index) => (
+              {primaryItem ? (
                 <FeedVoteCard
-                  key={item.id.toString()}
-                  item={item}
-                  submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                  item={primaryItem}
+                  submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
                   onSwipe={handleSwipe}
                   onVote={handleButtonVote}
                   onToggleWatch={handleToggleWatch}
                   onToggleFollow={handleToggleFollow}
-                  watched={watchedContentIds.has(item.id.toString())}
-                  watchPending={isWatchPending(item.id)}
-                  following={followedWallets.has(item.submitter.toLowerCase())}
-                  followPending={isFollowPending(item.submitter)}
+                  watched={watchedContentIds.has(primaryItem.id.toString())}
+                  watchPending={isWatchPending(primaryItem.id)}
+                  following={followedWallets.has(primaryItem.submitter.toLowerCase())}
+                  followPending={isFollowPending(primaryItem.submitter)}
                   normalizedAddress={normalizedAddress}
                   isCommitting={isCommitting}
                   voteError={voteError}
                   address={address}
-                  isPrimary={index === 0 && selectedId !== null}
                 />
-              ))}
+              ) : null}
+
+              {queueItems.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  {queueItems.map(item => (
+                    <FeedQueueCard
+                      key={item.id.toString()}
+                      item={item}
+                      onSelect={handleSelectCard}
+                      submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                    />
+                  ))}
+                </div>
+              ) : null}
 
               {canLoadMore ? (
                 <div ref={loadMoreRef} className="flex justify-center py-8">
@@ -763,7 +809,6 @@ const FeedVoteCard = memo(function FeedVoteCard({
   isCommitting,
   voteError,
   address,
-  isPrimary,
 }: {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
@@ -779,20 +824,16 @@ const FeedVoteCard = memo(function FeedVoteCard({
   isCommitting: boolean;
   voteError?: string | null;
   address?: string;
-  isPrimary: boolean;
 }) {
   return (
-    <div className={`surface-card rounded-2xl p-3 ${isPrimary ? "ring-1 ring-primary/20" : ""}`}>
-      <div className="mb-3 flex items-center justify-between gap-3 text-sm text-base-content/45">
+    <div className="surface-card rounded-2xl p-3 ring-1 ring-primary/20">
+      <div className="mb-3 flex items-center gap-3 text-sm text-base-content/45">
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-base-content/[0.05] px-2.5 py-1 font-medium text-base-content/60">
             {detectPlatform(item.url).type}
           </span>
           {item.tags[0] ? <span className="text-base-content/35">#{item.tags[0]}</span> : null}
         </div>
-        {isPrimary ? (
-          <span className="rounded-full bg-primary/12 px-2.5 py-1 font-medium text-primary">Selected</span>
-        ) : null}
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
@@ -801,7 +842,7 @@ const FeedVoteCard = memo(function FeedVoteCard({
             content={item}
             submitterProfile={submitterProfile}
             onSwipe={direction => onSwipe(item, direction)}
-            isTop={isPrimary}
+            isTop
             index={0}
             canVote={!!address}
             standalone
@@ -835,6 +876,113 @@ const FeedVoteCard = memo(function FeedVoteCard({
         </div>
       </div>
     </div>
+  );
+});
+
+const FeedQueueCard = memo(function FeedQueueCard({
+  item,
+  onSelect,
+  submitterProfile,
+}: {
+  item: ContentItem;
+  onSelect: (id: bigint, categoryId: bigint) => void;
+  submitterProfile?: SubmitterProfile;
+}) {
+  const platform = detectPlatform(item.url);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(platform.thumbnailUrl);
+  const [isThumbnailLoading, setIsThumbnailLoading] = useState(!platform.thumbnailUrl);
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setThumbnailUrl(platform.thumbnailUrl);
+    setImageError(false);
+
+    if (platform.thumbnailUrl) {
+      setIsThumbnailLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setIsThumbnailLoading(true);
+
+    fetch(`/api/thumbnail?url=${encodeURIComponent(item.url)}`)
+      .then(response => (response.ok ? response.json() : null))
+      .then(data => {
+        if (!cancelled) {
+          setThumbnailUrl(data?.imageUrl ?? data?.thumbnailUrl ?? null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setThumbnailUrl(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsThumbnailLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item.url, platform.thumbnailUrl]);
+
+  const thumbnailSrc = thumbnailUrl ? getThumbnailImageSrc(thumbnailUrl) : null;
+
+  return (
+    <button
+      type="button"
+      data-testid="content-thumbnail"
+      onClick={() => onSelect(item.id, item.categoryId)}
+      className="group overflow-hidden rounded-xl border border-base-content/10 bg-base-content/[0.03] text-left transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
+    >
+      <div className="relative aspect-video overflow-hidden bg-base-200">
+        {thumbnailSrc && !imageError ? (
+          <img
+            src={thumbnailSrc}
+            alt=""
+            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+        ) : isThumbnailLoading ? (
+          <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.16),_transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))]">
+            <span className="loading loading-spinner loading-md text-primary/60" />
+          </div>
+        ) : (
+          <div className="flex h-full w-full items-end bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.16),_transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">{platform.type}</p>
+              <p className="mt-1 line-clamp-2 text-sm font-medium text-white/90">{item.goal}</p>
+            </div>
+          </div>
+        )}
+        {thumbnailSrc && !imageError ? (
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent p-2.5">
+            <p className="line-clamp-2 text-sm font-semibold text-white">{item.goal}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="space-y-1.5 p-2.5">
+        <p className="line-clamp-2 text-sm font-medium text-white/90">{item.goal}</p>
+        <div className="flex items-center gap-2 text-xs text-base-content/50">
+          <span className="rounded-full bg-base-content/[0.05] px-2 py-1 font-medium text-base-content/65">
+            {platform.type}
+          </span>
+          {item.tags[0] ? <span className="truncate">#{item.tags[0]}</span> : null}
+          <span className="hidden truncate sm:inline">{getDomainLabel(item.url)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2 text-xs text-base-content/55">
+          <span className="min-w-0 truncate">{submitterProfile?.username ?? item.submitter}</span>
+          <span className="shrink-0 font-medium text-primary/80 group-hover:text-primary">Select</span>
+        </div>
+      </div>
+    </button>
   );
 });
 
