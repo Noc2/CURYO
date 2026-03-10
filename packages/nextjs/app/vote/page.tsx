@@ -27,6 +27,7 @@ import { useFeaturedToday } from "~~/hooks/useFeaturedToday";
 import { useFollowedCategories } from "~~/hooks/useFollowedCategories";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
+import { useRadarFeed } from "~~/hooks/useRadarFeed";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUrlValidation } from "~~/hooks/useUrlValidation";
@@ -57,7 +58,7 @@ const BROKEN_FILTER = "Broken";
 const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 type SortOption = "for_you" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
 type SearchSortOption = Exclude<SortOption, "for_you">;
-type ScopeOption = "all" | "watched" | "my_votes" | "my_submissions";
+type ScopeOption = "all" | "watched" | "my_votes" | "my_submissions" | "settling_soon" | "followed_curators";
 
 const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
   { value: "newest", label: "Newest" },
@@ -74,6 +75,8 @@ const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
   { value: "watched", label: "Watched" },
   { value: "my_votes", label: "My Votes" },
   { value: "my_submissions", label: "My Submissions" },
+  { value: "settling_soon", label: "Settling Soon" },
+  { value: "followed_curators", label: "Curators You Follow" },
 ];
 
 function toThumbnailSrc(url: string | null | undefined) {
@@ -128,6 +131,7 @@ const HomeInner = () => {
     toggleCategoryFollow,
     isPending: isCategoryFollowPending,
   } = useFollowedCategories(address);
+  const { radar, isLoading: radarLoading } = useRadarFeed(address);
 
   // URL validation — async check for broken URLs
   const feedUrls = useMemo(() => feed.map(item => item.url), [feed]);
@@ -154,8 +158,38 @@ const HomeInner = () => {
     });
     return order;
   }, [votes]);
+  const settlingSoonOrderMap = useMemo(() => {
+    const order = new Map<string, number>();
+    radar.settlingSoon.forEach((item, index) => {
+      const contentId = item.contentId.toString();
+      if (!order.has(contentId)) {
+        order.set(contentId, index);
+      }
+    });
+    return order;
+  }, [radar.settlingSoon]);
+  const followedCuratorOrderMap = useMemo(() => {
+    const order = new Map<string, number>();
+    radar.followedSubmissions.forEach((item, index) => {
+      const contentId = item.contentId.toString();
+      if (!order.has(contentId)) {
+        order.set(contentId, index);
+      }
+    });
+    return order;
+  }, [radar.followedSubmissions]);
+  const settlingSoonContentIds = useMemo(
+    () => new Set(radar.settlingSoon.map(item => item.contentId.toString())),
+    [radar.settlingSoon],
+  );
+  const followedCuratorContentIds = useMemo(
+    () => new Set(radar.followedSubmissions.map(item => item.contentId.toString())),
+    [radar.followedSubmissions],
+  );
   const scopeLoading =
-    (scope === "watched" && !!address && watchedLoading) || (scope === "my_votes" && !!address && votesLoading);
+    (scope === "watched" && !!address && watchedLoading) ||
+    (scope === "my_votes" && !!address && votesLoading) ||
+    ((scope === "settling_soon" || scope === "followed_curators") && !!address && radarLoading);
   const normalizedAddress = address?.toLowerCase();
 
   useEffect(() => {
@@ -243,12 +277,29 @@ const HomeInner = () => {
       case "my_submissions":
         items = items.filter(item => item.isOwnContent);
         break;
+      case "settling_soon":
+        items = items.filter(item => settlingSoonContentIds.has(item.id.toString()));
+        break;
+      case "followed_curators":
+        items = items.filter(item => followedCuratorContentIds.has(item.id.toString()));
+        break;
       default:
         break;
     }
 
     return items;
-  }, [feed, searchQuery, activeCategory, categoryNameToId, validationMap, scope, watchedContentIds, votedContentIds]);
+  }, [
+    feed,
+    searchQuery,
+    activeCategory,
+    categoryNameToId,
+    validationMap,
+    scope,
+    watchedContentIds,
+    votedContentIds,
+    settlingSoonContentIds,
+    followedCuratorContentIds,
+  ]);
 
   const preRatedDisplayFeed = useMemo(() => {
     const items = [...filteredFeed];
@@ -290,6 +341,20 @@ const HomeInner = () => {
       case "my_submissions":
         items.sort((a, b) => Number(b.id - a.id));
         break;
+      case "settling_soon":
+        items.sort((a, b) => {
+          const indexA = settlingSoonOrderMap.get(a.id.toString()) ?? Number.MAX_SAFE_INTEGER;
+          const indexB = settlingSoonOrderMap.get(b.id.toString()) ?? Number.MAX_SAFE_INTEGER;
+          return indexA - indexB;
+        });
+        break;
+      case "followed_curators":
+        items.sort((a, b) => {
+          const indexA = followedCuratorOrderMap.get(a.id.toString()) ?? Number.MAX_SAFE_INTEGER;
+          const indexB = followedCuratorOrderMap.get(b.id.toString()) ?? Number.MAX_SAFE_INTEGER;
+          return indexA - indexB;
+        });
+        break;
       default:
         if (hasPreferences && activeCategory === ALL_FILTER) {
           items.sort((a, b) => {
@@ -316,6 +381,8 @@ const HomeInner = () => {
     scope,
     watchedOrderMap,
     voteOrderMap,
+    settlingSoonOrderMap,
+    followedCuratorOrderMap,
   ]);
 
   const preSelectedItem = useMemo(() => {
@@ -679,6 +746,18 @@ const HomeInner = () => {
 
     if (scope === "my_submissions") {
       return address ? "You haven't submitted any content yet." : "Connect your wallet to view your submissions.";
+    }
+
+    if (scope === "settling_soon") {
+      return address
+        ? "Nothing you are tracking looks close to settlement right now."
+        : "Connect your wallet to view rounds settling soon.";
+    }
+
+    if (scope === "followed_curators") {
+      return address
+        ? "Follow a few curators to turn this into a live feed."
+        : "Connect your wallet to view activity from curators you follow.";
     }
 
     if (activeCategory === BROKEN_FILTER) {
