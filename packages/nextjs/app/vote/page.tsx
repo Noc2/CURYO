@@ -2,7 +2,6 @@
 
 import { type KeyboardEvent, Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, motion } from "framer-motion";
@@ -11,6 +10,7 @@ import { useAccount, useReadContracts } from "wagmi";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
+import { FeaturedTodayPanel, SettlingSoonPanel, SuggestedCuratorsPanel } from "~~/components/discover/DiscoverPanels";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
@@ -777,6 +777,7 @@ const HomeInner = () => {
       : undefined;
   const isSelectedCategoryFollowed =
     selectedCategoryId !== undefined && followedCategoryIds.has(selectedCategoryId.toString());
+  const pageGridClassName = isSearchMode ? "grid gap-8" : "grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]";
 
   const handleToggleCategoryFollow = useCallback(
     async (categoryId: bigint) => {
@@ -804,230 +805,262 @@ const HomeInner = () => {
 
   return (
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
-      <div className="w-full max-w-5xl">
-        <VotingGuide />
-        <div className="mb-4 flex items-center gap-2 sm:items-start sm:gap-3">
-          <CategoryFilter
-            categories={categories}
-            activeCategory={activeCategory}
-            onSelect={selectCategory}
-            pillClassName={(cat, isActive) => {
-              if (cat !== BROKEN_FILTER) return undefined;
-              return isActive
-                ? "bg-warning/20 text-warning border border-warning/40"
-                : "bg-base-200 text-warning/70 hover:bg-warning/10";
-            }}
-          />
-          {address ? (
-            <FeedScopeFilter value={scope} options={SCOPE_OPTIONS} onChange={value => setScope(value as ScopeOption)} />
-          ) : null}
-          <div className="shrink-0 flex items-center">
-            <StreakCounter />
-          </div>
-        </div>
-
-        {address && selectedCategoryId !== undefined ? (
-          <div className="mb-5 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                void handleToggleCategoryFollow(selectedCategoryId);
-              }}
-              disabled={isCategoryFollowPending(selectedCategoryId)}
-              className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
-                isSelectedCategoryFollowed ? "pill-filter-active" : "pill-filter"
-              }`}
-            >
-              {isCategoryFollowPending(selectedCategoryId)
-                ? "Saving..."
-                : isSelectedCategoryFollowed
-                  ? `Following ${activeCategory}`
-                  : `Follow ${activeCategory}`}
-            </button>
-          </div>
-        ) : null}
-
-        {isSearchMode ? (
-          <div className="mb-5 flex flex-wrap items-center gap-2">
-            <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-              Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
-            </div>
-            <select
-              value={effectiveSearchSortBy}
-              onChange={e => setSortBy(e.target.value as SearchSortOption)}
-              className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-              aria-label="Sort search results"
-            >
-              {SEARCH_SORT_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-
-        {!isSearchMode && featuredToday.length > 0 ? (
-          <div className="mb-5">
-            <div className="mb-2 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-primary/80">Featured Today</p>
-                <p className="text-sm text-base-content/55">Active rounds worth a look right now.</p>
+      <div className="w-full max-w-7xl">
+        <div className={pageGridClassName}>
+          <div className="min-w-0">
+            <VotingGuide />
+            <div className="mb-4 flex items-center gap-2 sm:items-start sm:gap-3">
+              <CategoryFilter
+                categories={categories}
+                activeCategory={activeCategory}
+                onSelect={selectCategory}
+                pillClassName={(cat, isActive) => {
+                  if (cat !== BROKEN_FILTER) return undefined;
+                  return isActive
+                    ? "bg-warning/20 text-warning border border-warning/40"
+                    : "bg-base-200 text-warning/70 hover:bg-warning/10";
+                }}
+              />
+              {address ? (
+                <FeedScopeFilter
+                  value={scope}
+                  options={SCOPE_OPTIONS}
+                  onChange={value => setScope(value as ScopeOption)}
+                />
+              ) : null}
+              <div className="shrink-0 flex items-center">
+                <StreakCounter />
               </div>
-              <Link href="/radar" className="text-sm font-medium text-primary hover:text-primary/80">
-                Open Radar
-              </Link>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {featuredToday.map(item => (
+
+            {address && selectedCategoryId !== undefined ? (
+              <div className="mb-5 flex items-center gap-2">
                 <button
-                  key={item.id}
                   type="button"
-                  onClick={() => handleSelectCard(BigInt(item.contentId), BigInt(item.categoryId))}
-                  className="group min-w-[250px] max-w-[280px] rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 text-left transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
+                  onClick={() => {
+                    void handleToggleCategoryFollow(selectedCategoryId);
+                  }}
+                  disabled={isCategoryFollowPending(selectedCategoryId)}
+                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
+                    isSelectedCategoryFollowed ? "pill-filter-active" : "pill-filter"
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">
-                        {item.featuredReason}
-                      </p>
-                      <h3 className="mt-1 line-clamp-2 text-base font-semibold text-white group-hover:text-primary">
-                        {item.goal}
-                      </h3>
-                    </div>
-                    <ShareIcon className="mt-0.5 h-4 w-4 shrink-0 text-base-content/30" />
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-base-content/45">
-                    <span>{item.voteCount} votes</span>
-                    <span>•</span>
-                    <span>{detectPlatform(item.url).type}</span>
-                  </div>
+                  {isCategoryFollowPending(selectedCategoryId)
+                    ? "Saving..."
+                    : isSelectedCategoryFollowed
+                      ? `Following ${activeCategory}`
+                      : `Follow ${activeCategory}`}
                 </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {/* Main content */}
-        {isLoading || categoriesLoading || scopeLoading ? (
-          <div className="flex justify-center py-16">
-            <span className="loading loading-spinner loading-lg text-primary"></span>
-          </div>
-        ) : displayFeed.length === 0 ? (
-          <div className="text-center py-16 text-base-content/30 text-base">{emptyStateMessage}</div>
-        ) : (
-          <>
-            {/* Featured card */}
-            {selectedItem && (
-              <div className="mb-8">
-                {isCommitting && (
-                  <div className="flex items-center justify-center mb-2">
-                    <span className="text-base text-base-content/50">
-                      <span className="loading loading-spinner loading-xs mr-1.5"></span>
-                      Committing...
-                    </span>
-                  </div>
-                )}
-
-                {/* Unified content + voting card */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={selectedItem.id.toString()}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.2 }}
-                    className="surface-card rounded-2xl p-3 mb-4"
-                  >
-                    <div className="flex flex-col lg:flex-row gap-3 items-stretch">
-                      {/* Content sub-card */}
-                      <div
-                        className="w-full lg:w-3/5 rounded-2xl overflow-hidden"
-                        style={{ background: "var(--color-base-300)" }}
-                      >
-                        <SwipeCard
-                          content={selectedItem}
-                          submitterProfile={enrichedProfiles[selectedItem.submitter.toLowerCase()]}
-                          onSwipe={handleSwipe}
-                          isTop={true}
-                          index={0}
-                          canVote={!!address}
-                          standalone
-                          embedded
-                          submitterAction={
-                            normalizedAddress && selectedItem.submitter.toLowerCase() === normalizedAddress ? null : (
-                              <FollowProfileButton
-                                following={followedWallets.has(selectedItem.submitter.toLowerCase())}
-                                pending={isFollowPending(selectedItem.submitter)}
-                                onClick={() => {
-                                  void handleToggleFollow(selectedItem.submitter);
-                                }}
-                              />
-                            )
-                          }
-                          headerActions={
-                            <WatchContentButton
-                              watched={watchedContentIds.has(selectedItem.id.toString())}
-                              pending={isWatchPending(selectedItem.id)}
-                              onClick={() => {
-                                void handleToggleWatch(selectedItem.id);
-                              }}
-                            />
-                          }
-                        />
-                      </div>
-
-                      {/* Voting sub-card */}
-                      <div className="w-full lg:w-2/5 rounded-2xl" style={{ background: "var(--color-base-300)" }}>
-                        <VotingQuestionCard
-                          contentId={selectedItem.id}
-                          categoryId={selectedItem.categoryId}
-                          onVote={handleButtonVote}
-                          isCommitting={isCommitting}
-                          address={address}
-                          error={voteError}
-                          isOwnContent={selectedItem.isOwnContent}
-                          embedded
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
               </div>
-            )}
+            ) : null}
 
-            {/* Thumbnail grid with infinite scroll */}
-            {gridItems.length > 0 && (
-              <div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                  {visibleGridItems.map(item => (
-                    <ThumbnailCard
-                      key={item.id.toString()}
-                      item={item}
-                      rating={ratingsMap.get(item.id.toString())}
-                      submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
-                      onSelect={handleSelectCard}
-                      onToggleWatch={handleToggleWatch}
-                      onToggleFollow={handleToggleFollow}
-                      watched={watchedContentIds.has(item.id.toString())}
-                      watchPending={isWatchPending(item.id)}
-                      following={followedWallets.has(item.submitter.toLowerCase())}
-                      followPending={isFollowPending(item.submitter)}
-                      isOwnSubmitter={normalizedAddress === item.submitter.toLowerCase()}
-                      thumbnailUrl={thumbnailMap[item.url]}
-                    />
+            {isSearchMode ? (
+              <div className="mb-5 flex flex-wrap items-center gap-2">
+                <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
+                  Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
+                </div>
+                <select
+                  value={effectiveSearchSortBy}
+                  onChange={e => setSortBy(e.target.value as SearchSortOption)}
+                  className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+                  aria-label="Sort search results"
+                >
+                  {SEARCH_SORT_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
+            {!isSearchMode && featuredToday.length > 0 ? (
+              <div className="mb-5 xl:hidden">
+                <div className="mb-2">
+                  <p className="text-sm font-semibold uppercase tracking-wide text-primary/80">Featured Today</p>
+                  <p className="text-sm text-base-content/55">Active rounds worth a look right now.</p>
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {featuredToday.map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSelectCard(BigInt(item.contentId), BigInt(item.categoryId))}
+                      className="group min-w-[250px] max-w-[280px] rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 text-left transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">
+                            {item.featuredReason}
+                          </p>
+                          <h3 className="mt-1 line-clamp-2 text-base font-semibold text-white group-hover:text-primary">
+                            {item.goal}
+                          </h3>
+                        </div>
+                        <ShareIcon className="mt-0.5 h-4 w-4 shrink-0 text-base-content/30" />
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-base-content/45">
+                        <span>{item.voteCount} votes</span>
+                        <span>•</span>
+                        <span>{detectPlatform(item.url).type}</span>
+                      </div>
+                    </button>
                   ))}
                 </div>
-                {/* Load more trigger */}
-                {canLoadMore && (
-                  <div ref={loadMoreRef} className="flex justify-center py-8">
-                    <span className="loading loading-spinner loading-md text-primary"></span>
+              </div>
+            ) : null}
+
+            {/* Main content */}
+            {isLoading || categoriesLoading || scopeLoading ? (
+              <div className="flex justify-center py-16">
+                <span className="loading loading-spinner loading-lg text-primary"></span>
+              </div>
+            ) : displayFeed.length === 0 ? (
+              <div className="text-center py-16 text-base-content/30 text-base">{emptyStateMessage}</div>
+            ) : (
+              <>
+                {/* Featured card */}
+                {selectedItem && (
+                  <div className="mb-8">
+                    {isCommitting && (
+                      <div className="flex items-center justify-center mb-2">
+                        <span className="text-base text-base-content/50">
+                          <span className="loading loading-spinner loading-xs mr-1.5"></span>
+                          Committing...
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Unified content + voting card */}
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={selectedItem.id.toString()}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        transition={{ duration: 0.2 }}
+                        className="surface-card rounded-2xl p-3 mb-4"
+                      >
+                        <div className="flex flex-col lg:flex-row gap-3 items-stretch">
+                          {/* Content sub-card */}
+                          <div
+                            className="w-full lg:w-3/5 rounded-2xl overflow-hidden"
+                            style={{ background: "var(--color-base-300)" }}
+                          >
+                            <SwipeCard
+                              content={selectedItem}
+                              submitterProfile={enrichedProfiles[selectedItem.submitter.toLowerCase()]}
+                              onSwipe={handleSwipe}
+                              isTop={true}
+                              index={0}
+                              canVote={!!address}
+                              standalone
+                              embedded
+                              submitterAction={
+                                normalizedAddress &&
+                                selectedItem.submitter.toLowerCase() === normalizedAddress ? null : (
+                                  <FollowProfileButton
+                                    following={followedWallets.has(selectedItem.submitter.toLowerCase())}
+                                    pending={isFollowPending(selectedItem.submitter)}
+                                    onClick={() => {
+                                      void handleToggleFollow(selectedItem.submitter);
+                                    }}
+                                  />
+                                )
+                              }
+                              headerActions={
+                                <WatchContentButton
+                                  watched={watchedContentIds.has(selectedItem.id.toString())}
+                                  pending={isWatchPending(selectedItem.id)}
+                                  onClick={() => {
+                                    void handleToggleWatch(selectedItem.id);
+                                  }}
+                                />
+                              }
+                            />
+                          </div>
+
+                          {/* Voting sub-card */}
+                          <div className="w-full lg:w-2/5 rounded-2xl" style={{ background: "var(--color-base-300)" }}>
+                            <VotingQuestionCard
+                              contentId={selectedItem.id}
+                              categoryId={selectedItem.categoryId}
+                              onVote={handleButtonVote}
+                              isCommitting={isCommitting}
+                              address={address}
+                              error={voteError}
+                              isOwnContent={selectedItem.isOwnContent}
+                              embedded
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    </AnimatePresence>
                   </div>
                 )}
-              </div>
+
+                {/* Thumbnail grid with infinite scroll */}
+                {gridItems.length > 0 && (
+                  <div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                      {visibleGridItems.map(item => (
+                        <ThumbnailCard
+                          key={item.id.toString()}
+                          item={item}
+                          rating={ratingsMap.get(item.id.toString())}
+                          submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                          onSelect={handleSelectCard}
+                          onToggleWatch={handleToggleWatch}
+                          onToggleFollow={handleToggleFollow}
+                          watched={watchedContentIds.has(item.id.toString())}
+                          watchPending={isWatchPending(item.id)}
+                          following={followedWallets.has(item.submitter.toLowerCase())}
+                          followPending={isFollowPending(item.submitter)}
+                          isOwnSubmitter={normalizedAddress === item.submitter.toLowerCase()}
+                          thumbnailUrl={thumbnailMap[item.url]}
+                        />
+                      ))}
+                    </div>
+                    {/* Load more trigger */}
+                    {canLoadMore && (
+                      <div ref={loadMoreRef} className="flex justify-center py-8">
+                        <span className="loading loading-spinner loading-md text-primary"></span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+
+          {!isSearchMode ? (
+            <aside className="hidden xl:block">
+              <div className="sticky top-24 space-y-4">
+                <FeaturedTodayPanel
+                  items={featuredToday}
+                  gridClassName="grid gap-3"
+                  description="A few active rounds that look especially worth paying attention to right now."
+                />
+                {address ? (
+                  <SettlingSoonPanel
+                    items={radar.settlingSoon}
+                    isLoading={radarLoading}
+                    description="Watched or voted rounds that look closest to resolution."
+                    emptyMessage="Watch content or vote on a few rounds to see approaching settlements here."
+                    gridClassName="grid gap-3"
+                  />
+                ) : null}
+                <SuggestedCuratorsPanel
+                  items={radar.suggestedCurators}
+                  followedWallets={followedWallets}
+                  isPending={isFollowPending}
+                  onToggleFollow={handleToggleFollow}
+                  description="Follow a few strong curators so Discover becomes more personal."
+                />
+              </div>
+            </aside>
+          ) : null}
+        </div>
       </div>
 
       {/* Stake selector modal */}
