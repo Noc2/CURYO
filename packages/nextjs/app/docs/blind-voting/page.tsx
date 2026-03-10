@@ -75,9 +75,9 @@ const BlindVoting: NextPage = () => {
         phase, all vote directions are encrypted &mdash; no one can see which way anyone voted.
       </p>
       <p>
-        After the blind phase ends, the decryption key for that time period becomes available. The system uses this key
-        to reveal all votes automatically. Revealing is also open &mdash; anyone with the decryption key can reveal any
-        vote after its blind phase ends.
+        After the blind phase ends, the decryption material for that time period becomes available. The keeper normally
+        uses it to reveal eligible votes in the background, and connected users can self-reveal if needed. Revealing is
+        also permissionless &mdash; anyone who knows the plaintext for a vote can reveal it after its blind phase ends.
       </p>
       <p>
         Votes placed after the blind phase (open phase) can see previously revealed directions, which is why they
@@ -88,9 +88,10 @@ const BlindVoting: NextPage = () => {
       <p>
         Resolution requires at least <strong>{protocolDocFacts.minVotersLabel} votes</strong> to be revealed (the
         minimum voter threshold). Once the threshold is reached, the round can be resolved once all past-epoch votes are
-        revealed or their {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. The system does
-        this automatically. Resolution determines the majority side, splits the reward pools, and updates the content
-        rating.
+        revealed or their {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. A keeper normally
+        handles the reveal and settlement flow automatically, and connected users also have a small manual fallback if a
+        reveal appears delayed. Resolution determines the majority side, splits the reward pools, and updates the
+        content rating.
       </p>
       <p>
         Rounds that exceed the <strong>maximum duration</strong> ({protocolDocFacts.maxRoundDurationLabel}) without

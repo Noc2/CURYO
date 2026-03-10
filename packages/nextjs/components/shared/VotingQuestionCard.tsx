@@ -207,7 +207,7 @@ export function VotingQuestionCard({
               /* Already committed — direction hidden until blind phase ends */
               <div
                 className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
-                data-tip="Your vote is encrypted until the blind phase ends. It is revealed automatically."
+                data-tip="Your vote is encrypted until the blind phase ends. The keeper normally reveals eligible votes afterward, and you can self-reveal if needed."
               >
                 <span className="text-base font-semibold text-primary">Committed</span>
                 <span className="text-base text-base-content/50">hidden</span>

@@ -76,8 +76,8 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
                 <InfoTooltip
                   text={
                     isEpoch1
-                      ? "Votes are encrypted until the blind phase ends. They are revealed automatically afterward."
-                      : "The system is revealing votes. Revealed votes are counted toward resolution."
+                      ? "Votes are encrypted until the blind phase ends. The keeper normally reveals eligible votes afterward, and users can self-reveal if needed."
+                      : "The keeper is revealing votes. Revealed votes are counted toward resolution."
                   }
                   position="bottom"
                 />

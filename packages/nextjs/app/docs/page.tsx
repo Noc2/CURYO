@@ -66,9 +66,9 @@ const DocsIntro: NextPage = () => {
           reveals them after the blind phase ends.
         </li>
         <li>
-          <strong>Resolve:</strong> After the blind phase ends, votes are revealed automatically. Once at least{" "}
-          {protocolDocFacts.minVotersLabel} votes are revealed, the round resolves. The majority side wins and the
-          losing side&apos;s stakes become the reward pool.
+          <strong>Resolve:</strong> After the blind phase ends, the keeper normally reveals eligible votes. Once at
+          least {protocolDocFacts.minVotersLabel} votes are revealed, the round resolves. Connected users can also
+          self-reveal if needed. The majority side wins and the losing side&apos;s stakes become the reward pool.
         </li>
       </ol>
       <p>The losing stakes are split:</p>

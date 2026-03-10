@@ -258,8 +258,9 @@ const GettingStarted: NextPage = () => {
       <p>
         The <strong>Vote</strong> page shows content cards. For each card, predict whether the rating will go UP or DOWN
         and choose a stake (1&ndash;100 cREP). Your vote direction is encrypted and hidden until the blind phase ends
-        (~20&nbsp;min). Early (blind phase) voters earn 4x more reward weight. Votes are revealed automatically, and
-        resolution occurs after enough votes are revealed.
+        (~20&nbsp;min). Early (blind phase) voters earn 4x more reward weight. The keeper normally reveals eligible
+        votes after the blind phase ends, and connected users can self-reveal if needed. Resolution occurs after enough
+        votes are revealed.
       </p>
       <p>
         <strong>Note:</strong> Each Voter ID can stake a maximum of 100 cREP per content per round. This limit is

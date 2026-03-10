@@ -96,7 +96,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
-              `Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends. After each epoch the keeper normally reveals eligible votes automatically, and connected users can self-reveal if needed. Settlement occurs after at least ${protocolDocFacts.minVotersLabel} votes are revealed and the reveal conditions are satisfied.`,
+              `Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends. After each epoch the keeper normally reveals eligible votes in the background, and connected users can self-reveal if needed. Settlement occurs after at least ${protocolDocFacts.minVotersLabel} votes are revealed and the reveal conditions are satisfied.`,
               `Contributor Rewards  -- After the ${protocolDocFacts.revealedLoserRefundPercentLabel} revealed-loser rebate, content submitters receive ${protocolDocFacts.submitterShareLabel}, category submitters receive ${protocolDocFacts.categoryShareLabel}, and frontend operators receive ${protocolDocFacts.frontendShareLabel}.`,
             ],
           },
