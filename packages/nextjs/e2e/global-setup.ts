@@ -127,19 +127,26 @@ async function globalSetup() {
   // Top up keeper balance to prevent gas exhaustion during settlements
   await topUpKeeperBalance();
 
-  // Non-fatal keeper check — settlement tests need the keeper but chromium tests don't.
-  // The keeper exposes /health on port 9090 when METRICS_ENABLED=true (disabled in dev by default).
+  // Keeper health check. The dedicated keeper-backed settlement project
+  // requires a live keeper process with metrics enabled.
   try {
     const keeperRes = await fetch("http://localhost:9090/health", { signal: AbortSignal.timeout(3_000) });
     if (keeperRes.ok) {
       console.log("  ✓ Keeper (settlement service) running with metrics");
     } else {
-      console.warn("  ⚠ Keeper health check returned non-OK — settlement tests may fail");
+      if (process.env.REQUIRE_E2E_KEEPER === "1") {
+        throw new Error("Keeper health check returned non-OK");
+      }
+      console.warn("  ⚠ Keeper health check returned non-OK — keeper-backed settlement tests may fail");
     }
   } catch {
-    // Metrics disabled in dev (.env METRICS_ENABLED=false) — can't verify keeper status.
-    // Settlement tests will still work if keeper is running; they just won't get early warning.
-    console.log("  ⓘ Keeper health endpoint not available (metrics disabled?) — start with: yarn keeper:dev");
+    if (process.env.REQUIRE_E2E_KEEPER === "1") {
+      throw new Error(
+        "E2E keeper-backed settlement tests require a running keeper at http://localhost:9090/health.\n" +
+          "  Start it with: yarn keeper:dev\n",
+      );
+    }
+    console.log("  ⓘ Keeper health endpoint not available — start with: yarn keeper:dev");
   }
 
   console.log("  ✓ All services ready\n");

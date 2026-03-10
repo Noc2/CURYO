@@ -21,6 +21,7 @@
     "whitepaper": "tsx scripts/whitepaper/generate.tsx",
     "e2e": "playwright test --config e2e/playwright.config.ts --project=chromium",
     "e2e:settlement": "playwright test --config e2e/playwright.config.ts --project=settlement",
+    "e2e:settlement:keeper": "REQUIRE_E2E_KEEPER=1 playwright test --config e2e/playwright.config.ts --project=settlement-keeper",
     "e2e:mobile": "playwright test --config e2e/playwright.config.ts --project=mobile-phone --project=mobile-tablet",
     "e2e:full": "playwright test --config e2e/playwright.config.ts --project=chromium --project=settlement --project=round-cancellation --project=content-dormancy --project=mobile-phone --project=mobile-tablet",
     "e2e:firefox": "playwright test --config e2e/playwright.config.ts --project=firefox",

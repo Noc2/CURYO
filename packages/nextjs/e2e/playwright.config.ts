@@ -36,6 +36,14 @@ export default defineConfig({
       dependencies: ["chromium"],
     },
     {
+      // Keeper-backed settlement tests require the live keeper service and
+      // should avoid direct reveal/settle helper calls.
+      name: "settlement-keeper",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch: /keeper-settlement/,
+      dependencies: ["chromium"],
+    },
+    {
       // Round cancellation fast-forwards 7+ days — runs after settlement tests.
       name: "round-cancellation",
       use: { ...devices["Desktop Chrome"] },
