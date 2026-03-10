@@ -278,11 +278,12 @@ const GettingStarted: NextPage = () => {
       </p>
       <ul>
         <li>
-          <strong>Returned:</strong> After 4 days if your content maintains a rating above 25.
+          <strong>Returned:</strong> After about 4 days once at least one round has settled, no round remains active,
+          and your content maintains a rating above 25.
         </li>
         <li>
-          <strong>Forfeited:</strong> If rating drops below 25 after the 24-hour grace period. 100% goes to the
-          treasury.
+          <strong>Forfeited:</strong> If a settled round establishes a rating below 25 after the 24-hour grace period.
+          100% goes to the treasury.
         </li>
       </ul>
       <p>

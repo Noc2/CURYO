@@ -784,7 +784,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Voter participation rewards are distributed when a round settles  -- deferred from vote time to prevent exploitation where attackers could vote, collect immediate participation rewards, and then have rounds cancel without risk. Submitter participation rewards are paid at submission time to bootstrap content supply. The pool is funded with 34M cREP and governed by the same timelock as all other protocol contracts.",
+            text: "Voter participation rewards are distributed when a round settles  -- deferred from vote time to prevent exploitation where attackers could vote, collect immediate participation rewards, and then have rounds cancel without risk. Submitter participation rewards are paid only when the submitter stake resolves on the healthy path after a settled round. The pool is funded with 34M cREP and governed by the same timelock as all other protocol contracts.",
           },
         ],
       },
@@ -850,7 +850,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with ${protocolDocFacts.openPhaseWeightLabel} weight vs ${protocolDocFacts.blindPhaseWeightLabel} for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter participation rewards flow only to genuine, successful curation activity while submitter bonuses still bootstrap supply at submission time.`,
+            text: `By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with ${protocolDocFacts.openPhaseWeightLabel} weight vs ${protocolDocFacts.blindPhaseWeightLabel} for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter participation rewards flow only to genuine, successful curation activity while submitter bonuses unlock only after healthy settled validation.`,
           },
         ],
       },
@@ -863,14 +863,14 @@ export const SECTIONS: Section[] = [
               headers: ["Action", "Stake", "Notes"],
               rows: [
                 ["Vote on content", "1-100 cREP", "Per vote, per round"],
-                ["Submit content", "10 cREP", "Returned after 4 days if rating stays above 25"],
+                ["Submit content", "10 cREP", "Returned after a settled round confirms rating stays above 25"],
                 ["Register as frontend", "1,000 cREP", "Requires governance approval"],
               ],
             },
           },
           {
             type: "paragraph",
-            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period. Stakes are automatically returned after 4 days if not slashed.",
+            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period and a settled round establishes that low rating. Stakes are returned after roughly 4 days once a settled round confirms a healthy rating and no round remains active.",
           },
         ],
       },

@@ -267,8 +267,9 @@ const Tokenomics = () => {
       <p>
         Voter participation rewards are distributed only after a round is resolved &mdash; deferred from vote time to
         prevent exploitation where attackers could vote, collect immediate rewards, and then have rounds cancel without
-        risk. Submitter participation rewards are paid at submission time to bootstrap content supply. The pool is
-        funded with <strong>34M cREP</strong> and governed by the same timelock as all other protocol contracts.
+        risk. Submitter participation rewards are paid only when the submitter stake resolves on the healthy path after
+        a settled round. The pool is funded with <strong>34M cREP</strong> and governed by the same timelock as all
+        other protocol contracts.
       </p>
       <div className="not-prose my-6">
         <FaucetHalvingChart />
@@ -400,7 +401,7 @@ const Tokenomics = () => {
             <tr>
               <td>Submit content</td>
               <td className="font-mono">10 cREP</td>
-              <td>Returned after grace period if rating stays above 25</td>
+              <td>Returned after a settled round confirms rating stays above 25</td>
             </tr>
             <tr>
               <td>Register as frontend</td>

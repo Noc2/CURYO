@@ -250,10 +250,11 @@ const SmartContracts: NextPage = () => {
           <strong>Grace period:</strong> 24 hours. No slash possible during this time.
         </li>
         <li>
-          <strong>Slash:</strong> If rating drops below 25 after grace period, 100% of stake goes to the treasury.
+          <strong>Slash:</strong> If a settled round establishes rating below 25 after grace period, 100% of stake goes
+          to the treasury.
         </li>
         <li>
-          <strong>Auto-return:</strong> After ~4 days if not slashed.
+          <strong>Auto-return:</strong> After ~4 days once at least one round has settled and no round remains active.
         </li>
       </ul>
 

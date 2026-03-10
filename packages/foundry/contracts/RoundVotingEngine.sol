@@ -758,6 +758,7 @@ contract RoundVotingEngine is
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
         round.settledAt = block.timestamp;
+        contentHasSettledRound[contentId] = true;
 
         // Epoch-weighted winning stake — used for proportional reward distribution
         uint256 weightedWinningStake = upWins ? round.weightedUpPool : round.weightedDownPool;
@@ -1164,6 +1165,7 @@ contract RoundVotingEngine is
         if (activeRoundId != 0 && !RoundLib.isTerminal(rounds[contentId][activeRoundId])) {
             revert ActiveRoundExists();
         }
+        if (!contentHasSettledRound[contentId]) return;
 
         uint256 elapsed = block.timestamp - contentCreatedAt;
 
@@ -1339,6 +1341,9 @@ contract RoundVotingEngine is
     // Frontend registry snapshot per round so historical fee claims do not depend on live registry replacement.
     mapping(uint256 => mapping(uint256 => address)) internal roundFrontendRegistrySnapshot;
 
+    // Tracks whether a content item has produced at least one settled round.
+    mapping(uint256 => bool) public contentHasSettledRound;
+
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[13] private __gap;
+    uint256[12] private __gap;
 }

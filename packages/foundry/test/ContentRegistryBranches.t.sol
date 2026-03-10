@@ -309,7 +309,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(balAfter, balBefore - 10e6, "submission should only lock stake until healthy resolution");
     }
 
-    function test_ResolveSubmitterStake_HealthyPath_PaysParticipationReward() public {
+    function test_ResolveSubmitterStake_NoSettledRound_LeavesStakeLocked() public {
         vm.prank(owner);
         registry.setParticipationPool(address(participationPool));
 
@@ -323,7 +323,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         votingEngine.resolveSubmitterStake(1);
 
         uint256 balAfter = crepToken.balanceOf(submitter);
-        assertEq(balAfter - balBefore, 9e6, "healthy submitter should net the deferred participation reward");
+        assertEq(balAfter, balBefore - 10e6, "no-vote content should not unlock through healthy resolution");
+        assertFalse(registry.isSubmitterStakeReturned(1), "no-vote content should remain unresolved");
     }
 
     function test_ResolveSubmitterStake_RevertsWhileRoundActive() public {

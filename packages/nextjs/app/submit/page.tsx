@@ -752,7 +752,7 @@ const SubmitPage: NextPage = () => {
                     <p className="flex items-center gap-1.5 text-base font-medium text-white">
                       Submission Stake
                       <InfoTooltip
-                        text={`Returned after ~4 days if rating stays above 25. Settled two-sided rounds allocate ${protocolDocFacts.submitterShareLabel} to the submitter.`}
+                        text={`Returned after ~4 days once at least one round has settled, no round remains active, and rating stays above 25. No-vote content unlocks later via dormancy. Settled two-sided rounds allocate ${protocolDocFacts.submitterShareLabel} to the submitter.`}
                       />
                     </p>
                   </div>
@@ -764,7 +764,7 @@ const SubmitPage: NextPage = () => {
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/10">
                     <p className="flex items-center gap-1.5 text-sm text-white/60">
                       Participation Bonus
-                      <InfoTooltip text="Immediate cREP reward from the Participation Pool. Rate decreases as more cREP is distributed." />
+                      <InfoTooltip text="Projected cREP reward from the Participation Pool, paid only when the submitter stake resolves on the healthy path after a settled round. Rate decreases as more cREP is distributed." />
                     </p>
                     <span className="text-sm font-semibold text-emerald-400">
                       +{submissionBonus} cREP ({ratePercent}%)
