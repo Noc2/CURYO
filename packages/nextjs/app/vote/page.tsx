@@ -55,7 +55,6 @@ const getDomainLabel = (url: string) => {
 const PROXYABLE_THUMBNAIL_HOSTS = new Set([
   "coin-images.coingecko.com",
   "assets.coingecko.com",
-  "covers.openlibrary.org",
   "image.tmdb.org",
   "upload.wikimedia.org",
   "cdn-avatars.huggingface.co",
@@ -827,13 +826,14 @@ const FeedVoteCard = memo(function FeedVoteCard({
 }) {
   return (
     <div className="surface-card rounded-2xl p-3 ring-1 ring-primary/20">
-      <div className="mb-3 flex items-center gap-3 text-sm text-base-content/45">
+      <div className="mb-3 flex items-center justify-between gap-3 text-sm text-base-content/45">
         <div className="flex items-center gap-2">
           <span className="rounded-full bg-base-content/[0.05] px-2.5 py-1 font-medium text-base-content/60">
             {detectPlatform(item.url).type}
           </span>
           {item.tags[0] ? <span className="text-base-content/35">#{item.tags[0]}</span> : null}
         </div>
+        <span className="rounded-full bg-primary/12 px-2.5 py-1 font-medium text-primary">Now Voting</span>
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
@@ -961,11 +961,6 @@ const FeedQueueCard = memo(function FeedQueueCard({
             </div>
           </div>
         )}
-        {thumbnailSrc && !imageError ? (
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/35 to-transparent p-2.5">
-            <p className="line-clamp-2 text-sm font-semibold text-white">{item.goal}</p>
-          </div>
-        ) : null}
       </div>
 
       <div className="space-y-1.5 p-2.5">

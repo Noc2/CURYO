@@ -3,6 +3,8 @@ import { db, dbClient } from "~~/lib/db";
 import { watchedContent } from "~~/lib/db/schema";
 
 let ensureWatchedContentTablePromise: Promise<void> | null = null;
+const LEGACY_MILLISECONDS_THRESHOLD = 9_999_999_999;
+const MAX_REASONABLE_TIMESTAMP_MS = Date.UTC(2100, 0, 1);
 
 export interface WatchedContentRecord {
   contentId: string;
@@ -33,6 +35,46 @@ export function normalizeContentId(value: unknown): string | null {
   return normalized === "0" ? null : normalized;
 }
 
+export function createWatchlistTimestamp(nowMs = Date.now()): Date {
+  return new Date(Math.floor(nowMs / 1000) * 1000);
+}
+
+export function normalizeWatchedContentCreatedAt(value: Date | number | string): Date {
+  if (value instanceof Date) {
+    const time = value.getTime();
+    if (!Number.isFinite(time)) {
+      return new Date(0);
+    }
+    if (time > MAX_REASONABLE_TIMESTAMP_MS) {
+      return new Date(Math.floor(time / 1000));
+    }
+    return value;
+  }
+
+  if (typeof value === "number") {
+    return new Date(value > LEGACY_MILLISECONDS_THRESHOLD ? value : value * 1000);
+  }
+
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return normalizeWatchedContentCreatedAt(numeric);
+  }
+
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime())) {
+    return new Date(0);
+  }
+  return normalizeWatchedContentCreatedAt(parsed);
+}
+
+export async function repairWatchedContentTimestamps(): Promise<void> {
+  await dbClient.execute(`
+    UPDATE watched_content
+    SET created_at = created_at / 1000
+    WHERE created_at > ${LEGACY_MILLISECONDS_THRESHOLD}
+  `);
+}
+
 export async function ensureWatchedContentTable() {
   if (!ensureWatchedContentTablePromise) {
     ensureWatchedContentTablePromise = (async () => {
@@ -52,6 +94,7 @@ export async function ensureWatchedContentTable() {
         CREATE INDEX IF NOT EXISTS watched_content_wallet_created_at_idx
         ON watched_content (wallet_address, created_at DESC)
       `);
+      await repairWatchedContentTimestamps();
     })();
   }
 
@@ -72,20 +115,20 @@ export async function listWatchedContent(walletAddress: `0x${string}`): Promise<
 
   return rows.map(row => ({
     contentId: row.contentId,
-    createdAt: row.createdAt.toISOString(),
+    createdAt: normalizeWatchedContentCreatedAt(row.createdAt).toISOString(),
   }));
 }
 
 export async function addWatchedContent(walletAddress: `0x${string}`, contentId: string): Promise<void> {
   await ensureWatchedContentTable();
-
-  await dbClient.execute({
-    sql: `
-      INSERT OR IGNORE INTO watched_content (wallet_address, content_id, created_at)
-      VALUES (?, ?, ?)
-    `,
-    args: [walletAddress, contentId, Date.now()],
-  });
+  await db
+    .insert(watchedContent)
+    .values({
+      walletAddress,
+      contentId,
+      createdAt: createWatchlistTimestamp(),
+    })
+    .onConflictDoNothing();
 }
 
 export async function removeWatchedContent(walletAddress: `0x${string}`, contentId: string): Promise<void> {

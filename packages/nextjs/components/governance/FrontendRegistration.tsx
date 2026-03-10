@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
 import { useAccount } from "wagmi";
@@ -20,6 +20,7 @@ export function FrontendRegistration() {
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   // Contract info
   const { data: frontendRegistryInfo } = useDeployedContractInfo({ contractName: "FrontendRegistry" });
@@ -68,6 +69,7 @@ export function FrontendRegistration() {
   const isSlashed = frontendInfo ? frontendInfo[3] : false;
   const exitAvailableAt = exitAvailableAtRaw ? Number(exitAvailableAtRaw) : 0;
   const isExitPending = exitAvailableAt > 0;
+  const canCompleteDeregister = isExitPending && nowMs >= exitAvailableAt * 1000;
   const exitAvailableAtLabel = isExitPending ? new Date(exitAvailableAt * 1000).toLocaleString() : "";
 
   // Parse fees (cREP only)
@@ -76,6 +78,14 @@ export function FrontendRegistration() {
 
   // cREP balance
   const crepFormatted = crepBalance ? Number(crepBalance) / 1e6 : 0;
+
+  useEffect(() => {
+    if (!isExitPending) return;
+
+    setNowMs(Date.now());
+    const timer = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, [isExitPending]);
 
   const handleRegister = async () => {
     if (!address || !frontendRegistryInfo?.address) return;
@@ -309,7 +319,7 @@ export function FrontendRegistration() {
                   <button
                     className="btn btn-outline btn-error btn-sm w-full"
                     onClick={handleCompleteDeregister}
-                    disabled={isCompletingDeregister}
+                    disabled={isCompletingDeregister || !canCompleteDeregister}
                   >
                     {isCompletingDeregister ? (
                       <span className="loading loading-spinner loading-xs" />

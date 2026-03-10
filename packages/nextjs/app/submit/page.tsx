@@ -70,6 +70,10 @@ const PLATFORM_CONFIG: Record<string, { urlPlaceholder: string; urlHint: string 
     urlPlaceholder: "https://huggingface.co/Qwen/Qwen3.5-397B-A17B",
     urlHint: "Paste a Hugging Face model URL",
   },
+  "open.spotify.com": {
+    urlPlaceholder: "https://open.spotify.com/show/5eXZwvvxt3K2dxha3BSaAe",
+    urlHint: "Paste a Spotify podcast show or episode URL",
+  },
   "x.com": {
     urlPlaceholder: "https://x.com/elonmusk/status/1234567890",
     urlHint: "Paste a tweet URL",

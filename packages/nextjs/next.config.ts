@@ -36,6 +36,7 @@ const cspDirectives = [
     "https://api.github.com",
     "https://cdn.syndication.twimg.com",
     "https://api.scryfall.com",
+    "https://open.spotify.com",
     "https://www.youtube.com",
     "https://api.twitch.tv",
     // Dev-only
@@ -49,6 +50,7 @@ const cspDirectives = [
     "https://youtube.com",
     "https://clips.twitch.tv",
     "https://player.twitch.tv",
+    "https://open.spotify.com",
     "https://self.xyz",
     "https://verify.walletconnect.com",
   ].join(" "),

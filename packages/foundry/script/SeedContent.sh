@@ -59,10 +59,11 @@ KEYS=(
   "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba"  # Account 5 (reused for Crypto)
   "0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e"  # Account 6 (reused for GitHub)
   "0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356"  # Account 7 (reused for GitHub)
+  "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused for Spotify)
 )
 
 # Example content from multiple platforms: (url, goal, tags, categoryId)
-# CategoryIds: 1=YouTube, 2=Twitch, 3=MTG, 4=Movies (TMDB), 5=People (Wikipedia), 6=Games (RAWG), 7=Books (Open Library), 8=AI (HuggingFace), 9=Crypto Tokens (CoinGecko), 10=Tweets (X), 11=GitHub Repos
+# CategoryIds: 1=YouTube, 2=Twitch, 3=MTG, 4=Movies (TMDB), 5=People (Wikipedia), 6=Games (RAWG), 7=Books (Open Library), 8=AI (HuggingFace), 9=Crypto Tokens (CoinGecko), 10=Tweets (X), 11=GitHub Repos, 12=Spotify Podcasts
 URLS=(
   "https://www.youtube.com/watch?v=rUCAdMnb1Oc"
   "https://www.twitch.tv/videos/2aborhwf"
@@ -79,6 +80,7 @@ URLS=(
   "https://www.coingecko.com/en/coins/ethereum"
   "https://github.com/ethereum/go-ethereum"
   "https://github.com/foundry-rs/foundry"
+  "https://open.spotify.com/show/5eXZwvvxt3K2dxha3BSaAe"
 )
 
 GOALS=(
@@ -97,6 +99,7 @@ GOALS=(
   "The world's leading smart contract platform — powering DeFi, NFTs, and decentralized applications."
   "Official Go implementation of Ethereum — the backbone of most Ethereum nodes worldwide."
   "Blazing-fast Solidity toolkit — forge, cast, anvil, and chisel for smart contract development."
+  "Engineering stories and behind-the-scenes conversations from Spotify's own podcast feed."
 )
 
 TAGS=(
@@ -115,9 +118,10 @@ TAGS=(
   "Layer 1,DeFi"
   "Infrastructure,DeFi/Web3"
   "Developer Tools,Infrastructure"
+  "Technology,Culture"
 )
 
-# CategoryIds mapping to URLs (1=YouTube, 2=Twitch, 3=MTG, 4=Movies, 5=People, 6=Games, 7=Books, 8=AI, 9=Crypto, 10=Tweets, 11=GitHub)
+# CategoryIds mapping to URLs (1=YouTube, 2=Twitch, 3=MTG, 4=Movies, 5=People, 6=Games, 7=Books, 8=AI, 9=Crypto, 10=Tweets, 11=GitHub, 12=Spotify)
 CATEGORY_IDS=(
   1   # YouTube
   2   # Twitch
@@ -134,14 +138,15 @@ CATEGORY_IDS=(
   9   # Crypto Tokens (CoinGecko)
   11  # GitHub Repos
   11  # GitHub Repos
+  12  # Spotify Podcasts
 )
 
 echo "=== Seeding example content from multiple platforms ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
-# Submit content from accounts 2-10 (some reused for Games & Books)
-for i in {0..14}; do
+# Submit content from accounts 2-10 (some reused for later categories)
+for i in {0..15}; do
   KEY="${KEYS[$i]}"
   URL="${URLS[$i]}"
   GOAL="${GOALS[$i]}"
@@ -169,7 +174,7 @@ for i in {0..14}; do
   echo ""
 done
 
-echo "=== Seed complete: 15 content items submitted ==="
+echo "=== Seed complete: 16 content items submitted ==="
 echo ""
 
 # --- Voting Section ---

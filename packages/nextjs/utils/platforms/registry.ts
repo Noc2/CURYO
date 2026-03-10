@@ -5,6 +5,7 @@ import { huggingfaceHandler } from "./handlers/huggingface";
 import { openLibraryHandler } from "./handlers/openlibrary";
 import { rawgHandler } from "./handlers/rawg";
 import { scryfallHandler } from "./handlers/scryfall";
+import { spotifyHandler } from "./handlers/spotify";
 import { tmdbHandler } from "./handlers/tmdb";
 import { twitchHandler } from "./handlers/twitch";
 import { twitterHandler } from "./handlers/twitter";
@@ -34,6 +35,7 @@ const handlers: PlatformHandler[] = [
   openLibraryHandler,
   coingeckoHandler,
   huggingfaceHandler,
+  spotifyHandler,
   twitterHandler,
   githubHandler,
   genericHandler, // Always last as fallback

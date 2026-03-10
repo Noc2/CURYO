@@ -213,5 +213,24 @@ contract DeployCategoryRegistry is Script {
             "Is this project valuable and innovative enough to score above {rating} out of 100?"
         );
         console.log("Seeded Crypto category");
+
+        // Spotify Podcasts
+        string[] memory spotifySubcats = new string[](8);
+        spotifySubcats[0] = "Technology";
+        spotifySubcats[1] = "Business";
+        spotifySubcats[2] = "Comedy";
+        spotifySubcats[3] = "News";
+        spotifySubcats[4] = "Science";
+        spotifySubcats[5] = "Health";
+        spotifySubcats[6] = "Sports";
+        spotifySubcats[7] = "Culture";
+
+        registry.addApprovedCategory(
+            "Spotify Podcasts",
+            "open.spotify.com",
+            spotifySubcats,
+            "Is this podcast or episode worth listening to enough to score above {rating} out of 100?"
+        );
+        console.log("Seeded Spotify Podcasts category");
     }
 }

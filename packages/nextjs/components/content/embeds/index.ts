@@ -5,6 +5,7 @@ export { TmdbEmbed } from "./TmdbEmbed";
 export { WikipediaEmbed } from "./WikipediaEmbed";
 export { RawgEmbed } from "./RawgEmbed";
 export { OpenLibraryEmbed } from "./OpenLibraryEmbed";
+export { SpotifyEmbed } from "./SpotifyEmbed";
 export { CoinGeckoEmbed } from "./CoinGeckoEmbed";
 export { GenericLinkCard } from "./GenericLinkCard";
 export { HuggingFaceEmbed } from "./HuggingFaceEmbed";

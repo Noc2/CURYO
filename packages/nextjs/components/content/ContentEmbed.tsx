@@ -29,6 +29,9 @@ const RawgEmbed = dynamic(() => import("./embeds/RawgEmbed").then(m => m.RawgEmb
 const OpenLibraryEmbed = dynamic(() => import("./embeds/OpenLibraryEmbed").then(m => m.OpenLibraryEmbed), {
   loading: EmbedSpinner,
 });
+const SpotifyEmbed = dynamic(() => import("./embeds/SpotifyEmbed").then(m => m.SpotifyEmbed), {
+  loading: EmbedSpinner,
+});
 const CoinGeckoEmbed = dynamic(() => import("./embeds/CoinGeckoEmbed").then(m => m.CoinGeckoEmbed), {
   loading: EmbedSpinner,
 });
@@ -96,6 +99,9 @@ export function ContentEmbed({ url, compact = false }: ContentEmbedProps) {
       break;
     case "openlibrary":
       embed = <OpenLibraryEmbed info={platformInfo} compact={compact} />;
+      break;
+    case "spotify":
+      embed = <SpotifyEmbed info={platformInfo} compact={compact} />;
       break;
     case "coingecko":
       embed = <CoinGeckoEmbed info={platformInfo} compact={compact} />;

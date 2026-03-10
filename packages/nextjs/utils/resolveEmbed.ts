@@ -71,6 +71,8 @@ export async function resolveEmbed(
         return await resolveCoinGecko(id);
       case "huggingface":
         return await resolveHuggingFace(id, metadata);
+      case "spotify":
+        return await resolveSpotify(id, metadata);
       case "rawg":
         return await resolveRawg(id);
       case "twitter":
@@ -242,6 +244,27 @@ async function resolveHuggingFace(modelId: string, metadata?: Record<string, unk
     imageUrl: avatarUrl ?? undefined,
     title: title ?? modelId,
     description,
+  };
+}
+
+async function resolveSpotify(id: string, metadata?: Record<string, unknown>): Promise<EmbedResult> {
+  const kind = metadata?.kind === "show" ? "show" : "episode";
+  const canonicalUrl =
+    typeof metadata?.canonicalUrl === "string" ? metadata.canonicalUrl : `https://open.spotify.com/${kind}/${id}`;
+  const data = await safeFetchJson(`https://open.spotify.com/oembed?url=${encodeURIComponent(canonicalUrl)}`);
+  if (!data) return { thumbnailUrl: null };
+
+  const title = typeof data.title === "string" ? data.title : undefined;
+  const thumbnailUrl = typeof data.thumbnail_url === "string" ? data.thumbnail_url : null;
+  const authorName = typeof data.author_name === "string" ? data.author_name : undefined;
+  const kindLabel = kind === "show" ? "Podcast show" : "Podcast episode";
+
+  return {
+    thumbnailUrl,
+    imageUrl: thumbnailUrl ?? undefined,
+    title,
+    description: authorName ? `${kindLabel} on Spotify by ${authorName}` : `${kindLabel} on Spotify`,
+    authors: authorName ? [authorName] : undefined,
   };
 }
 

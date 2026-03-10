@@ -8,6 +8,7 @@ export type PlatformType =
   | "openlibrary"
   | "coingecko"
   | "huggingface"
+  | "spotify"
   | "twitter"
   | "github"
   | "generic";
