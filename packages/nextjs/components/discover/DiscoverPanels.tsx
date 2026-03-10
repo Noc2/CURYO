@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowTopRightOnSquareIcon, ClockIcon } from "@heroicons/react/24/outline";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
@@ -38,6 +38,27 @@ function getDomainLabel(url: string) {
   }
 }
 
+function ClickableDiscoverCard({ href, children }: { href: string; children: React.ReactNode }) {
+  const router = useRouter();
+
+  return (
+    <div
+      role="link"
+      tabIndex={0}
+      className="group flex cursor-pointer flex-col gap-3 rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 transition-colors hover:border-primary/30 hover:bg-base-content/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      onClick={() => router.push(href)}
+      onKeyDown={event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          router.push(href);
+        }
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function DiscoverModuleCard({
   title,
   description,
@@ -68,10 +89,7 @@ export function EmptyDiscoverModule({ message }: { message: string }) {
 
 function FeaturedTodayCard({ item }: { item: PonderFeaturedTodayItem }) {
   return (
-    <Link
-      href={`/vote?content=${item.contentId}`}
-      className="group flex flex-col gap-3 rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
-    >
+    <ClickableDiscoverCard href={`/vote?content=${item.contentId}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium uppercase tracking-wide text-primary/80">{item.featuredReason}</p>
@@ -92,7 +110,7 @@ function FeaturedTodayCard({ item }: { item: PonderFeaturedTodayItem }) {
         profileImageUrl={item.profileImageUrl}
         showAddress={Boolean(item.profileName)}
       />
-    </Link>
+    </ClickableDiscoverCard>
   );
 }
 
@@ -125,10 +143,7 @@ function SettlingSoonCard({ item }: { item: PonderRadarSettlingItem }) {
     item.source === "watched_voted" ? "Watching + voted" : item.source === "watched" ? "Watching" : "You voted";
 
   return (
-    <Link
-      href={`/vote?content=${item.contentId}`}
-      className="group flex flex-col gap-3 rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
-    >
+    <ClickableDiscoverCard href={`/vote?content=${item.contentId}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -158,7 +173,7 @@ function SettlingSoonCard({ item }: { item: PonderRadarSettlingItem }) {
         profileImageUrl={item.profileImageUrl}
         showAddress={Boolean(item.profileName)}
       />
-    </Link>
+    </ClickableDiscoverCard>
   );
 }
 
