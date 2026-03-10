@@ -70,6 +70,38 @@ test.describe("Next.js API routes", () => {
     return res.json();
   }
 
+  async function issueEmailNotificationReadChallenge(address: string) {
+    const res = await fetch(`${BASE_URL}/api/notifications/email/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address, intent: "read" }),
+    });
+    expect(res.status).toBe(200);
+    return res.json() as Promise<{ challengeId: string; message: string }>;
+  }
+
+  async function createEmailNotificationReadSession(
+    address: string,
+    signMessage: (args: { message: string }) => Promise<`0x${string}`>,
+  ) {
+    const challenge = await issueEmailNotificationReadChallenge(address);
+    const signature = await signMessage({ message: challenge.message });
+    const res = await fetch(`${BASE_URL}/api/notifications/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address, signature, challengeId: challenge.challengeId }),
+    });
+
+    expect(res.status).toBe(200);
+    const cookie = res.headers.get("set-cookie");
+    expect(cookie).toContain("curyo_notification_email_read_session=");
+
+    return {
+      cookie: cookie!.split(";")[0],
+      body: await res.json(),
+    };
+  }
+
   test("GET /api/leaderboard returns entry list", async () => {
     const res = await fetch(`${BASE_URL}/api/leaderboard?limit=10`);
     expect(res.ok).toBe(true);
@@ -429,6 +461,30 @@ test.describe("Next.js API routes", () => {
 
     const session = await createNotificationPreferencesReadSession(address, account.signMessage);
     expect(session.body).toMatchObject(nextPreferences);
+  });
+
+  test("email notification settings use a signed read session", async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
+    const otherAddress = ANVIL_ACCOUNTS.account3.address.toLowerCase();
+    const address = account.address.toLowerCase();
+
+    const unsignedRes = await fetch(`${BASE_URL}/api/notifications/email?address=${address}`);
+    expect(unsignedRes.status).toBe(401);
+
+    const session = await createEmailNotificationReadSession(address, account.signMessage);
+    expect(session.body).toHaveProperty("email");
+    expect(session.body).toHaveProperty("verified");
+
+    const authorizedRes = await fetch(`${BASE_URL}/api/notifications/email?address=${address}`, {
+      headers: { cookie: session.cookie },
+    });
+    expect(authorizedRes.status).toBe(200);
+
+    const otherWalletRes = await fetch(`${BASE_URL}/api/notifications/email?address=${otherAddress}`, {
+      headers: { cookie: session.cookie },
+    });
+    expect(otherWalletRes.status).toBe(401);
   });
 
   test("notification preference read session does not authorize watchlist reads", async () => {

@@ -9,7 +9,17 @@ import {
   normalizeNotificationEmailInput,
   normalizeNotificationEmailReadInput,
 } from "~~/lib/auth/notificationEmails";
-import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
+import {
+  ensureSignedActionChallengeTable,
+  mapSignedActionError,
+  verifyAndConsumeSignedActionChallenge,
+} from "~~/lib/auth/signedActions";
+import {
+  NOTIFICATION_EMAIL_SIGNED_READ_SESSION_COOKIE_NAME,
+  getSignedReadSessionCookie,
+  issueSignedReadSession,
+  verifySignedReadSession,
+} from "~~/lib/auth/signedReadSessions";
 import { db } from "~~/lib/db";
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import {
@@ -25,8 +35,35 @@ const READ_RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 const WRITE_RATE_LIMIT = { limit: 10, windowMs: 60_000 };
 
 export async function GET(request: NextRequest) {
-  void request;
-  return NextResponse.json({ error: "Use a signed POST request to read email notification settings" }, { status: 405 });
+  const address = request.nextUrl.searchParams.get("address");
+  const limited = await checkRateLimit(request, READ_RATE_LIMIT, {
+    extraKeyParts: [typeof address === "string" ? address : undefined],
+  });
+  if (limited) return limited;
+
+  try {
+    const normalized = normalizeNotificationEmailReadInput({
+      address: typeof address === "string" ? address : undefined,
+    });
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
+    }
+
+    const hasSession = await verifySignedReadSession(
+      request.cookies.get(NOTIFICATION_EMAIL_SIGNED_READ_SESSION_COOKIE_NAME)?.value,
+      normalized.payload.normalizedAddress,
+      "notification_email",
+    );
+    if (!hasSession) {
+      return NextResponse.json({ error: "Signed read required" }, { status: 401 });
+    }
+
+    const settings = await getEmailNotificationSettings(normalized.payload.normalizedAddress);
+    return NextResponse.json(settings);
+  } catch (error) {
+    console.error("Error fetching email notification settings:", error);
+    return NextResponse.json({ error: "Failed to fetch email notification settings" }, { status: 500 });
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -69,21 +106,19 @@ export async function POST(request: NextRequest) {
             }),
         });
       });
-    } catch (error: any) {
-      if (error.message === "CHALLENGE_USED") {
-        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
-      }
-      if (error.message === "CHALLENGE_EXPIRED") {
-        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
-      }
-      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
-        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+    } catch (error: unknown) {
+      const mapped = mapSignedActionError(error);
+      if (mapped) {
+        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
       }
       throw error;
     }
 
+    const session = await issueSignedReadSession(payload.normalizedAddress, "notification_email");
     const settings = await getEmailNotificationSettings(payload.normalizedAddress);
-    return NextResponse.json(settings);
+    const response = NextResponse.json(settings);
+    response.cookies.set(getSignedReadSessionCookie("notification_email", session));
+    return response;
   } catch (error) {
     console.error("Error fetching email notification settings:", error);
     return NextResponse.json({ error: "Failed to fetch email notification settings" }, { status: 500 });
@@ -149,15 +184,10 @@ export async function PUT(request: NextRequest) {
             }),
         });
       });
-    } catch (error: any) {
-      if (error.message === "CHALLENGE_USED") {
-        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
-      }
-      if (error.message === "CHALLENGE_EXPIRED") {
-        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
-      }
-      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
-        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+    } catch (error: unknown) {
+      const mapped = mapSignedActionError(error);
+      if (mapped) {
+        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
       }
       throw error;
     }
