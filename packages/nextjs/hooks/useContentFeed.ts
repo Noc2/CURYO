@@ -230,12 +230,13 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
     refetchInterval: 30_000,
   });
 
-  const feed = result?.data?.feed ?? pagedRpcFeed;
-  const totalContent = result?.data?.totalContent ?? rpcTotalContent;
+  const feed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);
+  const totalContent = result?.source === "rpc" ? rpcTotalContent : (result?.data?.totalContent ?? rpcTotalContent);
+  const isLoading = ponderLoading || (rpcFallbackEnabled && eventsLoading && result?.source !== "ponder");
 
   return {
     feed,
-    isLoading: ponderLoading && eventsLoading,
+    isLoading,
     totalContent,
     hasMore: totalContent > offset + feed.length,
   };
