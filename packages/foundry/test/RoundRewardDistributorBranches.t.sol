@@ -319,4 +319,55 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
             )
         );
     }
+
+    // =========================================================================
+    // stranded cREP recovery
+    // =========================================================================
+
+    function test_SweepStrandedCrepToTreasury_TransfersFullBalance() public {
+        vm.prank(owner);
+        registry.setTreasury(treasury);
+
+        vm.prank(owner);
+        crepToken.mint(address(rewardDistributor), 7e6);
+
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+
+        vm.prank(owner);
+        uint256 swept = rewardDistributor.sweepStrandedCrepToTreasury();
+
+        assertEq(swept, 7e6);
+        assertEq(crepToken.balanceOf(address(rewardDistributor)), 0);
+        assertEq(crepToken.balanceOf(treasury), treasuryBefore + 7e6);
+    }
+
+    function test_SweepStrandedCrepToTreasury_TreasuryNotSet_Reverts() public {
+        vm.prank(owner);
+        crepToken.mint(address(rewardDistributor), 1e6);
+
+        vm.prank(owner);
+        vm.expectRevert(RoundRewardDistributor.TreasuryNotSet.selector);
+        rewardDistributor.sweepStrandedCrepToTreasury();
+    }
+
+    function test_SweepStrandedCrepToTreasury_NoBalance_Reverts() public {
+        vm.prank(owner);
+        registry.setTreasury(treasury);
+
+        vm.prank(owner);
+        vm.expectRevert(RoundRewardDistributor.NoStrandedCrep.selector);
+        rewardDistributor.sweepStrandedCrepToTreasury();
+    }
+
+    function test_SweepStrandedCrepToTreasury_NonAdmin_Reverts() public {
+        vm.prank(owner);
+        registry.setTreasury(treasury);
+
+        vm.prank(owner);
+        crepToken.mint(address(rewardDistributor), 1e6);
+
+        vm.prank(voter1);
+        vm.expectRevert();
+        rewardDistributor.sweepStrandedCrepToTreasury();
+    }
 }

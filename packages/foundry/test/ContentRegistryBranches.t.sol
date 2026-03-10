@@ -476,7 +476,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Cancelled));
     }
 
-    function test_CancelContent_FeeSentToBonusPool() public {
+    function test_CancelContent_FeeSentToConfiguredSink() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/1", "goal", "tags", 0);
@@ -487,6 +487,22 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         uint256 bonusAfter = crepToken.balanceOf(bonusPool);
         assertEq(bonusAfter - bonusBefore, 1e6); // CANCELLATION_FEE
+    }
+
+    function test_CancelContent_FeeCanBeSentToTreasury() public {
+        vm.prank(owner);
+        registry.setBonusPool(treasury);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/treasury", "goal", "tags", 0);
+
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        registry.cancelContent(1);
+        vm.stopPrank();
+
+        uint256 treasuryAfter = crepToken.balanceOf(treasury);
+        assertEq(treasuryAfter - treasuryBefore, 1e6);
     }
 
     // =========================================================================

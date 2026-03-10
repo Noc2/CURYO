@@ -373,6 +373,28 @@ contract CategoryRegistryTest is Test {
         assertFalse(registry.isDomainRegistered("awaiting-sponsor.test"));
     }
 
+    function test_RevertLinkApprovalProposal_ProposalMissing() public {
+        uint256 categoryId = _submitCategory("missing-proposal.test");
+
+        vm.expectRevert("Proposal not found");
+        registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #1")));
+    }
+
+    function test_RevertRejectCategory_WithoutLinkedProposal() public {
+        uint256 categoryId = _submitCategory("unlinked-reject.test");
+
+        vm.expectRevert("Proposal not linked");
+        registry.rejectCategory(categoryId);
+    }
+
+    function test_RevertCancelUnlinkedCategory_SponsorshipWindowActive() public {
+        uint256 categoryId = _submitCategory("too-early.test");
+
+        vm.prank(user1);
+        vm.expectRevert("Sponsorship window active");
+        registry.cancelUnlinkedCategory(categoryId);
+    }
+
     // --- View Functions Tests ---
 
     function test_GetCategoryByDomain() public {
