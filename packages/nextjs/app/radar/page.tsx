@@ -8,6 +8,7 @@ import { ArrowTopRightOnSquareIcon, BellAlertIcon, ClockIcon, SparklesIcon } fro
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
+import { type NotificationPreferences, useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { useRadarFeed } from "~~/hooks/useRadarFeed";
 import {
   type PonderRadarResolutionItem,
@@ -195,11 +196,42 @@ function ResolutionCard({ item }: { item: PonderRadarResolutionItem }) {
   );
 }
 
+function NotificationPreferenceToggle({
+  label,
+  description,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex items-start justify-between gap-4 rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3">
+      <div>
+        <div className="text-base font-medium text-white">{label}</div>
+        <p className="mt-1 text-sm text-base-content/50">{description}</p>
+      </div>
+      <input
+        type="checkbox"
+        className="toggle toggle-sm toggle-primary mt-1"
+        checked={checked}
+        disabled={disabled}
+        onChange={event => onChange(event.target.checked)}
+      />
+    </label>
+  );
+}
+
 export default function RadarPage() {
   const { address } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { radar, isLoading, watchedCount } = useRadarFeed(address);
   const { followedWallets, toggleFollow, isPending } = useFollowedProfiles(address);
+  const { preferences, isSaving, updatePreference } = useNotificationPreferences(address);
 
   const handleToggleFollow = useCallback(
     async (targetAddress: string) => {
@@ -223,6 +255,27 @@ export default function RadarPage() {
       notification.success(result.following ? "Following curator" : "Unfollowed curator");
     },
     [openConnectModal, toggleFollow],
+  );
+
+  const handleTogglePreference = useCallback(
+    async (key: keyof NotificationPreferences, value: boolean) => {
+      const result = await updatePreference(key, value);
+
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason !== "rejected") {
+          notification.error(result.error || "Failed to update notification settings");
+        }
+        return;
+      }
+
+      notification.success("Notification settings updated");
+    },
+    [openConnectModal, updatePreference],
   );
 
   if (!address) {
@@ -341,6 +394,59 @@ export default function RadarPage() {
           </div>
 
           <div className="space-y-6">
+            <ModuleCard
+              title="Notification Settings"
+              description="Choose which radar events should trigger in-app and browser notifications."
+            >
+              <div className="space-y-3">
+                <NotificationPreferenceToggle
+                  label="Round resolved"
+                  description="Notify when content you watched or voted on resolves."
+                  checked={preferences.roundResolved}
+                  disabled={isSaving}
+                  onChange={checked => {
+                    void handleTogglePreference("roundResolved", checked);
+                  }}
+                />
+                <NotificationPreferenceToggle
+                  label="Settling within 1 hour"
+                  description="Get a heads-up when tracked rounds look close to settlement."
+                  checked={preferences.settlingSoonHour}
+                  disabled={isSaving}
+                  onChange={checked => {
+                    void handleTogglePreference("settlingSoonHour", checked);
+                  }}
+                />
+                <NotificationPreferenceToggle
+                  label="Settling today"
+                  description="See a broader daily reminder for watched or voted rounds."
+                  checked={preferences.settlingSoonDay}
+                  disabled={isSaving}
+                  onChange={checked => {
+                    void handleTogglePreference("settlingSoonDay", checked);
+                  }}
+                />
+                <NotificationPreferenceToggle
+                  label="Followed curator submissions"
+                  description="Notify when someone you follow submits new content."
+                  checked={preferences.followedSubmission}
+                  disabled={isSaving}
+                  onChange={checked => {
+                    void handleTogglePreference("followedSubmission", checked);
+                  }}
+                />
+                <NotificationPreferenceToggle
+                  label="Followed curator outcomes"
+                  description="Notify when a followed curator has a round resolve."
+                  checked={preferences.followedResolution}
+                  disabled={isSaving}
+                  onChange={checked => {
+                    void handleTogglePreference("followedResolution", checked);
+                  }}
+                />
+              </div>
+            </ModuleCard>
+
             <ModuleCard
               title="Suggested Curators"
               description="A few active curators worth following so your radar becomes more useful."

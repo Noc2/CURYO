@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useAccount } from "wagmi";
 import { useScaffoldWatchContractEvent } from "~~/hooks/scaffold-eth";
+import { useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { useRadarFeed } from "~~/hooks/useRadarFeed";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { ponderApi } from "~~/services/ponder/client";
 import { notification } from "~~/utils/scaffold-eth";
@@ -19,7 +22,19 @@ export function SettlementNotifier() {
   const activeKeysRef = useRef<Set<string>>(new Set());
   const watchedContentIdsRef = useRef<Set<string>>(new Set());
   const seenSettlementKeysRef = useRef<Set<string>>(new Set());
+  const radarInitializedRef = useRef(false);
+  const seenSettlingDayKeysRef = useRef<Set<string>>(new Set());
+  const seenSettlingHourKeysRef = useRef<Set<string>>(new Set());
+  const seenFollowedSubmissionKeysRef = useRef<Set<string>>(new Set());
+  const seenFollowedResolutionKeysRef = useRef<Set<string>>(new Set());
+  const roundResolvedEnabledRef = useRef(true);
   const { watchedContentIds } = useWatchedContent(address);
+  const { radar } = useRadarFeed(address);
+  const { preferences } = useNotificationPreferences(address);
+
+  useEffect(() => {
+    roundResolvedEnabledRef.current = preferences.roundResolved;
+  }, [preferences.roundResolved]);
 
   // Request notification permission on mount (only if connected)
   useEffect(() => {
@@ -66,6 +81,147 @@ export function SettlementNotifier() {
     watchedContentIdsRef.current = watchedContentIds;
   }, [watchedContentIds]);
 
+  useEffect(() => {
+    if (!address) {
+      radarInitializedRef.current = false;
+      seenSettlingDayKeysRef.current = new Set();
+      seenSettlingHourKeysRef.current = new Set();
+      seenFollowedSubmissionKeysRef.current = new Set();
+      seenFollowedResolutionKeysRef.current = new Set();
+      return;
+    }
+
+    const openBrowserNotification = (title: string, body: string, href: string) => {
+      if (permissionRef.current !== "granted") return;
+
+      try {
+        const browserNotification = new Notification(title, {
+          body,
+          icon: "/logo.svg",
+        });
+
+        browserNotification.onclick = () => {
+          window.focus();
+          window.location.href = href;
+          browserNotification.close();
+        };
+      } catch {
+        // Browser may block notifications in some contexts
+      }
+    };
+
+    const notifyWithLink = (kind: "info" | "success", title: string, body: string, href: string) => {
+      const toastBody = (
+        <Link href={href} className="font-medium underline">
+          {body}
+        </Link>
+      );
+
+      if (kind === "success") {
+        notification.success(toastBody, { duration: 8000 });
+      } else {
+        notification.info(toastBody, { duration: 8000 });
+      }
+
+      openBrowserNotification(title, body, href);
+    };
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const currentSettlingDayKeys = new Set<string>();
+    const currentSettlingHourKeys = new Set<string>();
+    const currentSubmissionKeys = new Set<string>();
+    const currentResolutionKeys = new Set<string>();
+
+    for (const item of radar.settlingSoon) {
+      if (!item.estimatedSettlementTime) continue;
+
+      const secondsUntil = Number(item.estimatedSettlementTime) - nowSeconds;
+      const href = `/vote?content=${item.contentId}`;
+      const shortGoal = item.goal.length > 72 ? `${item.goal.slice(0, 69)}...` : item.goal;
+
+      if (secondsUntil > 0 && secondsUntil <= 24 * 60 * 60) {
+        currentSettlingDayKeys.add(item.id);
+
+        if (
+          radarInitializedRef.current &&
+          preferences.settlingSoonDay &&
+          !seenSettlingDayKeysRef.current.has(item.id)
+        ) {
+          notifyWithLink("info", "Watched round settling today", `"${shortGoal}" looks likely to settle today.`, href);
+        }
+      }
+
+      if (secondsUntil > 0 && secondsUntil <= 60 * 60) {
+        currentSettlingHourKeys.add(item.id);
+
+        if (
+          radarInitializedRef.current &&
+          preferences.settlingSoonHour &&
+          !seenSettlingHourKeysRef.current.has(item.id)
+        ) {
+          notifyWithLink("info", "Round settling soon", `"${shortGoal}" looks likely to settle within the hour.`, href);
+        }
+      }
+    }
+
+    for (const item of radar.followedSubmissions) {
+      const key = `${item.contentId}-${item.createdAt}`;
+      currentSubmissionKeys.add(key);
+
+      if (
+        radarInitializedRef.current &&
+        preferences.followedSubmission &&
+        !seenFollowedSubmissionKeysRef.current.has(key)
+      ) {
+        const displayName = item.profileName || `${item.submitter.slice(0, 6)}...${item.submitter.slice(-4)}`;
+        const shortGoal = item.goal.length > 72 ? `${item.goal.slice(0, 69)}...` : item.goal;
+        notifyWithLink(
+          "success",
+          "Followed curator submitted",
+          `${displayName} submitted "${shortGoal}".`,
+          `/vote?content=${item.contentId}`,
+        );
+      }
+    }
+
+    for (const item of radar.followedResolutions) {
+      const key = `${item.id}-${item.settledAt ?? ""}`;
+      currentResolutionKeys.add(key);
+
+      if (
+        radarInitializedRef.current &&
+        preferences.followedResolution &&
+        !seenFollowedResolutionKeysRef.current.has(key)
+      ) {
+        const displayName = item.profileName || `${item.voter.slice(0, 6)}...${item.voter.slice(-4)}`;
+        const shortGoal = item.goal.length > 72 ? `${item.goal.slice(0, 69)}...` : item.goal;
+        const action = item.outcome === "won" ? "won" : item.outcome === "lost" ? "lost" : "resolved";
+
+        notifyWithLink(
+          "success",
+          "Followed curator resolved",
+          `${displayName} ${action} a call on "${shortGoal}".`,
+          `/vote?content=${item.contentId}`,
+        );
+      }
+    }
+
+    if (!radarInitializedRef.current) {
+      radarInitializedRef.current = true;
+    }
+
+    seenSettlingDayKeysRef.current = new Set([...seenSettlingDayKeysRef.current, ...currentSettlingDayKeys]);
+    seenSettlingHourKeysRef.current = new Set([...seenSettlingHourKeysRef.current, ...currentSettlingHourKeys]);
+    seenFollowedSubmissionKeysRef.current = new Set([
+      ...seenFollowedSubmissionKeysRef.current,
+      ...currentSubmissionKeys,
+    ]);
+    seenFollowedResolutionKeysRef.current = new Set([
+      ...seenFollowedResolutionKeysRef.current,
+      ...currentResolutionKeys,
+    ]);
+  }, [address, preferences, radar]);
+
   // Watch for RoundSettled events
   useScaffoldWatchContractEvent({
     contractName: "RoundVotingEngine" as any,
@@ -82,6 +238,7 @@ export function SettlementNotifier() {
         const votedRound = activeKeysRef.current.has(key);
         const watchedContent = watchedContentIdsRef.current.has(contentId);
         if (!votedRound && !watchedContent) continue;
+        if (!roundResolvedEnabledRef.current) continue;
 
         seenSettlementKeysRef.current.add(key);
 
@@ -110,10 +267,15 @@ export function SettlementNotifier() {
         // Browser notification (only if permitted)
         if (permissionRef.current === "granted") {
           try {
-            new Notification(title, {
+            const browserNotification = new Notification(title, {
               body,
               icon: "/logo.svg",
             });
+            browserNotification.onclick = () => {
+              window.focus();
+              window.location.href = `/vote?content=${contentId}`;
+              browserNotification.close();
+            };
           } catch {
             // Browser may block notifications in some contexts
           }

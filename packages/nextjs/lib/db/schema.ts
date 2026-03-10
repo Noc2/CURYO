@@ -48,6 +48,19 @@ export const watchedContent = sqliteTable(
 export type WatchedContent = typeof watchedContent.$inferSelect;
 export type NewWatchedContent = typeof watchedContent.$inferInsert;
 
+export const notificationPreferences = sqliteTable("notification_preferences", {
+  walletAddress: text("wallet_address").primaryKey(),
+  roundResolved: integer("round_resolved", { mode: "boolean" }).notNull(),
+  settlingSoonHour: integer("settling_soon_hour", { mode: "boolean" }).notNull(),
+  settlingSoonDay: integer("settling_soon_day", { mode: "boolean" }).notNull(),
+  followedSubmission: integer("followed_submission", { mode: "boolean" }).notNull(),
+  followedResolution: integer("followed_resolution", { mode: "boolean" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+});
+
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type NewNotificationPreferences = typeof notificationPreferences.$inferInsert;
+
 export const urlValidations = sqliteTable("url_validations", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   url: text("url").notNull().unique(),
