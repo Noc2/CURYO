@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { MutateOptions } from "@tanstack/react-query";
 import { Abi, ExtractAbiFunctionNames } from "abitype";
-import { Config, UseWriteContractParameters, useAccount, useConfig, useWriteContract } from "wagmi";
+import { Config, useAccount, useConfig, useWriteContract } from "wagmi";
 import { WriteContractErrorType, WriteContractReturnType, getPublicClient } from "wagmi/actions";
 import { WriteContractVariables } from "wagmi/query";
 import { useSelectedNetwork } from "~~/hooks/scaffold-eth";
@@ -36,40 +36,20 @@ type ScaffoldWriteContractReturnType<TContractName extends ContractName> = Omit<
 export function useScaffoldWriteContract<TContractName extends ContractName>(
   config: UseScaffoldWriteConfig<TContractName>,
 ): ScaffoldWriteContractReturnType<TContractName>;
-/**
- * @deprecated Use object parameter version instead: useScaffoldWriteContract({ contractName: "YourContract" })
- */
-export function useScaffoldWriteContract<TContractName extends ContractName>(
-  contractName: TContractName,
-  writeContractParams?: UseWriteContractParameters,
-): ScaffoldWriteContractReturnType<TContractName>;
 
 /**
  * Wrapper around wagmi's useWriteContract hook which automatically loads (by name) the contract ABI and address from
  * the contracts present in deployedContracts.ts & externalContracts.ts corresponding to targetNetworks configured in scaffold.config.ts
- * @param contractName - name of the contract to be written to
+ * @param config.contractName - name of the contract to be written to
  * @param config.chainId - optional chainId that is configured with the scaffold project to make use for multi-chain interactions.
- * @param writeContractParams - wagmi's useWriteContract parameters
+ * @param config.writeContractParams - wagmi's useWriteContract parameters
  */
 export function useScaffoldWriteContract<TContractName extends ContractName>(
-  configOrName: UseScaffoldWriteConfig<TContractName> | TContractName,
-  writeContractParams?: UseWriteContractParameters,
+  config: UseScaffoldWriteConfig<TContractName>,
 ): ScaffoldWriteContractReturnType<TContractName> {
-  const finalConfig =
-    typeof configOrName === "string"
-      ? { contractName: configOrName, writeContractParams, chainId: undefined }
-      : (configOrName as UseScaffoldWriteConfig<TContractName>);
-  const { contractName, chainId, writeContractParams: finalWriteContractParams } = finalConfig;
+  const { contractName, chainId, writeContractParams: finalWriteContractParams } = config;
 
   const wagmiConfig = useConfig();
-
-  useEffect(() => {
-    if (typeof configOrName === "string") {
-      console.warn(
-        "Using `useScaffoldWriteContract` with a string parameter is deprecated. Please use the object parameter version instead.",
-      );
-    }
-  }, [configOrName]);
 
   const { chain: accountChain, address: accountAddress } = useAccount();
   const writeTx = useTransactor();
@@ -117,7 +97,7 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
         ...variables,
       } as WriteContractVariables<Abi, string, any[], Config, number>;
 
-      if (!finalConfig?.disableSimulate) {
+      if (!config.disableSimulate) {
         await simulateContractWriteAndNotifyError({
           wagmiConfig,
           writeContractParams: writeContractObject,

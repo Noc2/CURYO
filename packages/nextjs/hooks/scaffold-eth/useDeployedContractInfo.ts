@@ -22,29 +22,12 @@ type DeployedContractData<TContractName extends ContractName> = {
 export function useDeployedContractInfo<TContractName extends ContractName>(
   config: UseDeployedContractConfig<TContractName>,
 ): DeployedContractData<TContractName>;
-/**
- * @deprecated Use object parameter version instead: useDeployedContractInfo({ contractName: "YourContract" })
- */
-export function useDeployedContractInfo<TContractName extends ContractName>(
-  contractName: TContractName,
-): DeployedContractData<TContractName>;
 
 export function useDeployedContractInfo<TContractName extends ContractName>(
-  configOrName: UseDeployedContractConfig<TContractName> | TContractName,
+  config: UseDeployedContractConfig<TContractName>,
 ): DeployedContractData<TContractName> {
   const isMounted = useIsMounted();
-
-  const finalConfig: UseDeployedContractConfig<TContractName> =
-    typeof configOrName === "string" ? { contractName: configOrName } : (configOrName as any);
-
-  useEffect(() => {
-    if (typeof configOrName === "string") {
-      console.warn(
-        "Using `useDeployedContractInfo` with a string parameter is deprecated. Please use the object parameter version instead.",
-      );
-    }
-  }, [configOrName]);
-  const { contractName, chainId } = finalConfig;
+  const { contractName, chainId } = config;
   const selectedNetwork = useSelectedNetwork(chainId);
   const deployedContract = contracts?.[selectedNetwork.id]?.[contractName as ContractName] as Contract<TContractName>;
   const [status, setStatus] = useState<ContractCodeStatus>(ContractCodeStatus.LOADING);
