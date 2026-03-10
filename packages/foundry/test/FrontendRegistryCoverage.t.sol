@@ -176,6 +176,49 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(operator, frontend1);
     }
 
+    function test_Register_WithDelegatedVoterId_Reverts() public {
+        vm.prank(admin);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+
+        mockVoterIdNFT.setHolder(frontend1);
+        vm.prank(frontend1);
+        mockVoterIdNFT.setDelegate(frontend2);
+
+        vm.startPrank(frontend2);
+        crepToken.approve(address(registry), STAKE);
+        vm.expectRevert("Frontend operator must hold Voter ID");
+        registry.register();
+        vm.stopPrank();
+    }
+
+    function test_Register_DelegateRotation_CannotCreateNewFrontendIdentity() public {
+        vm.prank(admin);
+        registry.setVoterIdNFT(address(mockVoterIdNFT));
+
+        mockVoterIdNFT.setHolder(frontend1);
+
+        vm.prank(frontend1);
+        mockVoterIdNFT.setDelegate(frontend2);
+
+        vm.startPrank(frontend2);
+        crepToken.approve(address(registry), STAKE);
+        vm.expectRevert("Frontend operator must hold Voter ID");
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(frontend1);
+        mockVoterIdNFT.removeDelegate();
+
+        vm.prank(frontend1);
+        mockVoterIdNFT.setDelegate(frontend3);
+
+        vm.startPrank(frontend3);
+        crepToken.approve(address(registry), STAKE);
+        vm.expectRevert("Frontend operator must hold Voter ID");
+        registry.register();
+        vm.stopPrank();
+    }
+
     function test_Register_WithoutVoterIdNFT_SkipsCheck() public {
         // voterIdNFT is not set (address(0)) — registration should succeed without check
         vm.startPrank(frontend1);

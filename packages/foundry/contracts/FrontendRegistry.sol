@@ -169,6 +169,7 @@ contract FrontendRegistry is
         // Require Voter ID if VoterIdNFT is configured
         if (address(voterIdNFT) != address(0)) {
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+            require(voterIdNFT.resolveHolder(msg.sender) == msg.sender, "Frontend operator must hold Voter ID");
         }
 
         require(frontends[msg.sender].operator == address(0), "Already registered");
