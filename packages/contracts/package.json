@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./abis": "./src/abis/index.ts",
     "./deployedContracts": "./src/deployedContracts.ts",
+    "./protocol": "./src/protocol.ts",
     "./types": "./src/types.ts",
     "./voting": "./src/voting.ts"
   },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { EPOCH_WEIGHT_BPS, REWARD_SPLIT_BPS, ROUND_STATE } from "@curyo/contracts/protocol";
 import { useAccount, useReadContracts } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
@@ -13,13 +14,8 @@ export interface ClaimableItem {
   claimType: "reward" | "refund";
 }
 
-// RoundState enum (matching Solidity)
-const RoundState = { Open: 0, Settled: 1, Cancelled: 2, Tied: 3, RevealFailed: 4 } as const;
-const REVEALED_LOSER_REFUND_BPS = 500n;
-
-// epochWeightBps: epoch-1 = 10000 (100%), epoch-2+ = 2500 (25%)
 function epochWeightBps(epochIndex: number): number {
-  return epochIndex === 0 ? 10000 : 2500;
+  return epochIndex === 0 ? EPOCH_WEIGHT_BPS.blind : EPOCH_WEIGHT_BPS.informed;
 }
 
 /**
@@ -49,9 +45,9 @@ export function useAllClaimableRewards() {
   const terminalVotes = useMemo(() => {
     return votes.filter(v => {
       const state = v.roundState;
-      if (state === RoundState.Cancelled) return true;
-      if ((state === RoundState.Tied || state === RoundState.RevealFailed) && v.revealed) return true;
-      if (state === RoundState.Settled && v.revealed && v.isUp !== null) return true;
+      if (state === ROUND_STATE.Cancelled) return true;
+      if ((state === ROUND_STATE.Tied || state === ROUND_STATE.RevealFailed) && v.revealed) return true;
+      if (state === ROUND_STATE.Settled && v.revealed && v.isUp !== null) return true;
       return false;
     });
   }, [votes]);
@@ -63,10 +59,10 @@ export function useAllClaimableRewards() {
   const claimedContracts = useMemo(() => {
     if (!distributorInfo || !engineInfo || !address || terminalVotes.length === 0) return [];
     return terminalVotes.map(v => ({
-      address: v.roundState === RoundState.Settled ? distributorInfo.address : engineInfo.address,
-      abi: v.roundState === RoundState.Settled ? distributorInfo.abi : engineInfo.abi,
+      address: v.roundState === ROUND_STATE.Settled ? distributorInfo.address : engineInfo.address,
+      abi: v.roundState === ROUND_STATE.Settled ? distributorInfo.abi : engineInfo.abi,
       functionName:
-        v.roundState === RoundState.Settled ? ("rewardClaimed" as const) : ("cancelledRoundRefundClaimed" as const),
+        v.roundState === ROUND_STATE.Settled ? ("rewardClaimed" as const) : ("cancelledRoundRefundClaimed" as const),
       args: [BigInt(v.contentId), BigInt(v.roundId), address],
     }));
   }, [distributorInfo, engineInfo, address, terminalVotes]);
@@ -94,9 +90,9 @@ export function useAllClaimableRewards() {
     const refunds: typeof unclaimedVotes = [];
     for (const v of unclaimedVotes) {
       const state = v.roundState;
-      if (state === RoundState.Cancelled || state === RoundState.Tied || state === RoundState.RevealFailed) {
+      if (state === ROUND_STATE.Cancelled || state === ROUND_STATE.Tied || state === ROUND_STATE.RevealFailed) {
         refunds.push(v);
-      } else if (state === RoundState.Settled) {
+      } else if (state === ROUND_STATE.Settled) {
         rewards.push(v);
       }
     }
@@ -195,7 +191,7 @@ export function useAllClaimableRewards() {
     // Add settled losers (fixed 5% rebate for revealed losing votes).
     for (const v of settledLosers) {
       const stake = safeBigInt(v.stake);
-      const reward = (stake * REVEALED_LOSER_REFUND_BPS) / 10000n;
+      const reward = (stake * BigInt(REWARD_SPLIT_BPS.revealedLoserRefund)) / 10000n;
       items.push({
         contentId: safeBigInt(v.contentId),
         epochId: safeBigInt(v.roundId),
@@ -208,7 +204,7 @@ export function useAllClaimableRewards() {
     // Active stake = sum of stakes in open rounds
     let active = 0n;
     for (const v of votes) {
-      if (v.roundState === RoundState.Open) {
+      if (v.roundState === ROUND_STATE.Open) {
         active += safeBigInt(v.stake);
       }
     }

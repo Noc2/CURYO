@@ -1,3 +1,4 @@
+import { DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
 import { RoundData } from "~~/types/votingTypes";
 
 export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "revealFailed" | "none";
@@ -68,10 +69,10 @@ export interface RoundSnapshot {
 }
 
 export const DEFAULT_VOTING_CONFIG: VotingConfig = {
-  epochDuration: 1200,
-  maxDuration: 7 * 24 * 60 * 60,
-  minVoters: 3,
-  maxVoters: 1000,
+  epochDuration: DEFAULT_ROUND_CONFIG.epochDurationSeconds,
+  maxDuration: DEFAULT_ROUND_CONFIG.maxDurationSeconds,
+  minVoters: DEFAULT_ROUND_CONFIG.minVoters,
+  maxVoters: DEFAULT_ROUND_CONFIG.maxVoters,
 };
 
 function toBigInt(value: unknown, fallback = 0n): bigint {
@@ -189,15 +190,15 @@ function deriveRoundPhase(state: number, hasRound: boolean): RoundPhase {
   if (!hasRound) return "none";
 
   switch (state) {
-    case 0:
+    case ROUND_STATE.Open:
       return "voting";
-    case 1:
+    case ROUND_STATE.Settled:
       return "settled";
-    case 2:
+    case ROUND_STATE.Cancelled:
       return "cancelled";
-    case 3:
+    case ROUND_STATE.Tied:
       return "tied";
-    case 4:
+    case ROUND_STATE.RevealFailed:
       return "revealFailed";
     default:
       return "none";
@@ -249,7 +250,7 @@ export function deriveRoundSnapshot(params: {
     settlementTime: thresholdReachedAt > 0 ? thresholdReachedAt : 0,
     settlementCountdown: 0,
     votersNeeded: Math.max(0, params.config.minVoters - voteCount),
-    readyToSettle: state === 0 && voteCount >= params.config.minVoters,
+    readyToSettle: state === ROUND_STATE.Open && voteCount >= params.config.minVoters,
     isRoundFull: voteCount >= params.config.maxVoters,
     minVoters: params.config.minVoters,
     maxVoters: params.config.maxVoters,

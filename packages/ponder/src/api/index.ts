@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { db } from "ponder:api";
 import {
   content,
@@ -290,8 +291,7 @@ app.get("/voting-stakes", async (c) => {
 
   const voterAddr = voter.toLowerCase() as `0x${string}`;
 
-  // Active voting stakes: votes in open rounds (state = 0)
-  // Round states: Open(0), Settled(1), Cancelled(2), Tied(3), RevealFailed(4)
+  // Active voting stakes: votes in open rounds
   const [activeResult] = await db
     .select({
       total: sql<string>`coalesce(sum(${vote.stake}), 0)`,
@@ -303,7 +303,7 @@ app.get("/voting-stakes", async (c) => {
       and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
     )
     .where(
-      and(eq(vote.voter, voterAddr), eq(round.state, 0)),
+      and(eq(vote.voter, voterAddr), eq(round.state, ROUND_STATE.Open)),
     );
 
   return jsonBig(c, {

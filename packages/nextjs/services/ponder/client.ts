@@ -1,3 +1,4 @@
+import type { RoundState } from "@curyo/contracts/protocol";
 import { publicEnv } from "~~/utils/env/public";
 
 const PONDER_URL = publicEnv.ponderUrl;
@@ -213,7 +214,7 @@ export interface PonderVoteItem {
   committedAt: string;
   revealedAt: string | null;
   roundStartTime: string | null;
-  roundState: number | null; // 0=Open, 1=Settled, 2=Cancelled, 3=Tied, 4=RevealFailed
+  roundState: RoundState | null;
   roundUpWins: boolean | null;
 }
 

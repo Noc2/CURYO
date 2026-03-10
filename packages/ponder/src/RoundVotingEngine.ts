@@ -1,5 +1,6 @@
 import { ponder } from "ponder:registry";
 import { eq, and } from "ponder";
+import { ROUND_STATE } from "@curyo/contracts/protocol";
 import {
   round,
   vote,
@@ -14,8 +15,6 @@ import {
   dailyVoteActivity,
   voterStreak,
 } from "ponder:schema";
-
-// Round states: Open(0), Settled(1), Cancelled(2), Tied(3), RevealFailed(4)
 
 ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
   const { contentId, roundId, voter, commitHash, stake } = event.args;
@@ -35,7 +34,7 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       id: roundKey,
       contentId,
       roundId,
-      state: 0, // Open
+      state: ROUND_STATE.Open,
       voteCount: 1,
       revealedCount: 0,
       totalStake: stake,
@@ -213,7 +212,7 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
     await context.db.update(round, { id: roundKey }).set({
-      state: 1, // Settled
+      state: ROUND_STATE.Settled,
       upWins,
       losingPool,
       settledAt: event.block.timestamp,
@@ -223,7 +222,7 @@ ponder.on("RoundVotingEngine:RoundSettled", async ({ event, context }) => {
       id: roundKey,
       contentId,
       roundId,
-      state: 1, // Settled
+      state: ROUND_STATE.Settled,
       voteCount: 0,
       revealedCount: 0,
       totalStake: 0n,
@@ -332,13 +331,13 @@ ponder.on("RoundVotingEngine:RoundCancelled", async ({ event, context }) => {
 
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
-    await context.db.update(round, { id: roundKey }).set({ state: 2 }); // Cancelled
+    await context.db.update(round, { id: roundKey }).set({ state: ROUND_STATE.Cancelled });
   } else {
     await context.db.insert(round).values({
       id: roundKey,
       contentId,
       roundId,
-      state: 2, // Cancelled
+      state: ROUND_STATE.Cancelled,
       voteCount: 0,
       revealedCount: 0,
       totalStake: 0n,
@@ -356,13 +355,13 @@ ponder.on("RoundVotingEngine:RoundTied", async ({ event, context }) => {
 
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
-    await context.db.update(round, { id: roundKey }).set({ state: 3 }); // Tied
+    await context.db.update(round, { id: roundKey }).set({ state: ROUND_STATE.Tied });
   } else {
     await context.db.insert(round).values({
       id: roundKey,
       contentId,
       roundId,
-      state: 3, // Tied
+      state: ROUND_STATE.Tied,
       voteCount: 0,
       revealedCount: 0,
       totalStake: 0n,
@@ -380,13 +379,13 @@ ponder.on("RoundVotingEngine:RoundRevealFailed", async ({ event, context }) => {
 
   const existingRound = await context.db.find(round, { id: roundKey });
   if (existingRound) {
-    await context.db.update(round, { id: roundKey }).set({ state: 4 }); // RevealFailed
+    await context.db.update(round, { id: roundKey }).set({ state: ROUND_STATE.RevealFailed });
   } else {
     await context.db.insert(round).values({
       id: roundKey,
       contentId,
       roundId,
-      state: 4, // RevealFailed
+      state: ROUND_STATE.RevealFailed,
       voteCount: 0,
       revealedCount: 0,
       totalStake: 0n,
