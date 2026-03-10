@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { BellAlertIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import { useEmailNotificationSettings } from "~~/hooks/useEmailNotificationSettings";
@@ -73,8 +72,6 @@ function NotificationPreferenceToggle({
 
 export function NotificationSettingsPanel({ address }: { address?: string }) {
   const { openConnectModal } = useConnectModal();
-  const searchParams = useSearchParams();
-  const emailQueryStatus = searchParams.get("email");
   const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address);
   const {
     settings: emailSettings,
@@ -84,6 +81,7 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
   } = useEmailNotificationSettings(address);
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
   const [emailDraft, setEmailDraft] = useState("");
+  const [emailQueryStatus, setEmailQueryStatus] = useState<string | null>(null);
   const [emailPreferenceDrafts, setEmailPreferenceDrafts] = useState<Omit<EmailNotificationSettingsPayload, "email">>({
     roundResolved: false,
     settlingSoonHour: false,
@@ -91,6 +89,12 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
     followedSubmission: false,
     followedResolution: false,
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    setEmailQueryStatus(new URLSearchParams(window.location.search).get("email"));
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) {

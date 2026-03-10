@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { GlobeAltIcon, IdentificationIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
@@ -39,7 +39,6 @@ export default function LandingPage() {
   const { address, isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const wasConnected = useRef(isConnected);
 
   const { data: crepBalance } = useScaffoldReadContract({
@@ -51,11 +50,11 @@ export default function LandingPage() {
 
   // Redirect old /?content=123 share links to /vote?content=123
   useEffect(() => {
-    const contentParam = searchParams.get("content");
+    const contentParam = new URLSearchParams(window.location.search).get("content");
     if (contentParam) {
       router.replace(`/vote?content=${contentParam}`);
     }
-  }, [searchParams, router]);
+  }, [router]);
 
   useEffect(() => {
     if (isConnected && !wasConnected.current) {
