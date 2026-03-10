@@ -201,9 +201,12 @@ test.describe("Reward claim lifecycle", () => {
     const voteHistory = page.getByRole("heading", { name: "Vote History" });
     await expect(voteHistory).toBeVisible({ timeout: 10_000 });
 
+    // Scroll to vote history so round-status elements are in the viewport
+    await voteHistory.scrollIntoViewIfNeeded();
+
     const claimBtn = page.getByRole("button", { name: "Claim Reward" });
-    const activeBadge = page.getByText("Active");
-    const claimedBadge = page.getByText("Claimed");
+    const activeBadge = page.getByText("Active", { exact: true });
+    const claimedBadge = page.getByText("Claimed", { exact: true });
     const anyState = claimBtn.or(activeBadge).or(claimedBadge);
     await expect(anyState.first()).toBeVisible({ timeout: 15_000 });
 
@@ -393,8 +396,12 @@ test.describe("Reward claim lifecycle", () => {
       { account: futureEpochUnrevealed, isUp: false, tlockEpoch: 7200 },
     ];
 
-    const commits: { account: (typeof voters)[number]["account"]; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] =
-      [];
+    const commits: {
+      account: (typeof voters)[number]["account"];
+      commitKey: `0x${string}`;
+      isUp: boolean;
+      salt: `0x${string}`;
+    }[] = [];
 
     for (const voter of voters) {
       const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.account.address, CREP_TOKEN);
@@ -431,7 +438,10 @@ test.describe("Reward claim lifecycle", () => {
       expect(revealed, `Reveal failed for ${commit.account.address}`).toBe(true);
     }
 
-    await evmIncreaseTime(EPOCH_DURATION + 1);
+    // Advance past the reveal grace period (60 min default) so unrevealed
+    // past-epoch commits don't block settlement via UnrevealedPastEpochVotes.
+    const REVEAL_GRACE_PERIOD = 3600;
+    await evmIncreaseTime(EPOCH_DURATION + REVEAL_GRACE_PERIOD + 1);
     await waitForPonderSync();
 
     const settled = await settleRoundDirect(BigInt(cleanupContentId!), cleanupRoundId, keeper.address, VOTING_ENGINE);
