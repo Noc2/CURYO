@@ -181,12 +181,16 @@ const GovernanceDocs: NextPage = () => {
       <h2>Treasury</h2>
       <p>
         The governance treasury is held by the timelock controller and starts with 10M cREP. It grows over time through
-        three main ongoing inflow sources:
+        four main ongoing inflow sources:
       </p>
       <ul>
         <li>
           <strong>1% treasury fee</strong> &mdash; 1% of contested losing pools is sent to the treasury when rounds
           settle.
+        </li>
+        <li>
+          <strong>Cancellation fees</strong> &mdash; voluntary content withdrawals pay a fixed 1 cREP anti-spam fee into
+          the treasury.
         </li>
         <li>
           <strong>Forfeited submitter deposits</strong> &mdash; when content is flagged for policy violations or

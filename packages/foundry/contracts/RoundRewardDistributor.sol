@@ -6,6 +6,7 @@ import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/ac
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import { RoundVotingEngine } from "./RoundVotingEngine.sol";
 import { ContentRegistry } from "./ContentRegistry.sol";
@@ -18,6 +19,8 @@ import { RewardMath } from "./libraries/RewardMath.sol";
 ///      Rewards are distributed proportional to epoch-weighted effective stake.
 ///      Epoch-1 (blind) voters earn 4× more per cREP than epoch-2+ voters.
 contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, ReentrancyGuardTransient, UUPSUpgradeable {
+    using SafeERC20 for IERC20;
+
     // --- Access Control Roles ---
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
@@ -34,6 +37,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error NotWinningSide();
     error NoParticipationRate();
     error NoCommit();
+    error NoStrandedCrep();
+    error TreasuryNotSet();
 
     // --- State ---
     IERC20 public crepToken;
@@ -69,6 +74,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     event SubmitterRewardClaimed(
         uint256 indexed contentId, uint256 indexed roundId, address indexed submitter, uint256 crepAmount
     );
+    event StrandedCrepSwept(address indexed treasury, uint256 amount);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -97,6 +103,20 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         crepToken = IERC20(_crepToken);
         votingEngine = RoundVotingEngine(_votingEngine);
         registry = ContentRegistry(_registry);
+    }
+
+    /// @notice Sweep any cREP accidentally held by the distributor to the protocol treasury.
+    /// @dev Historical cancellation fees were mistakenly routed here in some deployments. This contract does not
+    ///      custody live reward inventory, so governance can safely recover the full balance to treasury.
+    function sweepStrandedCrepToTreasury() external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant returns (uint256 amount) {
+        address treasury = registry.treasury();
+        if (treasury == address(0)) revert TreasuryNotSet();
+
+        amount = crepToken.balanceOf(address(this));
+        if (amount == 0) revert NoStrandedCrep();
+
+        crepToken.safeTransfer(treasury, amount);
+        emit StrandedCrepSwept(treasury, amount);
     }
 
     // --- Voter Reward Claiming ---

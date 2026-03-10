@@ -179,8 +179,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 10. Set content voting contracts on token (for governance lock bypass)
         crepToken.setContentVotingContracts(address(votingEngine), address(registry));
 
-        // 11. Set treasury, bonus pool, and configure round parameters
-        registry.setBonusPool(address(rewardDistributor));
+        // 11. Set treasury, cancellation fee sink, and configure round parameters
+        registry.setBonusPool(governance);
         registry.setTreasury(governance);
         votingEngine.setTreasury(governance);
         votingEngine.setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters

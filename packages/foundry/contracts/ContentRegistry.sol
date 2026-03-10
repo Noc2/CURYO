@@ -73,7 +73,7 @@ contract ContentRegistry is
     IERC20 public crepToken;
     address public votingEngine;
     ICategoryRegistry public categoryRegistry;
-    address public bonusPool; // Receives cancellation fees (anti-spam)
+    address public bonusPool; // Cancellation fee sink (anti-spam), typically the treasury
     address public treasury; // Receives 100% of slashed stakes (governance timelock)
     uint256 public nextContentId;
     mapping(uint256 => Content) public contents;
@@ -167,7 +167,7 @@ contract ContentRegistry is
         participationPool = IParticipationPool(_participationPool);
     }
 
-    /// @notice Set the bonus pool address that receives cancellation fees (can only be called by CONFIG_ROLE).
+    /// @notice Set the cancellation fee sink address (can only be called by CONFIG_ROLE).
     function setBonusPool(address _bonusPool) external onlyRole(CONFIG_ROLE) {
         require(_bonusPool != address(0), "Invalid address");
         bonusPool = _bonusPool;
@@ -263,7 +263,7 @@ contract ContentRegistry is
             urlSubmitted[urlHash] = false;
         }
 
-        // Return stake minus cancellation fee (fee goes to bonus pool to prevent spam)
+        // Return stake minus cancellation fee (fee goes to the configured anti-spam sink)
         if (!c.submitterStakeReturned) {
             c.submitterStakeReturned = true;
             uint256 fee = c.submitterStake >= CANCELLATION_FEE ? CANCELLATION_FEE : c.submitterStake;

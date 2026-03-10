@@ -228,7 +228,8 @@ const SmartContracts: NextPage = () => {
           ID. Duplicate URLs are rejected.
         </li>
         <li>
-          <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to bonus pool).
+          <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured
+          cancellation-fee sink, treasury by default).
         </li>
         <li>
           <code>markDormant(contentId)</code> &mdash; Mark inactive content as dormant after 30 days. Permissionless;
@@ -373,6 +374,10 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>claimSubmitterReward(contentId, roundId)</code> &mdash; Claim submitter&apos;s 10% share.
+        </li>
+        <li>
+          <code>sweepStrandedCrepToTreasury()</code> &mdash; Governance-only recovery path for any cREP mistakenly sent
+          directly to the distributor.
         </li>
       </ul>
 

@@ -765,9 +765,8 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>L-01</td>
               <td>
-                <strong>Cancellation fee not sent if bonusPool is address(0).</strong> Added{" "}
-                <code>require(bonusPool != address(0))</code> at the top of <code>cancelContent()</code> to prevent fees
-                from being stuck when bonusPool is not configured.
+                <strong>Cancellation fee sink must be configured.</strong> <code>cancelContent()</code> requires a
+                nonzero fee-sink address so the 1 cREP anti-spam fee cannot be stranded during withdrawals.
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>
