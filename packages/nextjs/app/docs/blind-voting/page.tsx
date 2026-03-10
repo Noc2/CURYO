@@ -94,7 +94,9 @@ const BlindVoting: NextPage = () => {
       </p>
       <p>
         Rounds that exceed the <strong>maximum duration</strong> ({protocolDocFacts.maxRoundDurationLabel}) without
-        meeting the minimum voter threshold are cancelled. All stakes are fully refunded to participants.
+        reaching commit quorum are cancelled and refundable. If commit quorum is reached but reveal quorum still never
+        materializes by the final reveal grace deadline, the round can instead finalize as RevealFailed: revealed votes
+        remain refundable, while unrevealed stakes are forfeited.
       </p>
 
       <h2>One-Sided Rounds (Consensus)</h2>

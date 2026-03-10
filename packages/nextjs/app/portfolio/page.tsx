@@ -176,7 +176,7 @@ export default function PortfolioPage() {
                     ) : (
                       <span
                         className="tooltip tooltip-left text-base font-medium px-4 py-2 rounded-full bg-warning/10 text-warning"
-                        data-tip="Max time until round expiry. Rounds can settle sooner once the revealed-vote threshold and past-epoch reveal checks are satisfied. If the threshold is not reached by expiry, stakes are refunded."
+                        data-tip="Max time until round expiry. Rounds can settle sooner once the revealed-vote threshold and past-epoch reveal checks are satisfied. Below commit quorum at expiry, stakes refund. After commit quorum, missing reveal quorum can end in RevealFailed, where only revealed votes refund."
                       >
                         Active
                         {(() => {
