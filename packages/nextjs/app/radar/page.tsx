@@ -17,7 +17,6 @@ import {
 import { useCurrentSeasons } from "~~/hooks/useCurrentSeasons";
 import { useFeaturedToday } from "~~/hooks/useFeaturedToday";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
-import { type NotificationPreferences, useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { useRadarFeed } from "~~/hooks/useRadarFeed";
 import { type PonderRadarResolutionItem, type PonderRadarSubmissionItem } from "~~/services/ponder/client";
 import { notification } from "~~/utils/scaffold-eth";
@@ -111,36 +110,6 @@ function ResolutionCard({ item }: { item: PonderRadarResolutionItem }) {
   );
 }
 
-function NotificationPreferenceToggle({
-  label,
-  description,
-  checked,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  disabled: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex items-start justify-between gap-4 rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3">
-      <div>
-        <div className="text-base font-medium text-white">{label}</div>
-        <p className="mt-1 text-sm text-base-content/50">{description}</p>
-      </div>
-      <input
-        type="checkbox"
-        className="toggle toggle-sm toggle-primary mt-1"
-        checked={checked}
-        disabled={disabled}
-        onChange={event => onChange(event.target.checked)}
-      />
-    </label>
-  );
-}
-
 export default function RadarPage() {
   const { address } = useAccount();
   const { openConnectModal } = useConnectModal();
@@ -152,8 +121,6 @@ export default function RadarPage() {
     Number(seasons.endsAt) > 0
       ? `Current standings. This week resets ${formatRelativeTime(seasons.endsAt)}.`
       : "Current standings for the live weekly season.";
-  const { preferences, isSaving, updatePreference } = useNotificationPreferences(address);
-
   const handleToggleFollow = useCallback(
     async (targetAddress: string) => {
       const result = await toggleFollow(targetAddress);
@@ -176,27 +143,6 @@ export default function RadarPage() {
       notification.success(result.following ? "Following curator" : "Unfollowed curator");
     },
     [openConnectModal, toggleFollow],
-  );
-
-  const handleTogglePreference = useCallback(
-    async (key: keyof NotificationPreferences, value: boolean) => {
-      const result = await updatePreference(key, value);
-
-      if (!result.ok) {
-        if (result.reason === "not_connected") {
-          openConnectModal?.();
-          return;
-        }
-
-        if (result.reason !== "rejected") {
-          notification.error(result.error || "Failed to update notification settings");
-        }
-        return;
-      }
-
-      notification.success("Notification settings updated");
-    },
-    [openConnectModal, updatePreference],
   );
 
   if (!address) {
@@ -402,55 +348,20 @@ export default function RadarPage() {
 
             <DiscoverModuleCard
               title="Notification Settings"
-              description="Choose which radar events should trigger in-app and browser notifications."
+              description="Manage browser and in-app alerts from the dedicated settings page."
             >
-              <div className="space-y-3">
-                <NotificationPreferenceToggle
-                  label="Round resolved"
-                  description="Notify when content you watched or voted on resolves."
-                  checked={preferences.roundResolved}
-                  disabled={isSaving}
-                  onChange={checked => {
-                    void handleTogglePreference("roundResolved", checked);
-                  }}
-                />
-                <NotificationPreferenceToggle
-                  label="Settling within 1 hour"
-                  description="Get a heads-up when tracked rounds look close to settlement."
-                  checked={preferences.settlingSoonHour}
-                  disabled={isSaving}
-                  onChange={checked => {
-                    void handleTogglePreference("settlingSoonHour", checked);
-                  }}
-                />
-                <NotificationPreferenceToggle
-                  label="Settling today"
-                  description="See a broader daily reminder for watched or voted rounds."
-                  checked={preferences.settlingSoonDay}
-                  disabled={isSaving}
-                  onChange={checked => {
-                    void handleTogglePreference("settlingSoonDay", checked);
-                  }}
-                />
-                <NotificationPreferenceToggle
-                  label="Followed curator submissions"
-                  description="Notify when someone you follow submits new content."
-                  checked={preferences.followedSubmission}
-                  disabled={isSaving}
-                  onChange={checked => {
-                    void handleTogglePreference("followedSubmission", checked);
-                  }}
-                />
-                <NotificationPreferenceToggle
-                  label="Followed curator outcomes"
-                  description="Notify when a followed curator has a round resolve."
-                  checked={preferences.followedResolution}
-                  disabled={isSaving}
-                  onChange={checked => {
-                    void handleTogglePreference("followedResolution", checked);
-                  }}
-                />
-              </div>
+              <Link
+                href="/settings/notifications"
+                className="group flex items-center justify-between rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-4 transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
+              >
+                <div>
+                  <div className="text-base font-medium text-white group-hover:text-primary">Open notifications</div>
+                  <p className="mt-1 text-sm text-base-content/50">
+                    Choose which events should trigger alerts and where they should show up.
+                  </p>
+                </div>
+                <ArrowTopRightOnSquareIcon className="h-4 w-4 shrink-0 text-base-content/35 transition-colors group-hover:text-primary" />
+              </Link>
             </DiscoverModuleCard>
 
             <SuggestedCuratorsPanel

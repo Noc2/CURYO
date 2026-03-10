@@ -8,6 +8,7 @@ import { useAccount, useDisconnect } from "wagmi";
 import {
   ArrowLeftOnRectangleIcon,
   ArrowsRightLeftIcon,
+  BellAlertIcon,
   ChevronLeftIcon,
   EyeIcon,
   GiftIcon,
@@ -103,6 +104,12 @@ function MenuItems({
           </label>
         </li>
       )}
+      <li className={selectingNetwork ? "hidden" : ""}>
+        <Link href="/settings/notifications" className={menuItemClass}>
+          <BellAlertIcon className="w-6 h-6 shrink-0" />
+          <span className={textClass}>Notifications</span>
+        </Link>
+      </li>
       <li className={selectingNetwork ? "hidden" : ""}>
         <button className={`${menuItemClass} text-error hover:text-error`} type="button" onClick={() => disconnect()}>
           <ArrowLeftOnRectangleIcon className="w-6 h-6 shrink-0" />
