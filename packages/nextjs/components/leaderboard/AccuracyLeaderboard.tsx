@@ -10,6 +10,7 @@ import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { PonderAccuracyLeaderboardItem, ponderApi } from "~~/services/ponder/client";
+import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 type SortOption = "winRate" | "wins" | "stakeWon";
@@ -184,6 +185,8 @@ export function AccuracyLeaderboard() {
                 const streak = entry.currentStreak;
                 const streakLabel =
                   streak !== undefined ? (streak > 0 ? `${streak}W` : streak < 0 ? `${Math.abs(streak)}L` : "0") : "-";
+                const fallbackImageUrl = blo(entry.voter as `0x${string}`);
+                const avatarSrc = getProxiedProfileImageUrl(entry.profileImageUrl) || fallbackImageUrl;
 
                 return (
                   <tr
@@ -207,9 +210,9 @@ export function AccuracyLeaderboard() {
                           aria-label={`View profile for ${entry.profileName || truncateAddress(entry.voter)}`}
                         >
                           <img
-                            src={entry.profileImageUrl || blo(entry.voter as `0x${string}`)}
+                            src={avatarSrc}
                             onError={e => {
-                              e.currentTarget.src = blo(entry.voter as `0x${string}`);
+                              e.currentTarget.src = fallbackImageUrl;
                             }}
                             width={32}
                             height={32}

@@ -16,6 +16,7 @@ import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { type PonderProfile, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
+import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface PublicProfileViewProps {
@@ -122,9 +123,11 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const pending = isFollowPending(normalizedAddress);
   const fallbackProfile = profiles[normalizedAddress];
   const backHref = ownProfile ? "/governance#profile" : "/governance#leaderboard";
+  const fallbackImageUrl = blo(normalizedAddress);
 
   const displayName = summary?.name || fallbackProfile?.username || truncateAddress(normalizedAddress);
-  const profileImageUrl = summary?.imageUrl || fallbackProfile?.profileImageUrl || blo(normalizedAddress);
+  const profileImageUrl =
+    getProxiedProfileImageUrl(summary?.imageUrl || fallbackProfile?.profileImageUrl) || fallbackImageUrl;
   const totalVotes = summary?.totalVotes ?? 0;
   const totalContent = summary?.totalContent ?? 0;
   const totalRewardsClaimed = summary?.totalRewardsClaimed ?? "0";
@@ -174,7 +177,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
               <img
                 src={profileImageUrl}
                 onError={event => {
-                  event.currentTarget.src = blo(normalizedAddress);
+                  event.currentTarget.src = fallbackImageUrl;
                 }}
                 width={96}
                 height={96}

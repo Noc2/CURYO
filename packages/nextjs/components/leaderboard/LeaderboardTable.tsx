@@ -11,6 +11,7 @@ import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
+import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface LeaderboardUser {
@@ -214,6 +215,8 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
           <tbody>
             {visibleEntries.map(entry => {
               const isCurrentUser = connectedAddress?.toLowerCase() === entry.address.toLowerCase();
+              const fallbackImageUrl = blo(entry.address as `0x${string}`);
+              const avatarSrc = getProxiedProfileImageUrl(entry.profileImageUrl) || fallbackImageUrl;
               return (
                 <tr
                   key={entry.address}
@@ -240,9 +243,9 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
                         aria-label={`View profile for ${entry.username || truncateAddress(entry.address)}`}
                       >
                         <img
-                          src={entry.profileImageUrl || blo(entry.address as `0x${string}`)}
+                          src={avatarSrc}
                           onError={e => {
-                            e.currentTarget.src = blo(entry.address as `0x${string}`);
+                            e.currentTarget.src = fallbackImageUrl;
                           }}
                           width={32}
                           height={32}

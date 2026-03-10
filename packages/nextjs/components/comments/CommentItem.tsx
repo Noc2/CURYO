@@ -2,6 +2,7 @@
 
 import { blo } from "blo";
 import type { CommentData } from "~~/hooks/useComments";
+import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 
 function getTimeAgo(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -17,13 +18,15 @@ function getTimeAgo(date: Date): string {
 
 export function CommentItem({ comment }: { comment: CommentData }) {
   const displayName = comment.username || `${comment.walletAddress.slice(0, 6)}...${comment.walletAddress.slice(-4)}`;
+  const fallbackImageUrl = blo(comment.walletAddress as `0x${string}`);
+  const avatarSrc = getProxiedProfileImageUrl(comment.profileImageUrl) || fallbackImageUrl;
 
   return (
     <div className="flex gap-2.5">
       <img
-        src={comment.profileImageUrl || blo(comment.walletAddress as `0x${string}`)}
+        src={avatarSrc}
         onError={e => {
-          e.currentTarget.src = blo(comment.walletAddress as `0x${string}`);
+          e.currentTarget.src = fallbackImageUrl;
         }}
         width={32}
         height={32}

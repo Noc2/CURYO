@@ -8,21 +8,12 @@ import { IdentificationIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useIsNameTaken, useProfileRegistry, useSetProfile } from "~~/hooks/useProfileRegistry";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { sanitizeExternalUrl } from "~~/utils/externalUrl";
+import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 // Validation regex: 3-20 alphanumeric + underscore
 const NAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
-
-// Validate image URL format
-function isValidImageUrl(url: string): boolean {
-  if (!url) return true; // Empty is allowed
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
 
 export function ProfileForm() {
   const { address } = useAccount();
@@ -53,6 +44,8 @@ export function ProfileForm() {
 
   const handleSave = async () => {
     if (!address) return;
+    const trimmedImageInput = imageInput.trim();
+    const sanitizedImageUrl = trimmedImageInput ? sanitizeExternalUrl(trimmedImageInput) : null;
 
     // Validate name
     if (!nameInput.trim()) {
@@ -72,15 +65,15 @@ export function ProfileForm() {
     }
 
     // Validate image URL
-    if (imageInput && !isValidImageUrl(imageInput)) {
-      setError("Please enter a valid http/https URL for the image");
+    if (trimmedImageInput && !sanitizedImageUrl) {
+      setError("Please enter a valid HTTPS URL for the image");
       return;
     }
 
     setError(null);
 
     try {
-      await setProfile(nameInput.trim(), imageInput.trim());
+      await setProfile(nameInput.trim(), sanitizedImageUrl ?? "");
       notification.success(hasProfile ? "Profile updated!" : "Profile created!");
       refetch();
     } catch (e: any) {
@@ -100,6 +93,7 @@ export function ProfileForm() {
   const nameIsAvailable = showNameStatus && (!isNameTaken || isOwnName);
   const nameIsTaken = showNameStatus && isNameTaken && !isOwnName;
   const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/governance#profile";
+  const previewImageUrl = getProxiedProfileImageUrl(imageInput);
 
   if (profileLoading || voterIdLoading) {
     return (
@@ -149,7 +143,7 @@ export function ProfileForm() {
       <div className="flex items-center gap-4">
         <div className="relative">
           <img
-            src={imageInput || (address ? blo(address as `0x${string}`) : "")}
+            src={previewImageUrl || (address ? blo(address as `0x${string}`) : "")}
             onError={handleImageError}
             width={80}
             height={80}

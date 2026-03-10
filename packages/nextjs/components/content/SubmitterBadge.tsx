@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { blo } from "blo";
+import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 
 interface SubmitterBadgeProps {
   address: string;
@@ -34,6 +35,8 @@ export function SubmitterBadge({
   const truncatedAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
   const displayName = username || truncatedAddress;
   const profileHref = `/profiles/${address.toLowerCase()}`;
+  const fallbackImageUrl = blo(address as `0x${string}`);
+  const avatarSrc = getProxiedProfileImageUrl(profileImageUrl) || fallbackImageUrl;
 
   const showAccuracy = winRate !== undefined && totalSettledVotes !== undefined && totalSettledVotes >= 3;
   const winPct = showAccuracy ? Math.round(winRate! * 100) : 0;
@@ -49,7 +52,7 @@ export function SubmitterBadge({
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     // Fallback to blockie on error
-    e.currentTarget.src = blo(address as `0x${string}`);
+    e.currentTarget.src = fallbackImageUrl;
   };
 
   const stopPropagation = (event: React.SyntheticEvent) => {
@@ -67,7 +70,7 @@ export function SubmitterBadge({
         onKeyDown={stopPropagation}
       >
         <img
-          src={profileImageUrl || blo(address as `0x${string}`)}
+          src={avatarSrc}
           onError={handleImageError}
           width={avatarSize}
           height={avatarSize}
