@@ -16,7 +16,7 @@ interface FeedScopeFilterProps {
   label?: string;
 }
 
-export function FeedScopeFilter({ value, options, onChange, label = "Filter" }: FeedScopeFilterProps) {
+export function FeedScopeFilter({ value, options, onChange, label = "Feed" }: FeedScopeFilterProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -70,7 +70,7 @@ export function FeedScopeFilter({ value, options, onChange, label = "Filter" }: 
             ref={panelRef}
             className="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border border-base-content/10 bg-base-100 p-4 shadow-2xl sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:z-30 sm:mt-2 sm:w-72 sm:rounded-2xl sm:bg-base-200 sm:p-2"
             role="dialog"
-            aria-label="Feed filter options"
+            aria-label="Feed options"
           >
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-base-content/10 sm:hidden" />
             <div className="mb-3 flex items-center justify-between sm:hidden">
@@ -82,7 +82,7 @@ export function FeedScopeFilter({ value, options, onChange, label = "Filter" }: 
                 type="button"
                 onClick={close}
                 className="rounded-full bg-base-200 p-2 text-base-content/60"
-                aria-label="Close filters"
+                aria-label="Close feed options"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
