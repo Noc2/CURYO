@@ -15,7 +15,7 @@ import {
   verifyAndConsumeSignedActionChallenge,
 } from "~~/lib/auth/signedActions";
 import {
-  SIGNED_READ_SESSION_COOKIE_NAME,
+  NOTIFICATION_PREFERENCES_SIGNED_READ_SESSION_COOKIE_NAME,
   getSignedReadSessionCookie,
   issueSignedReadSession,
   verifySignedReadSession,
@@ -43,8 +43,9 @@ export async function GET(request: NextRequest) {
     }
 
     const hasSession = await verifySignedReadSession(
-      request.cookies.get(SIGNED_READ_SESSION_COOKIE_NAME)?.value,
+      request.cookies.get(NOTIFICATION_PREFERENCES_SIGNED_READ_SESSION_COOKIE_NAME)?.value,
       normalized.payload.normalizedAddress,
+      "notification_preferences",
     );
     if (!hasSession) {
       return NextResponse.json({ error: "Signed read required" }, { status: 401 });
@@ -106,10 +107,10 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const session = await issueSignedReadSession(payload.normalizedAddress);
+    const session = await issueSignedReadSession(payload.normalizedAddress, "notification_preferences");
     const preferences = await getNotificationPreferences(payload.normalizedAddress);
     const response = NextResponse.json(preferences);
-    response.cookies.set(getSignedReadSessionCookie(session));
+    response.cookies.set(getSignedReadSessionCookie("notification_preferences", session));
     return response;
   } catch (error) {
     console.error("Error fetching notification preferences:", error);

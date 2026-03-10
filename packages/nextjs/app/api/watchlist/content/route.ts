@@ -5,7 +5,7 @@ import {
   verifyAndConsumeSignedActionChallenge,
 } from "~~/lib/auth/signedActions";
 import {
-  SIGNED_READ_SESSION_COOKIE_NAME,
+  WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME,
   getSignedReadSessionCookie,
   issueSignedReadSession,
   verifySignedReadSession,
@@ -48,8 +48,9 @@ export async function GET(request: NextRequest) {
 
     const normalizedAddress = normalizeWalletAddress(address);
     const hasSession = await verifySignedReadSession(
-      request.cookies.get(SIGNED_READ_SESSION_COOKIE_NAME)?.value,
+      request.cookies.get(WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME)?.value,
       normalizedAddress,
+      "watchlist",
     );
 
     if (!hasSession) {
@@ -111,10 +112,10 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const session = await issueSignedReadSession(payload.normalizedAddress);
+    const session = await issueSignedReadSession(payload.normalizedAddress, "watchlist");
     const items = await listWatchedContent(payload.normalizedAddress);
     const response = NextResponse.json({ items, count: items.length });
-    response.cookies.set(getSignedReadSessionCookie(session));
+    response.cookies.set(getSignedReadSessionCookie("watchlist", session));
     return response;
   } catch (error) {
     console.error("Error fetching watched content:", error);

@@ -55,7 +55,7 @@ test.describe("Watchlist API routes", () => {
     expect(res.status).toBe(200);
 
     const cookie = res.headers.get("set-cookie");
-    expect(cookie).toContain("curyo_signed_read_session=");
+    expect(cookie).toContain("curyo_watchlist_read_session=");
 
     return {
       cookie: cookie!.split(";")[0],
@@ -167,5 +167,37 @@ test.describe("Watchlist API routes", () => {
       }),
     });
     expect(mismatchRes.status).toBe(401);
+  });
+
+  test("watchlist read session is address-bound", async () => {
+    const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(generatePrivateKey());
+    const otherAccount = privateKeyToAccount(generatePrivateKey());
+    const session = await createReadSession(account.address.toLowerCase(), account);
+
+    const authorizedRes = await fetch(`${BASE_URL}/api/watchlist/content?address=${account.address.toLowerCase()}`, {
+      headers: { cookie: session.cookie },
+    });
+    expect(authorizedRes.status).toBe(200);
+
+    const unauthorizedRes = await fetch(
+      `${BASE_URL}/api/watchlist/content?address=${otherAccount.address.toLowerCase()}`,
+      {
+        headers: { cookie: session.cookie },
+      },
+    );
+    expect(unauthorizedRes.status).toBe(401);
+  });
+
+  test("watchlist read session does not authorize notification preference reads", async () => {
+    const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(generatePrivateKey());
+    const session = await createReadSession(account.address.toLowerCase(), account);
+
+    const res = await fetch(`${BASE_URL}/api/notifications/preferences?address=${account.address.toLowerCase()}`, {
+      headers: { cookie: session.cookie },
+    });
+
+    expect(res.status).toBe(401);
   });
 });

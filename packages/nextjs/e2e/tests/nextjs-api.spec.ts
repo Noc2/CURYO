@@ -8,6 +8,68 @@ const BASE_URL = "http://localhost:3000";
  * Pure API tests using fetch — no browser needed.
  */
 test.describe("Next.js API routes", () => {
+  async function issueNotificationPreferencesReadChallenge(address: string) {
+    const res = await fetch(`${BASE_URL}/api/notifications/preferences/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address, intent: "read" }),
+    });
+    expect(res.status).toBe(200);
+    return res.json() as Promise<{ challengeId: string; message: string }>;
+  }
+
+  async function createNotificationPreferencesReadSession(
+    address: string,
+    signMessage: (args: { message: string }) => Promise<`0x${string}`>,
+  ) {
+    const challenge = await issueNotificationPreferencesReadChallenge(address);
+    const signature = await signMessage({ message: challenge.message });
+    const res = await fetch(`${BASE_URL}/api/notifications/preferences`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address, signature, challengeId: challenge.challengeId }),
+    });
+
+    expect(res.status).toBe(200);
+    const cookie = res.headers.get("set-cookie");
+    expect(cookie).toContain("curyo_notification_preferences_read_session=");
+
+    return {
+      cookie: cookie!.split(";")[0],
+      body: await res.json(),
+    };
+  }
+
+  async function updateNotificationPreferences(
+    address: string,
+    signMessage: (args: { message: string }) => Promise<`0x${string}`>,
+    nextPreferences: Record<string, boolean>,
+  ) {
+    const challengeRes = await fetch(`${BASE_URL}/api/notifications/preferences/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address, ...nextPreferences }),
+    });
+    expect(challengeRes.status).toBe(200);
+
+    const challenge = await challengeRes.json();
+    const signature = await signMessage({ message: challenge.message as string });
+
+    const res = await fetch(`${BASE_URL}/api/notifications/preferences`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        address,
+        ...nextPreferences,
+        signature,
+        challengeId: challenge.challengeId,
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    return res.json();
+  }
+
   test("GET /api/leaderboard returns entry list", async () => {
     const res = await fetch(`${BASE_URL}/api/leaderboard?limit=10`);
     expect(res.ok).toBe(true);
@@ -116,7 +178,13 @@ test.describe("Next.js API routes", () => {
     const res = await fetch(`${BASE_URL}/api/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contentId, body, address: account.address, signature, challengeId: challenge.challengeId }),
+      body: JSON.stringify({
+        contentId,
+        body,
+        address: account.address,
+        signature,
+        challengeId: challenge.challengeId,
+      }),
     });
 
     if (res.status !== 200) {
@@ -154,7 +222,13 @@ test.describe("Next.js API routes", () => {
     const firstRes = await fetch(`${BASE_URL}/api/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contentId, body, address: account.address, signature, challengeId: challenge.challengeId }),
+      body: JSON.stringify({
+        contentId,
+        body,
+        address: account.address,
+        signature,
+        challengeId: challenge.challengeId,
+      }),
     });
 
     if (firstRes.status !== 200) {
@@ -166,7 +240,13 @@ test.describe("Next.js API routes", () => {
     const replayRes = await fetch(`${BASE_URL}/api/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contentId, body, address: account.address, signature, challengeId: challenge.challengeId }),
+      body: JSON.stringify({
+        contentId,
+        body,
+        address: account.address,
+        signature,
+        challengeId: challenge.challengeId,
+      }),
     });
     expect(replayRes.status).toBe(409);
   });
@@ -203,6 +283,81 @@ test.describe("Next.js API routes", () => {
     expect(res.status).toBe(401);
   });
 
+  test("POST /api/comments rejects payload mismatches for an issued challenge", async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
+    const contentId = "1";
+    const originalBody = `Original payload ${Date.now()}`;
+    const tamperedBody = `${originalBody} (tampered)`;
+
+    const challengeRes = await fetch(`${BASE_URL}/api/comments/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentId, body: originalBody, address: account.address }),
+    });
+    expect(challengeRes.status).toBe(200);
+
+    const challenge = await challengeRes.json();
+    const signature = await account.signMessage({ message: challenge.message });
+
+    const res = await fetch(`${BASE_URL}/api/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contentId,
+        body: tamperedBody,
+        address: account.address,
+        signature,
+        challengeId: challenge.challengeId,
+      }),
+    });
+
+    expect(res.status).toBe(401);
+  });
+
+  test("POST /api/comments allows only one winner when the same challenge is submitted concurrently", async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
+    const contentId = "1";
+    const body = `Concurrent challenge test ${Date.now()}`;
+
+    const challengeRes = await fetch(`${BASE_URL}/api/comments/challenge`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contentId, body, address: account.address }),
+    });
+    expect(challengeRes.status).toBe(200);
+
+    const challenge = await challengeRes.json();
+    const signature = await account.signMessage({ message: challenge.message });
+
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    const requestBody = JSON.stringify({
+      contentId,
+      body,
+      address: account.address,
+      signature,
+      challengeId: challenge.challengeId,
+    });
+
+    const [firstRes, secondRes] = await Promise.all([
+      fetch(`${BASE_URL}/api/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      }),
+      fetch(`${BASE_URL}/api/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      }),
+    ]);
+
+    const statuses = [firstRes.status, secondRes.status].sort((a, b) => a - b);
+    expect(statuses).toEqual([200, 409]);
+  });
+
   test("POST /api/comments rejects missing fields", async () => {
     const res = await fetch(`${BASE_URL}/api/comments`, {
       method: "POST",
@@ -224,5 +379,67 @@ test.describe("Next.js API routes", () => {
     const knownVoters = [ANVIL_ACCOUNTS.account9.address.toLowerCase(), ANVIL_ACCOUNTS.account10.address.toLowerCase()];
     const hasKnownVoter = knownVoters.some(addr => addresses.includes(addr));
     expect(hasKnownVoter).toBe(true);
+  });
+
+  test("notification preferences require a signed read session", async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
+    const otherAddress = ANVIL_ACCOUNTS.account3.address.toLowerCase();
+
+    const unsignedRes = await fetch(
+      `${BASE_URL}/api/notifications/preferences?address=${account.address.toLowerCase()}`,
+    );
+    expect(unsignedRes.status).toBe(401);
+
+    const session = await createNotificationPreferencesReadSession(account.address.toLowerCase(), account.signMessage);
+    expect(session.body).toHaveProperty("roundResolved");
+    expect(session.body).toHaveProperty("settlingSoonHour");
+
+    const authorizedRes = await fetch(
+      `${BASE_URL}/api/notifications/preferences?address=${account.address.toLowerCase()}`,
+      {
+        headers: { cookie: session.cookie },
+      },
+    );
+    expect(authorizedRes.status).toBe(200);
+
+    const otherWalletRes = await fetch(`${BASE_URL}/api/notifications/preferences?address=${otherAddress}`, {
+      headers: { cookie: session.cookie },
+    });
+    expect(otherWalletRes.status).toBe(401);
+  });
+
+  test("notification preferences updates persist behind signed reads", async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
+    const address = account.address.toLowerCase();
+    const nextPreferences = {
+      roundResolved: false,
+      settlingSoonHour: true,
+      settlingSoonDay: false,
+      followedSubmission: true,
+      followedResolution: false,
+    };
+
+    const update = await updateNotificationPreferences(address, account.signMessage, nextPreferences);
+    expect(update).toMatchObject({
+      ok: true,
+      preferences: nextPreferences,
+    });
+
+    const session = await createNotificationPreferencesReadSession(address, account.signMessage);
+    expect(session.body).toMatchObject(nextPreferences);
+  });
+
+  test("notification preference read session does not authorize watchlist reads", async () => {
+    const { privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
+    const session = await createNotificationPreferencesReadSession(account.address.toLowerCase(), account.signMessage);
+
+    const res = await fetch(`${BASE_URL}/api/watchlist/content?address=${account.address.toLowerCase()}`, {
+      headers: { cookie: session.cookie },
+    });
+
+    expect(res.status).toBe(401);
   });
 });
