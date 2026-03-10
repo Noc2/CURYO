@@ -10,7 +10,7 @@ This note looks at three linked questions:
 2. If yes, how should governance decide what to spend and where to spend it?
 3. How should seasons integrate with the existing leaderboard product surface?
 
-This builds on the earlier engagement note in `docs/curyo-user-engagement-recommendations-2026-03-06.md`, but focuses more narrowly on incentive design, governance budgeting, and leaderboard structure.
+This note focuses on incentive design, governance budgeting, and leaderboard structure for seasons.
 
 ## Current Curyo State
 
@@ -19,13 +19,13 @@ This builds on the earlier engagement note in `docs/curyo-user-engagement-recomm
 - Curyo already has a lightweight weekly season concept in the product.
 - `packages/ponder/src/api/index.ts` exposes `/seasons/current`.
 - `packages/nextjs/hooks/useCurrentSeasons.ts` reads that endpoint.
-- `packages/nextjs/app/radar/page.tsx` renders a weekly global season and one featured category season.
+- The governance leaderboard now exposes a performance view with all-time, rolling windows, current-season, and category filters.
 
 ### What that current season system actually is
 
 - It is an indexed, off-chain view over settled weekly results.
 - It is not backed by a dedicated on-chain season rewards pool.
-- It is not currently integrated into the main governance leaderboard tab.
+- It now has a lightweight home in the main governance leaderboard surface, but not yet a dedicated archive or rewards policy.
 - It is not currently tied to any treasury or governance spend policy.
 
 ### Important naming constraint in the repo

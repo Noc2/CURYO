@@ -28,6 +28,18 @@ const GovernanceDocs: NextPage = () => {
         balance and is activated automatically &mdash; no delegation step required.
       </p>
 
+      <h2>Leaderboards</h2>
+      <p>
+        The governance page includes two leaderboard views. <strong>cREP</strong> tracks all-time token balances, while{" "}
+        <strong>Performance</strong> tracks voting results through indexed off-chain views such as all time, last 7
+        days, last 30 days, last 365 days, and the current weekly season. Performance also supports category filtering
+        and following-only views.
+      </p>
+      <p>
+        These leaderboard views are discovery and reputation surfaces only. They do not by themselves imply treasury
+        payouts or a dedicated season rewards pool.
+      </p>
+
       <h2>Proposal Lifecycle</h2>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">

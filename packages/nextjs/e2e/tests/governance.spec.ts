@@ -33,6 +33,9 @@ test.describe("Governance page", () => {
     const rankHeader = page.getByRole("columnheader", { name: "Rank" });
     await expect(rankHeader).toBeVisible({ timeout: 5_000 });
 
+    await expect(page.getByRole("button", { name: "cREP" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Performance" })).toBeVisible({ timeout: 5_000 });
+
     const followingOnlyToggle = page.getByRole("button", { name: "Following Only" }).first();
     await expect(followingOnlyToggle).toBeVisible({ timeout: 5_000 });
 
@@ -40,17 +43,23 @@ test.describe("Governance page", () => {
     await expect(profileLink).toBeVisible({ timeout: 5_000 });
   });
 
-  test("profile tab shows following-only filter on leaderboard", async ({ connectedPage: page }) => {
+  test("performance leaderboard exposes range and category filters", async ({ connectedPage: page }) => {
     await page.goto("/governance");
 
-    // The governance page tabs are: Leaderboard, Profile, Vote (no Accuracy tab).
-    // The "Following Only" filter lives on the Leaderboard tab.
     const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
     await expect(leaderboardTab).toBeVisible({ timeout: 15_000 });
     await leaderboardTab.click();
 
+    const performanceTab = page.getByRole("button", { name: "Performance" });
+    await expect(performanceTab).toBeVisible({ timeout: 10_000 });
+    await performanceTab.click();
+
+    await expect(page.getByText("Performance leaderboard")).toBeVisible({ timeout: 10_000 });
     const followingOnlyToggle = page.getByRole("button", { name: "Following Only" }).first();
     await expect(followingOnlyToggle).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("combobox", { name: "Time range" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("combobox", { name: "Filter by category" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("combobox", { name: "Sort by" })).toBeVisible({ timeout: 10_000 });
   });
 
   test("profile tab shows form", async ({ connectedPage: page }) => {
