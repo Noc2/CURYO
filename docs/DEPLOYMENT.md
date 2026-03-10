@@ -248,6 +248,7 @@ DATABASE_URL=<turso-database-url>                    # e.g., libsql://your-db.tu
 DATABASE_AUTH_TOKEN=<turso-auth-token>
 KEYSTORE_ACCOUNT=server
 KEYSTORE_PASSWORD=<server-keystore-password>
+RATE_LIMIT_TRUSTED_IP_HEADERS=x-forwarded-for        # Or your platform's trusted client-IP header
 DEV_FAUCET_ENABLED=false
 ```
 
@@ -276,6 +277,8 @@ yarn vercel --prod
 ```
 
 Set all environment variables from 4a in the Vercel dashboard under **Settings → Environment Variables** before deploying. Redeploy if you add variables after the first deploy.
+
+Rate limiting note: Next.js 15 does not reliably expose `NextRequest.ip`. In production, set `RATE_LIMIT_TRUSTED_IP_HEADERS` only to headers that your edge proxy overwrites, such as `x-forwarded-for` on Vercel or `cf-connecting-ip` on Cloudflare. If you leave it unset, the API falls back to a request fingerprint instead of a true client IP.
 
 ### 4d. Post-deploy checks
 

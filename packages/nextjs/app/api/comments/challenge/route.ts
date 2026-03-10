@@ -11,15 +11,16 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 const RATE_LIMIT = { limit: 10, windowMs: 60_000 };
 
 export async function POST(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT);
-  if (limited) return limited;
-
   try {
     const body = (await request.json()) as {
       address?: string;
       contentId?: string | number | bigint;
       body?: string;
     };
+    const limited = await checkRateLimit(request, RATE_LIMIT, {
+      extraKeyParts: [typeof body.address === "string" ? body.address : undefined],
+    });
+    if (limited) return limited;
 
     const normalized = normalizeCommentChallengeInput(body);
     if (!normalized.ok) {

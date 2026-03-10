@@ -12,15 +12,16 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 const RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
 export async function POST(request: NextRequest) {
-  const limited = await checkRateLimit(request, RATE_LIMIT);
-  if (limited) return limited;
-
   try {
     const body = (await request.json()) as {
       address?: string;
       contentId?: string | number | bigint;
       action?: "watch" | "unwatch";
     };
+    const limited = await checkRateLimit(request, RATE_LIMIT, {
+      extraKeyParts: [typeof body.address === "string" ? body.address : undefined, body.action],
+    });
+    if (limited) return limited;
 
     const normalized = normalizeWatchlistChallengeInput(body);
     if (!normalized.ok) {

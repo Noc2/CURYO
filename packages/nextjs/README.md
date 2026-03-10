@@ -40,12 +40,14 @@ Key environment variables (see `.env.example` for the full list):
 | `DATABASE_URL`                          | SQLite/Turso database URL (required in production)   |
 | `DATABASE_AUTH_TOKEN`                   | Turso auth token (production only)                   |
 | `NEXT_PUBLIC_PONDER_URL`                | Public Ponder indexer URL (required in production)   |
+| `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
 | `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                 |
 | `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                        |
 
 Notes:
 
 - Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or `rpcOverrides[1]`. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
+- On Next.js 15, `NextRequest.ip` is not reliably populated. Configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites, or the API will fall back to a per-request fingerprint instead of a real client IP.
 
 ## Project Structure
 

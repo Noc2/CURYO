@@ -21,11 +21,13 @@ const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 const WRITE_RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
 export async function GET(request: NextRequest) {
-  const limited = await checkRateLimit(request, READ_RATE_LIMIT);
+  const address = request.nextUrl.searchParams.get("address");
+  const limited = await checkRateLimit(request, READ_RATE_LIMIT, {
+    extraKeyParts: [typeof address === "string" ? address : undefined],
+  });
   if (limited) return limited;
 
   try {
-    const address = request.nextUrl.searchParams.get("address");
     if (!address || !isValidWalletAddress(address)) {
       return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
     }
@@ -40,11 +42,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const limited = await checkRateLimit(request, WRITE_RATE_LIMIT);
-  if (limited) return limited;
-
   try {
     const { address, contentId, signature, challengeId } = await request.json();
+    const limited = await checkRateLimit(request, WRITE_RATE_LIMIT, {
+      extraKeyParts: [typeof address === "string" ? address : undefined],
+    });
+    if (limited) return limited;
     if (!signature || !challengeId) {
       return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }
@@ -98,11 +101,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const limited = await checkRateLimit(request, WRITE_RATE_LIMIT);
-  if (limited) return limited;
-
   try {
     const { address, contentId, signature, challengeId } = await request.json();
+    const limited = await checkRateLimit(request, WRITE_RATE_LIMIT, {
+      extraKeyParts: [typeof address === "string" ? address : undefined],
+    });
+    if (limited) return limited;
     if (!signature || !challengeId) {
       return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }

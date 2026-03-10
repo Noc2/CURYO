@@ -15,12 +15,32 @@ export interface RateLimitConfig {
   windowMs: number;
 }
 
+export interface RateLimitOptions {
+  /** Additional stable key parts, such as a normalized wallet address */
+  extraKeyParts?: Array<string | number | bigint | null | undefined>;
+}
+
 const CLEANUP_INTERVAL_MS = 60_000;
 const CLEANUP_LEASE_MS = 15_000;
 const CLEANUP_ROW_KEY = "cleanup";
 
 let initPromise: Promise<void> | null = null;
 let lastCleanup = 0;
+
+const DEV_FALLBACK_IP = "127.0.0.1";
+const FORWARDED_FOR_HEADER = "x-forwarded-for";
+const FORWARDED_HEADER = "forwarded";
+const FALLBACK_FINGERPRINT_HEADERS = [
+  "user-agent",
+  "accept-language",
+  "accept",
+  "sec-ch-ua",
+  "sec-ch-ua-mobile",
+  "sec-ch-ua-platform",
+  "origin",
+  "referer",
+  "cookie",
+] as const;
 
 async function ensureRateLimitTable() {
   if (!initPromise) {
@@ -54,23 +74,82 @@ function hashIdentifier(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function getClientIp(request: NextRequest): string {
-  // In production, only trust the platform-provided IP (e.g. Vercel sets request.ip).
-  // Reading raw headers like x-forwarded-for is unsafe — clients can spoof them to
-  // bypass rate limits unless a trusted reverse proxy overwrites them.
+function getTrustedRateLimitHeaders(): string[] {
+  return (process.env.RATE_LIMIT_TRUSTED_IP_HEADERS ?? "")
+    .split(",")
+    .map(header => header.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function normalizeExtraKeyPart(value: string | number | bigint | null | undefined): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  return normalized ? normalized : null;
+}
+
+function parseForwardedIp(value: string): string | null {
+  const match = value.match(/for=(?:"?\[?)([^;\],"]+)/i);
+  return match?.[1]?.trim() || null;
+}
+
+function extractIpFromHeader(headerName: string, value: string | null): string | null {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  if (headerName === FORWARDED_HEADER) {
+    return parseForwardedIp(value);
+  }
+
+  const firstValue = value
+    .split(",")
+    .map(part => part.trim())
+    .find(Boolean);
+
+  return firstValue || null;
+}
+
+function getTrustedClientIp(request: NextRequest): string | null {
   const nextRequest = request as NextRequest & { ip?: string };
 
   if (nextRequest.ip?.trim()) {
     return nextRequest.ip.trim();
   }
 
-  // In development there is no reverse proxy, so fall back to x-forwarded-for.
   if (process.env.NODE_ENV === "development") {
-    return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+    return (
+      extractIpFromHeader(FORWARDED_FOR_HEADER, request.headers.get(FORWARDED_FOR_HEADER)) ??
+      extractIpFromHeader("x-real-ip", request.headers.get("x-real-ip")) ??
+      DEV_FALLBACK_IP
+    );
   }
 
-  // Unknown IP — all such requests share a single rate-limit bucket (safe default).
-  return "unknown";
+  for (const headerName of getTrustedRateLimitHeaders()) {
+    const ip = extractIpFromHeader(headerName, request.headers.get(headerName));
+    if (ip) {
+      return ip;
+    }
+  }
+
+  return null;
+}
+
+function buildFallbackFingerprint(request: NextRequest): string {
+  const parts = FALLBACK_FINGERPRINT_HEADERS.map(header => request.headers.get(header)?.trim() ?? "");
+  const fingerprint = parts.some(Boolean) ? parts.join("\n") : request.nextUrl.origin;
+  return `fingerprint:${fingerprint}`;
+}
+
+export function resolveRateLimitSubject(request: NextRequest, options: RateLimitOptions = {}): string {
+  const ip = getTrustedClientIp(request);
+  const baseIdentity = ip ? `ip:${ip}` : buildFallbackFingerprint(request);
+  const extraKeyParts = (options.extraKeyParts ?? [])
+    .map(normalizeExtraKeyPart)
+    .filter((part): part is string => !!part);
+  return [baseIdentity, ...extraKeyParts].join("|");
 }
 
 async function cleanupExpiredEntries(now: number) {
@@ -104,12 +183,18 @@ async function cleanupExpiredEntries(now: number) {
  * Check rate limit for a request. Returns a 429 NextResponse if exceeded,
  * or null if the request is within limits.
  */
-export async function checkRateLimit(request: NextRequest, config: RateLimitConfig): Promise<NextResponse | null> {
+export async function checkRateLimit(
+  request: NextRequest,
+  config: RateLimitConfig,
+  options: RateLimitOptions = {},
+): Promise<NextResponse | null> {
   const now = Date.now();
   const windowStartedAt = now - (now % config.windowMs);
   const expiresAt = windowStartedAt + config.windowMs;
-  const ip = getClientIp(request);
-  const key = hashIdentifier(`${request.nextUrl.pathname}:${windowStartedAt}:${ip}`);
+  const subject = resolveRateLimitSubject(request, options);
+  const key = hashIdentifier(
+    `${request.nextUrl.pathname}:${request.method.toUpperCase()}:${windowStartedAt}:${subject}`,
+  );
 
   await ensureRateLimitTable();
   await cleanupExpiredEntries(now);

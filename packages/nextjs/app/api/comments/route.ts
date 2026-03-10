@@ -64,11 +64,12 @@ export async function GET(request: NextRequest) {
 
 // POST: Create a comment with wallet signature verification
 export async function POST(request: NextRequest) {
-  const limited = await checkRateLimit(request, WRITE_RATE_LIMIT);
-  if (limited) return limited;
-
   try {
     const { contentId, body, address, signature, challengeId } = await request.json();
+    const limited = await checkRateLimit(request, WRITE_RATE_LIMIT, {
+      extraKeyParts: [typeof address === "string" ? address : undefined],
+    });
+    if (limited) return limited;
 
     if (!signature || !challengeId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
