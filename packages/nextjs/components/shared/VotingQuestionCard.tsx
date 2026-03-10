@@ -77,7 +77,8 @@ export function VotingQuestionCard({
   }, [category, currentRatingValue, contentLabel]);
 
   // Check if user already voted on this content in the current round
-  const { roundId, isRoundFull, phase, voteCount, minVoters, roundTimeRemaining } = useRoundSnapshot(contentId);
+  const roundSnapshot = useRoundSnapshot(contentId);
+  const { roundId, isRoundFull, phase, voteCount, minVoters, roundTimeRemaining } = roundSnapshot;
   const countdownTimeLeft = phase === "voting" && roundTimeRemaining > 0 ? roundTimeRemaining : 0;
   const urgency = getCountdownUrgency(countdownTimeLeft);
   const countdownLabel = formatRoundCountdown(countdownTimeLeft);
@@ -282,7 +283,7 @@ export function VotingQuestionCard({
 
         {/* Round progress - left aligned */}
         <div className="mb-1.5 flex justify-start">
-          <RoundProgress contentId={contentId} />
+          <RoundProgress snapshot={roundSnapshot} />
         </div>
 
         {/* Urgent countdown (warning/critical only) */}
@@ -298,7 +299,7 @@ export function VotingQuestionCard({
 
         {/* Round stats - below progress, left aligned */}
         <div className="mb-3 flex justify-start">
-          <RoundStats contentId={contentId} categoryId={categoryId} />
+          <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
         </div>
 
         {/* Rating history chart at the bottom */}

@@ -1,10 +1,10 @@
 "use client";
 
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
-import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
+import type { RoundSnapshot } from "~~/hooks/useRoundSnapshot";
 
 interface RoundProgressProps {
-  contentId: bigint;
+  snapshot: RoundSnapshot;
 }
 
 function formatDuration(seconds: number): string {
@@ -33,7 +33,7 @@ function formatDays(seconds: number): string {
  *
  * Terminal states: Resolved / Cancelled / Tied / Reveal failed
  */
-export function RoundProgress({ contentId }: RoundProgressProps) {
+export function RoundProgress({ snapshot }: RoundProgressProps) {
   const {
     phase,
     roundTimeRemaining,
@@ -44,7 +44,7 @@ export function RoundProgress({ contentId }: RoundProgressProps) {
     currentEpochRemaining,
     voteCount,
     minVoters,
-  } = useRoundSnapshot(contentId);
+  } = snapshot;
 
   if (!isReady) {
     return (

@@ -2,11 +2,11 @@
 
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
-import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
+import type { RoundSnapshot } from "~~/hooks/useRoundSnapshot";
 
 interface RoundStatsProps {
-  contentId: bigint;
   categoryId?: bigint;
+  snapshot: RoundSnapshot;
 }
 
 /**
@@ -16,9 +16,8 @@ interface RoundStatsProps {
  * - During blind phase: votes are encrypted and hidden. Only totalStake and voteCount are shown.
  * - After blind phase: the system reveals votes. Revealed UP/DOWN pool breakdown is shown.
  */
-export function RoundStats({ contentId, categoryId }: RoundStatsProps) {
+export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
-  const snapshot = useRoundSnapshot(contentId);
   const { round, isLoading, maxVoters, isRoundFull, phase, isEpoch1 } = snapshot;
 
   if (isLoading) {

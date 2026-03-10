@@ -54,3 +54,5 @@ export function useRoundSnapshot(contentId?: bigint) {
     isReady: contentId !== undefined && !isRoundIdLoading && !isRoundLoading,
   };
 }
+
+export type RoundSnapshot = ReturnType<typeof useRoundSnapshot>;
