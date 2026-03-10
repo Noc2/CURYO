@@ -91,6 +91,19 @@ test("resolveRateLimitSubject falls back to a request fingerprint when no truste
   assert.match(subject, /\|0xabc\|watch$/);
 });
 
+test("checkRateLimit fails closed in production when no trusted client IP can be derived", async () => {
+  const response = await rateLimit.checkRateLimit(
+    makeRequest("/api/watchlist/content", "GET", {
+      "user-agent": "test-agent",
+      "accept-language": "en-US",
+    }),
+    { limit: 10, windowMs: 60_000 },
+  );
+
+  assert.equal(response?.status, 503);
+  assert.deepEqual(await response?.json(), { error: "Rate limiting is misconfigured" });
+});
+
 test("resolveRateLimitSubject uses x-forwarded-for automatically in development", () => {
   env.NODE_ENV = "development";
 
@@ -104,10 +117,8 @@ test("resolveRateLimitSubject uses x-forwarded-for automatically in development"
 });
 
 test("checkRateLimit scopes counters by HTTP method on the same path", async () => {
-  const headers = {
-    "user-agent": "method-split-agent",
-    "accept-language": "en-US",
-  };
+  env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
+  const headers = { "x-forwarded-for": "203.0.113.12" };
 
   const getRequest = makeRequest("/api/comments", "GET", headers);
   const postRequest = makeRequest("/api/comments", "POST", headers);

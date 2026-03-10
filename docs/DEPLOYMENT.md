@@ -145,9 +145,10 @@ This will:
 2. Deploy `CuryoReputation` (cREP token, 100M max supply)
 3. Deploy all UUPS proxy contracts (ContentRegistry, RoundVotingEngine, RoundRewardDistributor, ProfileRegistry, FollowRegistry, FrontendRegistry) and non-upgradeable contracts (CategoryRegistry, VoterIdNFT, ParticipationPool, HumanFaucet)
 4. Wire cross-contract references
-5. Seed 11 content categories
+5. Seed 12 content categories
 6. Mint token allocations: 52M→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 10M→Treasury
 7. **Renounce deployer's temporary admin roles** — governance transfers fully to TimelockController
+8. **Automatically verify** that governance owns the expected roles and the deployer retained none
 
 ### 2c. Verify contracts on Blockscout
 
@@ -170,19 +171,10 @@ Save a copy of these addresses somewhere safe. You'll need them for Ponder, Keep
 
 ### 2e. Post-deployment verification
 
-```bash
-# Confirm governance owns all admin roles (deployer should have none)
-cast call <ContentRegistry> "hasRole(bytes32,address)(bool)" \
-  $(cast keccak "ADMIN_ROLE") <deployer-address> \
-  --rpc-url https://forno.celo.org
-# Should return false
+`DeployCuryo.s.sol` now performs automatic post-deploy role verification at the end of the production deploy flow and
+fails the deploy command if any deployer setup role remains or governance ownership is missing.
 
-# Confirm TimelockController has governance
-cast call <ContentRegistry> "hasRole(bytes32,address)(bool)" \
-  $(cast keccak "ADMIN_ROLE") <timelock-address> \
-  --rpc-url https://forno.celo.org
-# Should return true
-```
+Manual spot-checks are still useful, but they are no longer the primary safety mechanism.
 
 ---
 
@@ -269,6 +261,9 @@ cd packages/nextjs
 DATABASE_URL=<turso-url> DATABASE_AUTH_TOKEN=<token> yarn db:push
 ```
 
+Before running `yarn db:push` against production, follow the migration rollout / rollback procedure in
+`docs/OPERATIONS.md`.
+
 ### 4c. Deploy to Vercel
 
 ```bash
@@ -278,7 +273,7 @@ yarn vercel --prod
 
 Set all environment variables from 4a in the Vercel dashboard under **Settings → Environment Variables** before deploying. Redeploy if you add variables after the first deploy.
 
-Rate limiting note: Next.js 15 does not reliably expose `NextRequest.ip`. In production, set `RATE_LIMIT_TRUSTED_IP_HEADERS` only to headers that your edge proxy overwrites, such as `x-forwarded-for` on Vercel or `cf-connecting-ip` on Cloudflare. If you leave it unset, the API falls back to a request fingerprint instead of a true client IP.
+Rate limiting note: Next.js 15 does not reliably expose `NextRequest.ip`. In production, set `RATE_LIMIT_TRUSTED_IP_HEADERS` only to headers that your edge proxy overwrites, such as `x-forwarded-for` on Vercel or `cf-connecting-ip` on Cloudflare. If you leave it unset, protected API routes fail closed with `503 Rate limiting is misconfigured`.
 
 ### 4d. Post-deploy checks
 
@@ -464,7 +459,14 @@ curl 'https://<keeper>.up.railway.app/metrics'
 
 ### 7d. Redundancy (recommended)
 
-Run 2+ Keeper instances with different wallets. Duplicate transactions simply revert (no harm). Use `KEEPER_STARTUP_JITTER_MS` to stagger instances and reduce wasted gas.
+Run 2+ Keeper instances with different wallets only if you are intentionally operating an active / standby model.
+
+- Keep one primary instance actively sending transactions.
+- Keep the standby healthy and funded, but only promote it when the primary is unhealthy.
+- If you do run more than one active writer, use `KEEPER_STARTUP_JITTER_MS` and accept that duplicate transactions can
+  still race and waste gas because there is no nonce coordinator.
+
+`docs/OPERATIONS.md` documents this trade-off and the manual failover procedure.
 
 ---
 
@@ -654,6 +656,8 @@ These parameters can be updated via governance proposal (2-day timelock delay). 
 - [ ] Monitor Ponder sync status — alert if it falls behind chain head
 - [ ] Watch for unusual governance proposals (TimelockController events)
 - [ ] Monitor for unexpected transactions from bot or cold wallet addresses (Blockscout watch)
+
+Use `docs/OPERATIONS.md` as the source of truth for concrete alert thresholds and incident response steps.
 
 #### Protocol pool monitoring
 

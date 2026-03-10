@@ -188,10 +188,18 @@ export async function checkRateLimit(
   config: RateLimitConfig,
   options: RateLimitOptions = {},
 ): Promise<NextResponse | null> {
+  const trustedClientIp = getTrustedClientIp(request);
+  if (process.env.NODE_ENV === "production" && !trustedClientIp) {
+    return NextResponse.json({ error: "Rate limiting is misconfigured" }, { status: 503 });
+  }
+
   const now = Date.now();
   const windowStartedAt = now - (now % config.windowMs);
   const expiresAt = windowStartedAt + config.windowMs;
-  const subject = resolveRateLimitSubject(request, options);
+  const subject = [
+    trustedClientIp ? `ip:${trustedClientIp}` : buildFallbackFingerprint(request),
+    ...(options.extraKeyParts ?? []).map(normalizeExtraKeyPart).filter((part): part is string => !!part),
+  ].join("|");
   const key = hashIdentifier(
     `${request.nextUrl.pathname}:${request.method.toUpperCase()}:${windowStartedAt}:${subject}`,
   );
