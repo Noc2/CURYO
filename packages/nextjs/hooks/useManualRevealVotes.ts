@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { buildCommitKey, decryptTlockCiphertext } from "@curyo/contracts/voting";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Address, zeroHash } from "viem";
@@ -8,6 +8,7 @@ import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { invalidateRecentUserVotes, useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
+import { useUnixTime } from "~~/hooks/useUnixTime";
 import { CommitData } from "~~/types/votingTypes";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
 import { notification } from "~~/utils/scaffold-eth/notification";
@@ -40,15 +41,8 @@ export function useManualRevealVotes(voter?: Address) {
   const { targetNetwork } = useTargetNetwork();
   const publicClient = usePublicClient({ chainId: targetNetwork.id });
   const queryClient = useQueryClient();
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  const now = useUnixTime();
   const [pendingCommitKey, setPendingCommitKey] = useState<`0x${string}` | null>(null);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Math.floor(Date.now() / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const { data: engineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" as any });
   const { openVotes, isLoading: isLoadingVotes } = useRecentUserVotes(voter);
@@ -184,7 +178,7 @@ export function useManualRevealVotes(voter?: Address) {
           return true;
         }
 
-        if (BigInt(Math.floor(Date.now() / 1000)) < latestCommit.revealableAfter) {
+        if (BigInt(now) < latestCommit.revealableAfter) {
           notification.info("That vote is not revealable yet.");
           await refresh();
           return false;
@@ -229,7 +223,7 @@ export function useManualRevealVotes(voter?: Address) {
         setPendingCommitKey(null);
       }
     },
-    [address, chain?.id, engineInfo?.abi, engineInfo?.address, publicClient, refresh, targetNetwork, walletClient],
+    [address, chain?.id, engineInfo?.abi, engineInfo?.address, now, publicClient, refresh, targetNetwork, walletClient],
   );
 
   return {

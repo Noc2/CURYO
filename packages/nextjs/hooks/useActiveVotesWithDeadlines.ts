@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
+import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import { deriveRoundTiming } from "~~/lib/contracts/roundVotingEngine";
 
@@ -40,16 +40,7 @@ function formatTimeRemaining(seconds: number): string {
 }
 
 export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDeadlines {
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-
-  // Tick every second for countdown display
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Math.floor(Date.now() / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+  const now = useUnixTime();
   const { epochDuration, maxDuration } = useVotingConfig();
   const { openVotes, isLoading } = useRecentUserVotes(voter);
 

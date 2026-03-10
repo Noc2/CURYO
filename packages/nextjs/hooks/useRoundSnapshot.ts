@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useOptimisticVote } from "~~/contexts/OptimisticVoteContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import { deriveRoundSnapshot, parseRound } from "~~/lib/contracts/roundVotingEngine";
 
@@ -10,7 +10,7 @@ export function useRoundSnapshot(contentId?: bigint) {
   const { getOptimisticDelta } = useOptimisticVote();
   const optimisticDelta = contentId !== undefined ? getOptimisticDelta(contentId) : undefined;
   const config = useVotingConfig();
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+  const now = useUnixTime();
 
   const { data: rawActiveRoundId, isLoading: isRoundIdLoading } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
@@ -32,13 +32,6 @@ export function useRoundSnapshot(contentId?: bigint) {
       refetchInterval: 5000,
     },
   } as any);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(Math.floor(Date.now() / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const snapshot = deriveRoundSnapshot({
     roundId,
