@@ -1,4 +1,5 @@
 import type { NextPage } from "next";
+import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const FrontendCodes: NextPage = () => {
   return (
@@ -11,7 +12,8 @@ const FrontendCodes: NextPage = () => {
       <h2>Overview</h2>
       <p>
         Frontend operators who build frontends, mobile apps, or integrations receive{" "}
-        <strong>1% of the losing pool</strong> from votes made through their interface.
+        <strong>{protocolDocFacts.frontendShareLabel}</strong> from settled two-sided rounds on votes made through their
+        interface.
       </p>
 
       <h2>How to Register</h2>

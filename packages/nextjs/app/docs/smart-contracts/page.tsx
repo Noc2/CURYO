@@ -386,7 +386,7 @@ const SmartContracts: NextPage = () => {
       <h2>FrontendRegistry</h2>
       <p>
         Manages frontend operator registration and fee distribution. Frontend operators stake a fixed 1,000 cREP and
-        receive 1% of the losing pool for each round they facilitated votes in.
+        receive {protocolDocFacts.frontendShareLabel} for each settled two-sided round they facilitated votes in.
       </p>
       <h3>Key Functions</h3>
       <ul>

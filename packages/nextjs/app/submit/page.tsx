@@ -23,6 +23,7 @@ import {
 } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
@@ -750,7 +751,9 @@ const SubmitPage: NextPage = () => {
                   <div>
                     <p className="flex items-center gap-1.5 text-base font-medium text-white">
                       Submission Stake
-                      <InfoTooltip text="Returned after ~4 days if rating stays above 25. Settled two-sided rounds allocate 10% of the losing pool to the submitter." />
+                      <InfoTooltip
+                        text={`Returned after ~4 days if rating stays above 25. Settled two-sided rounds allocate ${protocolDocFacts.submitterShareLabel} to the submitter.`}
+                      />
                     </p>
                   </div>
                   <div className="text-right">
