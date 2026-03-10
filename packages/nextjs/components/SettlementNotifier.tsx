@@ -5,10 +5,9 @@ import Link from "next/link";
 import { useAccount } from "wagmi";
 import { useScaffoldWatchContractEvent } from "~~/hooks/scaffold-eth";
 import { useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
-import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useRadarFeed } from "~~/hooks/useRadarFeed";
+import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
-import { ponderApi } from "~~/services/ponder/client";
 import { notification } from "~~/utils/scaffold-eth";
 
 /**
@@ -53,25 +52,13 @@ export function SettlementNotifier() {
     }
   }, [address]);
 
-  // Fetch the user's active votes to build the watch set
-  const { data: ponderResult } = usePonderQuery({
-    queryKey: ["settlementNotifierVotes", address],
-    ponderFn: async () => {
-      if (!address) return { items: [] };
-      return ponderApi.getVotes({ voter: address, state: "0", limit: "200" });
-    },
-    rpcFn: async () => ({ items: [] }),
-    enabled: !!address,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
-  });
+  const { openVotes } = useRecentUserVotes(address);
 
   // Rebuild the active keys set when votes data changes
   useEffect(() => {
-    const items = ponderResult?.data?.items ?? [];
-    const keys = new Set(items.map(v => `${v.contentId}-${v.roundId}`));
+    const keys = new Set(openVotes.map(vote => `${vote.contentId}-${vote.roundId}`));
     setActiveKeys(keys);
-  }, [ponderResult]);
+  }, [openVotes]);
 
   useEffect(() => {
     activeKeysRef.current = activeKeys;

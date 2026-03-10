@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import { deriveRoundTiming } from "~~/lib/contracts/roundVotingEngine";
-import { ponderApi } from "~~/services/ponder/client";
 
 export interface ActiveVoteWithDeadline {
   contentId: string;
@@ -52,23 +51,9 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
   }, []);
 
   const { epochDuration, maxDuration } = useVotingConfig();
+  const { openVotes, isLoading } = useRecentUserVotes(voter);
 
-  // Fetch active votes (state=0 means open rounds) — revealed=false means pending reveal
-  const { data: ponderResult, isLoading } = usePonderQuery({
-    queryKey: ["activeVotesWithDeadlines", voter],
-    ponderFn: async () => {
-      if (!voter) return { items: [] };
-      return ponderApi.getVotes({ voter, state: "0", limit: "200" });
-    },
-    rpcFn: async () => ({ items: [] }),
-    enabled: !!voter,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
-  });
-
-  const items = ponderResult?.data?.items ?? [];
-
-  const votes: ActiveVoteWithDeadline[] = items
+  const votes: ActiveVoteWithDeadline[] = openVotes
     .filter(v => v.roundStartTime != null)
     .map(v => {
       const startTime = Number(v.roundStartTime);

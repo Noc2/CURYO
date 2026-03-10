@@ -4,8 +4,7 @@ import { useCallback, useMemo } from "react";
 import { EPOCH_WEIGHT_BPS, REWARD_SPLIT_BPS, ROUND_STATE } from "@curyo/contracts/protocol";
 import { useAccount, useReadContracts } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
-import { usePonderQuery } from "~~/hooks/usePonderQuery";
-import { ponderApi } from "~~/services/ponder/client";
+import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 
 export interface ClaimableItem {
   contentId: bigint;
@@ -24,22 +23,7 @@ function epochWeightBps(epochIndex: number): number {
  */
 export function useAllClaimableRewards() {
   const { address } = useAccount();
-
-  // --- Step 1: Fetch user's votes from Ponder ---
-  const { data: ponderResult, refetch: refetchVotes } = usePonderQuery({
-    queryKey: ["allClaimableVotes", address],
-    ponderFn: async () => {
-      if (!address) return [];
-      const res = await ponderApi.getVotes({ voter: address, limit: "200" });
-      return res.items ?? [];
-    },
-    rpcFn: async () => [],
-    enabled: !!address,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
-  });
-
-  const votes = useMemo(() => ponderResult?.data ?? [], [ponderResult?.data]);
+  const { votes, refetch: refetchVotes } = useRecentUserVotes(address);
 
   // --- Step 2: Filter to terminal rounds only ---
   const terminalVotes = useMemo(() => {

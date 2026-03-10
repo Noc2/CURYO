@@ -7,8 +7,7 @@ import { Address, zeroHash } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { usePonderQuery } from "~~/hooks/usePonderQuery";
-import { ponderApi } from "~~/services/ponder/client";
+import { invalidateRecentUserVotes, useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { CommitData } from "~~/types/votingTypes";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
 import { notification } from "~~/utils/scaffold-eth/notification";
@@ -52,22 +51,11 @@ export function useManualRevealVotes(voter?: Address) {
   }, []);
 
   const { data: engineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" as any });
-
-  const { data: ponderResult, isLoading: isLoadingVotes } = usePonderQuery({
-    queryKey: ["manualRevealVotes", voter],
-    ponderFn: async () => {
-      if (!voter) return { items: [] };
-      return ponderApi.getVotes({ voter, state: "0", limit: "200" });
-    },
-    rpcFn: async () => ({ items: [] }),
-    enabled: !!voter,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
-  });
+  const { openVotes, isLoading: isLoadingVotes } = useRecentUserVotes(voter);
 
   const pendingVotes = useMemo(() => {
-    return (ponderResult?.data?.items ?? []).filter(vote => !vote.revealed);
-  }, [ponderResult?.data?.items]);
+    return openVotes.filter(vote => !vote.revealed);
+  }, [openVotes]);
 
   const pendingVoteKey = useMemo(() => {
     return pendingVotes.map(vote => `${vote.contentId}-${vote.roundId}-${vote.committedAt}`).join("|");
@@ -162,11 +150,9 @@ export function useManualRevealVotes(voter?: Address) {
   const refresh = useCallback(async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["manualRevealVotesOnchain", voter] }),
-      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "manualRevealVotes", voter] }),
-      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "activeVotesWithDeadlines", voter] }),
+      invalidateRecentUserVotes(queryClient, voter),
       queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes", voter] }),
       queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "voteHistory", voter] }),
-      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "allClaimableVotes", voter] }),
     ]);
   }, [queryClient, voter]);
 
