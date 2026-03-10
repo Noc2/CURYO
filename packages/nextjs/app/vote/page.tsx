@@ -76,6 +76,13 @@ const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
   { value: "my_submissions", label: "My Submissions" },
 ];
 
+function toThumbnailSrc(url: string | null | undefined) {
+  if (!url) return null;
+  return url.startsWith("http://") || url.startsWith("https://")
+    ? `/api/image-proxy?url=${encodeURIComponent(url)}`
+    : url;
+}
+
 const HomeInner = () => {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("q") ?? "";
@@ -187,6 +194,7 @@ const HomeInner = () => {
     contentId: bigint;
     categoryId: bigint;
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
+  const [thumbnailMap, setThumbnailMap] = useState<Record<string, string | null>>({});
   const { commitVote, isCommitting, error: voteError } = useRoundVote();
   const needsRatingSort =
     isSearchMode && (effectiveSearchSortBy === "highest_rated" || effectiveSearchSortBy === "lowest_rated");
@@ -436,11 +444,68 @@ const HomeInner = () => {
   }, [submitterProfiles, accuracyMap]);
 
   const canLoadMore = visibleCount < gridItems.length || (shouldUsePagedFeed && hasMoreFeed);
+  const thumbnailRequestUrls = useMemo(() => {
+    const urls = new Set<string>();
+    for (const item of visibleGridItems) {
+      if (getThumbnailUrl(item.url)) continue;
+      if (thumbnailMap[item.url] !== undefined) continue;
+      urls.add(item.url);
+    }
+    return [...urls];
+  }, [thumbnailMap, visibleGridItems]);
 
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(FEED_PAGE_SIZE);
   }, [searchQuery, activeCategory, scope, sortBy]);
+
+  useEffect(() => {
+    if (thumbnailRequestUrls.length === 0) return;
+
+    let cancelled = false;
+
+    void fetch("/api/thumbnails", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ urls: thumbnailRequestUrls }),
+    })
+      .then(response => (response.ok ? response.json() : null))
+      .then(data => {
+        if (cancelled) return;
+
+        setThumbnailMap(prev => {
+          const next = { ...prev };
+          for (const url of thumbnailRequestUrls) {
+            next[url] = null;
+          }
+
+          const items = data?.items as Record<string, { thumbnailUrl?: string | null }> | undefined;
+          if (!items) return next;
+
+          for (const [url, metadata] of Object.entries(items)) {
+            next[url] = toThumbnailSrc(metadata?.thumbnailUrl ?? null);
+          }
+
+          return next;
+        });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setThumbnailMap(prev => {
+          const next = { ...prev };
+          for (const url of thumbnailRequestUrls) {
+            next[url] = null;
+          }
+          return next;
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [thumbnailRequestUrls]);
 
   // Infinite scroll with Intersection Observer
   useEffect(() => {
@@ -756,7 +821,7 @@ const HomeInner = () => {
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-base-content/45">
                     <span>{item.voteCount} votes</span>
                     <span>•</span>
-                    <span>{detectPlatform(item.url)}</span>
+                    <span>{detectPlatform(item.url).type}</span>
                   </div>
                 </button>
               ))}
@@ -870,6 +935,7 @@ const HomeInner = () => {
                       following={followedWallets.has(item.submitter.toLowerCase())}
                       followPending={isFollowPending(item.submitter)}
                       isOwnSubmitter={normalizedAddress === item.submitter.toLowerCase()}
+                      thumbnailUrl={thumbnailMap[item.url]}
                     />
                   ))}
                 </div>
@@ -910,6 +976,7 @@ const ThumbnailCard = memo(function ThumbnailCard({
   following,
   followPending,
   isOwnSubmitter,
+  thumbnailUrl,
 }: {
   item: ContentItem;
   rating?: number;
@@ -922,6 +989,7 @@ const ThumbnailCard = memo(function ThumbnailCard({
   following: boolean;
   followPending: boolean;
   isOwnSubmitter: boolean;
+  thumbnailUrl?: string | null;
 }) {
   const onClick = useCallback(() => onSelect(item.id, item.categoryId), [onSelect, item.id, item.categoryId]);
   const onKeyDown = useCallback(
@@ -935,42 +1003,7 @@ const ThumbnailCard = memo(function ThumbnailCard({
     [onClick],
   );
   const platformInfo = detectPlatform(item.url);
-  const rawStaticThumbnail = getThumbnailUrl(item.url);
-  const staticThumbnail =
-    rawStaticThumbnail && (rawStaticThumbnail.startsWith("http://") || rawStaticThumbnail.startsWith("https://"))
-      ? `/api/image-proxy?url=${encodeURIComponent(rawStaticThumbnail)}`
-      : rawStaticThumbnail;
-  const [asyncThumbnail, setAsyncThumbnail] = useState<string | null>(null);
-  const thumbnail = staticThumbnail || asyncThumbnail;
-
-  // Fetch thumbnail via server-side proxy (avoids CORS and caches results)
-  // Stagger requests with a random delay to avoid burst 429s on page load
-  useEffect(() => {
-    if (staticThumbnail) return;
-
-    let cancelled = false;
-    const delay = Math.random() * 1000; // spread over 1s
-
-    const timer = setTimeout(() => {
-      if (cancelled) return;
-      fetch(`/api/thumbnail?url=${encodeURIComponent(item.url)}`)
-        .then(r => (r.ok ? r.json() : null))
-        .then(data => {
-          if (!cancelled && data?.thumbnailUrl) {
-            // Route external images through the proxy to avoid CORS issues
-            const url = data.thumbnailUrl as string;
-            const isExternal = url.startsWith("http://") || url.startsWith("https://");
-            setAsyncThumbnail(isExternal ? `/api/image-proxy?url=${encodeURIComponent(url)}` : url);
-          }
-        })
-        .catch(() => {});
-    }, delay);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [staticThumbnail, item.url]);
+  const thumbnail = thumbnailUrl ?? toThumbnailSrc(getThumbnailUrl(item.url));
 
   const [showShare, setShowShare] = useState(false);
 
