@@ -22,6 +22,12 @@ import {
   voterStreak,
 } from "ponder:schema";
 import { eq, desc, asc, and, or, inArray, notInArray, sql, gte, lt, replaceBigInts } from "ponder";
+import {
+  getCurrentSeasonWindow,
+  resolveAccuracyLeaderboardWindow,
+  sortAccuracyLeaderboardItems,
+  type AccuracyLeaderboardSortBy,
+} from "./leaderboard-utils.js";
 import { RateLimiter } from "./rate-limit.js";
 import { safeBigInt, safeLimit, safeOffset, isValidAddress, getUrlLookupCandidates } from "./utils.js";
 
@@ -145,17 +151,6 @@ function getRadarResolutionOutcome(state: number | null, isUp: boolean | null, u
   }
 
   return "resolved" as const;
-}
-
-function getCurrentSeasonWindow(now = new Date()) {
-  const currentUtcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const day = currentUtcDate.getUTCDay();
-  const distanceFromMonday = day === 0 ? 6 : day - 1;
-  currentUtcDate.setUTCDate(currentUtcDate.getUTCDate() - distanceFromMonday);
-  currentUtcDate.setUTCHours(0, 0, 0, 0);
-
-  const end = new Date(currentUtcDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-  return { start: currentUtcDate, end };
 }
 
 // Ponder provides /health and /status natively — no custom health check needed.
@@ -1313,7 +1308,20 @@ app.get("/leaderboard", async (c) => {
 
 app.get("/accuracy-leaderboard", async (c) => {
   const categoryIdParam = c.req.query("categoryId");
-  const sortBy = c.req.query("sortBy") ?? "winRate";
+  const sortByRaw = c.req.query("sortBy") ?? "winRate";
+  const sortBy = (
+    sortByRaw === "winRate"
+    || sortByRaw === "wins"
+    || sortByRaw === "stakeWon"
+    || sortByRaw === "settledVotes"
+  )
+    ? sortByRaw
+    : null;
+  if (sortBy === null) return c.json({ error: "Invalid sortBy" }, 400);
+
+  const windowBounds = resolveAccuracyLeaderboardWindow(c.req.query("window"));
+  if (windowBounds === null) return c.json({ error: "Invalid window" }, 400);
+
   const minVotesParam = c.req.query("minVotes") ?? "3";
   const limit = safeLimit(c.req.query("limit"), 20, 100);
   const offset = safeOffset(c.req.query("offset"));
@@ -1321,8 +1329,16 @@ app.get("/accuracy-leaderboard", async (c) => {
   const minVotes = parseInt(minVotesParam);
   if (isNaN(minVotes) || minVotes < 1) return c.json({ error: "Invalid minVotes" }, 400);
 
+  const categoryId = categoryIdParam ? safeBigInt(categoryIdParam) : null;
+  if (categoryIdParam && categoryId === null) return c.json({ error: "Invalid categoryId" }, 400);
+
   let orderByExpr;
   switch (sortBy) {
+    case "settledVotes":
+      orderByExpr = categoryIdParam
+        ? desc(voterCategoryStats.totalSettledVotes)
+        : desc(voterStats.totalSettledVotes);
+      break;
     case "wins":
       orderByExpr = categoryIdParam
         ? desc(voterCategoryStats.totalWins)
@@ -1341,9 +1357,77 @@ app.get("/accuracy-leaderboard", async (c) => {
       break;
   }
 
-  if (categoryIdParam) {
-    const categoryId = safeBigInt(categoryIdParam);
-    if (categoryId === null) return c.json({ error: "Invalid categoryId" }, 400);
+  if (windowBounds.window !== "all" && windowBounds.startsAt !== null && windowBounds.endsAt !== null) {
+    const aggregateSelection = {
+      voter: vote.voter,
+      totalSettledVotes: sql<number>`count(*)`,
+      totalWins: sql<number>`sum(case when ${vote.isUp} = ${round.upWins} then 1 else 0 end)`,
+      totalLosses: sql<number>`sum(case when ${vote.isUp} = ${round.upWins} then 0 else 1 end)`,
+      totalStakeWon: sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then ${vote.stake} else 0 end), 0)`,
+      totalStakeLost: sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then 0 else ${vote.stake} end), 0)`,
+      profileName: profile.name,
+      profileImageUrl: profile.imageUrl,
+    };
+
+    const baseConditions = [
+      eq(vote.revealed, true),
+      eq(round.state, ROUND_STATE.Settled),
+      gte(round.settledAt, windowBounds.startsAt),
+      lt(round.settledAt, windowBounds.endsAt),
+    ];
+
+    const rows = categoryId !== null
+      ? await db
+          .select(aggregateSelection)
+          .from(vote)
+          .innerJoin(
+            round,
+            and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+          )
+          .innerJoin(content, eq(vote.contentId, content.id))
+          .leftJoin(profile, eq(vote.voter, profile.address))
+          .where(and(...baseConditions, eq(content.categoryId, categoryId)))
+          .groupBy(vote.voter, profile.name, profile.imageUrl)
+      : await db
+          .select(aggregateSelection)
+          .from(vote)
+          .innerJoin(
+            round,
+            and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+          )
+          .leftJoin(profile, eq(vote.voter, profile.address))
+          .where(and(...baseConditions))
+          .groupBy(vote.voter, profile.name, profile.imageUrl);
+
+    const normalized = rows
+      .map((row) => ({
+        voter: row.voter,
+        totalSettledVotes: Number(row.totalSettledVotes),
+        totalWins: Number(row.totalWins),
+        totalLosses: Number(row.totalLosses),
+        totalStakeWon: typeof row.totalStakeWon === "bigint" ? row.totalStakeWon : BigInt(row.totalStakeWon ?? 0),
+        totalStakeLost: typeof row.totalStakeLost === "bigint" ? row.totalStakeLost : BigInt(row.totalStakeLost ?? 0),
+        profileName: row.profileName,
+        profileImageUrl: row.profileImageUrl,
+        winRate: Number(row.totalSettledVotes) > 0 ? Number(row.totalWins) / Number(row.totalSettledVotes) : 0,
+      }))
+      .filter((row) => row.totalSettledVotes >= minVotes);
+
+    const items = sortAccuracyLeaderboardItems(normalized, sortBy as AccuracyLeaderboardSortBy).slice(
+      offset,
+      offset + limit,
+    );
+
+    return jsonBig(c, {
+      items,
+      categoryId: categoryIdParam,
+      window: windowBounds.window,
+      startsAt: windowBounds.startsAt,
+      endsAt: windowBounds.endsAt,
+    });
+  }
+
+  if (categoryId !== null) {
 
     const items = await db
       .select({
@@ -1373,7 +1457,13 @@ app.get("/accuracy-leaderboard", async (c) => {
       winRate: item.totalSettledVotes > 0 ? item.totalWins / item.totalSettledVotes : 0,
     }));
 
-    return jsonBig(c, { items: result, categoryId: categoryIdParam });
+    return jsonBig(c, {
+      items: result,
+      categoryId: categoryIdParam,
+      window: windowBounds.window,
+      startsAt: null,
+      endsAt: null,
+    });
   }
 
   // Global accuracy leaderboard
@@ -1402,7 +1492,12 @@ app.get("/accuracy-leaderboard", async (c) => {
     winRate: item.totalSettledVotes > 0 ? item.totalWins / item.totalSettledVotes : 0,
   }));
 
-  return jsonBig(c, { items: result });
+  return jsonBig(c, {
+    items: result,
+    window: windowBounds.window,
+    startsAt: null,
+    endsAt: null,
+  });
 });
 
 // ============================================================

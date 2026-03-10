@@ -349,6 +349,16 @@ export interface PonderAccuracyLeaderboardItem {
   winRate: number;
 }
 
+export type PonderAccuracyLeaderboardWindow = "all" | "7d" | "30d" | "365d" | "season";
+
+export interface PonderAccuracyLeaderboardResponse {
+  items: PonderAccuracyLeaderboardItem[];
+  categoryId?: string;
+  window: PonderAccuracyLeaderboardWindow;
+  startsAt: string | null;
+  endsAt: string | null;
+}
+
 export interface PonderVoteItem {
   id: string;
   contentId: string;
@@ -563,11 +573,12 @@ export const ponderApi = {
   getAccuracyLeaderboard(params?: {
     categoryId?: string;
     sortBy?: string;
+    window?: string;
     minVotes?: string;
     limit?: string;
     offset?: string;
   }) {
-    return ponderGet<{ items: PonderAccuracyLeaderboardItem[]; categoryId?: string }>("/accuracy-leaderboard", params);
+    return ponderGet<PonderAccuracyLeaderboardResponse>("/accuracy-leaderboard", params);
   },
 
   getVoterAccuracy(address: string) {
