@@ -21,7 +21,7 @@ import {
   voterCategoryStats,
   voterStreak,
 } from "ponder:schema";
-import { eq, desc, asc, and, or, inArray, notInArray, sql, gte, replaceBigInts } from "ponder";
+import { eq, desc, asc, and, or, inArray, notInArray, sql, gte, lt, replaceBigInts } from "ponder";
 import { RateLimiter } from "./rate-limit.js";
 import { safeBigInt, safeLimit, safeOffset, isValidAddress, getUrlLookupCandidates } from "./utils.js";
 
@@ -144,6 +144,17 @@ function getRadarResolutionOutcome(state: number | null, isUp: boolean | null, u
   }
 
   return "resolved" as const;
+}
+
+function getCurrentSeasonWindow(now = new Date()) {
+  const currentUtcDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = currentUtcDate.getUTCDay();
+  const distanceFromMonday = day === 0 ? 6 : day - 1;
+  currentUtcDate.setUTCDate(currentUtcDate.getUTCDate() - distanceFromMonday);
+  currentUtcDate.setUTCHours(0, 0, 0, 0);
+
+  const end = new Date(currentUtcDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+  return { start: currentUtcDate, end };
 }
 
 // Ponder provides /health and /status natively — no custom health check needed.
@@ -863,6 +874,147 @@ app.get("/featured-today", async (c) => {
     }));
 
   return jsonBig(c, { items });
+});
+
+app.get("/seasons/current", async (c) => {
+  const address = c.req.query("address")?.toLowerCase() as `0x${string}` | undefined;
+  if (address && !isValidAddress(address)) {
+    return c.json({ error: "Invalid address" }, 400);
+  }
+
+  const { start, end } = getCurrentSeasonWindow();
+  const startSeconds = BigInt(Math.floor(start.getTime() / 1000));
+  const endSeconds = BigInt(Math.floor(end.getTime() / 1000));
+
+  const rows = await db
+    .select({
+      voter: vote.voter,
+      profileName: profile.name,
+      profileImageUrl: profile.imageUrl,
+      categoryId: content.categoryId,
+      categoryName: category.name,
+      isUp: vote.isUp,
+      roundUpWins: round.upWins,
+    })
+    .from(vote)
+    .innerJoin(
+      round,
+      and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+    )
+    .innerJoin(content, eq(vote.contentId, content.id))
+    .leftJoin(category, eq(content.categoryId, category.id))
+    .leftJoin(profile, eq(vote.voter, profile.address))
+    .where(and(
+      eq(vote.revealed, true),
+      eq(round.state, ROUND_STATE.Settled),
+      gte(round.settledAt, startSeconds),
+      lt(round.settledAt, endSeconds),
+    ))
+    .limit(5000);
+
+  type StandingAccumulator = {
+    voter: `0x${string}`;
+    profileName: string | null;
+    profileImageUrl: string | null;
+    settledVotes: number;
+    wins: number;
+    losses: number;
+  };
+
+  const buildStandings = (items: StandingAccumulator[]) => {
+    const sorted = [...items].sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      const winRateA = a.settledVotes > 0 ? a.wins / a.settledVotes : 0;
+      const winRateB = b.settledVotes > 0 ? b.wins / b.settledVotes : 0;
+      if (winRateB !== winRateA) return winRateB - winRateA;
+      return b.settledVotes - a.settledVotes;
+    });
+
+    const standings = sorted.map((item, index) => ({
+      rank: index + 1,
+      ...item,
+      winRate: item.settledVotes > 0 ? item.wins / item.settledVotes : 0,
+    }));
+
+    return {
+      standings: standings.slice(0, 10),
+      me: address ? standings.find(item => item.voter === address) ?? null : null,
+    };
+  };
+
+  const globalMap = new Map<string, StandingAccumulator>();
+  const categoryMaps = new Map<string, Map<string, StandingAccumulator>>();
+  const categoryCounts = new Map<string, number>();
+  const categoryMeta = new Map<string, { categoryId: bigint; categoryName: string | null }>();
+
+  for (const row of rows) {
+    if (row.isUp === null || row.roundUpWins === null) continue;
+
+    const voterKey = row.voter.toLowerCase();
+    const didWin = row.isUp === row.roundUpWins;
+    const currentGlobal = globalMap.get(voterKey) ?? {
+      voter: row.voter,
+      profileName: row.profileName,
+      profileImageUrl: row.profileImageUrl,
+      settledVotes: 0,
+      wins: 0,
+      losses: 0,
+    };
+    currentGlobal.settledVotes += 1;
+    currentGlobal.wins += didWin ? 1 : 0;
+    currentGlobal.losses += didWin ? 0 : 1;
+    globalMap.set(voterKey, currentGlobal);
+
+    const categoryKey = row.categoryId.toString();
+    categoryCounts.set(categoryKey, (categoryCounts.get(categoryKey) ?? 0) + 1);
+    categoryMeta.set(categoryKey, { categoryId: row.categoryId, categoryName: row.categoryName });
+
+    const perCategoryMap = categoryMaps.get(categoryKey) ?? new Map<string, StandingAccumulator>();
+    const currentCategory = perCategoryMap.get(voterKey) ?? {
+      voter: row.voter,
+      profileName: row.profileName,
+      profileImageUrl: row.profileImageUrl,
+      settledVotes: 0,
+      wins: 0,
+      losses: 0,
+    };
+    currentCategory.settledVotes += 1;
+    currentCategory.wins += didWin ? 1 : 0;
+    currentCategory.losses += didWin ? 0 : 1;
+    perCategoryMap.set(voterKey, currentCategory);
+    categoryMaps.set(categoryKey, perCategoryMap);
+  }
+
+  const { standings: globalStandings, me: globalMe } = buildStandings([...globalMap.values()]);
+
+  const topCategoryEntry = [...categoryCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  const topCategoryKey = topCategoryEntry?.[0];
+  const topCategoryMeta = topCategoryKey ? categoryMeta.get(topCategoryKey) : undefined;
+  const categoryStandingsSource = topCategoryKey ? categoryMaps.get(topCategoryKey) : undefined;
+  const { standings: categoryStandings, me: categoryMe } = buildStandings(
+    categoryStandingsSource ? [...categoryStandingsSource.values()] : [],
+  );
+
+  return jsonBig(c, {
+    startsAt: startSeconds,
+    endsAt: endSeconds,
+    global: {
+      key: "global-weekly",
+      label: "Global Weekly Season",
+      standings: globalStandings,
+      me: globalMe,
+    },
+    category: topCategoryMeta
+      ? {
+          key: `category-weekly-${topCategoryMeta.categoryId.toString()}`,
+          label: "Category Weekly Season",
+          categoryId: topCategoryMeta.categoryId,
+          categoryName: topCategoryMeta.categoryName,
+          standings: categoryStandings,
+          me: categoryMe,
+        }
+      : null,
+  });
 });
 
 // ============================================================

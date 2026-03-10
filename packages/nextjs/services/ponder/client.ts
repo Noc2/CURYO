@@ -200,6 +200,33 @@ export interface PonderFeaturedTodayItem {
   featuredReason: string;
 }
 
+export interface PonderSeasonStandingItem {
+  rank: number;
+  voter: string;
+  profileName: string | null;
+  profileImageUrl: string | null;
+  settledVotes: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+}
+
+export interface PonderSeasonSection {
+  key: string;
+  label: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  standings: PonderSeasonStandingItem[];
+  me: PonderSeasonStandingItem | null;
+}
+
+export interface PonderCurrentSeasonsResponse {
+  startsAt: string;
+  endsAt: string;
+  global: PonderSeasonSection;
+  category: PonderSeasonSection | null;
+}
+
 export interface PonderSubmissionStakes {
   activeCount: number;
   submitter: string;
@@ -393,6 +420,12 @@ export const ponderApi = {
 
   getFeaturedToday(limit?: string) {
     return ponderGet<{ items: PonderFeaturedTodayItem[] }>("/featured-today", { limit });
+  },
+
+  getCurrentSeasons(address?: string) {
+    return ponderGet<PonderCurrentSeasonsResponse>("/seasons/current", {
+      address,
+    });
   },
 
   getLeaderboard(type?: string, limit?: string) {

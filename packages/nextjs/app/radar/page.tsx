@@ -7,6 +7,7 @@ import { useAccount } from "wagmi";
 import { ArrowTopRightOnSquareIcon, BellAlertIcon, ClockIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
+import { useCurrentSeasons } from "~~/hooks/useCurrentSeasons";
 import { useFeaturedToday } from "~~/hooks/useFeaturedToday";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { type NotificationPreferences, useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
@@ -263,7 +264,12 @@ export default function RadarPage() {
   const { openConnectModal } = useConnectModal();
   const { radar, isLoading, watchedCount, followedCategoryCount } = useRadarFeed(address);
   const { items: featuredToday } = useFeaturedToday(4);
+  const { seasons } = useCurrentSeasons(address);
   const { followedWallets, toggleFollow, isPending } = useFollowedProfiles(address);
+  const seasonDescription =
+    Number(seasons.endsAt) > 0
+      ? `Current standings. This week resets ${formatRelativeTime(seasons.endsAt)}.`
+      : "Current standings for the live weekly season.";
   const { preferences, isSaving, updatePreference } = useNotificationPreferences(address);
 
   const handleToggleFollow = useCallback(
@@ -463,6 +469,85 @@ export default function RadarPage() {
           </div>
 
           <div className="space-y-6">
+            <ModuleCard title="This Week's Season" description={seasonDescription}>
+              <div className="space-y-4">
+                <div>
+                  <div className="mb-2 text-sm font-semibold uppercase tracking-wide text-primary/80">
+                    {seasons.global.label}
+                  </div>
+                  {seasons.global.standings.length > 0 ? (
+                    <div className="space-y-2">
+                      {seasons.global.standings.slice(0, 3).map(item => (
+                        <div
+                          key={`global-${item.voter}`}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3"
+                        >
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="text-sm font-semibold text-base-content/45">#{item.rank}</span>
+                            <SubmitterBadge
+                              address={item.voter}
+                              username={item.profileName}
+                              profileImageUrl={item.profileImageUrl}
+                              showAddress={Boolean(item.profileName)}
+                            />
+                          </div>
+                          <div className="shrink-0 text-sm text-base-content/55">
+                            {item.wins}W / {item.losses}L
+                          </div>
+                        </div>
+                      ))}
+                      {seasons.global.me ? (
+                        <div className="rounded-2xl bg-primary/10 px-4 py-3 text-sm text-primary">
+                          You are #{seasons.global.me.rank} this week at {Math.round(seasons.global.me.winRate * 100)}%
+                          .
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <EmptyModule message="Season standings will fill in as this week's settled rounds come in." />
+                  )}
+                </div>
+
+                {seasons.category ? (
+                  <div>
+                    <div className="mb-2 text-sm font-semibold uppercase tracking-wide text-primary/80">
+                      {seasons.category.categoryName || "Featured category"} season
+                    </div>
+                    {seasons.category.standings.length > 0 ? (
+                      <div className="space-y-2">
+                        {seasons.category.standings.slice(0, 3).map(item => (
+                          <div
+                            key={`category-${item.voter}`}
+                            className="flex items-center justify-between gap-3 rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3"
+                          >
+                            <div className="flex min-w-0 items-center gap-3">
+                              <span className="text-sm font-semibold text-base-content/45">#{item.rank}</span>
+                              <SubmitterBadge
+                                address={item.voter}
+                                username={item.profileName}
+                                profileImageUrl={item.profileImageUrl}
+                                showAddress={Boolean(item.profileName)}
+                              />
+                            </div>
+                            <div className="shrink-0 text-sm text-base-content/55">
+                              {item.wins}W / {item.losses}L
+                            </div>
+                          </div>
+                        ))}
+                        {seasons.category.me ? (
+                          <div className="rounded-2xl bg-base-content/[0.06] px-4 py-3 text-sm text-base-content/65">
+                            Your {seasons.category.categoryName || "category"} rank: #{seasons.category.me.rank}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <EmptyModule message="Category-season standings will appear once that category has resolved rounds this week." />
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </ModuleCard>
+
             <ModuleCard
               title="Notification Settings"
               description="Choose which radar events should trigger in-app and browser notifications."
