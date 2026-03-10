@@ -24,6 +24,16 @@ ponder.on(
 );
 
 ponder.on(
+  "CategoryRegistry:CategoryProposalLinked",
+  async ({ event, context }) => {
+    const { categoryId, proposalId } = event.args;
+    await context.db
+      .update(category, { id: categoryId })
+      .set({ proposalId });
+  },
+);
+
+ponder.on(
   "CategoryRegistry:CategoryApproved",
   async ({ event, context }) => {
     const { categoryId } = event.args;
@@ -40,6 +50,16 @@ ponder.on(
     await context.db
       .update(category, { id: categoryId })
       .set({ status: 2 });
+  },
+);
+
+ponder.on(
+  "CategoryRegistry:CategoryCanceled",
+  async ({ event, context }) => {
+    const { categoryId } = event.args;
+    await context.db
+      .update(category, { id: categoryId })
+      .set({ status: 3 });
   },
 );
 

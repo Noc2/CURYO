@@ -14,7 +14,7 @@ export interface Category {
   rankingQuestion: string;
   submitter: string;
   stakeAmount: bigint;
-  status: number; // 0 = Pending, 1 = Approved, 2 = Rejected
+  status: number; // 0 = Pending, 1 = Approved, 2 = Rejected, 3 = Canceled
   proposalId: bigint;
   createdAt: bigint;
 }
@@ -260,6 +260,7 @@ const DOMAIN_CONTENT_LABELS: Record<string, string> = {
   "huggingface.co": "ai",
   "www.themoviedb.org": "movie",
   "coingecko.com": "token",
+  "open.spotify.com": "podcast",
   "x.com": "tweet",
 };
 

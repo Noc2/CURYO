@@ -205,13 +205,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         votingEngine.fundKeeperRewardPool(keeperPoolAmount);
         console.log("Funded 100K cREP to keeper reward pool");
 
-        // Fund CategoryRegistry so it meets the governor's proposal threshold (100 cREP).
-        // The contract self-delegates in its constructor, so minting cREP gives it voting power.
-        // Governor checks votes at clock()-1, so this must happen before any submitCategory call.
-        uint256 proposalThreshold = 100 * 1e6;
-        crepToken.mint(address(categoryRegistry), proposalThreshold);
-        console.log("Funded 100 cREP to CategoryRegistry for governance proposals");
-
         // 12a. Fund treasury (10M cREP to governance timelock)
         uint256 treasuryAmount = 10_000_000 * 1e6; // 10M cREP
         crepToken.mint(governance, treasuryAmount);
@@ -632,6 +625,23 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "github.com",
             githubSubcats,
             "Is this repository worth adopting or recommending enough to score above {rating} out of 100?"
+        );
+
+        // Spotify Podcasts (categoryId: 12)
+        string[] memory spotifySubcats = new string[](8);
+        spotifySubcats[0] = "Technology";
+        spotifySubcats[1] = "Business";
+        spotifySubcats[2] = "Comedy";
+        spotifySubcats[3] = "News";
+        spotifySubcats[4] = "Science";
+        spotifySubcats[5] = "Health";
+        spotifySubcats[6] = "Sports";
+        spotifySubcats[7] = "Culture";
+        registry.addApprovedCategory(
+            "Spotify Podcasts",
+            "open.spotify.com",
+            spotifySubcats,
+            "Is this podcast or episode worth listening to enough to score above {rating} out of 100?"
         );
     }
 }

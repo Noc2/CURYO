@@ -8,13 +8,14 @@ import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
 
-type FilterState = "all" | "pending" | "approved" | "rejected";
+type FilterState = "all" | "pending" | "approved" | "rejected" | "canceled";
 
 // Map CategoryStatus enum to filter state
 const STATUS_MAP: Record<number, FilterState> = {
   0: "pending",
   1: "approved",
   2: "rejected",
+  3: "canceled",
 };
 
 // Category status from contract
@@ -91,7 +92,7 @@ export function PlatformProposals() {
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-6">
-        {(["all", "pending", "approved", "rejected"] as FilterState[]).map(f => (
+        {(["all", "pending", "approved", "rejected", "canceled"] as FilterState[]).map(f => (
           <button
             key={f}
             className={`px-3 py-1.5 rounded-lg text-base font-medium transition-colors capitalize ${
@@ -143,10 +144,12 @@ export function PlatformProposals() {
         <h3 className="text-base font-medium mb-2">How Platform Proposals Work</h3>
         <ol className="text-base text-base-content/60 space-y-1 list-decimal list-inside">
           <li>Submit a platform on the Submit page (100 cREP stake)</li>
-          <li>A governance proposal is automatically created</li>
+          <li>Sponsor an approval proposal from the Governance composer</li>
+          <li>The composer links the resulting proposal back to the registry automatically</li>
           <li>Community votes for 1 week (4% circulating supply quorum required)</li>
           <li>If approved, stake is returned and platform is added</li>
           <li>If rejected, stake is sent to the consensus reserve</li>
+          <li>If no proposal is linked within 7 days, the submitter can cancel and reclaim the stake</li>
         </ol>
       </div>
     </div>
@@ -176,7 +179,7 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
       case "pending":
         return (
           <span className="px-2 py-0.5 rounded-full text-base font-medium bg-warning/20 text-warning">
-            Pending Vote
+            {category.proposalId > 0n ? "Pending Vote" : "Awaiting Sponsor"}
           </span>
         );
       case "approved":
@@ -185,6 +188,12 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
         );
       case "rejected":
         return <span className="px-2 py-0.5 rounded-full text-base font-medium bg-error/20 text-error">Rejected</span>;
+      case "canceled":
+        return (
+          <span className="px-2 py-0.5 rounded-full text-base font-medium bg-base-300 text-base-content/70">
+            Canceled
+          </span>
+        );
       default:
         return null;
     }

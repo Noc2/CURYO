@@ -130,7 +130,9 @@ export const CategorySubmissionForm = () => {
         args: [name.trim(), domain.trim().toLowerCase(), validSubcats, rankingQuestion.trim()],
       });
 
-      notification.success("Platform submitted! A governance proposal has been created.");
+      notification.success(
+        "Platform submitted. Next: sponsor an approval proposal from Governance. If nobody links one within 7 days, you can cancel and reclaim your stake.",
+      );
 
       // Reset form
       setName("");

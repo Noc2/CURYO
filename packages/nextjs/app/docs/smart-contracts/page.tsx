@@ -415,7 +415,15 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>submitCategory(name, domain, subcategories, question)</code> &mdash; Submit category for governance
-          approval (1,000 cREP stake). Requires Voter ID.
+          sponsorship (100 cREP stake). Requires Voter ID.
+        </li>
+        <li>
+          <code>linkApprovalProposal(categoryId, descriptionHash)</code> &mdash; Link the separately created governor
+          approval proposal to the pending category.
+        </li>
+        <li>
+          <code>cancelUnlinkedCategory(categoryId)</code> &mdash; Reclaim stake after 7 days if no approval proposal was
+          linked.
         </li>
         <li>
           <code>approveCategory(categoryId)</code> &mdash; Approve after successful governance vote (timelock only).

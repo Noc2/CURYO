@@ -13,7 +13,7 @@ import { Nonces } from "@openzeppelin/contracts/utils/Nonces.sol";
 ///      Minter role allows HumanFaucet to mint tokens up to MAX_SUPPLY.
 contract CuryoReputation is ERC20, ERC20Permit, ERC20Votes, AccessControl {
     uint8 private constant DECIMALS = 6;
-    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** DECIMALS; // 100M cREP (51,899,900 faucet + 34M participation + 4M consensus + 100K keeper + 10M treasury + 100 CategoryRegistry)
+    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** DECIMALS; // 100M cREP total cap across faucet, participation, consensus, keeper, treasury, and future governance budgets
 
     /// @notice Role for minting tokens (granted to HumanFaucet)
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");

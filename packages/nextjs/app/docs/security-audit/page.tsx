@@ -650,14 +650,14 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>M-14</td>
               <td>
-                <strong>CategoryRegistry needs delegated voting power.</strong> <code>submitCategory()</code> calls{" "}
-                <code>governor.propose()</code> which requires the caller to meet the proposal threshold (100 cREP
-                voting power). If CategoryRegistry has no delegated cREP, all category submissions will revert. Verify
-                deployment script delegates tokens to the contract.
+                <strong>Retired by design change.</strong> Category submissions no longer call{" "}
+                <code>governor.propose()</code> from <code>CategoryRegistry</code>. A real wallet now sponsors the
+                approval proposal separately and links it afterward, so the registry no longer needs standing delegated
+                voting power.
               </td>
               <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Needs Verification</span>
+                <span className="badge badge-success whitespace-nowrap text-white">Superseded</span>
               </td>
             </tr>
             <tr>

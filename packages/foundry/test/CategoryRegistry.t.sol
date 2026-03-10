@@ -10,17 +10,33 @@ import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
 
 /// @title Mock Governor for testing CategoryRegistry
 contract MockGovernor {
-    uint256 public nextProposalId = 1;
     mapping(uint256 => IGovernor.ProposalState) public proposalStates;
+    mapping(uint256 => address) public proposalProposers;
 
-    function propose(address[] memory, uint256[] memory, bytes[] memory, string memory) external returns (uint256) {
-        uint256 proposalId = nextProposalId++;
+    function propose(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, string memory description)
+        external
+        returns (uint256)
+    {
+        uint256 proposalId = getProposalId(targets, values, calldatas, keccak256(bytes(description)));
         proposalStates[proposalId] = IGovernor.ProposalState.Pending;
+        proposalProposers[proposalId] = msg.sender;
         return proposalId;
     }
 
     function state(uint256 proposalId) external view returns (IGovernor.ProposalState) {
         return proposalStates[proposalId];
+    }
+
+    function getProposalId(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
+        public
+        pure
+        returns (uint256)
+    {
+        return uint256(keccak256(abi.encode(targets, values, calldatas, descriptionHash)));
+    }
+
+    function proposalProposer(uint256 proposalId) external view returns (address) {
+        return proposalProposers[proposalId];
     }
 
     function setProposalState(uint256 proposalId, IGovernor.ProposalState newState) external {
@@ -84,12 +100,37 @@ contract CategoryRegistryTest is Test {
         // Mint tokens for users (not transfer, to avoid governance lock checks)
         token.mint(user1, 10_000e6);
         token.mint(user2, 10_000e6);
-        token.mint(address(registry), 10_000e6); // For governance voting
 
         vm.stopPrank();
 
         // Advance blocks to activate voting power
         vm.roll(block.number + 5);
+    }
+
+    function _submitCategory(string memory domain) internal returns (uint256 categoryId) {
+        string[] memory subcategories = new string[](1);
+        subcategories[0] = "General";
+
+        vm.startPrank(user1);
+        token.approve(address(registry), STAKE);
+        categoryId = registry.submitCategory("MTG", domain, subcategories, "What is the best?");
+        vm.stopPrank();
+    }
+
+    function _linkApprovalProposal(uint256 categoryId, string memory description) internal returns (uint256 proposalId) {
+        address[] memory targets = new address[](1);
+        targets[0] = address(registry);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId);
+
+        vm.prank(user2);
+        proposalId = governor.propose(targets, values, calldatas, description);
+
+        registry.linkApprovalProposal(categoryId, keccak256(bytes(description)));
     }
 
     // --- Constructor Tests ---
@@ -223,10 +264,10 @@ contract CategoryRegistryTest is Test {
         assertEq(cat.submitter, user1);
         assertEq(cat.stakeAmount, STAKE);
         assertEq(uint256(cat.status), uint256(ICategoryRegistry.CategoryStatus.Pending));
-        assertTrue(cat.proposalId > 0); // Proposal was created
+        assertEq(cat.proposalId, 0); // Proposal is linked separately
 
         // Verify stake was transferred
-        assertEq(token.balanceOf(address(registry)), 10_000e6 + STAKE);
+        assertEq(token.balanceOf(address(registry)), STAKE);
     }
 
     function test_RevertSubmitCategoryInsufficientStake() public {
@@ -243,14 +284,8 @@ contract CategoryRegistryTest is Test {
     // --- Approve Category Tests ---
 
     function test_ApproveCategory() public {
-        // Submit category
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.startPrank(user1);
-        token.approve(address(registry), STAKE);
-        uint256 categoryId = registry.submitCategory("MTG", "gatherer.wizards.com", subcategories, "What is the best?");
-        vm.stopPrank();
+        uint256 categoryId = _submitCategory("gatherer.wizards.com");
+        _linkApprovalProposal(categoryId, "Approve category #1");
 
         uint256 userBalanceBefore = token.balanceOf(user1);
 
@@ -268,13 +303,8 @@ contract CategoryRegistryTest is Test {
     }
 
     function test_RevertApproveCategoryNonTimelock() public {
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.startPrank(user1);
-        token.approve(address(registry), STAKE);
-        uint256 categoryId = registry.submitCategory("MTG", "gatherer.wizards.com", subcategories, "What is the best?");
-        vm.stopPrank();
+        uint256 categoryId = _submitCategory("gatherer.wizards.com");
+        _linkApprovalProposal(categoryId, "Approve category #1");
 
         vm.prank(user1);
         vm.expectRevert("Only timelock");
@@ -282,13 +312,8 @@ contract CategoryRegistryTest is Test {
     }
 
     function test_RevertApproveCategoryAlreadyApproved() public {
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.startPrank(user1);
-        token.approve(address(registry), STAKE);
-        uint256 categoryId = registry.submitCategory("MTG", "gatherer.wizards.com", subcategories, "What is the best?");
-        vm.stopPrank();
+        uint256 categoryId = _submitCategory("gatherer.wizards.com");
+        _linkApprovalProposal(categoryId, "Approve category #1");
 
         vm.prank(timelock);
         registry.approveCategory(categoryId);
@@ -301,18 +326,11 @@ contract CategoryRegistryTest is Test {
     // --- Reject Category Tests ---
 
     function test_RejectCategory() public {
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.startPrank(user1);
-        token.approve(address(registry), STAKE);
-        uint256 categoryId = registry.submitCategory("MTG", "gatherer.wizards.com", subcategories, "What is the best?");
-        vm.stopPrank();
-
-        ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
+        uint256 categoryId = _submitCategory("gatherer.wizards.com");
+        uint256 proposalId = _linkApprovalProposal(categoryId, "Approve category #1");
 
         // Set proposal to defeated
-        governor.setProposalState(cat.proposalId, IGovernor.ProposalState.Defeated);
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Defeated);
 
         uint256 voterPoolBefore = votingEngine.totalAddedToReserve();
 
@@ -320,7 +338,7 @@ contract CategoryRegistryTest is Test {
         vm.prank(user2);
         registry.rejectCategory(categoryId);
 
-        cat = registry.getCategory(categoryId);
+        ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(uint256(cat.status), uint256(ICategoryRegistry.CategoryStatus.Rejected));
 
         // Stake should go to voter pool
@@ -331,17 +349,28 @@ contract CategoryRegistryTest is Test {
     }
 
     function test_RevertRejectCategoryProposalNotFailed() public {
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.startPrank(user1);
-        token.approve(address(registry), STAKE);
-        uint256 categoryId = registry.submitCategory("MTG", "gatherer.wizards.com", subcategories, "What is the best?");
-        vm.stopPrank();
+        uint256 categoryId = _submitCategory("gatherer.wizards.com");
+        _linkApprovalProposal(categoryId, "Approve category #1");
 
         // Proposal is still Pending
         vm.expectRevert("Proposal not failed");
         registry.rejectCategory(categoryId);
+    }
+
+    function test_CancelUnlinkedCategory() public {
+        uint256 categoryId = _submitCategory("awaiting-sponsor.test");
+
+        vm.warp(block.timestamp + registry.SPONSORSHIP_WINDOW() + 1);
+
+        uint256 balanceBefore = token.balanceOf(user1);
+
+        vm.prank(user1);
+        registry.cancelUnlinkedCategory(categoryId);
+
+        ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
+        assertEq(uint256(cat.status), uint256(ICategoryRegistry.CategoryStatus.Canceled));
+        assertEq(token.balanceOf(user1), balanceBefore + STAKE);
+        assertFalse(registry.isDomainRegistered("awaiting-sponsor.test"));
     }
 
     // --- View Functions Tests ---

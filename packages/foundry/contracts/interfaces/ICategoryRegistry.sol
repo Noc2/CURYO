@@ -7,7 +7,8 @@ interface ICategoryRegistry {
     enum CategoryStatus {
         Pending,
         Approved,
-        Rejected
+        Rejected,
+        Canceled
     }
 
     struct Category {
@@ -27,8 +28,10 @@ interface ICategoryRegistry {
     event CategorySubmitted(
         uint256 indexed categoryId, address indexed submitter, string name, string domain, uint256 proposalId
     );
+    event CategoryProposalLinked(uint256 indexed categoryId, uint256 indexed proposalId, bytes32 descriptionHash);
     event CategoryApproved(uint256 indexed categoryId);
     event CategoryRejected(uint256 indexed categoryId);
+    event CategoryCanceled(uint256 indexed categoryId);
     event CategoryAdded(uint256 indexed categoryId, string name, string domain);
 
     /// @notice Check if a category is approved and active

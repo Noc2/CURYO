@@ -136,6 +136,19 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "SPONSORSHIP_WINDOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "addApprovedCategory",
     "inputs": [
       {
@@ -188,6 +201,43 @@ export const CategoryRegistryAbi = [
     "outputs": [
       {
         "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "cancelUnlinkedCategory",
+    "inputs": [
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getApprovalProposalId",
+    "inputs": [
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "descriptionHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "proposalId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -549,6 +599,30 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "linkApprovalProposal",
+    "inputs": [
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "descriptionHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "nextCategoryId",
     "inputs": [],
     "outputs": [
@@ -606,13 +680,6 @@ export const CategoryRegistryAbi = [
         "internalType": "address"
       }
     ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "selfDelegate",
-    "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -781,6 +848,44 @@ export const CategoryRegistryAbi = [
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CategoryCanceled",
+    "inputs": [
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CategoryProposalLinked",
+    "inputs": [
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "proposalId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "descriptionHash",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
       }
     ],
     "anonymous": false

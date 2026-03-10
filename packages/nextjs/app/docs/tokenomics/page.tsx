@@ -123,8 +123,8 @@ const Tokenomics = () => {
             </tr>
             <tr>
               <td className="font-medium">Category Registry</td>
-              <td className="font-mono">100 cREP</td>
-              <td>Initial reserve so category proposal mechanics meet the governance proposal threshold from launch</td>
+              <td className="font-mono">0 cREP</td>
+              <td>Pending category stakes are user-funded; approval proposals are now sponsored directly by voters</td>
             </tr>
           </tbody>
         </table>

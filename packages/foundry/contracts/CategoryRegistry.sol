@@ -6,15 +6,14 @@ import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/Reentran
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
-import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title CategoryRegistry
 /// @notice Manages content categories/platforms with governance-based approval.
-/// @dev Categories require 100 cREP stake and governance approval to become active.
-///      Rejected categories lose their stake to the voter pool.
+/// @dev Categories require 100 cREP stake and a separately sponsored governance approval proposal to become active.
+///      Rejected categories lose their stake to the consensus reserve.
 contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
@@ -28,6 +27,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     uint256 public constant MAX_QUESTION_LENGTH = 256;
     uint256 public constant MAX_SUBCATEGORIES = 20;
     uint256 public constant MAX_SUBCATEGORY_LENGTH = 32;
+    uint256 public constant SPONSORSHIP_WINDOW = 7 days;
 
     // --- State ---
     IERC20 public immutable token;
@@ -66,15 +66,6 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         timelock = _timelock;
         votingEngine = IRoundVotingEngine(_votingEngine);
         nextCategoryId = 1;
-
-        // Self-delegate so that received cREP stakes count as voting power
-        // (required for governor.propose() in submitCategory)
-        IVotes(_token).delegate(address(this));
-    }
-
-    /// @notice Re-delegate voting power to self (in case delegation was lost)
-    function selfDelegate() external {
-        IVotes(address(token)).delegate(address(this));
     }
 
     // --- Admin Functions ---
@@ -89,9 +80,8 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
     // --- Category Submission ---
 
-    /// @notice Submit a new category for governance approval
-    /// @dev Requires 100 cREP stake. Creates a governance proposal automatically.
-    ///      This contract must have delegated voting power to create proposals.
+    /// @notice Submit a new category for governance approval sponsorship.
+    /// @dev Requires 100 cREP stake. A separate governor proposal must later be linked via linkApprovalProposal().
     /// @param name The category name (e.g., "YouTube", "MTG")
     /// @param domain The category domain (e.g., "youtube.com", "gatherer.wizards.com")
     /// @param subcategories Array of subcategory names (e.g., ["Education", "Gaming"])
@@ -125,8 +115,10 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
             );
         }
 
+        string memory normalizedDomain = _normalizeDomain(domain);
+
         // Check domain uniqueness
-        bytes32 domainHash = keccak256(abi.encodePacked(_normalizeDomain(domain)));
+        bytes32 domainHash = keccak256(abi.encodePacked(normalizedDomain));
         require(_domainToCategory[domainHash] == 0, "Domain already registered");
 
         // Take stake from user
@@ -137,37 +129,61 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         _categories[categoryId] = Category({
             id: categoryId,
             name: name,
-            domain: _normalizeDomain(domain),
+            domain: normalizedDomain,
             subcategories: subcategories,
             rankingQuestion: rankingQuestion,
             submitter: msg.sender,
             stakeAmount: CATEGORY_STAKE,
             status: CategoryStatus.Pending,
-            proposalId: 0, // Will be set after proposal creation
+            proposalId: 0,
             createdAt: block.timestamp
         });
 
         // Reserve domain
         _domainToCategory[domainHash] = categoryId;
 
-        // Build governance proposal
-        address[] memory targets = new address[](1);
-        targets[0] = address(this);
+        emit CategorySubmitted(categoryId, msg.sender, name, normalizedDomain, 0);
+    }
 
-        uint256[] memory values = new uint256[](1);
-        values[0] = 0;
+    /// @notice Link the separately created governor approval proposal for a pending category.
+    /// @param categoryId The pending category ID.
+    /// @param descriptionHash Keccak-256 hash of the exact governor proposal description.
+    /// @return proposalId The canonical governor proposal ID for this category.
+    function linkApprovalProposal(uint256 categoryId, bytes32 descriptionHash)
+        external
+        nonReentrant
+        returns (uint256 proposalId)
+    {
+        Category storage cat = _categories[categoryId];
+        require(cat.id != 0, "Category does not exist");
+        require(cat.status == CategoryStatus.Pending, "Not pending");
+        require(cat.proposalId == 0, "Proposal already linked");
+        require(block.timestamp <= cat.createdAt + SPONSORSHIP_WINDOW, "Sponsorship window expired");
 
-        bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSelector(this.approveCategory.selector, categoryId);
+        proposalId = getApprovalProposalId(categoryId, descriptionHash);
+        require(governor.proposalProposer(proposalId) != address(0), "Proposal not found");
 
-        string memory description =
-            string(abi.encodePacked("Add Category: ", name, " (", _categories[categoryId].domain, ")"));
+        cat.proposalId = proposalId;
+        emit CategoryProposalLinked(categoryId, proposalId, descriptionHash);
+    }
 
-        // Create governance proposal (requires this contract to have delegated voting power)
-        uint256 proposalId = governor.propose(targets, values, calldatas, description);
-        _categories[categoryId].proposalId = proposalId;
+    /// @notice Cancel an unsponsored category after the sponsorship window and reclaim the submitter stake.
+    /// @dev Only possible while no approval proposal has been linked.
+    function cancelUnlinkedCategory(uint256 categoryId) external nonReentrant {
+        Category storage cat = _categories[categoryId];
+        require(cat.id != 0, "Category does not exist");
+        require(cat.submitter == msg.sender, "Not submitter");
+        require(cat.status == CategoryStatus.Pending, "Not pending");
+        require(cat.proposalId == 0, "Proposal already linked");
+        require(block.timestamp > cat.createdAt + SPONSORSHIP_WINDOW, "Sponsorship window active");
 
-        emit CategorySubmitted(categoryId, msg.sender, name, _categories[categoryId].domain, proposalId);
+        cat.status = CategoryStatus.Canceled;
+
+        bytes32 domainHash = keccak256(abi.encodePacked(cat.domain));
+        delete _domainToCategory[domainHash];
+
+        token.safeTransfer(cat.submitter, cat.stakeAmount);
+        emit CategoryCanceled(categoryId);
     }
 
     // --- Governance Callbacks ---
@@ -180,6 +196,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         Category storage cat = _categories[categoryId];
         require(cat.id != 0, "Category does not exist");
         require(cat.status == CategoryStatus.Pending, "Not pending");
+        require(cat.proposalId != 0, "Proposal not linked");
 
         cat.status = CategoryStatus.Approved;
         _approvedCategoryIds.push(categoryId);
@@ -196,6 +213,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         Category storage cat = _categories[categoryId];
         require(cat.id != 0, "Category does not exist");
         require(cat.status == CategoryStatus.Pending, "Not pending");
+        require(cat.proposalId != 0, "Proposal not linked");
 
         // Check that the governance proposal has failed
         IGovernor.ProposalState proposalState = governor.state(cat.proposalId);
@@ -330,6 +348,20 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     /// @notice Get the number of approved categories
     function approvedCategoryCount() external view returns (uint256) {
         return _approvedCategoryIds.length;
+    }
+
+    /// @notice Compute the governor proposal ID for approving a category with the supplied description hash.
+    function getApprovalProposalId(uint256 categoryId, bytes32 descriptionHash) public view returns (uint256 proposalId) {
+        address[] memory targets = new address[](1);
+        targets[0] = address(this);
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(this.approveCategory.selector, categoryId);
+
+        proposalId = governor.getProposalId(targets, values, calldatas, descriptionHash);
     }
 
     /// @notice Get category status

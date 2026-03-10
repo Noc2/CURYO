@@ -167,7 +167,7 @@ export const category = onchainTable(
     name: t.text().notNull(),
     domain: t.text().notNull(),
     submitter: t.hex().notNull(),
-    status: t.integer().notNull(), // 0=Pending, 1=Approved, 2=Rejected
+    status: t.integer().notNull(), // 0=Pending, 1=Approved, 2=Rejected, 3=Canceled
     proposalId: t.bigint(),
     createdAt: t.bigint().notNull(),
     totalVotes: t.integer().notNull(),

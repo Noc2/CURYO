@@ -1,14 +1,16 @@
 "use client";
 
 import { type FormEvent, useMemo, useState } from "react";
+import { CategoryRegistryAbi } from "@curyo/contracts/abis";
 import { useQueryClient } from "@tanstack/react-query";
-import { Address, encodeFunctionData, isAddress, parseUnits } from "viem";
-import { useAccount } from "wagmi";
+import { Address, encodeFunctionData, isAddress, keccak256, parseUnits, stringToHex } from "viem";
+import { useAccount, useConfig } from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
 import { ArrowsRightLeftIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { governorAbi, useGovernanceContracts, useGovernanceStats, useGovernanceWrite } from "~~/hooks/useGovernance";
 
-type ComposerFieldType = "address" | "uint" | "crep" | "string" | "textarea" | "csv";
+type ComposerFieldType = "address" | "uint" | "crep" | "string" | "textarea" | "csv" | "bytes32";
 
 type ComposerField = {
   key: string;
@@ -23,6 +25,7 @@ type FieldParser = {
   address: (key: string, label: string) => Address;
   uint: (key: string, label: string) => bigint;
   crep: (key: string, label: string) => bigint;
+  bytes32: (key: string, label: string) => `0x${string}`;
   string: (key: string, label: string) => string;
   csv: (key: string) => string[];
 };
@@ -98,12 +101,37 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     mode: "proposal",
     contractName: "CategoryRegistry",
     functionName: "approveCategory",
-    description: "Create a proposal to approve a pending category submission.",
-    note: "Most category submissions already create their own approval proposal automatically. Use this only for exceptional cases.",
-    advanced: true,
+    description: "Create a governor proposal to sponsor and approve a pending category submission.",
+    note: "After the proposal transaction confirms, the app automatically links it back to the CategoryRegistry.",
     fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
     buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
     buildDescription: values => `Approve category #${values.categoryId || "0"}`,
+  },
+  {
+    id: "category-link-approval",
+    group: "Category Registry",
+    label: "Link approval proposal",
+    mode: "direct",
+    contractName: "CategoryRegistry",
+    functionName: "linkApprovalProposal",
+    description:
+      "Directly link an existing governor proposal to a pending category when the proposal was created outside this composer.",
+    note: "Only needed for externally created governor proposals. Composer-created approval proposals are linked automatically.",
+    advanced: true,
+    fields: [
+      { key: "categoryId", label: "Category ID", type: "uint", required: true },
+      {
+        key: "descriptionHash",
+        label: "Description hash",
+        type: "bytes32",
+        required: true,
+        helperText: "keccak256 hash of the exact governor proposal description string.",
+      },
+    ],
+    buildArgs: (_, parser) => [
+      parser.uint("categoryId", "Category ID"),
+      parser.bytes32("descriptionHash", "Description hash"),
+    ],
   },
   {
     id: "category-reject",
@@ -112,7 +140,20 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     mode: "direct",
     contractName: "CategoryRegistry",
     functionName: "rejectCategory",
-    description: "Directly reject a category whose governance proposal has already failed, expired, or been canceled.",
+    description:
+      "Directly reject a category whose linked governance proposal has already failed, expired, or been canceled.",
+    fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
+    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
+  },
+  {
+    id: "category-cancel-unlinked",
+    group: "Category Registry",
+    label: "Cancel unsponsored category",
+    mode: "direct",
+    contractName: "CategoryRegistry",
+    functionName: "cancelUnlinkedCategory",
+    description:
+      "Cancel your pending category submission and reclaim the 100 cREP stake after 7 days if no approval proposal was linked.",
     fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
     buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
   },
@@ -388,6 +429,8 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
   },
 ];
 
+const CATEGORY_REGISTRY_EXTENDED_FUNCTIONS = new Set(["linkApprovalProposal", "cancelUnlinkedCategory"]);
+
 function formatVotingPower(amount: bigint | undefined) {
   if (amount === undefined) return "—";
   return `${(Number(amount) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} cREP`;
@@ -396,6 +439,7 @@ function formatVotingPower(amount: bigint | undefined) {
 export function GovernanceActionComposer() {
   const queryClient = useQueryClient();
   const { address } = useAccount();
+  const wagmiConfig = useConfig();
   const { governorAddress, hasGovernorContract, knownContractsByName } = useGovernanceContracts();
   const { proposalThreshold } = useGovernanceStats();
   const { writeContractAsync, isPending } = useGovernanceWrite();
@@ -459,6 +503,13 @@ export function GovernanceActionComposer() {
         throw new Error(`${label} must be a valid cREP amount.`);
       }
     },
+    bytes32: (key, label) => {
+      const value = formValues[key]?.trim() ?? "";
+      if (!/^0x[0-9a-fA-F]{64}$/.test(value)) {
+        throw new Error(`${label} must be a 32-byte hex value.`);
+      }
+      return value as `0x${string}`;
+    },
     string: (key, label) => {
       const value = formValues[key]?.trim() ?? "";
       if (!value) throw new Error(`${label} is required.`);
@@ -498,6 +549,12 @@ export function GovernanceActionComposer() {
         throw new Error(`${selectedTemplate.contractName} is not available on this network.`);
       }
 
+      const actionAbi =
+        selectedTemplate.contractName === "CategoryRegistry" &&
+        CATEGORY_REGISTRY_EXTENDED_FUNCTIONS.has(selectedTemplate.functionName)
+          ? CategoryRegistryAbi
+          : targetContract.abi;
+
       if (selectedTemplate.mode === "proposal" && (!hasGovernorContract || !governorAddress)) {
         throw new Error("CuryoGovernor is not deployed on this network.");
       }
@@ -527,10 +584,21 @@ export function GovernanceActionComposer() {
         });
 
         if (!txHash) return;
+
+        await waitForTransactionReceipt(wagmiConfig, { hash: txHash });
+
+        if (selectedTemplate.id === "category-approve") {
+          await writeContractAsync({
+            address: targetContract.address,
+            abi: CategoryRegistryAbi,
+            functionName: "linkApprovalProposal",
+            args: [args[0] as bigint, keccak256(stringToHex(effectiveDescription))],
+          });
+        }
       } else {
         const txHash = await writeContractAsync({
           address: targetContract.address,
-          abi: targetContract.abi,
+          abi: actionAbi,
           functionName: selectedTemplate.functionName,
           args,
         });
