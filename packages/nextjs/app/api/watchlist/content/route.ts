@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
 import {
+  ensureSignedActionChallengeTable,
+  mapSignedActionError,
+  verifyAndConsumeSignedActionChallenge,
+} from "~~/lib/auth/signedActions";
+import {
+  SIGNED_READ_SESSION_COOKIE_NAME,
+  getSignedReadSessionCookie,
+  issueSignedReadSession,
+  verifySignedReadSession,
+} from "~~/lib/auth/signedReadSessions";
+import {
+  READ_WATCHLIST_ACTION,
   UNWATCH_CONTENT_ACTION,
   WATCH_CONTENT_ACTION,
   buildWatchlistChallengeMessage,
+  buildWatchlistReadChallengeMessage,
   hashWatchlistChallengePayload,
+  hashWatchlistReadPayload,
   normalizeWatchlistChallengeInput,
+  normalizeWatchlistReadInput,
 } from "~~/lib/auth/watchlistChallenge";
 import { db } from "~~/lib/db";
 import {
@@ -33,6 +47,15 @@ export async function GET(request: NextRequest) {
     }
 
     const normalizedAddress = normalizeWalletAddress(address);
+    const hasSession = await verifySignedReadSession(
+      request.cookies.get(SIGNED_READ_SESSION_COOKIE_NAME)?.value,
+      normalizedAddress,
+    );
+
+    if (!hasSession) {
+      return NextResponse.json({ error: "Signed read required" }, { status: 401 });
+    }
+
     const items = await listWatchedContent(normalizedAddress);
     return NextResponse.json({ items, count: items.length });
   } catch (error) {
@@ -42,6 +65,64 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = await checkRateLimit(request, READ_RATE_LIMIT);
+  if (limited) return limited;
+
+  try {
+    const { address, signature, challengeId } = (await request.json()) as Record<string, unknown> & {
+      signature?: `0x${string}`;
+      challengeId?: string;
+    };
+    if (!signature || !challengeId) {
+      return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
+    }
+
+    const normalized = normalizeWatchlistReadInput({ address: typeof address === "string" ? address : undefined });
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
+    }
+
+    const payload = normalized.payload;
+    const payloadHash = hashWatchlistReadPayload(payload);
+    await ensureSignedActionChallengeTable();
+
+    try {
+      await db.transaction(async tx => {
+        await verifyAndConsumeSignedActionChallenge(tx, {
+          challengeId: String(challengeId),
+          action: READ_WATCHLIST_ACTION,
+          walletAddress: payload.normalizedAddress,
+          payloadHash,
+          signature: signature as `0x${string}`,
+          buildMessage: ({ nonce, expiresAt }) =>
+            buildWatchlistReadChallengeMessage({
+              address: payload.normalizedAddress,
+              payloadHash,
+              nonce,
+              expiresAt,
+            }),
+        });
+      });
+    } catch (error: unknown) {
+      const mapped = mapSignedActionError(error);
+      if (mapped) {
+        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
+      }
+      throw error;
+    }
+
+    const session = await issueSignedReadSession(payload.normalizedAddress);
+    const items = await listWatchedContent(payload.normalizedAddress);
+    const response = NextResponse.json({ items, count: items.length });
+    response.cookies.set(getSignedReadSessionCookie(session));
+    return response;
+  } catch (error) {
+    console.error("Error fetching watched content:", error);
+    return NextResponse.json({ error: "Failed to fetch watched content" }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
   try {
     const { address, contentId, signature, challengeId } = await request.json();
     const limited = await checkRateLimit(request, WRITE_RATE_LIMIT, {
@@ -79,15 +160,10 @@ export async function POST(request: NextRequest) {
             }),
         });
       });
-    } catch (error: any) {
-      if (error.message === "CHALLENGE_USED") {
-        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
-      }
-      if (error.message === "CHALLENGE_EXPIRED") {
-        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
-      }
-      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
-        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+    } catch (error: unknown) {
+      const mapped = mapSignedActionError(error);
+      if (mapped) {
+        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
       }
       throw error;
     }
@@ -138,15 +214,10 @@ export async function DELETE(request: NextRequest) {
             }),
         });
       });
-    } catch (error: any) {
-      if (error.message === "CHALLENGE_USED") {
-        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
-      }
-      if (error.message === "CHALLENGE_EXPIRED") {
-        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
-      }
-      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
-        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+    } catch (error: unknown) {
+      const mapped = mapSignedActionError(error);
+      if (mapped) {
+        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
       }
       throw error;
     }
