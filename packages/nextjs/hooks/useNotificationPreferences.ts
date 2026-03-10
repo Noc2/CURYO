@@ -14,32 +14,103 @@ interface UpdateNotificationPreferencesResult {
   preferences?: NotificationPreferences;
 }
 
+interface UseNotificationPreferencesOptions {
+  autoRead?: boolean;
+}
+
 function isSignatureRejected(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   return message.includes("rejected") || message.includes("denied") || message.includes("declined");
 }
 
-export function useNotificationPreferences(address?: string) {
+async function readNotificationPreferences(
+  address: string,
+  signMessageAsync: (args: { message: string }) => Promise<`0x${string}`>,
+  autoRead: boolean,
+): Promise<NotificationPreferences> {
+  const existingSessionRes = await fetch(`/api/notifications/preferences?address=${encodeURIComponent(address)}`);
+  if (existingSessionRes.ok) {
+    return (await existingSessionRes.json()) as NotificationPreferences;
+  }
+
+  if (!autoRead && existingSessionRes.status === 401) {
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES };
+  }
+
+  if (existingSessionRes.status !== 401) {
+    const body = (await existingSessionRes.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || "Failed to fetch notification preferences");
+  }
+
+  const challengeRes = await fetch("/api/notifications/preferences/challenge", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      address,
+      intent: "read",
+    }),
+  });
+
+  const challengeData = (await challengeRes.json().catch(() => null)) as {
+    error?: string;
+    message?: string;
+    challengeId?: string;
+  } | null;
+
+  if (!challengeRes.ok || !challengeData?.message || !challengeData.challengeId) {
+    throw new Error(challengeData?.error || "Failed to create signature challenge");
+  }
+
+  const signature = await signMessageAsync({ message: challengeData.message });
+
+  const res = await fetch("/api/notifications/preferences", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      address,
+      signature,
+      challengeId: challengeData.challengeId,
+    }),
+  });
+
+  const body = (await res.json().catch(() => null)) as ({ error?: string } & Partial<NotificationPreferences>) | null;
+  if (!res.ok) {
+    throw new Error(body?.error || "Failed to fetch notification preferences");
+  }
+
+  return {
+    roundResolved: body?.roundResolved ?? DEFAULT_NOTIFICATION_PREFERENCES.roundResolved,
+    settlingSoonHour: body?.settlingSoonHour ?? DEFAULT_NOTIFICATION_PREFERENCES.settlingSoonHour,
+    settlingSoonDay: body?.settlingSoonDay ?? DEFAULT_NOTIFICATION_PREFERENCES.settlingSoonDay,
+    followedSubmission: body?.followedSubmission ?? DEFAULT_NOTIFICATION_PREFERENCES.followedSubmission,
+    followedResolution: body?.followedResolution ?? DEFAULT_NOTIFICATION_PREFERENCES.followedResolution,
+  };
+}
+
+export function useNotificationPreferences(address?: string, options?: UseNotificationPreferencesOptions) {
   const { signMessageAsync } = useSignMessage();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const queryKey = useMemo(() => ["notificationPreferences", address] as const, [address]);
+  const autoRead = options?.autoRead ?? false;
 
   const { data, isLoading, refetch } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!address) return { ...DEFAULT_NOTIFICATION_PREFERENCES };
 
-      const res = await fetch(`/api/notifications/preferences?address=${encodeURIComponent(address)}`);
-      if (!res.ok) {
-        throw new Error("Failed to fetch notification preferences");
+      try {
+        return await readNotificationPreferences(address, signMessageAsync, autoRead);
+      } catch (error) {
+        if (isSignatureRejected(error)) {
+          return { ...DEFAULT_NOTIFICATION_PREFERENCES };
+        }
+        throw error;
       }
-
-      return (await res.json()) as NotificationPreferences;
     },
     enabled: Boolean(address),
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: Infinity,
+    refetchInterval: false,
   });
 
   const preferences = data ?? DEFAULT_NOTIFICATION_PREFERENCES;
