@@ -122,6 +122,67 @@ export interface PonderFollowResponse {
   offset: number;
 }
 
+export interface PonderRadarSettlingItem {
+  id: string;
+  contentId: string;
+  roundId: string;
+  goal: string;
+  url: string;
+  submitter: string;
+  categoryId: string;
+  roundStartTime: string | null;
+  estimatedSettlementTime: string | null;
+  profileName: string | null;
+  profileImageUrl: string | null;
+  source: "watched" | "voted" | "watched_voted";
+}
+
+export interface PonderRadarSubmissionItem {
+  contentId: string;
+  goal: string;
+  url: string;
+  createdAt: string;
+  categoryId: string;
+  submitter: string;
+  profileName: string | null;
+  profileImageUrl: string | null;
+}
+
+export interface PonderRadarResolutionItem {
+  id: string;
+  contentId: string;
+  roundId: string;
+  voter: string;
+  isUp: boolean | null;
+  goal: string;
+  url: string;
+  settledAt: string | null;
+  roundState: RoundState | null;
+  roundUpWins: boolean | null;
+  profileName: string | null;
+  profileImageUrl: string | null;
+  outcome: "won" | "lost" | "cancelled" | "tied" | "reveal_failed" | "resolved";
+}
+
+export interface PonderRadarSuggestedCurator {
+  address: string;
+  totalSettledVotes: number;
+  totalWins: number;
+  totalLosses: number;
+  profileName: string | null;
+  profileImageUrl: string | null;
+  winRate: number;
+}
+
+export interface PonderRadarResponse {
+  followingCount: number;
+  settlingSoon: PonderRadarSettlingItem[];
+  followedSubmissions: PonderRadarSubmissionItem[];
+  followedResolutions: PonderRadarResolutionItem[];
+  suggestedCurators: PonderRadarSuggestedCurator[];
+  recommendedContent: PonderRadarSubmissionItem[];
+}
+
 export interface PonderSubmissionStakes {
   activeCount: number;
   submitter: string;
@@ -307,6 +368,10 @@ export const ponderApi = {
       follower,
       target,
     });
+  },
+
+  getRadar(address: string, params?: { watched?: string }) {
+    return ponderGet<PonderRadarResponse>(`/radar/${address}`, params);
   },
 
   getLeaderboard(type?: string, limit?: string) {

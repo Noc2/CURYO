@@ -8,6 +8,7 @@ import { useAccount } from "wagmi";
 import {
   ArrowLeftIcon,
   Bars3Icon,
+  BellAlertIcon,
   BookOpenIcon,
   GlobeAltIcon,
   IdentificationIcon,
@@ -31,6 +32,7 @@ type HeaderMenuLink = {
 
 export const menuLinks: HeaderMenuLink[] = [
   { label: "Discover", href: "/vote", icon: GlobeAltIcon, color: "#359EEE" },
+  { label: "Radar", href: "/radar", icon: BellAlertIcon, color: "#D9641E" },
   { label: "Submit", href: "/submit", icon: PlusCircleIcon, color: "#03CEA4" },
   { label: "cREP", href: "/governance", icon: IdentificationIcon, color: "#FFC43D" },
   { label: "Docs", href: "/docs", icon: BookOpenIcon, color: "#EF476F" },

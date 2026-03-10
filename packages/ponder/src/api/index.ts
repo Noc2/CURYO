@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { ROUND_STATE } from "@curyo/contracts/protocol";
+import { DEFAULT_REVEAL_GRACE_PERIOD_SECONDS, DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
 import { db } from "ponder:api";
 import {
   content,
@@ -26,6 +26,9 @@ import { RateLimiter } from "./rate-limit.js";
 import { safeBigInt, safeLimit, safeOffset, isValidAddress, getUrlLookupCandidates } from "./utils.js";
 
 const app = new Hono();
+const RADAR_MODULE_LIMIT = 6;
+const RADAR_SUGGESTED_CURATOR_LIMIT = 4;
+const RADAR_SETTLING_SOON_WINDOW_SECONDS = 24 * 60 * 60;
 
 // ============================================================
 // GLOBAL ERROR HANDLER — catch unhandled DB/runtime errors
@@ -101,6 +104,46 @@ app.use(
 // Helper: serialize BigInts as strings for JSON responses
 function jsonBig(c: any, data: any, status?: number) {
   return c.json(replaceBigInts(data, (v: bigint) => String(v)), status);
+}
+
+function parseBigIntList(value: string | undefined, max = 50) {
+  if (!value) return [];
+
+  const unique = new Set<string>();
+  const items: bigint[] = [];
+
+  for (const raw of value.split(",").slice(0, max)) {
+    const parsed = safeBigInt(raw.trim());
+    if (parsed === null) continue;
+
+    const key = parsed.toString();
+    if (unique.has(key)) continue;
+    unique.add(key);
+    items.push(parsed);
+  }
+
+  return items;
+}
+
+function getEstimatedSettlementTime(startTime: bigint | null | undefined) {
+  if (startTime === null || startTime === undefined) return null;
+
+  return (
+    startTime
+    + BigInt(DEFAULT_ROUND_CONFIG.epochDurationSeconds)
+    + BigInt(DEFAULT_REVEAL_GRACE_PERIOD_SECONDS)
+  );
+}
+
+function getRadarResolutionOutcome(state: number | null, isUp: boolean | null, upWins: boolean | null) {
+  if (state === ROUND_STATE.Cancelled) return "cancelled" as const;
+  if (state === ROUND_STATE.Tied) return "tied" as const;
+  if (state === ROUND_STATE.RevealFailed) return "reveal_failed" as const;
+  if (state === ROUND_STATE.Settled && isUp !== null && upWins !== null) {
+    return isUp === upWins ? "won" as const : "lost" as const;
+  }
+
+  return "resolved" as const;
 }
 
 // Ponder provides /health and /status natively — no custom health check needed.
@@ -497,6 +540,241 @@ app.get("/follow-state", async (c) => {
     .limit(1);
 
   return c.json({ follower, target, following: Boolean(item) });
+});
+
+// ============================================================
+// RADAR
+// ============================================================
+
+app.get("/radar/:address", async (c) => {
+  const address = c.req.param("address").toLowerCase() as `0x${string}`;
+  if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
+
+  const watchedContentIds = parseBigIntList(c.req.query("watched"), 100);
+
+  const followedRows = await db
+    .select({ followed: profileFollow.followed })
+    .from(profileFollow)
+    .where(eq(profileFollow.follower, address))
+    .orderBy(desc(profileFollow.createdAt))
+    .limit(200);
+
+  const followedAddresses = followedRows.map(item => item.followed);
+
+  const votedOpenRounds = await db
+    .select({
+      id: round.id,
+      contentId: round.contentId,
+      roundId: round.roundId,
+      goal: content.goal,
+      url: content.url,
+      submitter: content.submitter,
+      categoryId: content.categoryId,
+      roundStartTime: round.startTime,
+      profileName: profile.name,
+      profileImageUrl: profile.imageUrl,
+    })
+    .from(vote)
+    .innerJoin(
+      round,
+      and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+    )
+    .innerJoin(content, eq(vote.contentId, content.id))
+    .leftJoin(profile, eq(content.submitter, profile.address))
+    .where(and(eq(vote.voter, address), eq(round.state, ROUND_STATE.Open)))
+    .orderBy(asc(round.startTime))
+    .limit(24);
+
+  const watchedOpenRounds = watchedContentIds.length === 0
+    ? []
+    : await db
+        .select({
+          id: round.id,
+          contentId: round.contentId,
+          roundId: round.roundId,
+          goal: content.goal,
+          url: content.url,
+          submitter: content.submitter,
+          categoryId: content.categoryId,
+          roundStartTime: round.startTime,
+          profileName: profile.name,
+          profileImageUrl: profile.imageUrl,
+        })
+        .from(round)
+        .innerJoin(content, eq(round.contentId, content.id))
+        .leftJoin(profile, eq(content.submitter, profile.address))
+        .where(and(inArray(round.contentId, watchedContentIds), eq(round.state, ROUND_STATE.Open)))
+        .orderBy(asc(round.startTime))
+        .limit(24);
+
+  const settlingSoonMap = new Map<
+    string,
+    {
+      id: string;
+      contentId: bigint;
+      roundId: bigint;
+      goal: string;
+      url: string;
+      submitter: string;
+      categoryId: bigint;
+      roundStartTime: bigint | null;
+      estimatedSettlementTime: bigint | null;
+      profileName: string | null;
+      profileImageUrl: string | null;
+      source: "watched" | "voted" | "watched_voted";
+    }
+  >();
+
+  const addSettlingItems = (
+    rows: typeof votedOpenRounds,
+    source: "watched" | "voted",
+  ) => {
+    for (const item of rows) {
+      const key = `${item.contentId.toString()}-${item.roundId.toString()}`;
+      const existing = settlingSoonMap.get(key);
+      settlingSoonMap.set(key, {
+        ...item,
+        estimatedSettlementTime: getEstimatedSettlementTime(item.roundStartTime),
+        source: existing && existing.source !== source ? "watched_voted" : existing?.source ?? source,
+      });
+    }
+  };
+
+  addSettlingItems(votedOpenRounds, "voted");
+  addSettlingItems(watchedOpenRounds, "watched");
+
+  const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
+  const cutoff = nowSeconds + BigInt(RADAR_SETTLING_SOON_WINDOW_SECONDS);
+  const allSettlingSoon = [...settlingSoonMap.values()].sort((a, b) => {
+    const aTime = a.estimatedSettlementTime ?? (2n ** 62n);
+    const bTime = b.estimatedSettlementTime ?? (2n ** 62n);
+    if (aTime === bTime) return 0;
+    return aTime < bTime ? -1 : 1;
+  });
+  const settlingSoon = (
+    allSettlingSoon.filter(item => item.estimatedSettlementTime !== null && item.estimatedSettlementTime <= cutoff)
+      .slice(0, RADAR_MODULE_LIMIT)
+  );
+  const settlingSoonItems = (settlingSoon.length > 0 ? settlingSoon : allSettlingSoon.slice(0, RADAR_MODULE_LIMIT));
+
+  const followedSubmissions = followedAddresses.length === 0
+    ? []
+    : await db
+        .select({
+          contentId: content.id,
+          goal: content.goal,
+          url: content.url,
+          createdAt: content.createdAt,
+          categoryId: content.categoryId,
+          submitter: content.submitter,
+          profileName: profile.name,
+          profileImageUrl: profile.imageUrl,
+        })
+        .from(content)
+        .leftJoin(profile, eq(content.submitter, profile.address))
+        .where(and(eq(content.status, 0), inArray(content.submitter, followedAddresses)))
+        .orderBy(desc(content.createdAt))
+        .limit(RADAR_MODULE_LIMIT);
+
+  const followedResolutions = followedAddresses.length === 0
+    ? []
+    : await db
+        .select({
+          id: vote.id,
+          contentId: vote.contentId,
+          roundId: vote.roundId,
+          voter: vote.voter,
+          isUp: vote.isUp,
+          goal: content.goal,
+          url: content.url,
+          settledAt: round.settledAt,
+          roundState: round.state,
+          roundUpWins: round.upWins,
+          profileName: profile.name,
+          profileImageUrl: profile.imageUrl,
+        })
+        .from(vote)
+        .innerJoin(
+          round,
+          and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+        )
+        .innerJoin(content, eq(vote.contentId, content.id))
+        .leftJoin(profile, eq(vote.voter, profile.address))
+        .where(and(
+          inArray(vote.voter, followedAddresses),
+          eq(vote.revealed, true),
+          or(
+            eq(round.state, ROUND_STATE.Settled),
+            eq(round.state, ROUND_STATE.Cancelled),
+            eq(round.state, ROUND_STATE.Tied),
+            eq(round.state, ROUND_STATE.RevealFailed),
+          ),
+        ))
+        .orderBy(desc(round.settledAt), desc(vote.revealedAt))
+        .limit(RADAR_MODULE_LIMIT);
+
+  const suggestedCuratorsRaw = await db
+    .select({
+      address: voterStats.voter,
+      totalSettledVotes: voterStats.totalSettledVotes,
+      totalWins: voterStats.totalWins,
+      totalLosses: voterStats.totalLosses,
+      profileName: profile.name,
+      profileImageUrl: profile.imageUrl,
+    })
+    .from(voterStats)
+    .leftJoin(profile, eq(voterStats.voter, profile.address))
+    .where(gte(voterStats.totalSettledVotes, 3))
+    .orderBy(
+      desc(sql`CAST(${voterStats.totalWins} AS FLOAT) / ${voterStats.totalSettledVotes}`),
+      desc(voterStats.totalSettledVotes),
+    )
+    .limit(24);
+
+  const suggestedCurators = suggestedCuratorsRaw
+    .filter(item => item.address !== address && !followedAddresses.includes(item.address))
+    .slice(0, RADAR_SUGGESTED_CURATOR_LIMIT)
+    .map(item => ({
+      ...item,
+      winRate: item.totalSettledVotes > 0 ? item.totalWins / item.totalSettledVotes : 0,
+    }));
+
+  const recommendedConditions = [eq(content.status, 0)];
+  if (watchedContentIds.length > 0) {
+    recommendedConditions.push(notInArray(content.id, watchedContentIds));
+  }
+  if (followedAddresses.length > 0) {
+    recommendedConditions.push(notInArray(content.submitter, followedAddresses));
+  }
+
+  const recommendedContent = await db
+    .select({
+      contentId: content.id,
+      goal: content.goal,
+      url: content.url,
+      createdAt: content.createdAt,
+      categoryId: content.categoryId,
+      submitter: content.submitter,
+      profileName: profile.name,
+      profileImageUrl: profile.imageUrl,
+    })
+    .from(content)
+    .leftJoin(profile, eq(content.submitter, profile.address))
+    .where(and(...recommendedConditions))
+    .orderBy(desc(content.createdAt))
+    .limit(RADAR_MODULE_LIMIT);
+
+  return jsonBig(c, {
+    followingCount: followedAddresses.length,
+    settlingSoon: settlingSoonItems,
+    followedSubmissions,
+    followedResolutions: followedResolutions.map(item => ({
+      ...item,
+      outcome: getRadarResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),
+    })),
+    suggestedCurators,
+    recommendedContent,
+  });
 });
 
 // ============================================================
