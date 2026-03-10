@@ -1490,7 +1490,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "deregistered frontend should bypass fee crediting");
     }
 
-    function test_ClaimFrontendFee_PaysDirectlyWhileFrontendIsSlashed() public {
+    function test_ClaimFrontendFee_RevertsWhileFrontendIsSlashed() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
@@ -1499,14 +1499,11 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
+        vm.expectRevert(IFrontendRegistry.FrontendIsSlashed.selector);
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
-        assertGt(
-            crepToken.balanceOf(frontendOp) - frontendBalanceBefore,
-            0,
-            "historical fees should pay directly after slashing"
-        );
-        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend should bypass fee crediting");
+        assertEq(crepToken.balanceOf(frontendOp), frontendBalanceBefore, "slashed frontend must not be paid directly");
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend should not receive credited fees");
     }
 
     function test_ClaimFrontendFee_SucceedsAfterFrontendReregistersWithoutReapproval() public {

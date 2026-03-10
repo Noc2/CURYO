@@ -425,8 +425,11 @@ contract RoundVotingEngine is
             bool frontendSlashed
         ) {
             if (frontendOperator == address(0) || frontendSlashed) {
-                crepToken.safeTransfer(frontend, fee);
-                return;
+                if (frontendOperator == address(0)) {
+                    crepToken.safeTransfer(frontend, fee);
+                    return;
+                }
+                revert IFrontendRegistry.FrontendIsSlashed();
             }
 
             try snapshotRegistry.creditFees(frontend, fee) {

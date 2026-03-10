@@ -15,6 +15,7 @@ import {
   slashFrontend,
   submitContentDirect,
   transferCREP,
+  unslashFrontend,
   waitForPonderIndexed,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
@@ -179,7 +180,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     expect(doubleClaim, "Frontend fee should not be claimable twice").toBe(false);
   });
 
-  test("slashed frontend still receives already-earned fees", async () => {
+  test("slashed frontend fees stay frozen until unslashed", async () => {
     test.setTimeout(180_000);
 
     const uniqueId = Date.now() + 1;
@@ -206,8 +207,20 @@ test.describe("Frontend fee claim lifecycle", () => {
       DEPLOYER.address,
       VOTING_ENGINE,
     );
-    expect(claimed, "Slashed frontend fee claim should still succeed").toBe(true);
+    expect(claimed, "Slashed frontend fee claim should fail").toBe(false);
     expect(await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY)).toBe(feesBefore);
+
+    const unslashed = await unslashFrontend(frontendAddress, DEPLOYER.address, FRONTEND_REGISTRY);
+    expect(unslashed, "Frontend unslash should succeed").toBe(true);
+
+    const claimedAfterUnslash = await claimFrontendFee(
+      BigInt(contentId),
+      roundId,
+      frontendAddress,
+      DEPLOYER.address,
+      VOTING_ENGINE,
+    );
+    expect(claimedAfterUnslash, "Frontend fee claim should succeed after unslash").toBe(true);
     expect(await readTokenBalance(frontendAddress, CREP_TOKEN)).toBeGreaterThan(balanceBefore);
   });
 });
