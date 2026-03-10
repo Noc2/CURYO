@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
@@ -17,6 +18,7 @@ interface RatingHistoryProps {
  */
 export function RatingHistory({ contentId, variant = "default" }: RatingHistoryProps) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const isPageVisible = usePageVisibility();
   const {
     data: events,
     isLoading: eventsLoading,
@@ -25,15 +27,15 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     contractName: "ContentRegistry",
     eventName: "RatingUpdated",
     filters: { contentId },
-    watch: rpcFallbackEnabled,
-    enabled: rpcFallbackEnabled,
+    watch: rpcFallbackEnabled && isPageVisible,
+    enabled: rpcFallbackEnabled && isPageVisible,
   });
 
   const { data: currentRating } = useScaffoldReadContract({
     contractName: "ContentRegistry",
     functionName: "getRating",
     args: [contentId],
-    query: { refetchInterval: 5000 },
+    query: { refetchInterval: isPageVisible ? 15_000 : false },
   });
 
   const rpcDataPoints = useMemo(() => {
@@ -79,7 +81,7 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     rpcFn: async () => rpcDataPoints,
     rpcEnabled: rpcFallbackEnabled,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 30_000 : false,
   });
 
   const dataPoints = result?.data ?? rpcDataPoints;

@@ -2,6 +2,7 @@
 
 import { useOptimisticVote } from "~~/contexts/OptimisticVoteContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import { deriveRoundSnapshot, parseRound } from "~~/lib/contracts/roundVotingEngine";
@@ -11,6 +12,8 @@ export function useRoundSnapshot(contentId?: bigint) {
   const optimisticDelta = contentId !== undefined ? getOptimisticDelta(contentId) : undefined;
   const config = useVotingConfig();
   const now = useUnixTime();
+  const isPageVisible = usePageVisibility();
+  const refetchInterval = isPageVisible ? 10_000 : false;
 
   const { data: rawActiveRoundId, isLoading: isRoundIdLoading } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
@@ -18,7 +21,7 @@ export function useRoundSnapshot(contentId?: bigint) {
     args: [contentId] as any,
     query: {
       enabled: contentId !== undefined,
-      refetchInterval: 5000,
+      refetchInterval,
     },
   } as any);
   const roundId = (rawActiveRoundId as unknown as bigint | undefined) ?? 0n;
@@ -29,7 +32,7 @@ export function useRoundSnapshot(contentId?: bigint) {
     args: [contentId, roundId] as any,
     query: {
       enabled: contentId !== undefined && roundId > 0n,
-      refetchInterval: 5000,
+      refetchInterval,
     },
   } as any);
 
