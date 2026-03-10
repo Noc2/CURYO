@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
-import { DEFAULT_NOTIFICATION_PREFERENCES, NotificationPreferencesPayload } from "~~/lib/auth/notificationPreferences";
+import "server-only";
+import { type NotificationPreferencesPayload } from "~~/lib/auth/notificationPreferences";
 import { db } from "~~/lib/db";
 import { notificationPreferences } from "~~/lib/db/schema";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "~~/lib/notifications/shared";
 
 let ensureNotificationPreferencesTablePromise: Promise<void> | null = null;
 

@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { and, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import "server-only";
 import { verifyMessage } from "viem";
 import { db } from "~~/lib/db";
 import { signedActionChallenges } from "~~/lib/db/schema";

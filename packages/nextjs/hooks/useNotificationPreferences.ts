@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
-import { DEFAULT_NOTIFICATION_PREFERENCES } from "~~/lib/auth/notificationPreferences";
+import { DEFAULT_NOTIFICATION_PREFERENCES } from "~~/lib/notifications/shared";
 
 export type NotificationPreferences = typeof DEFAULT_NOTIFICATION_PREFERENCES;
 

@@ -1,28 +1,14 @@
+import "server-only";
 import { buildSignedActionMessage, hashSignedActionPayload } from "~~/lib/auth/signedActions";
+import { type NotificationPreferencesState } from "~~/lib/notifications/shared";
 import { isValidWalletAddress, normalizeWalletAddress } from "~~/lib/watchlist/contentWatch";
 
 export const NOTIFICATION_PREFERENCES_CHALLENGE_TITLE = "Curyo notification settings";
 export const UPDATE_NOTIFICATION_PREFERENCES_ACTION = "notification_preferences:update";
 
-export interface NotificationPreferencesState {
-  roundResolved: boolean;
-  settlingSoonHour: boolean;
-  settlingSoonDay: boolean;
-  followedSubmission: boolean;
-  followedResolution: boolean;
-}
-
 export type NotificationPreferencesPayload = {
   normalizedAddress: `0x${string}`;
 } & NotificationPreferencesState;
-
-export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferencesState = {
-  roundResolved: true,
-  settlingSoonHour: true,
-  settlingSoonDay: true,
-  followedSubmission: true,
-  followedResolution: true,
-};
 
 export function normalizeNotificationPreferencesInput(body: Record<string, unknown>):
   | {
