@@ -25,7 +25,7 @@ export default defineConfig({
       // - round-cancellation/content-dormancy: need time-skip (fast-forward days)
       // - mobile: need phone/tablet device profiles (run via mobile-phone/mobile-tablet projects)
       testIgnore:
-        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement|frontend-fee-claim|reveal-failed|manual-reveal|mobile/,
+        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement|frontend-fee-claim|reveal-failed|manual-reveal|keeper-settlement|mobile/,
     },
     {
       // Settlement tests need block advancement for random settlement.
