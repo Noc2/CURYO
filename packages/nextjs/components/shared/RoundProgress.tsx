@@ -40,8 +40,10 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
     isEpoch1,
     epoch1Remaining,
     isReady,
+    readyToSettle,
     thresholdReachedAt,
     currentEpochRemaining,
+    revealedCount,
     voteCount,
     minVoters,
   } = snapshot;
@@ -170,30 +172,26 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
       )}
 
       {/* Round expiry or resolution countdown */}
-      {voteCount >= minVoters ? (
+      {readyToSettle || thresholdReachedAt > 0 ? (
         <div className="flex items-center gap-2">
-          {thresholdReachedAt > 0 ? (
-            <>
-              <span className="flex items-center gap-1">
-                Ready to resolve
-                <InfoTooltip
-                  text="Enough votes are revealed. Settlement is available once past-epoch reveal checks are satisfied."
-                  position="bottom"
-                />
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="flex items-center gap-1">
-                Resolves in
-                <InfoTooltip
-                  text="Estimated time: votes reveal when the blind phase ends. Settlement follows once enough votes are revealed and past-epoch reveal checks clear."
-                  position="bottom"
-                />
-              </span>
-              <span className="font-semibold tabular-nums">{formatDuration(currentEpochRemaining)}</span>
-            </>
-          )}
+          <span className="flex items-center gap-1">
+            Ready to resolve
+            <InfoTooltip
+              text="Enough votes are revealed. Settlement is available once past-epoch reveal checks are satisfied."
+              position="bottom"
+            />
+          </span>
+        </div>
+      ) : voteCount >= minVoters ? (
+        <div className="flex items-center gap-2">
+          <span className="flex items-center gap-1">
+            {isEpoch1 ? "Blind phase ends in" : "Awaiting reveal"}
+            <InfoTooltip
+              text={`Enough votes are committed, but settlement still needs ${Math.max(0, minVoters - revealedCount)} more revealed vote${Math.max(0, minVoters - revealedCount) === 1 ? "" : "s"} and past-epoch reveal checks to clear.`}
+              position="bottom"
+            />
+          </span>
+          {isEpoch1 && <span className="font-semibold tabular-nums">{formatDuration(currentEpochRemaining)}</span>}
         </div>
       ) : (
         formattedExpiry && (

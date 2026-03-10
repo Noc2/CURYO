@@ -78,11 +78,12 @@ export function VotingQuestionCard({
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId);
-  const { roundId, isRoundFull, phase, voteCount, minVoters, roundTimeRemaining } = roundSnapshot;
+  const { roundId, isRoundFull, phase, voteCount, revealedCount, minVoters, roundTimeRemaining } = roundSnapshot;
   const countdownTimeLeft = phase === "voting" && roundTimeRemaining > 0 ? roundTimeRemaining : 0;
   const urgency = getCountdownUrgency(countdownTimeLeft);
   const countdownLabel = formatRoundCountdown(countdownTimeLeft);
   const countdownActive = countdownTimeLeft > 0;
+  const pendingRevealCount = Math.max(0, voteCount - revealedCount);
 
   // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
@@ -155,7 +156,7 @@ export function VotingQuestionCard({
           <div className="flex justify-center mb-2">
             <span className="inline-flex items-center gap-1.5">
               <span className="flex -space-x-1">
-                {Array.from({ length: Math.min(voteCount, 7) }).map((_, i) => (
+                {Array.from({ length: Math.min(revealedCount, 7) }).map((_, i) => (
                   <svg
                     key={`filled-${i}`}
                     xmlns="http://www.w3.org/2000/svg"
@@ -171,7 +172,7 @@ export function VotingQuestionCard({
                   </svg>
                 ))}
                 {Array.from({
-                  length: Math.min(Math.max(0, minVoters - voteCount), 7 - Math.min(voteCount, 7)),
+                  length: Math.min(Math.max(0, minVoters - revealedCount), 7 - Math.min(revealedCount, 7)),
                 }).map((_, i) => (
                   <svg
                     key={`empty-${i}`}
@@ -189,7 +190,7 @@ export function VotingQuestionCard({
                 ))}
               </span>
               <InfoTooltip
-                text={`${voteCount} of ${minVoters} voters. ${Math.max(0, minVoters - voteCount) > 0 ? `${Math.max(0, minVoters - voteCount)} more vote${Math.max(0, minVoters - voteCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."} Votes are revealed after the blind phase ends.`}
+                text={`${revealedCount} of ${minVoters} votes revealed.${pendingRevealCount > 0 ? ` ${pendingRevealCount} commit${pendingRevealCount === 1 ? "" : "s"} still pending reveal.` : ""} ${Math.max(0, minVoters - revealedCount) > 0 ? `${Math.max(0, minVoters - revealedCount)} more revealed vote${Math.max(0, minVoters - revealedCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."}`}
                 position="bottom"
               />
             </span>

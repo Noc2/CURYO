@@ -29,9 +29,9 @@ export interface RoundSnapshot {
   hasRound: boolean;
   state: number;
   startTime: number;
+  revealedCount: number;
   voteCount: number;
   voteCountBigInt: bigint;
-  revealedCount: number;
   totalStake: bigint;
   upPool: bigint;
   downPool: bigint;
@@ -220,8 +220,8 @@ export function deriveRoundSnapshot(params: {
   const optimisticStake = params.optimisticDelta?.stake ?? 0n;
   const baseVoteCount = round?.voteCount ?? 0n;
   const voteCountBigInt = baseVoteCount + optimisticVoteCount;
-  const voteCount = Number(voteCountBigInt);
   const revealedCount = Number(round?.revealedCount ?? 0n);
+  const voteCount = Number(voteCountBigInt);
   const totalStake = (round?.totalStake ?? 0n) + optimisticStake;
   const thresholdReachedAt = round ? Number(round.thresholdReachedAt) : 0;
   const timing = deriveRoundTiming({
@@ -237,9 +237,9 @@ export function deriveRoundSnapshot(params: {
     hasRound,
     state,
     startTime,
+    revealedCount,
     voteCount,
     voteCountBigInt,
-    revealedCount,
     totalStake,
     upPool: round?.upPool ?? 0n,
     downPool: round?.downPool ?? 0n,
@@ -249,8 +249,8 @@ export function deriveRoundSnapshot(params: {
     thresholdReachedAt,
     settlementTime: thresholdReachedAt > 0 ? thresholdReachedAt : 0,
     settlementCountdown: 0,
-    votersNeeded: Math.max(0, params.config.minVoters - voteCount),
-    readyToSettle: state === ROUND_STATE.Open && voteCount >= params.config.minVoters,
+    votersNeeded: Math.max(0, params.config.minVoters - revealedCount),
+    readyToSettle: state === ROUND_STATE.Open && revealedCount >= params.config.minVoters,
     isRoundFull: voteCount >= params.config.maxVoters,
     minVoters: params.config.minVoters,
     maxVoters: params.config.maxVoters,
