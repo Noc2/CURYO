@@ -148,6 +148,15 @@ function getAbsoluteVoteUrl(contentId: string) {
   return url.toString();
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function buildCandidates(subscription: DeliverySubscription, events: NotificationEventResponse): EmailCandidate[] {
   const candidates = new Map<string, EmailCandidate>();
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -293,16 +302,20 @@ async function releaseDeliveryLease(eventKey: string) {
 }
 
 async function sendCandidate(candidate: EmailCandidate) {
+  const safeSubject = escapeHtml(candidate.subject);
+  const safeBody = escapeHtml(candidate.body);
+  const safeHref = escapeHtml(candidate.href);
+
   await sendResendEmail({
     to: candidate.email,
     subject: candidate.subject,
     text: `${candidate.body}\n\nOpen Curyo: ${candidate.href}`,
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #f5f5f5; background: #111; padding: 24px;">
-        <h1 style="font-size: 20px; margin-bottom: 12px;">${candidate.subject}</h1>
-        <p style="margin-bottom: 16px;">${candidate.body}</p>
+        <h1 style="font-size: 20px; margin-bottom: 12px;">${safeSubject}</h1>
+        <p style="margin-bottom: 16px;">${safeBody}</p>
         <p style="margin-bottom: 20px;">
-          <a href="${candidate.href.replace(/&/g, "&amp;")}" style="display: inline-block; background: #fff; color: #111; padding: 10px 16px; border-radius: 9999px; text-decoration: none; font-weight: 600;">
+          <a href="${safeHref}" style="display: inline-block; background: #fff; color: #111; padding: 10px 16px; border-radius: 9999px; text-decoration: none; font-weight: 600;">
             Open Curyo
           </a>
         </p>
