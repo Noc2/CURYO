@@ -7,6 +7,10 @@ import {
   evmIncreaseTime,
   getActiveRoundId,
   processUnrevealedVotes,
+  readAddress,
+  readBool,
+  readTokenBalance,
+  readUint256,
   revealVoteDirect,
   setTestConfig,
   settleRoundDirect,
@@ -344,5 +348,137 @@ test.describe("Reward claim lifecycle", () => {
       VOTING_ENGINE,
     );
     expect(result, "processUnrevealedVotes should revert with NothingProcessed when all votes revealed").toBe(false);
+  });
+
+  test("processUnrevealedVotes sweeps past-epoch stake, refunds future-epoch stake, and pays cleanup once", async () => {
+    test.setTimeout(180_000);
+
+    const submitter = ANVIL_ACCOUNTS.account10;
+    const keeper = ANVIL_ACCOUNTS.account1;
+    const pastEpochUnrevealed = ANVIL_ACCOUNTS.account5;
+    const futureEpochUnrevealed = ANVIL_ACCOUNTS.account6;
+    const uniqueId = Date.now();
+
+    const submitApproved = await approveCREP(CONTENT_REGISTRY, BigInt(10e6), submitter.address, CREP_TOKEN);
+    expect(submitApproved, "Content submission approval failed").toBe(true);
+
+    const submitted = await submitContentDirect(
+      `https://www.youtube.com/watch?v=cleanup_test_${uniqueId}`,
+      `Cleanup Test ${uniqueId}`,
+      "test",
+      1,
+      submitter.address,
+      CONTENT_REGISTRY,
+    );
+    expect(submitted, "Content submission failed").toBe(true);
+
+    let cleanupContentId: string | null = null;
+    const indexedContent = await waitForPonderIndexed(async () => {
+      const { items } = await getContentList({ status: "all", sortBy: "newest", limit: 5 });
+      const match = items.find(item => item.url.includes(`cleanup_test_${uniqueId}`));
+      if (match) {
+        cleanupContentId = match.id;
+        return true;
+      }
+      return false;
+    }, 30_000);
+    expect(indexedContent, "Ponder did not index the cleanup test content").toBe(true);
+    expect(cleanupContentId).toBeTruthy();
+
+    const voters = [
+      { account: ANVIL_ACCOUNTS.account3, isUp: true, tlockEpoch: 30 },
+      { account: ANVIL_ACCOUNTS.account4, isUp: true, tlockEpoch: 30 },
+      { account: ANVIL_ACCOUNTS.account7, isUp: false, tlockEpoch: 30 },
+      { account: pastEpochUnrevealed, isUp: true, tlockEpoch: 30 },
+      { account: futureEpochUnrevealed, isUp: false, tlockEpoch: 7200 },
+    ];
+
+    const commits: { account: (typeof voters)[number]["account"]; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }[] =
+      [];
+
+    for (const voter of voters) {
+      const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.account.address, CREP_TOKEN);
+      expect(approved, `Vote approval failed for ${voter.account.address}`).toBe(true);
+
+      const commit = await commitVoteDirect(
+        BigInt(cleanupContentId!),
+        voter.isUp,
+        STAKE,
+        ZERO_ADDRESS,
+        voter.account.address,
+        VOTING_ENGINE,
+        voter.tlockEpoch,
+      );
+      expect(commit.success, `Vote commit failed for ${voter.account.address}`).toBe(true);
+      commits.push({ account: voter.account, commitKey: commit.commitKey, isUp: commit.isUp, salt: commit.salt });
+    }
+
+    const cleanupRoundId = await getActiveRoundId(BigInt(cleanupContentId!), VOTING_ENGINE);
+    expect(cleanupRoundId).toBeGreaterThan(0n);
+
+    await evmIncreaseTime(EPOCH_DURATION + 1);
+
+    for (const commit of commits.slice(0, 3)) {
+      const revealed = await revealVoteDirect(
+        BigInt(cleanupContentId!),
+        cleanupRoundId,
+        commit.commitKey,
+        commit.isUp,
+        commit.salt,
+        keeper.address,
+        VOTING_ENGINE,
+      );
+      expect(revealed, `Reveal failed for ${commit.account.address}`).toBe(true);
+    }
+
+    await evmIncreaseTime(EPOCH_DURATION + 1);
+    await waitForPonderSync();
+
+    const settled = await settleRoundDirect(BigInt(cleanupContentId!), cleanupRoundId, keeper.address, VOTING_ENGINE);
+    expect(settled, "Cleanup setup round did not settle").toBe(true);
+
+    const treasuryAddress = await readAddress("treasury", VOTING_ENGINE);
+    const keeperReward = await readUint256("keeperReward", VOTING_ENGINE);
+    const keeperRewardPoolBefore = await readUint256("keeperRewardPool", VOTING_ENGINE);
+    const treasuryBalanceBefore = await readTokenBalance(treasuryAddress, CREP_TOKEN);
+    const keeperBalanceBefore = await readTokenBalance(keeper.address, CREP_TOKEN);
+    const futureVoterBalanceBefore = await readTokenBalance(futureEpochUnrevealed.address, CREP_TOKEN);
+
+    const cleanupSuccess = await processUnrevealedVotes(
+      BigInt(cleanupContentId!),
+      cleanupRoundId,
+      0,
+      10,
+      keeper.address,
+      VOTING_ENGINE,
+    );
+    expect(cleanupSuccess, "Cleanup should process unrevealed votes").toBe(true);
+
+    const treasuryBalanceAfter = await readTokenBalance(treasuryAddress, CREP_TOKEN);
+    const keeperBalanceAfter = await readTokenBalance(keeper.address, CREP_TOKEN);
+    const futureVoterBalanceAfter = await readTokenBalance(futureEpochUnrevealed.address, CREP_TOKEN);
+    const keeperRewardPoolAfter = await readUint256("keeperRewardPool", VOTING_ENGINE);
+    const cleanupRewarded = await readBool("roundCleanupRewarded", VOTING_ENGINE, [
+      BigInt(cleanupContentId!),
+      cleanupRoundId,
+    ]);
+
+    expect(treasuryBalanceAfter - treasuryBalanceBefore).toBe(STAKE);
+    expect(futureVoterBalanceAfter - futureVoterBalanceBefore).toBe(STAKE);
+    expect(keeperRewardPoolBefore - keeperRewardPoolAfter).toBe(keeperReward);
+    expect(keeperBalanceAfter - keeperBalanceBefore).toBe(keeperReward);
+    expect(cleanupRewarded).toBe(true);
+
+    const secondCleanup = await processUnrevealedVotes(
+      BigInt(cleanupContentId!),
+      cleanupRoundId,
+      0,
+      10,
+      keeper.address,
+      VOTING_ENGINE,
+    );
+    expect(secondCleanup, "Cleanup should not pay out again once all unrevealed votes are processed").toBe(false);
+    expect(await readTokenBalance(keeper.address, CREP_TOKEN)).toBe(keeperBalanceAfter);
+    expect(await readUint256("keeperRewardPool", VOTING_ENGINE)).toBe(keeperRewardPoolAfter);
   });
 });

@@ -1173,6 +1173,100 @@ export async function readUint256(functionName: string, contractAddress: string,
 }
 
 /**
+ * Read a public bool view function from a contract.
+ */
+export async function readBool(functionName: string, contractAddress: string, args: bigint[] = []): Promise<boolean> {
+  const { encodeFunctionData, decodeFunctionResult } = await import("viem");
+  const abi = [
+    {
+      name: functionName,
+      type: "function",
+      inputs: args.map((_, i) => ({ name: `arg${i}`, type: "uint256" })),
+      outputs: [{ name: "", type: "bool" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({ abi, functionName, args });
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: contractAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) return false;
+  return decodeFunctionResult({ abi, functionName, data: json.result }) as boolean;
+}
+
+/**
+ * Read a public address view function from a contract (e.g. treasury()).
+ */
+export async function readAddress(functionName: string, contractAddress: string): Promise<`0x${string}`> {
+  const { encodeFunctionData, decodeFunctionResult } = await import("viem");
+  const abi = [
+    {
+      name: functionName,
+      type: "function",
+      inputs: [],
+      outputs: [{ name: "", type: "address" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({ abi, functionName, args: [] });
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: contractAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) return "0x0000000000000000000000000000000000000000";
+  return decodeFunctionResult({ abi, functionName, data: json.result }) as `0x${string}`;
+}
+
+/**
+ * Read an ERC20 token balance via balanceOf(address).
+ */
+export async function readTokenBalance(holder: string, tokenAddress: string): Promise<bigint> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "balanceOf",
+      type: "function",
+      inputs: [{ name: "holder", type: "address" }],
+      outputs: [{ name: "", type: "uint256" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({
+    abi,
+    functionName: "balanceOf",
+    args: [holder as `0x${string}`],
+  });
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: tokenAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) return 0n;
+  return decodeFunctionResult({ abi, functionName: "balanceOf", data: json.result }) as bigint;
+}
+
+/**
  * Read the active round ID for a content item.
  */
 export async function getActiveRoundId(contentId: number | bigint, contractAddress: string): Promise<bigint> {
