@@ -30,6 +30,7 @@ const EMPTY_PROFILE: ProfileRegistryProfile = {
 const targetNetwork = scaffoldConfig.targetNetworks[0];
 const contractsForChain = (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id];
 const profileRegistry = contractsForChain?.ProfileRegistry;
+const crepToken = contractsForChain?.CuryoReputation;
 const rpcOverrides = scaffoldConfig.rpcOverrides as Partial<Record<number, string>> | undefined;
 const rpcUrl = rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0];
 
@@ -138,6 +139,54 @@ export async function readProfileRegistryProfile(address: string): Promise<Profi
   const normalizedAddress = normalizeAddress(address);
   const profiles = await readProfileRegistryProfiles([normalizedAddress]);
   return profiles[normalizedAddress] ?? EMPTY_PROFILE;
+}
+
+export async function readCRepBalances(addresses: string[]): Promise<Record<string, bigint>> {
+  const normalizedAddresses = normalizeUniqueAddresses(addresses);
+  const balances: Record<string, bigint> = {};
+
+  for (const address of normalizedAddresses) {
+    balances[address] = 0n;
+  }
+
+  if (!crepToken || !publicClient || normalizedAddresses.length === 0) {
+    return balances;
+  }
+
+  try {
+    const results = await publicClient.multicall({
+      allowFailure: true,
+      contracts: normalizedAddresses.map(address => ({
+        address: crepToken.address,
+        abi: crepToken.abi,
+        functionName: "balanceOf",
+        args: [address],
+      })),
+    });
+
+    results.forEach((result, index) => {
+      const address = normalizedAddresses[index];
+      balances[address] = result.status === "success" && typeof result.result === "bigint" ? result.result : 0n;
+    });
+  } catch {
+    await Promise.all(
+      normalizedAddresses.map(async address => {
+        try {
+          const result = await publicClient.readContract({
+            address: crepToken.address,
+            abi: crepToken.abi,
+            functionName: "balanceOf",
+            args: [address],
+          });
+          balances[address] = typeof result === "bigint" ? result : 0n;
+        } catch {
+          balances[address] = 0n;
+        }
+      }),
+    );
+  }
+
+  return balances;
 }
 
 export async function listRegisteredProfileAddresses(params: { limit: number; offset?: number }) {

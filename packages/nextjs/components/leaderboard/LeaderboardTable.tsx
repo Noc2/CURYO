@@ -4,28 +4,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { blo } from "blo";
-import { Address } from "viem";
-import { useAccount, useReadContracts } from "wagmi";
+import { useAccount } from "wagmi";
 import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
-import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
-import { useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
-
-interface LeaderboardUser {
-  address: string;
-  username: string | null;
-  profileImageUrl: string | null;
-}
 
 interface LeaderboardEntry {
   rank: number;
   address: string;
   username: string | null;
   profileImageUrl: string | null;
-  balance: bigint;
+  balance: string;
 }
 
 interface LeaderboardTableProps {
@@ -36,33 +27,26 @@ interface LeaderboardTableProps {
 export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   const { address: connectedAddress } = useAccount();
   const { openConnectModal } = useConnectModal();
-  const { data: tokenInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(connectedAddress);
 
-  const [users, setUsers] = useState<LeaderboardUser[]>([]);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scope, setScope] = useState<"all" | "following">("all");
 
-  // Fetch users from API and include connected user
+  // Fetch pre-ranked rows from the server.
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch("/api/leaderboard");
+        const params = new URLSearchParams();
+        if (connectedAddress) {
+          params.set("includeAddress", connectedAddress);
+        }
+        const res = await fetch(`/api/leaderboard${params.size > 0 ? `?${params.toString()}` : ""}`);
         if (!res.ok) throw new Error(`Leaderboard API returned ${res.status}`);
         const data = await res.json();
-        let fetchedUsers: LeaderboardUser[] = data.users || [];
-
-        // Always include the connected user if they're not already in the list
-        if (connectedAddress) {
-          const normalizedConnected = connectedAddress.toLowerCase();
-          const alreadyIncluded = fetchedUsers.some(u => u.address.toLowerCase() === normalizedConnected);
-          if (!alreadyIncluded) {
-            fetchedUsers = [...fetchedUsers, { address: normalizedConnected, username: null, profileImageUrl: null }];
-          }
-        }
-
-        setUsers(fetchedUsers);
+        setEntries(data.entries || []);
+        setError(null);
       } catch (err) {
         console.error("Failed to fetch leaderboard:", err);
         setError("Failed to load leaderboard");
@@ -74,67 +58,13 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
     fetchUsers();
   }, [connectedAddress, refreshKey]);
 
-  // Fetch on-chain profiles (always fresh, unlike database)
-  const userAddresses = useMemo(() => users.map(u => u.address), [users]);
-  const { profiles: onChainProfiles } = useSubmitterProfiles(userAddresses);
-
-  // Build balance calls for all users
-  const balanceCalls = useMemo(() => {
-    if (!tokenInfo || users.length === 0) return [];
-    return users.map(user => ({
-      address: tokenInfo.address as Address,
-      abi: tokenInfo.abi,
-      functionName: "balanceOf" as const,
-      args: [user.address as Address],
-    }));
-  }, [tokenInfo, users]);
-
-  // Fetch all balances
-  const { data: balancesData, isLoading: balancesLoading } = useReadContracts({
-    contracts: balanceCalls,
-  });
-
-  // Build sorted leaderboard
-  const leaderboard: LeaderboardEntry[] = useMemo(() => {
-    if (!balancesData || users.length === 0) return [];
-
-    const entries = users.map((user, i) => {
-      const result = balancesData[i];
-      const balance = result?.status === "success" ? (result.result as bigint) : 0n;
-      // Prefer on-chain profile (always fresh) over database profile (may be stale)
-      const onChain = onChainProfiles[user.address.toLowerCase()];
-      return {
-        rank: 0,
-        address: user.address,
-        username: onChain?.username ?? user.username,
-        profileImageUrl: onChain?.profileImageUrl ?? user.profileImageUrl,
-        balance,
-      };
-    });
-
-    // Sort by balance descending
-    entries.sort((a, b) => {
-      if (b.balance > a.balance) return 1;
-      if (b.balance < a.balance) return -1;
-      return 0;
-    });
-
-    // Filter out zero balances and assign ranks
-    const nonZeroEntries = entries.filter(e => e.balance > 0n);
-    nonZeroEntries.forEach((entry, i) => {
-      entry.rank = i + 1;
-    });
-
-    return nonZeroEntries;
-  }, [balancesData, users, onChainProfiles]);
-
   const visibleEntries = useMemo(() => {
-    if (scope === "all") return leaderboard;
-    return leaderboard.filter(entry => followedWallets.has(entry.address.toLowerCase()));
-  }, [followedWallets, leaderboard, scope]);
+    if (scope === "all") return entries;
+    return entries.filter(entry => followedWallets.has(entry.address.toLowerCase()));
+  }, [entries, followedWallets, scope]);
 
   // Format balance with 6 decimals
-  const formatBalance = (balance: bigint) => {
+  const formatBalance = (balance: string) => {
     const num = Number(balance) / 1e6;
     return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
   };
@@ -168,7 +98,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
     [openConnectModal, toggleFollow],
   );
 
-  if (isLoading || balancesLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <span className="loading loading-spinner loading-lg"></span>
@@ -184,7 +114,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
     );
   }
 
-  if (leaderboard.length === 0) {
+  if (entries.length === 0) {
     return (
       <div className="text-center py-12 text-base-content/50">
         <p>No token holders yet</p>

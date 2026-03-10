@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listRegisteredProfileAddresses, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
+import { isAddress } from "viem";
+import {
+  listRegisteredProfileAddresses,
+  readCRepBalances,
+  readProfileRegistryProfiles,
+} from "~~/lib/profileRegistry/server";
 import { isPonderAvailable, ponderApi } from "~~/services/ponder/client";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -19,44 +24,89 @@ export async function GET(request: NextRequest) {
     const limit = String(
       Math.min(Math.max(parseInt(request.nextUrl.searchParams.get("limit") ?? "20") || 20, 1), MAX_LIMIT),
     );
+    const includeAddressParam = request.nextUrl.searchParams.get("includeAddress");
+    const includeAddress =
+      includeAddressParam && isAddress(includeAddressParam) ? includeAddressParam.toLowerCase() : null;
 
     // Try Ponder first for enriched leaderboard data
+    let users: {
+      address: string;
+      username: string | null;
+      profileImageUrl: string | null;
+    }[] = [];
+    let source: "ponder" | "rpc" = "rpc";
+
     const ponderAvailable = await isPonderAvailable();
     if (ponderAvailable) {
       try {
         const result = await ponderApi.getLeaderboard(type, limit);
-        const entries = result.items.map(p => ({
+        users = result.items.map(p => ({
           address: p.address,
           username: p.name || null,
           profileImageUrl: p.imageUrl || null,
-          totalVotes: p.totalVotes,
-          totalContent: p.totalContent,
-          totalRewardsClaimed: p.totalRewardsClaimed,
         }));
-        return NextResponse.json({
-          users: entries,
-          totalCount: entries.length,
-          source: "ponder",
-        });
+        source = "ponder";
       } catch (e) {
         console.warn("Ponder leaderboard failed, falling back to DB:", e);
       }
     }
 
-    // Fallback: direct on-chain ProfileRegistry reads
-    const { addresses, total } = await listRegisteredProfileAddresses({ limit: Number(limit) });
-    const profiles = await readProfileRegistryProfiles(addresses);
+    if (users.length === 0) {
+      const { addresses } = await listRegisteredProfileAddresses({ limit: Number(limit) });
+      const profiles = await readProfileRegistryProfiles(addresses);
 
-    const entries = addresses.map(address => ({
-      address,
-      username: profiles[address]?.username || null,
-      profileImageUrl: profiles[address]?.profileImageUrl || null,
+      users = addresses.map(address => ({
+        address,
+        username: profiles[address]?.username || null,
+        profileImageUrl: profiles[address]?.profileImageUrl || null,
+      }));
+    }
+
+    if (includeAddress && !users.some(user => user.address.toLowerCase() === includeAddress)) {
+      users.push({
+        address: includeAddress,
+        username: null,
+        profileImageUrl: null,
+      });
+    }
+
+    const normalizedUsers = users.map(user => ({
+      ...user,
+      address: user.address.toLowerCase(),
     }));
+    const [onChainProfiles, balances] = await Promise.all([
+      readProfileRegistryProfiles(normalizedUsers.map(user => user.address)),
+      readCRepBalances(normalizedUsers.map(user => user.address)),
+    ]);
+
+    const entries = normalizedUsers
+      .map(user => {
+        const onChainProfile = onChainProfiles[user.address];
+        return {
+          rank: 0,
+          address: user.address,
+          username: onChainProfile?.username ?? user.username,
+          profileImageUrl: onChainProfile?.profileImageUrl ?? user.profileImageUrl,
+          balance: (balances[user.address] ?? 0n).toString(),
+        };
+      })
+      .filter(entry => BigInt(entry.balance) > 0n)
+      .sort((left, right) => {
+        const leftBalance = BigInt(left.balance);
+        const rightBalance = BigInt(right.balance);
+        if (rightBalance > leftBalance) return 1;
+        if (rightBalance < leftBalance) return -1;
+        return left.address.localeCompare(right.address);
+      })
+      .map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+      }));
 
     return NextResponse.json({
-      users: entries,
-      totalCount: total,
-      source: "rpc",
+      entries,
+      totalCount: entries.length,
+      source,
     });
   } catch (error) {
     console.error("Error fetching leaderboard data:", error);
