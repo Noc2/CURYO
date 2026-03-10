@@ -25,14 +25,14 @@ export default defineConfig({
       // - round-cancellation/content-dormancy: need time-skip (fast-forward days)
       // - mobile: need phone/tablet device profiles (run via mobile-phone/mobile-tablet projects)
       testIgnore:
-        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement|mobile/,
+        /round-cancellation|content-dormancy|settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement|frontend-fee-claim|mobile/,
     },
     {
       // Settlement tests need block advancement for random settlement.
       // Run with: yarn e2e:settlement
       name: "settlement",
       use: { ...devices["Desktop Chrome"] },
-      testMatch: /settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement/,
+      testMatch: /settlement-lifecycle|reward-claim|tied-round|zz-multi-round|unanimous-settlement|frontend-fee-claim/,
       dependencies: ["chromium"],
     },
     {

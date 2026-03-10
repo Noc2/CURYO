@@ -714,6 +714,39 @@ export async function claimParticipationReward(
 }
 
 /**
+ * Claim frontend fees for a settled round.
+ * Calls RoundVotingEngine.claimFrontendFee(uint256 contentId, uint256 roundId, address frontend).
+ * Permissionless, but the fee is credited or paid to the frontend specified in the round snapshot.
+ */
+export async function claimFrontendFee(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  frontendAddress: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "claimFrontendFee",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+          { name: "frontend", type: "address" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "claimFrontendFee",
+    args: [BigInt(contentId), BigInt(roundId), frontendAddress as `0x${string}`],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
  * Check if an address has a VoterID on-chain (not Ponder).
  * Calls holderToTokenId(address) — returns true if tokenId > 0.
  */
@@ -809,6 +842,40 @@ export async function getFrontendInfoOnChain(
     approved,
     slashed,
   };
+}
+
+/**
+ * Read accumulated frontend fees from the FrontendRegistry.
+ */
+export async function getFrontendAccumulatedFees(frontendAddr: string, contractAddress: string): Promise<bigint> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "getAccumulatedFees",
+      type: "function",
+      inputs: [{ name: "frontend", type: "address" }],
+      outputs: [{ name: "", type: "uint256" }],
+      stateMutability: "view",
+    },
+  ] as const;
+  const data = encodeFunctionData({
+    abi,
+    functionName: "getAccumulatedFees",
+    args: [frontendAddr as `0x${string}`],
+  });
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: contractAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) return 0n;
+  return decodeFunctionResult({ abi, functionName: "getAccumulatedFees", data: json.result }) as bigint;
 }
 
 // ============================================================
