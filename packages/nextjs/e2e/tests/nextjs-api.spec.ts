@@ -8,25 +8,22 @@ const BASE_URL = "http://localhost:3000";
  * Pure API tests using fetch — no browser needed.
  */
 test.describe("Next.js API routes", () => {
-  test("GET /api/leaderboard?type=voters returns user list", async () => {
-    const res = await fetch(`${BASE_URL}/api/leaderboard?type=voters&limit=10`);
+  test("GET /api/leaderboard returns entry list", async () => {
+    const res = await fetch(`${BASE_URL}/api/leaderboard?limit=10`);
     expect(res.ok).toBe(true);
 
     const data = await res.json();
-    expect(data).toHaveProperty("users");
+    expect(data).toHaveProperty("entries");
     expect(data).toHaveProperty("totalCount");
     expect(data).toHaveProperty("source");
-    expect(Array.isArray(data.users)).toBe(true);
-    expect(data.users.length).toBeGreaterThan(0);
+    expect(data).toHaveProperty("type", "voters");
+    expect(Array.isArray(data.entries)).toBe(true);
+    expect(data.entries.length).toBeGreaterThan(0);
   });
 
-  test("GET /api/leaderboard?type=content returns content leaderboard", async () => {
+  test("GET /api/leaderboard rejects unsupported leaderboard types", async () => {
     const res = await fetch(`${BASE_URL}/api/leaderboard?type=content&limit=5`);
-    expect(res.ok).toBe(true);
-
-    const data = await res.json();
-    expect(data).toHaveProperty("users");
-    expect(data).toHaveProperty("source");
+    expect(res.status).toBe(400);
   });
 
   test("GET /api/username returns profile for known address", async () => {
@@ -215,15 +212,15 @@ test.describe("Next.js API routes", () => {
     expect(res.status).toBe(400);
   });
 
-  test("GET /api/leaderboard?type=voters includes known voter accounts", async () => {
-    const res = await fetch(`${BASE_URL}/api/leaderboard?type=voters&limit=100`);
+  test("GET /api/leaderboard includes known voter accounts", async () => {
+    const res = await fetch(`${BASE_URL}/api/leaderboard?limit=100`);
     expect(res.ok).toBe(true);
 
     const data = await res.json();
-    expect(data.users.length).toBeGreaterThan(0);
+    expect(data.entries.length).toBeGreaterThan(0);
 
     // At least one seeded account should appear (accounts #9, #10 voted during seed)
-    const addresses = data.users.map((u: { address: string }) => u.address.toLowerCase());
+    const addresses = data.entries.map((u: { address: string }) => u.address.toLowerCase());
     const knownVoters = [ANVIL_ACCOUNTS.account9.address.toLowerCase(), ANVIL_ACCOUNTS.account10.address.toLowerCase()];
     const hasKnownVoter = knownVoters.some(addr => addresses.includes(addr));
     expect(hasKnownVoter).toBe(true);

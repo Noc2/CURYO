@@ -9,18 +9,19 @@ import { isPonderAvailable, ponderApi } from "~~/services/ponder/client";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
-const ALLOWED_TYPES = ["voters", "content", "rewards"];
 const MAX_LIMIT = 100;
 
-// GET: Fetch leaderboard data
-// Uses Ponder when available for richer data (vote counts, rewards), falls back to direct ProfileRegistry reads
+// GET: Fetch cREP leaderboard data.
+// Uses Ponder when available for candidate discovery, then ranks by live on-chain cREP balances.
 export async function GET(request: NextRequest) {
   const limited = await checkRateLimit(request, RATE_LIMIT);
   if (limited) return limited;
 
   try {
-    const rawType = request.nextUrl.searchParams.get("type") ?? "voters";
-    const type = ALLOWED_TYPES.includes(rawType) ? rawType : "voters";
+    const requestedType = request.nextUrl.searchParams.get("type");
+    if (requestedType && requestedType !== "voters") {
+      return NextResponse.json({ error: "Unsupported leaderboard type" }, { status: 400 });
+    }
     const limit = String(
       Math.min(Math.max(parseInt(request.nextUrl.searchParams.get("limit") ?? "20") || 20, 1), MAX_LIMIT),
     );
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     const ponderAvailable = await isPonderAvailable();
     if (ponderAvailable) {
       try {
-        const result = await ponderApi.getLeaderboard(type, limit);
+        const result = await ponderApi.getLeaderboard("voters", limit);
         users = result.items.map(p => ({
           address: p.address,
           username: p.name || null,
@@ -90,7 +91,7 @@ export async function GET(request: NextRequest) {
           balance: (balances[user.address] ?? 0n).toString(),
         };
       })
-      .filter(entry => BigInt(entry.balance) > 0n)
+      .filter(entry => entry.address === includeAddress || BigInt(entry.balance) > 0n)
       .sort((left, right) => {
         const leftBalance = BigInt(left.balance);
         const rightBalance = BigInt(right.balance);
@@ -107,6 +108,7 @@ export async function GET(request: NextRequest) {
       entries,
       totalCount: entries.length,
       source,
+      type: "voters",
     });
   } catch (error) {
     console.error("Error fetching leaderboard data:", error);
