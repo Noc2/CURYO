@@ -22,6 +22,51 @@ function isSignatureRejected(error: unknown): boolean {
   return message.includes("rejected") || message.includes("denied") || message.includes("declined");
 }
 
+async function readEmailNotificationSettings(
+  address: string,
+  signMessageAsync: (args: { message: string }) => Promise<`0x${string}`>,
+): Promise<EmailNotificationSettingsState> {
+  const challengeRes = await fetch("/api/notifications/email/challenge", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      address,
+      intent: "read",
+    }),
+  });
+
+  const challengeData = (await challengeRes.json().catch(() => null)) as {
+    error?: string;
+    message?: string;
+    challengeId?: string;
+  } | null;
+
+  if (!challengeRes.ok || !challengeData?.message || !challengeData.challengeId) {
+    throw new Error(challengeData?.error || "Failed to create signature challenge");
+  }
+
+  const signature = await signMessageAsync({ message: challengeData.message });
+
+  const res = await fetch("/api/notifications/email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      address,
+      signature,
+      challengeId: challengeData.challengeId,
+    }),
+  });
+
+  const body = (await res.json().catch(() => null)) as
+    | ({ error?: string } & Partial<EmailNotificationSettingsState>)
+    | null;
+  if (!res.ok) {
+    throw new Error(body?.error || "Failed to fetch email notification settings");
+  }
+
+  return body as EmailNotificationSettingsState;
+}
+
 export function useEmailNotificationSettings(address?: string) {
   const { signMessageAsync } = useSignMessage();
   const queryClient = useQueryClient();
@@ -33,16 +78,18 @@ export function useEmailNotificationSettings(address?: string) {
     queryFn: async () => {
       if (!address) return { ...DEFAULT_EMAIL_NOTIFICATION_SETTINGS };
 
-      const res = await fetch(`/api/notifications/email?address=${encodeURIComponent(address)}`);
-      if (!res.ok) {
-        throw new Error("Failed to fetch email notification settings");
+      try {
+        return await readEmailNotificationSettings(address, signMessageAsync);
+      } catch (error) {
+        if (isSignatureRejected(error)) {
+          return { ...DEFAULT_EMAIL_NOTIFICATION_SETTINGS };
+        }
+        throw error;
       }
-
-      return (await res.json()) as EmailNotificationSettingsState;
     },
     enabled: Boolean(address),
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: Infinity,
+    refetchInterval: false,
   });
 
   const settings = data ?? DEFAULT_EMAIL_NOTIFICATION_SETTINGS;

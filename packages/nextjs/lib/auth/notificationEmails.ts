@@ -5,6 +5,7 @@ import { isValidWalletAddress, normalizeWalletAddress } from "~~/lib/watchlist/c
 
 export const NOTIFICATION_EMAIL_CHALLENGE_TITLE = "Curyo email notification settings";
 export const UPDATE_NOTIFICATION_EMAIL_ACTION = "notification_email:update";
+export const READ_NOTIFICATION_EMAIL_ACTION = "notification_email:read";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -12,6 +13,10 @@ export type NotificationEmailPayload = {
   normalizedAddress: `0x${string}`;
   email: string | null;
 } & Omit<EmailNotificationSettingsPayload, "email">;
+
+export type NotificationEmailReadPayload = {
+  normalizedAddress: `0x${string}`;
+};
 
 export function normalizeNotificationEmailInput(
   body: Record<string, unknown>,
@@ -55,6 +60,21 @@ export function normalizeNotificationEmailInput(
   };
 }
 
+export function normalizeNotificationEmailReadInput(
+  body: Record<string, unknown>,
+): { ok: true; payload: NotificationEmailReadPayload } | { ok: false; error: string } {
+  if (!body.address || typeof body.address !== "string" || !isValidWalletAddress(body.address)) {
+    return { ok: false, error: "Invalid wallet address" };
+  }
+
+  return {
+    ok: true,
+    payload: {
+      normalizedAddress: normalizeWalletAddress(body.address),
+    },
+  };
+}
+
 export function hashNotificationEmailPayload(payload: NotificationEmailPayload) {
   return hashSignedActionPayload([
     payload.normalizedAddress,
@@ -67,6 +87,10 @@ export function hashNotificationEmailPayload(payload: NotificationEmailPayload) 
   ]);
 }
 
+export function hashNotificationEmailReadPayload(payload: NotificationEmailReadPayload) {
+  return hashSignedActionPayload([payload.normalizedAddress]);
+}
+
 export function buildNotificationEmailChallengeMessage(params: {
   address: `0x${string}`;
   payloadHash: string;
@@ -76,6 +100,22 @@ export function buildNotificationEmailChallengeMessage(params: {
   return buildSignedActionMessage({
     title: NOTIFICATION_EMAIL_CHALLENGE_TITLE,
     action: UPDATE_NOTIFICATION_EMAIL_ACTION,
+    address: params.address,
+    payloadHash: params.payloadHash,
+    nonce: params.nonce,
+    expiresAt: params.expiresAt,
+  });
+}
+
+export function buildNotificationEmailReadChallengeMessage(params: {
+  address: `0x${string}`;
+  payloadHash: string;
+  nonce: string;
+  expiresAt: Date;
+}) {
+  return buildSignedActionMessage({
+    title: NOTIFICATION_EMAIL_CHALLENGE_TITLE,
+    action: READ_NOTIFICATION_EMAIL_ACTION,
     address: params.address,
     payloadHash: params.payloadHash,
     nonce: params.nonce,

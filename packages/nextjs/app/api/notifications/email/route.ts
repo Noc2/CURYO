@@ -1,32 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  READ_NOTIFICATION_EMAIL_ACTION,
   UPDATE_NOTIFICATION_EMAIL_ACTION,
   buildNotificationEmailChallengeMessage,
+  buildNotificationEmailReadChallengeMessage,
   hashNotificationEmailPayload,
+  hashNotificationEmailReadPayload,
   normalizeNotificationEmailInput,
+  normalizeNotificationEmailReadInput,
 } from "~~/lib/auth/notificationEmails";
 import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { db } from "~~/lib/db";
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import { getEmailNotificationSettings, upsertEmailNotificationSettings } from "~~/lib/notifications/emailSettings";
 import { sendNotificationVerificationEmail } from "~~/lib/notifications/resend";
-import { isValidWalletAddress, normalizeWalletAddress } from "~~/lib/watchlist/contentWatch";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 30, windowMs: 60_000 };
 const WRITE_RATE_LIMIT = { limit: 10, windowMs: 60_000 };
 
 export async function GET(request: NextRequest) {
+  void request;
+  return NextResponse.json({ error: "Use a signed POST request to read email notification settings" }, { status: 405 });
+}
+
+export async function POST(request: NextRequest) {
   const limited = await checkRateLimit(request, READ_RATE_LIMIT);
   if (limited) return limited;
 
   try {
-    const address = request.nextUrl.searchParams.get("address");
-    if (!address || !isValidWalletAddress(address)) {
-      return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
+    const body = (await request.json()) as Record<string, unknown> & {
+      signature?: `0x${string}`;
+      challengeId?: string;
+    };
+
+    if (!body.signature || !body.challengeId) {
+      return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }
 
-    const settings = await getEmailNotificationSettings(normalizeWalletAddress(address));
+    const normalized = normalizeNotificationEmailReadInput(body);
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
+    }
+
+    const payload = normalized.payload;
+    const payloadHash = hashNotificationEmailReadPayload(payload);
+    await ensureSignedActionChallengeTable();
+
+    try {
+      await db.transaction(async tx => {
+        await verifyAndConsumeSignedActionChallenge(tx, {
+          challengeId: String(body.challengeId),
+          action: READ_NOTIFICATION_EMAIL_ACTION,
+          walletAddress: payload.normalizedAddress,
+          payloadHash,
+          signature: body.signature as `0x${string}`,
+          buildMessage: ({ nonce, expiresAt }) =>
+            buildNotificationEmailReadChallengeMessage({
+              address: payload.normalizedAddress,
+              payloadHash,
+              nonce,
+              expiresAt,
+            }),
+        });
+      });
+    } catch (error: any) {
+      if (error.message === "CHALLENGE_USED") {
+        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
+      }
+      if (error.message === "CHALLENGE_EXPIRED") {
+        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
+      }
+      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
+        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+      }
+      throw error;
+    }
+
+    const settings = await getEmailNotificationSettings(payload.normalizedAddress);
     return NextResponse.json(settings);
   } catch (error) {
     console.error("Error fetching email notification settings:", error);
