@@ -65,14 +65,14 @@ export function DiscoverModuleCard({
   children,
 }: {
   title: string;
-  description: string;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="surface-card rounded-3xl p-5 sm:p-6">
       <div className="mb-4">
         <h2 className="text-2xl font-semibold">{title}</h2>
-        <p className="mt-1 text-base text-base-content/55">{description}</p>
+        {description ? <p className="mt-1 text-base text-base-content/55">{description}</p> : null}
       </div>
       {children}
     </section>
@@ -117,7 +117,7 @@ function FeaturedTodayCard({ item }: { item: PonderFeaturedTodayItem }) {
 export function FeaturedTodayPanel({
   items,
   title = "Featured Today",
-  description = "A few active rounds that look especially worth paying attention to right now.",
+  description,
   gridClassName = "grid gap-3 md:grid-cols-2 xl:grid-cols-4",
 }: {
   items: PonderFeaturedTodayItem[];
@@ -181,7 +181,7 @@ export function SettlingSoonPanel({
   items,
   isLoading,
   title = "Settling Soon",
-  description = "Rounds you are tracking or voted in, sorted by the earliest likely settlement window.",
+  description,
   emptyMessage = "Watch content or vote on a few rounds and they will show up here before they resolve.",
   gridClassName = "grid gap-3 md:grid-cols-2",
 }: {
@@ -219,7 +219,7 @@ export function SuggestedCuratorsPanel({
   isPending,
   onToggleFollow,
   title = "Suggested Curators",
-  description = "A few active curators worth following so your radar becomes more useful.",
+  description,
   emptyMessage = "Suggested curators will appear here once enough recent activity is indexed.",
 }: {
   items: PonderRadarSuggestedCurator[];

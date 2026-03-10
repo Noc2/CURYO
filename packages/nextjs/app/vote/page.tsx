@@ -22,7 +22,6 @@ import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
 import { useFeaturedToday } from "~~/hooks/useFeaturedToday";
-import { useFollowedCategories } from "~~/hooks/useFollowedCategories";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useRadarFeed } from "~~/hooks/useRadarFeed";
@@ -112,11 +111,6 @@ const HomeInner = () => {
     isPending: isWatchPending,
   } = useWatchedContent(address);
   const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(address);
-  const {
-    followedCategoryIds,
-    toggleCategoryFollow,
-    isPending: isCategoryFollowPending,
-  } = useFollowedCategories(address);
   const { radar, isLoading: radarLoading } = useRadarFeed(address);
 
   // URL validation — async check for broken URLs
@@ -646,37 +640,7 @@ const HomeInner = () => {
     return `No content found in "${activeCategory}".`;
   }, [activeCategory, address, scope, searchQuery]);
 
-  const selectedCategoryId =
-    activeCategory !== ALL_FILTER && activeCategory !== BROKEN_FILTER
-      ? categoryNameToId.get(activeCategory)
-      : undefined;
-  const isSelectedCategoryFollowed =
-    selectedCategoryId !== undefined && followedCategoryIds.has(selectedCategoryId.toString());
   const pageGridClassName = isSearchMode ? "grid gap-8" : "grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]";
-
-  const handleToggleCategoryFollow = useCallback(
-    async (categoryId: bigint) => {
-      const result = await toggleCategoryFollow(categoryId);
-
-      if (!result.ok) {
-        if (result.reason === "not_connected") {
-          notification.info("Connect your wallet to follow categories.");
-          openConnectModal?.();
-          return;
-        }
-
-        if (result.reason === "rejected") {
-          return;
-        }
-
-        notification.error(result.error || "Failed to update category follows");
-        return;
-      }
-
-      notification.success(result.following ? "Following category" : "Unfollowed category");
-    },
-    [openConnectModal, toggleCategoryFollow],
-  );
 
   return (
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
@@ -707,27 +671,6 @@ const HomeInner = () => {
                 <StreakCounter />
               </div>
             </div>
-
-            {address && selectedCategoryId !== undefined ? (
-              <div className="mb-5 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void handleToggleCategoryFollow(selectedCategoryId);
-                  }}
-                  disabled={isCategoryFollowPending(selectedCategoryId)}
-                  className={`inline-flex items-center rounded-full px-3 py-1.5 text-base font-medium whitespace-nowrap transition-colors ${
-                    isSelectedCategoryFollowed ? "pill-filter-active" : "pill-filter"
-                  }`}
-                >
-                  {isCategoryFollowPending(selectedCategoryId)
-                    ? "Saving..."
-                    : isSelectedCategoryFollowed
-                      ? `Following ${activeCategory}`
-                      : `Follow ${activeCategory}`}
-                </button>
-              </div>
-            ) : null}
 
             {isSearchMode ? (
               <div className="mb-5 flex flex-wrap items-center gap-2">
@@ -836,16 +779,11 @@ const HomeInner = () => {
           {!isSearchMode ? (
             <aside className="hidden xl:block">
               <div className="sticky top-24 space-y-4">
-                <FeaturedTodayPanel
-                  items={featuredToday}
-                  gridClassName="grid gap-3"
-                  description="A few active rounds that look especially worth paying attention to right now."
-                />
+                <FeaturedTodayPanel items={featuredToday} gridClassName="grid gap-3" />
                 {address ? (
                   <SettlingSoonPanel
                     items={radar.settlingSoon}
                     isLoading={radarLoading}
-                    description="Watched or voted rounds that look closest to resolution."
                     emptyMessage="Watch content or vote on a few rounds to see approaching settlements here."
                     gridClassName="grid gap-3"
                   />
@@ -855,7 +793,6 @@ const HomeInner = () => {
                   followedWallets={followedWallets}
                   isPending={isFollowPending}
                   onToggleFollow={handleToggleFollow}
-                  description="Follow a few strong curators so Discover becomes more personal."
                 />
               </div>
             </aside>

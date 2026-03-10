@@ -139,7 +139,7 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
                 clipRule="evenodd"
               />
             </svg>
-            Blind phase — full weight
+            Blind Phase
           </span>
           <InfoTooltip
             text="Blind phase: votes are encrypted and hidden. You earn 100% reward weight. Weight drops to 25% when the blind phase ends."
