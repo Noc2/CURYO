@@ -13,7 +13,10 @@ export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
   const { claimReward, isClaiming } = useClaimReward();
 
-  const { votes, isLoading } = useVoteHistory(address);
+  const { votes, totalVotes, settledVoteCount, hasMore, loadMore, isLoading } = useVoteHistory(address, {
+    paginated: true,
+    pageSize: 50,
+  });
 
   const { data: balance } = useScaffoldReadContract({
     contractName: "CuryoReputation",
@@ -34,8 +37,6 @@ export default function PortfolioPage() {
   const formattedBalance = balance
     ? (Number(balance) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 })
     : "0";
-
-  const settledVoteCount = votes.filter(vote => vote.isSettled).length;
 
   const { votes: activeVotesWithDeadlines } = useActiveVotesWithDeadlines(address);
 
@@ -70,7 +71,7 @@ export default function PortfolioPage() {
             </div>
             <div>
               <p className="text-3xl font-bold tabular-nums">
-                {isLoading ? <span className="loading loading-dots loading-sm"></span> : votes.length}
+                {isLoading ? <span className="loading loading-dots loading-sm"></span> : totalVotes}
               </p>
               <p className="text-base text-base-content/50">Total Votes</p>
             </div>
@@ -188,6 +189,15 @@ export default function PortfolioPage() {
                   </div>
                 );
               })}
+              {hasMore ? (
+                <button
+                  type="button"
+                  onClick={loadMore}
+                  className="w-full rounded-xl border border-base-content/10 px-4 py-3 text-sm font-medium text-base-content/70 transition-colors hover:border-primary/30 hover:text-white"
+                >
+                  Load more votes
+                </button>
+              ) : null}
             </div>
           ) : (
             <div className="text-center py-12 text-base-content/40">

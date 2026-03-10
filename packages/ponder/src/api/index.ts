@@ -1547,7 +1547,25 @@ app.get("/votes", async (c) => {
     .limit(limit)
     .offset(offset);
 
-  return jsonBig(c, { items });
+  const [countResult] = await db
+    .select({
+      settledTotal: sql<number>`sum(case when ${round.state} = ${ROUND_STATE.Settled} then 1 else 0 end)`,
+      total: sql<number>`count(*)`,
+    })
+    .from(vote)
+    .leftJoin(
+      round,
+      and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+    )
+    .where(where);
+
+  return jsonBig(c, {
+    items,
+    total: countResult?.total ?? 0,
+    settledTotal: countResult?.settledTotal ?? 0,
+    limit,
+    offset,
+  });
 });
 
 // ============================================================

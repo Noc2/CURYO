@@ -13,7 +13,10 @@ type PortfolioModalProps = {
 
 export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
   const { claimReward, isClaiming } = useClaimReward();
-  const { votes, isLoading } = useVoteHistory(address);
+  const { votes, totalVotes, settledVoteCount, hasMore, loadMore, isLoading } = useVoteHistory(address, {
+    paginated: true,
+    pageSize: 20,
+  });
 
   const { data: balance } = useScaffoldReadContract({
     contractName: "CuryoReputation",
@@ -31,8 +34,6 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
   const formattedBalance = balance
     ? (Number(balance) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 })
     : "0";
-
-  const settledVoteCount = votes.filter(vote => vote.isSettled).length;
 
   return (
     <div>
@@ -55,7 +56,7 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
                 <p className="text-base text-base-content/50">cREP</p>
               </div>
               <div>
-                <p className="text-xl font-bold tabular-nums">{votes.length}</p>
+                <p className="text-xl font-bold tabular-nums">{totalVotes}</p>
                 <p className="text-base text-base-content/50">Votes</p>
               </div>
               <div>
@@ -104,6 +105,15 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
                     </div>
                   );
                 })}
+                {hasMore ? (
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    className="w-full rounded-lg border border-base-content/10 px-3 py-2 text-sm font-medium text-base-content/70 transition-colors hover:border-primary/30 hover:text-white"
+                  >
+                    Load more
+                  </button>
+                ) : null}
               </div>
             ) : (
               <div className="text-center py-8 text-base-content/40 text-base">No votes yet. Start swiping!</div>

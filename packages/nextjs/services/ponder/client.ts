@@ -365,6 +365,14 @@ export interface PonderVoteItem {
   roundUpWins: boolean | null;
 }
 
+export interface PonderVotesResponse {
+  items: PonderVoteItem[];
+  limit: number;
+  offset: number;
+  settledTotal: number;
+  total: number;
+}
+
 export interface PonderVoterStreak {
   currentDailyStreak: number;
   bestDailyStreak: number;
@@ -582,7 +590,52 @@ export const ponderApi = {
     limit?: string;
     offset?: string;
   }) {
-    return ponderGet<{ items: PonderVoteItem[] }>("/votes", params);
+    return ponderGet<PonderVotesResponse>("/votes", params);
+  },
+
+  async getVotesWindow(params?: {
+    voter?: string;
+    contentId?: string;
+    roundId?: string;
+    state?: string;
+    limit?: string;
+    offset?: string;
+  }) {
+    const requestedLimit = Number(params?.limit ?? PONDER_PAGE_LIMIT);
+    const safeRequestedLimit = Number.isFinite(requestedLimit)
+      ? Math.max(1, Math.floor(requestedLimit))
+      : PONDER_PAGE_LIMIT;
+    const initialOffset = Number(params?.offset ?? 0);
+    let offset = Number.isFinite(initialOffset) ? Math.max(0, Math.floor(initialOffset)) : 0;
+    let total = 0;
+    let settledTotal = 0;
+    const items: PonderVoteItem[] = [];
+
+    while (items.length < safeRequestedLimit) {
+      const remaining = safeRequestedLimit - items.length;
+      const page = await this.getVotes({
+        ...params,
+        limit: String(Math.min(PONDER_PAGE_LIMIT, remaining)),
+        offset: String(offset),
+      });
+
+      items.push(...page.items);
+      total = page.total;
+      settledTotal = page.settledTotal;
+      offset += page.items.length;
+
+      if (page.items.length === 0 || offset >= page.total) {
+        break;
+      }
+    }
+
+    return {
+      items,
+      limit: safeRequestedLimit,
+      offset: Number.isFinite(initialOffset) ? Math.max(0, Math.floor(initialOffset)) : 0,
+      settledTotal,
+      total,
+    } satisfies PonderVotesResponse;
   },
 
   async getAllVotes(params?: { voter?: string; contentId?: string; roundId?: string; state?: string }) {
