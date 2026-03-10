@@ -33,3 +33,7 @@ export function getResendConfig() {
     appUrl: getOptionalAppUrl(),
   };
 }
+
+export function getNotificationDeliverySecret(): string | undefined {
+  return readEnv("NOTIFICATION_DELIVERY_SECRET");
+}

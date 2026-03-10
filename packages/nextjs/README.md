@@ -42,6 +42,7 @@ Key environment variables (see `.env.example` for the full list):
 | `RESEND_API_KEY`                        | Resend API key for email notification delivery       |
 | `RESEND_FROM_EMAIL`                     | Verified sender address/domain used by Resend        |
 | `APP_URL`                               | Public app URL used in verification and email links  |
+| `NOTIFICATION_DELIVERY_SECRET`          | Secret for the email delivery cron endpoint          |
 | `NEXT_PUBLIC_PONDER_URL`                | Public Ponder indexer URL (required in production)   |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
 | `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                 |

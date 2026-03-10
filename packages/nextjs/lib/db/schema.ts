@@ -86,6 +86,25 @@ export const notificationEmailSubscriptions = sqliteTable(
 export type NotificationEmailSubscription = typeof notificationEmailSubscriptions.$inferSelect;
 export type NewNotificationEmailSubscription = typeof notificationEmailSubscriptions.$inferInsert;
 
+export const notificationEmailDeliveries = sqliteTable(
+  "notification_email_deliveries",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    walletAddress: text("wallet_address").notNull(),
+    email: text("email").notNull(),
+    eventKey: text("event_key").notNull(),
+    eventType: text("event_type").notNull(),
+    contentId: text("content_id"),
+    deliveredAt: integer("delivered_at", { mode: "timestamp" }).notNull(),
+  },
+  table => ({
+    eventKeyUnique: uniqueIndex("notification_email_deliveries_event_key_unique").on(table.eventKey),
+  }),
+);
+
+export type NotificationEmailDelivery = typeof notificationEmailDeliveries.$inferSelect;
+export type NewNotificationEmailDelivery = typeof notificationEmailDeliveries.$inferInsert;
+
 export const followedCategories = sqliteTable(
   "followed_categories",
   {
