@@ -391,22 +391,24 @@ test.describe("Reward claim lifecycle", () => {
     expect(indexedContent, "Ponder did not index the cleanup test content").toBe(true);
     expect(cleanupContentId).toBeTruthy();
 
-    const voters = [
-      { account: ANVIL_ACCOUNTS.account3, isUp: true, tlockEpoch: 30 },
-      { account: ANVIL_ACCOUNTS.account4, isUp: true, tlockEpoch: 30 },
-      { account: ANVIL_ACCOUNTS.account7, isUp: false, tlockEpoch: 30 },
-      { account: pastEpochUnrevealed, isUp: true, tlockEpoch: 30 },
-      { account: futureEpochUnrevealed, isUp: false, tlockEpoch: 7200 },
+    // Commit 4 voters at round start (epoch 0). The 5th ("future epoch")
+    // voter commits later so the contract assigns a later epoch, ensuring
+    // its revealableAfter > settledAt and the stake is refunded, not forfeited.
+    const initialVoters = [
+      { account: ANVIL_ACCOUNTS.account3, isUp: true },
+      { account: ANVIL_ACCOUNTS.account4, isUp: true },
+      { account: ANVIL_ACCOUNTS.account7, isUp: false },
+      { account: pastEpochUnrevealed, isUp: true },
     ];
 
     const commits: {
-      account: (typeof voters)[number]["account"];
+      account: (typeof initialVoters)[number]["account"];
       commitKey: `0x${string}`;
       isUp: boolean;
       salt: `0x${string}`;
     }[] = [];
 
-    for (const voter of voters) {
+    for (const voter of initialVoters) {
       const approved = await approveCREP(VOTING_ENGINE, STAKE, voter.account.address, CREP_TOKEN);
       expect(approved, `Vote approval failed for ${voter.account.address}`).toBe(true);
 
@@ -417,7 +419,6 @@ test.describe("Reward claim lifecycle", () => {
         ZERO_ADDRESS,
         voter.account.address,
         VOTING_ENGINE,
-        voter.tlockEpoch,
       );
       expect(commit.success, `Vote commit failed for ${voter.account.address}`).toBe(true);
       commits.push({ account: voter.account, commitKey: commit.commitKey, isUp: commit.isUp, salt: commit.salt });
@@ -444,7 +445,26 @@ test.describe("Reward claim lifecycle", () => {
     // Advance past the reveal grace period (60 min default) so unrevealed
     // past-epoch commits don't block settlement via UnrevealedPastEpochVotes.
     const REVEAL_GRACE_PERIOD = 3600;
-    await evmIncreaseTime(EPOCH_DURATION + REVEAL_GRACE_PERIOD + 1);
+    await evmIncreaseTime(EPOCH_DURATION + REVEAL_GRACE_PERIOD);
+
+    // Now commit the "future epoch" voter. At this point, chain time is
+    // ~(2*EPOCH_DURATION + GRACE_PERIOD + 1) seconds past round start,
+    // so computeEpochEnd assigns an epoch well beyond settlement time.
+    // This means processUnrevealedVotes will refund (not forfeit) this stake.
+    const futureApproved = await approveCREP(VOTING_ENGINE, STAKE, futureEpochUnrevealed.address, CREP_TOKEN);
+    expect(futureApproved, "Future epoch voter approval failed").toBe(true);
+    const futureCommit = await commitVoteDirect(
+      BigInt(cleanupContentId!),
+      false,
+      STAKE,
+      ZERO_ADDRESS,
+      futureEpochUnrevealed.address,
+      VOTING_ENGINE,
+    );
+    expect(futureCommit.success, "Future epoch voter commit failed").toBe(true);
+
+    // Advance 1 more second so settlement can proceed
+    await evmIncreaseTime(1);
     await waitForPonderSync();
 
     const settled = await settleRoundDirect(BigInt(cleanupContentId!), cleanupRoundId, keeper.address, VOTING_ENGINE);
