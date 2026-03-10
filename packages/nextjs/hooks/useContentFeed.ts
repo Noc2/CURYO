@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { parseTags } from "~~/constants/categories";
-import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
@@ -21,8 +21,13 @@ export interface ContentItem {
 type FeedSort = "newest" | "oldest" | "highest_rated" | "lowest_rated" | "most_votes";
 
 interface UseContentFeedOptions {
+  categoryId?: bigint;
+  contentIds?: bigint[];
   limit?: number;
+  offset?: number;
+  searchQuery?: string;
   sortBy?: FeedSort;
+  submitter?: string;
 }
 
 function mapContentItem(
@@ -68,14 +73,53 @@ function sortRpcFeed(feed: ContentItem[], sortBy: FeedSort): ContentItem[] {
   return items;
 }
 
+function filterRpcFeed(feed: ContentItem[], options: UseContentFeedOptions): ContentItem[] {
+  const { categoryId, contentIds, searchQuery, submitter } = options;
+
+  const normalizedSearch = searchQuery?.trim().toLowerCase();
+  const normalizedSubmitter = submitter?.toLowerCase();
+  const contentIdSet = contentIds ? new Set(contentIds.map(id => id.toString())) : null;
+
+  return feed.filter(item => {
+    if (categoryId !== undefined && item.categoryId !== categoryId) {
+      return false;
+    }
+
+    if (contentIdSet && !contentIdSet.has(item.id.toString())) {
+      return false;
+    }
+
+    if (normalizedSubmitter && item.submitter.toLowerCase() !== normalizedSubmitter) {
+      return false;
+    }
+
+    if (normalizedSearch) {
+      const matchesSearch =
+        item.goal.toLowerCase().includes(normalizedSearch) ||
+        item.url.toLowerCase().includes(normalizedSearch) ||
+        item.tags.some(tag => tag.toLowerCase().includes(normalizedSearch));
+      if (!matchesSearch) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 /**
  * Fetch the content feed.
  * Uses Ponder API when available, falls back to on-chain event scanning.
  */
 export function useContentFeed(voterAddress?: string, options: UseContentFeedOptions = {}) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const categoryId = options.categoryId;
+  const contentIds = options.contentIds;
   const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
+  const offset = options.offset && options.offset > 0 ? Math.floor(options.offset) : 0;
+  const searchQuery = options.searchQuery?.trim();
   const sortBy = options.sortBy ?? "newest";
+  const submitter = options.submitter?.trim();
 
   // --- RPC fallback: get content submitted events ---
   const { data: events, isLoading: eventsLoading } = useScaffoldEventHistory({
@@ -83,11 +127,6 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
     eventName: "ContentSubmitted",
     watch: rpcFallbackEnabled,
     enabled: rpcFallbackEnabled,
-  });
-
-  const { data: nextContentId } = useScaffoldReadContract({
-    contractName: "ContentRegistry",
-    functionName: "nextContentId",
   });
 
   // Transform RPC events to ContentItem[]
@@ -123,23 +162,52 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       .filter((item): item is ContentItem => item !== null);
   }, [events, voterAddress]);
 
-  const sortedRpcFeed = useMemo(() => sortRpcFeed(rpcFeed, sortBy), [rpcFeed, sortBy]);
-  const limitedRpcFeed = useMemo(() => {
-    if (limit === undefined) return sortedRpcFeed;
-    return sortedRpcFeed.slice(0, limit);
-  }, [sortedRpcFeed, limit]);
-  const rpcTotalContent = nextContentId ? Number(nextContentId) - 1 : sortedRpcFeed.length;
+  const filteredRpcFeed = useMemo(
+    () =>
+      filterRpcFeed(rpcFeed, {
+        categoryId,
+        contentIds,
+        searchQuery,
+        submitter,
+      }),
+    [categoryId, contentIds, rpcFeed, searchQuery, submitter],
+  );
+  const sortedRpcFeed = useMemo(() => sortRpcFeed(filteredRpcFeed, sortBy), [filteredRpcFeed, sortBy]);
+  const pagedRpcFeed = useMemo(() => {
+    if (limit === undefined) return sortedRpcFeed.slice(offset);
+    return sortedRpcFeed.slice(offset, offset + limit);
+  }, [sortedRpcFeed, offset, limit]);
+  const rpcTotalContent = filteredRpcFeed.length;
+  const contentIdsParam = useMemo(() => contentIds?.map(id => id.toString()).join(","), [contentIds]);
 
   // --- Ponder-first with RPC fallback ---
   const { data: result, isLoading: ponderLoading } = usePonderQuery({
-    queryKey: ["contentFeed", voterAddress, sortBy, limit ?? "all"],
+    queryKey: [
+      "contentFeed",
+      voterAddress,
+      sortBy,
+      limit ?? "all",
+      offset,
+      categoryId?.toString() ?? "all",
+      submitter ?? "all",
+      searchQuery ?? "",
+      contentIdsParam ?? "",
+    ],
     ponderFn: async () => {
+      const params = {
+        categoryId: categoryId?.toString(),
+        contentIds: contentIdsParam,
+        search: searchQuery || undefined,
+        sortBy,
+        status: "all",
+        submitter: submitter || undefined,
+      };
+
       if (limit !== undefined) {
-        const response = await ponderApi.getContent({
-          status: "all",
-          sortBy,
+        const response = await ponderApi.getContentWindow({
+          ...params,
           limit: String(limit),
-          offset: "0",
+          offset: String(offset),
         });
         return {
           feed: response.items.map(item => mapContentItem(item, voterAddress)),
@@ -147,14 +215,14 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
         };
       }
 
-      const items = await ponderApi.getAllContent({ status: "all", sortBy });
+      const items = await ponderApi.getAllContent(params);
       return {
         feed: items.map(item => mapContentItem(item, voterAddress)),
         totalContent: items.length,
       };
     },
     rpcFn: async () => ({
-      feed: limitedRpcFeed,
+      feed: pagedRpcFeed,
       totalContent: rpcTotalContent,
     }),
     rpcEnabled: rpcFallbackEnabled,
@@ -162,13 +230,13 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
     refetchInterval: 30_000,
   });
 
-  const feed = result?.data?.feed ?? limitedRpcFeed;
+  const feed = result?.data?.feed ?? pagedRpcFeed;
   const totalContent = result?.data?.totalContent ?? rpcTotalContent;
 
   return {
     feed,
     isLoading: ponderLoading && eventsLoading,
     totalContent,
-    hasMore: totalContent > feed.length,
+    hasMore: totalContent > offset + feed.length,
   };
 }

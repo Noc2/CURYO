@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import type { NextPage } from "next";
-import { useAccount, useReadContracts } from "wagmi";
+import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
@@ -14,7 +14,6 @@ import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import { SwipeCard } from "~~/components/swipe/SwipeCard";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
-import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -115,21 +114,7 @@ const HomeInner = () => {
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const isSearchMode = searchQuery.trim().length > 0;
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
-  const shouldUsePagedFeed = !contentParam && !isSearchMode && scope === "all" && activeCategory === ALL_FILTER;
-  const feedRequestLimit = shouldUsePagedFeed
-    ? Math.max(FEED_PAGE_SIZE * 2, visibleCount + FEED_PREFETCH_BUFFER + 1)
-    : undefined;
-  const {
-    feed,
-    isLoading,
-    hasMore: hasMoreFeed,
-  } = useContentFeed(address, {
-    limit: feedRequestLimit,
-    sortBy: "newest",
-  });
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
-  const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
-  const voteCounts = useCategoryPopularity(feed);
   const { votes, isLoading: votesLoading } = useVoteHistory(address);
   const {
     watchedItems,
@@ -140,6 +125,101 @@ const HomeInner = () => {
   } = useWatchedContent(address);
   const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(address);
   const { radar, isLoading: radarLoading } = useRadarFeed(address);
+
+  const feedRequestLimit = contentParam
+    ? undefined
+    : Math.max(FEED_PAGE_SIZE * 2, visibleCount + FEED_PREFETCH_BUFFER + 1);
+
+  const watchedContentOrder = useMemo(() => {
+    const seen = new Set<string>();
+    const ids: bigint[] = [];
+    for (const item of watchedItems) {
+      if (seen.has(item.contentId)) continue;
+      seen.add(item.contentId);
+      ids.push(BigInt(item.contentId));
+    }
+    return ids;
+  }, [watchedItems]);
+
+  const votedContentOrder = useMemo(() => {
+    const seen = new Set<string>();
+    const ids: bigint[] = [];
+    for (const vote of votes) {
+      const contentId = vote.contentId.toString();
+      if (seen.has(contentId)) continue;
+      seen.add(contentId);
+      ids.push(vote.contentId);
+    }
+    return ids;
+  }, [votes]);
+
+  const settlingSoonContentOrder = useMemo(() => {
+    const seen = new Set<string>();
+    const ids: bigint[] = [];
+    for (const item of radar.settlingSoon) {
+      if (seen.has(item.contentId)) continue;
+      seen.add(item.contentId);
+      ids.push(BigInt(item.contentId));
+    }
+    return ids;
+  }, [radar.settlingSoon]);
+
+  const followedCuratorContentOrder = useMemo(() => {
+    const seen = new Set<string>();
+    const ids: bigint[] = [];
+    for (const item of radar.followedSubmissions) {
+      if (seen.has(item.contentId)) continue;
+      seen.add(item.contentId);
+      ids.push(BigInt(item.contentId));
+    }
+    return ids;
+  }, [radar.followedSubmissions]);
+
+  const activeCategoryId = useMemo(() => {
+    if (activeCategory === ALL_FILTER || activeCategory === BROKEN_FILTER) {
+      return undefined;
+    }
+    return categoryNameToId.get(activeCategory);
+  }, [activeCategory, categoryNameToId]);
+
+  const scopedContentIds = useMemo(() => {
+    switch (scope) {
+      case "watched":
+        return watchedContentOrder;
+      case "my_votes":
+        return votedContentOrder;
+      case "settling_soon":
+        return settlingSoonContentOrder;
+      case "followed_curators":
+        return followedCuratorContentOrder;
+      default:
+        return undefined;
+    }
+  }, [followedCuratorContentOrder, scope, settlingSoonContentOrder, votedContentOrder, watchedContentOrder]);
+
+  const feedContentIds = useMemo(() => {
+    if (!scopedContentIds) return undefined;
+    if (feedRequestLimit === undefined) return scopedContentIds;
+    return scopedContentIds.slice(0, feedRequestLimit);
+  }, [scopedContentIds, feedRequestLimit]);
+
+  const {
+    feed,
+    isLoading,
+    totalContent: serverTotalContent,
+    hasMore: serverHasMoreFeed,
+  } = useContentFeed(address, {
+    categoryId: activeCategoryId,
+    contentIds: feedContentIds,
+    limit: feedRequestLimit,
+    searchQuery: searchQuery.trim() || undefined,
+    sortBy: isSearchMode ? effectiveSearchSortBy : "newest",
+    submitter: scope === "my_submissions" ? address : undefined,
+  });
+  const totalContent = scopedContentIds?.length ?? serverTotalContent;
+  const hasMoreFeed = scopedContentIds ? feed.length < totalContent : serverHasMoreFeed;
+  const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
+  const voteCounts = useCategoryPopularity(feed);
 
   // URL validation — async check for broken URLs
   const feedUrls = useMemo(() => feed.map(item => item.url), [feed]);
@@ -237,11 +317,6 @@ const HomeInner = () => {
     categoryId: bigint;
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
   const { commitVote, isCommitting, error: voteError } = useRoundVote();
-  const needsRatingSort =
-    isSearchMode && (effectiveSearchSortBy === "highest_rated" || effectiveSearchSortBy === "lowest_rated");
-
-  // Batch-fetch ratings via multicall
-  const { data: registryInfo } = useDeployedContractInfo({ contractName: "ContentRegistry" });
   // Apply search, category filter, and scope before sorting
   const filteredFeed = useMemo(() => {
     let items = feed.filter(item => !isContentItemBlocked(item));
@@ -263,15 +338,8 @@ const HomeInner = () => {
       );
     }
 
-    if (activeCategory !== ALL_FILTER && activeCategory !== BROKEN_FILTER) {
-      const categoryId = categoryNameToId.get(activeCategory);
-      if (categoryId !== undefined) {
-        // Filter by categoryId (platform-based filtering)
-        items = items.filter(item => item.categoryId === categoryId);
-      } else {
-        // Fallback to tag-based filtering for legacy categories
-        items = items.filter(item => item.tags.includes(activeCategory));
-      }
+    if (activeCategory !== ALL_FILTER && activeCategory !== BROKEN_FILTER && activeCategoryId === undefined) {
+      items = items.filter(item => item.tags.includes(activeCategory));
     }
 
     switch (scope) {
@@ -299,7 +367,7 @@ const HomeInner = () => {
     feed,
     searchQuery,
     activeCategory,
-    categoryNameToId,
+    activeCategoryId,
     validationMap,
     scope,
     watchedContentIds,
@@ -308,12 +376,8 @@ const HomeInner = () => {
     followedCuratorContentIds,
   ]);
 
-  const preRatedDisplayFeed = useMemo(() => {
+  const displayFeed = useMemo(() => {
     const items = [...filteredFeed];
-
-    if (needsRatingSort) {
-      return items;
-    }
 
     if (isSearchMode) {
       switch (effectiveSearchSortBy) {
@@ -325,7 +389,7 @@ const HomeInner = () => {
           break;
         case "highest_rated":
         case "lowest_rated":
-          break;
+          return items;
       }
       return items;
     }
@@ -380,7 +444,6 @@ const HomeInner = () => {
   }, [
     filteredFeed,
     isSearchMode,
-    needsRatingSort,
     activeCategory,
     effectiveSearchSortBy,
     categoryScores,
@@ -391,56 +454,6 @@ const HomeInner = () => {
     settlingSoonOrderMap,
     followedCuratorOrderMap,
   ]);
-
-  const ratingTargets = useMemo(() => {
-    const items = needsRatingSort ? filteredFeed : preRatedDisplayFeed.slice(0, visibleCount);
-    const seen = new Set<string>();
-
-    return items.filter(item => {
-      const key = item.id.toString();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [needsRatingSort, filteredFeed, preRatedDisplayFeed, visibleCount]);
-
-  const ratingCalls = useMemo(() => {
-    if (!registryInfo || ratingTargets.length === 0) return [];
-    return ratingTargets.map(item => ({
-      address: registryInfo.address,
-      abi: registryInfo.abi,
-      functionName: "getRating" as const,
-      args: [item.id],
-    }));
-  }, [registryInfo, ratingTargets]);
-
-  const { data: ratingsData } = useReadContracts({ contracts: ratingCalls });
-
-  const ratingsMap = useMemo(() => {
-    const map = new Map<string, number>();
-    if (!ratingsData) return map;
-    ratingTargets.forEach((item, i) => {
-      const result = ratingsData[i];
-      if (result?.status === "success") {
-        map.set(item.id.toString(), Number(result.result));
-      }
-    });
-    return map;
-  }, [ratingsData, ratingTargets]);
-
-  const displayFeed = useMemo(() => {
-    if (!needsRatingSort) {
-      return preRatedDisplayFeed;
-    }
-
-    const items = [...filteredFeed];
-    items.sort((a, b) => {
-      const rA = ratingsMap.get(a.id.toString()) ?? 50;
-      const rB = ratingsMap.get(b.id.toString()) ?? 50;
-      return effectiveSearchSortBy === "highest_rated" ? rB - rA : rA - rB;
-    });
-    return items;
-  }, [needsRatingSort, preRatedDisplayFeed, filteredFeed, ratingsMap, effectiveSearchSortBy]);
 
   const orderedDisplayFeed = useMemo(() => {
     if (selectedId === null) return displayFeed;
@@ -478,7 +491,7 @@ const HomeInner = () => {
     return result;
   }, [submitterProfiles, accuracyMap]);
 
-  const canLoadMore = visibleCount < orderedDisplayFeed.length || (shouldUsePagedFeed && hasMoreFeed);
+  const canLoadMore = visibleCount < orderedDisplayFeed.length || hasMoreFeed;
 
   // Reset visible count when filters change
   useEffect(() => {

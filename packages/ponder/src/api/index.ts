@@ -166,7 +166,10 @@ function getCurrentSeasonWindow(now = new Date()) {
 
 app.get("/content", async (c) => {
   const categoryId = c.req.query("categoryId");
+  const contentIds = parseBigIntList(c.req.query("contentIds"), 500);
+  const search = c.req.query("search")?.trim().toLowerCase();
   const status = c.req.query("status") ?? "0";
+  const submitter = c.req.query("submitter");
   const sortBy = c.req.query("sortBy") ?? "newest";
   const limit = safeLimit(c.req.query("limit"), 50, 200);
   const offset = safeOffset(c.req.query("offset"));
@@ -179,6 +182,23 @@ app.get("/content", async (c) => {
     const parsed = safeBigInt(categoryId);
     if (parsed === null) return c.json({ error: "Invalid categoryId" }, 400);
     conditions.push(eq(content.categoryId, parsed));
+  }
+  if (contentIds.length > 0) {
+    conditions.push(inArray(content.id, contentIds));
+  }
+  if (submitter) {
+    if (!isValidAddress(submitter)) return c.json({ error: "Invalid submitter address" }, 400);
+    conditions.push(eq(content.submitter, submitter.toLowerCase() as `0x${string}`));
+  }
+  if (search) {
+    const pattern = `%${search}%`;
+    conditions.push(
+      sql<boolean>`(
+        lower(${content.goal}) like ${pattern}
+        or lower(${content.url}) like ${pattern}
+        or lower(${content.tags}) like ${pattern}
+      )`,
+    );
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
