@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, or, sql } from "drizzle-orm";
 import "server-only";
-import { db } from "~~/lib/db";
+import { db, dbClient } from "~~/lib/db";
 import { notificationEmailDeliveries, notificationEmailSubscriptions, watchedContent } from "~~/lib/db/schema";
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import { sendResendEmail } from "~~/lib/notifications/resend";
@@ -70,6 +70,7 @@ interface EmailCandidate {
 }
 
 let ensureNotificationEmailDeliveriesTablePromise: Promise<void> | null = null;
+const DELIVERY_LEASE_MS = 2 * 60 * 1000;
 
 export async function ensureNotificationEmailDeliveriesTable() {
   if (!ensureNotificationEmailDeliveriesTablePromise) {
@@ -84,6 +85,14 @@ export async function ensureNotificationEmailDeliveriesTable() {
             event_type TEXT NOT NULL,
             content_id TEXT,
             delivered_at INTEGER NOT NULL
+          )
+        `),
+      );
+      await db.run(
+        sql.raw(`
+          CREATE TABLE IF NOT EXISTS notification_email_delivery_leases (
+            event_key TEXT PRIMARY KEY,
+            lease_expires_at INTEGER NOT NULL
           )
         `),
       );
@@ -260,6 +269,29 @@ async function recordDelivery(candidate: EmailCandidate) {
   });
 }
 
+async function acquireDeliveryLease(eventKey: string, now: number) {
+  const result = await dbClient.execute({
+    sql: `
+      INSERT INTO notification_email_delivery_leases (event_key, lease_expires_at)
+      VALUES (?, ?)
+      ON CONFLICT(event_key) DO UPDATE SET
+        lease_expires_at = excluded.lease_expires_at
+      WHERE notification_email_delivery_leases.lease_expires_at <= ?
+      RETURNING event_key
+    `,
+    args: [eventKey, now + DELIVERY_LEASE_MS, now],
+  });
+
+  return result.rows.length > 0;
+}
+
+async function releaseDeliveryLease(eventKey: string) {
+  await dbClient.execute({
+    sql: "DELETE FROM notification_email_delivery_leases WHERE event_key = ?",
+    args: [eventKey],
+  });
+}
+
 async function sendCandidate(candidate: EmailCandidate) {
   await sendResendEmail({
     to: candidate.email,
@@ -303,6 +335,12 @@ export async function deliverNotificationEmails() {
         continue;
       }
 
+      const leaseAcquired = await acquireDeliveryLease(candidate.eventKey, Date.now());
+      if (!leaseAcquired) {
+        result.skipped += 1;
+        continue;
+      }
+
       try {
         await sendCandidate(candidate);
         await recordDelivery(candidate);
@@ -310,6 +348,8 @@ export async function deliverNotificationEmails() {
       } catch (error) {
         console.error("Failed to send notification email:", candidate.eventKey, error);
         result.failed += 1;
+      } finally {
+        await releaseDeliveryLease(candidate.eventKey);
       }
     }
   }
