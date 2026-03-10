@@ -204,11 +204,14 @@ test.describe("Reward claim lifecycle", () => {
     // Scroll to vote history so round-status elements are in the viewport
     await voteHistory.scrollIntoViewIfNeeded();
 
-    const claimBtn = page.getByRole("button", { name: "Claim Reward" });
-    const activeBadge = page.getByText("Active", { exact: true });
-    const claimedBadge = page.getByText("Claimed", { exact: true });
-    const anyState = claimBtn.or(activeBadge).or(claimedBadge);
-    await expect(anyState.first()).toBeVisible({ timeout: 15_000 });
+    // Check for any settlement state badge — use toPass() to retry because
+    // .or().first() can pick a hidden element earlier in DOM order.
+    await expect(async () => {
+      const hasClaimBtn = await page.getByRole("button", { name: "Claim Reward" }).first().isVisible();
+      const hasActive = await page.getByText(/^Active( ·|$)/).first().isVisible();
+      const hasClaimed = await page.getByText("Claimed", { exact: true }).first().isVisible();
+      expect(hasClaimBtn || hasActive || hasClaimed).toBeTruthy();
+    }).toPass({ timeout: 15_000 });
 
     await context.close();
   });
