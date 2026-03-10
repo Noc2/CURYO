@@ -9,12 +9,13 @@ import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
-import { PonderAccuracyLeaderboardItem, ponderApi } from "~~/services/ponder/client";
+import { PonderAccuracyLeaderboardItem, PonderAccuracyLeaderboardWindow, ponderApi } from "~~/services/ponder/client";
 import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
-type SortOption = "winRate" | "wins" | "stakeWon";
+type SortOption = "winRate" | "wins" | "stakeWon" | "settledVotes";
 type MinVotesOption = "3" | "5" | "10";
+type WindowOption = PonderAccuracyLeaderboardWindow;
 
 export function AccuracyLeaderboard() {
   const { address: connectedAddress } = useAccount();
@@ -27,6 +28,7 @@ export function AccuracyLeaderboard() {
   const [fetchError, setFetchError] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("winRate");
   const [minVotes, setMinVotes] = useState<MinVotesOption>("3");
+  const [window, setWindow] = useState<WindowOption>("all");
   const [categoryId, setCategoryId] = useState<string>("");
   const [scope, setScope] = useState<"all" | "following">("all");
 
@@ -38,6 +40,7 @@ export function AccuracyLeaderboard() {
       try {
         const params: Record<string, string> = {
           sortBy,
+          window,
           minVotes,
           limit: "50",
         };
@@ -58,7 +61,7 @@ export function AccuracyLeaderboard() {
     return () => {
       cancelled = true;
     };
-  }, [sortBy, minVotes, categoryId]);
+  }, [sortBy, window, minVotes, categoryId]);
 
   const truncateAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   const formatRate = (rate: number) => `${(rate * 100).toFixed(1)}%`;
@@ -68,6 +71,7 @@ export function AccuracyLeaderboard() {
   };
 
   const approvedCategories = categories.filter(c => c.status === 1);
+  const showStreakColumn = window === "all" && !categoryId;
   const visibleItems = useMemo(() => {
     return items.flatMap((entry, index) => {
       if (scope === "following" && !followedWallets.has(entry.voter.toLowerCase())) {
@@ -103,11 +107,24 @@ export function AccuracyLeaderboard() {
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-3">
-      <span className="text-base font-medium text-base-content/60">Accuracy leaderboard</span>
+      <span className="text-base font-medium text-base-content/60">Performance leaderboard</span>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
         <FollowScopeToggle value={scope} onChange={setScope} />
+
+        <select
+          className="select select-sm bg-base-200 text-base rounded-full"
+          value={window}
+          aria-label="Time range"
+          onChange={e => setWindow(e.target.value as WindowOption)}
+        >
+          <option value="all">All time</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="365d">Last 365 days</option>
+          <option value="season">Current season</option>
+        </select>
 
         {/* Category filter */}
         <select
@@ -134,6 +151,7 @@ export function AccuracyLeaderboard() {
           <option value="winRate">Win Rate</option>
           <option value="wins">Wins</option>
           <option value="stakeWon">Stake Won</option>
+          <option value="settledVotes">Settled Votes</option>
         </select>
 
         {/* Min votes filter */}
@@ -160,7 +178,7 @@ export function AccuracyLeaderboard() {
         </div>
       ) : items.length === 0 ? (
         <div className="text-center py-12 text-base-content/50">
-          <p>No voters with enough resolved votes yet</p>
+          <p>No voters with enough resolved votes in this range yet</p>
         </div>
       ) : scope === "following" && visibleItems.length === 0 ? (
         <div className="text-center py-12 text-base-content/50">
@@ -175,7 +193,7 @@ export function AccuracyLeaderboard() {
                 <th>User</th>
                 <th className="text-right">Win Rate</th>
                 <th className="text-right">W / L</th>
-                {!categoryId && <th className="text-right">Streak</th>}
+                {showStreakColumn && <th className="text-right">Streak</th>}
                 <th className="text-right">Stake Won</th>
               </tr>
             </thead>
@@ -252,7 +270,7 @@ export function AccuracyLeaderboard() {
                     <td className="text-right font-mono">
                       {entry.totalWins} / {entry.totalLosses}
                     </td>
-                    {!categoryId && <td className="text-right font-mono">{streakLabel}</td>}
+                    {showStreakColumn && <td className="text-right font-mono">{streakLabel}</td>}
                     <td className="text-right font-mono">{formatStake(entry.totalStakeWon)}</td>
                   </tr>
                 );

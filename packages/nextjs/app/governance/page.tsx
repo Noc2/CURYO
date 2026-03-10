@@ -14,6 +14,7 @@ import { ProposalList } from "~~/components/governance/ProposalList";
 import { ReferralSection } from "~~/components/governance/ReferralSection";
 import { TokenManagement } from "~~/components/governance/TokenManagement";
 import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
+import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
 import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
 import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
 import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
@@ -37,6 +38,7 @@ function GovernancePageInner() {
   const { isConnected, address } = useAccount();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("leaderboard");
+  const [leaderboardView, setLeaderboardView] = useState<"crep" | "performance">("crep");
   const [referrer, setReferrer] = useState<string | null>(null);
   const { hasGovernorContract } = useGovernanceContracts();
 
@@ -169,9 +171,37 @@ function GovernancePageInner() {
         {/* Leaderboard Tab */}
         {activeTab === "leaderboard" && (
           <>
-            <BalanceHistory />
-            <StakeBreakdown />
-            <LeaderboardTable />
+            <div className="surface-card rounded-2xl p-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLeaderboardView("crep")}
+                  className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
+                    leaderboardView === "crep" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+                  }`}
+                >
+                  cREP
+                </button>
+                <button
+                  onClick={() => setLeaderboardView("performance")}
+                  className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
+                    leaderboardView === "performance"
+                      ? "pill-active-yellow"
+                      : "bg-base-200 text-white hover:bg-base-300"
+                  }`}
+                >
+                  Performance
+                </button>
+              </div>
+            </div>
+            {leaderboardView === "crep" ? (
+              <>
+                <BalanceHistory />
+                <StakeBreakdown />
+                <LeaderboardTable />
+              </>
+            ) : (
+              <AccuracyLeaderboard />
+            )}
           </>
         )}
 
