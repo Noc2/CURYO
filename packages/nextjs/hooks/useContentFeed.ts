@@ -81,7 +81,6 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   const { data: events, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
     eventName: "ContentSubmitted",
-    fromBlock: 0n,
     watch: rpcFallbackEnabled,
     enabled: rpcFallbackEnabled,
   });

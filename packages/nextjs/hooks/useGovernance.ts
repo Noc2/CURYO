@@ -305,16 +305,22 @@ export function useGovernanceStats() {
 
 export function useGovernorProposals() {
   const { address } = useAccount();
-  const { targetNetwork, governorAddress, hasGovernorContract, knownContractsByAddress } = useGovernanceContracts();
+  const { targetNetwork, governorAddress, hasGovernorContract, knownContractsByAddress, token } =
+    useGovernanceContracts();
   const publicClient = usePublicClient({ chainId: targetNetwork.id });
 
   const proposalCreatedEvent = useMemo(
     () => governorAbi.find(item => item.type === "event" && item.name === "ProposalCreated"),
     [],
   );
+  const governorFromBlock = useMemo(() => {
+    const deployedOnBlock = token.data?.deployedOnBlock;
+    if (deployedOnBlock === undefined || deployedOnBlock === null) return 0n;
+    return BigInt(Number(deployedOnBlock) || 0);
+  }, [token.data?.deployedOnBlock]);
 
   return useQuery({
-    queryKey: ["governor-proposals", targetNetwork.id, governorAddress, address],
+    queryKey: ["governor-proposals", targetNetwork.id, governorAddress, address, governorFromBlock.toString()],
     enabled: !!publicClient && !!governorAddress && hasGovernorContract && !!proposalCreatedEvent,
     staleTime: 15_000,
     refetchInterval: 30_000,
@@ -322,7 +328,7 @@ export function useGovernorProposals() {
       const rawLogs = await publicClient!.getLogs({
         address: governorAddress!,
         event: proposalCreatedEvent as any,
-        fromBlock: 0n,
+        fromBlock: governorFromBlock,
         toBlock: "latest",
       });
 

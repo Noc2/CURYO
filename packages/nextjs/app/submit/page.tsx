@@ -13,12 +13,7 @@ import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
-import {
-  useDeployedContractInfo,
-  useScaffoldEventHistory,
-  useScaffoldReadContract,
-  useScaffoldWriteContract,
-} from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import {
   Category,
   extractDomain,
@@ -27,11 +22,8 @@ import {
   useCategoryRegistry,
 } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
-import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
-import { ponderApi } from "~~/services/ponder/client";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
-import { publicEnv } from "~~/utils/env/public";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
 import { notification } from "~~/utils/scaffold-eth";
@@ -113,7 +105,6 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 }
 
 const SubmitPage: NextPage = () => {
-  const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
   const { address } = useAccount();
   const { hasVoterId, isLoading: voterIdLoading } = useVoterIdNFT(address);
   const { ratePercent, calculateBonus } = useParticipationRate();
@@ -321,32 +312,21 @@ const SubmitPage: NextPage = () => {
     contractName: "ContentRegistry",
     functionName: "nextContentId",
   });
-  const { data: existingContentEvents } = useScaffoldEventHistory({
+  const canonicalUrl = useMemo(() => {
+    if (!url || urlError) return undefined;
+    return canonicalizeUrl(url);
+  }, [url, urlError]);
+  const { data: isUrlSubmitted } = useScaffoldReadContract({
     contractName: "ContentRegistry",
-    eventName: "ContentSubmitted",
-    fromBlock: 0n,
+    functionName: "isUrlSubmitted",
+    args: canonicalUrl ? [canonicalUrl] : undefined,
     watch: false,
-    enabled: rpcFallbackEnabled,
-  });
-
-  // Check if URL is already submitted by querying Ponder, with an optional RPC fallback for local development.
-  const { data: existingContent } = usePonderQuery({
-    queryKey: ["submittedContent", url],
-    enabled: Boolean(url) && !urlError,
-    ponderFn: async () => {
-      const existingItems = await ponderApi.getAllContent({ status: "all" });
-      return existingItems.map(item => item.url);
+    query: {
+      enabled: Boolean(canonicalUrl),
+      staleTime: 30_000,
     },
-    rpcFn: async () => existingContentEvents?.map(event => event.args.url ?? "").filter(Boolean) ?? [],
-    rpcEnabled: rpcFallbackEnabled,
-    staleTime: 30_000,
   });
-
-  const isUrlAlreadySubmitted = !!(
-    url &&
-    !urlError &&
-    existingContent?.data?.some(existingUrl => canonicalizeUrl(existingUrl) === canonicalizeUrl(url))
-  );
+  const isUrlAlreadySubmitted = Boolean(canonicalUrl && isUrlSubmitted);
 
   const handleGoalChange = (value: string) => {
     setGoal(value);
@@ -403,7 +383,6 @@ const SubmitPage: NextPage = () => {
         return;
       }
 
-      const canonicalUrl = canonicalizeUrl(url);
       await writeRegistry({
         functionName: "submitContent",
         args: [canonicalUrl, goal, serializeTags(selectedSubcategories), selectedCategory.id],

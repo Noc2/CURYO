@@ -19,7 +19,6 @@ export function useVoteHistory(voter?: string) {
   const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "VoteCommitted",
-    fromBlock: 0n,
     filters: { voter },
     watch: rpcFallbackEnabled,
     enabled: rpcFallbackEnabled && Boolean(voter),
@@ -28,7 +27,6 @@ export function useVoteHistory(voter?: string) {
   const { data: settledEvents, isLoading: settledLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "RoundSettled",
-    fromBlock: 0n,
     watch: rpcFallbackEnabled,
     enabled: rpcFallbackEnabled && Boolean(voter),
   } as any);
