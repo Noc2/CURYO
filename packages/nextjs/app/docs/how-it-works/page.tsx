@@ -1,6 +1,7 @@
 import type { NextPage } from "next";
 import { RewardSplitChart } from "~~/components/docs/RewardSplitChart";
 import { VotingFlowDiagram } from "~~/components/docs/VotingFlowDiagram";
+import { protocolDocFacts, rewardSplitTableRows } from "~~/lib/docs/protocolFacts";
 
 const HowItWorks: NextPage = () => {
   return (
@@ -62,11 +63,11 @@ const HowItWorks: NextPage = () => {
           plaintext for their vote.
         </li>
         <li>
-          <strong>Resolve:</strong> Once at least 3 votes are revealed and all past-phase votes have been revealed (or
-          the 60-minute reveal grace period has expired), the round can be resolved. The majority side wins. The losing
-          side&apos;s stakes become the reward pool. Content rating is recalculated from the final revealed stake
-          imbalance, with small rounds pulled toward 50 by a fixed smoothing parameter. Winners can then click Claim to
-          collect their rewards.
+          <strong>Resolve:</strong> Once at least {protocolDocFacts.minVotersLabel} votes are revealed and all
+          past-phase votes have been revealed (or the {protocolDocFacts.revealGracePeriodLabel} reveal grace period has
+          expired), the round can be resolved. The majority side wins. The losing side&apos;s stakes become the reward
+          pool. Content rating is recalculated from the final revealed stake imbalance, with small rounds pulled toward
+          50 by a fixed smoothing parameter. Winners can then click Claim to collect their rewards.
         </li>
       </ol>
 
@@ -118,8 +119,11 @@ const HowItWorks: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Resolved</span>
               </td>
-              <td>&ldquo;Claim X cREP&rdquo; (winners) or &ldquo;Claim 5% rebate&rdquo; (revealed losers)</td>
-              <td className="font-mono">After min 3 revealed</td>
+              <td>
+                &ldquo;Claim X cREP&rdquo; (winners) or &ldquo;Claim {protocolDocFacts.revealedLoserRefundPercentLabel}{" "}
+                rebate&rdquo; (revealed losers)
+              </td>
+              <td className="font-mono">After min {protocolDocFacts.minVotersLabel} revealed</td>
               <td>Revealed voters click Claim</td>
             </tr>
           </tbody>
@@ -127,11 +131,12 @@ const HowItWorks: NextPage = () => {
       </div>
       <p>
         After the blind phase ends, the keeper normally reveals votes automatically in the background. If that flow
-        looks delayed, connected users can also use the hidden manual reveal fallback. Once at least 3 votes are
-        revealed and all past-phase votes have been revealed (or the 60-minute reveal grace period has expired),
-        resolution can be triggered. Resolution is fully open &mdash; anyone can trigger it. Winners receive their
-        original stake plus a phase-weighted share of the losing stakes, while revealed losers can later claim a fixed
-        5% rebate.
+        looks delayed, connected users can also use the hidden manual reveal fallback. Once at least{" "}
+        {protocolDocFacts.minVotersLabel} votes are revealed and all past-phase votes have been revealed (or the{" "}
+        {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired), resolution can be triggered.
+        Resolution is fully open &mdash; anyone can trigger it. Winners receive their original stake plus a
+        phase-weighted share of the losing stakes, while revealed losers can later claim a fixed{" "}
+        {protocolDocFacts.revealedLoserRefundPercentLabel} rebate.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
@@ -145,17 +150,17 @@ const HowItWorks: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">Blind phase duration</td>
-              <td>20 minutes</td>
+              <td>{protocolDocFacts.blindPhaseDurationLabel}</td>
               <td>Phase window for reward weighting.</td>
             </tr>
             <tr>
               <td className="font-mono">Minimum voters</td>
-              <td>3</td>
+              <td>{protocolDocFacts.minVotersLabel}</td>
               <td>Minimum revealed votes required before resolution is allowed.</td>
             </tr>
             <tr>
               <td className="font-mono">maxDuration</td>
-              <td>7 days</td>
+              <td>{protocolDocFacts.maxRoundDurationLabel}</td>
               <td>
                 Maximum round lifetime. Rounds below commit quorum cancel with refunds; rounds that hit commit quorum
                 but miss reveal quorum can finalize as RevealFailed only after voting closes and the final reveal grace
@@ -164,7 +169,7 @@ const HowItWorks: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Reveal grace period</td>
-              <td>60 minutes</td>
+              <td>{protocolDocFacts.revealGracePeriodLabel}</td>
               <td>Time after each blind phase during which all votes must be revealed before resolution is allowed.</td>
             </tr>
           </tbody>
@@ -185,45 +190,27 @@ const HowItWorks: NextPage = () => {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Revealed losing voters (rebate)</td>
-              <td className="font-mono">5% of raw losing stake</td>
-            </tr>
-            <tr>
-              <td>Content-specific voter pool</td>
-              <td className="font-mono">82% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Consensus subsidy reserve</td>
-              <td className="font-mono">5% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Content submitter</td>
-              <td className="font-mono">10% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Frontend operators</td>
-              <td className="font-mono">1% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Category submitter</td>
-              <td className="font-mono">1% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Treasury</td>
-              <td className="font-mono">1% of the remaining 95%</td>
-            </tr>
+            {rewardSplitTableRows.map(([recipient, share]) => (
+              <tr key={recipient}>
+                <td>{recipient === "Revealed losing voters" ? "Revealed losing voters (rebate)" : recipient}</td>
+                <td className="font-mono">{share}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       <p>
-        A revealed losing vote can still recover <strong>5%</strong> of its original stake. The remaining losing pool is
-        then split so the <strong>82%</strong> voter share goes entirely to a <strong>content-specific pool</strong>{" "}
-        distributed proportionally by <strong>phase-weighted effective stake</strong> to winning voters on that content.
-        Blind phase voters receive 100% reward weight, while open phase voters receive 25% &mdash; giving early voters a
-        4x advantage per cREP staked. An additional <strong>5%</strong> of the remaining pool goes to a consensus
-        subsidy reserve. Rewards become claimable immediately after the round is resolved. There is no global pool
-        &mdash; each content round is self-contained.
+        A revealed losing vote can still recover <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of
+        its original stake. The remaining losing pool is then split so the{" "}
+        <strong>{protocolDocFacts.voterPoolShareLabel}</strong> voter share goes entirely to a{" "}
+        <strong>content-specific pool</strong> distributed proportionally by{" "}
+        <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase voters receive{" "}
+        {protocolDocFacts.blindPhaseWeightLabel} reward weight, while open phase voters receive{" "}
+        {protocolDocFacts.openPhaseWeightLabel} &mdash; giving early voters a{" "}
+        {protocolDocFacts.earlyVoterAdvantageLabel} advantage per cREP staked. An additional{" "}
+        <strong>{protocolDocFacts.consensusShareLabel}</strong> goes to a consensus subsidy reserve. Rewards become
+        claimable immediately after the round is resolved. There is no global pool &mdash; each content round is
+        self-contained.
       </p>
 
       <h2>Content Rating</h2>

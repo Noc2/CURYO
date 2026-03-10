@@ -1,4 +1,5 @@
 import type { NextPage } from "next";
+import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const SmartContracts: NextPage = () => {
   return (
@@ -285,27 +286,27 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">epochDuration</td>
-              <td>20 minutes</td>
+              <td>{protocolDocFacts.blindPhaseDurationLabel}</td>
               <td>Duration of each reward tier</td>
             </tr>
             <tr>
               <td className="font-mono">maxDuration</td>
-              <td>7 days</td>
+              <td>{protocolDocFacts.maxRoundDurationLabel}</td>
               <td>Maximum round lifetime &mdash; expired rounds can be cancelled</td>
             </tr>
             <tr>
               <td className="font-mono">minVoters</td>
-              <td>3</td>
+              <td>{protocolDocFacts.minVotersLabel}</td>
               <td>Minimum revealed votes required before settlement is allowed</td>
             </tr>
             <tr>
               <td className="font-mono">maxVotersPerRound</td>
-              <td>1,000</td>
+              <td>{protocolDocFacts.maxVotersLabel}</td>
               <td>Cap on voters per content per round (O(1) settlement)</td>
             </tr>
             <tr>
               <td className="font-mono">revealGracePeriod</td>
-              <td>60 minutes</td>
+              <td>{protocolDocFacts.revealGracePeriodLabel}</td>
               <td>Time after each epoch during which all past-epoch votes must be revealed before settlement</td>
             </tr>
             <tr>
@@ -331,9 +332,9 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
-          <code>minVoters</code> votes are revealed and all past-epoch votes have been revealed (or their 60-minute
-          reveal grace period has expired). Determines winners based on epoch-weighted stakes, splits reward pools, and
-          updates content rating.
+          <code>minVoters</code> votes are revealed and all past-epoch votes have been revealed (or their{" "}
+          {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired). Determines winners based on
+          epoch-weighted stakes, splits reward pools, and updates content rating.
         </li>
         <li>
           <code>claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators claim their
@@ -344,8 +345,9 @@ const SmartContracts: NextPage = () => {
           snapshotted at settlement time for fairness). Pull-based.
         </li>
         <li>
-          <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (7 days)
-          without reaching commit quorum (<code>minVoters</code> total commits). Refundable to participants.
+          <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (
+          {protocolDocFacts.maxRoundDurationLabel}) without reaching commit quorum (<code>minVoters</code> total
+          commits). Refundable to participants.
         </li>
         <li>
           <code>finalizeRevealFailedRound(contentId, roundId)</code> &mdash; Finalize a round that reached commit
@@ -367,7 +369,7 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>claimReward(contentId, roundId)</code> &mdash; Claim settled-round voter payouts. Winners receive stake
-          plus winnings; revealed losers receive a fixed 5% rebate.
+          plus winnings; revealed losers receive a fixed {protocolDocFacts.revealedLoserRefundPercentLabel} rebate.
         </li>
         <li>
           <code>claimSubmitterReward(contentId, roundId)</code> &mdash; Claim submitter&apos;s 10% share.

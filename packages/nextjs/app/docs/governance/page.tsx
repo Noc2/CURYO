@@ -1,4 +1,5 @@
 import type { NextPage } from "next";
+import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const GovernanceDocs: NextPage = () => {
   return (
@@ -122,7 +123,7 @@ const GovernanceDocs: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">Minimum voters</td>
-              <td>3</td>
+              <td>{protocolDocFacts.minVotersLabel}</td>
               <td>
                 Minimum revealed votes required before a round becomes eligible to settle. Past-epoch reveal checks may
                 still delay settlement. Rounds that stay below commit quorum within the maximum round duration are
@@ -132,12 +133,12 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Epoch duration</td>
-              <td>20 minutes</td>
+              <td>{protocolDocFacts.blindPhaseDurationLabel}</td>
               <td>Length of each blind-voting epoch before votes from that epoch can be revealed.</td>
             </tr>
             <tr>
               <td className="font-mono">Reveal grace period</td>
-              <td>60 minutes</td>
+              <td>{protocolDocFacts.revealGracePeriodLabel}</td>
               <td>
                 After each epoch ends, past-epoch votes must be revealed before settlement, unless this grace period has
                 expired. This parameter is configured separately from <code>setConfig()</code>.
@@ -145,7 +146,7 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Max round duration</td>
-              <td>7 days</td>
+              <td>{protocolDocFacts.maxRoundDurationLabel}</td>
               <td>
                 Maximum time before a round expires. Below commit quorum the round is cancelled and refundable. At or
                 above commit quorum, missing reveal quorum after the last reveal grace window can finalize as
@@ -154,7 +155,7 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Max voters</td>
-              <td>1,000</td>
+              <td>{protocolDocFacts.maxVotersLabel}</td>
               <td>Per-round cap. O(1) resolution enables higher limits without cost concerns.</td>
             </tr>
             <tr>
@@ -171,9 +172,10 @@ const GovernanceDocs: NextPage = () => {
         </table>
       </div>
       <p>
-        The 3-voter minimum is a deliberate balance between manipulation resistance and early-stage practicality. With
-        fewer than 3 voters, a single actor could control round outcomes. As the platform grows and rounds naturally
-        attract more voters, governance can increase this threshold to further strengthen agreement quality.
+        The {protocolDocFacts.minVotersLabel}-voter minimum is a deliberate balance between manipulation resistance and
+        early-stage practicality. With fewer than {protocolDocFacts.minVotersLabel} voters, a single actor could control
+        round outcomes. As the platform grows and rounds naturally attract more voters, governance can increase this
+        threshold to further strengthen agreement quality.
       </p>
 
       <h2>Treasury</h2>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { NextPage } from "next";
 import { RewardSplitChart } from "~~/components/docs/RewardSplitChart";
 import { VotingFlowDiagram } from "~~/components/docs/VotingFlowDiagram";
+import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const DocsIntro: NextPage = () => {
   return (
@@ -37,11 +38,11 @@ const DocsIntro: NextPage = () => {
         />
         <FeatureCard
           title="Per-Content Rounds"
-          description="Each content item has independent rounds with blind voting. Blind phase voters earn 4x more reward weight per cREP than open phase voters."
+          description={`Each content item has independent rounds with blind voting. Blind phase voters earn ${protocolDocFacts.earlyVoterAdvantageLabel} more reward weight per cREP than open phase voters.`}
         />
         <FeatureCard
           title="Contributor Rewards"
-          description="After a 5% rebate for revealed losers, the remaining losing stake funds submitter, category, frontend, and winner rewards."
+          description={`After a ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate for revealed losers, the remaining losing stake funds submitter, category, frontend, and winner rewards.`}
         />
       </div>
 
@@ -49,7 +50,8 @@ const DocsIntro: NextPage = () => {
       <p>
         Voters predict whether content&apos;s rating will go <strong>UP</strong> or <strong>DOWN</strong> and back their
         prediction with a cREP stake. Vote directions are encrypted and hidden until the blind phase ends &mdash;
-        phase-weighted rewards give early (blind) voters 4x more reward per cREP than later voters.
+        phase-weighted rewards give early (blind) voters {protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")}{" "}
+        more reward per cREP than later voters.
       </p>
       <div className="not-prose">
         <VotingFlowDiagram />
@@ -64,9 +66,9 @@ const DocsIntro: NextPage = () => {
           reveals them after the blind phase ends.
         </li>
         <li>
-          <strong>Resolve:</strong> After the blind phase ends, votes are revealed automatically. Once at least 3 votes
-          are revealed, the round resolves. The majority side wins and the losing side&apos;s stakes become the reward
-          pool.
+          <strong>Resolve:</strong> After the blind phase ends, votes are revealed automatically. Once at least{" "}
+          {protocolDocFacts.minVotersLabel} votes are revealed, the round resolves. The majority side wins and the
+          losing side&apos;s stakes become the reward pool.
         </li>
       </ol>
       <p>The losing stakes are split:</p>

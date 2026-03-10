@@ -1,3 +1,5 @@
+import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
+
 const STEPS = [
   {
     label: "Vote",
@@ -9,7 +11,7 @@ const STEPS = [
   {
     label: "Reveal",
     badge: "badge-secondary",
-    duration: "~20 min",
+    duration: protocolDocFacts.blindPhaseDurationLabel,
     description: "Votes revealed after blind phase ends",
     icon: "🔓",
   },
@@ -17,7 +19,7 @@ const STEPS = [
     label: "Resolve",
     badge: "badge-secondary",
     duration: "",
-    description: "Majority wins after min 3 voters revealed",
+    description: `Majority wins after min ${protocolDocFacts.minVotersLabel} voters revealed`,
     icon: "⚖️",
   },
   {

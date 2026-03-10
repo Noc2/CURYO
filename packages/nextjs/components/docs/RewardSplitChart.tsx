@@ -1,16 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-const SLICES = [
-  { label: "Revealed loser rebate", value: 5, color: "#8B5E34" },
-  { label: "Voter pool (content-specific)", value: 77.9, color: "#359EEE" },
-  { label: "Consensus subsidy reserve", value: 4.75, color: "#F97316" },
-  { label: "Content submitter", value: 9.5, color: "#FFC43D" },
-  { label: "Frontend operators", value: 0.95, color: "#EF476F" },
-  { label: "Category submitters", value: 0.95, color: "#2B7FCC" },
-  { label: "Treasury", value: 0.95, color: "#029B7B" },
-];
+import { rewardSplitChartSlices } from "~~/lib/docs/protocolFacts";
 
 const SIZE = 200;
 const CENTER = SIZE / 2;
@@ -35,7 +26,7 @@ export function RewardSplitChart() {
   const [hovered, setHovered] = useState<number | null>(null);
 
   let currentAngle = 0;
-  const arcs = SLICES.map((slice, i) => {
+  const arcs = rewardSplitChartSlices.map((slice, i) => {
     const angle = (slice.value / 100) * 360;
     const startAngle = currentAngle;
     const endAngle = currentAngle + angle;
@@ -66,7 +57,7 @@ export function RewardSplitChart() {
         ))}
       </svg>
       <div className="flex flex-col gap-1.5">
-        {SLICES.map((slice, i) => (
+        {rewardSplitChartSlices.map((slice, i) => (
           <div
             key={i}
             className={`flex items-center gap-2 text-sm transition-opacity duration-150 ${

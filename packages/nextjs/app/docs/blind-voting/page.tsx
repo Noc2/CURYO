@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { NextPage } from "next";
 import { VotingFlowDiagram } from "~~/components/docs/VotingFlowDiagram";
+import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const BlindVoting: NextPage = () => {
   return (
@@ -8,7 +9,7 @@ const BlindVoting: NextPage = () => {
       <h1>Blind Voting</h1>
       <p className="lead text-base-content/60 text-lg">
         How encrypted voting hides vote directions to prevent herding, with phase-weighted rewards that give early
-        voters a 4x advantage.
+        voters a {protocolDocFacts.earlyVoterAdvantageLabel} advantage.
       </p>
 
       <h2>Why Blind Voting?</h2>
@@ -47,30 +48,31 @@ const BlindVoting: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">Blind phase</td>
-              <td>First ~20 minutes</td>
-              <td className="font-mono">100%</td>
+              <td>First {protocolDocFacts.blindPhaseDurationLabel}</td>
+              <td className="font-mono">{protocolDocFacts.blindPhaseWeightLabel}</td>
               <td>Full stake counts toward rewards</td>
             </tr>
             <tr>
               <td className="font-mono">Open phase</td>
               <td>After blind phase ends</td>
-              <td className="font-mono">25%</td>
-              <td>Only 25% of stake counts toward rewards</td>
+              <td className="font-mono">{protocolDocFacts.openPhaseWeightLabel}</td>
+              <td>Only {protocolDocFacts.openPhaseWeightLabel} of stake counts toward rewards</td>
             </tr>
           </tbody>
         </table>
       </div>
       <p>
-        This creates a <strong>4:1 early-voter advantage</strong>. A blind phase voter staking 10 cREP has the same
-        effective stake as an open phase voter staking 40 cREP. The system rewards conviction under uncertainty &mdash;
-        voters who vote while directions are hidden take on more risk and are compensated accordingly.
+        This creates a <strong>{protocolDocFacts.earlyVoterAdvantageLabel} early-voter advantage</strong>. A blind phase
+        voter staking 10 cREP has the same effective stake as an open phase voter staking 40 cREP. The system rewards
+        conviction under uncertainty &mdash; voters who vote while directions are hidden take on more risk and are
+        compensated accordingly.
       </p>
 
       <h2>How the Phases Work</h2>
       <p>
-        Each blind phase lasts <strong>~20 minutes</strong> (configurable by governance). When the first vote on a
-        content item is placed, the round begins and the phase clock starts. During the blind phase, all vote directions
-        are encrypted &mdash; no one can see which way anyone voted.
+        Each blind phase lasts <strong>{protocolDocFacts.blindPhaseDurationLabel}</strong> (configurable by governance).
+        When the first vote on a content item is placed, the round begins and the phase clock starts. During the blind
+        phase, all vote directions are encrypted &mdash; no one can see which way anyone voted.
       </p>
       <p>
         After the blind phase ends, the decryption key for that time period becomes available. The system uses this key
@@ -84,14 +86,15 @@ const BlindVoting: NextPage = () => {
 
       <h2>Resolution</h2>
       <p>
-        Resolution requires at least <strong>3 votes</strong> to be revealed (the minimum voter threshold). Once the
-        threshold is reached, the round can be resolved once all past-epoch votes are revealed or their 60-minute reveal
-        grace period has expired. The system does this automatically. Resolution determines the majority side, splits
-        the reward pools, and updates the content rating.
+        Resolution requires at least <strong>{protocolDocFacts.minVotersLabel} votes</strong> to be revealed (the
+        minimum voter threshold). Once the threshold is reached, the round can be resolved once all past-epoch votes are
+        revealed or their {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. The system does
+        this automatically. Resolution determines the majority side, splits the reward pools, and updates the content
+        rating.
       </p>
       <p>
-        Rounds that exceed the <strong>maximum duration</strong> (7 days) without meeting the minimum voter threshold
-        are cancelled. All stakes are fully refunded to participants.
+        Rounds that exceed the <strong>maximum duration</strong> ({protocolDocFacts.maxRoundDurationLabel}) without
+        meeting the minimum voter threshold are cancelled. All stakes are fully refunded to participants.
       </p>
 
       <h2>One-Sided Rounds (Consensus)</h2>

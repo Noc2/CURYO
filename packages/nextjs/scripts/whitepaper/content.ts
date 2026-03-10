@@ -2,6 +2,11 @@
  * Whitepaper content extracted from the Curyo documentation.
  * Sections: Introduction, How It Works, tlock Commit-Reveal Voting, Tokenomics, Governance.
  */
+import {
+  protocolDocFacts,
+  whitepaperRewardSplitRows,
+  whitepaperSettlementConfigRows,
+} from "../../lib/docs/protocolFacts";
 
 export type TableData = { headers: string[]; rows: string[][] };
 
@@ -39,7 +44,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go UP or DOWN and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each 20-minute epoch ends, preventing herding. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn 25% weight, creating a 4:1 incentive to vote early.",
+    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go UP or DOWN and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
   },
   {
     type: "paragraph",
@@ -91,7 +96,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
-              "Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each 20-minute epoch ends. After each epoch the keeper normally reveals eligible votes automatically, and connected users can self-reveal if needed. Settlement occurs after at least 3 votes are revealed and the reveal conditions are satisfied.",
+              `Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends. After each epoch the keeper normally reveals eligible votes automatically, and connected users can self-reveal if needed. Settlement occurs after at least ${protocolDocFacts.minVotersLabel} votes are revealed and the reveal conditions are satisfied.`,
               "Contributor Rewards  -- Content submitters receive 10%, category submitters 1%, and frontend operators 1% of the losing pool.",
             ],
           },
@@ -102,16 +107,16 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Voters predict whether content's rating will go UP or DOWN and back their prediction with a cREP stake. Votes are encrypted with tlock and hidden until the epoch ends, preventing herding. Voting early in the epoch earns full reward weight (Tier 1), while voting after seeing epoch-1 results earns only 25% weight (Tier 2).",
+            text: `Voters predict whether content's rating will go UP or DOWN and back their prediction with a cREP stake. Votes are encrypted with tlock and hidden until the epoch ends, preventing herding. Voting early in the epoch earns full reward weight (Tier 1), while voting after seeing epoch-1 results earns only ${protocolDocFacts.openPhaseWeightLabel} weight (Tier 2).`,
           },
           {
             type: "ordered",
             items: [
               "Commit: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress). The vote direction is encrypted with tlock -- hidden until the epoch ends.",
-              "Accumulate: More voters commit during the 20-minute epoch. No one can see anyone else's vote direction until the epoch ends.",
+              `Accumulate: More voters commit during the ${protocolDocFacts.blindPhaseDurationLabel} epoch. No one can see anyone else's vote direction until the epoch ends.`,
               "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
-              "Settle: Once at least 3 votes are revealed and all past-epoch votes are revealed (or the 60-minute reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.",
-              "Claim: Winners receive their original stake back plus an epoch-weighted share of the losing pool (Tier 1 = 4x reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.",
+              `Settle: Once at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.`,
+              `Claim: Winners receive their original stake back plus an epoch-weighted share of the losing pool (Tier 1 = ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.`,
             ],
           },
           {
@@ -172,15 +177,15 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the epoch ends. Each 20-minute epoch defines a reward tier: Tier 1 (first epoch, blind) earns 100% weight; Tier 2+ (subsequent epochs, informed) earns 25% weight.",
+            text: `Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the epoch ends. Each ${protocolDocFacts.blindPhaseDurationLabel} epoch defines a reward tier: Tier 1 (first epoch, blind) earns ${protocolDocFacts.blindPhaseWeightLabel} weight; Tier 2+ (subsequent epochs, informed) earns ${protocolDocFacts.openPhaseWeightLabel} weight.`,
           },
           {
             type: "ordered",
             items: [
               "Commit (any time during the round): Choose UP or DOWN. The UI encrypts your direction and stake with tlock (commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress)). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
-              "Epoch ends (every 20 minutes): The drand beacon publishes a randomness value. The keeper fetches it, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.",
-              "Settlement: After at least 3 votes are revealed and all past-epoch votes are revealed (or the 60-minute reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.",
-              "Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed 5% rebate. Content submitters may claim a separate submitter reward.",
+              `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
+              `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.`,
+              `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. Content submitters may claim a separate submitter reward.`,
             ],
           },
         ],
@@ -211,14 +216,14 @@ export const SECTIONS: Section[] = [
               rows: [
                 [
                   "Committed",
-                  "Stake locked, direction hidden (Tier 1 = 100% weight, Tier 2 = 25% weight)",
+                  `Stake locked, direction hidden (Tier 1 = ${protocolDocFacts.blindPhaseWeightLabel} weight, Tier 2 = ${protocolDocFacts.openPhaseWeightLabel} weight)`,
                   "Instant",
                   "None  -- wait for epoch to end",
                 ],
                 [
                   "Epoch ended",
                   "Keeper normally reveals votes via drand; users can self-reveal if needed",
-                  "~20 min per epoch",
+                  `${protocolDocFacts.blindPhaseDurationLabel} per epoch`,
                   "Usually none  -- fallback reveal exists",
                 ],
                 ["Settled", "Rewards calculated and claimable", "--", "Revealed voters claim rewards or rebates"],
@@ -234,7 +239,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement requires at least 3 voters revealed (minVoters threshold). It is only allowed once all past-epoch votes are revealed or their 60-minute reveal grace period has expired. A lightweight keeper service normally handles reveal, settlement, reveal-failed finalization, and cleanup automatically, but connected users also have a small manual fallback page if keeper reveal appears delayed. Winners receive their original stake plus an epoch-weighted share of the losing pool, and revealed losers can later reclaim a fixed 5% rebate.",
+            text: `Settlement requires at least ${protocolDocFacts.minVotersLabel} voters revealed (minVoters threshold). It is only allowed once all past-epoch votes are revealed or their ${protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. A lightweight keeper service normally handles reveal, settlement, reveal-failed finalization, and cleanup automatically, but connected users also have a small manual fallback page if keeper reveal appears delayed. Winners receive their original stake plus an epoch-weighted share of the losing pool, and revealed losers can later reclaim a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate.`,
           },
         ],
       },
@@ -249,20 +254,15 @@ export const SECTIONS: Section[] = [
             type: "table",
             data: {
               headers: ["Recipient", "Share"],
-              rows: [
-                ["Revealed losing voters", "5% of raw losing stake"],
-                ["Winning voters (content-specific)", "82% of the remaining 95%"],
-                ["Content submitter", "10% of the remaining 95%"],
-                ["Consensus subsidy reserve", "5% of the remaining 95%"],
-                ["Frontend operators", "1% of the remaining 95%"],
-                ["Category submitter", "1% of the remaining 95%"],
-                ["Treasury", "1% of the remaining 95%"],
-              ],
+              rows: whitepaperRewardSplitRows.map(([recipient, share]) => [
+                recipient === "Content-specific voter pool" ? "Winning voters (content-specific)" : recipient,
+                share,
+              ]),
             },
           },
           {
             type: "paragraph",
-            text: "A revealed losing vote can reclaim 5% of its original stake. The remaining losing pool then feeds the content-specific reward split: the 82% voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have 25% weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The 5% consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool).",
+            text: `A revealed losing vote can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of its original stake. The remaining losing pool then feeds the content-specific reward split: the 82% voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have ${protocolDocFacts.openPhaseWeightLabel} weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The 5% consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool).`,
           },
         ],
       },
@@ -271,7 +271,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo's parimutuel voting mechanism can be modeled as a game. Let N voters each choose a direction d_i in {UP, DOWN}, a stake s_i in [1, 100], and an epoch tier t_i in {1, 2+}. Each voter has an epoch-weighted effective stake: e_i = s_i when t_i = 1 (Tier 1, blind epoch), or e_i = s_i * 0.25 when t_i >= 2 (Tier 2+, saw prior results). The win condition uses weighted pools: upWins iff sum(e_i : d_i = UP) > sum(e_i : d_i = DOWN). Let W_e denote the total effective stake on the winning side and L the total raw stake on the losing side. Revealed losers reclaim 5% of L, and the voter pool receives 82% of the remaining 95% of L, distributed proportionally by e_i / W_e.",
+            text: `Curyo's parimutuel voting mechanism can be modeled as a game. Let N voters each choose a direction d_i in {UP, DOWN}, a stake s_i in [1, 100], and an epoch tier t_i in {1, 2+}. Each voter has an epoch-weighted effective stake: e_i = s_i when t_i = 1 (Tier 1, blind epoch), or e_i = s_i * 0.25 when t_i >= 2 (Tier 2+, saw prior results). The win condition uses weighted pools: upWins iff sum(e_i : d_i = UP) > sum(e_i : d_i = DOWN). Let W_e denote the total effective stake on the winning side and L the total raw stake on the losing side. Revealed losers reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of L, and the voter pool receives ${protocolDocFacts.voterPoolShareLabel} of L, distributed proportionally by e_i / W_e.`,
           },
           {
             type: "sub_heading",
@@ -312,7 +312,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "If each voter has a private signal with accuracy p > 0.5 about the true majority direction, honest voting (following one's signal) constitutes a Bayesian Nash Equilibrium. The tlock scheme enforces that votes committed before epoch end are cryptographically hidden from other voters, ensuring genuine independence. Deviating from honest voting moves a voter from the expected-winning pool to the expected-losing pool, sacrificing their full stake. For p > 0.5, the expected gain from honest voting dominates any deviation. The epoch-weight penalty (4:1 ratio) further strengthens this equilibrium by rewarding early honest voters disproportionately, making bandwagoning (waiting to see epoch-1 results) costly in reward terms.",
+            text: `If each voter has a private signal with accuracy p > 0.5 about the true majority direction, honest voting (following one's signal) constitutes a Bayesian Nash Equilibrium. The tlock scheme enforces that votes committed before epoch end are cryptographically hidden from other voters, ensuring genuine independence. Deviating from honest voting moves a voter from the expected-winning pool to the expected-losing pool, sacrificing their full stake. For p > 0.5, the expected gain from honest voting dominates any deviation. The epoch-weight penalty (${protocolDocFacts.earlyVoterAdvantageLabel} ratio) further strengthens this equilibrium by rewarding early honest voters disproportionately, making bandwagoning (waiting to see epoch-1 results) costly in reward terms.`,
           },
           {
             type: "sub_heading",
@@ -365,7 +365,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38.95 cREP reward pool (82% of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately 4x the reward per cREP compared to each Tier-2 voter, confirming the 4:1 weight ratio. The epoch-weighted win condition test: 1 Tier-1 DOWN voter (100 cREP, effectiveStake 100) beats 3 Tier-2 UP voters (100 cREP each, effectiveStake 25 each = 75 total) -- DOWN wins despite raw majority being UP.",
+            text: `Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38.95 cREP reward pool (82% of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} the reward per cREP compared to each Tier-2 voter, confirming the ${protocolDocFacts.earlyVoterAdvantageLabel} weight ratio. The epoch-weighted win condition test: 1 Tier-1 DOWN voter (100 cREP, effectiveStake 100) beats 3 Tier-2 UP voters (100 cREP each, effectiveStake 25 each = 75 total) -- DOWN wins despite raw majority being UP.`,
           },
           {
             type: "sub_heading",
@@ -424,7 +424,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Each content item has independent voting rounds. A round begins when the first vote is committed. Voters commit encrypted votes at any time; the direction is hidden until the epoch ends. Each 20-minute period is an epoch -- commitments made within the first epoch are Tier 1 (100% reward weight), while later commitments are Tier 2 (25% weight).",
+            text: `Each content item has independent voting rounds. A round begins when the first vote is committed. Voters commit encrypted votes at any time; the direction is hidden until the epoch ends. Each ${protocolDocFacts.blindPhaseDurationLabel} period is an epoch -- commitments made within the first epoch are Tier 1 (${protocolDocFacts.blindPhaseWeightLabel} reward weight), while later commitments are Tier 2 (${protocolDocFacts.openPhaseWeightLabel} weight).`,
           },
           {
             type: "paragraph",
@@ -432,7 +432,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Settlement conditions: at least 3 votes must be revealed (minVoters), and all past-epoch votes must be revealed unless their 60-minute reveal grace period has expired. Rounds that expire (7 days) below commit quorum are cancelled and refundable, while rounds that hit commit quorum but still miss reveal quorum can finalize as RevealFailed after the final reveal grace deadline.",
+            text: `Settlement conditions: at least ${protocolDocFacts.minVotersLabel} votes must be revealed (minVoters), and all past-epoch votes must be revealed unless their ${protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired. Rounds that expire (${protocolDocFacts.maxRoundDurationLabel}) below commit quorum are cancelled and refundable, while rounds that hit commit quorum but still miss reveal quorum can finalize as RevealFailed after the final reveal grace deadline.`,
           },
         ],
       },
@@ -479,7 +479,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Curyo uses tlock (time-lock encryption based on the drand randomness beacon) to reduce the reveal burden. When a voter commits, the direction is encrypted to a future timestamp -- the end of the current 20-minute epoch. After the epoch ends, the drand beacon publishes a verifiable random value that enables off-chain decryption. The keeper normally fetches that beacon data and calls revealVoteByCommitKey() on-chain for unrevealed votes it can decrypt. In normal use, most voters do not need to take any additional action after their initial commit, although the app also exposes a small manual fallback if an auto-reveal appears delayed.",
+            text: `Curyo uses tlock (time-lock encryption based on the drand randomness beacon) to reduce the reveal burden. When a voter commits, the direction is encrypted to a future timestamp -- the end of the current ${protocolDocFacts.blindPhaseDurationLabel} epoch. After the epoch ends, the drand beacon publishes a verifiable random value that enables off-chain decryption. The keeper normally fetches that beacon data and calls revealVoteByCommitKey() on-chain for unrevealed votes it can decrypt. In normal use, most voters do not need to take any additional action after their initial commit, although the app also exposes a small manual fallback if an auto-reveal appears delayed.`,
           },
         ],
       },
@@ -488,15 +488,25 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Each 20-minute epoch defines a reward tier. Voters who commit during the first epoch (before any results are visible) earn Tier 1 weight (100%). Voters who commit in subsequent epochs (after seeing epoch-1 results) earn Tier 2 weight (25%). This 4:1 ratio creates a strong incentive to vote early and honestly, before any herding signal exists.",
+            text: `Each ${protocolDocFacts.blindPhaseDurationLabel} epoch defines a reward tier. Voters who commit during the first epoch (before any results are visible) earn Tier 1 weight (${protocolDocFacts.blindPhaseWeightLabel}). Voters who commit in subsequent epochs (after seeing epoch-1 results) earn Tier 2 weight (${protocolDocFacts.openPhaseWeightLabel}). This ${protocolDocFacts.earlyVoterAdvantageLabel} ratio creates a strong incentive to vote early and honestly, before any herding signal exists.`,
           },
           {
             type: "table",
             data: {
               headers: ["Tier", "Epoch", "Reward Weight", "Information Available"],
               rows: [
-                ["Tier 1", "Epoch 1 (0 to 20 min)", "100%", "None  -- all votes hidden by tlock"],
-                ["Tier 2", "Epoch 2+ (20+ min)", "25%", "Epoch 1 results visible (directions + stakes revealed)"],
+                [
+                  "Tier 1",
+                  `Epoch 1 (0 to ${protocolDocFacts.blindPhaseDurationLabel})`,
+                  protocolDocFacts.blindPhaseWeightLabel,
+                  "None  -- all votes hidden by tlock",
+                ],
+                [
+                  "Tier 2",
+                  `Epoch 2+ (after ${protocolDocFacts.blindPhaseDurationLabel})`,
+                  protocolDocFacts.openPhaseWeightLabel,
+                  "Epoch 1 results visible (directions + stakes revealed)",
+                ],
               ],
             },
           },
@@ -535,26 +545,13 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Settlement requires at least 3 votes to be revealed (minVoters). Additionally, all votes from past epochs must be revealed before settlement is allowed during the reveal grace period (default: 60 minutes after each epoch ends). This prevents selective revelation attacks where an attacker reveals only favorable votes. After the grace period, any remaining unrevealed votes no longer block settlement and are forfeited post-settlement.",
+            text: `Settlement requires at least ${protocolDocFacts.minVotersLabel} votes to be revealed (minVoters). Additionally, all votes from past epochs must be revealed before settlement is allowed during the reveal grace period (default: ${protocolDocFacts.revealGracePeriodLabel} after each epoch ends). This prevents selective revelation attacks where an attacker reveals only favorable votes. After the grace period, any remaining unrevealed votes no longer block settlement and are forfeited post-settlement.`,
           },
           {
             type: "table",
             data: {
               headers: ["Parameter", "Value", "Effect"],
-              rows: [
-                ["epochDuration", "20 minutes", "Duration of each reward tier"],
-                ["minVoters", "3", "Minimum revealed votes required for settlement"],
-                [
-                  "maxDuration",
-                  "7 days",
-                  "Maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
-                ],
-                [
-                  "revealGracePeriod",
-                  "60 minutes",
-                  "Time after each epoch during which all votes must be revealed before settlement",
-                ],
-              ],
+              rows: whitepaperSettlementConfigRows,
             },
           },
           {
@@ -587,10 +584,10 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Cryptographic anti-herding: tlock ensures votes are provably hidden until the epoch ends, enforced by the drand randomness beacon. No voter can see others' directions during epoch 1.",
-              "Economic anti-herding: Tier 2 voters (who saw epoch-1 results) earn only 25% reward weight per cREP. Herding is economically unattractive regardless of information advantage.",
+              `Economic anti-herding: Tier 2 voters (who saw epoch-1 results) earn only ${protocolDocFacts.openPhaseWeightLabel} reward weight per cREP. Herding is economically unattractive regardless of information advantage.`,
               "Epoch-weighted win condition: A flood of late Tier-2 voters cannot flip a Tier-1 consensus  -- 3 Tier-2 voters at 100 cREP each (effective stake 25 each = 75 total) cannot override 1 Tier-1 voter at 100 cREP (effective stake 100). Even 4 Tier-2 voters at 100 cREP each (effective 100 total) only produce a tie.",
               "Keeper is not trusted: The reveal transaction is open to any caller who knows the plaintext `(isUp, salt)`. In practice the keeper derives that plaintext off-chain after epoch end. The keeper is a convenience, not a gatekeeper.",
-              "Anti-selective-revelation: The contract tracks unrevealed vote counts per epoch. Settlement is blocked during the reveal grace period (60 minutes) if any past-epoch votes remain unrevealed, forcing the keeper to reveal all votes before anyone can settle. After the grace period, any unrevealed votes are forfeited (past epoch) or refunded (current epoch) post-settlement.",
+              `Anti-selective-revelation: The contract tracks unrevealed vote counts per epoch. Settlement is blocked during the reveal grace period (${protocolDocFacts.revealGracePeriodLabel}) if any past-epoch votes remain unrevealed, forcing the keeper to reveal all votes before anyone can settle. After the grace period, any unrevealed votes are forfeited (past epoch) or refunded (current epoch) post-settlement.`,
               "Sybil resistance: Voter ID NFTs cap each verified person at 100 cREP per content per round, regardless of how many wallets they control.",
               "Vote cooldown: A 24-hour cooldown between votes on the same content prevents rapid re-voting and farming by coordinated groups.",
             ],
@@ -606,7 +603,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Rounds require a minimum of 3 revealed votes (minVoters) to settle as contested. If 7 days pass below commit quorum, the round is cancelled and refundable. If commit quorum was reached but reveal quorum still never materializes by the final reveal grace deadline, the round can finalize as RevealFailed: revealed votes remain refundable, while unrevealed stakes are forfeited in cleanup. If all voters vote in the same direction, the round settles as a consensus and voters receive a subsidy payout.",
+            text: `Rounds require a minimum of ${protocolDocFacts.minVotersLabel} revealed votes (minVoters) to settle as contested. If ${protocolDocFacts.maxRoundDurationLabel} pass below commit quorum, the round is cancelled and refundable. If commit quorum was reached but reveal quorum still never materializes by the final reveal grace deadline, the round can finalize as RevealFailed: revealed votes remain refundable, while unrevealed stakes are forfeited in cleanup. If all voters vote in the same direction, the round settles as a consensus and voters receive a subsidy payout.`,
           },
           {
             type: "sub_heading",
@@ -614,7 +611,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The reveal transaction is open to any caller who knows the plaintext `(isUp, salt)` for a commit. In normal operation the keeper derives that plaintext off-chain from the tlock ciphertext after epoch end. Connected users can also self-reveal from the fallback flow. If the keeper is offline, settlement is delayed until an honest party reveals the needed votes or the reveal grace period expires. Below commit quorum the round can still cancel; after commit quorum, missing reveal quorum can end in RevealFailed and unrevealed stakes are forfeited during cleanup.",
+            text: `The reveal transaction is open to any caller who knows the plaintext \`(isUp, salt)\` for a commit. In normal operation the keeper derives that plaintext off-chain from the tlock ciphertext after epoch end. Connected users can also self-reveal from the fallback flow. If the keeper is offline, settlement is delayed until an honest party reveals the needed votes or the reveal grace period expires. Below commit quorum the round can still cancel; after commit quorum, missing reveal quorum can end in RevealFailed and unrevealed stakes are forfeited during cleanup.`,
           },
           {
             type: "sub_heading",
@@ -630,7 +627,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "During the reveal grace period (60 minutes after each epoch ends), settlement is blocked if any past-epoch votes remain unrevealed. This prevents selective revelation attacks. Once all past-epoch votes are revealed (or the grace period expires), settlement proceeds. Post-settlement, votes whose revealableAfter timestamp falls before the settlement time are considered forfeited  -- their stake goes to treasury. Votes whose revealableAfter is after the settlement time (committed in the current epoch) are refunded in full, as they could not yet be revealed.",
+            text: `During the reveal grace period (${protocolDocFacts.revealGracePeriodLabel} after each epoch ends), settlement is blocked if any past-epoch votes remain unrevealed. This prevents selective revelation attacks. Once all past-epoch votes are revealed (or the grace period expires), settlement proceeds. Post-settlement, votes whose revealableAfter timestamp falls before the settlement time are considered forfeited  -- their stake goes to treasury. Votes whose revealableAfter is after the settlement time (committed in the current epoch) are refunded in full, as they could not yet be revealed.`,
           },
           {
             type: "sub_heading",
@@ -796,7 +793,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform reveal, settlement, reveal-failed finalization, and post-settlement cleanup work. The contract enforces a reveal grace period (60 minutes) during which all past-epoch votes must be revealed before settlement is allowed, preventing selective revelation attacks. Round finalization and cleanup remain permissionless  -- any account can call the relevant functions.",
+            text: `Anyone can run a keeper. Keepers are lightweight services that monitor the blockchain for active rounds and perform reveal, settlement, reveal-failed finalization, and post-settlement cleanup work. The contract enforces a reveal grace period (${protocolDocFacts.revealGracePeriodLabel}) during which all past-epoch votes must be revealed before settlement is allowed, preventing selective revelation attacks. Round finalization and cleanup remain permissionless  -- any account can call the relevant functions.`,
           },
           {
             type: "paragraph",
@@ -828,20 +825,19 @@ export const SECTIONS: Section[] = [
             type: "table",
             data: {
               headers: ["Recipient", "Share"],
-              rows: [
-                ["Revealed losing voters (rebate)", "5% of raw losing stake"],
-                ["Winning voters (content-specific)", "82% of the remaining 95%"],
-                ["Content submitter", "10% of the remaining 95%"],
-                ["Consensus subsidy reserve", "5% of the remaining 95%"],
-                ["Frontend operators", "1% of the remaining 95%"],
-                ["Category submitters", "1% of the remaining 95%"],
-                ["Treasury", "1% of the remaining 95%"],
-              ],
+              rows: whitepaperRewardSplitRows.map(([recipient, share]) => [
+                recipient === "Revealed losing voters"
+                  ? "Revealed losing voters (rebate)"
+                  : recipient === "Content-specific voter pool"
+                    ? "Winning voters (content-specific)"
+                    : recipient,
+                share,
+              ]),
             },
           },
           {
             type: "paragraph",
-            text: "A revealed losing vote first recovers a fixed 5% rebate. The 82% voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (100% of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn 25% weight. This 4:1 ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The 5% consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The 1% treasury fee goes to the governance timelock.",
+            text: `A revealed losing vote first recovers a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. The 82% voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (${protocolDocFacts.blindPhaseWeightLabel} of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn ${protocolDocFacts.openPhaseWeightLabel} weight. This ${protocolDocFacts.earlyVoterAdvantageLabel} ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The 5% consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The 1% treasury fee goes to the governance timelock.`,
           },
         ],
       },
@@ -854,7 +850,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with 25% weight vs 100% for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter participation rewards flow only to genuine, successful curation activity while submitter bonuses still bootstrap supply at submission time.",
+            text: `By deferring voter rewards to settlement, the full vote stake stays at risk until the round completes. Combined with the epoch-weighted reward structure (which penalizes late entrants with ${protocolDocFacts.openPhaseWeightLabel} weight vs ${protocolDocFacts.blindPhaseWeightLabel} for early voters) and deterministic epoch-based settlement (which prevents strategic timing of entries), the deferred model ensures voter participation rewards flow only to genuine, successful curation activity while submitter bonuses still bootstrap supply at submission time.`,
           },
         ],
       },
@@ -1015,16 +1011,20 @@ export const SECTIONS: Section[] = [
               rows: [
                 [
                   "epochDuration",
-                  "20 minutes",
-                  "Duration of each reward tier; commits in epoch 1 earn 100% weight, later epochs 25%",
+                  protocolDocFacts.blindPhaseDurationLabel,
+                  `Duration of each reward tier; commits in epoch 1 earn ${protocolDocFacts.blindPhaseWeightLabel} weight, later epochs ${protocolDocFacts.openPhaseWeightLabel}`,
                 ],
                 [
                   "maxDuration",
-                  "7 days",
+                  protocolDocFacts.maxRoundDurationLabel,
                   "Maximum round lifetime  -- below commit quorum rounds cancel; commit-quorum rounds can end as RevealFailed",
                 ],
-                ["minVoters", "3", "Minimum revealed votes required before settlement is allowed"],
-                ["maxVoters", "1,000", "Per-round cap on total commits"],
+                [
+                  "minVoters",
+                  protocolDocFacts.minVotersLabel,
+                  "Minimum revealed votes required before settlement is allowed",
+                ],
+                ["maxVoters", protocolDocFacts.maxVotersLabel, "Per-round cap on total commits"],
                 ["Rating smoothing (b_r)", "50 cREP (hardcoded)", "Controls rating sensitivity to individual votes"],
                 ["Vote stake", "1-100 cREP", "Stake range per vote, capped per Voter ID"],
                 ["Vote cooldown", "24 hours", "Wait time before voting on the same content again"],
@@ -1033,7 +1033,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The epoch-based mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (20 minutes for full weight). Settlement becomes available once minVoters is reached and past-epoch reveal constraints are satisfied. The maxDuration hard cap prevents indefinite rounds. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual revealed votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.",
+            text: `The epoch-based mechanism ensures rounds complete within a bounded timeframe. The epochDuration defines the reward tier window (${protocolDocFacts.blindPhaseDurationLabel} for full weight). Settlement becomes available once minVoters is reached and past-epoch reveal constraints are satisfied. The maxDuration hard cap prevents indefinite rounds. The rating smoothing parameter b_r is hardcoded and controls how responsive the content rating is to individual revealed votes. As the platform grows, governance can adjust the configurable parameters to optimize for the observed voter population.`,
           },
         ],
       },
@@ -1232,7 +1232,7 @@ export const SECTIONS: Section[] = [
             type: "bullets",
             items: [
               "Economic commitment  -- Each rating is backed by a token stake, making systematic manipulation expensive relative to the signal produced.",
-              "Economic independence  -- tlock encryption hides votes during epoch 1, eliminating herd signals. Epoch-weighted rewards (4:1 ratio) further penalize late followers, incentivizing genuine early assessment over copying.",
+              `Economic independence  -- tlock encryption hides votes during epoch 1, eliminating herd signals. Epoch-weighted rewards (${protocolDocFacts.earlyVoterAdvantageLabel} ratio) further penalize late followers, incentivizing genuine early assessment over copying.`,
               "Sybil resistance  -- Passport-verified Voter IDs limit each human to one identity with a capped stake per content, preventing bot farms from flooding the signal.",
               "Verifiability  -- All votes, stakes, and outcomes are recorded on-chain with cryptographic integrity, enabling third-party audit and reproducibility.",
             ],

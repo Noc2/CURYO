@@ -4,6 +4,7 @@ import { FaucetHalvingChart } from "~~/components/docs/FaucetHalvingChart";
 import { FaucetTierChart } from "~~/components/docs/FaucetTierChart";
 import { RewardSplitChart } from "~~/components/docs/RewardSplitChart";
 import { TokenAllocationChart } from "~~/components/docs/TokenAllocationChart";
+import { protocolDocFacts, rewardSplitTableRows } from "~~/lib/docs/protocolFacts";
 
 const Tokenomics = () => {
   return (
@@ -357,45 +358,25 @@ const Tokenomics = () => {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Revealed losing voters (rebate)</td>
-              <td className="font-mono">5% of raw losing stake</td>
-            </tr>
-            <tr>
-              <td>Voter pool (content-specific)</td>
-              <td className="font-mono">82% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Consensus subsidy reserve</td>
-              <td className="font-mono">5% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Content submitter</td>
-              <td className="font-mono">10% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Frontend operators</td>
-              <td className="font-mono">1% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Category submitters</td>
-              <td className="font-mono">1% of the remaining 95%</td>
-            </tr>
-            <tr>
-              <td>Treasury</td>
-              <td className="font-mono">1% of the remaining 95%</td>
-            </tr>
+            {rewardSplitTableRows.map(([recipient, share]) => (
+              <tr key={recipient}>
+                <td>{recipient === "Content-specific voter pool" ? "Voter pool (content-specific)" : recipient}</td>
+                <td className="font-mono">{share}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
       <p>
-        Revealed losers can reclaim <strong>5%</strong> of their original stake. The remaining losing pool is split so
-        the 82% voter share goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
-        <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase voters earn 4x
-        more per cREP than open phase voters. An additional 5% of the remaining pool goes to a consensus subsidy
-        reserve. Because each content item has independent rounds that resolve on their own timeline, rewards are
-        claimable immediately after resolution. The 1% treasury fee goes to the governance timelock.
+        Revealed losers can reclaim <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of their
+        original stake. The remaining losing pool is split so the {protocolDocFacts.voterPoolShareLabel} voter share
+        goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
+        <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase voters earn{" "}
+        {protocolDocFacts.earlyVoterAdvantageLabel} more per cREP than open phase voters. An additional{" "}
+        {protocolDocFacts.consensusShareLabel} goes to a consensus subsidy reserve. Because each content item has
+        independent rounds that resolve on their own timeline, rewards are claimable immediately after resolution. The
+        1% treasury fee goes to the governance timelock.
       </p>
 
       <hr />
