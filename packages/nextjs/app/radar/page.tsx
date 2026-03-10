@@ -7,10 +7,12 @@ import { useAccount } from "wagmi";
 import { ArrowTopRightOnSquareIcon, BellAlertIcon, ClockIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
+import { useFeaturedToday } from "~~/hooks/useFeaturedToday";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { type NotificationPreferences, useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { useRadarFeed } from "~~/hooks/useRadarFeed";
 import {
+  type PonderFeaturedTodayItem,
   type PonderRadarResolutionItem,
   type PonderRadarSettlingItem,
   type PonderRadarSubmissionItem,
@@ -196,6 +198,36 @@ function ResolutionCard({ item }: { item: PonderRadarResolutionItem }) {
   );
 }
 
+function FeaturedTodayCard({ item }: { item: PonderFeaturedTodayItem }) {
+  return (
+    <Link
+      href={`/vote?content=${item.contentId}`}
+      className="group flex flex-col gap-3 rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium uppercase tracking-wide text-primary/80">{item.featuredReason}</p>
+          <h3 className="mt-1 text-lg font-semibold leading-snug text-white group-hover:text-primary">{item.goal}</h3>
+        </div>
+        <ArrowTopRightOnSquareIcon className="mt-1 h-4 w-4 shrink-0 text-base-content/35 transition-colors group-hover:text-primary" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/45">
+        <span>{getDomainLabel(item.url)}</span>
+        <span>•</span>
+        <span>{item.voteCount} votes</span>
+      </div>
+
+      <SubmitterBadge
+        address={item.submitter}
+        username={item.profileName}
+        profileImageUrl={item.profileImageUrl}
+        showAddress={Boolean(item.profileName)}
+      />
+    </Link>
+  );
+}
+
 function NotificationPreferenceToggle({
   label,
   description,
@@ -230,6 +262,7 @@ export default function RadarPage() {
   const { address } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { radar, isLoading, watchedCount, followedCategoryCount } = useRadarFeed(address);
+  const { items: featuredToday } = useFeaturedToday(4);
   const { followedWallets, toggleFollow, isPending } = useFollowedProfiles(address);
   const { preferences, isSaving, updatePreference } = useNotificationPreferences(address);
 
@@ -336,6 +369,19 @@ export default function RadarPage() {
             </div>
           </div>
         </section>
+
+        {featuredToday.length > 0 ? (
+          <ModuleCard
+            title="Featured Today"
+            description="A few active rounds that look especially worth paying attention to right now."
+          >
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {featuredToday.map(item => (
+                <FeaturedTodayCard key={item.id} item={item} />
+              ))}
+            </div>
+          </ModuleCard>
+        ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6">

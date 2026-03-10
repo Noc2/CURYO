@@ -184,6 +184,22 @@ export interface PonderRadarResponse {
   recommendedContent: PonderRadarSubmissionItem[];
 }
 
+export interface PonderFeaturedTodayItem {
+  id: string;
+  contentId: string;
+  roundId: string;
+  goal: string;
+  url: string;
+  submitter: string;
+  categoryId: string;
+  voteCount: number;
+  totalStake: string;
+  roundStartTime: string | null;
+  profileName: string | null;
+  profileImageUrl: string | null;
+  featuredReason: string;
+}
+
 export interface PonderSubmissionStakes {
   activeCount: number;
   submitter: string;
@@ -373,6 +389,10 @@ export const ponderApi = {
 
   getRadar(address: string, params?: { watched?: string; categories?: string }) {
     return ponderGet<PonderRadarResponse>(`/radar/${address}`, params);
+  },
+
+  getFeaturedToday(limit?: string) {
+    return ponderGet<{ items: PonderFeaturedTodayItem[] }>("/featured-today", { limit });
   },
 
   getLeaderboard(type?: string, limit?: string) {

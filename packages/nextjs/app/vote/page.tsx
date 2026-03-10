@@ -2,6 +2,7 @@
 
 import { type KeyboardEvent, Suspense, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, motion } from "framer-motion";
@@ -22,6 +23,7 @@ import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
+import { useFeaturedToday } from "~~/hooks/useFeaturedToday";
 import { useFollowedCategories } from "~~/hooks/useFollowedCategories";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
@@ -101,6 +103,7 @@ const HomeInner = () => {
     limit: feedRequestLimit,
     sortBy: "newest",
   });
+  const { items: featuredToday } = useFeaturedToday(4);
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
   const voteCounts = useCategoryPopularity(feed);
@@ -717,6 +720,47 @@ const HomeInner = () => {
                 </option>
               ))}
             </select>
+          </div>
+        ) : null}
+
+        {!isSearchMode && featuredToday.length > 0 ? (
+          <div className="mb-5">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-wide text-primary/80">Featured Today</p>
+                <p className="text-sm text-base-content/55">Active rounds worth a look right now.</p>
+              </div>
+              <Link href="/radar" className="text-sm font-medium text-primary hover:text-primary/80">
+                Open Radar
+              </Link>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {featuredToday.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleSelectCard(BigInt(item.contentId), BigInt(item.categoryId))}
+                  className="group min-w-[250px] max-w-[280px] rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 text-left transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">
+                        {item.featuredReason}
+                      </p>
+                      <h3 className="mt-1 line-clamp-2 text-base font-semibold text-white group-hover:text-primary">
+                        {item.goal}
+                      </h3>
+                    </div>
+                    <ShareIcon className="mt-0.5 h-4 w-4 shrink-0 text-base-content/30" />
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-base-content/45">
+                    <span>{item.voteCount} votes</span>
+                    <span>•</span>
+                    <span>{detectPlatform(item.url)}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
 

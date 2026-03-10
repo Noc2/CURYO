@@ -798,6 +798,73 @@ app.get("/radar/:address", async (c) => {
   });
 });
 
+app.get("/featured-today", async (c) => {
+  const limit = safeLimit(c.req.query("limit"), RADAR_MODULE_LIMIT, 12);
+  const activeLimit = Math.max(2, Math.ceil(limit / 2));
+  const earlyLimit = Math.max(2, limit - activeLimit + 1);
+
+  const selectFields = {
+    id: round.id,
+    contentId: round.contentId,
+    roundId: round.roundId,
+    goal: content.goal,
+    url: content.url,
+    submitter: content.submitter,
+    categoryId: content.categoryId,
+    voteCount: round.voteCount,
+    totalStake: round.totalStake,
+    roundStartTime: round.startTime,
+    profileName: profile.name,
+    profileImageUrl: profile.imageUrl,
+  };
+
+  const activeDebates = await db
+    .select(selectFields)
+    .from(round)
+    .innerJoin(content, eq(round.contentId, content.id))
+    .leftJoin(profile, eq(content.submitter, profile.address))
+    .where(and(
+      eq(round.state, ROUND_STATE.Open),
+      eq(content.status, 0),
+      gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+    ))
+    .orderBy(desc(round.totalStake), desc(round.voteCount), desc(round.startTime))
+    .limit(activeLimit);
+
+  const earlySignal = await db
+    .select(selectFields)
+    .from(round)
+    .innerJoin(content, eq(round.contentId, content.id))
+    .leftJoin(profile, eq(content.submitter, profile.address))
+    .where(and(
+      eq(round.state, ROUND_STATE.Open),
+      eq(content.status, 0),
+      sql`${round.voteCount} < ${DEFAULT_ROUND_CONFIG.minVoters}`,
+    ))
+    .orderBy(desc(round.startTime), desc(round.totalStake))
+    .limit(earlyLimit);
+
+  const seen = new Set<string>();
+  const items = [...activeDebates, ...earlySignal]
+    .filter(item => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    })
+    .slice(0, limit)
+    .map(item => ({
+      ...item,
+      featuredReason:
+        item.voteCount >= DEFAULT_ROUND_CONFIG.minVoters
+          ? "Active debate"
+          : item.voteCount > 0
+            ? "Needs early signal"
+            : "Fresh round",
+    }));
+
+  return jsonBig(c, { items });
+});
+
 // ============================================================
 // LEADERBOARD
 // ============================================================
