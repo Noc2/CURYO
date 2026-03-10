@@ -39,6 +39,9 @@ Key environment variables (see `.env.example` for the full list):
 | `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata          |
 | `DATABASE_URL`                          | SQLite/Turso database URL (required in production)   |
 | `DATABASE_AUTH_TOKEN`                   | Turso auth token (production only)                   |
+| `RESEND_API_KEY`                        | Resend API key for email notification delivery       |
+| `RESEND_FROM_EMAIL`                     | Verified sender address/domain used by Resend        |
+| `APP_URL`                               | Public app URL used in verification and email links  |
 | `NEXT_PUBLIC_PONDER_URL`                | Public Ponder indexer URL (required in production)   |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
 | `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                 |

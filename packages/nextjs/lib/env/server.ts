@@ -21,3 +21,15 @@ export function getDatabaseConfig() {
 export function getTmdbApiKey(): string | undefined {
   return readEnv("TMDB_API_KEY") ?? readEnv("NEXT_PUBLIC_TMDB_API_KEY");
 }
+
+export function getOptionalAppUrl(): string | undefined {
+  return readEnv("APP_URL") ?? readEnv("NEXT_PUBLIC_APP_URL") ?? (!isProduction ? "http://localhost:3000" : undefined);
+}
+
+export function getResendConfig() {
+  return {
+    apiKey: readEnv("RESEND_API_KEY"),
+    fromEmail: readEnv("RESEND_FROM_EMAIL"),
+    appUrl: getOptionalAppUrl(),
+  };
+}

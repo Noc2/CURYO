@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { BellAlertIcon } from "@heroicons/react/24/outline";
+import { BellAlertIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
+import { useEmailNotificationSettings } from "~~/hooks/useEmailNotificationSettings";
 import { type NotificationPreferences, useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
+import { type EmailNotificationSettingsPayload } from "~~/lib/notifications/emailShared";
 import { notification } from "~~/utils/scaffold-eth";
 
 const NOTIFICATION_OPTIONS: {
@@ -70,8 +73,24 @@ function NotificationPreferenceToggle({
 
 export function NotificationSettingsPanel({ address }: { address?: string }) {
   const { openConnectModal } = useConnectModal();
+  const searchParams = useSearchParams();
+  const emailQueryStatus = searchParams.get("email");
   const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address);
+  const {
+    settings: emailSettings,
+    isLoading: isEmailLoading,
+    isSaving: isEmailSaving,
+    updateSettings: updateEmailSettings,
+  } = useEmailNotificationSettings(address);
   const [browserPermission, setBrowserPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [emailDraft, setEmailDraft] = useState("");
+  const [emailPreferenceDrafts, setEmailPreferenceDrafts] = useState<Omit<EmailNotificationSettingsPayload, "email">>({
+    roundResolved: false,
+    settlingSoonHour: false,
+    settlingSoonDay: false,
+    followedSubmission: false,
+    followedResolution: false,
+  });
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) {
@@ -81,6 +100,32 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
 
     setBrowserPermission(Notification.permission);
   }, []);
+
+  useEffect(() => {
+    setEmailDraft(emailSettings.email);
+    setEmailPreferenceDrafts({
+      roundResolved: emailSettings.roundResolved,
+      settlingSoonHour: emailSettings.settlingSoonHour,
+      settlingSoonDay: emailSettings.settlingSoonDay,
+      followedSubmission: emailSettings.followedSubmission,
+      followedResolution: emailSettings.followedResolution,
+    });
+  }, [
+    emailSettings.email,
+    emailSettings.followedResolution,
+    emailSettings.followedSubmission,
+    emailSettings.roundResolved,
+    emailSettings.settlingSoonDay,
+    emailSettings.settlingSoonHour,
+  ]);
+
+  useEffect(() => {
+    if (emailQueryStatus === "verified") {
+      notification.success("Email verified. Curyo can now send email notifications to that address.");
+    } else if (emailQueryStatus === "invalid") {
+      notification.error("That verification link is invalid or expired.");
+    }
+  }, [emailQueryStatus]);
 
   const handleTogglePreference = useCallback(
     async (key: keyof NotificationPreferences, value: boolean) => {
@@ -123,6 +168,51 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
     }
   }, []);
 
+  const hasEmail = emailDraft.trim().length > 0;
+  const emailPayload = useMemo<EmailNotificationSettingsPayload>(
+    () => ({
+      email: emailDraft.trim().toLowerCase(),
+      ...emailPreferenceDrafts,
+    }),
+    [emailDraft, emailPreferenceDrafts],
+  );
+
+  const emailDirty =
+    emailPayload.email !== emailSettings.email ||
+    emailPayload.roundResolved !== emailSettings.roundResolved ||
+    emailPayload.settlingSoonHour !== emailSettings.settlingSoonHour ||
+    emailPayload.settlingSoonDay !== emailSettings.settlingSoonDay ||
+    emailPayload.followedSubmission !== emailSettings.followedSubmission ||
+    emailPayload.followedResolution !== emailSettings.followedResolution;
+
+  const handleSaveEmailSettings = useCallback(async () => {
+    const result = await updateEmailSettings(emailPayload);
+
+    if (!result.ok) {
+      if (result.reason === "not_connected") {
+        openConnectModal?.();
+        return;
+      }
+
+      if (result.reason !== "rejected") {
+        notification.error(result.error || "Failed to update email notification settings");
+      }
+      return;
+    }
+
+    if (!emailPayload.email) {
+      notification.success("Email notifications removed");
+      return;
+    }
+
+    if (result.verificationSent) {
+      notification.success("Verification email sent");
+      return;
+    }
+
+    notification.success("Email notification settings updated");
+  }, [emailPayload, openConnectModal, updateEmailSettings]);
+
   if (!address) {
     return (
       <div className="surface-card rounded-3xl p-6 sm:p-8">
@@ -134,7 +224,7 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
             </div>
             <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h1>
             <p className="mt-3 text-base text-base-content/60">
-              Connect your wallet to choose which in-app and browser alerts you want to receive.
+              Connect your wallet to choose which in-app, browser, and email alerts you want to receive.
             </p>
           </div>
           <button
@@ -160,8 +250,7 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
             </div>
             <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h1>
             <p className="mt-3 text-base text-base-content/60">
-              Choose which alerts should appear in-app and through browser notifications. Email delivery will live here
-              too once it is enabled.
+              Choose which alerts should appear in-app, through browser notifications, or by email.
             </p>
           </div>
           <div className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3 text-sm text-base-content/60">
@@ -204,6 +293,93 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
               }}
             />
           ))}
+        </div>
+      </section>
+
+      <section className="surface-card rounded-3xl p-6 sm:p-8">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-base-content/[0.06] px-3 py-1 text-sm font-semibold uppercase tracking-wide text-base-content/65">
+              <EnvelopeIcon className="h-4 w-4" />
+              Email delivery
+            </div>
+            <h2 className="mt-3 text-xl font-semibold text-white">Email notifications</h2>
+            <p className="mt-1 text-sm text-base-content/55">
+              Add an email address, verify it once, and choose which alerts should also arrive in your inbox.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3 text-sm text-base-content/60">
+            {!emailSettings.email
+              ? "No email configured yet."
+              : emailSettings.verified
+                ? `Verified: ${emailSettings.email}`
+                : `Verification pending for ${emailSettings.email}`}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-base-content/65" htmlFor="notification-email">
+              Delivery email
+            </label>
+            <input
+              id="notification-email"
+              type="email"
+              value={emailDraft}
+              onChange={event => setEmailDraft(event.target.value)}
+              placeholder="you@example.com"
+              className="input input-bordered w-full bg-base-200/50 text-base"
+              autoComplete="email"
+            />
+            <p className="mt-2 text-sm text-base-content/45">
+              Clearing the address removes all email notifications for this wallet.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {NOTIFICATION_OPTIONS.map(option => (
+              <NotificationPreferenceToggle
+                key={`email-${option.key}`}
+                label={option.label}
+                description={option.description}
+                checked={emailPreferenceDrafts[option.key]}
+                disabled={!hasEmail || isEmailSaving || isEmailLoading}
+                onChange={checked => {
+                  setEmailPreferenceDrafts(current => ({
+                    ...current,
+                    [option.key]: checked,
+                  }));
+                }}
+              />
+            ))}
+          </div>
+
+          {!emailSettings.verified && hasEmail ? (
+            <div className="rounded-2xl border border-warning/20 bg-warning/10 px-4 py-3 text-sm text-warning">
+              Verify this address from your inbox before Curyo starts sending email notifications.
+            </div>
+          ) : null}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleSaveEmailSettings()}
+              disabled={isEmailSaving || (!emailDirty && emailPayload.email.length > 0)}
+              className="btn border-none bg-white text-black hover:bg-gray-200 disabled:bg-white/60"
+            >
+              {isEmailSaving ? "Saving..." : emailPayload.email ? "Save email settings" : "Remove email notifications"}
+            </button>
+            {!emailSettings.verified && hasEmail ? (
+              <button
+                type="button"
+                onClick={() => void handleSaveEmailSettings()}
+                disabled={isEmailSaving}
+                className="btn btn-outline"
+              >
+                Resend verification
+              </button>
+            ) : null}
+          </div>
         </div>
       </section>
     </div>

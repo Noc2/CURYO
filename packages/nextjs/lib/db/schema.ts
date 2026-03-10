@@ -61,6 +61,31 @@ export const notificationPreferences = sqliteTable("notification_preferences", {
 export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
 export type NewNotificationPreferences = typeof notificationPreferences.$inferInsert;
 
+export const notificationEmailSubscriptions = sqliteTable(
+  "notification_email_subscriptions",
+  {
+    walletAddress: text("wallet_address").primaryKey(),
+    email: text("email").notNull(),
+    verifiedAt: integer("verified_at", { mode: "timestamp" }),
+    verificationToken: text("verification_token"),
+    verificationExpiresAt: integer("verification_expires_at", { mode: "timestamp" }),
+    roundResolved: integer("round_resolved", { mode: "boolean" }).notNull(),
+    settlingSoonHour: integer("settling_soon_hour", { mode: "boolean" }).notNull(),
+    settlingSoonDay: integer("settling_soon_day", { mode: "boolean" }).notNull(),
+    followedSubmission: integer("followed_submission", { mode: "boolean" }).notNull(),
+    followedResolution: integer("followed_resolution", { mode: "boolean" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  table => ({
+    emailUnique: uniqueIndex("notification_email_subscriptions_email_unique").on(table.email),
+    verificationTokenUnique: uniqueIndex("notification_email_subscriptions_token_unique").on(table.verificationToken),
+  }),
+);
+
+export type NotificationEmailSubscription = typeof notificationEmailSubscriptions.$inferSelect;
+export type NewNotificationEmailSubscription = typeof notificationEmailSubscriptions.$inferInsert;
+
 export const followedCategories = sqliteTable(
   "followed_categories",
   {
