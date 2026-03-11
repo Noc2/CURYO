@@ -75,12 +75,15 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   `claimFrontendFee`. This turns hot-path gas into a tracked regression gate instead of an ad hoc report.
   _Ref: `packages/foundry/test/GasBudget.t.sol`, `docs/PERFORMANCE_BASELINE_2026-03-11.md`_
 
-- [ ] **Keeper reward pool exhaustion monitoring**
-  If `keeperRewardPool` depletes, the keeper still works but earns no rewards — reducing incentive to operate. Document a monitoring alert for when the pool drops below a threshold (e.g., 10K cREP) and a governance procedure to refill it.
-  _Ref: `packages/foundry/contracts/RoundVotingEngine.sol` (keeperRewardPool state variable)_
+- [x] **Keeper reward pool exhaustion monitoring** _(documented)_
+  Alert thresholds and a governance refill runbook are now documented in deployment/operations docs. The keeper also
+  exposes the live pool balance via metrics so operators can alert on it directly.
+  _Ref: `packages/foundry/contracts/RoundVotingEngine.sol`, `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, `packages/keeper/src/metrics.ts`_
 
-- [ ] **Consensus reserve depletion monitoring**
-  Same as above for `consensusReserve` (4M cREP initial). Unanimous rounds stop earning the 5% subsidy when exhausted.
+- [x] **Consensus reserve depletion monitoring** _(documented)_
+  Warning/critical thresholds and the same governance refill procedure are now documented for `consensusReserve`,
+  including the default restoration target and required approval + funding call sequence.
+  _Ref: `packages/foundry/contracts/RoundVotingEngine.sol`, `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, `packages/keeper/src/metrics.ts`_
 
 - [x] **Tlock reveal trust model documented**
   `commitHash` is bound to `keccak256(ciphertext)`, so reveals are tied to the exact ciphertext bytes that were

@@ -56,6 +56,23 @@ mcp-server (tools)→ exposes read-only MCP tools backed by the Ponder API
 
 Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, RainbowKit, wagmi, and viem.
 
+### Vendored And Upstream Code
+
+Not every directory in this repository is first-party Curyo source.
+
+- `packages/foundry/lib/self/` is vendored upstream Self.xyz code used for identity verification integration.
+- `packages/foundry/lib/openzeppelin-*` and other `packages/foundry/lib/*` entries are upstream dependency submodules.
+
+For protocol review, security review, and contribution planning, treat Curyo-owned code as the primary focus:
+
+- `packages/foundry/contracts/`
+- `packages/foundry/test/`
+- `packages/nextjs/`
+- `packages/ponder/`
+- `packages/keeper/`
+- `packages/bot/`
+- `packages/mcp-server/`
+
 ## Install
 
 ### Prerequisites

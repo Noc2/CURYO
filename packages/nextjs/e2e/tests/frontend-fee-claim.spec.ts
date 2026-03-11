@@ -2,11 +2,13 @@ import {
   approveCREP,
   approveFrontend,
   claimFrontendFee,
+  claimFrontendFees,
   commitVoteDirect,
   evmIncreaseTime,
   getActiveRoundId,
   getFrontendAccumulatedFees,
   mintVoterId,
+  readTokenBalance,
   registerFrontend,
   revealVoteDirect,
   setTestConfig,
@@ -40,6 +42,9 @@ test.describe("Frontend fee claim lifecycle", () => {
   const FRONTEND_STAKE = BigInt(1000e6);
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const EPOCH_DURATION = 300;
+
+  // Shared across serial tests — set by test 1, consumed by test 3.
+  let withdrawableFrontend: `0x${string}` | null = null;
 
   test.beforeAll(async () => {
     const ok = await setTestConfig(VOTING_ENGINE, DEPLOYER.address, EPOCH_DURATION);
@@ -189,6 +194,9 @@ test.describe("Frontend fee claim lifecycle", () => {
     const feesAfter = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
     expect(feesAfter).toBeGreaterThan(feesBefore);
 
+    // Save for the claimFees withdrawal test
+    withdrawableFrontend = frontendAddress;
+
     const doubleClaim = await claimFrontendFee(
       BigInt(contentId),
       roundId,
@@ -241,5 +249,33 @@ test.describe("Frontend fee claim lifecycle", () => {
     expect(claimedAfterUnslash, "Frontend fee claim should succeed after unslash").toBe(true);
     // claimFrontendFee credits fees to FrontendRegistry (pull-based), not directly to the wallet.
     expect(await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY)).toBeGreaterThan(feesBefore);
+  });
+
+  test("operator withdraws accumulated fees via claimFees()", async () => {
+    test.setTimeout(60_000);
+
+    // Uses the frontend from test 1 which already has credited fees.
+    expect(withdrawableFrontend, "No frontend with credited fees from prior test").toBeTruthy();
+    const frontendAddress = withdrawableFrontend!;
+
+    const accumulatedBefore = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
+    expect(accumulatedBefore, "Frontend should have accumulated fees to withdraw").toBeGreaterThan(0n);
+
+    const walletBefore = await readTokenBalance(frontendAddress, CREP_TOKEN);
+
+    const withdrawn = await claimFrontendFees(frontendAddress, FRONTEND_REGISTRY);
+    expect(withdrawn, "claimFees() should succeed for approved frontend with fees").toBe(true);
+
+    // Accumulated fees should be zeroed after withdrawal
+    const accumulatedAfter = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
+    expect(accumulatedAfter).toBe(0n);
+
+    // Operator wallet should have received the cREP
+    const walletAfter = await readTokenBalance(frontendAddress, CREP_TOKEN);
+    expect(walletAfter - walletBefore).toBe(accumulatedBefore);
+
+    // Double withdrawal should revert (no fees remaining)
+    const doubleWithdraw = await claimFrontendFees(frontendAddress, FRONTEND_REGISTRY);
+    expect(doubleWithdraw, "claimFees() should revert when no fees remain").toBe(false);
   });
 });

@@ -31,6 +31,7 @@ The following are in scope:
 Out of scope:
 
 - Third-party dependencies (report upstream)
+- Vendored upstream code under `packages/foundry/lib/*` unless the issue is caused by a Curyo-specific modification or integration bug
 - Social engineering attacks
 - Denial of service attacks
 

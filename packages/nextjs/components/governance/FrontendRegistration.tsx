@@ -7,9 +7,12 @@ import { useAccount } from "wagmi";
 import { CodeBracketIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
+import scaffoldConfig from "~~/scaffold.config";
 import { notification } from "~~/utils/scaffold-eth";
 
 const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 /**
  * Frontend Registration section for developers to register as frontend operators
@@ -20,10 +23,17 @@ export function FrontendRegistration() {
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isClaimingAllRoundFees, setIsClaimingAllRoundFees] = useState(false);
+  const [claimingRoundKey, setClaimingRoundKey] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const configuredFrontendCode = scaffoldConfig.frontendCode;
+  const deploymentIsConfigured = !!configuredFrontendCode;
+  const deploymentMatchesConnectedAddress =
+    !!address && !!configuredFrontendCode && configuredFrontendCode.toLowerCase() === address.toLowerCase();
 
   // Contract info
   const { data: frontendRegistryInfo } = useDeployedContractInfo({ contractName: "FrontendRegistry" });
+  const { writeContractAsync: writeVotingEngine } = useScaffoldWriteContract({ contractName: "RoundVotingEngine" });
 
   // Read frontend info
   const { data: frontendInfo, refetch: refetchFrontendInfo } = useScaffoldReadContract({
@@ -43,6 +53,25 @@ export function FrontendRegistration() {
     contractName: "FrontendRegistry",
     functionName: "frontendExitAvailableAt",
     args: [address],
+  });
+
+  const { data: frontendVoterIdAddress } = useScaffoldReadContract({
+    contractName: "FrontendRegistry",
+    functionName: "voterIdNFT",
+  });
+
+  const requiresVoterId = !!frontendVoterIdAddress && frontendVoterIdAddress !== ZERO_ADDRESS;
+  const { data: hasVoterId } = useScaffoldReadContract({
+    contractName: "VoterIdNFT",
+    functionName: "hasVoterId",
+    args: [address],
+    query: { enabled: !!address && requiresVoterId },
+  });
+  const { data: resolvedVoterIdHolder } = useScaffoldReadContract({
+    contractName: "VoterIdNFT",
+    functionName: "resolveHolder",
+    args: [address],
+    query: { enabled: !!address && requiresVoterId },
   });
 
   // Read cREP balance
@@ -71,6 +100,9 @@ export function FrontendRegistration() {
   const isExitPending = exitAvailableAt > 0;
   const canCompleteDeregister = isExitPending && nowMs >= exitAvailableAt * 1000;
   const exitAvailableAtLabel = isExitPending ? new Date(exitAvailableAt * 1000).toLocaleString() : "";
+  const canRegisterWithCurrentAddress =
+    !requiresVoterId ||
+    (hasVoterId === true && !!address && resolvedVoterIdHolder?.toLowerCase() === address.toLowerCase());
 
   // Parse fees (cREP only)
   const curyoFees = accumulatedFees ? Number(accumulatedFees) / 1e6 : 0;
@@ -78,6 +110,17 @@ export function FrontendRegistration() {
 
   // cREP balance
   const crepFormatted = crepBalance ? Number(crepBalance) / 1e6 : 0;
+
+  const {
+    items: claimableRoundFees,
+    totalClaimable: totalClaimableRoundFees,
+    isLoading: claimableRoundFeesLoading,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    refetch: refetchClaimableRoundFees,
+  } = useFrontendClaimableFees(isRegistered && address ? (address as `0x${string}`) : undefined);
+  const totalClaimableRoundFeesFormatted = Number(totalClaimableRoundFees) / 1e6;
 
   useEffect(() => {
     if (!isExitPending) return;
@@ -89,6 +132,11 @@ export function FrontendRegistration() {
 
   const handleRegister = async () => {
     if (!address || !frontendRegistryInfo?.address) return;
+
+    if (!canRegisterWithCurrentAddress) {
+      notification.error("This wallet must hold a Voter ID directly before it can register as a frontend.");
+      return;
+    }
 
     if (crepFormatted < STAKE_AMOUNT) {
       notification.error("Insufficient cREP balance");
@@ -190,6 +238,62 @@ export function FrontendRegistration() {
     }
   };
 
+  const handleClaimRoundFee = async (contentId: string, roundId: string, claimableFee: string) => {
+    if (!address) return;
+
+    const roundKey = `${contentId}-${roundId}`;
+    setClaimingRoundKey(roundKey);
+    try {
+      await writeVotingEngine({
+        functionName: "claimFrontendFee",
+        args: [BigInt(contentId), BigInt(roundId), address],
+      });
+
+      notification.success(`Credited ${(Number(BigInt(claimableFee)) / 1e6).toFixed(2)} cREP from round ${roundId}.`);
+      await Promise.all([refetchClaimableRoundFees(), refetchFees()]);
+    } catch (e: any) {
+      console.error("Frontend round fee claim failed:", e);
+      notification.error(e?.shortMessage || "Failed to credit round fee");
+    } finally {
+      setClaimingRoundKey(current => (current === roundKey ? null : current));
+    }
+  };
+
+  const handleClaimAllRoundFees = async () => {
+    if (!address || claimableRoundFees.length === 0) return;
+
+    setIsClaimingAllRoundFees(true);
+    let claimedCount = 0;
+
+    try {
+      for (const item of claimableRoundFees) {
+        try {
+          await writeVotingEngine({
+            functionName: "claimFrontendFee",
+            args: [BigInt(item.contentId), BigInt(item.roundId), address],
+          });
+          claimedCount += 1;
+        } catch (error) {
+          console.error(`Failed to claim frontend fee for ${item.contentId}-${item.roundId}:`, error);
+        }
+      }
+
+      if (claimedCount > 0) {
+        notification.success(
+          `Credited frontend fees from ${claimedCount} settled round${claimedCount === 1 ? "" : "s"}.`,
+        );
+      }
+      if (claimedCount < claimableRoundFees.length) {
+        notification.warning("Some frontend fee claims failed. You can retry the remaining rounds individually.");
+      }
+
+      await Promise.all([refetchClaimableRoundFees(), refetchFees()]);
+    } finally {
+      setIsClaimingAllRoundFees(false);
+      setClaimingRoundKey(null);
+    }
+  };
+
   // Status badge
   const getStatusBadge = () => {
     if (isSlashed) {
@@ -225,6 +329,37 @@ export function FrontendRegistration() {
         </Link>
       </p>
 
+      <div className="rounded-2xl border border-base-300 bg-base-200/50 p-4 space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <p className="font-medium">This deployment&apos;s frontend code</p>
+          {deploymentIsConfigured ? (
+            <span className="rounded-full bg-success/15 px-2 py-0.5 text-sm font-medium text-success">Configured</span>
+          ) : (
+            <span className="rounded-full bg-warning/15 px-2 py-0.5 text-sm font-medium text-warning">Missing</span>
+          )}
+        </div>
+        {deploymentIsConfigured ? (
+          <div className="flex items-center gap-2 text-base">
+            <Address address={configuredFrontendCode} />
+          </div>
+        ) : (
+          <p className="text-sm text-base-content/70">
+            Set <code>NEXT_PUBLIC_FRONTEND_CODE</code> to the frontend operator address before launch. Otherwise votes
+            from this deployment will not accrue frontend fees.
+          </p>
+        )}
+        {deploymentIsConfigured && !deploymentMatchesConnectedAddress && (
+          <p className="text-sm text-warning">
+            This deployment currently attributes votes to {configuredFrontendCode}, not the wallet connected here.
+          </p>
+        )}
+        {deploymentMatchesConnectedAddress && (
+          <p className="text-sm text-success">
+            This deployment is already pointing at the connected frontend operator address.
+          </p>
+        )}
+      </div>
+
       {!isRegistered ? (
         // Registration Form
         <div className="space-y-4">
@@ -233,6 +368,14 @@ export function FrontendRegistration() {
             <span className="text-base-content/60">Registering address:</span>
             <Address address={address} />
           </div>
+
+          {requiresVoterId && (
+            <p className={`text-sm ${canRegisterWithCurrentAddress ? "text-success" : "text-warning"}`}>
+              {canRegisterWithCurrentAddress
+                ? "This wallet satisfies the Voter ID requirement for frontend registration."
+                : "Frontend registration requires this wallet to hold a Voter ID directly."}
+            </p>
+          )}
 
           {/* Stake info */}
           <div
@@ -257,7 +400,7 @@ export function FrontendRegistration() {
           <button
             className="btn btn-submit w-full"
             onClick={handleRegister}
-            disabled={isRegistering || crepFormatted < STAKE_AMOUNT}
+            disabled={isRegistering || crepFormatted < STAKE_AMOUNT || !canRegisterWithCurrentAddress}
           >
             {isRegistering ? (
               <span className="flex items-center gap-2">
@@ -288,6 +431,109 @@ export function FrontendRegistration() {
               <p className="text-base text-base-content/60">Staked</p>
               <p className="text-lg font-bold">{stakedAmount.toLocaleString()} cREP</p>
             </div>
+          </div>
+
+          <div className="bg-secondary/10 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-medium">Unclaimed Round Fees</p>
+                <p className="text-sm text-base-content/60">
+                  Claim settled round fees into the registry first, then withdraw them below.
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-base text-base-content/60">Claimable</p>
+                <p className="text-lg font-bold text-secondary">{totalClaimableRoundFeesFormatted.toFixed(2)} cREP</p>
+              </div>
+            </div>
+
+            {isSlashed ? (
+              <p className="text-sm text-warning">Round fee claims stay locked while this frontend is slashed.</p>
+            ) : claimableRoundFeesLoading && claimableRoundFees.length === 0 ? (
+              <div className="flex items-center gap-2 text-sm text-base-content/60">
+                <span className="loading loading-spinner loading-xs" />
+                Scanning settled rounds for claimable frontend fees...
+              </div>
+            ) : claimableRoundFees.length === 0 ? (
+              <p className="text-sm text-base-content/60">
+                No unclaimed frontend fees were found in the settled rounds scanned so far.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  className="btn btn-submit btn-sm w-full"
+                  onClick={handleClaimAllRoundFees}
+                  disabled={isClaimingAllRoundFees || isSlashed}
+                >
+                  {isClaimingAllRoundFees ? (
+                    <span className="flex items-center gap-2">
+                      <span className="loading loading-spinner loading-xs" />
+                      Claiming round fees...
+                    </span>
+                  ) : (
+                    "Claim All Round Fees"
+                  )}
+                </button>
+
+                <div className="space-y-2">
+                  {claimableRoundFees.map(item => {
+                    const roundKey = `${item.contentId}-${item.roundId}`;
+                    const isClaimingRound = claimingRoundKey === roundKey;
+
+                    return (
+                      <div key={roundKey} className="rounded-xl border border-base-300 bg-base-100/40 p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium line-clamp-2">
+                              {item.goal || item.url || `Content ${item.contentId}`}
+                            </p>
+                            <p className="text-sm text-base-content/60">
+                              Round {item.roundId}
+                              {item.settledAt
+                                ? ` • Settled ${new Date(Number(item.settledAt) * 1000).toLocaleString()}`
+                                : ""}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm text-base-content/60">Claimable</p>
+                            <p className="font-semibold">{(Number(BigInt(item.claimableFee)) / 1e6).toFixed(2)} cREP</p>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <p className="text-xs text-base-content/50 truncate">
+                            Pool {(Number(BigInt(item.totalFrontendPool)) / 1e6).toFixed(2)} cREP
+                          </p>
+                          <button
+                            className="btn btn-outline btn-primary btn-sm"
+                            onClick={() => handleClaimRoundFee(item.contentId, item.roundId, item.claimableFee)}
+                            disabled={isClaimingRound || isClaimingAllRoundFees || isSlashed}
+                          >
+                            {isClaimingRound ? <span className="loading loading-spinner loading-xs" /> : "Claim round"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {hasNextPage && (
+                  <button
+                    className="btn btn-ghost btn-sm w-full"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage ? (
+                      <span className="flex items-center gap-2">
+                        <span className="loading loading-spinner loading-xs" />
+                        Scanning older rounds...
+                      </span>
+                    ) : (
+                      "Scan Older Settled Rounds"
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Accumulated Fees */}

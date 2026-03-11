@@ -1487,3 +1487,29 @@ export async function waitForPonderSync(
   );
   return false;
 }
+
+/**
+ * Withdraw accumulated frontend fees via FrontendRegistry.claimFees().
+ * Must be called by the frontend operator address. Transfers cREP from
+ * the registry to the operator's wallet.
+ */
+export async function claimFrontendFees(
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "claimFees",
+        type: "function",
+        inputs: [],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "claimFees",
+    args: [],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}

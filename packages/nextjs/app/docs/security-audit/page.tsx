@@ -7,16 +7,89 @@ const SecurityAudit: NextPage = () => {
       <p className="lead text-base-content/60 text-lg">
         Consolidated internal security audit of all Curyo smart contracts covering static analysis, manual review,
         storage layout verification, and economic attack analysis. Consolidated from 5 prior review rounds (V1&ndash;V5,
-        Feb 2025&ndash;Feb 2026). March 4, 2026.
+        Feb 2025&ndash;Feb 2026), with a full follow-up contract review and full-suite test rerun on March 11, 2026.
       </p>
 
       <h2>Executive Summary</h2>
       <p>
-        This audit identified <strong>3 Critical</strong>, <strong>16 High</strong>, <strong>21 Medium</strong>,{" "}
-        <strong>11 Low</strong>, and <strong>10 Informational</strong> findings across 11 production contracts and 2
-        libraries. All findings have been resolved, verified safe, documented as intentional design choices, or flagged
-        for pre-mainnet testing.
+        The March 4 consolidated audit below captures the historical finding inventory across the earlier review rounds.
+        A follow-up full-contract review on <strong>March 11, 2026</strong> found{" "}
+        <strong>no new critical or high-severity issues</strong>, but it did confirm{" "}
+        <strong>two medium-severity items still worth fixing before mainnet</strong> and{" "}
+        <strong>one low-severity identity-consistency issue</strong> that should either be fixed or documented as
+        intentional policy.
       </p>
+      <p>
+        Full follow-up report:{" "}
+        <a
+          href="https://github.com/Noc2/CURYO/blob/main/docs/SMART_CONTRACT_AUDIT_REPORT_2026-03-11.md"
+          target="_blank"
+          rel="noreferrer"
+        >
+          SMART_CONTRACT_AUDIT_REPORT_2026-03-11.md
+        </a>
+      </p>
+
+      <h2>Latest Follow-Up Review (March 11, 2026)</h2>
+      <p>
+        The latest review re-ran the full Foundry suite (<strong>1292 passed, 0 failed, 0 skipped</strong>) and
+        performed a fresh manual audit of the production contracts. The main conclusion is that the codebase looks much
+        stronger than the earlier review rounds, but the items below are still open.
+      </p>
+      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
+        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
+          <thead>
+            <tr>
+              <th>Severity</th>
+              <th>Issue</th>
+              <th>Current Assessment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Medium</td>
+              <td>Submitter stake resolution can be griefed by keeping a round open</td>
+              <td>Still needs a contract fix before mainnet</td>
+            </tr>
+            <tr>
+              <td>Medium</td>
+              <td>
+                Participation reward snapshots can become permanently unclaimable after settlement-side-effect failure
+              </td>
+              <td>Still needs a contract fix before mainnet</td>
+            </tr>
+            <tr>
+              <td>Low</td>
+              <td>Category and profile registries still treat delegates as standalone Voter ID holders</td>
+              <td>Policy-dependent; fix or explicitly document before mainnet</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Recommended Next Fixes</h3>
+      <ol>
+        <li>
+          <strong>Decouple submitter stake resolution from later active rounds.</strong> Resolve slash/return against
+          the first qualifying settled round instead of blocking on any later open round, and snapshot the submitter
+          participation reward rate when the healthy-return condition is first satisfied.
+        </li>
+        <li>
+          <strong>Make participation snapshot recovery repairable.</strong> Either write the pool snapshot only after
+          the rate snapshot succeeds, or relax the backfill helper so governance can repair rounds where the pool is set
+          but the rate remained zero.
+        </li>
+        <li>
+          <strong>Choose a canonical delegate policy for auxiliary registries.</strong> If Curyo wants one human / one
+          persona semantics across category/profile surfaces, normalize callers through <code>resolveHolder()</code> or
+          require the holder address directly, similar to the frontend registry.
+        </li>
+      </ol>
+      <p className="text-base-content/60 text-sm">
+        The table below remains the historical March 4, 2026 consolidated finding inventory from review rounds
+        V1&ndash;V5.
+      </p>
+
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
           <thead>
@@ -1856,9 +1929,8 @@ const SecurityAudit: NextPage = () => {
       <hr />
 
       <p className="text-base-content/60 text-sm">
-        This is an internal AI-assisted security review, not a professional third-party audit. Consolidated audit
-        &mdash; March 4, 2026. Covers 5 prior review rounds (V1&ndash;V5, Feb 2025&ndash;Feb 2026). Report generated by
-        Claude Code.
+        This is an internal AI-assisted security review, not a professional third-party audit. Historical consolidated
+        audit: March 4, 2026. Latest follow-up review: March 11, 2026.
       </p>
     </article>
   );

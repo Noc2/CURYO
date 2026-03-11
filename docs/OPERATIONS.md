@@ -1,6 +1,6 @@
 # Curyo Operations Runbook
 
-Status: **Active** | Last updated: 2026-03-10
+Status: **Active** | Last updated: 2026-03-11
 
 This document covers the production procedures that sit adjacent to deployment:
 
@@ -158,6 +158,26 @@ is no shared nonce coordinator today.
 3. Start exactly one replacement keeper and confirm `/health` turns `ok`.
 4. Watch for nonce conflicts or duplicate-submit reverts for 10 minutes.
 5. Only run multiple keepers intentionally, with documented startup jitter and operator awareness that duplicate submits waste gas.
+
+### Keeper reward pool / consensus reserve depletion
+
+1. Confirm the low balance from two sources:
+   - keeper `/metrics` or `/health`
+   - direct on-chain `cast call` against `RoundVotingEngine`
+2. Classify severity:
+   - `keeperRewardPool < 25,000 cREP`: warning
+   - `keeperRewardPool < 10,000 cREP`: critical
+   - `consensusReserve < 1,000,000 cREP`: warning
+   - `consensusReserve < 250,000 cREP`: critical
+3. Decide the refill target:
+   - `keeperRewardPool` default restore target: `100,000 cREP`
+   - `consensusReserve` default restore target: `4,000,000 cREP`
+4. Calculate the refill amount as `target - currentBalance`.
+5. Submit a governance proposal that batches:
+   - `CuryoReputation.approve(<RoundVotingEngine>, amount)` and then
+   - `RoundVotingEngine.fundKeeperRewardPool(amount)` or `RoundVotingEngine.fundConsensusReserve(amount)`
+6. Vote, queue, and execute after the normal timelock delay.
+7. Verify the refill on-chain and in the governance UI, then record the proposal ID, refill amount, and execution time in operator notes.
 
 ### Deploy rollback
 
