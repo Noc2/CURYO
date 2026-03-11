@@ -96,6 +96,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         // Require Voter ID if VoterIdNFT is configured
         if (address(voterIdNFT) != address(0)) {
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+            require(voterIdNFT.resolveHolder(msg.sender) == msg.sender, "Category submitter must hold Voter ID");
         }
 
         // Validate inputs

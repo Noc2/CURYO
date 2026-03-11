@@ -343,12 +343,15 @@ contract RoundVotingEngine is
 
         RoundLib.Round storage round = rounds[contentId][roundId];
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
-        if (roundParticipationPool[contentId][roundId] != address(0)) revert SnapshotAlreadySet();
-
+        address existingPool = roundParticipationPool[contentId][roundId];
         uint256 existingRateBps = roundParticipationRateBps[contentId][roundId];
+        if (existingPool != address(0) && existingPool != rewardPoolAddress) revert SnapshotAlreadySet();
         if (existingRateBps != 0 && existingRateBps != rateBps) revert InvalidConfig();
+        if (existingPool != address(0) && existingRateBps != 0) revert SnapshotAlreadySet();
 
-        roundParticipationPool[contentId][roundId] = rewardPoolAddress;
+        if (existingPool == address(0)) {
+            roundParticipationPool[contentId][roundId] = rewardPoolAddress;
+        }
         if (existingRateBps == 0) {
             roundParticipationRateBps[contentId][roundId] = rateBps;
         }
@@ -1161,16 +1164,12 @@ contract RoundVotingEngine is
         uint256 contentCreatedAt = registry.getCreatedAt(contentId);
         if (contentCreatedAt == 0) revert ContentNotFound();
 
-        uint256 activeRoundId = currentRoundId[contentId];
-        if (activeRoundId != 0 && !RoundLib.isTerminal(rounds[contentId][activeRoundId])) {
-            revert ActiveRoundExists();
-        }
         if (!contentHasSettledRound[contentId]) return;
 
         uint256 elapsed = block.timestamp - contentCreatedAt;
+        uint256 rating = registry.getRating(contentId);
 
         if (elapsed >= 24 hours) {
-            uint256 rating = registry.getRating(contentId);
             if (rating < registry.SLASH_RATING_THRESHOLD()) {
                 registry.slashSubmitterStake(contentId);
                 return;
@@ -1178,7 +1177,15 @@ contract RoundVotingEngine is
         }
 
         if (elapsed >= 4 days) {
-            registry.returnSubmitterStake(contentId);
+            uint256 rewardRateBps;
+            IParticipationPool currentParticipationPool = participationPool;
+            if (address(currentParticipationPool) != address(0)) {
+                try currentParticipationPool.getCurrentRateBps() returns (uint256 rateBps) {
+                    rewardRateBps = rateBps;
+                } catch { }
+            }
+
+            registry.returnSubmitterStakeWithRewardRate(contentId, rewardRateBps);
         }
     }
 

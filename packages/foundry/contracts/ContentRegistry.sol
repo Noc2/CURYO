@@ -390,6 +390,17 @@ contract ContentRegistry is
 
     /// @notice Called by VotingEngine to return submitter stake after milestone 0 resolves favorably.
     function returnSubmitterStake(uint256 contentId) external {
+        _returnSubmitterStake(contentId, 0, false);
+    }
+
+    /// @notice Called by VotingEngine to return submitter stake with a snapshotted submission reward rate.
+    /// @dev This avoids coupling the submitter reward to whatever the live participation rate is when the
+    ///      stake finally gets returned.
+    function returnSubmitterStakeWithRewardRate(uint256 contentId, uint256 rewardRateBps) external {
+        _returnSubmitterStake(contentId, rewardRateBps, true);
+    }
+
+    function _returnSubmitterStake(uint256 contentId, uint256 rewardRateBps, bool useSnapshottedReward) internal {
         require(msg.sender == votingEngine, "Only VotingEngine");
         Content storage c = contents[contentId];
         require(!c.submitterStakeReturned, "Already returned");
@@ -399,7 +410,14 @@ contract ContentRegistry is
 
         // Submission participation rewards are only earned once the stake resolves on the healthy path.
         if (address(participationPool) != address(0)) {
-            try participationPool.rewardSubmission(c.submitter, c.submitterStake) { } catch { }
+            if (useSnapshottedReward) {
+                uint256 rewardAmount = c.submitterStake * rewardRateBps / 10000;
+                if (rewardAmount > 0) {
+                    try participationPool.distributeReward(c.submitter, rewardAmount) { } catch { }
+                }
+            } else {
+                try participationPool.rewardSubmission(c.submitter, c.submitterStake) { } catch { }
+            }
         }
 
         emit SubmitterStakeReturned(contentId, c.submitterStake);

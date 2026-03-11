@@ -76,6 +76,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         // Require Voter ID if VoterIdNFT is configured
         if (address(voterIdNFT) != address(0)) {
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+            require(voterIdNFT.resolveHolder(msg.sender) == msg.sender, "Profile owner must hold Voter ID");
         }
 
         require(bytes(name).length >= MIN_NAME_LENGTH, "Name too short");

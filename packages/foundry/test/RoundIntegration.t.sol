@@ -12,10 +12,33 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract RevertingParticipationPool {
+    IERC20 public immutable token;
+
+    constructor(address _token) {
+        token = IERC20(_token);
+    }
+
     function getCurrentRateBps() external pure returns (uint256) {
         revert("rate unavailable");
+    }
+
+    function rewardVote(address voter, uint256 stakeAmount) external returns (uint256 paidAmount) {
+        return distributeReward(voter, stakeAmount);
+    }
+
+    function rewardSubmission(address submitter, uint256 stakeAmount) external returns (uint256 paidAmount) {
+        return distributeReward(submitter, stakeAmount);
+    }
+
+    function distributeReward(address voter, uint256 amount) public returns (uint256 paidAmount) {
+        uint256 balance = token.balanceOf(address(this));
+        paidAmount = amount > balance ? balance : amount;
+        if (paidAmount > 0) {
+            token.transfer(voter, paidAmount);
+        }
     }
 }
 
@@ -1877,6 +1900,41 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.backfillParticipationRewardSnapshot(contentId, roundId, address(pool2), replacementRateBps);
     }
 
+    function test_BackfillParticipationRewardSnapshot_RepairsRateWhenPoolAlreadySnapshotted() public {
+        RevertingParticipationPool badPool = new RevertingParticipationPool(address(crepToken));
+        vm.prank(owner);
+        votingEngine.setParticipationPool(address(badPool));
+
+        uint256 contentId = _submitContent();
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        _commitAllThenReveal(voters, contentId, dirs, STAKE);
+        uint256 roundId = _getActiveOrLatestRoundId(contentId);
+        votingEngine.settleRound(contentId, roundId);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 1_000_000e6);
+        crepToken.transfer(address(badPool), 1_000_000e6);
+        vm.stopPrank();
+
+        uint256 rateBps = 9000;
+        vm.prank(owner);
+        votingEngine.backfillParticipationRewardSnapshot(contentId, roundId, address(badPool), rateBps);
+
+        uint256 balanceBefore = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        votingEngine.claimParticipationReward(contentId, roundId);
+
+        assertEq(crepToken.balanceOf(voter1) - balanceBefore, STAKE * rateBps / 10000);
+    }
+
     function test_ClaimParticipationReward_DoubleClaimReverts() public {
         (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
 
@@ -1915,7 +1973,7 @@ contract RoundIntegrationTest is VotingTestBase {
     }
 
     function test_SettlementSideEffectFailure_ParticipationRateSnapshotLeavesRewardsUnclaimable() public {
-        RevertingParticipationPool badPool = new RevertingParticipationPool();
+        RevertingParticipationPool badPool = new RevertingParticipationPool(address(crepToken));
         vm.prank(owner);
         votingEngine.setParticipationPool(address(badPool));
 

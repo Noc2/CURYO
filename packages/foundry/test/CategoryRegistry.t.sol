@@ -7,6 +7,7 @@ import { ICategoryRegistry } from "../contracts/interfaces/ICategoryRegistry.sol
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 /// @title Mock Governor for testing CategoryRegistry
 contract MockGovernor {
@@ -78,11 +79,13 @@ contract CategoryRegistryTest is Test {
     CuryoReputation public token;
     MockGovernor public governor;
     MockVotingEngine public votingEngine;
+    MockVoterIdNFT public voterIdNFT;
 
     address public admin = address(1);
     address public timelock = address(2);
     address public user1 = address(4);
     address public user2 = address(5);
+    address public delegate = address(6);
 
     uint256 public constant STAKE = 100e6; // 100 cREP
 
@@ -93,6 +96,7 @@ contract CategoryRegistryTest is Test {
         token = new CuryoReputation(admin, admin);
         governor = new MockGovernor();
         votingEngine = new MockVotingEngine();
+        voterIdNFT = new MockVoterIdNFT();
 
         // Grant minter role to admin
         token.grantRole(token.MINTER_ROLE(), admin);
@@ -235,6 +239,24 @@ contract CategoryRegistryTest is Test {
         vm.prank(admin);
         vm.expectRevert("Invalid name length");
         registry.addApprovedCategory("", "youtube.com", subcategories, "What is the best?");
+    }
+
+    function test_SubmitCategoryRequiresHolderWhenVoterIdConfigured() public {
+        string[] memory subcategories = new string[](1);
+        subcategories[0] = "General";
+
+        vm.prank(admin);
+        registry.setVoterIdNFT(address(voterIdNFT));
+
+        voterIdNFT.setHolder(user1);
+        vm.prank(user1);
+        voterIdNFT.setDelegate(delegate);
+
+        vm.startPrank(delegate);
+        token.approve(address(registry), STAKE);
+        vm.expectRevert("Category submitter must hold Voter ID");
+        registry.submitCategory("MTG", "delegate-submit.test", subcategories, "What is the best?");
+        vm.stopPrank();
     }
 
     function test_RevertAddApprovedCategoryDuplicateDomain() public {

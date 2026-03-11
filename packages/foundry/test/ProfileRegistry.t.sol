@@ -5,14 +5,17 @@ import { Test, console } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { IProfileRegistry } from "../contracts/interfaces/IProfileRegistry.sol";
+import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
 /// @title ProfileRegistry Test Suite
 contract ProfileRegistryTest is Test {
     ProfileRegistry public registry;
+    MockVoterIdNFT public voterIdNFT;
 
     address public admin = address(1);
     address public user1 = address(2);
     address public user2 = address(3);
+    address public delegate = address(4);
 
     function setUp() public {
         vm.startPrank(admin);
@@ -22,6 +25,7 @@ contract ProfileRegistryTest is Test {
         registry = ProfileRegistry(
             address(new ERC1967Proxy(address(impl), abi.encodeCall(ProfileRegistry.initialize, (admin, admin))))
         );
+        voterIdNFT = new MockVoterIdNFT();
 
         vm.stopPrank();
     }
@@ -209,6 +213,19 @@ contract ProfileRegistryTest is Test {
         registry.setProfile("alice", "");
 
         assertTrue(registry.hasProfile(user1));
+    }
+
+    function test_SetProfileRequiresHolderWhenVoterIdConfigured() public {
+        vm.prank(admin);
+        registry.setVoterIdNFT(address(voterIdNFT));
+
+        voterIdNFT.setHolder(user1);
+        vm.prank(user1);
+        voterIdNFT.setDelegate(delegate);
+
+        vm.prank(delegate);
+        vm.expectRevert("Profile owner must hold Voter ID");
+        registry.setProfile("alice", "");
     }
 
     function test_GetAddressByName() public {

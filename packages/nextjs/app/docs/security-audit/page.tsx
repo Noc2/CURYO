@@ -14,10 +14,8 @@ const SecurityAudit: NextPage = () => {
       <p>
         The March 4 consolidated audit below captures the historical finding inventory across the earlier review rounds.
         A follow-up full-contract review on <strong>March 11, 2026</strong> found{" "}
-        <strong>no new critical or high-severity issues</strong>, but it did confirm{" "}
-        <strong>two medium-severity items still worth fixing before mainnet</strong> and{" "}
-        <strong>one low-severity identity-consistency issue</strong> that should either be fixed or documented as
-        intentional policy.
+        <strong>no new critical or high-severity issues</strong>. The three residual follow-up items from that review
+        have now been addressed on the current branch and are covered by regression tests.
       </p>
       <p>
         Full follow-up report:{" "}
@@ -32,9 +30,9 @@ const SecurityAudit: NextPage = () => {
 
       <h2>Latest Follow-Up Review (March 11, 2026)</h2>
       <p>
-        The latest review re-ran the full Foundry suite (<strong>1292 passed, 0 failed, 0 skipped</strong>) and
-        performed a fresh manual audit of the production contracts. The main conclusion is that the codebase looks much
-        stronger than the earlier review rounds, but the items below are still open.
+        The latest review re-ran the full Foundry suite, performed a fresh manual audit of the production contracts, and
+        drove a final remediation pass for the remaining medium/low findings. Current full-suite status:
+        <strong> 1296 passed, 0 failed, 0 skipped</strong>.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -49,40 +47,37 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>Medium</td>
               <td>Submitter stake resolution can be griefed by keeping a round open</td>
-              <td>Still needs a contract fix before mainnet</td>
+              <td>Fixed on current branch</td>
             </tr>
             <tr>
               <td>Medium</td>
               <td>
                 Participation reward snapshots can become permanently unclaimable after settlement-side-effect failure
               </td>
-              <td>Still needs a contract fix before mainnet</td>
+              <td>Fixed on current branch</td>
             </tr>
             <tr>
               <td>Low</td>
               <td>Category and profile registries still treat delegates as standalone Voter ID holders</td>
-              <td>Policy-dependent; fix or explicitly document before mainnet</td>
+              <td>Fixed on current branch</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <h3>Recommended Next Fixes</h3>
+      <h3>What Changed</h3>
       <ol>
         <li>
-          <strong>Decouple submitter stake resolution from later active rounds.</strong> Resolve slash/return against
-          the first qualifying settled round instead of blocking on any later open round, and snapshot the submitter
-          participation reward rate when the healthy-return condition is first satisfied.
+          <strong>Submitter stake resolution no longer blocks on later open rounds.</strong> The return/slash decision
+          now resolves once the content has a qualifying settled round, even if another round is still open afterward.
         </li>
         <li>
-          <strong>Make participation snapshot recovery repairable.</strong> Either write the pool snapshot only after
-          the rate snapshot succeeds, or relax the backfill helper so governance can repair rounds where the pool is set
-          but the rate remained zero.
+          <strong>Participation snapshot recovery is now repairable.</strong> Governance backfill can repair
+          settlement-side-effect failures where the pool snapshot was written but the rate snapshot remained zero.
         </li>
         <li>
-          <strong>Choose a canonical delegate policy for auxiliary registries.</strong> If Curyo wants one human / one
-          persona semantics across category/profile surfaces, normalize callers through <code>resolveHolder()</code> or
-          require the holder address directly, similar to the frontend registry.
+          <strong>Auxiliary registries now require the holder address when Voter ID is configured.</strong> Delegates
+          can no longer act as standalone category/profile owners.
         </li>
       </ol>
       <p className="text-base-content/60 text-sm">
