@@ -407,6 +407,48 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertFalse(registry.isSubmitterStakeReturned(1), "no-vote content should remain unresolved");
     }
 
+    function test_ResolveSubmitterStake_NoSettledRound_ReturnsAfterDormancyPeriod() public {
+        vm.prank(owner);
+        registry.setParticipationPool(address(participationPool));
+
+        uint256 balBefore = crepToken.balanceOf(submitter);
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/dormancy-return", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 31 days);
+        votingEngine.resolveSubmitterStake(1);
+
+        uint256 balAfter = crepToken.balanceOf(submitter);
+        assertEq(balAfter, balBefore, "dormancy fallback should return the locked stake without a submission reward");
+        assertTrue(registry.isSubmitterStakeReturned(1), "stake should resolve after the dormancy period");
+    }
+
+    function test_ResolveSubmitterStake_NoSettledRound_LowRatingSlashesAfterDormancyPeriod() public {
+        uint256 treasuryBefore = crepToken.balanceOf(treasury);
+        uint256 submitterBefore = crepToken.balanceOf(submitter);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/dormancy-slash", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.prank(address(votingEngine));
+        registry.updateRatingDirect(1, 10);
+
+        vm.warp(T0 + 31 days);
+        votingEngine.resolveSubmitterStake(1);
+
+        assertEq(crepToken.balanceOf(treasury) - treasuryBefore, 10e6, "low-rated dormant fallback should slash");
+        assertEq(
+            crepToken.balanceOf(submitter),
+            submitterBefore - 10e6,
+            "submitter should not recover stake after dormant fallback slash"
+        );
+        assertTrue(registry.isSubmitterStakeReturned(1), "stake should resolve after dormant fallback slash");
+    }
+
     function test_SubmitContent_NoParticipationPool_NoReward() public {
         // Don't set participation pool — reward is skipped
         uint256 balBefore = crepToken.balanceOf(submitter);
@@ -672,7 +714,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.markDormant(1);
     }
 
-    function test_MarkDormant_CancelledRound_StillUsesLastVoteTimestamp() public {
+    function test_MarkDormant_CancelledRound_UsesDormancyAnchor() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/recent-vote", "goal", "tags", 0);
@@ -685,8 +727,34 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 29 days + 7 days + 1);
         votingEngine.cancelExpiredRound(1, roundId);
 
-        vm.expectRevert("Dormancy period not elapsed");
         registry.markDormant(1);
+
+        ContentRegistry.Content memory c = registry.getContent(1);
+        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Dormant));
+    }
+
+    function test_CommitVote_DormancyEligibleContent_CannotStartNewRoundAfterCancellation() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/dormancy-guard", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 29 days);
+        _vote(voter1, 1, true);
+
+        uint256 roundId = votingEngine.getActiveRoundId(1);
+        vm.warp(T0 + 29 days + 7 days + 1);
+        votingEngine.cancelExpiredRound(1, roundId);
+
+        bytes32 salt = keccak256(abi.encodePacked(voter2, block.timestamp));
+        bytes memory ciphertext = _testCiphertext(true, salt, 1);
+        bytes32 commitHash = _commitHash(true, salt, 1, ciphertext);
+
+        vm.startPrank(voter2);
+        crepToken.approve(address(votingEngine), STAKE);
+        vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
+        votingEngine.commitVote(1, commitHash, ciphertext, STAKE, address(0));
+        vm.stopPrank();
     }
 
     function test_MarkDormant_ReleasesUrlForResubmission() public {

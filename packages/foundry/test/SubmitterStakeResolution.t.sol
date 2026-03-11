@@ -85,6 +85,8 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
     }
 
     function test_ResolveSubmitterStake_AllowsResolutionWhileLaterRoundIsOpen() public {
+        uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
+
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/1", "goal", "tags", 0);
@@ -109,6 +111,34 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         votingEngine.resolveSubmitterStake(1);
 
         assertTrue(registry.isSubmitterStakeReturned(1), "submitter stake should resolve even if a later round is open");
+        assertEq(
+            crepToken.balanceOf(submitter) - submitterBalanceBefore,
+            0,
+            "healthy resolution should only release the locked submitter stake"
+        );
+    }
+
+    function test_ResolveSubmitterStake_AllowsDormancyFallbackWhileLaterRoundIsOpenWithoutSettlement() public {
+        uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/no-settlement", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _commit(voter1, 1, true);
+        uint256 activeRoundId = votingEngine.getActiveRoundId(1);
+        assertTrue(activeRoundId != 0, "later round should remain open");
+
+        vm.warp(T0 + 31 days);
+        votingEngine.resolveSubmitterStake(1);
+
+        assertTrue(registry.isSubmitterStakeReturned(1), "dormancy fallback should resolve even with an open round");
+        assertEq(
+            crepToken.balanceOf(submitter) - submitterBalanceBefore,
+            0,
+            "dormancy fallback should only release the locked stake"
+        );
     }
 
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {

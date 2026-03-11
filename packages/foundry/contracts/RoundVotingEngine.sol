@@ -65,6 +65,7 @@ contract RoundVotingEngine is
     error RoundNotCancelledOrTied();
     error ContentNotFound();
     error ActiveRoundExists();
+    error DormancyWindowElapsed();
     error ThresholdReached();
     error RevealGraceActive();
 
@@ -552,6 +553,11 @@ contract RoundVotingEngine is
         }
 
         // Get or create active round
+        uint256 currentOpenRoundId = currentRoundId[contentId];
+        if (currentOpenRoundId == 0 || RoundLib.isTerminal(rounds[contentId][currentOpenRoundId])) {
+            if (registry.isDormancyEligible(contentId)) revert DormancyWindowElapsed();
+        }
+
         uint256 roundId = _getOrCreateRound(contentId);
         RoundLib.Round storage round = rounds[contentId][roundId];
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
@@ -877,7 +883,7 @@ contract RoundVotingEngine is
             emit SettlementSideEffectFailed(contentId, roundId, REASON_UPDATE_RATING);
         }
 
-        try registry.updateActivity(contentId) { }
+        try registry.recordMeaningfulActivity(contentId) { }
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_UPDATE_ACTIVITY);
         }
@@ -1186,9 +1192,15 @@ contract RoundVotingEngine is
         uint256 contentCreatedAt = registry.getCreatedAt(contentId);
         if (contentCreatedAt == 0) revert ContentNotFound();
 
-        if (!contentHasSettledRound[contentId]) return;
-
         uint256 elapsed = block.timestamp - contentCreatedAt;
+
+        if (!contentHasSettledRound[contentId]) {
+            if (elapsed >= registry.DORMANCY_PERIOD()) {
+                registry.resolvePendingSubmitterStake(contentId);
+            }
+            return;
+        }
+
         uint256 rating = registry.getRating(contentId);
 
         if (elapsed >= 24 hours) {

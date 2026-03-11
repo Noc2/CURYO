@@ -89,8 +89,13 @@ contract ContentRegistry is
     /// @notice Canonical submitter identity snapshot (holder address if submitted through a delegate).
     mapping(uint256 => address) internal contentSubmitterIdentity;
 
+    /// @notice Meaningful-activity anchor used for dormancy checks.
+    /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
+    ///      and milestone-0 settlement move the dormancy window forward.
+    mapping(uint256 => uint256) internal dormancyAnchorAt;
+
     /// @dev Reserved storage gap for future upgrades
-    uint256[48] private __gap;
+    uint256[47] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -241,6 +246,7 @@ contract ContentRegistry is
             rating: 50,
             categoryId: resolvedCategoryId
         });
+        dormancyAnchorAt[contentId] = block.timestamp;
 
         emit ContentSubmitted(contentId, msg.sender, contentHash, url, goal, tags, resolvedCategoryId);
 
@@ -310,7 +316,7 @@ contract ContentRegistry is
     function markDormant(uint256 contentId) external nonReentrant {
         Content storage c = contents[contentId];
         require(c.status == ContentStatus.Active, "Not active");
-        require(block.timestamp > c.lastActivityAt + DORMANCY_PERIOD, "Dormancy period not elapsed");
+        require(block.timestamp > _getDormancyAnchor(contentId, c) + DORMANCY_PERIOD, "Dormancy period not elapsed");
         // Prevent dormancy while any round is still open, even if all votes have been revealed.
         if (votingEngine != address(0)) {
             require(IRoundVotingEngine(votingEngine).getActiveRoundId(contentId) == 0, "Content has active round");
@@ -324,19 +330,7 @@ contract ContentRegistry is
             submissionKeyUsed[submissionKey] = false;
         }
 
-        // Low-rated content should still be slashed if nobody resolved the submitter stake earlier.
-        if (!c.submitterStakeReturned) {
-            if (block.timestamp >= c.createdAt + 24 hours && c.rating < SLASH_RATING_THRESHOLD) {
-                require(treasury != address(0), "Treasury not set");
-                c.submitterStakeReturned = true;
-                crepToken.safeTransfer(treasury, c.submitterStake);
-                emit SubmitterStakeSlashed(contentId, c.submitterStake);
-            } else {
-                c.submitterStakeReturned = true;
-                crepToken.safeTransfer(c.submitter, c.submitterStake);
-                emit SubmitterStakeReturned(contentId, c.submitterStake);
-            }
-        }
+        _resolvePendingSubmitterStake(contentId, c);
 
         emit ContentDormant(contentId);
     }
@@ -359,6 +353,7 @@ contract ContentRegistry is
         c.status = ContentStatus.Active;
         c.dormantCount++;
         c.lastActivityAt = block.timestamp;
+        dormancyAnchorAt[contentId] = block.timestamp;
         c.reviver = msg.sender;
 
         emit ContentRevived(contentId, msg.sender);
@@ -366,10 +361,23 @@ contract ContentRegistry is
 
     // --- VotingEngine callbacks ---
 
-    /// @notice Called by VotingEngine to update last activity timestamp.
+    /// @notice Called by VotingEngine to update raw activity timestamp after commits.
+    /// @dev Legacy content lazily seeds `dormancyAnchorAt` from the pre-upgrade activity value so
+    ///      post-upgrade commit spam cannot keep extending dormancy indefinitely.
     function updateActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
+        Content storage c = contents[contentId];
+        if (dormancyAnchorAt[contentId] == 0) {
+            dormancyAnchorAt[contentId] = c.lastActivityAt;
+        }
+        c.lastActivityAt = block.timestamp;
+    }
+
+    /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
+    function recordMeaningfulActivity(uint256 contentId) external {
+        require(msg.sender == votingEngine, "Only VotingEngine");
         contents[contentId].lastActivityAt = block.timestamp;
+        dormancyAnchorAt[contentId] = block.timestamp;
     }
 
     /// @notice Called by VotingEngine to set content rating directly (live updates on each vote).
@@ -400,6 +408,14 @@ contract ContentRegistry is
         _returnSubmitterStake(contentId, rewardRateBps, true);
     }
 
+    /// @notice Called by VotingEngine once the dormancy window elapses without any settled round.
+    function resolvePendingSubmitterStake(uint256 contentId) external {
+        require(msg.sender == votingEngine, "Only VotingEngine");
+        Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
+        _resolvePendingSubmitterStake(contentId, c);
+    }
+
     function _returnSubmitterStake(uint256 contentId, uint256 rewardRateBps, bool useSnapshottedReward) internal {
         require(msg.sender == votingEngine, "Only VotingEngine");
         Content storage c = contents[contentId];
@@ -420,6 +436,22 @@ contract ContentRegistry is
             }
         }
 
+        emit SubmitterStakeReturned(contentId, c.submitterStake);
+    }
+
+    function _resolvePendingSubmitterStake(uint256 contentId, Content storage c) internal {
+        if (c.submitterStakeReturned) return;
+
+        if (block.timestamp >= c.createdAt + 24 hours && c.rating < SLASH_RATING_THRESHOLD) {
+            require(treasury != address(0), "Treasury not set");
+            c.submitterStakeReturned = true;
+            crepToken.safeTransfer(treasury, c.submitterStake);
+            emit SubmitterStakeSlashed(contentId, c.submitterStake);
+            return;
+        }
+
+        c.submitterStakeReturned = true;
+        crepToken.safeTransfer(c.submitter, c.submitterStake);
         emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
 
@@ -488,8 +520,20 @@ contract ContentRegistry is
         return contents[contentId].createdAt;
     }
 
+    function getDormancyAnchorAt(uint256 contentId) external view returns (uint256) {
+        Content storage c = contents[contentId];
+        if (c.id == 0) return 0;
+        return _getDormancyAnchor(contentId, c);
+    }
+
     function isSubmitterStakeReturned(uint256 contentId) external view returns (bool) {
         return contents[contentId].submitterStakeReturned;
+    }
+
+    function isDormancyEligible(uint256 contentId) external view returns (bool) {
+        Content storage c = contents[contentId];
+        if (c.id == 0 || c.status != ContentStatus.Active) return false;
+        return block.timestamp > _getDormancyAnchor(contentId, c) + DORMANCY_PERIOD;
     }
 
     function isUrlSubmitted(string calldata url) external view returns (bool) {
@@ -527,6 +571,11 @@ contract ContentRegistry is
             }
         }
         return submitter;
+    }
+
+    function _getDormancyAnchor(uint256 contentId, Content storage c) internal view returns (uint256) {
+        uint256 anchor = dormancyAnchorAt[contentId];
+        return anchor == 0 ? c.lastActivityAt : anchor;
     }
 
     function _resolveCategoryAndSubmissionKey(string memory url, uint256 categoryIdHint)
