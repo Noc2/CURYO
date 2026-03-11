@@ -144,6 +144,20 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
+    /// @dev Commit via ERC-1363 transferAndCall and return (commitKey, salt).
+    function _commitWithTransferAndCall(address voter, uint256 contentId, bool isUp, uint256 stake, address frontend)
+        internal
+        returns (bytes32 commitKey, bytes32 salt)
+    {
+        salt = keccak256(abi.encodePacked(voter, block.timestamp));
+        bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
+        bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
+        bytes memory payload = abi.encode(contentId, commitHash, ciphertext, frontend);
+        vm.prank(voter);
+        crepToken.transferAndCall(address(engine), stake, payload);
+        commitKey = _commitKey(voter, commitHash);
+    }
+
     /// @dev Commit with a specific frontend address.
     function _commitWithFrontend(address voter, uint256 contentId, bool isUp, uint256 stake, address frontend)
         internal
@@ -237,6 +251,29 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
         assertTrue(round.upWins);
         assertGt(round.settledAt, 0);
+    }
+
+    function test_CommitVote_TransferAndCall_Succeeds() public {
+        uint256 contentId = _submitContent();
+        uint256 engineBalanceBefore = crepToken.balanceOf(address(engine));
+
+        (bytes32 commitKey, bytes32 salt) = _commitWithTransferAndCall(voter1, contentId, true, STAKE, address(0));
+
+        uint256 roundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Commit memory commit = engine.getCommit(contentId, roundId, commitKey);
+
+        assertEq(round.voteCount, 1, "vote count");
+        assertEq(round.totalStake, STAKE, "total stake");
+        assertEq(commit.voter, voter1, "commit voter");
+        assertEq(commit.stakeAmount, STAKE, "commit stake");
+        assertEq(commit.frontend, address(0), "frontend");
+        assertEq(
+            keccak256(commit.ciphertext),
+            keccak256(_testCiphertext(true, salt, contentId)),
+            "stored ciphertext"
+        );
+        assertEq(crepToken.balanceOf(address(engine)), engineBalanceBefore + STAKE, "engine balance");
     }
 
     function test_BasicLifecycle_ThreeVoters_DownWins() public {

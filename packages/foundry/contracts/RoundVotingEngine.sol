@@ -9,6 +9,7 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 
 import { ContentRegistry } from "./ContentRegistry.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
@@ -33,6 +34,7 @@ import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
 ///      Win condition uses weighted pools, not raw stake, preventing late-voter herding.
 contract RoundVotingEngine is
     IRoundVotingEngine,
+    IERC1363Receiver,
     Initializable,
     AccessControlUpgradeable,
     PausableUpgradeable,
@@ -470,7 +472,7 @@ contract RoundVotingEngine is
         uint256 stakeAmount,
         address frontend
     ) external nonReentrant whenNotPaused {
-        _commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend);
+        _commitVote(msg.sender, contentId, commitHash, ciphertext, stakeAmount, frontend, false);
     }
 
     /// @notice Commit a blind vote using ERC2612 permit (single transaction).
@@ -490,15 +492,33 @@ contract RoundVotingEngine is
     ) external nonReentrant whenNotPaused {
         try IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s) { }
             catch { }
-        _commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend);
+        _commitVote(msg.sender, contentId, commitHash, ciphertext, stakeAmount, frontend, false);
+    }
+
+    function onTransferReceived(address operator, address from, uint256 value, bytes calldata data)
+        external
+        nonReentrant
+        whenNotPaused
+        returns (bytes4)
+    {
+        if (msg.sender != address(crepToken)) revert Unauthorized();
+        if (operator != from) revert Unauthorized();
+
+        (uint256 contentId, bytes32 commitHash, bytes memory ciphertext, address frontend) =
+            abi.decode(data, (uint256, bytes32, bytes, address));
+
+        _commitVote(from, contentId, commitHash, ciphertext, value, frontend, true);
+        return IERC1363Receiver.onTransferReceived.selector;
     }
 
     function _commitVote(
+        address voter,
         uint256 contentId,
         bytes32 commitHash,
-        bytes calldata ciphertext,
+        bytes memory ciphertext,
         uint256 stakeAmount,
-        address frontend
+        address frontend,
+        bool stakeAlreadyTransferred
     ) internal {
         if (stakeAmount < MIN_STAKE || stakeAmount > MAX_STAKE) revert InvalidStake();
         if (ciphertext.length == 0) revert InvalidCiphertext();
@@ -507,14 +527,14 @@ contract RoundVotingEngine is
         // Voter ID check (if configured)
         uint256 voterId;
         if (address(voterIdNFT) != address(0)) {
-            if (!voterIdNFT.hasVoterId(msg.sender)) revert VoterIdRequired();
-            voterId = voterIdNFT.getTokenId(msg.sender);
+            if (!voterIdNFT.hasVoterId(voter)) revert VoterIdRequired();
+            voterId = voterIdNFT.getTokenId(voter);
         }
 
         // Prevent submitter from voting on own content
-        address effectiveVoter = msg.sender;
+        address effectiveVoter = voter;
         if (address(voterIdNFT) != address(0)) {
-            address resolved = voterIdNFT.resolveHolder(msg.sender);
+            address resolved = voterIdNFT.resolveHolder(voter);
             if (resolved != address(0)) effectiveVoter = resolved;
         }
         if (effectiveVoter == registry.getSubmitterIdentity(contentId)) revert SelfVote();
@@ -527,7 +547,7 @@ contract RoundVotingEngine is
             uint256 lastVote = lastVoteTimestampByToken[contentId][voterId];
             if (lastVote > 0 && block.timestamp < lastVote + VOTE_COOLDOWN) revert CooldownActive();
         } else {
-            uint256 lastVote = lastVoteTimestamp[contentId][msg.sender];
+            uint256 lastVote = lastVoteTimestamp[contentId][voter];
             if (lastVote > 0 && block.timestamp < lastVote + VOTE_COOLDOWN) revert CooldownActive();
         }
 
@@ -540,7 +560,7 @@ contract RoundVotingEngine is
         if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotAccepting();
 
         // One vote per voter per round
-        if (hasCommitted[contentId][roundId][msg.sender]) revert AlreadyCommitted();
+        if (hasCommitted[contentId][roundId][voter]) revert AlreadyCommitted();
 
         // One vote per identity per round (prevents holder + delegate double voting)
         if (address(voterIdNFT) != address(0) && voterId != 0) {
@@ -551,7 +571,7 @@ contract RoundVotingEngine is
         if (round.voteCount >= roundCfg.maxVoters) revert MaxVotersReached();
 
         // Per-voter commit key prevents mempool griefing via copied commit hashes
-        bytes32 commitKey = _buildCommitKey(msg.sender, commitHash);
+        bytes32 commitKey = _buildCommitKey(voter, commitHash);
         if (commits[contentId][roundId][commitKey].voter != address(0)) revert CommitHashUsed();
 
         // Check MAX_STAKE per Voter ID per content per round
@@ -561,7 +581,9 @@ contract RoundVotingEngine is
         }
 
         // Transfer cREP stake
-        crepToken.safeTransferFrom(msg.sender, address(this), stakeAmount);
+        if (!stakeAlreadyTransferred) {
+            crepToken.safeTransferFrom(voter, address(this), stakeAmount);
+        }
 
         // Compute epoch end time and epoch index for this commit
         uint256 epochEnd = RoundLib.computeEpochEnd(round, roundCfg.epochDuration, block.timestamp);
@@ -569,7 +591,7 @@ contract RoundVotingEngine is
 
         // Store commit with epoch index (determines reward weight)
         commits[contentId][roundId][commitKey] = RoundLib.Commit({
-            voter: msg.sender,
+            voter: voter,
             stakeAmount: stakeAmount,
             ciphertext: ciphertext,
             frontend: frontend,
@@ -592,14 +614,14 @@ contract RoundVotingEngine is
 
         // Track for iteration
         roundCommitHashes[contentId][roundId].push(commitKey);
-        hasCommitted[contentId][roundId][msg.sender] = true;
+        hasCommitted[contentId][roundId][voter] = true;
 
         // Track unrevealed count per epoch (selective revelation prevention)
         epochUnrevealedCount[contentId][roundId][epochEnd]++;
         if (epochEnd > lastCommitRevealableAfter[contentId][roundId]) {
             lastCommitRevealableAfter[contentId][roundId] = epochEnd;
         }
-        voterCommitHash[contentId][roundId][msg.sender] = commitHash;
+        voterCommitHash[contentId][roundId][voter] = commitHash;
         contentCommitCount[contentId]++;
 
         // Mark identity as committed for this round
@@ -617,7 +639,7 @@ contract RoundVotingEngine is
         }
 
         // Record cooldown (per identity + per address)
-        lastVoteTimestamp[contentId][msg.sender] = block.timestamp;
+        lastVoteTimestamp[contentId][voter] = block.timestamp;
         if (address(voterIdNFT) != address(0) && voterId != 0) {
             lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
         }
@@ -625,7 +647,7 @@ contract RoundVotingEngine is
         // Vote commits count as content activity for dormancy tracking.
         registry.updateActivity(contentId);
 
-        emit VoteCommitted(contentId, roundId, msg.sender, commitHash, stakeAmount);
+        emit VoteCommitted(contentId, roundId, voter, commitHash, stakeAmount);
     }
 
     /// @dev Get or create the active round for a content item.
