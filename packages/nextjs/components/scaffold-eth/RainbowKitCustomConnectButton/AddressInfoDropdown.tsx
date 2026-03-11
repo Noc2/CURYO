@@ -34,6 +34,80 @@ const getMenuItemClass = (showText: boolean) =>
     ? "flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium"
     : "flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium";
 
+function ExtendedWalletSummary({ address }: { address: Address }) {
+  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
+  const { totalSubmissionStake } = useSubmissionStakes(address);
+  const { activeStaked: votingStaked } = useVotingStakes(address);
+  const { claimAll, isClaiming, progress } = useClaimAll();
+  const { votes: activeVotes, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
+  const { readyCount: manualRevealReadyCount } = useManualRevealVotes(address);
+  const showManualRevealLink = manualRevealReadyCount > 0;
+
+  const claimableFormatted =
+    totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
+
+  const handleClaimAll = () => {
+    claimAll(claimableItems, () => refetchClaimable());
+  };
+
+  const { data: frontendInfo } = useScaffoldReadContract({
+    contractName: "FrontendRegistry",
+    functionName: "getFrontendInfo",
+    args: [address],
+    watch: false,
+    query: {
+      staleTime: 30_000,
+      refetchInterval: 30_000,
+    },
+  });
+  const frontendStake = frontendInfo ? Number(frontendInfo[1]) / 1e6 : 0;
+
+  const fallbackVotingStaked = activeVotes.reduce((sum, vote) => sum + Number(vote.stake) / 1e6, 0);
+  const effectiveVotingStaked = Math.max(votingStaked, fallbackVotingStaked);
+  const totalStaked = effectiveVotingStaked + totalSubmissionStake + frontendStake;
+  const stakedFormatted = totalStaked.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const shouldShowStaked = totalStaked > 0 || activeVotes.length > 0;
+
+  const stakeParts: string[] = [];
+  if (totalSubmissionStake > 0) stakeParts.push(`${totalSubmissionStake} cREP submissions`);
+  if (effectiveVotingStaked > 0) {
+    let votingLabel = `${effectiveVotingStaked} cREP voting`;
+    if (earliestReveal) votingLabel += ` · reveals in ${earliestReveal}`;
+    else if (showManualRevealLink || hasPendingReveals) votingLabel += ` · pending reveal`;
+    stakeParts.push(votingLabel);
+  }
+  if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
+  const stakeTooltip = stakeParts.join(" · ");
+
+  return (
+    <>
+      {showManualRevealLink ? (
+        <div className="text-left px-4 pl-12">
+          <Link
+            href="/vote/reveal"
+            className="text-xs text-base-content/50 hover:text-base-content underline underline-offset-2"
+          >
+            Reveal my vote
+          </Link>
+        </div>
+      ) : null}
+      {shouldShowStaked && (
+        <div className="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12">
+          {stakedFormatted} Staked
+          <InfoTooltip text={stakeTooltip} position="bottom" />
+        </div>
+      )}
+      {totalClaimable > 0n && (
+        <div className="text-left px-4 pl-12 mt-1">
+          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-xs text-white">
+            {isClaiming ? `Claiming ${progress.current}/${progress.total}...` : `Claim ${claimableFormatted}`}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function MenuItems({
   disconnect,
   connector,
@@ -99,21 +173,6 @@ export const AddressInfoDropdown = ({
   const isLocalNetwork = targetNetwork.id === hardhat.id && chain?.id === hardhat.id;
   const showFaucet = isLocalNetwork;
 
-  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
-  const { totalSubmissionStake } = useSubmissionStakes(address);
-  const { activeStaked: votingStaked } = useVotingStakes(address);
-  const { claimAll, isClaiming, progress } = useClaimAll();
-  const { votes: activeVotes, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
-  const { readyCount: manualRevealReadyCount } = useManualRevealVotes(address);
-  const showManualRevealLink = manualRevealReadyCount > 0;
-
-  const claimableFormatted =
-    totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
-
-  const handleClaimAll = () => {
-    claimAll(claimableItems, () => refetchClaimable());
-  };
-
   const { data: crepBalance } = useScaffoldReadContract({
     contractName: "CuryoReputation",
     functionName: "balanceOf",
@@ -127,34 +186,6 @@ export const AddressInfoDropdown = ({
   const crepFormatted =
     crepBalance != null ? (Number(crepBalance) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—";
 
-  // Frontend operator stake
-  const { data: frontendInfo } = useScaffoldReadContract({
-    contractName: "FrontendRegistry",
-    functionName: "getFrontendInfo",
-    args: [address],
-  });
-  const frontendStake = frontendInfo ? Number(frontendInfo[1]) / 1e6 : 0;
-
-  const fallbackVotingStaked = activeVotes.reduce((sum, vote) => sum + Number(vote.stake) / 1e6, 0);
-  const effectiveVotingStaked = Math.max(votingStaked, fallbackVotingStaked);
-
-  // Combine all staked amounts (voting + submissions + frontend)
-  const totalStaked = effectiveVotingStaked + totalSubmissionStake + frontendStake;
-  const stakedFormatted = totalStaked.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  const shouldShowStaked = totalStaked > 0 || activeVotes.length > 0;
-
-  // Build tooltip showing stake breakdown
-  const stakeParts: string[] = [];
-  if (totalSubmissionStake > 0) stakeParts.push(`${totalSubmissionStake} cREP submissions`);
-  if (effectiveVotingStaked > 0) {
-    let votingLabel = `${effectiveVotingStaked} cREP voting`;
-    if (earliestReveal) votingLabel += ` · reveals in ${earliestReveal}`;
-    else if (showManualRevealLink || hasPendingReveals) votingLabel += ` · pending reveal`;
-    stakeParts.push(votingLabel);
-  }
-  if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
-  const stakeTooltip = stakeParts.join(" · ");
-
   if (menuItemsOnly) {
     return <MenuItems disconnect={disconnect} connector={connector} showText={true} showFaucet={showFaucet} />;
   }
@@ -167,30 +198,8 @@ export const AddressInfoDropdown = ({
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      <div className="text-base text-base-content text-left px-4 pl-12">
-        {crepFormatted} cREP
-        {showManualRevealLink ? (
-          <Link
-            href="/vote/reveal"
-            className="ml-2 text-xs text-base-content/50 hover:text-base-content underline underline-offset-2"
-          >
-            Reveal my vote
-          </Link>
-        ) : null}
-      </div>
-      {shouldShowStaked && (
-        <div className="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12">
-          {stakedFormatted} Staked
-          <InfoTooltip text={stakeTooltip} position="bottom" />
-        </div>
-      )}
-      {totalClaimable > 0n && (
-        <div className="text-left px-4 pl-12 mt-1">
-          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-xs text-white">
-            {isClaiming ? `Claiming ${progress.current}/${progress.total}...` : `Claim ${claimableFormatted}`}
-          </button>
-        </div>
-      )}
+      <div className="text-base text-base-content text-left px-4 pl-12">{crepFormatted} cREP</div>
+      {inlineMenu ? <ExtendedWalletSummary address={address} /> : null}
     </div>
   );
 
@@ -214,19 +223,6 @@ export const AddressInfoDropdown = ({
         </span>
       </div>
       <span className="text-base text-base-content hidden xl:inline xl:px-2">{crepFormatted} cREP</span>
-      {shouldShowStaked && (
-        <span className="hidden xl:inline-flex xl:px-2 items-center gap-1 text-base text-base-content">
-          {stakedFormatted} Staked
-          <InfoTooltip text={stakeTooltip} position="top" />
-        </span>
-      )}
-      {totalClaimable > 0n && (
-        <span className="hidden xl:inline xl:px-2 mt-1">
-          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-xs text-white">
-            {isClaiming ? `Claiming ${progress.current}/${progress.total}...` : `Claim ${claimableFormatted}`}
-          </button>
-        </span>
-      )}
     </div>
   );
 };
