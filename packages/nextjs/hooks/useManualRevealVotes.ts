@@ -7,6 +7,7 @@ import { Address, zeroHash } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { invalidateRecentUserVotes, useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useUnixTime } from "~~/hooks/useUnixTime";
 import { CommitData } from "~~/types/votingTypes";
@@ -42,6 +43,7 @@ export function useManualRevealVotes(voter?: Address) {
   const publicClient = usePublicClient({ chainId: targetNetwork.id });
   const queryClient = useQueryClient();
   const now = useUnixTime();
+  const isPageVisible = usePageVisibility();
   const [pendingCommitKey, setPendingCommitKey] = useState<`0x${string}` | null>(null);
 
   const { data: engineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" as any });
@@ -58,8 +60,8 @@ export function useManualRevealVotes(voter?: Address) {
   const { data: rawVotes, isLoading: isLoadingCommits } = useQuery({
     queryKey: ["manualRevealVotesOnchain", voter, pendingVoteKey],
     enabled: Boolean(voter && publicClient && engineInfo?.address && pendingVotes.length > 0),
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
     queryFn: async (): Promise<ManualRevealVote[]> => {
       if (!voter || !publicClient || !engineInfo?.address || pendingVotes.length === 0) return [];
 

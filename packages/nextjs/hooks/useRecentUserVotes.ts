@@ -29,8 +29,8 @@ export function useRecentUserVotes(voter?: string) {
     },
     rpcFn: async () => [] as PonderVoteItem[],
     enabled: !!voter,
-    staleTime: 15_000,
-    refetchInterval: isPageVisible ? 30_000 : false,
+    staleTime: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
   });
 
   const votes = useMemo(() => result?.data ?? [], [result?.data]);

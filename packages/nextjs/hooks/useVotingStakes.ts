@@ -1,5 +1,6 @@
 "use client";
 
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 
@@ -19,6 +20,7 @@ const EMPTY: VotingStakes = { activeStaked: 0, activeCount: 0, totalVotingStake:
  * Uses Ponder API (on-chain indexed data, works cross-browser).
  */
 export function useVotingStakes(address?: string): VotingStakes {
+  const isPageVisible = usePageVisibility();
   const { data: result } = usePonderQuery({
     queryKey: ["votingStakes", address],
     ponderFn: async () => {
@@ -30,8 +32,8 @@ export function useVotingStakes(address?: string): VotingStakes {
     },
     rpcFn: async () => EMPTY,
     enabled: !!address,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
   });
 
   return result?.data ?? EMPTY;

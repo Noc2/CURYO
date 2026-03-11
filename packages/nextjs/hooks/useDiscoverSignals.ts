@@ -38,8 +38,8 @@ export function useDiscoverSignals(address?: string, options?: UseDiscoverSignal
       });
     },
     rpcFn: async () => EMPTY_DISCOVER_SIGNALS,
-    staleTime: 15_000,
-    refetchInterval: isPageVisible ? 30_000 : false,
+    staleTime: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
   });
 
   return {

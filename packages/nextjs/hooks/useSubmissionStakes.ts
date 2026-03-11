@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useReadContracts } from "wagmi";
 import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
@@ -15,6 +16,7 @@ const SUBMISSION_STAKE_CREP = 10; // 10 cREP (contract constant MIN_SUBMITTER_ST
  */
 export function useSubmissionStakes(address?: string) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const isPageVisible = usePageVisibility();
   // --- RPC fallback: fetch all content via multicall ---
   const { data: registryInfo } = useDeployedContractInfo({ contractName: "ContentRegistry" });
   const { data: nextContentId } = useScaffoldReadContract({
@@ -75,7 +77,7 @@ export function useSubmissionStakes(address?: string) {
     rpcEnabled: rpcFallbackEnabled,
     enabled: !!address,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: isPageVisible ? 120_000 : false,
   });
 
   return result?.data ?? rpcResult;
