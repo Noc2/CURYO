@@ -1,12 +1,7 @@
-import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { GlobeAltIcon, IdentificationIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
-
-const CuryoAnimation = dynamic(() => import("~~/components/home/CuryoAnimation").then(m => m.CuryoAnimation), {
-  ssr: false,
-  loading: () => <div className="w-full max-w-5xl mx-auto h-[600px] sm:h-[780px]" />,
-});
+import { LandingPageAnimation } from "~~/components/home/LandingPageAnimation";
 
 const STEPS = [
   {
@@ -42,7 +37,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
         <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-8">
           {/* Animation (right on large screens) */}
           <div className="lg:flex-1">
-            <CuryoAnimation />
+            <LandingPageAnimation />
           </div>
 
           {/* Title (left on large screens) */}
