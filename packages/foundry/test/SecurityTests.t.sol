@@ -417,7 +417,137 @@ contract SecurityPermitTest is VotingTestBase {
 }
 
 // ============================================================================
-// Section 3 — Settlement Timing Tests
+// Section 3 — ERC1363 transferAndCall Tests
+// ============================================================================
+
+contract SecurityTransferAndCallTest is VotingTestBase {
+    CuryoReputation crepToken;
+    ContentRegistry registry;
+    RoundVotingEngine votingEngine;
+
+    address owner = address(0xA);
+    address treasury = address(0xB);
+    address submitter = address(0xC);
+    address voter = address(0xD);
+    address spender = address(0xE);
+
+    uint256 constant STAKE = 10e6;
+    uint256 constant EPOCH_DURATION = 5 minutes;
+
+    function setUp() public {
+        vm.warp(1000);
+        vm.startPrank(owner);
+
+        crepToken = new CuryoReputation(owner, owner);
+        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
+
+        ContentRegistry registryImpl = new ContentRegistry();
+        RoundVotingEngine engineImpl = new RoundVotingEngine();
+
+        registry = ContentRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(registryImpl),
+                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
+                )
+            )
+        );
+
+        votingEngine = RoundVotingEngine(
+            address(
+                new ERC1967Proxy(
+                    address(engineImpl),
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                )
+            )
+        );
+
+        registry.setVotingEngine(address(votingEngine));
+        votingEngine.setTreasury(treasury);
+        votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+
+        uint256 reserveAmount = 1_000_000e6;
+        crepToken.mint(owner, reserveAmount);
+        crepToken.approve(address(votingEngine), reserveAmount);
+        votingEngine.fundConsensusReserve(reserveAmount);
+
+        crepToken.mint(submitter, 10_000e6);
+        crepToken.mint(voter, 10_000e6);
+
+        vm.stopPrank();
+    }
+
+    function _submitContent() internal returns (uint256) {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/1", "test goal", "test", 0);
+        vm.stopPrank();
+        return 1;
+    }
+
+    function _votePayload(uint256 contentId)
+        internal
+        view
+        returns (bytes memory payload, bytes32 commitHash, bytes memory ciphertext)
+    {
+        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
+        ciphertext = _testCiphertext(true, salt, contentId);
+        commitHash = _commitHash(true, salt, contentId, ciphertext);
+        payload = abi.encode(contentId, commitHash, ciphertext, address(0));
+    }
+
+    function test_TransferAndCall_RejectsDirectExternalCallback() public {
+        uint256 contentId = _submitContent();
+        (bytes memory payload,,) = _votePayload(contentId);
+
+        vm.prank(voter);
+        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
+        votingEngine.onTransferReceived(voter, voter, STAKE, payload);
+    }
+
+    function test_TransferAndCall_RejectsApprovedSpenderForcedVote() public {
+        uint256 contentId = _submitContent();
+        (bytes memory payload,,) = _votePayload(contentId);
+        uint256 voterBalanceBefore = crepToken.balanceOf(voter);
+
+        vm.prank(voter);
+        crepToken.approve(spender, STAKE);
+
+        vm.prank(spender);
+        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
+        crepToken.transferFromAndCall(voter, address(votingEngine), STAKE, payload);
+
+        assertEq(votingEngine.getActiveRoundId(contentId), 0, "no round created");
+        assertEq(crepToken.balanceOf(voter), voterBalanceBefore, "voter balance unchanged");
+        assertEq(crepToken.balanceOf(address(votingEngine)), 1_000_000e6, "engine only holds reserve");
+    }
+
+    function test_TransferAndCall_RejectsMalformedPayload() public {
+        uint256 contentId = _submitContent();
+        uint256 voterBalanceBefore = crepToken.balanceOf(voter);
+
+        vm.prank(voter);
+        vm.expectRevert();
+        crepToken.transferAndCall(address(votingEngine), STAKE, hex"1234");
+
+        assertEq(votingEngine.getActiveRoundId(contentId), 0, "no round created");
+        assertEq(crepToken.balanceOf(voter), voterBalanceBefore, "voter balance unchanged");
+        assertEq(crepToken.balanceOf(address(votingEngine)), 1_000_000e6, "engine only holds reserve");
+    }
+
+    function test_TransferAndCall_PlainTransferDoesNotCreateVote() public {
+        uint256 contentId = _submitContent();
+
+        vm.prank(voter);
+        crepToken.transfer(address(votingEngine), STAKE);
+
+        assertEq(votingEngine.getActiveRoundId(contentId), 0, "plain transfers do not create rounds");
+        assertEq(crepToken.balanceOf(address(votingEngine)), 1_000_000e6 + STAKE, "tokens transferred without vote");
+    }
+}
+
+// ============================================================================
+// Section 4 — Settlement Timing Tests
 // ============================================================================
 
 contract SecuritySettlementTimingTest is VotingTestBase {
