@@ -615,7 +615,13 @@ app.get("/discover-signals/:address", async (c) => {
     )
     .innerJoin(content, eq(vote.contentId, content.id))
     .leftJoin(profile, eq(content.submitter, profile.address))
-    .where(and(eq(vote.voter, address), eq(round.state, ROUND_STATE.Open)))
+    .where(
+      and(
+        eq(vote.voter, address),
+        eq(round.state, ROUND_STATE.Open),
+        gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+      ),
+    )
     .orderBy(asc(round.startTime))
     .limit(24);
 
@@ -637,7 +643,13 @@ app.get("/discover-signals/:address", async (c) => {
         .from(round)
         .innerJoin(content, eq(round.contentId, content.id))
         .leftJoin(profile, eq(content.submitter, profile.address))
-        .where(and(inArray(round.contentId, watchedContentIds), eq(round.state, ROUND_STATE.Open)))
+        .where(
+          and(
+            inArray(round.contentId, watchedContentIds),
+            eq(round.state, ROUND_STATE.Open),
+            gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+          ),
+        )
         .orderBy(asc(round.startTime))
         .limit(24);
 
@@ -793,7 +805,13 @@ app.get("/notification-events/:address", async (c) => {
     .innerJoin(round, and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)))
     .innerJoin(content, eq(vote.contentId, content.id))
     .leftJoin(profile, eq(content.submitter, profile.address))
-    .where(and(eq(vote.voter, address), eq(round.state, ROUND_STATE.Open)))
+    .where(
+      and(
+        eq(vote.voter, address),
+        eq(round.state, ROUND_STATE.Open),
+        gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+      ),
+    )
     .orderBy(asc(round.startTime))
     .limit(24);
 
@@ -815,7 +833,13 @@ app.get("/notification-events/:address", async (c) => {
         .from(round)
         .innerJoin(content, eq(round.contentId, content.id))
         .leftJoin(profile, eq(content.submitter, profile.address))
-        .where(and(inArray(round.contentId, watchedContentIds), eq(round.state, ROUND_STATE.Open)))
+        .where(
+          and(
+            inArray(round.contentId, watchedContentIds),
+            eq(round.state, ROUND_STATE.Open),
+            gte(round.voteCount, DEFAULT_ROUND_CONFIG.minVoters),
+          ),
+        )
         .orderBy(asc(round.startTime))
         .limit(24);
 
