@@ -390,8 +390,13 @@ export interface PonderVoterStreak {
   bestDailyStreak: number;
   totalActiveDays: number;
   lastActiveDate: string | null;
+  lastMilestoneDay: number;
+  milestones: Array<{
+    days: number;
+    baseBonus: number;
+  }>;
   nextMilestone: number | null;
-  nextMilestoneBonus: number | null;
+  nextMilestoneBaseBonus: number | null;
 }
 
 export type PonderVoterStatsBatch = Record<string, PonderVoterStats>;

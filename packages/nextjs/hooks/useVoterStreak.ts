@@ -1,57 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { isPonderAvailable, ponderGet } from "~~/services/ponder/client";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
+import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { type PonderVoterStreak, ponderApi } from "~~/services/ponder/client";
 
-interface StreakMilestone {
-  days: number;
-  baseBonus: number;
-}
-
-interface VoterStreakData {
-  currentDailyStreak: number;
-  bestDailyStreak: number;
-  totalActiveDays: number;
-  lastActiveDate: string | null;
-  lastMilestoneDay: number;
-  milestones: StreakMilestone[];
-  nextMilestone: number | null;
-  nextMilestoneBaseBonus: number | null;
-}
+const EMPTY_STREAK: PonderVoterStreak = {
+  currentDailyStreak: 0,
+  bestDailyStreak: 0,
+  totalActiveDays: 0,
+  lastActiveDate: null,
+  lastMilestoneDay: 0,
+  milestones: [],
+  nextMilestone: null,
+  nextMilestoneBaseBonus: null,
+};
 
 /**
  * Fetches daily voting streak data from Ponder API.
  */
-export function useVoterStreak(address?: string): VoterStreakData | null {
-  const [data, setData] = useState<VoterStreakData | null>(null);
+export function useVoterStreak(address?: string): PonderVoterStreak | null {
+  const isPageVisible = usePageVisibility();
 
-  useEffect(() => {
-    if (!address) {
-      setData(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function fetchStreak() {
-      const available = await isPonderAvailable();
-      if (!available || cancelled) return;
-
-      try {
-        const result = await ponderGet<VoterStreakData>("/voter-streak", { voter: address });
-        if (!cancelled) setData(result);
-      } catch {
-        // Ponder may not have the endpoint yet
+  const { data } = usePonderQuery<PonderVoterStreak, PonderVoterStreak>({
+    queryKey: ["voterStreak", address],
+    ponderFn: async () => {
+      if (!address) {
+        return EMPTY_STREAK;
       }
-    }
 
-    fetchStreak();
-    const interval = setInterval(fetchStreak, 30_000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [address]);
+      return ponderApi.getVoterStreak(address);
+    },
+    rpcFn: async () => EMPTY_STREAK,
+    enabled: Boolean(address),
+    staleTime: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
+  });
 
-  return data;
+  return data?.data ?? null;
 }
