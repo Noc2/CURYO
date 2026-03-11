@@ -1,13 +1,7 @@
-"use client";
-
-import { useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { useAccount } from "wagmi";
+import { redirect } from "next/navigation";
 import { GlobeAltIcon, IdentificationIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { LandingPageActions } from "~~/components/home/LandingPageActions";
 
 const CuryoAnimation = dynamic(() => import("~~/components/home/CuryoAnimation").then(m => m.CuryoAnimation), {
   ssr: false,
@@ -35,34 +29,11 @@ const STEPS = [
   },
 ];
 
-export default function LandingPage() {
-  const { address, isConnected } = useAccount();
-  const { openConnectModal } = useConnectModal();
-  const router = useRouter();
-  const wasConnected = useRef(isConnected);
-
-  const { data: crepBalance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
-    functionName: "balanceOf",
-    args: [address],
-    query: { enabled: !!address },
-  });
-
-  // Redirect old /?content=123 share links to /vote?content=123
-  useEffect(() => {
-    const contentParam = new URLSearchParams(window.location.search).get("content");
-    if (contentParam) {
-      router.replace(`/vote?content=${contentParam}`);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    if (isConnected && !wasConnected.current) {
-      const hasBalance = crepBalance && crepBalance > 0n;
-      router.push(hasBalance ? "/vote" : "/governance");
-    }
-    wasConnected.current = isConnected;
-  }, [isConnected, router, crepBalance]);
+export default async function LandingPage({ searchParams }: { searchParams: Promise<{ content?: string }> }) {
+  const params = await searchParams;
+  if (params.content) {
+    redirect(`/vote?content=${encodeURIComponent(params.content)}`);
+  }
 
   return (
     <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
@@ -82,25 +53,7 @@ export default function LandingPage() {
               <br />
               Age of AI
             </p>
-            <div className="flex gap-3 mt-6">
-              {!isConnected && (
-                <button
-                  className="btn bg-white text-black hover:bg-gray-200 border-none"
-                  onClick={openConnectModal}
-                  type="button"
-                  style={{ fontSize: "16px" }}
-                >
-                  Connect Wallet
-                </button>
-              )}
-              <Link
-                href="/docs"
-                className="btn bg-gray-800 text-white hover:bg-gray-700 border-none"
-                style={{ fontSize: "16px" }}
-              >
-                Learn More
-              </Link>
-            </div>
+            <LandingPageActions />
           </div>
         </div>
 
