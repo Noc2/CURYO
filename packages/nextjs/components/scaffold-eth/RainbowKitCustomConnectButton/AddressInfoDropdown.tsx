@@ -138,7 +138,7 @@ export const AddressInfoDropdown = ({
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked: votingStaked } = useVotingStakes(address);
   const { claimAll, isClaiming, progress } = useClaimAll();
-  const { earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
+  const { votes: activeVotes, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
   const { readyCount: manualRevealReadyCount } = useManualRevealVotes(address);
   const showManualRevealLink = manualRevealReadyCount > 0;
 
@@ -170,15 +170,19 @@ export const AddressInfoDropdown = ({
   });
   const frontendStake = frontendInfo ? Number(frontendInfo[1]) / 1e6 : 0;
 
+  const fallbackVotingStaked = activeVotes.reduce((sum, vote) => sum + Number(vote.stake) / 1e6, 0);
+  const effectiveVotingStaked = Math.max(votingStaked, fallbackVotingStaked);
+
   // Combine all staked amounts (voting + submissions + frontend)
-  const totalStaked = votingStaked + totalSubmissionStake + frontendStake;
+  const totalStaked = effectiveVotingStaked + totalSubmissionStake + frontendStake;
   const stakedFormatted = totalStaked.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const shouldShowStaked = totalStaked > 0 || activeVotes.length > 0;
 
   // Build tooltip showing stake breakdown
   const stakeParts: string[] = [];
   if (totalSubmissionStake > 0) stakeParts.push(`${totalSubmissionStake} cREP submissions`);
-  if (votingStaked > 0) {
-    let votingLabel = `${votingStaked} cREP voting`;
+  if (effectiveVotingStaked > 0) {
+    let votingLabel = `${effectiveVotingStaked} cREP voting`;
     if (earliestReveal) votingLabel += ` · reveals in ${earliestReveal}`;
     else if (showManualRevealLink || hasPendingReveals) votingLabel += ` · pending reveal`;
     stakeParts.push(votingLabel);
@@ -220,7 +224,7 @@ export const AddressInfoDropdown = ({
           </Link>
         ) : null}
       </div>
-      {totalStaked > 0 && (
+      {shouldShowStaked && (
         <div className="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12">
           {stakedFormatted} Staked
           <InfoTooltip text={stakeTooltip} position="bottom" />
@@ -263,8 +267,8 @@ export const AddressInfoDropdown = ({
         </span>
       </div>
       <span className="text-base text-base-content hidden xl:inline xl:px-2">{crepFormatted} cREP</span>
-      {totalStaked > 0 && (
-        <span className="text-base text-base-content hidden xl:inline xl:px-2 items-center gap-1">
+      {shouldShowStaked && (
+        <span className="hidden xl:inline-flex xl:px-2 items-center gap-1 text-base text-base-content">
           {stakedFormatted} Staked
           <InfoTooltip text={stakeTooltip} position="top" />
         </span>
