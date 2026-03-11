@@ -36,6 +36,7 @@ const PONDER_URL = getPonderUrl();
 
 let cachedAvailability: boolean | null = null;
 let cacheExpiry = 0;
+let availabilityPromise: Promise<boolean> | null = null;
 
 const HEALTH_CHECK_TIMEOUT = 2000;
 const CACHE_DURATION = 30_000;
@@ -45,21 +46,33 @@ export async function isPonderAvailable(): Promise<boolean> {
     return cachedAvailability;
   }
 
-  try {
-    const res = await fetch(`${PONDER_URL}/health`, {
-      signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT),
-    });
-    cachedAvailability = res.ok;
-  } catch {
-    cachedAvailability = false;
+  if (availabilityPromise) {
+    return availabilityPromise;
   }
-  cacheExpiry = Date.now() + CACHE_DURATION;
-  return cachedAvailability;
+
+  availabilityPromise = (async () => {
+    try {
+      const res = await fetch(`${PONDER_URL}/health`, {
+        signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT),
+      });
+      cachedAvailability = res.ok;
+    } catch {
+      cachedAvailability = false;
+    } finally {
+      cacheExpiry = Date.now() + CACHE_DURATION;
+      availabilityPromise = null;
+    }
+
+    return cachedAvailability;
+  })();
+
+  return availabilityPromise;
 }
 
 export function invalidatePonderCache() {
   cachedAvailability = null;
   cacheExpiry = 0;
+  availabilityPromise = null;
 }
 
 export async function ponderGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
