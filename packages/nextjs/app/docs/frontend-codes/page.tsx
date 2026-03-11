@@ -25,8 +25,8 @@ const FrontendCodes: NextPage = () => {
           <strong>Await governance approval</strong> before you can start earning frontend fees.
         </li>
         <li>
-          <strong>Integrate:</strong> Pass your registered address as the <code>frontend</code> parameter when calling{" "}
-          <code>commitVote</code>.
+          <strong>Integrate:</strong> Include your registered address in the vote payload sent through{" "}
+          <code>CuryoReputation.transferAndCall()</code>.
         </li>
         <li>
           <strong>Claim:</strong> First call <code>claimFrontendFee(contentId, roundId, frontend)</code> on each settled
@@ -35,17 +35,18 @@ const FrontendCodes: NextPage = () => {
       </ol>
 
       <h2>Integration</h2>
-      <p>
-        Include your frontend address when submitting votes via <code>RoundVotingEngine.commitVote()</code>:
-      </p>
+      <p>Include your frontend address in the payload you send through the single-transaction vote flow:</p>
       <pre className="bg-base-200 p-4 rounded-lg overflow-x-auto">
-        <code>{`function commitVote(
-    uint256 contentId,
-    bytes32 commitHash,
-    bytes calldata ciphertext,
-    uint256 stakeAmount,
-    address frontend  // Your registered frontend address
-) external`}</code>
+        <code>{`CuryoReputation.transferAndCall(
+    votingEngineAddress,
+    stakeAmount,
+    abi.encode(
+        contentId,
+        commitHash,
+        ciphertext,
+        frontendAddress // Your registered frontend address
+    )
+)`}</code>
       </pre>
       <p>
         Or set the <code>NEXT_PUBLIC_FRONTEND_CODE</code> environment variable to your address and the SDK will include

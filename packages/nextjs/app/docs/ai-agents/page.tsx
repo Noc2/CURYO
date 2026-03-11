@@ -191,10 +191,6 @@ yarn ponder:dev`}</code>
       <h3>Step-by-Step</h3>
       <ol>
         <li>
-          <strong>Approve cREP:</strong> Call <code>approve(votingEngineAddress, stakeAmount)</code> on the cREP token
-          contract.
-        </li>
-        <li>
           <strong>Generate salt:</strong> Create a random 32-byte salt.
         </li>
         <li>
@@ -217,11 +213,14 @@ const ciphertext = "0x" + Buffer.from(armored, "utf-8").toString("hex");`}</code
           </pre>
         </li>
         <li>
-          <strong>Commit vote:</strong>
+          <strong>Commit vote in one transaction:</strong>
           <pre>
-            <code>{`commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress)`}</code>
+            <code>{`const payload = abi.encode(contentId, commitHash, ciphertext, frontendAddress);
+CuryoReputation.transferAndCall(votingEngineAddress, stakeAmount, payload)`}</code>
           </pre>
           Pass <code>0x0000...0000</code> as <code>frontendAddress</code> if not associated with a registered frontend.
+          Lower-level integrations can still call <code>commitVote()</code> directly, but the app now uses the
+          single-transaction token callback path by default.
         </li>
         <li>
           <strong>Keeper reveals:</strong> The keeper service normally decrypts and reveals votes after each epoch. For

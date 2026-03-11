@@ -65,11 +65,6 @@ const SmartContracts: NextPage = () => {
               <td>UUPS</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FollowRegistry</td>
-              <td>On-chain curator follow graph shared across all Curyo frontends</td>
-              <td>UUPS</td>
-            </tr>
-            <tr>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>Sybil-resistant token distribution via Self.xyz passport verification</td>
               <td>No</td>
@@ -97,8 +92,8 @@ const SmartContracts: NextPage = () => {
 
       <h2>CuryoReputation</h2>
       <p>
-        ERC-20 token with ERC20Votes for governance and ERC20Permit for gasless approvals. Fixed supply of 100M with 6
-        decimals.
+        ERC-20 token with ERC20Votes for governance, ERC20Permit for scoped approvals, and ERC-1363 transfer hooks for
+        one-transaction voting. Fixed supply of 100M with 6 decimals.
       </p>
       <h3>Key Features</h3>
       <ul>
@@ -115,6 +110,10 @@ const SmartContracts: NextPage = () => {
         <li>
           <strong>Minting:</strong> Only <code>MINTER_ROLE</code> (HumanFaucet) can mint, up to <code>MAX_SUPPLY</code>.
         </li>
+        <li>
+          <strong>Single-tx voting:</strong> The production UI now uses <code>transferAndCall()</code> so cREP transfer
+          and vote commit happen atomically in one wallet transaction.
+        </li>
       </ul>
       <h3>Key Functions</h3>
       <ul>
@@ -126,6 +125,10 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>getTransferableBalance(account)</code> &mdash; Returns balance minus locked amount.
+        </li>
+        <li>
+          <code>transferAndCall(votingEngine, amount, payload)</code> &mdash; Default vote path used by the app. Sends
+          cREP stake to the voting engine and atomically commits the encrypted vote payload.
         </li>
       </ul>
 
@@ -322,9 +325,17 @@ const SmartContracts: NextPage = () => {
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend)</code> &mdash; Submit a tlock
-          encrypted vote with cREP stake (1&ndash;100). Direction is hidden until the epoch ends. Requires Voter ID.
-          Per-identity stake cap enforced. The commitHash binds the voter to their direction before revealing.
+          <code>
+            CuryoReputation.transferAndCall(votingEngine, stakeAmount, abi.encode(contentId, commitHash, ciphertext,
+            frontend))
+          </code>{" "}
+          &mdash; Default one-transaction vote flow. Transfers cREP and records the tlock-encrypted commit atomically.
+          Direction is hidden until the epoch ends. Requires Voter ID and enforces the same 1&ndash;100 cREP stake
+          bounds.
+        </li>
+        <li>
+          <code>commitVote(...)</code> / <code>commitVoteWithPermit(...)</code> &mdash; Lower-level integration paths
+          still supported for bots, tests, and direct contract callers.
         </li>
         <li>
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
@@ -464,40 +475,6 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>getAddressByName(name)</code> &mdash; Reverse lookup: name to owner address.
-        </li>
-      </ul>
-
-      <hr />
-
-      <h2>FollowRegistry</h2>
-      <p>
-        Canonical on-chain follow graph for curator discovery. Follows live on-chain so different Curyo frontends can
-        read the same social graph without sharing a centralized database.
-      </p>
-      <h3>Design Notes</h3>
-      <ul>
-        <li>
-          <strong>Portable social graph:</strong> any frontend or indexer can reconstruct the same follow edges from
-          contract events.
-        </li>
-        <li>
-          <strong>Gas-first storage:</strong> the contract stores only follow membership; enumeration is reconstructed
-          by Ponder instead of being mirrored in contract arrays.
-        </li>
-        <li>
-          <strong>No profile dependency:</strong> addresses can be followed even before they set a profile.
-        </li>
-      </ul>
-      <h3>Key Functions</h3>
-      <ul>
-        <li>
-          <code>follow(target)</code> &mdash; Follow a target address.
-        </li>
-        <li>
-          <code>unfollow(target)</code> &mdash; Remove an existing follow edge.
-        </li>
-        <li>
-          <code>isFollowing(follower, target)</code> &mdash; Read canonical follow state.
         </li>
       </ul>
 

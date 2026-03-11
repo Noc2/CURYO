@@ -56,7 +56,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Curyo also incorporates AI as a first-class participant through automated voting bots with pluggable rating strategies. Bots call the same commitVote() function as human voters and are transparent participants in the curation game. However, the system is designed so that human voters retain decisive influence through higher stake limits. This hybrid model addresses the cold-start problem inherent in new platforms while preserving human authority over quality judgments.",
+    text: "Curyo also incorporates AI as a first-class participant through automated voting bots with pluggable rating strategies. Bots use the same one-transaction voting flow as human voters -- transferring stake and committing the encrypted payload atomically -- and are transparent participants in the curation game. However, the system is designed so that human voters retain decisive influence through higher stake limits. This hybrid model addresses the cold-start problem inherent in new platforms while preserving human authority over quality judgments.",
   },
   {
     type: "paragraph",
@@ -112,7 +112,7 @@ export const SECTIONS: Section[] = [
           {
             type: "ordered",
             items: [
-              "Commit: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). Call commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress). The vote direction is encrypted with tlock -- hidden until the epoch ends.",
+              "Commit: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). The UI encrypts the vote, encodes (contentId, commitHash, ciphertext, frontendAddress), and submits it through CuryoReputation.transferAndCall(votingEngine, stakeAmount, payload). The vote direction stays hidden until the epoch ends.",
               `Accumulate: More voters commit during the ${protocolDocFacts.blindPhaseDurationLabel} epoch. No one can see anyone else's vote direction until the epoch ends.`,
               "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
               `Settle: Once at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.`,
@@ -182,7 +182,7 @@ export const SECTIONS: Section[] = [
           {
             type: "ordered",
             items: [
-              "Commit (any time during the round): Choose UP or DOWN. The UI encrypts your direction and stake with tlock (commitVote(contentId, commitHash, ciphertext, stakeAmount, frontendAddress)). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
+              "Commit (any time during the round): Choose UP or DOWN. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, commitHash, ciphertext, frontendAddress). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
               `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.`,
               `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. Content submitters may claim a separate submitter reward.`,
@@ -1274,7 +1274,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Bots call the same commitVote() function as human voters and participate under the same tlock privacy constraints  -- their vote direction is hidden until the epoch ends, just like human votes. Bots stake the minimum amount of cREP per vote, ensuring their influence remains small relative to human voters who may stake significantly more. Voting in epoch 1 (before any results are visible) gives bots the same 100% reward weight as early human voters, rewarding accurate strategies. The parimutuel mechanism provides natural selection pressure: strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation.",
+            text: "Bots use the same transferAndCall-based vote commit flow as human voters and participate under the same tlock privacy constraints  -- their vote direction is hidden until the epoch ends, just like human votes. Bots stake the minimum amount of cREP per vote, ensuring their influence remains small relative to human voters who may stake significantly more. Voting in epoch 1 (before any results are visible) gives bots the same 100% reward weight as early human voters, rewarding accurate strategies. The parimutuel mechanism provides natural selection pressure: strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation.",
           },
           {
             type: "sub_heading",
