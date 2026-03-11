@@ -171,7 +171,11 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](5);
-        cks[0] = ck1; cks[1] = ck2; cks[2] = ck3; cks[3] = ck4; cks[4] = ck5;
+        cks[0] = ck1;
+        cks[1] = ck2;
+        cks[2] = ck3;
+        cks[3] = ck4;
+        cks[4] = ck5;
         _settleRound(contentId, roundId, cks);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -210,7 +214,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         uint256 balBefore = crepToken.balanceOf(voter2);
@@ -235,7 +240,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         vm.prank(voter1);
@@ -256,7 +262,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         vm.prank(submitter);
@@ -294,7 +301,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         // voter3 can't claim reward (not revealed)
@@ -320,7 +328,8 @@ contract AdversarialTests is VotingTestBase {
 
         // Only reveal first two, settle
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
@@ -381,7 +390,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
@@ -397,7 +407,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         vm.expectRevert(RoundVotingEngine.RoundNotOpen.selector);
@@ -465,7 +476,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         vm.prank(voter1);
@@ -488,7 +500,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
         _settleRound(contentId, roundId, cks);
 
         uint256 reserveAfter = engine.consensusReserve();
@@ -529,8 +542,7 @@ contract AdversarialTests is VotingTestBase {
                 new ERC1967Proxy(
                     address(new RoundRewardDistributor()),
                     abi.encodeCall(
-                        RoundRewardDistributor.initialize,
-                        (owner, address(token2), address(eng2), address(reg2))
+                        RoundRewardDistributor.initialize, (owner, address(token2), address(eng2), address(reg2))
                     )
                 )
             )
@@ -610,7 +622,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ckAttack; cks[1] = ckSybil;
+        cks[0] = ckAttack;
+        cks[1] = ckSybil;
         _settleRound(contentId, roundId, cks);
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
@@ -657,7 +670,9 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](3);
-        cks[0] = ckHonest; cks[1] = ckBig; cks[2] = ckSmall;
+        cks[0] = ckHonest;
+        cks[1] = ckBig;
+        cks[2] = ckSmall;
         _settleRound(contentId, roundId, cks);
 
         // UP wins. Attacker gains from UP side but loses 20e6 from DOWN side
@@ -777,7 +792,9 @@ contract AdversarialTests is VotingTestBase {
         // Settle round 1 quickly (after epoch 1)
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](3);
-        cks[0] = ckH; cks[1] = ck1; cks[2] = ck2;
+        cks[0] = ckH;
+        cks[1] = ck1;
+        cks[2] = ck2;
         _settleRound(contentId, roundId, cks);
 
         // Now within 24h of holder's vote, delegate tries to vote on round 2 (same content)
@@ -807,7 +824,8 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](2);
-        cks[0] = ck1; cks[1] = ck2;
+        cks[0] = ck1;
+        cks[1] = ck2;
 
         RoundLib.Round memory round = engine.getRound(contentId, roundId);
         vm.warp(round.startTime + EPOCH_DURATION + 1);
@@ -969,7 +987,9 @@ contract AdversarialTests is VotingTestBase {
 
         uint256 roundId = engine.getActiveRoundId(contentId);
         bytes32[] memory cks = new bytes32[](3);
-        cks[0] = ck1; cks[1] = ck2; cks[2] = ck3;
+        cks[0] = ck1;
+        cks[1] = ck2;
+        cks[2] = ck3;
         _settleRound(contentId, roundId, cks);
 
         // Claim all

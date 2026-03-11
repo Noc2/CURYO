@@ -1,12 +1,14 @@
 "use client";
 
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 
 /**
  * Hook to read the current ParticipationPool reward rate.
  * Returns the rate as basis points, percentage, and a helper to calculate bonuses.
  */
 export function useParticipationRate() {
+  const isPageVisible = usePageVisibility();
   const {
     data: currentRateBps,
     isLoading,
@@ -15,7 +17,7 @@ export function useParticipationRate() {
     contractName: "ParticipationPool" as any,
     functionName: "getCurrentRateBps",
     query: {
-      refetchInterval: 30_000,
+      refetchInterval: isPageVisible ? 30_000 : false,
     },
   } as any);
 

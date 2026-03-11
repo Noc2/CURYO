@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {RoundLib} from "../contracts/libraries/RoundLib.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 
 /// @title Audit Gap Tests — Priority-1 test coverage for gaps identified during security audit.
 /// @dev Covers:
@@ -92,8 +92,7 @@ contract AuditGapTests is VotingTestBase {
         frontendRegistry = FrontendRegistry(
             address(
                 new ERC1967Proxy(
-                    address(frImpl),
-                    abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
+                    address(frImpl), abi.encodeCall(FrontendRegistry.initialize, (owner, owner, address(crepToken)))
                 )
             )
         );
@@ -204,7 +203,9 @@ contract AuditGapTests is VotingTestBase {
 
         vm.startPrank(voter1);
         vm.expectRevert(); // EnforcedPause
-        votingEngine.commitVoteWithPermit(contentId, hash, ct, STAKE, block.timestamp + 1 hours, 0, bytes32(0), bytes32(0), address(0));
+        votingEngine.commitVoteWithPermit(
+            contentId, hash, ct, STAKE, block.timestamp + 1 hours, 0, bytes32(0), bytes32(0), address(0)
+        );
         vm.stopPrank();
     }
 
@@ -608,8 +609,7 @@ contract AuditGapTests is VotingTestBase {
 
         // Engine should hold at least reserves + keeper pool
         assertTrue(
-            engineBalAfter >= consensusReserve + keeperPool,
-            "Engine must hold at least consensus reserve + keeper pool"
+            engineBalAfter >= consensusReserve + keeperPool, "Engine must hold at least consensus reserve + keeper pool"
         );
 
         // Dust should be minimal (at most a few tokens from rounding)

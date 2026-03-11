@@ -561,9 +561,9 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>M-07</td>
               <td>
-                <strong>Dormant URL stays locked.</strong> URL hash is cleared on cancel but not on dormancy. Dormant
-                URLs staying locked prevents legitimate resubmission. Fix: <code>markDormant()</code> now releases the
-                URL hash (<code>urlSubmitted[urlHash] = false</code>) so it can be resubmitted.
+                <strong>Dormant URL stays locked.</strong> The canonical submission key was cleared on cancel but not on
+                dormancy. Dormant URLs staying locked prevents legitimate resubmission. Fix:
+                <code>markDormant()</code> now releases the submission key so the content can be resubmitted.
               </td>
               <td className="font-mono text-[#EF476F]">ContentRegistry</td>
               <td>

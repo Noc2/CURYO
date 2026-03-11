@@ -70,7 +70,7 @@ function GovernancePageInner() {
 
   // Extract and validate referral code from URL
   useEffect(() => {
-    const refParam = searchParams.get("ref");
+    const refParam = searchParams?.get("ref");
     if (refParam && isAddress(refParam)) {
       setReferrer(refParam);
       sessionStorage.setItem("curyo_referrer", refParam);

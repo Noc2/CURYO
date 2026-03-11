@@ -2,6 +2,8 @@
 
 Date: March 6, 2026
 
+Point-in-time note: this document reflects repo state on March 6, 2026. The official read-only MCP server has since been added under `packages/mcp-server`.
+
 ## Executive Summary
 
 Curyo is already directionally well-positioned for the AI era: it has a public quality signal, sybil resistance, economic commitment behind ratings, an indexer/API, and an existing bot implementation. The gap is not thesis. The gap is packaging and distribution.

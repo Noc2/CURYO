@@ -97,7 +97,8 @@ library RewardMath {
         )
     {
         loserRefundShare = calculateRevealedLoserRefund(losingPool);
-        (voterShare, submitterShare, platformShare, treasuryShare, consensusShare) = splitPool(losingPool - loserRefundShare);
+        (voterShare, submitterShare, platformShare, treasuryShare, consensusShare) =
+            splitPool(losingPool - loserRefundShare);
     }
 
     /// @notice Split the losing pool into the 5 reward buckets.

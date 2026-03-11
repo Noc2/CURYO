@@ -1,9 +1,4 @@
-import {
-  followProfile,
-  isFollowingOnChain,
-  unfollowProfile,
-  waitForPonderIndexed,
-} from "../helpers/admin-helpers";
+import { followProfile, isFollowingOnChain, unfollowProfile, waitForPonderIndexed } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { getFollowState, getFollowing } from "../helpers/ponder-api";

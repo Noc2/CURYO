@@ -42,6 +42,7 @@ Within the package directory, additional scripts are available:
 | `PONDER_CONTENT_REGISTRY_ADDRESS` etc. | Deployed contract addresses for the selected network |
 | `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Start blocks for each indexed contract |
 | `CORS_ORIGIN` | Allowed origins (comma-separated; required in production) |
+| `RATE_LIMIT_TRUSTED_IP_HEADERS` | Comma-separated proxy IP headers to trust for API rate limiting in production |
 
 ## Project Structure
 
@@ -96,3 +97,5 @@ rm -rf packages/ponder/.ponder
 ```
 
 **BigInt serialization:** Always use `replaceBigInts()` from `"ponder"` before calling `c.json()` in API routes — `JSON.stringify` cannot serialize BigInt values.
+
+**Rate limiting behind proxies:** In production, set `RATE_LIMIT_TRUSTED_IP_HEADERS` only to headers your edge proxy overwrites, such as `x-forwarded-for` on Vercel/Railway behind a trusted proxy or `cf-connecting-ip` on Cloudflare. If you leave it unset, Ponder falls back to a request fingerprint instead of skipping rate limiting.

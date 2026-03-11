@@ -1,0 +1,237 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import { RoundIntegrationTest } from "./RoundIntegration.t.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+
+contract GasBudgetTest is RoundIntegrationTest {
+    uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 400_000;
+    uint256 internal constant MAX_COMMIT_VOTE_GAS = 800_000;
+    uint256 internal constant MAX_REVEAL_VOTE_GAS = 320_000;
+    uint256 internal constant MAX_SETTLE_ROUND_GAS = 475_000;
+    uint256 internal constant MAX_PROCESS_UNREVEALED_GAS = 250_000;
+    uint256 internal constant MAX_CANCEL_EXPIRED_ROUND_GAS = 60_000;
+    uint256 internal constant MAX_CLAIM_REWARD_GAS = 190_000;
+    uint256 internal constant MAX_CLAIM_PARTICIPATION_REWARD_GAS = 240_000;
+    uint256 internal constant MAX_CLAIM_FRONTEND_FEE_GAS = 250_000;
+
+    function _measureCall(address target, bytes memory callData) internal returns (uint256 gasUsed) {
+        vm.resumeGasMetering();
+        uint256 gasBefore = gasleft();
+        (bool success,) = target.call(callData);
+        gasUsed = gasBefore - gasleft();
+        vm.pauseGasMetering();
+        assertTrue(success, "measured call reverted");
+    }
+
+    function _measureCallAs(address caller, address target, bytes memory callData) internal returns (uint256 gasUsed) {
+        vm.pauseGasMetering();
+        vm.startPrank(caller);
+        vm.resumeGasMetering();
+        uint256 gasBefore = gasleft();
+        (bool success,) = target.call(callData);
+        gasUsed = gasBefore - gasleft();
+        vm.pauseGasMetering();
+        vm.stopPrank();
+        assertTrue(success, "measured pranked call reverted");
+    }
+
+    function testGas_submitContent_underBudget() public {
+        vm.pauseGasMetering();
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        vm.stopPrank();
+
+        uint256 gasUsed = _measureCallAs(
+            submitter,
+            address(registry),
+            abi.encodeCall(ContentRegistry.submitContent, ("https://example.com/gas-submit", "test goal", "test", 0))
+        );
+
+        assertLe(gasUsed, MAX_SUBMIT_CONTENT_GAS, "submitContent gas budget exceeded");
+    }
+
+    function testGas_commitVote_underBudget() public {
+        vm.pauseGasMetering();
+        uint256 contentId = _submitContent();
+        bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1)));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes memory ciphertext = _testCiphertext(true, salt, contentId);
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        vm.stopPrank();
+
+        uint256 gasUsed = _measureCallAs(
+            voter1,
+            address(votingEngine),
+            abi.encodeCall(RoundVotingEngine.commitVote, (contentId, commitHash, ciphertext, STAKE, address(0)))
+        );
+
+        assertLe(gasUsed, MAX_COMMIT_VOTE_GAS, "commitVote gas budget exceeded");
+    }
+
+    function testGas_revealVoteByCommitKey_underBudget() public {
+        vm.pauseGasMetering();
+        uint256 contentId = _submitContent();
+        bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(2)));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
+        bytes memory ciphertext = _testCiphertext(true, salt, contentId);
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        vm.stopPrank();
+
+        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+
+        uint256 gasUsed = _measureCall(
+            address(votingEngine),
+            abi.encodeCall(
+                RoundVotingEngine.revealVoteByCommitKey, (contentId, roundId, _commitKey(voter1, commitHash), true, salt)
+            )
+        );
+
+        assertLe(gasUsed, MAX_REVEAL_VOTE_GAS, "revealVoteByCommitKey gas budget exceeded");
+    }
+
+    function testGas_settleRound_underBudget() public {
+        vm.pauseGasMetering();
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory directions = new bool[](3);
+        directions[0] = true;
+        directions[1] = true;
+        directions[2] = false;
+
+        _commitAllThenReveal(voters, contentId, directions, STAKE);
+        uint256 roundId = _getActiveOrLatestRoundId(contentId);
+
+        uint256 gasUsed =
+            _measureCall(address(votingEngine), abi.encodeCall(RoundVotingEngine.settleRound, (contentId, roundId)));
+
+        assertLe(gasUsed, MAX_SETTLE_ROUND_GAS, "settleRound gas budget exceeded");
+    }
+
+    function testGas_processUnrevealedVotes_underBudget() public {
+        vm.pauseGasMetering();
+        uint256 contentId = _submitContent();
+
+        bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(1)));
+        bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, true, uint256(2)));
+        bytes32 s3 = keccak256(abi.encodePacked(voter3, contentId, false, uint256(3)));
+        bytes32 ch1 = _commitHash(true, s1, contentId);
+        bytes32 ch2 = _commitHash(true, s2, contentId);
+        bytes32 ch3 = _commitHash(false, s3, contentId);
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(voter2);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
+        vm.stopPrank();
+
+        vm.startPrank(voter3);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, address(0));
+        vm.stopPrank();
+
+        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+
+        vm.warp(round.startTime + EPOCH_DURATION + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
+
+        vm.warp(round.startTime + EPOCH_DURATION + votingEngine.revealGracePeriod() + 1);
+        votingEngine.settleRound(contentId, roundId);
+
+        uint256 gasUsed = _measureCall(
+            address(votingEngine),
+            abi.encodeCall(RoundVotingEngine.processUnrevealedVotes, (contentId, roundId, 0, 10))
+        );
+
+        assertLe(gasUsed, MAX_PROCESS_UNREVEALED_GAS, "processUnrevealedVotes gas budget exceeded");
+    }
+
+    function testGas_cancelExpiredRound_underBudget() public {
+        vm.pauseGasMetering();
+        uint256 contentId = _submitContent();
+        bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(4)));
+        bytes32 commitHash = _commitHash(true, salt, contentId);
+
+        vm.startPrank(voter1);
+        crepToken.approve(address(votingEngine), STAKE);
+        votingEngine.commitVote(contentId, commitHash, _testCiphertext(true, salt, contentId), STAKE, address(0));
+        vm.stopPrank();
+
+        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        vm.warp(round.startTime + 7 days + 1);
+
+        uint256 gasUsed = _measureCall(
+            address(votingEngine), abi.encodeCall(RoundVotingEngine.cancelExpiredRound, (contentId, roundId))
+        );
+
+        assertLe(gasUsed, MAX_CANCEL_EXPIRED_ROUND_GAS, "cancelExpiredRound gas budget exceeded");
+    }
+
+    function testGas_claimReward_underBudget() public {
+        vm.pauseGasMetering();
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory directions = new bool[](3);
+        directions[0] = true;
+        directions[1] = true;
+        directions[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, directions, STAKE);
+
+        uint256 gasUsed = _measureCallAs(
+            voter1, address(rewardDistributor), abi.encodeCall(RoundRewardDistributor.claimReward, (contentId, roundId))
+        );
+
+        assertLe(gasUsed, MAX_CLAIM_REWARD_GAS, "claimReward gas budget exceeded");
+    }
+
+    function testGas_claimParticipationReward_underBudget() public {
+        vm.pauseGasMetering();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
+
+        uint256 gasUsed = _measureCallAs(
+            voter1,
+            address(votingEngine),
+            abi.encodeCall(RoundVotingEngine.claimParticipationReward, (contentId, roundId))
+        );
+
+        assertLe(gasUsed, MAX_CLAIM_PARTICIPATION_REWARD_GAS, "claimParticipationReward gas budget exceeded");
+    }
+
+    function testGas_claimFrontendFee_underBudget() public {
+        vm.pauseGasMetering();
+        (, address frontendOp) = _setupFrontendRegistry();
+        (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
+
+        uint256 gasUsed = _measureCall(
+            address(votingEngine), abi.encodeCall(RoundVotingEngine.claimFrontendFee, (contentId, roundId, frontendOp))
+        );
+
+        assertLe(gasUsed, MAX_CLAIM_FRONTEND_FEE_GAS, "claimFrontendFee gas budget exceeded");
+    }
+}

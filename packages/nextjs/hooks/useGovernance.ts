@@ -11,6 +11,7 @@ import {
   useTargetNetwork,
   useTransactor,
 } from "~~/hooks/scaffold-eth";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
@@ -229,13 +230,14 @@ export function useGovernanceContracts() {
 
 export function useGovernanceStats() {
   const { targetNetwork, governorAddress, hasGovernorContract, timelockAddress } = useGovernanceContracts();
+  const isPageVisible = usePageVisibility();
   const { data: latestBlock } = useBlockNumber({
     chainId: targetNetwork.id,
     watch: false,
     query: {
       enabled: hasGovernorContract,
       staleTime: 30_000,
-      refetchInterval: 30_000,
+      refetchInterval: isPageVisible ? 30_000 : false,
     },
   });
 
@@ -311,6 +313,7 @@ export function useGovernanceStats() {
 
 export function useGovernorProposals() {
   const { address } = useAccount();
+  const isPageVisible = usePageVisibility();
   const { targetNetwork, governorAddress, hasGovernorContract, knownContractsByAddress, token } =
     useGovernanceContracts();
   const publicClient = usePublicClient({ chainId: targetNetwork.id });
@@ -329,7 +332,7 @@ export function useGovernorProposals() {
     queryKey: ["governor-proposals", targetNetwork.id, governorAddress, address, governorFromBlock.toString()],
     enabled: !!publicClient && !!governorAddress && hasGovernorContract && !!proposalCreatedEvent,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 30_000 : false,
     queryFn: async (): Promise<Proposal[]> => {
       const rawLogs = await publicClient!.getLogs({
         address: governorAddress!,

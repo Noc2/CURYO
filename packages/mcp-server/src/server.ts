@@ -12,7 +12,9 @@ import {
   toContentStatusParam,
   toRoundStateParam,
 } from "./lib/filters.js";
-import { createToolEnvelope, errorToolResult, jsonToolResult } from "./lib/results.js";
+import { createDataEnvelope, errorToolResult, jsonToolResult } from "./lib/results.js";
+import { registerPrompts } from "./prompts.js";
+import { registerResources } from "./resources.js";
 
 const addressSchema = z.string().regex(/^0x[0-9a-fA-F]{40}$/i, "Expected a 0x-prefixed address");
 const bigintIdSchema = z.string().regex(/^\d+$/, "Expected an unsigned integer string");
@@ -24,7 +26,10 @@ const readOnlyAnnotations = {
   openWorldHint: false,
 } as const;
 
-export function createServer(config: ServerConfig, ponderClient = new PonderClient({ baseUrl: config.ponderBaseUrl })): McpServer {
+export function createServer(
+  config: ServerConfig,
+  ponderClient = new PonderClient({ baseUrl: config.ponderBaseUrl, timeoutMs: config.ponderTimeoutMs }),
+): McpServer {
   const server = new McpServer({
     name: config.serverName,
     version: config.serverVersion,
@@ -37,7 +42,7 @@ export function createServer(config: ServerConfig, ponderClient = new PonderClie
   ): Promise<CallToolResult> => {
     try {
       const data = await action();
-      return jsonToolResult(createToolEnvelope(config.ponderBaseUrl, endpoint, data, warnings));
+      return jsonToolResult(createDataEnvelope(config.ponderBaseUrl, endpoint, data, warnings));
     } catch (error) {
       if (error instanceof PonderApiError) {
         return errorToolResult(`Ponder API error (${error.status}): ${error.message}`);
@@ -47,6 +52,9 @@ export function createServer(config: ServerConfig, ponderClient = new PonderClie
       return errorToolResult(message);
     }
   };
+
+  registerResources(server, config, ponderClient);
+  registerPrompts(server);
 
   server.registerTool(
     "search_content",

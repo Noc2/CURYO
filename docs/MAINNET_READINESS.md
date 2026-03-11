@@ -1,6 +1,6 @@
 # Mainnet Readiness Checklist
 
-Status: **Draft** | Last updated: 2026-03-09
+Status: **Draft** | Last updated: 2026-03-11
 
 This document tracks every item that must be resolved (BLOCKING) or should be resolved (NON-BLOCKING) before deploying Curyo to Celo Mainnet (chain ID 42220).
 
@@ -13,9 +13,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 - [ ] **External audit completed and findings addressed**
   No third-party audit report found in the repository. The codebase has internal test coverage (38 top-level Foundry test files including invariant/solvency/adversarial suites) and Slither static analysis in CI, but no formal external audit trail.
 
-- [ ] **Post-deployment role verification automated**
-  `DEPLOYMENT.md` Step 2e shows manual `cast call` checks to confirm the deployer renounced all roles. Automate this as a script that fails loudly if the deployer retains any role — human error here is catastrophic.
-  _Ref: `DEPLOYMENT.md:173-185`_
+- [x] **Post-deployment role verification automated** _(fixed)_
+  `DeployCuryo.s.sol` now performs a fail-loud production verification pass after renouncing deployer setup roles and transferring ownership, and the deployment guide now documents that this automatic verification is the primary safety gate.
+  _Ref: `packages/foundry/script/DeployCuryo.s.sol`, `docs/DEPLOYMENT.md`_
 
 ### Keeper
 
@@ -47,9 +47,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   Added a comprehensive CSP header restricting `script-src`, `connect-src`, `frame-src`, `img-src`, `font-src`, `style-src`, `object-src`, `base-uri`, and `form-action` to known origins. Dev-only localhost origins are conditionally included. Production Ponder URL injected via `NEXT_PUBLIC_PONDER_URL` at build time.
   _Ref: `packages/nextjs/next.config.ts:8-56`_
 
-- [ ] **Database migration rollout / rollback documented**
-  Versioned Drizzle migrations now exist (`packages/nextjs/drizzle/`, `yarn db:generate`, `yarn db:push`), so schema versioning is in place. What is still missing is a production runbook for pre-deploy dry-runs, backups, rollback/restore, and how to apply migrations safely against Turso.
-  _Ref: `packages/nextjs/drizzle/`, `packages/nextjs/package.json:18-20`, `docs/DEPLOYMENT.md:254-269`_
+- [x] **Database migration rollout / rollback documented** _(documented)_
+  Production migration preflight, backup, point-in-time restore, logical dump restore, and rollback rules now live in `docs/OPERATIONS.md`, and `DEPLOYMENT.md` now points operators to that runbook before `yarn db:push`.
+  _Ref: `docs/OPERATIONS.md`, `docs/DEPLOYMENT.md`_
 
 ### Environment & Secrets
 
@@ -68,6 +68,12 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 ## NON-BLOCKING — Should resolve, not a launch gate
 
 ### Smart Contracts
+
+- [x] **Hot-path gas budgets enforced** _(fixed)_
+  Added an assertion-based gas budget suite covering `submitContent`, `commitVote`, `revealVoteByCommitKey`,
+  `settleRound`, `processUnrevealedVotes`, `cancelExpiredRound`, `claimReward`, `claimParticipationReward`, and
+  `claimFrontendFee`. This turns hot-path gas into a tracked regression gate instead of an ad hoc report.
+  _Ref: `packages/foundry/test/GasBudget.t.sol`, `docs/PERFORMANCE_BASELINE_2026-03-11.md`_
 
 - [ ] **Keeper reward pool exhaustion monitoring**
   If `keeperRewardPool` depletes, the keeper still works but earns no rewards — reducing incentive to operate. Document a monitoring alert for when the pool drops below a threshold (e.g., 10K cREP) and a governance procedure to refill it.
@@ -89,13 +95,13 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Keeper
 
-- [ ] **Nonce management for multi-instance deployments**
-  `DEPLOYMENT.md` recommends running 2+ keeper instances for redundancy. Without nonce coordination, concurrent instances may submit txs with conflicting nonces. Currently mitigated by `KEEPER_STARTUP_JITTER_MS` staggering, but under load both could fire simultaneously. Duplicate reveals simply revert (no harm, wasted gas). Document this trade-off or add explicit nonce management.
-  _Ref: `DEPLOYMENT.md:461-463`, `packages/keeper/src/index.ts:50-54`_
+- [x] **Nonce management for multi-instance deployments** _(documented)_
+  The deployment guide and operations runbook now document the intended active / standby keeper model, the absence of a shared nonce coordinator, and the expected duplicate-submit / wasted-gas trade-off if multiple active writers are run intentionally.
+  _Ref: `docs/DEPLOYMENT.md`, `docs/OPERATIONS.md`, `packages/keeper/src/index.ts:50-54`_
 
-- [ ] **Keeper metrics alert thresholds documented**
-  `DEPLOYMENT.md` already covers baseline monitoring (Keeper health, gas balance, bot balances, Ponder sync), but it still lacks concrete thresholds for `keeper_decrypt_failures_total`, `keeper_errors_total`, and abnormal run duration. Add copy-paste alert rules to `DEPLOYMENT.md` or a separate `OPERATIONS.md`.
-  _Ref: `packages/keeper/src/metrics.ts`, `docs/DEPLOYMENT.md:643-650`_
+- [x] **Keeper metrics alert thresholds documented** _(documented)_
+  `docs/OPERATIONS.md` now defines explicit thresholds for `keeper_errors_total`, `keeper_decrypt_failures_total`, `keeper_last_run_duration_seconds`, wallet balance, and pool balances.
+  _Ref: `packages/keeper/src/metrics.ts`, `docs/OPERATIONS.md`_
 
 ### Ponder Indexer
 
@@ -108,6 +114,16 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   _Ref: `packages/ponder/src/api/index.ts:33-36`_
 
 ### Frontend (Next.js)
+
+- [x] **High-traffic polling pauses in hidden tabs** _(fixed)_
+  The highest-noise Discover/Vote/Governance/Profile hooks now stop their periodic Ponder/RPC refresh loop when the
+  page is hidden, reducing idle traffic from background tabs without changing visible-tab freshness.
+  _Ref: `packages/nextjs/hooks/useContentFeedQuery.ts`, `packages/nextjs/hooks/useVoteHistoryQuery.ts`, `packages/nextjs/hooks/useRecentUserVotes.ts`, `packages/nextjs/hooks/useDiscoverSignals.ts`, `packages/nextjs/hooks/useGovernance.ts`, `packages/nextjs/components/profile/PublicProfileView.tsx`_
+
+- [x] **Production bundle baseline recorded** _(documented)_
+  Generated analyzer reports and recorded the current route-chunk/shared-chunk baseline, plus the production-build
+  env checks surfaced during that pass, in the performance note.
+  _Ref: `docs/PERFORMANCE_BASELINE_2026-03-11.md`, `packages/nextjs/next.config.ts`_
 
 - [x] **robots.txt** _(fixed)_
   Added `public/robots.txt` blocking `/api/` and `/debug/` routes. Sitemap deferred — all routes are dynamic/app-generated content.
@@ -126,8 +142,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
 
 ### Documentation
 
-- [ ] **Operations runbook**
-  `DEPLOYMENT.md` now covers monitoring, security checks, wallet-balance alerts, and secret rotation. What is still missing is a concise day-2 incident runbook for Ponder lag, prolonged drand outages, database backup/restore, deploy rollback, and manual keeper failover.
+- [x] **Operations runbook** _(documented)_
+  `docs/OPERATIONS.md` now includes runbooks for Ponder lag, drand outages, manual keeper failover, deploy rollback, and database restore.
+  _Ref: `docs/OPERATIONS.md`_
 
 - [x] **Self.xyz dependency documented** _(documented)_
   The mainnet deployment guide already documents the dependency, verification flow, cold-wallet identity requirements, and mainnet hub address. Public legal/docs pages also mention the third-party dependency. An emergency fallback policy is still a product/governance decision, but the dependency itself is documented.

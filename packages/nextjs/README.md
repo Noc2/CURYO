@@ -31,22 +31,22 @@ Requires the local chain (`yarn chain`), deployed contracts (`yarn deploy`), and
 
 Key environment variables (see `.env.example` for the full list):
 
-| Variable                                | Description                                          |
-| --------------------------------------- | ---------------------------------------------------- |
-| `NEXT_PUBLIC_ALCHEMY_API_KEY`           | Alchemy RPC provider key                             |
-| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID                             |
+| Variable                                | Description                                                                   |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_ALCHEMY_API_KEY`           | Alchemy RPC provider key                                                      |
+| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID                                                      |
 | `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
-| `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata          |
-| `DATABASE_URL`                          | SQLite/Turso database URL (required in production)   |
-| `DATABASE_AUTH_TOKEN`                   | Turso auth token (production only)                   |
-| `RESEND_API_KEY`                        | Resend API key for email notification delivery       |
-| `RESEND_FROM_EMAIL`                     | Verified sender address/domain used by Resend        |
-| `APP_URL`                               | Public app URL used in verification and email links  |
-| `NOTIFICATION_DELIVERY_SECRET`          | Secret for the email delivery cron endpoint          |
-| `NEXT_PUBLIC_PONDER_URL`                | Public Ponder indexer URL (required in production)   |
+| `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata                                   |
+| `DATABASE_URL`                          | SQLite/Turso database URL (required in production)                            |
+| `DATABASE_AUTH_TOKEN`                   | Turso auth token (production only)                                            |
+| `RESEND_API_KEY`                        | Resend API key for email notification delivery                                |
+| `RESEND_FROM_EMAIL`                     | Verified sender address/domain used by Resend                                 |
+| `APP_URL`                               | Public app URL used in verification and email links                           |
+| `NOTIFICATION_DELIVERY_SECRET`          | Secret for the email delivery cron endpoint                                   |
+| `NEXT_PUBLIC_PONDER_URL`                | Public Ponder indexer URL (required in production)                            |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
-| `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                 |
-| `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                        |
+| `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                                          |
+| `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                                                 |
 
 Notes:
 

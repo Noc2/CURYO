@@ -37,7 +37,7 @@ export const menuLinks: HeaderMenuLink[] = [
 ];
 
 export const HeaderMenuLinks = () => {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const isDocsPage = pathname.startsWith("/docs");
 
   return (
@@ -144,10 +144,10 @@ const buildVoteSearchTarget = (value: string) => {
 
 const HeaderSearchBar = ({ className }: { className?: string }) => {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
 
-  const activeQuery = searchParams.get("q") ?? "";
+  const activeQuery = searchParams?.get("q") ?? "";
   const [inputValue, setInputValue] = useState(activeQuery);
 
   useEffect(() => {
@@ -208,9 +208,9 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
 
 const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const searchParams = useSearchParams();
-  const activeQuery = searchParams.get("q") ?? "";
+  const activeQuery = searchParams?.get("q") ?? "";
   const [draftValue, setDraftValue] = useState(activeQuery);
 
   useEffect(() => {
@@ -285,7 +285,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
  * Left-side vertical navbar (TikTok-style). Desktop: fixed sidebar; mobile: top bar with burger.
  */
 export const Header = () => {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);

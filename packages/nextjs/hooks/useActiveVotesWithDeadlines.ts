@@ -3,7 +3,7 @@
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
-import { deriveRoundTiming } from "~~/lib/contracts/roundVotingEngine";
+import { deriveVoteDeadlines } from "~~/lib/contracts/roundVotingEngine";
 
 export interface ActiveVoteWithDeadline {
   contentId: string;
@@ -48,13 +48,12 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
     .filter(v => v.roundStartTime != null)
     .map(v => {
       const startTime = Number(v.roundStartTime);
-      const timing = deriveRoundTiming({
+      const deadlines = deriveVoteDeadlines({
         startTime,
         now,
         epochDuration,
         maxDuration,
       });
-      const roundExpiry = startTime + maxDuration;
 
       return {
         contentId: v.contentId,
@@ -64,10 +63,10 @@ export function useActiveVotesWithDeadlines(voter?: string): ActiveVotesWithDead
         revealed: v.revealed,
         epochIndex: v.epochIndex,
         startTime,
-        epoch1EndTime: timing.epoch1EndTime,
-        deadline: roundExpiry,
-        timeRemaining: timing.roundTimeRemaining,
-        epoch1Remaining: timing.epoch1Remaining,
+        epoch1EndTime: deadlines.epoch1EndTime,
+        deadline: deadlines.deadline,
+        timeRemaining: deadlines.roundTimeRemaining,
+        epoch1Remaining: deadlines.epoch1Remaining,
       };
     });
 

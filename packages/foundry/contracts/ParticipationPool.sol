@@ -154,7 +154,12 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @param voter The address to reward
     /// @param amount The pre-computed reward amount
     /// @return paidAmount The actual amount distributed (can be less than requested if depleted)
-    function distributeReward(address voter, uint256 amount) external onlyAuthorized nonReentrant returns (uint256 paidAmount) {
+    function distributeReward(address voter, uint256 amount)
+        external
+        onlyAuthorized
+        nonReentrant
+        returns (uint256 paidAmount)
+    {
         return _distribute(voter, amount, false);
     }
 

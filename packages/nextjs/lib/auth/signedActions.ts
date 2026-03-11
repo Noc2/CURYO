@@ -170,6 +170,22 @@ export async function persistSignedActionChallenge(params: {
   });
 }
 
+export function mapSignedActionError(error: unknown): { status: number; error: string } | null {
+  const code = error instanceof Error ? error.message : typeof error === "string" ? error : null;
+
+  switch (code) {
+    case "CHALLENGE_USED":
+      return { status: 409, error: "Challenge already used" };
+    case "CHALLENGE_EXPIRED":
+      return { status: 401, error: "Challenge expired" };
+    case "INVALID_CHALLENGE":
+    case "INVALID_SIGNATURE":
+      return { status: 401, error: "Invalid signature challenge" };
+    default:
+      return null;
+  }
+}
+
 export async function verifyAndConsumeSignedActionChallenge(
   tx: any,
   params: {

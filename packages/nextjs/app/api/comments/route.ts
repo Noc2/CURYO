@@ -6,7 +6,11 @@ import {
   hashCommentChallengePayload,
   normalizeCommentChallengeInput,
 } from "~~/lib/auth/commentChallenge";
-import { ensureSignedActionChallengeTable, verifyAndConsumeSignedActionChallenge } from "~~/lib/auth/signedActions";
+import {
+  ensureSignedActionChallengeTable,
+  mapSignedActionError,
+  verifyAndConsumeSignedActionChallenge,
+} from "~~/lib/auth/signedActions";
 import { db } from "~~/lib/db";
 import { comments } from "~~/lib/db/schema";
 import { readProfileRegistryProfile, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
@@ -115,15 +119,10 @@ export async function POST(request: NextRequest) {
           })
           .returning();
       });
-    } catch (error: any) {
-      if (error.message === "CHALLENGE_USED") {
-        return NextResponse.json({ error: "Challenge already used" }, { status: 409 });
-      }
-      if (error.message === "CHALLENGE_EXPIRED") {
-        return NextResponse.json({ error: "Challenge expired" }, { status: 401 });
-      }
-      if (error.message === "INVALID_CHALLENGE" || error.message === "INVALID_SIGNATURE") {
-        return NextResponse.json({ error: "Invalid signature challenge" }, { status: 401 });
+    } catch (error: unknown) {
+      const mapped = mapSignedActionError(error);
+      if (mapped) {
+        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
       }
       throw error;
     }

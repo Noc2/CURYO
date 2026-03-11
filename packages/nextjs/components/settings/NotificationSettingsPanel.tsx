@@ -72,7 +72,9 @@ function NotificationPreferenceToggle({
 
 export function NotificationSettingsPanel({ address }: { address?: string }) {
   const { openConnectModal } = useConnectModal();
-  const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address);
+  const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address, {
+    autoRead: true,
+  });
   const {
     settings: emailSettings,
     isLoading: isEmailLoading,

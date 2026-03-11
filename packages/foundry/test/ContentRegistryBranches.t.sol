@@ -20,9 +20,17 @@ import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 contract MockCategoryRegistry is ICategoryRegistry {
     mapping(uint256 => bool) public approved;
     mapping(uint256 => address) public submitters;
+    mapping(uint256 => string) public domains;
+    mapping(bytes32 => uint256) public domainToId;
 
     function setApproved(uint256 id, bool val) external {
         approved[id] = val;
+    }
+
+    function setDomain(uint256 id, string calldata domain) external {
+        string memory normalized = _normalizeDomain(domain);
+        domains[id] = normalized;
+        domainToId[keccak256(bytes(normalized))] = id;
     }
 
     function setSubmitter(uint256 id, address s) external {
@@ -33,24 +41,105 @@ contract MockCategoryRegistry is ICategoryRegistry {
         return approved[categoryId];
     }
 
-    function getCategory(uint256) external pure override returns (Category memory) {
-        revert("not impl");
+    function getCategory(uint256 categoryId) external view override returns (Category memory) {
+        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
+        return _category(categoryId);
     }
 
-    function getCategoryByDomain(string calldata) external pure override returns (Category memory) {
-        revert("not impl");
+    function getCategoryByDomain(string calldata domain) external view override returns (Category memory) {
+        uint256 categoryId = domainToId[keccak256(bytes(_normalizeDomain(domain)))];
+        require(categoryId != 0, "Domain not registered");
+        return _category(categoryId);
     }
 
     function getApprovedCategoryIds() external pure override returns (uint256[] memory) {
         return new uint256[](0);
     }
 
-    function isDomainRegistered(string calldata) external pure override returns (bool) {
-        return false;
+    function isDomainRegistered(string calldata domain) external view override returns (bool) {
+        return domainToId[keccak256(bytes(_normalizeDomain(domain)))] != 0;
     }
 
     function getSubmitter(uint256 categoryId) external view override returns (address) {
         return submitters[categoryId];
+    }
+
+    function _category(uint256 categoryId) internal view returns (Category memory) {
+        string[] memory subcategories = new string[](0);
+        return Category({
+            id: categoryId,
+            name: "",
+            domain: domains[categoryId],
+            subcategories: subcategories,
+            rankingQuestion: "",
+            submitter: submitters[categoryId],
+            stakeAmount: 0,
+            status: approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending,
+            proposalId: 0,
+            createdAt: 0
+        });
+    }
+
+    function _normalizeDomain(string memory domain) internal pure returns (string memory) {
+        bytes memory b = bytes(domain);
+        uint256 startIndex = 0;
+
+        if (b.length >= 8 && b[0] == "h" && b[1] == "t" && b[2] == "t" && b[3] == "p") {
+            if (b[4] == "s" && b[5] == ":" && b[6] == "/" && b[7] == "/") {
+                startIndex = 8;
+            } else if (b[4] == ":" && b[5] == "/" && b[6] == "/") {
+                startIndex = 7;
+            }
+        }
+
+        if (
+            b.length >= startIndex + 4 && (b[startIndex] == "w" || b[startIndex] == "W")
+                && (b[startIndex + 1] == "w" || b[startIndex + 1] == "W")
+                && (b[startIndex + 2] == "w" || b[startIndex + 2] == "W") && b[startIndex + 3] == "."
+        ) {
+            startIndex += 4;
+        }
+
+        if (
+            b.length >= startIndex + 2 && b[startIndex + 1] == "."
+                && ((b[startIndex] >= 0x61 && b[startIndex] <= 0x7A)
+                    || (b[startIndex] >= 0x41 && b[startIndex] <= 0x5A))
+        ) {
+            bool hasMoreDots = false;
+            for (uint256 j = startIndex + 2; j < b.length; j++) {
+                if (b[j] == "/" || b[j] == ":" || b[j] == "?" || b[j] == "#") break;
+                if (b[j] == ".") {
+                    hasMoreDots = true;
+                    break;
+                }
+            }
+            if (hasMoreDots) {
+                startIndex += 2;
+            }
+        }
+
+        bytes memory result = new bytes(b.length - startIndex);
+        uint256 resultIndex = 0;
+        for (uint256 i = startIndex; i < b.length; i++) {
+            bytes1 char = b[i];
+            if (char == "/" || char == ":" || char == "?" || char == "#") break;
+            if (char >= 0x41 && char <= 0x5A) {
+                result[resultIndex] = bytes1(uint8(char) + 32);
+            } else {
+                result[resultIndex] = char;
+            }
+            resultIndex++;
+        }
+
+        if (resultIndex > 0 && result[resultIndex - 1] == ".") {
+            resultIndex--;
+        }
+
+        bytes memory trimmed = new bytes(resultIndex);
+        for (uint256 i = 0; i < resultIndex; i++) {
+            trimmed[i] = result[i];
+        }
+        return string(trimmed);
     }
 }
 
@@ -269,6 +358,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_SubmitContent_CategoryNotApproved_Reverts() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(99, "example.com");
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
@@ -277,17 +367,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_SubmitContent_CategoryRegistryNotSet_Reverts() public {
-        // No categoryRegistry set but categoryId != 0
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("CategoryRegistry not set");
-        registry.submitContent("https://example.com/1", "goal", "tags", 1);
-        vm.stopPrank();
-    }
-
-    function test_SubmitContent_CategoryZero_SkipsValidation() public {
-        // categoryId = 0 → skip category validation entirely
+    function test_SubmitContent_CategoryZero_SkipsValidation_WhenRegistryUnset() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         uint256 id = registry.submitContent("https://example.com/1", "goal", "tags", 0);
@@ -796,6 +876,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_SubmitContent_CategoryApproved_Succeeds() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "example.com");
         mockCategoryRegistry.setApproved(1, true);
 
         vm.startPrank(submitter);
@@ -804,5 +885,202 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
         assertEq(id, 1);
         assertEq(registry.getCategoryId(1), 1);
+    }
+
+    function test_SubmitContent_CategoryRegistryConfigured_AutoResolvesCategoryFromUrl() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(7, "example.com");
+        mockCategoryRegistry.setApproved(7, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        uint256 id = registry.submitContent("https://example.com/auto", "goal", "tags", 0);
+        vm.stopPrank();
+
+        assertEq(id, 1);
+        assertEq(registry.getCategoryId(id), 7, "configured registries should derive the category from the URL");
+    }
+
+    function test_SubmitContent_CategoryRegistryConfigured_UnapprovedDomainReverts() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "youtube.com");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Domain not approved");
+        registry.submitContent("https://example.com/not-approved", "goal", "tags", 0);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CategoryRegistryConfigured_MismatchedCategoryReverts() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "example.com");
+        mockCategoryRegistry.setApproved(1, true);
+        mockCategoryRegistry.setDomain(2, "youtube.com");
+        mockCategoryRegistry.setApproved(2, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        vm.expectRevert("Category mismatch");
+        registry.submitContent("https://example.com/mismatch", "goal", "tags", 2);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_YouTubeVariantsCollide() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "youtube.com");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://youtu.be/dQw4w9WgXcQ", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_TwitterAndXVariantsCollide() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "x.com");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://twitter.com/openai/status/12345", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://x.com/openai/status/12345", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_GitHubDeepPathCollidesWithRepoRoot() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "github.com");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://github.com/foundry-rs/foundry/tree/master/crates", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://www.github.com/foundry-rs/foundry", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_ScryfallQueryVariantCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "scryfall.com");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://scryfall.com/card/lea/232/black-lotus?utm_source=test", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://scryfall.com/card/lea/232/black-lotus", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_TmdbSlugVariantCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "themoviedb.org");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://www.themoviedb.org/movie/238-the-godfather", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://themoviedb.org/movie/238", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_WikipediaQueryVariantCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "en.wikipedia.org");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://en.wikipedia.org/wiki/Lionel_Messi?oldformat=true", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://en.wikipedia.org/wiki/Lionel_Messi", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_RawgQueryVariantCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "rawg.io");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://rawg.io/games/elden-ring?ref=feed", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://rawg.io/games/elden-ring", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_OpenLibraryTitleVariantCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "openlibrary.org");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://openlibrary.org/works/OL45883W/Fantastic_Mr_Fox", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://openlibrary.org/works/OL45883W", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_HuggingFaceDeepPathCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "huggingface.co");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://huggingface.co/Qwen/Qwen3.5-397B-A17B/tree/main", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://huggingface.co/Qwen/Qwen3.5-397B-A17B", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_CoinGeckoLocaleVariantCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "coingecko.com");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://www.coingecko.com/en/coins/bitcoin", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://coingecko.com/coins/bitcoin", "goal2", "tags2", 1);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_SpotifyEmbedVariantCollides() public {
+        vm.prank(owner);
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        mockCategoryRegistry.setDomain(1, "open.spotify.com");
+        mockCategoryRegistry.setApproved(1, true);
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        registry.submitContent("https://open.spotify.com/embed/show/5eXZwvvxt3K2dxha3BSaAe", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://open.spotify.com/intl-de/show/5eXZwvvxt3K2dxha3BSaAe", "goal2", "tags2", 1);
+        vm.stopPrank();
     }
 }

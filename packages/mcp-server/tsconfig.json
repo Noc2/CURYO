@@ -5,6 +5,7 @@
     "moduleResolution": "Bundler",
     "esModuleInterop": true,
     "strict": true,
+    "noEmitOnError": true,
     "rootDir": "src",
     "outDir": "dist",
     "skipLibCheck": true

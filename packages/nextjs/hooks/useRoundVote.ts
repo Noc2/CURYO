@@ -1,13 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { createTlockVoteCommit } from "@curyo/contracts/voting";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePublicClient } from "wagmi";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
+import { buildCommitVoteParams, needsApproval } from "~~/lib/contracts/roundVotingEngine";
 import scaffoldConfig from "~~/scaffold.config";
 
 interface RoundVoteParams {
@@ -84,21 +84,13 @@ export function useRoundVote() {
     setError(null);
 
     try {
-      // Convert to 6 decimals (cREP uses 6 decimals)
-      const stakeWei = BigInt(stakeAmount * 1e6);
-      const frontend = frontendCode ?? scaffoldConfig.frontendCode ?? "0x0000000000000000000000000000000000000000";
-
-      // Generate random 32-byte salt client-side
-      const saltBytes = crypto.getRandomValues(new Uint8Array(32));
-      const salt = `0x${Array.from(saltBytes)
-        .map(b => b.toString(16).padStart(2, "0"))
-        .join("")}` as `0x${string}`;
-
-      const { ciphertext, commitHash } = await createTlockVoteCommit({
-        isUp,
-        salt,
+      const { ciphertext, commitHash, frontend, stakeWei } = await buildCommitVoteParams({
         contentId,
-        epochDurationSeconds: epochDuration,
+        isUp,
+        stakeAmount,
+        epochDuration,
+        frontendCode,
+        defaultFrontendCode: scaffoldConfig.frontendCode,
       });
 
       // Approve tokens if needed
@@ -109,7 +101,7 @@ export function useRoundVote() {
           functionName: "allowance",
           args: [address, votingEngineInfo.address],
         });
-        if ((currentAllowance as bigint) < stakeWei) {
+        if (needsApproval(currentAllowance as bigint, stakeWei)) {
           await writeCRep({
             functionName: "approve",
             args: [votingEngineInfo.address, stakeWei],

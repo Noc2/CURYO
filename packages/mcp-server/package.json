@@ -4,9 +4,28 @@
   "private": true,
   "type": "module",
   "description": "Official read-only Curyo MCP server",
+  "homepage": "https://github.com/Noc2/CURYO/tree/main/packages/mcp-server",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Noc2/CURYO.git",
+    "directory": "packages/mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/Noc2/CURYO/issues"
+  },
+  "keywords": [
+    "curyo",
+    "mcp",
+    "model-context-protocol",
+    "trust",
+    "reputation"
+  ],
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "start": "tsx src/index.ts",
+    "start:http": "CURYO_MCP_TRANSPORT=streamable-http tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
+    "dev:http": "CURYO_MCP_TRANSPORT=streamable-http tsx watch src/index.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

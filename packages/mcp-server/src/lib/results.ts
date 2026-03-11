@@ -1,6 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-interface ToolEnvelope extends Record<string, unknown> {
+export interface DataEnvelope extends Record<string, unknown> {
   data: Record<string, unknown>;
   provenance: {
     source: "ponder";
@@ -14,12 +14,12 @@ interface ToolEnvelope extends Record<string, unknown> {
   warnings?: string[];
 }
 
-export function createToolEnvelope(
+export function createDataEnvelope(
   baseUrl: string,
   endpoint: string,
   data: Record<string, unknown>,
   warnings?: string[],
-): ToolEnvelope {
+): DataEnvelope {
   return {
     data,
     provenance: {
@@ -35,7 +35,7 @@ export function createToolEnvelope(
   };
 }
 
-export function jsonToolResult(envelope: ToolEnvelope): CallToolResult {
+export function jsonToolResult(envelope: DataEnvelope): CallToolResult {
   return {
     structuredContent: envelope,
     content: [

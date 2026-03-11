@@ -4,12 +4,13 @@ import { mainnetClient, roundAt, timelockEncrypt } from "tlock-js";
 
 function usage() {
   console.error(
-    "Usage: node scripts-js/generateTlockCommit.js <contentId> <isUp:true|false> <saltHex> [epochDurationSeconds]",
+    "Usage: node scripts-js/generateTlockCommit.js <contentId> <isUp:true|false> <saltHex> [epochDurationSeconds]"
   );
   process.exit(1);
 }
 
-const [contentIdArg, isUpArg, saltArg, epochDurationArg = "1200"] = process.argv.slice(2);
+const [contentIdArg, isUpArg, saltArg, epochDurationArg = "1200"] =
+  process.argv.slice(2);
 
 if (!contentIdArg || !isUpArg || !saltArg) {
   usage();
@@ -38,12 +39,18 @@ Buffer.from(salt.slice(2), "hex").copy(plaintext, 1);
 
 const client = mainnetClient();
 const chainInfo = await client.chain().info();
-const targetRound = roundAt(Date.now() + epochDurationSeconds * 1000, chainInfo);
+const targetRound = roundAt(
+  Date.now() + epochDurationSeconds * 1000,
+  chainInfo
+);
 const armored = await timelockEncrypt(targetRound, plaintext, client);
 
 const ciphertext = `0x${Buffer.from(armored, "utf-8").toString("hex")}`;
 const commitHash = keccak256(
-  encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]),
+  encodePacked(
+    ["bool", "bytes32", "uint256", "bytes32"],
+    [isUp, salt, contentId, keccak256(ciphertext)]
+  )
 );
 
 process.stdout.write(`${commitHash}\n${ciphertext}\n`);

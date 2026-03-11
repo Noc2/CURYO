@@ -10,12 +10,14 @@ import {
   sortRpcFeed,
 } from "~~/hooks/contentFeed/shared";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
 
 export function useContentFeedQuery(voterAddress?: string, options: UseContentFeedOptions = {}) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const isPageVisible = usePageVisibility();
   const categoryId = options.categoryId;
   const contentIds = options.contentIds;
   const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
@@ -27,8 +29,8 @@ export function useContentFeedQuery(voterAddress?: string, options: UseContentFe
   const { data: events, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
     eventName: "ContentSubmitted",
-    watch: rpcFallbackEnabled,
-    enabled: rpcFallbackEnabled,
+    watch: rpcFallbackEnabled && isPageVisible,
+    enabled: rpcFallbackEnabled && isPageVisible,
   });
 
   const rpcFeed = useMemo(() => {
@@ -129,7 +131,7 @@ export function useContentFeedQuery(voterAddress?: string, options: UseContentFe
     }),
     rpcEnabled: rpcFallbackEnabled,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 30_000 : false,
   });
 
   const feed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);

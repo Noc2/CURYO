@@ -1,6 +1,11 @@
 # Pre-Mainnet Contract Boundary And Auth Plan
 
-Status: **Updated** | Last updated: 2026-03-09
+Status: **Updated** | Last updated: 2026-03-10
+
+Update 2026-03-10: the shared signed-action mapper now lives in `signedActions.ts`, the signed-write routes now reuse
+that mapper, and the round adapter now owns shared vote/timing helpers used by `useRoundVote()` and
+`useActiveVotesWithDeadlines()`. The sections below remain useful as historical context, but the highest-value code
+items from this plan are now complete.
 
 This document tracks the remaining refactor work after the first cleanup pass. The large structural pieces are already in place:
 

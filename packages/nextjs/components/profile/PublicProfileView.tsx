@@ -13,6 +13,7 @@ import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
@@ -80,6 +81,7 @@ function StatCard({ label, value, tooltip }: { label: string; value: string; too
 
 export function PublicProfileView({ address }: PublicProfileViewProps) {
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
+  const isPageVisible = usePageVisibility();
   const { address: connectedAddress } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { profiles } = useSubmitterProfiles([normalizedAddress]);
@@ -101,7 +103,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
       rpcFn: async () => null,
       enabled: true,
       staleTime: 30_000,
-      refetchInterval: 30_000,
+      refetchInterval: isPageVisible ? 30_000 : false,
     },
   );
 
@@ -114,7 +116,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     rpcFn: async () => ({ items: [] }),
     enabled: true,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 30_000 : false,
   });
 
   const summary = summaryResult?.data ?? null;

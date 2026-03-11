@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {VotingTestBase} from "./helpers/VotingTestHelpers.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {Vm} from "forge-std/Test.sol";
-import {ContentRegistry} from "../contracts/ContentRegistry.sol";
-import {RoundVotingEngine} from "../contracts/RoundVotingEngine.sol";
-import {RoundRewardDistributor} from "../contracts/RoundRewardDistributor.sol";
-import {RoundLib} from "../contracts/libraries/RoundLib.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {ParticipationPool} from "../contracts/ParticipationPool.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
-import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { Vm } from "forge-std/Test.sol";
+import { ContentRegistry } from "../contracts/ContentRegistry.sol";
+import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { ParticipationPool } from "../contracts/ParticipationPool.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 
 contract RevertingParticipationPool {
     function getCurrentRateBps() external pure returns (uint256) {
@@ -1033,9 +1033,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertLt(registry.getRating(contentId), registry.SLASH_RATING_THRESHOLD(), "round should be slashable");
         assertTrue(registry.isSubmitterStakeReturned(contentId), "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter stake should not be returned");
-        assertEq(
-            crepToken.balanceOf(treasury) - treasuryBalanceBefore, 10e6, "slash amount should be sent to treasury"
-        );
+        assertEq(crepToken.balanceOf(treasury) - treasuryBalanceBefore, 10e6, "slash amount should be sent to treasury");
     }
 
     function test_SubmitterStake_ReturnsHealthyFirstSettlementAfterFourDays() public {
@@ -1487,7 +1485,9 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertGt(crepToken.balanceOf(frontendOp) - frontendBalanceBefore, 0);
-        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "deregistered frontend should bypass fee crediting");
+        assertEq(
+            frontendReg.getAccumulatedFees(frontendOp), feesBefore, "deregistered frontend should bypass fee crediting"
+        );
     }
 
     function test_ClaimFrontendFee_RevertsWhileFrontendIsSlashed() public {
@@ -1503,7 +1503,9 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertEq(crepToken.balanceOf(frontendOp), frontendBalanceBefore, "slashed frontend must not be paid directly");
-        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend should not receive credited fees");
+        assertEq(
+            frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend should not receive credited fees"
+        );
     }
 
     function test_ClaimFrontendFee_SucceedsAfterFrontendReregistersWithoutReapproval() public {

@@ -207,12 +207,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
         if (frontendFeeClaimed[contentId][roundId][frontend]) revert AlreadyClaimed();
 
-        (
-            uint256 totalFrontendPool,
-            uint256 frontendStake,
-            uint256 totalApprovedStake,
-            uint256 totalFrontendClaimants
-        ) = votingEngine.getFrontendFeeSnapshot(contentId, roundId, frontend);
+        (uint256 totalFrontendPool, uint256 frontendStake, uint256 totalApprovedStake, uint256 totalFrontendClaimants) =
+            votingEngine.getFrontendFeeSnapshot(contentId, roundId, frontend);
 
         if (totalFrontendPool == 0) revert NoPool();
         if (frontendStake == 0) revert NoStake();

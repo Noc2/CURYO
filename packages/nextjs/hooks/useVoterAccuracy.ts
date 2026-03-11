@@ -1,5 +1,6 @@
 "use client";
 
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { PonderVoterCategoryStats, PonderVoterStats, ponderApi } from "~~/services/ponder/client";
 
@@ -11,6 +12,7 @@ interface VoterAccuracyResult {
 const EMPTY: VoterAccuracyResult = { stats: null, categories: [] };
 
 export function useVoterAccuracy(address: string | undefined) {
+  const isPageVisible = usePageVisibility();
   const { data } = usePonderQuery<VoterAccuracyResult, VoterAccuracyResult>({
     queryKey: ["voterAccuracy", address],
     ponderFn: async () => {
@@ -20,7 +22,7 @@ export function useVoterAccuracy(address: string | undefined) {
     rpcFn: async () => EMPTY, // No on-chain equivalent
     enabled: !!address,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 30_000 : false,
   });
 
   return data?.data ?? EMPTY;

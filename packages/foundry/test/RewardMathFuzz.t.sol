@@ -92,10 +92,10 @@ contract RewardMathFuzz is Test {
     // calculateConsensusSubsidy
     // =========================================================================
 
-    function testFuzz_calculateConsensusSubsidy_CappedByMaxAndReserve(
-        uint256 totalStake,
-        uint256 reserveBalance
-    ) public pure {
+    function testFuzz_calculateConsensusSubsidy_CappedByMaxAndReserve(uint256 totalStake, uint256 reserveBalance)
+        public
+        pure
+    {
         totalStake = bound(totalStake, 0, type(uint128).max);
         reserveBalance = bound(reserveBalance, 0, type(uint128).max);
 

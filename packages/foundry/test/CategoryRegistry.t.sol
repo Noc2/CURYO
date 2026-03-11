@@ -13,10 +13,12 @@ contract MockGovernor {
     mapping(uint256 => IGovernor.ProposalState) public proposalStates;
     mapping(uint256 => address) public proposalProposers;
 
-    function propose(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, string memory description)
-        external
-        returns (uint256)
-    {
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description
+    ) external returns (uint256) {
         uint256 proposalId = getProposalId(targets, values, calldatas, keccak256(bytes(description)));
         proposalStates[proposalId] = IGovernor.ProposalState.Pending;
         proposalProposers[proposalId] = msg.sender;
@@ -27,11 +29,12 @@ contract MockGovernor {
         return proposalStates[proposalId];
     }
 
-    function getProposalId(address[] memory targets, uint256[] memory values, bytes[] memory calldatas, bytes32 descriptionHash)
-        public
-        pure
-        returns (uint256)
-    {
+    function getProposalId(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    ) public pure returns (uint256) {
         return uint256(keccak256(abi.encode(targets, values, calldatas, descriptionHash)));
     }
 
@@ -117,7 +120,10 @@ contract CategoryRegistryTest is Test {
         vm.stopPrank();
     }
 
-    function _createApprovalProposal(uint256 categoryId, string memory description) internal returns (uint256 proposalId) {
+    function _createApprovalProposal(uint256 categoryId, string memory description)
+        internal
+        returns (uint256 proposalId)
+    {
         address[] memory targets = new address[](1);
         targets[0] = address(registry);
 
@@ -131,7 +137,10 @@ contract CategoryRegistryTest is Test {
         proposalId = governor.propose(targets, values, calldatas, description);
     }
 
-    function _linkApprovalProposal(uint256 categoryId, string memory description) internal returns (uint256 proposalId) {
+    function _linkApprovalProposal(uint256 categoryId, string memory description)
+        internal
+        returns (uint256 proposalId)
+    {
         proposalId = _createApprovalProposal(categoryId, description);
 
         vm.prank(user1);

@@ -306,7 +306,10 @@ function main() {
   );
 
   console.log(
-    `📝 Updated shared contract definition file on ${join(CONTRACTS_TARGET_DIR, "deployedContracts.ts")}`
+    `📝 Updated shared contract definition file on ${join(
+      CONTRACTS_TARGET_DIR,
+      "deployedContracts.ts"
+    )}`
   );
 
   // --- Auto-generate ABI files for the shared contracts package ---
@@ -314,7 +317,6 @@ function main() {
 
   // --- Auto-update Ponder env with latest deployment for the selected target network ---
   updatePonderEnv(allGeneratedContracts, deployers);
-
 }
 
 /**

@@ -127,13 +127,25 @@ test.describe("Negative cases", () => {
     // Also detect the modal closing as an implicit success signal.
     const successMsg = page.getByText(/voted|success|committed|staked/i);
     const errorMsg = page.getByText(/reverted|failed|error|rejected|not confirmed/i);
-    const modalClosed = stakeModal.waitFor({ state: "hidden", timeout: 30_000 }).then(() => true).catch(() => false);
-    const msgVisible = expect(successMsg.or(errorMsg).first()).toBeVisible({ timeout: 30_000 }).then(() => true).catch(() => false);
+    const modalClosed = stakeModal
+      .waitFor({ state: "hidden", timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
+    const msgVisible = expect(successMsg.or(errorMsg).first())
+      .toBeVisible({ timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
     await Promise.race([modalClosed, msgVisible]);
 
     // Check if vote succeeded: either success message visible or modal closed without error
-    const hasSuccessMsg = await successMsg.first().isVisible().catch(() => false);
-    const hasErrorMsg = await errorMsg.first().isVisible().catch(() => false);
+    const hasSuccessMsg = await successMsg
+      .first()
+      .isVisible()
+      .catch(() => false);
+    const hasErrorMsg = await errorMsg
+      .first()
+      .isVisible()
+      .catch(() => false);
     const firstVoteSucceeded = hasSuccessMsg || (!hasErrorMsg && !(await stakeModal.isVisible().catch(() => true)));
 
     if (!firstVoteSucceeded) {

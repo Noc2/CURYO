@@ -79,9 +79,8 @@ library RoundLib {
 
     /// @notice Check if a round is in a terminal state.
     function isTerminal(Round storage round) internal view returns (bool) {
-        return
-            round.state == RoundState.Settled || round.state == RoundState.Cancelled || round.state == RoundState.Tied
-                || round.state == RoundState.RevealFailed;
+        return round.state == RoundState.Settled || round.state == RoundState.Cancelled
+            || round.state == RoundState.Tied || round.state == RoundState.RevealFailed;
     }
 
     /// @notice Check if a round accepts new votes (Open and not expired).

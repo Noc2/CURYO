@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { usePonderQuery } from "./usePonderQuery";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { QueryClient } from "@tanstack/react-query";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 
 export function getRecentUserVotesQueryKey(voter?: string) {
@@ -15,6 +16,7 @@ export function invalidateRecentUserVotes(queryClient: QueryClient, voter?: stri
 }
 
 export function useRecentUserVotes(voter?: string) {
+  const isPageVisible = usePageVisibility();
   const {
     data: result,
     isLoading,
@@ -28,7 +30,7 @@ export function useRecentUserVotes(voter?: string) {
     rpcFn: async () => [] as PonderVoteItem[],
     enabled: !!voter,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 30_000 : false,
   });
 
   const votes = useMemo(() => result?.data ?? [], [result?.data]);

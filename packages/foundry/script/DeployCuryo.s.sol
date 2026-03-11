@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import { ScaffoldETHDeploy } from "./DeployHelpers.s.sol";
 import { console } from "forge-std/console.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
@@ -27,6 +28,8 @@ import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.
 ///      Local dev: deployer is governance (all roles go to deployer).
 ///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles.
 contract DeployCuryo is ScaffoldETHDeploy {
+    error DeploymentRoleVerificationFailed(string check);
+
     // Timelock delay: 2 days for standard operations
     uint256 public constant TIMELOCK_MIN_DELAY = 2 days;
 
@@ -369,6 +372,24 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
             console.log("Renounced all deployer temporary roles (including Timelock)");
             console.log("VoterIdNFT ownership transferred to governance");
+
+            _verifyProductionDeploymentRoles({
+                deployerAddress: deployer,
+                governance: governance,
+                governorAddr: governorAddr,
+                crepToken: crepToken,
+                registry: registry,
+                votingEngine: votingEngine,
+                rewardDistributor: rewardDistributor,
+                frontendRegistry: frontendRegistry,
+                followRegistry: followRegistry,
+                profileRegistry: profileRegistry,
+                categoryRegistry: categoryRegistry,
+                voterIdNFT: voterIdNFT,
+                participationPool: participationPool,
+                humanFaucet: humanFaucet
+            });
+            console.log("Verified governance ownership and deployer role renunciation");
         } else {
             // Local dev: just revoke MINTER_ROLE as before
             crepToken.revokeRole(crepToken.MINTER_ROLE(), deployer);
@@ -410,6 +431,174 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
         console.log("Seeded categories:", categoryRegistry.approvedCategoryCount());
         console.log("Local dev:", isLocalDev);
+    }
+
+    function _verifyProductionDeploymentRoles(
+        address deployerAddress,
+        address governance,
+        address governorAddr,
+        CuryoReputation crepToken,
+        ContentRegistry registry,
+        RoundVotingEngine votingEngine,
+        RoundRewardDistributor rewardDistributor,
+        FrontendRegistry frontendRegistry,
+        FollowRegistry followRegistry,
+        ProfileRegistry profileRegistry,
+        CategoryRegistry categoryRegistry,
+        VoterIdNFT voterIdNFT,
+        ParticipationPool participationPool,
+        HumanFaucet humanFaucet
+    ) internal view {
+        _requireHasRole(address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), governance, "cREP governance default admin");
+        _requireHasRole(address(crepToken), crepToken.CONFIG_ROLE(), governance, "cREP governance config");
+        _requireLacksRole(
+            address(crepToken), crepToken.DEFAULT_ADMIN_ROLE(), deployerAddress, "cREP deployer default admin"
+        );
+        _requireLacksRole(address(crepToken), crepToken.CONFIG_ROLE(), deployerAddress, "cREP deployer config");
+        _requireLacksRole(address(crepToken), crepToken.MINTER_ROLE(), deployerAddress, "cREP deployer minter");
+
+        _requireHasRole(
+            address(registry), registry.DEFAULT_ADMIN_ROLE(), governance, "ContentRegistry governance default admin"
+        );
+        _requireHasRole(address(registry), registry.ADMIN_ROLE(), governance, "ContentRegistry governance admin");
+        _requireHasRole(address(registry), registry.CONFIG_ROLE(), governance, "ContentRegistry governance config");
+        _requireHasRole(address(registry), registry.PAUSER_ROLE(), governance, "ContentRegistry governance pauser");
+        _requireHasRole(address(registry), registry.UPGRADER_ROLE(), governance, "ContentRegistry governance upgrader");
+        _requireLacksRole(address(registry), registry.CONFIG_ROLE(), deployerAddress, "ContentRegistry deployer config");
+
+        _requireHasRole(
+            address(votingEngine),
+            votingEngine.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "RoundVotingEngine governance default admin"
+        );
+        _requireHasRole(
+            address(votingEngine), votingEngine.ADMIN_ROLE(), governance, "RoundVotingEngine governance admin"
+        );
+        _requireHasRole(
+            address(votingEngine), votingEngine.CONFIG_ROLE(), governance, "RoundVotingEngine governance config"
+        );
+        _requireHasRole(
+            address(votingEngine), votingEngine.UPGRADER_ROLE(), governance, "RoundVotingEngine governance upgrader"
+        );
+        _requireLacksRole(
+            address(votingEngine), votingEngine.CONFIG_ROLE(), deployerAddress, "RoundVotingEngine deployer config"
+        );
+
+        _requireHasRole(
+            address(rewardDistributor),
+            rewardDistributor.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "RoundRewardDistributor governance default admin"
+        );
+        _requireHasRole(
+            address(rewardDistributor),
+            rewardDistributor.UPGRADER_ROLE(),
+            governance,
+            "RoundRewardDistributor governance upgrader"
+        );
+
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "FrontendRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), governance, "FrontendRegistry governance admin"
+        );
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.GOVERNANCE_ROLE(),
+            governance,
+            "FrontendRegistry governance governance-role"
+        );
+        _requireHasRole(
+            address(frontendRegistry),
+            frontendRegistry.UPGRADER_ROLE(),
+            governance,
+            "FrontendRegistry governance upgrader"
+        );
+        _requireLacksRole(
+            address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), deployerAddress, "FrontendRegistry deployer admin"
+        );
+
+        _requireHasRole(
+            address(followRegistry),
+            followRegistry.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "FollowRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(followRegistry), followRegistry.ADMIN_ROLE(), governance, "FollowRegistry governance admin"
+        );
+        _requireHasRole(
+            address(followRegistry), followRegistry.UPGRADER_ROLE(), governance, "FollowRegistry governance upgrader"
+        );
+        _requireLacksRole(
+            address(followRegistry), followRegistry.ADMIN_ROLE(), deployerAddress, "FollowRegistry deployer admin"
+        );
+
+        _requireHasRole(
+            address(profileRegistry),
+            profileRegistry.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "ProfileRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(profileRegistry), profileRegistry.ADMIN_ROLE(), governance, "ProfileRegistry governance admin"
+        );
+        _requireHasRole(
+            address(profileRegistry), profileRegistry.UPGRADER_ROLE(), governance, "ProfileRegistry governance upgrader"
+        );
+        _requireLacksRole(
+            address(profileRegistry), profileRegistry.ADMIN_ROLE(), deployerAddress, "ProfileRegistry deployer admin"
+        );
+
+        _requireHasRole(
+            address(categoryRegistry),
+            categoryRegistry.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "CategoryRegistry governance default admin"
+        );
+        _requireHasRole(
+            address(categoryRegistry), categoryRegistry.ADMIN_ROLE(), governance, "CategoryRegistry governance admin"
+        );
+        _requireLacksRole(
+            address(categoryRegistry), categoryRegistry.ADMIN_ROLE(), deployerAddress, "CategoryRegistry deployer admin"
+        );
+
+        _require(voterIdNFT.owner() == governance, "VoterIdNFT governance owner");
+        _require(participationPool.owner() == governance, "ParticipationPool governance owner");
+        if (address(humanFaucet) != address(0)) {
+            _require(humanFaucet.owner() == governance, "HumanFaucet governance owner");
+        }
+
+        _require(governorAddr != address(0), "Governor deployed");
+        TimelockController timelock = TimelockController(payable(governance));
+        _requireHasRole(address(timelock), timelock.PROPOSER_ROLE(), governorAddr, "Timelock governor proposer");
+        _requireHasRole(address(timelock), timelock.CANCELLER_ROLE(), governorAddr, "Timelock governor canceller");
+        _requireLacksRole(address(timelock), timelock.PROPOSER_ROLE(), deployerAddress, "Timelock deployer proposer");
+        _requireLacksRole(address(timelock), timelock.CANCELLER_ROLE(), deployerAddress, "Timelock deployer canceller");
+        _requireLacksRole(
+            address(timelock), timelock.DEFAULT_ADMIN_ROLE(), deployerAddress, "Timelock deployer default admin"
+        );
+    }
+
+    function _requireHasRole(address target, bytes32 role, address account, string memory check) internal view {
+        if (!IAccessControl(target).hasRole(role, account)) {
+            revert DeploymentRoleVerificationFailed(check);
+        }
+    }
+
+    function _requireLacksRole(address target, bytes32 role, address account, string memory check) internal view {
+        if (IAccessControl(target).hasRole(role, account)) {
+            revert DeploymentRoleVerificationFailed(check);
+        }
+    }
+
+    function _require(bool condition, string memory check) internal pure {
+        if (!condition) revert DeploymentRoleVerificationFailed(check);
     }
 
     function _buildQuorumExcludedHolders(

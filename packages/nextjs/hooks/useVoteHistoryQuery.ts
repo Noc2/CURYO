@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { type VoteHistoryItem, mapVoteHistoryItem } from "~~/hooks/voteHistory/shared";
 import { ponderApi } from "~~/services/ponder/client";
@@ -13,21 +14,22 @@ interface UseVoteHistoryQueryOptions {
 
 export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQueryOptions = {}) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const isPageVisible = usePageVisibility();
   const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
 
   const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "VoteCommitted",
     filters: { voter },
-    watch: rpcFallbackEnabled,
-    enabled: rpcFallbackEnabled && Boolean(voter),
+    watch: rpcFallbackEnabled && isPageVisible,
+    enabled: rpcFallbackEnabled && Boolean(voter) && isPageVisible,
   } as any);
 
   const { data: settledEvents, isLoading: settledLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "RoundSettled",
-    watch: rpcFallbackEnabled,
-    enabled: rpcFallbackEnabled && Boolean(voter),
+    watch: rpcFallbackEnabled && isPageVisible,
+    enabled: rpcFallbackEnabled && Boolean(voter) && isPageVisible,
   } as any);
 
   const rpcVotes = useMemo(() => {
@@ -100,7 +102,7 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
     }),
     rpcEnabled: rpcFallbackEnabled,
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 30_000 : false,
   });
 
   return {

@@ -13,15 +13,18 @@ export class PonderApiError extends Error {
 export interface PonderClientOptions {
   baseUrl: string;
   fetchImpl?: typeof fetch;
+  timeoutMs?: number;
 }
 
 export class PonderClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
 
-  constructor({ baseUrl, fetchImpl = fetch }: PonderClientOptions) {
+  constructor({ baseUrl, fetchImpl = fetch, timeoutMs = 10_000 }: PonderClientOptions) {
     this.baseUrl = baseUrl;
     this.fetchImpl = fetchImpl;
+    this.timeoutMs = timeoutMs;
   }
 
   async searchContent(params: {
@@ -78,14 +81,43 @@ export class PonderClient {
       }
     }
 
-    const response = await this.fetchImpl(url, {
-      headers: {
-        accept: "application/json",
-      },
-    });
+    const controller = new AbortController();
+    const timeoutHandle = setTimeout(() => controller.abort(), this.timeoutMs);
+    let response: Response;
+
+    try {
+      response = await this.fetchImpl(url, {
+        headers: {
+          accept: "application/json",
+        },
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new PonderApiError(`Ponder request timed out after ${this.timeoutMs}ms`, 504);
+      }
+
+      const message = error instanceof Error ? error.message : "Unknown fetch error";
+      throw new PonderApiError(`Ponder request failed: ${message}`, 502);
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
 
     const body = await response.text();
-    const parsed = body.length > 0 ? JSON.parse(body) as Record<string, unknown> : {};
+    let parsed: Record<string, unknown> = {};
+    if (body.length > 0) {
+      try {
+        const json = JSON.parse(body) as unknown;
+        if (!isRecord(json)) {
+          throw new Error("Expected a JSON object response");
+        }
+
+        parsed = json;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown parse error";
+        throw new PonderApiError(`Ponder returned invalid JSON: ${message}`, 502);
+      }
+    }
 
     if (!response.ok) {
       const errorMessage = typeof parsed.error === "string" ? parsed.error : `Ponder request failed with status ${response.status}`;
@@ -94,4 +126,8 @@ export class PonderClient {
 
     return parsed;
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

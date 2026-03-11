@@ -1,6 +1,6 @@
 # Curyo MCP Server
 
-Status: local read-only `stdio` MVP implemented on March 6, 2026.
+Status: read-only MCP server with local `stdio` transport, stateless Streamable HTTP transport, MCP prompts, and basic MCP resources.
 
 ## Quick Start
 
@@ -9,21 +9,69 @@ Status: local read-only `stdio` MVP implemented on March 6, 2026.
 yarn mcp:start
 ```
 
+For a remote MCP endpoint:
+
+```bash
+# From the monorepo root:
+yarn mcp:start:http
+```
+
 Environment:
 
 - `CURYO_PONDER_URL` or `PONDER_URL`: base URL for the backing Ponder API
+- `CURYO_MCP_TRANSPORT`: `stdio` or `streamable-http`
+- `CURYO_MCP_PONDER_TIMEOUT_MS`: upstream request timeout in milliseconds
+- `CURYO_MCP_HTTP_HOST`: bind host for Streamable HTTP mode
+- `CURYO_MCP_HTTP_PORT`: bind port for Streamable HTTP mode
+- `CURYO_MCP_HTTP_PATH`: HTTP endpoint path for Streamable HTTP mode
+- `CURYO_MCP_HTTP_CORS_ORIGIN`: CORS allow-origin header for Streamable HTTP mode
+- `CURYO_MCP_HTTP_AUTH_MODE`: `none` or `bearer`
+- `CURYO_MCP_HTTP_BEARER_TOKEN`: single static bearer token for the MCP endpoint
+- `CURYO_MCP_HTTP_BEARER_TOKENS`: comma-separated bearer tokens for rotation
+- `CURYO_MCP_HTTP_AUTH_REALM`: `WWW-Authenticate` realm value
+- `CURYO_MCP_HTTP_AUTH_SCOPES`: comma-separated scopes attached to validated tokens
+- `CURYO_MCP_LOG_ENABLED`: set to `0` to suppress stderr JSON logs
 
 Current scope:
 
 - local `stdio` transport
+- stateless Streamable HTTP transport
 - read-only tools backed by Ponder
+- optional static bearer auth for the remote MCP endpoint
+- MCP prompts:
+  - `rank_candidate_sources`
+  - `inspect_source_trust_profile`
+  - `summarize_content_history`
+- MCP resources:
+  - `curyo://about`
+  - `curyo://status`
+  - `curyo://categories`
+  - `curyo://schema/tools`
+- HTTP liveness and readiness endpoints:
+  - `/healthz`
+  - `/readyz`
 - no wallet actions or write-capable tools
 
 Planned next steps:
 
-- hosted Streamable HTTP transport
-- MCP resources and prompts
+- provider-backed auth, monitoring, and deployment hardening
 - registry packaging and OpenClaw integration
+
+When running in Streamable HTTP mode:
+
+- MCP traffic is served on `CURYO_MCP_HTTP_PATH`
+- bearer auth protects `CURYO_MCP_HTTP_PATH` when `CURYO_MCP_HTTP_AUTH_MODE=bearer`
+- liveness is exposed on `/healthz`
+- readiness performs a bounded `get_stats` call against Ponder on `/readyz`
+- request logs are emitted as JSON to stderr
+
+Example remote auth setup:
+
+```bash
+CURYO_MCP_TRANSPORT=streamable-http
+CURYO_MCP_HTTP_AUTH_MODE=bearer
+CURYO_MCP_HTTP_BEARER_TOKEN=replace-me
+```
 
 ## Plan
 
@@ -192,7 +240,7 @@ Keep v1 small. The first release should expose only high-confidence tools that m
 
 7. `search_votes`
    - Purpose: inspect recent or filtered vote activity.
-   - Inputs: `voter`, `contentId`, `roundId`, `revealed`, `limit`, `offset`
+   - Inputs: `voter`, `contentId`, `roundId`, `state`, `limit`, `offset`
    - Upstream: `GET /votes`
    - Notes: keep defaults conservative to avoid oversized outputs.
 
@@ -209,9 +257,9 @@ Recommended resources:
 
 ### Prompts
 
-Do not lead with MCP prompts in v1. Add them only after the tools are stable.
+The current MCP server now exposes a small prompt layer for the highest-signal read-only workflows.
 
-Possible phase-2 prompts:
+Current prompts:
 
 - "Rank candidate sources with Curyo"
 - "Inspect a source's trust profile"

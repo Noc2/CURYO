@@ -1,4 +1,5 @@
 import { DEFAULT_ROUND_CONFIG, ROUND_STATE } from "@curyo/contracts/protocol";
+import { createTlockVoteCommit } from "@curyo/contracts/voting";
 import { RoundData } from "~~/types/votingTypes";
 
 export type RoundPhase = "voting" | "settled" | "cancelled" | "tied" | "revealFailed" | "none";
@@ -21,6 +22,19 @@ export interface RoundTiming {
   currentEpochRemaining: number;
   roundTimeRemaining: number;
   isEpoch1: boolean;
+}
+
+export interface VoteDeadlines extends RoundTiming {
+  deadline: number;
+  nextActionRemaining: number;
+}
+
+export interface CommitVoteParams {
+  commitHash: `0x${string}`;
+  ciphertext: `0x${string}`;
+  salt: `0x${string}`;
+  stakeWei: bigint;
+  frontend: `0x${string}`;
 }
 
 export interface RoundSnapshot {
@@ -183,6 +197,78 @@ export function deriveRoundTiming(params: {
     currentEpochRemaining,
     roundTimeRemaining: Math.max(0, params.startTime + params.maxDuration - params.now),
     isEpoch1: params.now < epoch1EndTime,
+  };
+}
+
+export function deriveVoteDeadlines(params: {
+  startTime: number;
+  now: number;
+  epochDuration: number;
+  maxDuration: number;
+}): VoteDeadlines {
+  const timing = deriveRoundTiming(params);
+  const deadline = params.startTime > 0 ? params.startTime + params.maxDuration : 0;
+
+  return {
+    ...timing,
+    deadline,
+    nextActionRemaining: timing.epoch1Remaining > 0 ? timing.epoch1Remaining : timing.roundTimeRemaining,
+  };
+}
+
+export function buildStakeAmountWei(stakeAmount: number): bigint {
+  return BigInt(Math.round(stakeAmount * 1e6));
+}
+
+export function needsApproval(currentAllowance: bigint, requiredAllowance: bigint): boolean {
+  return currentAllowance < requiredAllowance;
+}
+
+export function resolveFrontendCode(frontendCode?: `0x${string}`, defaultFrontendCode?: `0x${string}`): `0x${string}` {
+  return frontendCode ?? defaultFrontendCode ?? "0x0000000000000000000000000000000000000000";
+}
+
+export function generateVoteSalt(randomValues?: (bytes: Uint8Array) => Uint8Array): `0x${string}` {
+  const fillRandom =
+    randomValues ??
+    ((bytes: Uint8Array) => {
+      if (!globalThis.crypto?.getRandomValues) {
+        throw new Error("Secure random generator unavailable");
+      }
+      return globalThis.crypto.getRandomValues(bytes);
+    });
+
+  const saltBytes = fillRandom(new Uint8Array(32));
+  return `0x${Array.from(saltBytes)
+    .map(byte => byte.toString(16).padStart(2, "0"))
+    .join("")}` as `0x${string}`;
+}
+
+export async function buildCommitVoteParams(params: {
+  contentId: bigint;
+  isUp: boolean;
+  stakeAmount: number;
+  epochDuration: number;
+  frontendCode?: `0x${string}`;
+  defaultFrontendCode?: `0x${string}`;
+  salt?: `0x${string}`;
+}): Promise<CommitVoteParams> {
+  const stakeWei = buildStakeAmountWei(params.stakeAmount);
+  const frontend = resolveFrontendCode(params.frontendCode, params.defaultFrontendCode);
+  const salt = params.salt ?? generateVoteSalt();
+  const { ciphertext, commitHash } = await createTlockVoteCommit({
+    isUp: params.isUp,
+    salt,
+    contentId: params.contentId,
+    epochDurationSeconds: params.epochDuration,
+  });
+
+  return {
+    commitHash,
+    ciphertext,
+    salt,
+    stakeWei,
+    frontend,
   };
 }
 

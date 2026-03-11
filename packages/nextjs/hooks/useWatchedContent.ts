@@ -33,48 +33,10 @@ function isSignatureRejected(error: unknown): boolean {
 const EMPTY_WATCHED_ITEMS: WatchedContentItem[] = [];
 const EMPTY_WATCHED_RESPONSE: WatchedContentResponse = { items: [], count: 0 };
 
-function getWatchlistCacheKey(address: string) {
-  return `curyo:watchlist:${address.toLowerCase()}`;
-}
-
-function readWatchlistCache(address: string): WatchedContentResponse | null {
-  if (typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(getWatchlistCacheKey(address));
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw) as Partial<WatchedContentResponse>;
-    if (!Array.isArray(parsed.items) || typeof parsed.count !== "number") {
-      return null;
-    }
-
-    const items = parsed.items.filter(
-      (item): item is WatchedContentItem => typeof item?.contentId === "string" && typeof item?.createdAt === "string",
-    );
-
-    return {
-      items,
-      count: items.length,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeWatchlistCache(address: string, value: WatchedContentResponse) {
-  if (typeof window === "undefined") return;
-
-  try {
-    window.localStorage.setItem(getWatchlistCacheKey(address), JSON.stringify(value));
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
 async function readWatchedContent(
   address: string,
   signMessageAsync: (args: { message: string }) => Promise<`0x${string}`>,
+  autoRead: boolean,
 ): Promise<WatchedContentResponse> {
   const existingSessionRes = await fetch(`/api/watchlist/content?address=${encodeURIComponent(address)}`);
   if (existingSessionRes.ok) {
@@ -83,6 +45,10 @@ async function readWatchedContent(
       items: Array.isArray(body.items) ? (body.items as WatchedContentItem[]) : [],
       count: Array.isArray(body.items) ? body.items.length : 0,
     };
+  }
+
+  if (!autoRead && existingSessionRes.status === 401) {
+    return EMPTY_WATCHED_RESPONSE;
   }
 
   if (existingSessionRes.status !== 401) {
@@ -147,19 +113,8 @@ export function useWatchedContent(address?: string, options?: UseWatchedContentO
         return EMPTY_WATCHED_RESPONSE;
       }
 
-      const cached = readWatchlistCache(address);
-      if (cached) {
-        return cached;
-      }
-
-      if (!autoRead) {
-        return EMPTY_WATCHED_RESPONSE;
-      }
-
       try {
-        const response = await readWatchedContent(address, signMessageAsync);
-        writeWatchlistCache(address, response);
-        return response;
+        return await readWatchedContent(address, signMessageAsync, autoRead);
       } catch (error) {
         if (isSignatureRejected(error)) {
           return EMPTY_WATCHED_RESPONSE;
@@ -191,28 +146,21 @@ export function useWatchedContent(address?: string, options?: UseWatchedContentO
     (contentId: string, watched: boolean) => {
       queryClient.setQueryData(queryKey, (old: WatchedContentResponse | undefined) => {
         const items = old?.items ?? [];
-        let next: WatchedContentResponse;
 
         if (watched) {
           if (items.some(item => item.contentId === contentId)) {
-            next = old ?? { items, count: items.length };
-          } else {
-            const nextItems = [{ contentId, createdAt: new Date().toISOString() }, ...items];
-            next = { items: nextItems, count: nextItems.length };
+            return old ?? { items, count: items.length };
           }
-        } else {
-          const nextItems = items.filter(item => item.contentId !== contentId);
-          next = { items: nextItems, count: nextItems.length };
+
+          const nextItems = [{ contentId, createdAt: new Date().toISOString() }, ...items];
+          return { items: nextItems, count: nextItems.length };
         }
 
-        if (address) {
-          writeWatchlistCache(address, next);
-        }
-
-        return next;
+        const nextItems = items.filter(item => item.contentId !== contentId);
+        return { items: nextItems, count: nextItems.length };
       });
     },
-    [address, queryClient, queryKey],
+    [queryClient, queryKey],
   );
 
   const toggleWatch = useCallback(
@@ -266,9 +214,6 @@ export function useWatchedContent(address?: string, options?: UseWatchedContentO
         return { ok: true, watched: !isWatched };
       } catch (error) {
         queryClient.setQueryData(queryKey, previous);
-        if (address && previous) {
-          writeWatchlistCache(address, previous);
-        }
         await refetch();
 
         if (isSignatureRejected(error)) {

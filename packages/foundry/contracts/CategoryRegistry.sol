@@ -368,7 +368,11 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     }
 
     /// @notice Compute the governor proposal ID for approving a category with the supplied description hash.
-    function getApprovalProposalId(uint256 categoryId, bytes32 descriptionHash) public view returns (uint256 proposalId) {
+    function getApprovalProposalId(uint256 categoryId, bytes32 descriptionHash)
+        public
+        view
+        returns (uint256 proposalId)
+    {
         address[] memory targets = new address[](1);
         targets[0] = address(this);
 
@@ -438,8 +442,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
             // Verify there's still a valid domain after the subdomain (at least "x.y")
             bool hasMoreDots = false;
             for (uint256 j = startIndex + 2; j < b.length; j++) {
-                if (b[j] == "/" || b[j] == ":" || b[j] == "?" || b[j] == "#") break;
-                // forgefmt: disable-next-line
+                if (b[j] == "/" || b[j] == ":" || b[j] == "?" || b[j] == "#") break;// forgefmt: disable-next-line
                 if (b[j] == ".") { hasMoreDots = true; break; }
             }
             if (hasMoreDots) {

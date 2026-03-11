@@ -64,8 +64,8 @@ const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
 
 const HomeInner = () => {
   const searchParams = useSearchParams();
-  const searchQuery = searchParams.get("q") ?? "";
-  const contentParam = searchParams.get("content");
+  const searchQuery = searchParams?.get("q") ?? "";
+  const contentParam = searchParams?.get("content");
 
   const { address } = useAccount();
   const { openConnectModal } = useConnectModal();

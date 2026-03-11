@@ -510,6 +510,19 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "sweepStrandedCrepToTreasury",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "upgradeToAndCall",
     "inputs": [
       {
@@ -691,6 +704,25 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "event",
+    "name": "StrandedCrepSwept",
+    "inputs": [
+      {
+        "name": "treasury",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "SubmitterRewardClaimed",
     "inputs": [
       {
@@ -823,6 +855,11 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
+    "name": "NoStrandedCrep",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NotInitializing",
     "inputs": []
   },
@@ -849,6 +886,22 @@ export const RoundRewardDistributorAbi = [
   {
     "type": "error",
     "name": "RoundNotSettled",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "SafeERC20FailedOperation",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TreasuryNotSet",
     "inputs": []
   },
   {

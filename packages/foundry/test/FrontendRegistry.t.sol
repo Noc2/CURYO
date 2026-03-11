@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test, console} from "forge-std/Test.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {FrontendRegistry} from "../contracts/FrontendRegistry.sol";
-import {CuryoReputation} from "../contracts/CuryoReputation.sol";
-import {IFrontendRegistry} from "../contracts/interfaces/IFrontendRegistry.sol";
-import {IRoundVotingEngine} from "../contracts/interfaces/IRoundVotingEngine.sol";
+import { Test, console } from "forge-std/Test.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
+import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 
 /// @title Mock RoundVotingEngine for testing FrontendRegistry
 contract MockVotingEngine is IRoundVotingEngine {
@@ -28,9 +28,9 @@ contract MockVotingEngine is IRoundVotingEngine {
         return false;
     }
 
-    function transferReward(address, uint256) external override {}
-    function claimFrontendFee(uint256, uint256, address) external override {}
-    function claimParticipationReward(uint256, uint256) external override {}
+    function transferReward(address, uint256) external override { }
+    function claimFrontendFee(uint256, uint256, address) external override { }
+    function claimParticipationReward(uint256, uint256) external override { }
 }
 
 /// @title FrontendRegistry Test Suite

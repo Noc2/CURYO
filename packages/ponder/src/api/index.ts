@@ -27,6 +27,7 @@ import {
   sortAccuracyLeaderboardItems,
   type AccuracyLeaderboardSortBy,
 } from "./leaderboard-utils.js";
+import { isLoopbackRateLimitIdentifier, resolveRateLimitIdentifier } from "./request-identity.js";
 import { RateLimiter } from "./rate-limit.js";
 import { safeBigInt, safeLimit, safeOffset, isValidAddress, getUrlLookupCandidates } from "./utils.js";
 
@@ -51,20 +52,28 @@ app.onError((err, c) => {
 const rateLimiter = new RateLimiter(120, 60_000, 60_000);
 
 app.use("/*", async (c, next) => {
-  const xff = c.req.header("x-forwarded-for");
-  const ip =
-    c.req.header("x-real-ip")?.trim() ||
-    xff?.split(",").pop()?.trim() ||
-    "unknown";
+  const identifier = resolveRateLimitIdentifier(name => c.req.header(name) ?? undefined, {
+    requestUrl: c.req.url,
+  });
 
-  // Skip rate limiting for localhost/loopback (dev server, E2E tests)
-  const isLocal = ip === "unknown" || ip === "127.0.0.1" || ip === "::1" || ip === "localhost";
-  if (isLocal) {
+  const isLoopbackRequest =
+    process.env.NODE_ENV !== "production"
+    && isLoopbackRateLimitIdentifier(identifier)
+    && (() => {
+      try {
+        const hostname = new URL(c.req.url).hostname;
+        return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+      } catch {
+        return false;
+      }
+    })();
+
+  if (isLoopbackRequest) {
     await next();
     return;
   }
 
-  const { allowed, retryAfter } = rateLimiter.check(ip);
+  const { allowed, retryAfter } = rateLimiter.check(identifier);
 
   if (!allowed) {
     c.header("Retry-After", String(retryAfter));

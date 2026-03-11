@@ -548,6 +548,25 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
+    "name": "contentHasSettledRound",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "crepToken",
     "inputs": [],
     "outputs": [
@@ -1467,6 +1486,16 @@ export const RoundVotingEngineAbi = [
     "name": "payoutFrontendFee",
     "inputs": [
       {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
         "name": "frontend",
         "type": "address",
         "internalType": "address"
@@ -1571,6 +1600,19 @@ export const RoundVotingEngineAbi = [
         "name": "callerConfirmation",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "resolveSubmitterStake",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -2885,6 +2927,11 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
+    "name": "ActiveRoundExists",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "AddressEmptyCode",
     "inputs": [
       {
@@ -2922,6 +2969,11 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "ContentNotActive",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ContentNotFound",
     "inputs": []
   },
   {
