@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
@@ -31,14 +31,11 @@ function getGovernanceHash(tab: GovernanceTab) {
 }
 
 function normalizeGovernanceHash(hash: string): GovernanceTab | null {
-  if (hash === "leaderboard" || hash === "performance" || hash === "profile") return "leaderboard";
-  if (hash === "vote") return "governance";
   return governanceTabs.includes(hash as GovernanceTab) ? (hash as GovernanceTab) : null;
 }
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("leaderboard");
   const [referrer, setReferrer] = useState<string | null>(null);
@@ -54,11 +51,6 @@ function GovernancePageInner() {
   useEffect(() => {
     const applyHash = () => {
       const rawHash = window.location.hash.replace(/^#/, "");
-      if (rawHash === "profile") {
-        router.replace("/settings");
-        return;
-      }
-
       const nextTab = normalizeGovernanceHash(rawHash);
 
       if (nextTab) {
@@ -73,7 +65,7 @@ function GovernancePageInner() {
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, [router]);
+  }, []);
 
   // Extract and validate referral code from URL
   useEffect(() => {

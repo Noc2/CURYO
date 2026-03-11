@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAccount } from "wagmi";
 import { useScaffoldWatchContractEvent } from "~~/hooks/scaffold-eth";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
+import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
@@ -12,8 +13,8 @@ import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon"
 import { notification } from "~~/utils/scaffold-eth";
 
 /**
- * Headless component that fires browser notifications + in-app toasts
- * when a round the connected user voted on gets settled.
+ * Headless component that fires browser notifications + in-app toasts for
+ * tracked round resolutions, settling-soon reminders, and followed-curator activity.
  */
 export function SettlementNotifier() {
   const { address } = useAccount();
@@ -29,7 +30,8 @@ export function SettlementNotifier() {
   const seenFollowedResolutionKeysRef = useRef<Set<string>>(new Set());
   const roundResolvedEnabledRef = useRef(true);
   const { watchedItems, watchedContentIds } = useWatchedContent(address, { autoRead: false });
-  const { discoverSignals } = useDiscoverSignals(address, { watchedItems });
+  const { followedItems } = useFollowedProfiles(address, { autoRead: false });
+  const { discoverSignals } = useDiscoverSignals(address, { watchedItems, followedItems });
   const { preferences } = useNotificationPreferences(address, { autoRead: false });
 
   useEffect(() => {

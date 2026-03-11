@@ -13,7 +13,6 @@ import {
   globalStats,
   ratingChange,
   frontend,
-  profileFollow,
   voterId,
   tokenHolder,
   tokenTransfer,
@@ -139,6 +138,23 @@ function parseBigIntList(value: string | undefined, max = 50) {
   return items;
 }
 
+function parseAddressList(value: string | undefined, max = 200) {
+  if (!value) return [];
+
+  const unique = new Set<string>();
+  const items: `0x${string}`[] = [];
+
+  for (const raw of value.split(",").slice(0, max)) {
+    const address = raw.trim().toLowerCase() as `0x${string}`;
+    if (!isValidAddress(address)) continue;
+    if (unique.has(address)) continue;
+    unique.add(address);
+    items.push(address);
+  }
+
+  return items;
+}
+
 function getEstimatedSettlementTime(startTime: bigint | null | undefined) {
   if (startTime === null || startTime === undefined) return null;
 
@@ -149,7 +165,7 @@ function getEstimatedSettlementTime(startTime: bigint | null | undefined) {
   );
 }
 
-function getRadarResolutionOutcome(state: number | null, isUp: boolean | null, upWins: boolean | null) {
+function getDiscoverResolutionOutcome(state: number | null, isUp: boolean | null, upWins: boolean | null) {
   if (state === ROUND_STATE.Cancelled) return "cancelled" as const;
   if (state === ROUND_STATE.Tied) return "tied" as const;
   if (state === ROUND_STATE.RevealFailed) return "reveal_failed" as const;
@@ -562,91 +578,6 @@ app.get("/profile/:address", async (c) => {
   return jsonBig(c, { profile: item, recentVotes, recentRewards });
 });
 
-app.get("/following/:address", async (c) => {
-  const address = c.req.param("address").toLowerCase() as `0x${string}`;
-  if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
-
-  const limit = safeLimit(c.req.query("limit"), 100, 200);
-  const offset = safeOffset(c.req.query("offset"));
-
-  const items = await db
-    .select({
-      walletAddress: profileFollow.followed,
-      createdAt: profileFollow.createdAt,
-      profileName: profile.name,
-      profileImageUrl: profile.imageUrl,
-    })
-    .from(profileFollow)
-    .leftJoin(profile, eq(profileFollow.followed, profile.address))
-    .where(eq(profileFollow.follower, address))
-    .orderBy(desc(profileFollow.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  const [countResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(profileFollow)
-    .where(eq(profileFollow.follower, address));
-
-  return jsonBig(c, {
-    items,
-    total: countResult?.count ?? 0,
-    limit,
-    offset,
-  });
-});
-
-app.get("/followers/:address", async (c) => {
-  const address = c.req.param("address").toLowerCase() as `0x${string}`;
-  if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
-
-  const limit = safeLimit(c.req.query("limit"), 100, 200);
-  const offset = safeOffset(c.req.query("offset"));
-
-  const items = await db
-    .select({
-      walletAddress: profileFollow.follower,
-      createdAt: profileFollow.createdAt,
-      profileName: profile.name,
-      profileImageUrl: profile.imageUrl,
-    })
-    .from(profileFollow)
-    .leftJoin(profile, eq(profileFollow.follower, profile.address))
-    .where(eq(profileFollow.followed, address))
-    .orderBy(desc(profileFollow.createdAt))
-    .limit(limit)
-    .offset(offset);
-
-  const [countResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(profileFollow)
-    .where(eq(profileFollow.followed, address));
-
-  return jsonBig(c, {
-    items,
-    total: countResult?.count ?? 0,
-    limit,
-    offset,
-  });
-});
-
-app.get("/follow-state", async (c) => {
-  const follower = c.req.query("follower")?.toLowerCase() as `0x${string}` | undefined;
-  const target = c.req.query("target")?.toLowerCase() as `0x${string}` | undefined;
-
-  if (!follower || !target || !isValidAddress(follower) || !isValidAddress(target)) {
-    return c.json({ error: "Invalid follower or target address" }, 400);
-  }
-
-  const [item] = await db
-    .select({ id: profileFollow.id })
-    .from(profileFollow)
-    .where(eq(profileFollow.id, `${follower}-${target}`))
-    .limit(1);
-
-  return c.json({ follower, target, following: Boolean(item) });
-});
-
 // ============================================================
 // DISCOVER SIGNALS
 // ============================================================
@@ -656,15 +587,8 @@ app.get("/discover-signals/:address", async (c) => {
   if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
 
   const watchedContentIds = parseBigIntList(c.req.query("watched"), 100);
-
-  const followedRows = await db
-    .select({ followed: profileFollow.followed })
-    .from(profileFollow)
-    .where(eq(profileFollow.follower, address))
-    .orderBy(desc(profileFollow.createdAt))
-    .limit(200);
-
-  const followedAddresses = followedRows.map(item => item.followed);
+  const followedQuery = c.req.query("followed");
+  const followedAddresses = parseAddressList(followedQuery, 200);
 
   const votedOpenRounds = await db
     .select({
@@ -837,7 +761,7 @@ app.get("/discover-signals/:address", async (c) => {
     followedSubmissions,
     followedResolutions: followedResolutions.map(item => ({
       ...item,
-      outcome: getRadarResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),
+      outcome: getDiscoverResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),
     })),
   });
 });
@@ -847,14 +771,8 @@ app.get("/notification-events/:address", async (c) => {
   if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
 
   const watchedContentIds = parseBigIntList(c.req.query("watched"), 200);
-  const followedRows = await db
-    .select({ followed: profileFollow.followed })
-    .from(profileFollow)
-    .where(eq(profileFollow.follower, address))
-    .orderBy(desc(profileFollow.createdAt))
-    .limit(200);
-
-  const followedAddresses = followedRows.map(item => item.followed);
+  const followedQuery = c.req.query("followed");
+  const followedAddresses = parseAddressList(followedQuery, 200);
   const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
   const settlingSoonCutoff = nowSeconds + BigInt(SETTLING_SOON_WINDOW_SECONDS);
   const recentCutoff = nowSeconds - BigInt(NOTIFICATION_EMAIL_LOOKBACK_SECONDS);
@@ -1065,7 +983,7 @@ app.get("/notification-events/:address", async (c) => {
     trackedResolutionMap.set(key, {
       ...item,
       source: existing && existing.source !== item.source ? "watched_voted" : existing?.source ?? item.source,
-      outcome: getRadarResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),
+      outcome: getDiscoverResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),
     });
   }
 
@@ -1074,7 +992,7 @@ app.get("/notification-events/:address", async (c) => {
     followedSubmissions,
     followedResolutions: followedResolutions.map(item => ({
       ...item,
-      outcome: getRadarResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),
+      outcome: getDiscoverResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),
     })),
     trackedResolutions: [...trackedResolutionMap.values()]
       .sort((a, b) => {

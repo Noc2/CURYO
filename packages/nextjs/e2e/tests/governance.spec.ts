@@ -69,13 +69,6 @@ test.describe("Governance page", () => {
     await expect(page.getByRole("heading", { name: /your profile|create profile/i })).toBeVisible({ timeout: 15_000 });
   });
 
-  test("legacy governance profile hash redirects to settings", async ({ connectedPage: page }) => {
-    await page.goto("/governance#profile");
-
-    await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByRole("heading", { name: /your profile|create profile/i })).toBeVisible({ timeout: 15_000 });
-  });
-
   test("governance tab shows governance content", async ({ connectedPage: page }) => {
     await page.goto("/governance");
 

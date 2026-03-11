@@ -57,7 +57,7 @@ Production build output with production-safe env:
 | `/governance` | `154 KB` | `708 KB` |
 | `/profiles/[address]` | `8.89 KB` | `410 KB` |
 | `/submit` | `7.69 KB` | `595 KB` |
-| `/settings/notifications` | `4.8 KB` | `384 KB` |
+| `/settings/notifications` (redirect to `/settings?tab=notifications`) | `4.8 KB` | `384 KB` |
 | `/` | `3.32 KB` | `404 KB` |
 
 Shared first-load baseline:
