@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
+import { CuryoReputationAbi, RoundVotingEngineAbi, encodeVoteTransferPayload } from "@curyo/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -39,7 +39,8 @@ export function useRoundVote() {
   const queryClient = useQueryClient();
   const { epochDuration } = useVotingConfig();
   const writeTx = useTransactor();
-  const wagmiVoteWrite = useWriteContract();
+  const wagmiTokenWrite = useWriteContract();
+  const wagmiVotingWrite = useWriteContract();
 
   const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
@@ -97,14 +98,13 @@ export function useRoundVote() {
         frontend,
       });
 
-      wagmiVoteWrite.reset();
-
       const transferAndCallRequest: any = {
         abi: CuryoReputationAbi,
         address: crepInfo.address,
         functionName: "transferAndCall",
         args: [votingEngineInfo.address, stakeWei, payload] as const,
       };
+      let shouldUseLegacyFallback = false;
 
       if (publicClient) {
         try {
@@ -117,11 +117,34 @@ export function useRoundVote() {
           });
           transferAndCallRequest.gas = (estimatedGas * 120n) / 100n;
         } catch {
-          // Fall back to wallet-side gas estimation.
+          // Old deployments do not expose transferAndCall yet; use the legacy path.
+          shouldUseLegacyFallback = true;
         }
       }
 
-      await writeTx(() => wagmiVoteWrite.writeContractAsync(transferAndCallRequest));
+      if (shouldUseLegacyFallback) {
+        const approveRequest = {
+          abi: CuryoReputationAbi,
+          address: crepInfo.address,
+          functionName: "approve",
+          args: [votingEngineInfo.address, stakeWei] as const,
+        };
+        const commitVoteRequest = {
+          abi: RoundVotingEngineAbi,
+          address: votingEngineInfo.address,
+          functionName: "commitVote",
+          args: [contentId, commitHash, ciphertext, stakeWei, frontend] as const,
+        };
+
+        wagmiTokenWrite.reset();
+        await writeTx(() => wagmiTokenWrite.writeContractAsync(approveRequest as any));
+
+        wagmiVotingWrite.reset();
+        await writeTx(() => wagmiVotingWrite.writeContractAsync(commitVoteRequest as any));
+      } else {
+        wagmiTokenWrite.reset();
+        await writeTx(() => wagmiTokenWrite.writeContractAsync(transferAndCallRequest));
+      }
 
       queryClient.setQueryData<WalletDisplaySummary | undefined>(
         getWalletDisplaySummaryQueryKey(address.toLowerCase()),
