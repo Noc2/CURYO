@@ -1,13 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAccount, usePublicClient } from "wagmi";
+import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
-import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
+import { getRecentUserVotesQueryKey } from "~~/hooks/useRecentUserVotes";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
-import { buildCommitVoteParams, needsApproval } from "~~/lib/contracts/roundVotingEngine";
+import { type WalletDisplaySummary, getWalletDisplaySummaryQueryKey } from "~~/hooks/useWalletDisplaySummary";
+import { buildCommitVoteParams } from "~~/lib/contracts/roundVotingEngine";
 import scaffoldConfig from "~~/scaffold.config";
 
 interface RoundVoteParams {
@@ -19,8 +22,8 @@ interface RoundVoteParams {
 }
 
 /**
- * Hook for tlock commit-reveal round voting using cREP tokens.
- * Handles: token approval -> commitVote() tx.
+ * Hook for tlock commit-reveal round voting using cREP transferAndCall.
+ * Handles: atomic token transfer + vote commit in a single transaction.
  *
  * Vote direction is tlock-encrypted to the current epoch's drand round,
  * ensuring vote secrecy until the epoch ends. The keeper decrypts and
@@ -35,14 +38,8 @@ export function useRoundVote() {
   const { requireAcceptance } = useTermsAcceptance();
   const queryClient = useQueryClient();
   const { epochDuration } = useVotingConfig();
-
-  const { writeContractAsync: writeCRep } = useScaffoldWriteContract({
-    contractName: "CuryoReputation",
-  });
-
-  const { writeContractAsync: writeVoting } = useScaffoldWriteContract({
-    contractName: "RoundVotingEngine" as any,
-  });
+  const writeTx = useTransactor();
+  const wagmiVoteWrite = useWriteContract();
 
   const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
@@ -93,67 +90,60 @@ export function useRoundVote() {
         defaultFrontendCode: scaffoldConfig.frontendCode,
       });
 
-      // Approve tokens if needed
-      if (publicClient && crepInfo) {
-        const currentAllowance = await publicClient.readContract({
-          address: crepInfo.address,
-          abi: crepInfo.abi,
-          functionName: "allowance",
-          args: [address, votingEngineInfo.address],
-        });
-        if (needsApproval(currentAllowance as bigint, stakeWei)) {
-          await writeCRep({
-            functionName: "approve",
-            args: [votingEngineInfo.address, stakeWei],
-          });
-
-          // Verify allowance was actually set on-chain before proceeding.
-          // MetaMask can return a tx hash before Anvil has mined the block,
-          // causing the next call to fail with ERC20InsufficientAllowance.
-          for (let i = 0; i < 20; i++) {
-            if (!address) throw new Error("Wallet disconnected during approval confirmation");
-            const newAllowance = await publicClient.readContract({
-              address: crepInfo.address,
-              abi: crepInfo.abi,
-              functionName: "allowance",
-              args: [address, votingEngineInfo.address],
-            });
-            if ((newAllowance as bigint) >= stakeWei) break;
-            if (i === 19)
-              throw new Error(
-                "Token approval was not confirmed on-chain. Try resetting your wallet activity (MetaMask → Settings → Advanced → Clear activity tab data).",
-              );
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
-      } else {
-        await writeCRep({
-          functionName: "approve",
-          args: [votingEngineInfo.address, stakeWei],
-        });
-      }
-
-      // Re-check wallet connection before submitting
-      if (!address) {
-        setError("Wallet disconnected after approval. Your allowance is set — please reconnect and retry.");
-        return false;
-      }
-
-      // Submit the encrypted vote commitment
-      await (writeVoting as any)({
-        functionName: "commitVote",
-        args: [contentId, commitHash, ciphertext, stakeWei, frontend],
+      const payload = encodeVoteTransferPayload({
+        contentId,
+        commitHash,
+        ciphertext,
+        frontend,
       });
 
-      // Optimistically update voting stakes so the navbar shows the new total
-      // immediately, without waiting for Ponder to index the event.
-      const stakeDisplay = stakeWei;
-      queryClient.setQueriesData<{
+      wagmiVoteWrite.reset();
+
+      const transferAndCallRequest: any = {
+        abi: CuryoReputationAbi,
+        address: crepInfo.address,
+        functionName: "transferAndCall",
+        args: [votingEngineInfo.address, stakeWei, payload] as const,
+      };
+
+      if (publicClient) {
+        try {
+          const estimatedGas = await publicClient.estimateContractGas({
+            address: crepInfo.address,
+            abi: CuryoReputationAbi,
+            functionName: "transferAndCall",
+            args: [votingEngineInfo.address, stakeWei, payload],
+            account: address,
+          });
+          transferAndCallRequest.gas = (estimatedGas * 120n) / 100n;
+        } catch {
+          // Fall back to wallet-side gas estimation.
+        }
+      }
+
+      await writeTx(() => wagmiVoteWrite.writeContractAsync(transferAndCallRequest));
+
+      queryClient.setQueryData<WalletDisplaySummary | undefined>(
+        getWalletDisplaySummaryQueryKey(address.toLowerCase()),
+        current => {
+          if (!current || current.liquidMicro < stakeWei) return current;
+          return {
+            ...current,
+            liquidMicro: current.liquidMicro - stakeWei,
+            votingStakedMicro: current.votingStakedMicro + stakeWei,
+            totalStakedMicro: current.totalStakedMicro + stakeWei,
+            totalMicro: current.totalMicro,
+            updatedAt: Date.now(),
+          };
+        },
+      );
+
+      queryClient.setQueryData<{
         data: { activeStaked: number; activeCount: number; totalVotingStake: number };
         source: string;
-      }>({ queryKey: ["ponder-fallback", "votingStakes"] }, old => {
+      }>(["ponder-fallback", "votingStakes", address], old => {
         if (!old?.data) return old;
-        const added = Number(stakeDisplay) / 1e6;
+        const added = Number(stakeWei) / 1e6;
         return {
           ...old,
           data: {
@@ -163,8 +153,8 @@ export function useRoundVote() {
           },
         };
       });
-      // Also invalidate so the real indexed data replaces the optimistic value once available
-      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes"] });
+      queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes", address] });
+      queryClient.invalidateQueries({ queryKey: getRecentUserVotesQueryKey(address) });
 
       return true;
     } catch (e: any) {
