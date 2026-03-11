@@ -255,9 +255,6 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
               Notifications
             </div>
             <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h1>
-            <p className="mt-3 text-base text-base-content/60">
-              Choose which alerts should appear in-app, through browser notifications, or by email.
-            </p>
           </div>
           <div className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3 text-sm text-base-content/60">
             {browserPermission === "granted"
