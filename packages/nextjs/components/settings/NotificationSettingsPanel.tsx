@@ -272,9 +272,6 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-white">In-app and browser alerts</h2>
-            <p className="mt-1 text-sm text-base-content/55">
-              These preferences control the live alerts shown while you are using Curyo.
-            </p>
           </div>
           {browserPermission === "default" ? (
             <button type="button" onClick={() => void requestBrowserPermission()} className="btn btn-outline btn-sm">
@@ -307,9 +304,6 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
               Email delivery
             </div>
             <h2 className="mt-3 text-xl font-semibold text-white">Email notifications</h2>
-            <p className="mt-1 text-sm text-base-content/55">
-              Add an email address, verify it once, and choose which alerts should also arrive in your inbox.
-            </p>
           </div>
           <div className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3 text-sm text-base-content/60">
             {!emailSettings.email
