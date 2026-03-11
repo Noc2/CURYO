@@ -325,6 +325,77 @@ app.get("/content/:id", async (c) => {
 });
 
 // ============================================================
+// ROUNDS
+// ============================================================
+
+app.get("/rounds", async (c) => {
+  const contentId = c.req.query("contentId");
+  const stateFilter = c.req.query("state");
+  const limit = safeLimit(c.req.query("limit"), 50, 200);
+  const offset = safeOffset(c.req.query("offset"));
+
+  const conditions = [];
+  if (contentId) {
+    const parsed = safeBigInt(contentId);
+    if (parsed === null) return c.json({ error: "Invalid contentId" }, 400);
+    conditions.push(eq(round.contentId, parsed));
+  }
+  if (stateFilter !== undefined) {
+    const parsed = parseInt(stateFilter);
+    if (isNaN(parsed)) return c.json({ error: "Invalid state filter" }, 400);
+    conditions.push(eq(round.state, parsed));
+  }
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const settledOnly = stateFilter !== undefined && parseInt(stateFilter) === ROUND_STATE.Settled;
+
+  const items = await db
+    .select({
+      id: round.id,
+      contentId: round.contentId,
+      roundId: round.roundId,
+      state: round.state,
+      voteCount: round.voteCount,
+      revealedCount: round.revealedCount,
+      totalStake: round.totalStake,
+      upPool: round.upPool,
+      downPool: round.downPool,
+      upCount: round.upCount,
+      downCount: round.downCount,
+      upWins: round.upWins,
+      losingPool: round.losingPool,
+      startTime: round.startTime,
+      settledAt: round.settledAt,
+      goal: content.goal,
+      url: content.url,
+      submitter: content.submitter,
+      categoryId: content.categoryId,
+    })
+    .from(round)
+    .leftJoin(content, eq(round.contentId, content.id))
+    .where(where)
+    .orderBy(
+      settledOnly ? desc(round.settledAt) : desc(round.startTime),
+      desc(round.contentId),
+      desc(round.roundId),
+    )
+    .limit(limit)
+    .offset(offset);
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(round)
+    .where(where);
+
+  return jsonBig(c, {
+    items,
+    total: countResult?.count ?? 0,
+    limit,
+    offset,
+  });
+});
+
+// ============================================================
 // SUBMISSION STAKES
 // ============================================================
 

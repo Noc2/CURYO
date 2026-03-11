@@ -8,6 +8,14 @@ const BASE_URL = "http://localhost:3000";
  * Pure API tests using fetch — no browser needed.
  */
 test.describe("Next.js API routes", () => {
+  async function getNotificationPreferencesSessionStatus(address: string, cookie?: string) {
+    const res = await fetch(`${BASE_URL}/api/notifications/preferences/session?address=${address}`, {
+      headers: cookie ? { cookie } : undefined,
+    });
+    expect(res.status).toBe(200);
+    return res.json() as Promise<{ hasSession: boolean }>;
+  }
+
   async function issueNotificationPreferencesReadChallenge(address: string) {
     const res = await fetch(`${BASE_URL}/api/notifications/preferences/challenge`, {
       method: "POST",
@@ -100,6 +108,14 @@ test.describe("Next.js API routes", () => {
       cookie: cookie!.split(";")[0],
       body: await res.json(),
     };
+  }
+
+  async function getEmailNotificationSessionStatus(address: string, cookie?: string) {
+    const res = await fetch(`${BASE_URL}/api/notifications/email/session?address=${address}`, {
+      headers: cookie ? { cookie } : undefined,
+    });
+    expect(res.status).toBe(200);
+    return res.json() as Promise<{ hasSession: boolean }>;
   }
 
   test("GET /api/leaderboard returns entry list", async () => {
@@ -418,6 +434,9 @@ test.describe("Next.js API routes", () => {
     const account = privateKeyToAccount(ANVIL_ACCOUNTS.account2.privateKey as `0x${string}`);
     const otherAddress = ANVIL_ACCOUNTS.account3.address.toLowerCase();
 
+    const unsignedSession = await getNotificationPreferencesSessionStatus(account.address.toLowerCase());
+    expect(unsignedSession.hasSession).toBe(false);
+
     const unsignedRes = await fetch(
       `${BASE_URL}/api/notifications/preferences?address=${account.address.toLowerCase()}`,
     );
@@ -434,6 +453,12 @@ test.describe("Next.js API routes", () => {
       },
     );
     expect(authorizedRes.status).toBe(200);
+
+    const authorizedSession = await getNotificationPreferencesSessionStatus(account.address.toLowerCase(), session.cookie);
+    expect(authorizedSession.hasSession).toBe(true);
+
+    const otherWalletSession = await getNotificationPreferencesSessionStatus(otherAddress, session.cookie);
+    expect(otherWalletSession.hasSession).toBe(false);
 
     const otherWalletRes = await fetch(`${BASE_URL}/api/notifications/preferences?address=${otherAddress}`, {
       headers: { cookie: session.cookie },
@@ -469,6 +494,9 @@ test.describe("Next.js API routes", () => {
     const otherAddress = ANVIL_ACCOUNTS.account3.address.toLowerCase();
     const address = account.address.toLowerCase();
 
+    const unsignedSession = await getEmailNotificationSessionStatus(address);
+    expect(unsignedSession.hasSession).toBe(false);
+
     const unsignedRes = await fetch(`${BASE_URL}/api/notifications/email?address=${address}`);
     expect(unsignedRes.status).toBe(401);
 
@@ -480,6 +508,12 @@ test.describe("Next.js API routes", () => {
       headers: { cookie: session.cookie },
     });
     expect(authorizedRes.status).toBe(200);
+
+    const authorizedSession = await getEmailNotificationSessionStatus(address, session.cookie);
+    expect(authorizedSession.hasSession).toBe(true);
+
+    const otherWalletSession = await getEmailNotificationSessionStatus(otherAddress, session.cookie);
+    expect(otherWalletSession.hasSession).toBe(false);
 
     const otherWalletRes = await fetch(`${BASE_URL}/api/notifications/email?address=${otherAddress}`, {
       headers: { cookie: session.cookie },

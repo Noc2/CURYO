@@ -1,18 +1,9 @@
-import { useState } from "react";
 import Link from "next/link";
-import { NetworkOptions } from "./NetworkOptions";
 import { getAddress } from "viem";
 import { Address } from "viem";
 import { hardhat } from "viem/chains";
 import { useAccount, useDisconnect } from "wagmi";
-import {
-  ArrowLeftOnRectangleIcon,
-  ArrowsRightLeftIcon,
-  BellAlertIcon,
-  ChevronLeftIcon,
-  EyeIcon,
-  GiftIcon,
-} from "@heroicons/react/24/outline";
+import { ArrowLeftOnRectangleIcon, BellAlertIcon, EyeIcon, GiftIcon } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -23,12 +14,9 @@ import { useClaimAll } from "~~/hooks/useClaimAll";
 import { useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
-import { getTargetNetworks } from "~~/utils/scaffold-eth";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
 const BURNER_WALLET_ID = "burnerWallet";
-
-const allowedNetworks = getTargetNetworks();
 
 type AddressInfoDropdownProps = {
   address: Address;
@@ -47,19 +35,13 @@ const getMenuItemClass = (showText: boolean) =>
     : "flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium";
 
 function MenuItems({
-  selectingNetwork,
-  setSelectingNetwork,
   disconnect,
   connector,
-  showBackWhenSelectingNetwork,
   showText = false,
   showFaucet,
 }: {
-  selectingNetwork: boolean;
-  setSelectingNetwork: (v: boolean) => void;
   disconnect: () => void;
   connector: { id: string } | undefined;
-  showBackWhenSelectingNetwork?: boolean;
   showText?: boolean;
   showFaucet?: boolean;
 }) {
@@ -67,23 +49,6 @@ function MenuItems({
   const menuItemClass = getMenuItemClass(showText);
   return (
     <>
-      {showBackWhenSelectingNetwork && selectingNetwork ? (
-        <li>
-          <button className={menuItemClass} type="button" onClick={() => setSelectingNetwork(false)}>
-            <ChevronLeftIcon className="w-6 h-6 shrink-0" />
-            <span className={textClass}>Back</span>
-          </button>
-        </li>
-      ) : null}
-      <NetworkOptions hidden={!selectingNetwork} />
-      {allowedNetworks.length > 1 ? (
-        <li className={selectingNetwork ? "hidden" : ""}>
-          <button className={menuItemClass} type="button" onClick={() => setSelectingNetwork(true)}>
-            <ArrowsRightLeftIcon className="w-6 h-6 shrink-0" />
-            <span className={textClass}>Switch Network</span>
-          </button>
-        </li>
-      ) : null}
       {connector?.id === BURNER_WALLET_ID ? (
         <li>
           <label
@@ -97,20 +62,20 @@ function MenuItems({
         </li>
       ) : null}
       {showFaucet && (
-        <li className={selectingNetwork ? "hidden" : ""}>
+        <li>
           <label htmlFor="faucet-modal" className={menuItemClass}>
             <GiftIcon className="w-6 h-6 shrink-0" />
             <span className={textClass}>Faucet</span>
           </label>
         </li>
       )}
-      <li className={selectingNetwork ? "hidden" : ""}>
+      <li>
         <Link href="/settings/notifications" className={menuItemClass}>
           <BellAlertIcon className="w-6 h-6 shrink-0" />
           <span className={textClass}>Notifications</span>
         </Link>
       </li>
-      <li className={selectingNetwork ? "hidden" : ""}>
+      <li>
         <button className={`${menuItemClass} text-error hover:text-error`} type="button" onClick={() => disconnect()}>
           <ArrowLeftOnRectangleIcon className="w-6 h-6 shrink-0" />
           <span className={textClass}>Disconnect</span>
@@ -190,19 +155,8 @@ export const AddressInfoDropdown = ({
   if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
   const stakeTooltip = stakeParts.join(" · ");
 
-  const [selectingNetwork, setSelectingNetwork] = useState(false);
-
   if (menuItemsOnly) {
-    return (
-      <MenuItems
-        selectingNetwork={selectingNetwork}
-        setSelectingNetwork={setSelectingNetwork}
-        disconnect={disconnect}
-        connector={connector}
-        showText={true}
-        showFaucet={showFaucet}
-      />
-    );
+    return <MenuItems disconnect={disconnect} connector={connector} showText={true} showFaucet={showFaucet} />;
   }
 
   const walletSummary = (
@@ -245,14 +199,7 @@ export const AddressInfoDropdown = ({
       <div className="w-full flex flex-col">
         {walletSummary}
         <ul className="menu menu-vertical p-0 gap-0.5 w-full">
-          <MenuItems
-            selectingNetwork={selectingNetwork}
-            setSelectingNetwork={setSelectingNetwork}
-            disconnect={disconnect}
-            connector={connector}
-            showBackWhenSelectingNetwork
-            showFaucet={showFaucet}
-          />
+          <MenuItems disconnect={disconnect} connector={connector} showFaucet={showFaucet} />
         </ul>
       </div>
     );

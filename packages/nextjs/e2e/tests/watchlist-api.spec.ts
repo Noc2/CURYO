@@ -3,6 +3,14 @@ import { expect, test } from "@playwright/test";
 const BASE_URL = "http://localhost:3000";
 
 test.describe("Watchlist API routes", () => {
+  async function getReadSessionStatus(address: string, cookie?: string) {
+    const res = await fetch(`${BASE_URL}/api/watchlist/content/session?address=${address}`, {
+      headers: cookie ? { cookie } : undefined,
+    });
+    expect(res.status).toBe(200);
+    return res.json() as Promise<{ hasSession: boolean }>;
+  }
+
   async function issueReadChallenge(address: string) {
     const res = await fetch(`${BASE_URL}/api/watchlist/content/challenge`, {
       method: "POST",
@@ -87,11 +95,17 @@ test.describe("Watchlist API routes", () => {
     const firstContentId = "1";
     const secondContentId = "2";
 
+    const unsignedSession = await getReadSessionStatus(address);
+    expect(unsignedSession.hasSession).toBe(false);
+
     const unauthenticatedRes = await fetch(`${BASE_URL}/api/watchlist/content?address=${address}`);
     expect(unauthenticatedRes.status).toBe(401);
 
     const initial = await createReadSession(address, account);
     expect(initial.body.items).toEqual([]);
+
+    const authorizedSession = await getReadSessionStatus(address, initial.cookie);
+    expect(authorizedSession.hasSession).toBe(true);
 
     const firstWatch = await watchContent(address, firstContentId, account);
     expect(firstWatch).toMatchObject({ ok: true, watched: true, contentId: firstContentId });
@@ -179,6 +193,12 @@ test.describe("Watchlist API routes", () => {
       headers: { cookie: session.cookie },
     });
     expect(authorizedRes.status).toBe(200);
+
+    const authorizedSession = await getReadSessionStatus(account.address.toLowerCase(), session.cookie);
+    expect(authorizedSession.hasSession).toBe(true);
+
+    const otherSession = await getReadSessionStatus(otherAccount.address.toLowerCase(), session.cookie);
+    expect(otherSession.hasSession).toBe(false);
 
     const unauthorizedRes = await fetch(
       `${BASE_URL}/api/watchlist/content?address=${otherAccount.address.toLowerCase()}`,

@@ -26,14 +26,20 @@ async function readEmailNotificationSettings(
   address: string,
   signMessageAsync: (args: { message: string }) => Promise<`0x${string}`>,
 ): Promise<EmailNotificationSettingsState> {
-  const existingSessionRes = await fetch(`/api/notifications/email?address=${encodeURIComponent(address)}`);
-  if (existingSessionRes.ok) {
-    return (await existingSessionRes.json()) as EmailNotificationSettingsState;
+  const sessionRes = await fetch(`/api/notifications/email/session?address=${encodeURIComponent(address)}`);
+  const sessionBody = (await sessionRes.json().catch(() => null)) as { hasSession?: boolean; error?: string } | null;
+  if (!sessionRes.ok) {
+    throw new Error(sessionBody?.error || "Failed to check email notification session");
   }
 
-  if (existingSessionRes.status !== 401) {
-    const body = (await existingSessionRes.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error || "Failed to fetch email notification settings");
+  if (sessionBody?.hasSession) {
+    const existingSessionRes = await fetch(`/api/notifications/email?address=${encodeURIComponent(address)}`);
+    if (!existingSessionRes.ok) {
+      const body = (await existingSessionRes.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(body?.error || "Failed to fetch email notification settings");
+    }
+
+    return (await existingSessionRes.json()) as EmailNotificationSettingsState;
   }
 
   const challengeRes = await fetch("/api/notifications/email/challenge", {
@@ -73,7 +79,6 @@ async function readEmailNotificationSettings(
   if (!res.ok) {
     throw new Error(body?.error || "Failed to fetch email notification settings");
   }
-
   return body as EmailNotificationSettingsState;
 }
 

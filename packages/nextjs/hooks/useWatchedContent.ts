@@ -38,8 +38,19 @@ async function readWatchedContent(
   signMessageAsync: (args: { message: string }) => Promise<`0x${string}`>,
   autoRead: boolean,
 ): Promise<WatchedContentResponse> {
-  const existingSessionRes = await fetch(`/api/watchlist/content?address=${encodeURIComponent(address)}`);
-  if (existingSessionRes.ok) {
+  const sessionRes = await fetch(`/api/watchlist/content/session?address=${encodeURIComponent(address)}`);
+  const sessionBody = (await sessionRes.json().catch(() => null)) as { hasSession?: boolean; error?: string } | null;
+  if (!sessionRes.ok) {
+    throw new Error(sessionBody?.error || "Failed to check watchlist session");
+  }
+
+  if (sessionBody?.hasSession) {
+    const existingSessionRes = await fetch(`/api/watchlist/content?address=${encodeURIComponent(address)}`);
+    if (!existingSessionRes.ok) {
+      const body = (await existingSessionRes.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(body?.error || "Failed to fetch watched content");
+    }
+
     const body = (await existingSessionRes.json()) as Partial<WatchedContentResponse>;
     return {
       items: Array.isArray(body.items) ? (body.items as WatchedContentItem[]) : [],
@@ -47,13 +58,8 @@ async function readWatchedContent(
     };
   }
 
-  if (!autoRead && existingSessionRes.status === 401) {
+  if (!autoRead) {
     return EMPTY_WATCHED_RESPONSE;
-  }
-
-  if (existingSessionRes.status !== 401) {
-    const body = (await existingSessionRes.json().catch(() => null)) as { error?: string } | null;
-    throw new Error(body?.error || "Failed to fetch watched content");
   }
 
   const challengeRes = await fetch("/api/watchlist/content/challenge", {

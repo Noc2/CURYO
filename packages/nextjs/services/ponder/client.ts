@@ -120,6 +120,35 @@ export interface PonderContentQuery {
   submitter?: string;
 }
 
+export interface PonderRoundItem {
+  id: string;
+  contentId: string;
+  roundId: string;
+  state: number;
+  voteCount: number;
+  revealedCount: number;
+  totalStake: string;
+  upPool: string;
+  downPool: string;
+  upCount: number;
+  downCount: number;
+  upWins: boolean | null;
+  losingPool: string | null;
+  startTime: string | null;
+  settledAt: string | null;
+  goal: string | null;
+  url: string | null;
+  submitter: string | null;
+  categoryId: string | null;
+}
+
+export interface PonderRoundsResponse {
+  items: PonderRoundItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface PonderRatingChange {
   id: string;
   contentId: string;
@@ -420,6 +449,10 @@ export const ponderApi = {
       limit: safeRequestedLimit,
       offset: Number.isFinite(initialOffset) ? Math.max(0, Math.floor(initialOffset)) : 0,
     } satisfies PonderContentResponse;
+  },
+
+  getRounds(params?: { contentId?: string; state?: string; limit?: string; offset?: string }) {
+    return ponderGet<PonderRoundsResponse>("/rounds", params);
   },
 
   async getAllContent(params?: Omit<PonderContentQuery, "limit" | "offset">) {
