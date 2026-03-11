@@ -91,6 +91,7 @@ export function VotingQuestionCard({
     contractName: "RoundVotingEngine" as any,
     functionName: "voterCommitHash" as any,
     args: [contentId, roundId, address] as any,
+    watch: true,
     query: { enabled: roundId > 0n && !!address },
   } as any);
 

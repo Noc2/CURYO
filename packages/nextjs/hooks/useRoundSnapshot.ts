@@ -19,6 +19,7 @@ export function useRoundSnapshot(contentId?: bigint) {
     contractName: "RoundVotingEngine" as any,
     functionName: "getActiveRoundId" as any,
     args: [contentId] as any,
+    watch: true,
     query: {
       enabled: contentId !== undefined,
       refetchInterval,
@@ -30,6 +31,7 @@ export function useRoundSnapshot(contentId?: bigint) {
     contractName: "RoundVotingEngine" as any,
     functionName: "getRound" as any,
     args: [contentId, roundId] as any,
+    watch: true,
     query: {
       enabled: contentId !== undefined && roundId > 0n,
       refetchInterval,

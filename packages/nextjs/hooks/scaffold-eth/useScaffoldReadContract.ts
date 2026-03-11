@@ -39,8 +39,9 @@ export const useScaffoldReadContract = <
   });
 
   const { query: queryOptions, watch, ...readContractConfig } = readConfig;
-  // set watch to true by default
-  const defaultWatch = watch ?? true;
+  // Default reads to static/query-driven refreshes. Opt in to block watching only
+  // for surfaces that genuinely need near-real-time updates.
+  const defaultWatch = watch ?? false;
 
   // Contract address must be available before making any RPC calls
   const isContractReady = !!deployedContract?.address;
