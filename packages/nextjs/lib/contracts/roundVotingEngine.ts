@@ -220,10 +220,6 @@ export function buildStakeAmountWei(stakeAmount: number): bigint {
   return BigInt(Math.round(stakeAmount * 1e6));
 }
 
-export function needsApproval(currentAllowance: bigint, requiredAllowance: bigint): boolean {
-  return currentAllowance < requiredAllowance;
-}
-
 export function resolveFrontendCode(frontendCode?: `0x${string}`, defaultFrontendCode?: `0x${string}`): `0x${string}` {
   return frontendCode ?? defaultFrontendCode ?? "0x0000000000000000000000000000000000000000";
 }

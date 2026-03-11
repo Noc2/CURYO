@@ -73,24 +73,6 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
   return false;
 }
 
-async function readCall(to: string, data: `0x${string}`): Promise<`0x${string}`> {
-  const res = await fetch(ANVIL_RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method: "eth_call",
-      params: [{ to, data }, "latest"],
-      id: Date.now(),
-    }),
-  });
-  const json = await res.json();
-  if (json.error) {
-    throw new Error(json.error.message || "eth_call failed");
-  }
-  return json.result as `0x${string}`;
-}
-
 /**
  * Approve a pending category via the timelock.
  * Calls CategoryRegistry.approveCategory(uint256 categoryId).
@@ -173,78 +155,6 @@ export async function registerFrontend(fromAddress: string, contractAddress: str
     args: [],
   });
   return sendTx(fromAddress, contractAddress, data);
-}
-
-export async function followProfile(
-  targetAddress: string,
-  fromAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
-  const { encodeFunctionData } = await import("viem");
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "follow",
-        type: "function",
-        inputs: [{ name: "target", type: "address" }],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "follow",
-    args: [targetAddress as `0x${string}`],
-  });
-  return sendTx(fromAddress, contractAddress, data);
-}
-
-export async function unfollowProfile(
-  targetAddress: string,
-  fromAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
-  const { encodeFunctionData } = await import("viem");
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "unfollow",
-        type: "function",
-        inputs: [{ name: "target", type: "address" }],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "unfollow",
-    args: [targetAddress as `0x${string}`],
-  });
-  return sendTx(fromAddress, contractAddress, data);
-}
-
-export async function isFollowingOnChain(
-  followerAddress: string,
-  targetAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
-  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
-  const abi = [
-    {
-      name: "isFollowing",
-      type: "function",
-      inputs: [
-        { name: "follower", type: "address" },
-        { name: "target", type: "address" },
-      ],
-      outputs: [{ name: "", type: "bool" }],
-      stateMutability: "view",
-    },
-  ] as const;
-
-  const data = encodeFunctionData({
-    abi,
-    functionName: "isFollowing",
-    args: [followerAddress as `0x${string}`, targetAddress as `0x${string}`],
-  });
-  const result = await readCall(contractAddress, data);
-  return decodeFunctionResult({ abi, functionName: "isFollowing", data: result });
 }
 
 /**
@@ -946,6 +856,71 @@ export async function commitVoteDirect(
 }
 
 /**
+ * Commit a vote via the single-transaction ERC-1363 transferAndCall path.
+ * Transfers cREP to the voting engine and commits the encrypted vote atomically.
+ */
+export async function commitVoteWithTransferAndCallDirect(
+  contentId: number | bigint,
+  isUp: boolean,
+  stakeAmount: bigint,
+  frontend: string,
+  fromAddress: string,
+  tokenAddress: string,
+  votingEngineAddress: string,
+  epochDurationSeconds = 1200,
+): Promise<{ success: boolean; commitKey: `0x${string}`; isUp: boolean; salt: `0x${string}` }> {
+  const { createTlockVoteCommit, encodeVoteTransferPayload } = await import("@curyo/contracts/voting");
+  const { encodeFunctionData, encodePacked, keccak256 } = await import("viem");
+
+  const salt = keccak256(
+    encodePacked(
+      ["address", "uint256", "uint256"],
+      [fromAddress as `0x${string}`, BigInt(contentId), BigInt(Date.now())],
+    ),
+  );
+
+  const {
+    ciphertext,
+    commitHash: chash,
+    commitKey: ckey,
+  } = await createTlockVoteCommit({
+    voter: fromAddress as `0x${string}`,
+    isUp,
+    salt,
+    contentId: BigInt(contentId),
+    epochDurationSeconds,
+  });
+
+  const payload = encodeVoteTransferPayload({
+    contentId: BigInt(contentId),
+    commitHash: chash,
+    ciphertext,
+    frontend: frontend as `0x${string}`,
+  });
+
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "transferAndCall",
+        type: "function",
+        inputs: [
+          { name: "to", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "data", type: "bytes" },
+        ],
+        outputs: [{ name: "", type: "bool" }],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "transferAndCall",
+    args: [votingEngineAddress as `0x${string}`, stakeAmount, payload],
+  });
+
+  const success = await sendTx(fromAddress, tokenAddress, data);
+  return { success, commitKey: ckey!, isUp, salt };
+}
+
+/**
  * Reveal a committed vote via contract call.
  * Calls revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt).
  * Anyone can reveal — the keeper normally does this after epoch ends.
@@ -1493,10 +1468,7 @@ export async function waitForPonderSync(
  * Must be called by the frontend operator address. Transfers cREP from
  * the registry to the operator's wallet.
  */
-export async function claimFrontendFees(
-  fromAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
+export async function claimFrontendFees(fromAddress: string, contractAddress: string): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
   const data = encodeFunctionData({
     abi: [

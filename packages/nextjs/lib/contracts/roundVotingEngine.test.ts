@@ -4,10 +4,10 @@ import {
   buildStakeAmountWei,
   deriveRoundSnapshot,
   deriveVoteDeadlines,
-  needsApproval,
   resolveFrontendCode,
 } from "./roundVotingEngine";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
+import { decodeVoteTransferPayload, encodeVoteTransferPayload } from "@curyo/contracts/voting";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -92,13 +92,27 @@ test("deriveVoteDeadlines falls back to round expiry after epoch 1", () => {
   assert.equal(deadlines.nextActionRemaining, deadlines.roundTimeRemaining);
 });
 
-test("vote helpers normalize stake, frontend code, and approval checks", () => {
+test("vote helpers normalize stake and frontend codes", () => {
   assert.equal(buildStakeAmountWei(2.5), 2_500_000n);
-  assert.equal(needsApproval(1_000_000n, 1_000_001n), true);
-  assert.equal(needsApproval(1_000_001n, 1_000_001n), false);
   assert.equal(
     resolveFrontendCode(undefined, "0x1111111111111111111111111111111111111111"),
     "0x1111111111111111111111111111111111111111",
   );
   assert.equal(resolveFrontendCode(undefined, undefined), "0x0000000000000000000000000000000000000000");
+});
+
+test("vote transfer payloads round-trip for single-transaction voting", () => {
+  const payload = encodeVoteTransferPayload({
+    contentId: 42n,
+    commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+    ciphertext: "0x1234",
+    frontend: "0x2222222222222222222222222222222222222222",
+  });
+
+  assert.deepEqual(decodeVoteTransferPayload(payload), {
+    contentId: 42n,
+    commitHash: "0x1111111111111111111111111111111111111111111111111111111111111111",
+    ciphertext: "0x1234",
+    frontend: "0x2222222222222222222222222222222222222222",
+  });
 });
