@@ -8,6 +8,7 @@ import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
+import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { notification } from "~~/utils/scaffold-eth";
 
 /**
@@ -123,31 +124,44 @@ export function SettlementNotifier() {
       if (!item.estimatedSettlementTime) continue;
 
       const secondsUntil = Number(item.estimatedSettlementTime) - nowSeconds;
-      const href = `/vote?content=${item.contentId}`;
-      const shortGoal = item.goal.length > 72 ? `${item.goal.slice(0, 69)}...` : item.goal;
 
-      if (secondsUntil > 0 && secondsUntil <= 24 * 60 * 60) {
+      if (secondsUntil > 60 * 60 && secondsUntil <= 24 * 60 * 60) {
         currentSettlingDayKeys.add(item.id);
-
-        if (
-          discoverSignalsInitializedRef.current &&
-          preferences.settlingSoonDay &&
-          !seenSettlingDayKeysRef.current.has(item.id)
-        ) {
-          notifyWithLink("info", "Watched round settling today", `"${shortGoal}" looks likely to settle today.`, href);
-        }
       }
 
       if (secondsUntil > 0 && secondsUntil <= 60 * 60) {
         currentSettlingHourKeys.add(item.id);
+      }
+    }
 
-        if (
-          discoverSignalsInitializedRef.current &&
-          preferences.settlingSoonHour &&
-          !seenSettlingHourKeysRef.current.has(item.id)
-        ) {
-          notifyWithLink("info", "Round settling soon", `"${shortGoal}" looks likely to settle within the hour.`, href);
-        }
+    const settlingSoonNotification = discoverSignalsInitializedRef.current
+      ? pickSettlingSoonNotification({
+          nowSeconds,
+          items: discoverSignals.settlingSoon,
+          seenHourIds: seenSettlingHourKeysRef.current,
+          seenDayIds: seenSettlingDayKeysRef.current,
+          allowHour: preferences.settlingSoonHour,
+          allowDay: preferences.settlingSoonDay,
+        })
+      : null;
+
+    if (settlingSoonNotification) {
+      notifyWithLink(
+        "info",
+        settlingSoonNotification.title,
+        settlingSoonNotification.body,
+        settlingSoonNotification.href,
+      );
+      if (settlingSoonNotification.kind === "hour") {
+        seenSettlingHourKeysRef.current = new Set([
+          ...seenSettlingHourKeysRef.current,
+          ...settlingSoonNotification.itemIds,
+        ]);
+      } else {
+        seenSettlingDayKeysRef.current = new Set([
+          ...seenSettlingDayKeysRef.current,
+          ...settlingSoonNotification.itemIds,
+        ]);
       }
     }
 
@@ -195,10 +209,10 @@ export function SettlementNotifier() {
 
     if (!discoverSignalsInitializedRef.current) {
       discoverSignalsInitializedRef.current = true;
+      seenSettlingDayKeysRef.current = new Set([...seenSettlingDayKeysRef.current, ...currentSettlingDayKeys]);
+      seenSettlingHourKeysRef.current = new Set([...seenSettlingHourKeysRef.current, ...currentSettlingHourKeys]);
     }
 
-    seenSettlingDayKeysRef.current = new Set([...seenSettlingDayKeysRef.current, ...currentSettlingDayKeys]);
-    seenSettlingHourKeysRef.current = new Set([...seenSettlingHourKeysRef.current, ...currentSettlingHourKeys]);
     seenFollowedSubmissionKeysRef.current = new Set([
       ...seenFollowedSubmissionKeysRef.current,
       ...currentSubmissionKeys,

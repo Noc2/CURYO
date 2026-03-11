@@ -4,6 +4,7 @@ import { db, dbClient } from "~~/lib/db";
 import { notificationEmailDeliveries, notificationEmailSubscriptions, watchedContent } from "~~/lib/db/schema";
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import { sendResendEmail } from "~~/lib/notifications/resend";
+import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { ponderGet } from "~~/services/ponder/client";
 
 type DeliverySubscription = typeof notificationEmailSubscriptions.$inferSelect;
@@ -185,38 +186,30 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
     }
   }
 
-  for (const item of events.settlingSoon) {
-    if (!item.estimatedSettlementTime) continue;
-    const secondsUntil = Number(item.estimatedSettlementTime) - nowSeconds;
+  const settlingSoonSummary = pickSettlingSoonNotification({
+    nowSeconds,
+    items: events.settlingSoon,
+    seenHourIds: new Set(),
+    seenDayIds: new Set(),
+    allowHour: subscription.settlingSoonHour,
+    allowDay: subscription.settlingSoonDay,
+  });
 
-    if (subscription.settlingSoonHour && secondsUntil > 0 && secondsUntil <= 60 * 60) {
-      const eventKey = `settling-hour:${subscription.walletAddress}:${item.contentId}:${item.roundId}`;
-      candidates.set(eventKey, {
-        walletAddress: subscription.walletAddress,
-        email: subscription.email,
-        eventKey,
-        eventType: "settling_soon_hour",
-        contentId: item.contentId,
-        subject: "A tracked round is settling within the hour",
-        body: `"${item.goal}" looks close to settlement right now.`,
-        href: getAbsoluteVoteUrl(item.contentId),
-      });
-      continue;
-    }
-
-    if (subscription.settlingSoonDay && secondsUntil > 60 * 60 && secondsUntil <= 24 * 60 * 60) {
-      const eventKey = `settling-day:${subscription.walletAddress}:${item.contentId}:${item.roundId}`;
-      candidates.set(eventKey, {
-        walletAddress: subscription.walletAddress,
-        email: subscription.email,
-        eventKey,
-        eventType: "settling_soon_day",
-        contentId: item.contentId,
-        subject: "A tracked round looks likely to settle today",
-        body: `"${item.goal}" is one to keep an eye on today.`,
-        href: getAbsoluteVoteUrl(item.contentId),
-      });
-    }
+  if (settlingSoonSummary) {
+    const eventKey = `settling-${settlingSoonSummary.kind}:${subscription.walletAddress}:${settlingSoonSummary.itemIds.join(",")}`;
+    candidates.set(eventKey, {
+      walletAddress: subscription.walletAddress,
+      email: subscription.email,
+      eventKey,
+      eventType: settlingSoonSummary.kind === "hour" ? "settling_soon_hour" : "settling_soon_day",
+      contentId: settlingSoonSummary.contentId,
+      subject:
+        settlingSoonSummary.kind === "hour"
+          ? "A tracked round is settling within the hour"
+          : "A tracked round looks likely to settle today",
+      body: settlingSoonSummary.body,
+      href: getAbsoluteVoteUrl(settlingSoonSummary.contentId),
+    });
   }
 
   if (subscription.followedSubmission) {
