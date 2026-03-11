@@ -15,6 +15,7 @@ import { useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
+import { useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
 const BURNER_WALLET_ID = "burnerWallet";
@@ -35,7 +36,12 @@ const getMenuItemClass = (showText: boolean) =>
     ? "flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium"
     : "flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium";
 
-function ExtendedWalletSummary({ address }: { address: Address }) {
+function formatCrepAmount(value: bigint | null | undefined) {
+  if (value == null) return "—";
+  return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
   const isPageVisible = usePageVisibility();
   const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
   const { totalSubmissionStake } = useSubmissionStakes(address);
@@ -62,18 +68,30 @@ function ExtendedWalletSummary({ address }: { address: Address }) {
       refetchInterval: isPageVisible ? 60_000 : false,
     },
   });
-  const frontendStake = frontendInfo ? Number(frontendInfo[1]) / 1e6 : 0;
 
   const fallbackVotingStaked = activeVotes.reduce((sum, vote) => sum + Number(vote.stake) / 1e6, 0);
   const effectiveVotingStaked = Math.max(votingStaked, fallbackVotingStaked);
-  const totalStaked = effectiveVotingStaked + totalSubmissionStake + frontendStake;
-  const stakedFormatted = totalStaked.toLocaleString(undefined, { maximumFractionDigits: 0 });
-  const shouldShowStaked = totalStaked > 0 || activeVotes.length > 0;
+  const summary = useWalletDisplaySummary(
+    address,
+    crepBalance === undefined
+      ? null
+      : {
+          liquidMicro: crepBalance,
+          votingStakedMicro: BigInt(Math.round(effectiveVotingStaked * 1e6)),
+          submissionStakedMicro: BigInt(Math.round(totalSubmissionStake * 1e6)),
+          frontendStakedMicro: frontendInfo?.[1] ?? 0n,
+        },
+  );
+  const shouldShowStaked = (summary?.totalStakedMicro ?? 0n) > 0n || activeVotes.length > 0;
 
   const stakeParts: string[] = [];
-  if (totalSubmissionStake > 0) stakeParts.push(`${totalSubmissionStake} cREP submissions`);
-  if (effectiveVotingStaked > 0) {
-    let votingLabel = `${effectiveVotingStaked} cREP voting`;
+  const submissionStake = Number(summary?.submissionStakedMicro ?? 0n) / 1e6;
+  const frontendStake = Number(summary?.frontendStakedMicro ?? 0n) / 1e6;
+  const votingStake = Number(summary?.votingStakedMicro ?? 0n) / 1e6;
+
+  if (submissionStake > 0) stakeParts.push(`${submissionStake} cREP submissions`);
+  if (votingStake > 0) {
+    let votingLabel = `${votingStake} cREP voting`;
     if (earliestReveal) votingLabel += ` · reveals in ${earliestReveal}`;
     else if (showManualRevealLink || hasPendingReveals) votingLabel += ` · pending reveal`;
     stakeParts.push(votingLabel);
@@ -83,6 +101,9 @@ function ExtendedWalletSummary({ address }: { address: Address }) {
 
   return (
     <>
+      <div className="text-base text-base-content text-left px-4 pl-12">
+        {formatCrepAmount(summary?.liquidMicro)} cREP
+      </div>
       {showManualRevealLink ? (
         <div className="text-left px-4 pl-12">
           <Link
@@ -95,7 +116,7 @@ function ExtendedWalletSummary({ address }: { address: Address }) {
       ) : null}
       {shouldShowStaked && (
         <div className="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12">
-          {stakedFormatted} Staked
+          {formatCrepAmount(summary?.totalStakedMicro)} Staked
           <InfoTooltip text={stakeTooltip} position="bottom" />
         </div>
       )}
@@ -186,8 +207,7 @@ export const AddressInfoDropdown = ({
       refetchInterval: isPageVisible ? 60_000 : false,
     },
   });
-  const crepFormatted =
-    crepBalance != null ? (Number(crepBalance) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—";
+  const crepFormatted = crepBalance != null ? formatCrepAmount(crepBalance) : "—";
 
   if (menuItemsOnly) {
     return <MenuItems disconnect={disconnect} connector={connector} showText={true} showFaucet={showFaucet} />;
@@ -201,8 +221,10 @@ export const AddressInfoDropdown = ({
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      <div className="text-base text-base-content text-left px-4 pl-12">{crepFormatted} cREP</div>
-      {inlineMenu ? <ExtendedWalletSummary address={address} /> : null}
+      {inlineMenu ? <InlineWalletSummary address={address} crepBalance={crepBalance} /> : null}
+      {!inlineMenu ? (
+        <div className="text-base text-base-content text-left px-4 pl-12">{crepFormatted} cREP</div>
+      ) : null}
     </div>
   );
 
