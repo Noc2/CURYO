@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { useScaffoldWatchContractEvent } from "~~/hooks/scaffold-eth";
+import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
-import { useRadarFeed } from "~~/hooks/useRadarFeed";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { notification } from "~~/utils/scaffold-eth";
@@ -21,15 +21,15 @@ export function SettlementNotifier() {
   const activeKeysRef = useRef<Set<string>>(new Set());
   const watchedContentIdsRef = useRef<Set<string>>(new Set());
   const seenSettlementKeysRef = useRef<Set<string>>(new Set());
-  const radarInitializedRef = useRef(false);
+  const discoverSignalsInitializedRef = useRef(false);
   const seenSettlingDayKeysRef = useRef<Set<string>>(new Set());
   const seenSettlingHourKeysRef = useRef<Set<string>>(new Set());
   const seenFollowedSubmissionKeysRef = useRef<Set<string>>(new Set());
   const seenFollowedResolutionKeysRef = useRef<Set<string>>(new Set());
   const roundResolvedEnabledRef = useRef(true);
-  const { watchedContentIds } = useWatchedContent(address);
-  const { radar } = useRadarFeed(address);
-  const { preferences } = useNotificationPreferences(address);
+  const { watchedItems, watchedContentIds } = useWatchedContent(address, { autoRead: false });
+  const { discoverSignals } = useDiscoverSignals(address, { watchedItems });
+  const { preferences } = useNotificationPreferences(address, { autoRead: false });
 
   useEffect(() => {
     roundResolvedEnabledRef.current = preferences.roundResolved;
@@ -70,7 +70,7 @@ export function SettlementNotifier() {
 
   useEffect(() => {
     if (!address) {
-      radarInitializedRef.current = false;
+      discoverSignalsInitializedRef.current = false;
       seenSettlingDayKeysRef.current = new Set();
       seenSettlingHourKeysRef.current = new Set();
       seenFollowedSubmissionKeysRef.current = new Set();
@@ -119,7 +119,7 @@ export function SettlementNotifier() {
     const currentSubmissionKeys = new Set<string>();
     const currentResolutionKeys = new Set<string>();
 
-    for (const item of radar.settlingSoon) {
+    for (const item of discoverSignals.settlingSoon) {
       if (!item.estimatedSettlementTime) continue;
 
       const secondsUntil = Number(item.estimatedSettlementTime) - nowSeconds;
@@ -130,7 +130,7 @@ export function SettlementNotifier() {
         currentSettlingDayKeys.add(item.id);
 
         if (
-          radarInitializedRef.current &&
+          discoverSignalsInitializedRef.current &&
           preferences.settlingSoonDay &&
           !seenSettlingDayKeysRef.current.has(item.id)
         ) {
@@ -142,7 +142,7 @@ export function SettlementNotifier() {
         currentSettlingHourKeys.add(item.id);
 
         if (
-          radarInitializedRef.current &&
+          discoverSignalsInitializedRef.current &&
           preferences.settlingSoonHour &&
           !seenSettlingHourKeysRef.current.has(item.id)
         ) {
@@ -151,12 +151,12 @@ export function SettlementNotifier() {
       }
     }
 
-    for (const item of radar.followedSubmissions) {
+    for (const item of discoverSignals.followedSubmissions) {
       const key = `${item.contentId}-${item.createdAt}`;
       currentSubmissionKeys.add(key);
 
       if (
-        radarInitializedRef.current &&
+        discoverSignalsInitializedRef.current &&
         preferences.followedSubmission &&
         !seenFollowedSubmissionKeysRef.current.has(key)
       ) {
@@ -171,12 +171,12 @@ export function SettlementNotifier() {
       }
     }
 
-    for (const item of radar.followedResolutions) {
+    for (const item of discoverSignals.followedResolutions) {
       const key = `${item.id}-${item.settledAt ?? ""}`;
       currentResolutionKeys.add(key);
 
       if (
-        radarInitializedRef.current &&
+        discoverSignalsInitializedRef.current &&
         preferences.followedResolution &&
         !seenFollowedResolutionKeysRef.current.has(key)
       ) {
@@ -193,8 +193,8 @@ export function SettlementNotifier() {
       }
     }
 
-    if (!radarInitializedRef.current) {
-      radarInitializedRef.current = true;
+    if (!discoverSignalsInitializedRef.current) {
+      discoverSignalsInitializedRef.current = true;
     }
 
     seenSettlingDayKeysRef.current = new Set([...seenSettlingDayKeysRef.current, ...currentSettlingDayKeys]);
@@ -207,7 +207,7 @@ export function SettlementNotifier() {
       ...seenFollowedResolutionKeysRef.current,
       ...currentResolutionKeys,
     ]);
-  }, [address, preferences, radar]);
+  }, [address, discoverSignals, preferences]);
 
   // Watch for RoundSettled events
   useScaffoldWatchContractEvent({

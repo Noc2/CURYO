@@ -15,9 +15,9 @@ import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
+import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
-import { useRadarFeed } from "~~/hooks/useRadarFeed";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUserPreferences } from "~~/hooks/useUserPreferences";
@@ -85,9 +85,9 @@ const HomeInner = () => {
     isLoading: watchedLoading,
     toggleWatch,
     isPending: isWatchPending,
-  } = useWatchedContent(address);
+  } = useWatchedContent(address, { autoRead: true });
   const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(address);
-  const { radar, isLoading: radarLoading } = useRadarFeed(address);
+  const { discoverSignals, isLoading: discoverSignalsLoading } = useDiscoverSignals(address, { watchedItems });
 
   const feedRequestLimit = contentParam
     ? undefined
@@ -119,24 +119,24 @@ const HomeInner = () => {
   const settlingSoonContentOrder = useMemo(() => {
     const seen = new Set<string>();
     const ids: bigint[] = [];
-    for (const item of radar.settlingSoon) {
+    for (const item of discoverSignals.settlingSoon) {
       if (seen.has(item.contentId)) continue;
       seen.add(item.contentId);
       ids.push(BigInt(item.contentId));
     }
     return ids;
-  }, [radar.settlingSoon]);
+  }, [discoverSignals.settlingSoon]);
 
   const followedCuratorContentOrder = useMemo(() => {
     const seen = new Set<string>();
     const ids: bigint[] = [];
-    for (const item of radar.followedSubmissions) {
+    for (const item of discoverSignals.followedSubmissions) {
       if (seen.has(item.contentId)) continue;
       seen.add(item.contentId);
       ids.push(BigInt(item.contentId));
     }
     return ids;
-  }, [radar.followedSubmissions]);
+  }, [discoverSignals.followedSubmissions]);
 
   const activeCategoryId = useMemo(() => {
     if (activeCategory === ALL_FILTER || activeCategory === BROKEN_FILTER) {
@@ -207,36 +207,36 @@ const HomeInner = () => {
   }, [votes]);
   const settlingSoonOrderMap = useMemo(() => {
     const order = new Map<string, number>();
-    radar.settlingSoon.forEach((item, index) => {
+    discoverSignals.settlingSoon.forEach((item, index) => {
       const contentId = item.contentId.toString();
       if (!order.has(contentId)) {
         order.set(contentId, index);
       }
     });
     return order;
-  }, [radar.settlingSoon]);
+  }, [discoverSignals.settlingSoon]);
   const followedCuratorOrderMap = useMemo(() => {
     const order = new Map<string, number>();
-    radar.followedSubmissions.forEach((item, index) => {
+    discoverSignals.followedSubmissions.forEach((item, index) => {
       const contentId = item.contentId.toString();
       if (!order.has(contentId)) {
         order.set(contentId, index);
       }
     });
     return order;
-  }, [radar.followedSubmissions]);
+  }, [discoverSignals.followedSubmissions]);
   const settlingSoonContentIds = useMemo(
-    () => new Set(radar.settlingSoon.map(item => item.contentId.toString())),
-    [radar.settlingSoon],
+    () => new Set(discoverSignals.settlingSoon.map(item => item.contentId.toString())),
+    [discoverSignals.settlingSoon],
   );
   const followedCuratorContentIds = useMemo(
-    () => new Set(radar.followedSubmissions.map(item => item.contentId.toString())),
-    [radar.followedSubmissions],
+    () => new Set(discoverSignals.followedSubmissions.map(item => item.contentId.toString())),
+    [discoverSignals.followedSubmissions],
   );
   const scopeLoading =
     (scope === "watched" && !!address && watchedLoading) ||
     (scope === "my_votes" && !!address && votesLoading) ||
-    ((scope === "settling_soon" || scope === "followed_curators") && !!address && radarLoading);
+    ((scope === "settling_soon" || scope === "followed_curators") && !!address && discoverSignalsLoading);
   const normalizedAddress = address?.toLowerCase();
 
   useEffect(() => {

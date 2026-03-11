@@ -31,9 +31,8 @@ import { RateLimiter } from "./rate-limit.js";
 import { safeBigInt, safeLimit, safeOffset, isValidAddress, getUrlLookupCandidates } from "./utils.js";
 
 const app = new Hono();
-const RADAR_MODULE_LIMIT = 6;
-const RADAR_SUGGESTED_CURATOR_LIMIT = 4;
-const RADAR_SETTLING_SOON_WINDOW_SECONDS = 24 * 60 * 60;
+const DISCOVER_MODULE_LIMIT = 6;
+const SETTLING_SOON_WINDOW_SECONDS = 24 * 60 * 60;
 const NOTIFICATION_EMAIL_LOOKBACK_SECONDS = 48 * 60 * 60;
 
 // ============================================================
@@ -569,10 +568,10 @@ app.get("/follow-state", async (c) => {
 });
 
 // ============================================================
-// RADAR
+// DISCOVER SIGNALS
 // ============================================================
 
-app.get("/radar/:address", async (c) => {
+app.get("/discover-signals/:address", async (c) => {
   const address = c.req.param("address").toLowerCase() as `0x${string}`;
   if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
 
@@ -670,7 +669,7 @@ app.get("/radar/:address", async (c) => {
   addSettlingItems(watchedOpenRounds, "watched");
 
   const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
-  const cutoff = nowSeconds + BigInt(RADAR_SETTLING_SOON_WINDOW_SECONDS);
+  const cutoff = nowSeconds + BigInt(SETTLING_SOON_WINDOW_SECONDS);
   const allSettlingSoon = [...settlingSoonMap.values()].sort((a, b) => {
     const aTime = a.estimatedSettlementTime ?? (2n ** 62n);
     const bTime = b.estimatedSettlementTime ?? (2n ** 62n);
@@ -679,9 +678,11 @@ app.get("/radar/:address", async (c) => {
   });
   const settlingSoon = (
     allSettlingSoon.filter(item => item.estimatedSettlementTime !== null && item.estimatedSettlementTime <= cutoff)
-      .slice(0, RADAR_MODULE_LIMIT)
+      .slice(0, DISCOVER_MODULE_LIMIT)
   );
-  const settlingSoonItems = (settlingSoon.length > 0 ? settlingSoon : allSettlingSoon.slice(0, RADAR_MODULE_LIMIT));
+  const settlingSoonItems = (
+    settlingSoon.length > 0 ? settlingSoon : allSettlingSoon.slice(0, DISCOVER_MODULE_LIMIT)
+  );
 
   const followedSubmissions = followedAddresses.length === 0
     ? []
@@ -700,7 +701,7 @@ app.get("/radar/:address", async (c) => {
         .leftJoin(profile, eq(content.submitter, profile.address))
         .where(and(eq(content.status, 0), inArray(content.submitter, followedAddresses)))
         .orderBy(desc(content.createdAt))
-        .limit(RADAR_MODULE_LIMIT);
+        .limit(DISCOVER_MODULE_LIMIT);
 
   const followedResolutions = followedAddresses.length === 0
     ? []
@@ -737,69 +738,15 @@ app.get("/radar/:address", async (c) => {
           ),
         ))
         .orderBy(desc(round.settledAt), desc(vote.revealedAt))
-        .limit(RADAR_MODULE_LIMIT);
-
-  const suggestedCuratorsRaw = await db
-    .select({
-      address: voterStats.voter,
-      totalSettledVotes: voterStats.totalSettledVotes,
-      totalWins: voterStats.totalWins,
-      totalLosses: voterStats.totalLosses,
-      profileName: profile.name,
-      profileImageUrl: profile.imageUrl,
-    })
-    .from(voterStats)
-    .leftJoin(profile, eq(voterStats.voter, profile.address))
-    .where(gte(voterStats.totalSettledVotes, 3))
-    .orderBy(
-      desc(sql`CAST(${voterStats.totalWins} AS FLOAT) / ${voterStats.totalSettledVotes}`),
-      desc(voterStats.totalSettledVotes),
-    )
-    .limit(24);
-
-  const suggestedCurators = suggestedCuratorsRaw
-    .filter(item => item.address !== address && !followedAddresses.includes(item.address))
-    .slice(0, RADAR_SUGGESTED_CURATOR_LIMIT)
-    .map(item => ({
-      ...item,
-      winRate: item.totalSettledVotes > 0 ? item.totalWins / item.totalSettledVotes : 0,
-    }));
-
-  const recommendedConditions = [eq(content.status, 0)];
-  if (watchedContentIds.length > 0) {
-    recommendedConditions.push(notInArray(content.id, watchedContentIds));
-  }
-  if (followedAddresses.length > 0) {
-    recommendedConditions.push(notInArray(content.submitter, followedAddresses));
-  }
-
-  const recommendedContent = await db
-    .select({
-      contentId: content.id,
-      goal: content.goal,
-      url: content.url,
-      createdAt: content.createdAt,
-      categoryId: content.categoryId,
-      submitter: content.submitter,
-      profileName: profile.name,
-      profileImageUrl: profile.imageUrl,
-    })
-    .from(content)
-    .leftJoin(profile, eq(content.submitter, profile.address))
-    .where(and(...recommendedConditions))
-    .orderBy(desc(content.createdAt))
-    .limit(RADAR_MODULE_LIMIT);
+        .limit(DISCOVER_MODULE_LIMIT);
 
   return jsonBig(c, {
-    followingCount: followedAddresses.length,
     settlingSoon: settlingSoonItems,
     followedSubmissions,
     followedResolutions: followedResolutions.map(item => ({
       ...item,
       outcome: getRadarResolutionOutcome(item.roundState, item.isUp, item.roundUpWins),
     })),
-    suggestedCurators,
-    recommendedContent,
   });
 });
 
@@ -817,7 +764,7 @@ app.get("/notification-events/:address", async (c) => {
 
   const followedAddresses = followedRows.map(item => item.followed);
   const nowSeconds = BigInt(Math.floor(Date.now() / 1000));
-  const settlingSoonCutoff = nowSeconds + BigInt(RADAR_SETTLING_SOON_WINDOW_SECONDS);
+  const settlingSoonCutoff = nowSeconds + BigInt(SETTLING_SOON_WINDOW_SECONDS);
   const recentCutoff = nowSeconds - BigInt(NOTIFICATION_EMAIL_LOOKBACK_SECONDS);
 
   const votedOpenRounds = await db
@@ -1037,7 +984,7 @@ app.get("/notification-events/:address", async (c) => {
 });
 
 app.get("/featured-today", async (c) => {
-  const limit = safeLimit(c.req.query("limit"), RADAR_MODULE_LIMIT, 12);
+  const limit = safeLimit(c.req.query("limit"), DISCOVER_MODULE_LIMIT, 12);
   const activeLimit = Math.max(2, Math.ceil(limit / 2));
   const earlyLimit = Math.max(2, limit - activeLimit + 1);
 

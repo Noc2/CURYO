@@ -165,7 +165,7 @@ export interface PonderFollowResponse {
   offset: number;
 }
 
-export interface PonderRadarSettlingItem {
+export interface PonderDiscoverSignalsSettlingItem {
   id: string;
   contentId: string;
   roundId: string;
@@ -180,7 +180,7 @@ export interface PonderRadarSettlingItem {
   source: "watched" | "voted" | "watched_voted";
 }
 
-export interface PonderRadarSubmissionItem {
+export interface PonderDiscoverSignalsSubmissionItem {
   contentId: string;
   goal: string;
   url: string;
@@ -191,7 +191,7 @@ export interface PonderRadarSubmissionItem {
   profileImageUrl: string | null;
 }
 
-export interface PonderRadarResolutionItem {
+export interface PonderDiscoverSignalsResolutionItem {
   id: string;
   contentId: string;
   roundId: string;
@@ -207,23 +207,10 @@ export interface PonderRadarResolutionItem {
   outcome: "won" | "lost" | "cancelled" | "tied" | "reveal_failed" | "resolved";
 }
 
-export interface PonderRadarSuggestedCurator {
-  address: string;
-  totalSettledVotes: number;
-  totalWins: number;
-  totalLosses: number;
-  profileName: string | null;
-  profileImageUrl: string | null;
-  winRate: number;
-}
-
-export interface PonderRadarResponse {
-  followingCount: number;
-  settlingSoon: PonderRadarSettlingItem[];
-  followedSubmissions: PonderRadarSubmissionItem[];
-  followedResolutions: PonderRadarResolutionItem[];
-  suggestedCurators: PonderRadarSuggestedCurator[];
-  recommendedContent: PonderRadarSubmissionItem[];
+export interface PonderDiscoverSignalsResponse {
+  settlingSoon: PonderDiscoverSignalsSettlingItem[];
+  followedSubmissions: PonderDiscoverSignalsSubmissionItem[];
+  followedResolutions: PonderDiscoverSignalsResolutionItem[];
 }
 
 export interface PonderFeaturedTodayItem {
@@ -482,8 +469,8 @@ export const ponderApi = {
     });
   },
 
-  getRadar(address: string, params?: { watched?: string }) {
-    return ponderGet<PonderRadarResponse>(`/radar/${address}`, params);
+  getDiscoverSignals(address: string, params?: { watched?: string }) {
+    return ponderGet<PonderDiscoverSignalsResponse>(`/discover-signals/${address}`, params);
   },
 
   getFeaturedToday(limit?: string) {
