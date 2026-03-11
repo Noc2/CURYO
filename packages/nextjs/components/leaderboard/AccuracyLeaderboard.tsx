@@ -107,7 +107,7 @@ export function AccuracyLeaderboard() {
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-3">
-      <span className="text-base font-medium text-base-content/60">Performance leaderboard</span>
+      <span className="text-base font-medium text-base-content/60">Accuracy leaderboard</span>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">

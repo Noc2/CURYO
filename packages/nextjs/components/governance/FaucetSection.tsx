@@ -140,7 +140,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         )}
 
         <p className="text-base-content/60">
-          You have claimed your cREP tokens and received your Voter ID. Check your referral link in the Profile tab!
+          You have claimed your cREP tokens and received your Voter ID. Check your referral link in Settings.
         </p>
 
         {/* Benefits */}

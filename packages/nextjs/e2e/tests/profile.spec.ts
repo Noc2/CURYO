@@ -11,19 +11,14 @@ import { expect, test } from "@playwright/test";
 test.describe("Profile management", () => {
   const profileAccount = ANVIL_ACCOUNTS.account8;
 
-  test("can create profile via governance page", async ({ browser }) => {
+  test("can create profile via settings page", async ({ browser }) => {
     test.setTimeout(120_000);
 
     const context = await browser.newContext();
     const page = await context.newPage();
     await setupWallet(page, profileAccount.privateKey);
 
-    await page.goto("/governance");
-
-    // Wait for tabs to load (balance check may redirect to faucet then back)
-    const profileTab = page.getByRole("button", { name: "Profile" });
-    await expect(profileTab).toBeVisible({ timeout: 20_000 });
-    await profileTab.click();
+    await page.goto("/settings");
 
     // Wait for the profile form to load
     const profileHeading = page
@@ -59,12 +54,7 @@ test.describe("Profile management", () => {
     const page = await context.newPage();
     await setupWallet(page, profileAccount.privateKey);
 
-    await page.goto("/governance");
-
-    // Click Profile tab explicitly
-    const profileTab = page.getByRole("button", { name: "Profile" });
-    await expect(profileTab).toBeVisible({ timeout: 20_000 });
-    await profileTab.click();
+    await page.goto("/settings");
 
     // Wait for form to load
     const profileHeading = page

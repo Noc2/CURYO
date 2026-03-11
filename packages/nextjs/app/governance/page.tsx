@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
@@ -13,47 +13,59 @@ import { PlatformProposals } from "~~/components/governance/PlatformProposals";
 import { ProposalList } from "~~/components/governance/ProposalList";
 import { TokenManagement } from "~~/components/governance/TokenManagement";
 import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
+import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
 import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
 import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
 import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
+import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGovernanceContracts } from "~~/hooks/useGovernance";
 
-type GovernanceTab = "performance" | "governance" | "faucet";
+type GovernanceTab = "leaderboard" | "accuracy" | "governance" | "faucet";
 
-const governanceTabs: GovernanceTab[] = ["performance", "governance", "faucet"];
+const governanceTabs: GovernanceTab[] = ["leaderboard", "accuracy", "governance", "faucet"];
+
+function getGovernanceHash(tab: GovernanceTab) {
+  return tab === "leaderboard" ? "" : `#${tab}`;
+}
 
 function normalizeGovernanceHash(hash: string): GovernanceTab | null {
-  if (hash === "leaderboard" || hash === "profile" || hash === "accuracy") return "performance";
+  if (hash === "leaderboard" || hash === "performance" || hash === "profile") return "leaderboard";
   if (hash === "vote") return "governance";
   return governanceTabs.includes(hash as GovernanceTab) ? (hash as GovernanceTab) : null;
 }
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<GovernanceTab>("performance");
+  const [activeTab, setActiveTab] = useState<GovernanceTab>("leaderboard");
   const [referrer, setReferrer] = useState<string | null>(null);
   const { hasGovernorContract } = useGovernanceContracts();
 
   // Sync tab with URL hash (e.g. /governance#governance)
   const selectTab = useCallback((tab: GovernanceTab) => {
     setActiveTab(tab);
-    const hash = tab === "performance" ? "" : `#${tab}`;
+    const hash = getGovernanceHash(tab);
     history.replaceState(null, "", hash || window.location.pathname + window.location.search);
   }, []);
 
   useEffect(() => {
     const applyHash = () => {
       const rawHash = window.location.hash.replace(/^#/, "");
+      if (rawHash === "profile") {
+        router.replace("/settings");
+        return;
+      }
+
       const nextTab = normalizeGovernanceHash(rawHash);
 
       if (nextTab) {
         setActiveTab(nextTab);
-
-        if (rawHash === "accuracy") {
-          const nextHash = nextTab === "performance" ? "" : `#${nextTab}`;
+        const nextHash = getGovernanceHash(nextTab);
+        const currentHash = rawHash ? `#${rawHash}` : "";
+        if (currentHash !== nextHash) {
           history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
         }
       }
@@ -61,7 +73,7 @@ function GovernancePageInner() {
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, []);
+  }, [router]);
 
   // Extract and validate referral code from URL
   useEffect(() => {
@@ -102,7 +114,7 @@ function GovernancePageInner() {
 
     if (!hasZeroBalance && activeTab === "faucet") {
       const hashTab = normalizeGovernanceHash(window.location.hash.replace(/^#/, ""));
-      selectTab(hashTab && hashTab !== "faucet" ? hashTab : "performance");
+      selectTab(hashTab && hashTab !== "faucet" ? hashTab : "leaderboard");
     }
   }, [hasResolvedBalance, hasZeroBalance, activeTab, selectTab]);
 
@@ -133,12 +145,20 @@ function GovernancePageInner() {
           ) : (
             <>
               <button
-                onClick={() => selectTab("performance")}
+                onClick={() => selectTab("leaderboard")}
                 className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                  activeTab === "performance" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+                  activeTab === "leaderboard" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
                 }`}
               >
-                Performance
+                Leaderboard
+              </button>
+              <button
+                onClick={() => selectTab("accuracy")}
+                className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
+                  activeTab === "accuracy" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+                }`}
+              >
+                Accuracy
               </button>
               <button
                 onClick={() => selectTab("governance")}
@@ -155,12 +175,20 @@ function GovernancePageInner() {
         {/* Faucet Tab - only when zero balance */}
         {activeTab === "faucet" && <FaucetSection referrer={referrer} />}
 
-        {/* Performance Tab */}
-        {activeTab === "performance" && (
+        {/* Leaderboard Tab */}
+        {activeTab === "leaderboard" && (
           <>
             <BalanceHistory />
             <StakeBreakdown />
             <LeaderboardTable />
+          </>
+        )}
+
+        {/* Accuracy Tab */}
+        {activeTab === "accuracy" && (
+          <>
+            <VoterAccuracyStats />
+            <AccuracyLeaderboard />
           </>
         )}
 

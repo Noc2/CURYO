@@ -9,11 +9,11 @@ test.describe("Governance page", () => {
 
     // Account #2 has cREP, so should see all tabs (not just Faucet)
     const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
-    const profileTab = page.getByRole("button", { name: "Profile" });
-    const voteTab = page.getByRole("button", { name: "Vote" });
+    const accuracyTab = page.getByRole("button", { name: "Accuracy" });
+    const governanceTab = page.getByRole("button", { name: "Governance" });
 
     // At least one tab should be visible (tabs render after wallet state loads)
-    const anyTab = leaderboardTab.or(profileTab).or(voteTab);
+    const anyTab = leaderboardTab.or(accuracyTab).or(governanceTab);
     await expect(anyTab.first()).toBeVisible({ timeout: 30_000 });
   });
 
@@ -33,8 +33,7 @@ test.describe("Governance page", () => {
     const rankHeader = page.getByRole("columnheader", { name: "Rank" });
     await expect(rankHeader).toBeVisible({ timeout: 5_000 });
 
-    await expect(page.getByRole("button", { name: "cREP" })).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole("button", { name: "Performance" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText("cREP leaderboard")).toBeVisible({ timeout: 5_000 });
 
     const followingOnlyToggle = page.getByRole("button", { name: "Following Only" }).first();
     await expect(followingOnlyToggle).toBeVisible({ timeout: 5_000 });
@@ -43,46 +42,37 @@ test.describe("Governance page", () => {
     await expect(profileLink).toBeVisible({ timeout: 5_000 });
   });
 
-  test("performance leaderboard exposes range and category filters", async ({ connectedPage: page }) => {
+  test("accuracy tab exposes ranking filters", async ({ connectedPage: page }) => {
     await page.goto("/governance");
 
-    const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
-    await expect(leaderboardTab).toBeVisible({ timeout: 15_000 });
-    await leaderboardTab.click();
+    const accuracyTab = page.getByRole("button", { name: "Accuracy" });
+    await expect(accuracyTab).toBeVisible({ timeout: 15_000 });
+    await accuracyTab.click();
 
-    const performanceTab = page.getByRole("button", { name: "Performance" });
-    await expect(performanceTab).toBeVisible({ timeout: 10_000 });
-    await performanceTab.click();
-
-    await expect(page.getByText("Performance leaderboard")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Accuracy leaderboard")).toBeVisible({ timeout: 10_000 });
     const followingOnlyToggle = page.getByRole("button", { name: "Following Only" }).first();
     await expect(followingOnlyToggle).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox", { name: "Time range" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox", { name: "Filter by category" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox", { name: "Sort by" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("combobox", { name: "Minimum votes" })).toBeVisible({ timeout: 10_000 });
   });
 
-  test("profile tab shows form", async ({ connectedPage: page }) => {
-    await page.goto("/governance");
-
-    // Click Profile tab
-    const profileTab = page.getByRole("button", { name: "Profile" });
-    await expect(profileTab).toBeVisible({ timeout: 15_000 });
-    await profileTab.click();
-
-    // Profile tab should show input fields or profile content
-    const profileContent = page.locator("main").getByText(/display name|delegation|referral|profile/i);
-    await expect(profileContent.first()).toBeVisible({ timeout: 15_000 });
-  });
-
-  test("manage profile keeps the governance profile tab open", async ({ connectedPage: page }) => {
+  test("manage profile opens settings", async ({ connectedPage: page }) => {
     await page.goto(`/profiles/${ANVIL_ACCOUNTS.account2.address}`);
 
     const manageProfileLink = page.getByRole("link", { name: "Manage profile" });
     await expect(manageProfileLink).toBeVisible({ timeout: 15_000 });
     await manageProfileLink.click();
 
-    await expect(page).toHaveURL(/\/governance#profile$/);
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(page.getByRole("heading", { name: /your profile|create profile/i })).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("legacy governance profile hash redirects to settings", async ({ connectedPage: page }) => {
+    await page.goto("/governance#profile");
+
+    await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole("heading", { name: /your profile|create profile/i })).toBeVisible({ timeout: 15_000 });
   });
 

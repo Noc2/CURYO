@@ -28,11 +28,11 @@ const GovernanceDocs: NextPage = () => {
         balance and is activated automatically &mdash; no delegation step required.
       </p>
 
-      <h2>Performance</h2>
+      <h2>Leaderboards</h2>
       <p>
-        The governance page centers on a single <strong>cREP</strong> performance surface. It shows all-time token
-        balances alongside your indexed balance history and current staking breakdown so token holders can see who has
-        accumulated the most reputation and how that reputation is currently allocated.
+        The governance page exposes two reputation views: a <strong>Leaderboard</strong> tab for all-time cREP balances
+        plus balance history and stake breakdown, and an <strong>Accuracy</strong> tab for voting performance rankings
+        across all time, rolling windows, and the current season.
       </p>
       <p>
         Profile editing, delegation, referrals, and notification preferences now live under{" "}

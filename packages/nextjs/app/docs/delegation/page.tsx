@@ -54,7 +54,7 @@ const DelegationDocs: NextPage = () => {
           (Self.xyz verification)
         </li>
         <li>
-          <strong>Go to Governance &rarr; Profile &rarr; Delegation</strong> &mdash; connect with your cold wallet
+          <strong>Go to Settings &rarr; Delegation</strong> &mdash; connect with your cold wallet
         </li>
         <li>
           <strong>Enter your hot wallet address</strong> &mdash; this is the address your bot or daily-use wallet
@@ -112,7 +112,7 @@ const DelegationDocs: NextPage = () => {
             <tr>
               <td>Revoke immediately if compromised</td>
               <td>
-                Use the cold wallet to call <code>removeDelegate()</code> from the governance Profile tab
+                Use the cold wallet to call <code>removeDelegate()</code> from the Settings delegation tab
               </td>
             </tr>
             <tr>
@@ -127,8 +127,8 @@ const DelegationDocs: NextPage = () => {
       <p>If the delegate key is compromised:</p>
       <ol>
         <li>
-          Connect with your cold wallet and <strong>remove the delegate</strong> (Governance &rarr; Profile &rarr;
-          Delegation &rarr; Remove Delegate)
+          Connect with your cold wallet and <strong>remove the delegate</strong> (Settings &rarr; Delegation &rarr;
+          Remove Delegate)
         </li>
         <li>Create a new hot wallet address</li>
         <li>Set the new address as delegate</li>
