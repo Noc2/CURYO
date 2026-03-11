@@ -4,7 +4,9 @@ import {
   buildCommitHash,
   buildCommitKey,
   createTlockVoteCommit,
+  decodeVoteTransferPayload,
   decodeVotePlaintext,
+  encodeVoteTransferPayload,
   encodeVotePlaintext,
   tlockEncryptVote,
 } from "@curyo/contracts/voting";
@@ -96,5 +98,17 @@ describe("shared voting helpers", () => {
     expect(commit.ciphertext).toBe("0x46414b452d41524d4f5245442d4147452d535452494e47");
     expect(commit.commitHash).toBe(buildCommitHash(true, salt, 7n, commit.ciphertext));
     expect(commit.commitKey).toBe(buildCommitKey(voter, commit.commitHash));
+  });
+
+  it("round-trips the ERC-1363 vote transfer payload", () => {
+    const payload = {
+      contentId: 9n,
+      commitHash: "0x" + "44".repeat(32) as `0x${string}`,
+      ciphertext: "0x123456" as `0x${string}`,
+      frontend: "0x3333333333333333333333333333333333333333" as const,
+    };
+
+    const encoded = encodeVoteTransferPayload(payload);
+    expect(decodeVoteTransferPayload(encoded)).toEqual(payload);
   });
 });

@@ -1,15 +1,29 @@
 import { Buffer } from "buffer";
-import { hexToString, keccak256, encodePacked, stringToHex, type Address } from "viem";
+import { decodeAbiParameters, encodeAbiParameters, hexToString, keccak256, encodePacked, stringToHex, type Address } from "viem";
 import { mainnetClient, roundAt, timelockDecrypt, timelockEncrypt } from "tlock-js";
 
 export type VoteSalt = `0x${string}`;
 export type VoteCiphertext = `0x${string}`;
+export type VoteCommitHash = `0x${string}`;
+export interface VoteTransferPayload {
+  contentId: bigint;
+  commitHash: VoteCommitHash;
+  ciphertext: VoteCiphertext;
+  frontend: Address;
+}
 export type VoteTlockRuntime = {
   client?: ReturnType<typeof mainnetClient>;
   now?: () => number;
   encryptFn?: typeof timelockEncrypt;
   decryptFn?: typeof timelockDecrypt;
 };
+
+const voteTransferPayloadParams = [
+  { name: "contentId", type: "uint256" },
+  { name: "commitHash", type: "bytes32" },
+  { name: "ciphertext", type: "bytes" },
+  { name: "frontend", type: "address" },
+] as const;
 
 function saltToBytes(salt: VoteSalt): Uint8Array {
   const hex = salt.startsWith("0x") ? salt.slice(2) : salt;
@@ -49,7 +63,7 @@ export function buildCommitHash(
   salt: VoteSalt,
   contentId: bigint,
   ciphertext: VoteCiphertext,
-): `0x${string}` {
+): VoteCommitHash {
   return keccak256(
     encodePacked(["bool", "bytes32", "uint256", "bytes32"], [isUp, salt, contentId, keccak256(ciphertext)]),
   );
@@ -57,6 +71,25 @@ export function buildCommitHash(
 
 export function buildCommitKey(voter: Address, commitHash: `0x${string}`): `0x${string}` {
   return keccak256(encodePacked(["address", "bytes32"], [voter, commitHash]));
+}
+
+export function encodeVoteTransferPayload(payload: VoteTransferPayload): `0x${string}` {
+  return encodeAbiParameters(voteTransferPayloadParams, [
+    payload.contentId,
+    payload.commitHash,
+    payload.ciphertext,
+    payload.frontend,
+  ]);
+}
+
+export function decodeVoteTransferPayload(data: `0x${string}`): VoteTransferPayload {
+  const [contentId, commitHash, ciphertext, frontend] = decodeAbiParameters(voteTransferPayloadParams, data);
+  return {
+    contentId,
+    commitHash,
+    ciphertext,
+    frontend,
+  };
 }
 
 export async function tlockEncryptVote(
