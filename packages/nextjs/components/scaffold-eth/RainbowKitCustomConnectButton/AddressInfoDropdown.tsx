@@ -12,6 +12,7 @@ import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadline
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
 import { useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 import { isENS } from "~~/utils/scaffold-eth/common";
@@ -35,6 +36,7 @@ const getMenuItemClass = (showText: boolean) =>
     : "flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium";
 
 function ExtendedWalletSummary({ address }: { address: Address }) {
+  const isPageVisible = usePageVisibility();
   const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked: votingStaked } = useVotingStakes(address);
@@ -56,8 +58,8 @@ function ExtendedWalletSummary({ address }: { address: Address }) {
     args: [address],
     watch: false,
     query: {
-      staleTime: 30_000,
-      refetchInterval: 30_000,
+      staleTime: 60_000,
+      refetchInterval: isPageVisible ? 60_000 : false,
     },
   });
   const frontendStake = frontendInfo ? Number(frontendInfo[1]) / 1e6 : 0;
@@ -166,6 +168,7 @@ export const AddressInfoDropdown = ({
   inlineMenu = false,
   menuItemsOnly = false,
 }: AddressInfoDropdownProps) => {
+  const isPageVisible = usePageVisibility();
   const { disconnect } = useDisconnect();
   const { connector, chain } = useAccount();
   const { targetNetwork } = useTargetNetwork();
@@ -179,8 +182,8 @@ export const AddressInfoDropdown = ({
     args: [address],
     watch: false,
     query: {
-      staleTime: 30_000,
-      refetchInterval: 30_000,
+      staleTime: 60_000,
+      refetchInterval: isPageVisible ? 60_000 : false,
     },
   });
   const crepFormatted =

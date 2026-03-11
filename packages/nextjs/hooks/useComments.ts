@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, useSignMessage } from "wagmi";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 
 export interface CommentData {
   id: number;
@@ -19,6 +20,7 @@ export function useComments(contentId: bigint | null) {
   const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const queryClient = useQueryClient();
+  const isPageVisible = usePageVisibility();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -31,7 +33,7 @@ export function useComments(contentId: bigint | null) {
     },
     enabled: !!contentIdStr,
     staleTime: 10_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
   });
 
   const submitComment = useCallback(

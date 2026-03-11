@@ -17,7 +17,8 @@ export function useParticipationRate() {
     contractName: "ParticipationPool" as any,
     functionName: "getCurrentRateBps",
     query: {
-      refetchInterval: isPageVisible ? 30_000 : false,
+      staleTime: 30_000,
+      refetchInterval: isPageVisible ? 60_000 : false,
     },
   } as any);
 

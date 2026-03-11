@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDeployedContractInfo, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { PonderFollowResponse, ponderApi } from "~~/services/ponder/client";
 
@@ -39,6 +40,7 @@ type FollowQueryData = {
 export function useFollowedProfiles(address?: string) {
   const queryClient = useQueryClient();
   const normalizedAddress = address?.toLowerCase();
+  const isPageVisible = usePageVisibility();
   const [pendingAddresses, setPendingAddresses] = useState<Set<string>>(new Set());
   const queryKey = useMemo(() => ["followedProfiles", normalizedAddress] as const, [normalizedAddress]);
   const { data: followRegistry } = useDeployedContractInfo({ contractName: "FollowRegistry" as any });
@@ -56,7 +58,7 @@ export function useFollowedProfiles(address?: string) {
     rpcFn: async () => EMPTY_RESPONSE,
     enabled: Boolean(normalizedAddress),
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
   });
 
   const followedItems =

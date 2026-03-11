@@ -22,7 +22,7 @@ export function useVoterAccuracy(address: string | undefined) {
     rpcFn: async () => EMPTY, // No on-chain equivalent
     enabled: !!address,
     staleTime: 15_000,
-    refetchInterval: isPageVisible ? 30_000 : false,
+    refetchInterval: isPageVisible ? 60_000 : false,
   });
 
   return data?.data ?? EMPTY;

@@ -103,7 +103,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
       rpcFn: async () => null,
       enabled: true,
       staleTime: 30_000,
-      refetchInterval: isPageVisible ? 30_000 : false,
+      refetchInterval: isPageVisible ? 60_000 : false,
     },
   );
 
@@ -116,7 +116,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     rpcFn: async () => ({ items: [] }),
     enabled: true,
     staleTime: 15_000,
-    refetchInterval: isPageVisible ? 30_000 : false,
+    refetchInterval: isPageVisible ? 60_000 : false,
   });
 
   const summary = summaryResult?.data ?? null;

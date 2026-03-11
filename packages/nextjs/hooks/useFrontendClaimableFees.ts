@@ -33,8 +33,8 @@ export function useFrontendClaimableFees(frontend?: `0x${string}`) {
     queryKey: ["frontend-claimable-fees", frontend],
     initialPageParam: 0,
     enabled: !!frontend,
-    staleTime: 15_000,
-    refetchInterval: isPageVisible ? 30_000 : false,
+    staleTime: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
     queryFn: async ({ pageParam }) => {
       const response = await fetch(
         `/api/frontend/claimable-fees?frontend=${frontend}&limit=${PAGE_SIZE}&offset=${pageParam}`,
