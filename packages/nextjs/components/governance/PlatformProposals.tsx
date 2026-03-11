@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { GlobeAltIcon } from "@heroicons/react/24/outline";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
@@ -38,13 +39,15 @@ interface Category {
 export function PlatformProposals() {
   const [filter, setFilter] = useState<FilterState>("all");
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
+  const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
 
   // Fetch CategorySubmitted events to get all submitted category IDs
   const { data: categoryEvents, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "CategoryRegistry",
     eventName: "CategorySubmitted",
-    watch: rpcFallbackEnabled,
-    enabled: rpcFallbackEnabled,
+    watch: rpcFallbackActive,
+    enabled: rpcFallbackActive,
   });
 
   const rpcCategories = useMemo(() => {
@@ -81,7 +84,7 @@ export function PlatformProposals() {
   });
 
   const categories = result?.data ?? rpcCategories;
-  const proposalsLoading = isLoading || (rpcFallbackEnabled && eventsLoading);
+  const proposalsLoading = isLoading || (rpcFallbackActive && eventsLoading);
 
   return (
     <div className="surface-card rounded-2xl p-6">

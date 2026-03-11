@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
+import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
@@ -18,6 +19,8 @@ interface RatingHistoryProps {
  */
 export function RatingHistory({ contentId, variant = "default" }: RatingHistoryProps) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
+  const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
   const isPageVisible = usePageVisibility();
   const {
     data: events,
@@ -27,8 +30,8 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     contractName: "ContentRegistry",
     eventName: "RatingUpdated",
     filters: { contentId },
-    watch: rpcFallbackEnabled && isPageVisible,
-    enabled: rpcFallbackEnabled && isPageVisible,
+    watch: rpcFallbackActive && isPageVisible,
+    enabled: rpcFallbackActive && isPageVisible,
   });
 
   const { data: currentRating } = useScaffoldReadContract({
@@ -86,7 +89,7 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
 
   const dataPoints = result?.data ?? rpcDataPoints;
 
-  if (isLoading || (rpcFallbackEnabled && eventsLoading)) {
+  if (isLoading || (rpcFallbackActive && eventsLoading)) {
     return (
       <div className="h-16 flex items-center justify-center">
         <span className="loading loading-spinner loading-xs text-base-content/20"></span>
@@ -94,7 +97,7 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
     );
   }
 
-  if (error || (rpcFallbackEnabled && eventsError)) {
+  if (error || (rpcFallbackActive && eventsError)) {
     const textColor = variant === "dark" ? "text-white/40" : "text-base-content/25";
     return (
       <div className={`h-16 flex items-center justify-center text-base ${textColor}`}>

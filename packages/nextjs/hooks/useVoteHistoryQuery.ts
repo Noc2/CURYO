@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
+import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { type VoteHistoryItem, mapVoteHistoryItem } from "~~/hooks/voteHistory/shared";
 import { ponderApi } from "~~/services/ponder/client";
@@ -14,6 +15,8 @@ interface UseVoteHistoryQueryOptions {
 
 export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQueryOptions = {}) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
+  const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
   const isPageVisible = usePageVisibility();
   const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
 
@@ -21,15 +24,15 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
     contractName: "RoundVotingEngine",
     eventName: "VoteCommitted",
     filters: { voter },
-    watch: rpcFallbackEnabled && isPageVisible,
-    enabled: rpcFallbackEnabled && Boolean(voter) && isPageVisible,
+    watch: rpcFallbackActive && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
   } as any);
 
   const { data: settledEvents, isLoading: settledLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "RoundSettled",
-    watch: rpcFallbackEnabled && isPageVisible,
-    enabled: rpcFallbackEnabled && Boolean(voter) && isPageVisible,
+    watch: rpcFallbackActive && isPageVisible,
+    enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
   } as any);
 
   const rpcVotes = useMemo(() => {
@@ -109,6 +112,6 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
     votes: result?.data?.votes ?? rpcVisibleVotes,
     totalVotes: result?.data?.total ?? rpcTotalVotes,
     settledVoteCount: result?.data?.settledTotal ?? rpcSettledTotal,
-    isLoading: isLoading || (rpcFallbackEnabled && (commitsLoading || settledLoading)),
+    isLoading: isLoading || (rpcFallbackActive && (commitsLoading || settledLoading)),
   };
 }

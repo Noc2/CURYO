@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import type { ContentItem } from "~~/hooks/useContentFeed";
+import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
@@ -13,13 +14,15 @@ import { publicEnv } from "~~/utils/env/public";
  */
 export function useCategoryPopularity(feed: ContentItem[]): Map<string, number> {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
+  const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
 
   // --- RPC fallback: scan VoteCommitted events ---
   const { data: voteEvents } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "VoteCommitted",
-    watch: rpcFallbackEnabled,
-    enabled: rpcFallbackEnabled,
+    watch: rpcFallbackActive,
+    enabled: rpcFallbackActive,
   } as any);
 
   const rpcPopularity = useMemo(() => {

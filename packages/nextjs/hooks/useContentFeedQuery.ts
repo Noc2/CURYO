@@ -11,12 +11,15 @@ import {
 } from "~~/hooks/contentFeed/shared";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
+import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
 
 export function useContentFeedQuery(voterAddress?: string, options: UseContentFeedOptions = {}) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
+  const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
+  const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
   const isPageVisible = usePageVisibility();
   const categoryId = options.categoryId;
   const contentIds = options.contentIds;
@@ -29,8 +32,8 @@ export function useContentFeedQuery(voterAddress?: string, options: UseContentFe
   const { data: events, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
     eventName: "ContentSubmitted",
-    watch: rpcFallbackEnabled && isPageVisible,
-    enabled: rpcFallbackEnabled && isPageVisible,
+    watch: rpcFallbackActive && isPageVisible,
+    enabled: rpcFallbackActive && isPageVisible,
   });
 
   const rpcFeed = useMemo(() => {
@@ -136,7 +139,7 @@ export function useContentFeedQuery(voterAddress?: string, options: UseContentFe
 
   const feed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);
   const totalContent = result?.source === "rpc" ? rpcTotalContent : (result?.data?.totalContent ?? rpcTotalContent);
-  const isLoading = ponderLoading || (rpcFallbackEnabled && eventsLoading && result?.source !== "ponder");
+  const isLoading = ponderLoading || (rpcFallbackActive && eventsLoading && result?.source !== "ponder");
 
   return {
     feed,
