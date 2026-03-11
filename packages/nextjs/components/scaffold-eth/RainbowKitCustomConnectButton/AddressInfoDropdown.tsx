@@ -3,7 +3,7 @@ import { getAddress } from "viem";
 import { Address } from "viem";
 import { hardhat } from "viem/chains";
 import { useAccount, useDisconnect } from "wagmi";
-import { ArrowLeftOnRectangleIcon, BellAlertIcon, EyeIcon, GiftIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftOnRectangleIcon, Cog6ToothIcon, EyeIcon, GiftIcon } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -70,9 +70,9 @@ function MenuItems({
         </li>
       )}
       <li>
-        <Link href="/settings/notifications" className={menuItemClass}>
-          <BellAlertIcon className="w-6 h-6 shrink-0" />
-          <span className={textClass}>Notifications</span>
+        <Link href="/settings" className={menuItemClass}>
+          <Cog6ToothIcon className="w-6 h-6 shrink-0" />
+          <span className={textClass}>Settings</span>
         </Link>
       </li>
       <li>

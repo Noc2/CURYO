@@ -15,7 +15,7 @@ export default function PublicProfilePage() {
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
         <p className="text-base-content/60">Invalid profile address.</p>
         <Link
-          href="/governance#leaderboard"
+          href="/governance"
           className="mt-4 rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
         >
           Back to governance

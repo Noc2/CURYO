@@ -92,7 +92,7 @@ export function ProfileForm() {
   const showNameStatus = nameInput.length >= 3 && !nameCheckLoading;
   const nameIsAvailable = showNameStatus && (!isNameTaken || isOwnName);
   const nameIsTaken = showNameStatus && isNameTaken && !isOwnName;
-  const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/governance#profile";
+  const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/settings";
   const previewImageUrl = getProxiedProfileImageUrl(imageInput);
 
   if (profileLoading || voterIdLoading) {

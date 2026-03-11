@@ -125,7 +125,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const following = followedWallets.has(normalizedAddress);
   const pending = isFollowPending(normalizedAddress);
   const fallbackProfile = profiles[normalizedAddress];
-  const backHref = ownProfile ? "/governance#profile" : "/governance#leaderboard";
+  const backHref = ownProfile ? "/settings" : "/governance";
   const fallbackImageUrl = blo(normalizedAddress);
 
   const displayName = summary?.name || fallbackProfile?.username || truncateAddress(normalizedAddress);
@@ -203,7 +203,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
 
             {ownProfile ? (
               <Link
-                href="/governance#profile"
+                href="/settings"
                 className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
               >
                 Manage profile
