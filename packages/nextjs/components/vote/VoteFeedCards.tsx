@@ -149,19 +149,19 @@ export const FeedQueueCard = memo(function FeedQueueCard({ item, onSelect, submi
       type="button"
       data-testid="content-thumbnail"
       onClick={() => onSelect(item.id, item.categoryId)}
-      className="group overflow-hidden rounded-xl border border-base-content/10 bg-base-content/[0.03] text-left transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
+      className="group cursor-pointer overflow-hidden rounded-xl border border-base-content/10 bg-base-content/[0.03] text-left transition-colors hover:border-primary/30 hover:bg-base-content/[0.05]"
     >
-      <div className="relative aspect-video overflow-hidden bg-base-200">
+      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200">
         {thumbnailSrc && !imageError ? (
           <img
             src={thumbnailSrc}
             alt=""
-            className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+            className="h-full w-full cursor-pointer object-cover transition-transform duration-200 group-hover:scale-[1.02]"
             loading="lazy"
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="flex h-full w-full items-end bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.16),_transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-3">
+          <div className="flex h-full w-full cursor-pointer items-end bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.16),_transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">{platform.type}</p>
               <p className="mt-1 line-clamp-2 text-sm font-medium text-white/90">{item.goal}</p>
@@ -179,9 +179,8 @@ export const FeedQueueCard = memo(function FeedQueueCard({ item, onSelect, submi
           {item.tags[0] ? <span className="truncate">#{item.tags[0]}</span> : null}
           <span className="hidden truncate sm:inline">{getDomainLabel(item.url)}</span>
         </div>
-        <div className="flex items-center justify-between gap-2 text-xs text-base-content/55">
-          <span className="min-w-0 truncate">{submitterProfile?.username ?? item.submitter}</span>
-          <span className="shrink-0 font-medium text-primary/80 group-hover:text-primary">Select</span>
+        <div className="text-xs text-base-content/55">
+          <span className="block min-w-0 truncate">{submitterProfile?.username ?? item.submitter}</span>
         </div>
       </div>
     </button>
