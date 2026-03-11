@@ -11,25 +11,21 @@ import { GovernanceActionComposer } from "~~/components/governance/GovernanceAct
 import { GovernanceStats } from "~~/components/governance/GovernanceStats";
 import { PlatformProposals } from "~~/components/governance/PlatformProposals";
 import { ProposalList } from "~~/components/governance/ProposalList";
-import { ReferralSection } from "~~/components/governance/ReferralSection";
 import { TokenManagement } from "~~/components/governance/TokenManagement";
 import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
-import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
 import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
 import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
 import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
-import { DelegationSection } from "~~/components/profile/DelegationSection";
-import { ProfileForm } from "~~/components/profile/ProfileForm";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGovernanceContracts } from "~~/hooks/useGovernance";
 
-type GovernanceTab = "leaderboard" | "profile" | "governance" | "faucet";
+type GovernanceTab = "performance" | "governance" | "faucet";
 
-const governanceTabs: GovernanceTab[] = ["leaderboard", "profile", "governance", "faucet"];
+const governanceTabs: GovernanceTab[] = ["performance", "governance", "faucet"];
 
 function normalizeGovernanceHash(hash: string): GovernanceTab | null {
-  if (hash === "accuracy") return "profile";
+  if (hash === "leaderboard" || hash === "profile" || hash === "accuracy") return "performance";
   if (hash === "vote") return "governance";
   return governanceTabs.includes(hash as GovernanceTab) ? (hash as GovernanceTab) : null;
 }
@@ -37,15 +33,14 @@ function normalizeGovernanceHash(hash: string): GovernanceTab | null {
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<GovernanceTab>("leaderboard");
-  const [leaderboardView, setLeaderboardView] = useState<"crep" | "performance">("crep");
+  const [activeTab, setActiveTab] = useState<GovernanceTab>("performance");
   const [referrer, setReferrer] = useState<string | null>(null);
   const { hasGovernorContract } = useGovernanceContracts();
 
-  // Sync tab with URL hash (e.g. /governance#profile)
+  // Sync tab with URL hash (e.g. /governance#governance)
   const selectTab = useCallback((tab: GovernanceTab) => {
     setActiveTab(tab);
-    const hash = tab === "leaderboard" ? "" : `#${tab}`;
+    const hash = tab === "performance" ? "" : `#${tab}`;
     history.replaceState(null, "", hash || window.location.pathname + window.location.search);
   }, []);
 
@@ -58,7 +53,7 @@ function GovernancePageInner() {
         setActiveTab(nextTab);
 
         if (rawHash === "accuracy") {
-          const nextHash = nextTab === "leaderboard" ? "" : `#${nextTab}`;
+          const nextHash = nextTab === "performance" ? "" : `#${nextTab}`;
           history.replaceState(null, "", `${window.location.pathname}${window.location.search}${nextHash}`);
         }
       }
@@ -107,7 +102,7 @@ function GovernancePageInner() {
 
     if (!hasZeroBalance && activeTab === "faucet") {
       const hashTab = normalizeGovernanceHash(window.location.hash.replace(/^#/, ""));
-      selectTab(hashTab && hashTab !== "faucet" ? hashTab : "leaderboard");
+      selectTab(hashTab && hashTab !== "faucet" ? hashTab : "performance");
     }
   }, [hasResolvedBalance, hasZeroBalance, activeTab, selectTab]);
 
@@ -138,20 +133,12 @@ function GovernancePageInner() {
           ) : (
             <>
               <button
-                onClick={() => selectTab("leaderboard")}
+                onClick={() => selectTab("performance")}
                 className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                  activeTab === "leaderboard" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+                  activeTab === "performance" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
                 }`}
               >
-                Leaderboard
-              </button>
-              <button
-                onClick={() => selectTab("profile")}
-                className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                  activeTab === "profile" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
-                }`}
-              >
-                Profile
+                Performance
               </button>
               <button
                 onClick={() => selectTab("governance")}
@@ -168,49 +155,12 @@ function GovernancePageInner() {
         {/* Faucet Tab - only when zero balance */}
         {activeTab === "faucet" && <FaucetSection referrer={referrer} />}
 
-        {/* Leaderboard Tab */}
-        {activeTab === "leaderboard" && (
+        {/* Performance Tab */}
+        {activeTab === "performance" && (
           <>
-            <div className="surface-card rounded-2xl p-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setLeaderboardView("crep")}
-                  className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                    leaderboardView === "crep" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
-                  }`}
-                >
-                  cREP
-                </button>
-                <button
-                  onClick={() => setLeaderboardView("performance")}
-                  className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                    leaderboardView === "performance"
-                      ? "pill-active-yellow"
-                      : "bg-base-200 text-white hover:bg-base-300"
-                  }`}
-                >
-                  Performance
-                </button>
-              </div>
-            </div>
-            {leaderboardView === "crep" ? (
-              <>
-                <BalanceHistory />
-                <StakeBreakdown />
-                <LeaderboardTable />
-              </>
-            ) : (
-              <AccuracyLeaderboard />
-            )}
-          </>
-        )}
-
-        {/* Profile Tab */}
-        {activeTab === "profile" && (
-          <>
-            <ProfileForm />
-            <DelegationSection />
-            <ReferralSection />
+            <BalanceHistory />
+            <StakeBreakdown />
+            <LeaderboardTable />
           </>
         )}
 

@@ -28,16 +28,16 @@ const GovernanceDocs: NextPage = () => {
         balance and is activated automatically &mdash; no delegation step required.
       </p>
 
-      <h2>Leaderboards</h2>
+      <h2>Performance</h2>
       <p>
-        The governance page includes two leaderboard views. <strong>cREP</strong> tracks all-time token balances, while{" "}
-        <strong>Performance</strong> tracks voting results through indexed off-chain views such as all time, last 7
-        days, last 30 days, last 365 days, and the current weekly season. Performance also supports category filtering
-        and following-only views.
+        The governance page centers on a single <strong>cREP</strong> performance surface. It shows all-time token
+        balances alongside your indexed balance history and current staking breakdown so token holders can see who has
+        accumulated the most reputation and how that reputation is currently allocated.
       </p>
       <p>
-        These leaderboard views are discovery and reputation surfaces only. They do not by themselves imply treasury
-        payouts or a dedicated season rewards pool.
+        Profile editing, delegation, referrals, and notification preferences now live under{" "}
+        <code className="bg-base-300 px-1 rounded text-base">/settings</code>. Governance remains focused on reputation,
+        proposals, and frontend participation rather than account management.
       </p>
 
       <h2>Proposal Lifecycle</h2>
