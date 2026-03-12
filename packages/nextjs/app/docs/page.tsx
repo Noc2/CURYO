@@ -89,8 +89,10 @@ const DocsIntro: NextPage = () => {
       </p>
       <p>
         Each category (platform) has a <strong>ranking question</strong> set by its creator &mdash; for example,
-        &ldquo;Is this content good enough to score above 75 out of 100?&rdquo;. When you vote UP or DOWN, you are
-        answering this question for the current content. The question is displayed on the voting card.
+        &ldquo;Are the fundamentals of Bitcoin strong enough to score above 50 out of 100?&rdquo;. Categories define
+        this as a template with <code>{"{title}"}</code> and <code>{"{rating}"}</code> placeholders, so every frontend
+        can render the same content-specific prompt. When you vote UP or DOWN, you are answering this question for the
+        current content. The question is displayed on the voting card.
       </p>
       <p>
         <strong>When to downvote:</strong> Illegal content, content that doesn&apos;t load, or content with an incorrect

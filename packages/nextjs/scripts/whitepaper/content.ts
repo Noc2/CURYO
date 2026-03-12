@@ -134,7 +134,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: 'Each category (platform) has a ranking question set by its creator -- for example, "Is this content good enough to score above 75 out of 100?". When you vote UP or DOWN, you are answering this question for the current content.',
+            text: 'Each category (platform) has a ranking-question template set by its creator -- for example, "Are the fundamentals of {title} strong enough to score above {rating} out of 100?". Frontends render the final question by replacing {title} with the submitted content title and {rating} with the current score. When you vote UP or DOWN, you are answering this rendered question for the current content.',
           },
           {
             type: "paragraph",
@@ -398,7 +398,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: 'This dynamic makes the design of each category\'s ranking question critical. Well-defined, verifiable questions anchor voter judgment and reduce ambiguity. A question like "Is this factually accurate?" produces more stable equilibria than "Is this interesting?" because the former admits shared evidence while the latter invites pure preference divergence. Category creators shape equilibrium quality by choosing precise questions that guide honest evaluation.',
+            text: 'This dynamic makes the design of each category\'s ranking-question template critical. Well-defined, verifiable prompts anchor voter judgment and reduce ambiguity. A template like "Is {title} factually accurate enough to score above {rating} out of 100?" produces more stable equilibria than "Is {title} interesting?" because the former admits shared evidence while the latter invites pure preference divergence. Category creators shape equilibrium quality by choosing precise title-aware questions that guide honest evaluation.',
           },
           {
             type: "paragraph",

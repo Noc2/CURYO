@@ -145,7 +145,7 @@ This will:
 2. Deploy `CuryoReputation` (cREP token, 100M max supply)
 3. Deploy all UUPS proxy contracts (ContentRegistry, RoundVotingEngine, RoundRewardDistributor, ProfileRegistry, FrontendRegistry) and non-upgradeable contracts (CategoryRegistry, VoterIdNFT, ParticipationPool, HumanFaucet)
 4. Wire cross-contract references
-5. Seed 12 content categories
+5. Seed 12 content categories, each with a ranking-question template that includes `{title}` and `{rating}`
 6. Mint token allocations: 52M→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 10M→Treasury
 7. **Renounce deployer's temporary admin roles** — governance transfers fully to TimelockController
 8. **Automatically verify** that governance owns the expected roles and the deployer retained none
