@@ -7,6 +7,12 @@ import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import {
+  RATING_PLACEHOLDER,
+  TITLE_PLACEHOLDER,
+  renderRankingQuestion,
+  validateRankingQuestionTemplate,
+} from "~~/lib/categories/rankingQuestionTemplate";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -49,6 +55,19 @@ export const CategorySubmissionForm = () => {
 
   const hasEnoughBalance = crepBalance && crepBalance >= CATEGORY_STAKE;
   const isCategoryRegistryDeployed = !!categoryRegistryInfo?.address;
+  const rankingQuestionValidation = validateRankingQuestionTemplate(rankingQuestion);
+  const rankingQuestionError = !rankingQuestion.trim()
+    ? null
+    : !rankingQuestionValidation.hasTitlePlaceholder
+      ? `Ranking question must include ${TITLE_PLACEHOLDER}`
+      : !rankingQuestionValidation.hasRatingPlaceholder
+        ? `Ranking question must include ${RATING_PLACEHOLDER}`
+        : null;
+  const rankingQuestionPreview = renderRankingQuestion(rankingQuestion, {
+    title: name.trim() || "Bitcoin",
+    rating: 50,
+    fallbackLabel: "content",
+  });
 
   const addSubcategory = () => {
     if (subcategories.length < MAX_SUBCATEGORIES) {
@@ -75,6 +94,11 @@ export const CategorySubmissionForm = () => {
     // Validate inputs
     if (!name.trim() || !domain.trim() || !rankingQuestion.trim()) {
       notification.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!rankingQuestionValidation.isValid) {
+      notification.error(`Ranking question must include both ${TITLE_PLACEHOLDER} and ${RATING_PLACEHOLDER}`);
       return;
     }
 
@@ -209,40 +233,44 @@ export const CategorySubmissionForm = () => {
           <div>
             <label className="flex items-center gap-1.5 text-base font-medium mb-2">
               Ranking Question
-              <InfoTooltip text="Question shown to voters when rating content. Use {rating} as a placeholder — displayed as 'X out of 100' (e.g., 65 out of 100)." />
+              <InfoTooltip text="Question shown to voters when rating content. Use both {title} and {rating}. Example: 'Are the fundamentals of {title} strong enough to score above {rating} out of 100?'" />
             </label>
             <input
               type="text"
-              placeholder="e.g., Is this Reddit post informative and well-reasoned enough to score above {rating} out of 100?"
-              className="input input-bordered w-full bg-base-100"
+              placeholder="e.g., Are the fundamentals of {title} strong enough to score above {rating} out of 100?"
+              className={`input input-bordered w-full bg-base-100 ${rankingQuestionError ? "input-error" : ""}`}
               value={rankingQuestion}
               onChange={e => setRankingQuestion(e.target.value)}
               maxLength={256}
               required
             />
+            {rankingQuestionError && <p className="text-error text-base mt-1">{rankingQuestionError}</p>}
             {/* Ranking Question Guidance */}
             <div className="bg-info/10 rounded-lg p-4 mt-3">
               <p className="text-base font-medium text-info mb-2">Writing a Good Ranking Question</p>
               <ul className="text-base text-base-content/70 space-y-1.5 list-disc list-inside">
                 <li>
-                  Use <code className="bg-base-300/50 px-1 rounded text-sm">{"{rating}"}</code> as the placeholder for
-                  the current score, displayed as <strong>X out of 100</strong> (e.g., 65 out of 100).
+                  Use <code className="bg-base-300/50 px-1 rounded text-sm">{"{title}"}</code> for the content title and{" "}
+                  <code className="bg-base-300/50 px-1 rounded text-sm ml-1">{"{rating}"}</code> for the current score.
                 </li>
+                <li>Both placeholders are required so every frontend can render the exact same question.</li>
                 <li>
-                  Frame the question around specific, observable qualities rather than vague subjective preferences.
-                </li>
-                <li>
-                  <strong>Good:</strong> &ldquo;Is this video informative enough to score above {"{rating}"} out of
+                  <strong>Good:</strong> &ldquo;Is {"{title}"} informative enough to score above {"{rating}"} out of
                   100?&rdquo;
                 </li>
                 <li>
-                  <strong>Avoid:</strong> &ldquo;Do you like this video?&rdquo; (too subjective, no {"{rating}"} anchor)
+                  <strong>Avoid:</strong> &ldquo;Do you like this video?&rdquo; (too subjective, missing both
+                  placeholders)
                 </li>
                 <li>
                   Questions with clear evaluation criteria help voters reach consensus and produce more accurate
                   ratings.
                 </li>
               </ul>
+            </div>
+            <div className="bg-base-300/30 rounded-lg p-4 mt-3">
+              <p className="text-base font-medium text-base-content mb-1.5">Preview</p>
+              <p className="text-base text-base-content/75">{rankingQuestionPreview}</p>
             </div>
           </div>
 
@@ -329,6 +357,8 @@ export const CategorySubmissionForm = () => {
               !!isDomainRegistered ||
               !name.trim() ||
               !domain.trim() ||
+              !rankingQuestion.trim() ||
+              !rankingQuestionValidation.isValid ||
               !!domainBlockedError ||
               !!nameBlockedError
             }
