@@ -101,24 +101,24 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 }: FeedVoteCardProps) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
-      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:h-[min(52vh,34rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
-        <div className="grid w-full min-h-0 gap-3 lg:w-3/5 lg:grid-rows-[auto_minmax(0,1fr)]">
-          <FeedContentMetaCard
-            item={item}
-            submitterProfile={submitterProfile}
-            normalizedAddress={normalizedAddress}
-            following={following}
-            followPending={followPending}
-            watched={watched}
-            watchPending={watchPending}
-            onToggleFollow={onToggleFollow}
-            onToggleWatch={onToggleWatch}
-            onPrevious={onPrevious}
-            onNext={onNext}
-            canPrevious={canPrevious}
-            canNext={canNext}
-          />
+      <FeedContentMetaCard
+        item={item}
+        submitterProfile={submitterProfile}
+        normalizedAddress={normalizedAddress}
+        following={following}
+        followPending={followPending}
+        watched={watched}
+        watchPending={watchPending}
+        onToggleFollow={onToggleFollow}
+        onToggleWatch={onToggleWatch}
+        onPrevious={onPrevious}
+        onNext={onNext}
+        canPrevious={canPrevious}
+        canNext={canNext}
+      />
 
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:h-[min(48vh,30rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
+        <div className="w-full min-h-0 lg:w-3/5">
           <div className="min-h-0 overflow-hidden rounded-2xl bg-base-200">
             <div className="h-full w-full">
               <ContentEmbed url={item.url} />
@@ -180,7 +180,7 @@ function FeedContentMetaCard({
   return (
     <>
       <div className="rounded-2xl bg-base-200 p-4 xl:p-3">
-        <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <button
             type="button"
             onClick={onPrevious}
@@ -207,7 +207,7 @@ function FeedContentMetaCard({
           </button>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="mt-3 flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
             username={submitterProfile?.username}
