@@ -67,7 +67,9 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
         alt={formattedName}
         loading="lazy"
         className={`shadow-lg transition-transform group-hover:scale-[1.02] ${
-          compact ? "w-full h-auto rounded-xl aspect-[5/7] object-cover" : "h-full w-full rounded-xl object-cover"
+          compact
+            ? "w-full h-auto rounded-xl aspect-[5/7] object-cover"
+            : "h-full w-full rounded-xl object-contain object-center bg-base-200"
         } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setImageLoaded(true)}
         onError={() => setImageError(true)}
