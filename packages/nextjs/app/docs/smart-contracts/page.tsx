@@ -227,8 +227,9 @@ const SmartContracts: NextPage = () => {
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>submitContent(hash, url, goal, categoryId)</code> &mdash; Submit content (10 cREP stake). Requires Voter
-          ID. Duplicate URLs are rejected.
+          <code>submitContent(url, title, description, tags, categoryId)</code> &mdash; Submit content (10 cREP stake).
+          Requires Voter ID. Duplicate URLs are rejected, and the title plus description are emitted in the canonical{" "}
+          <code>ContentSubmitted</code> event for indexers and alternate frontends.
         </li>
         <li>
           <code>cancelContent(contentId)</code> &mdash; Cancel own content (1 cREP fee to the configured

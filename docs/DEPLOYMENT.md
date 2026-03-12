@@ -474,7 +474,7 @@ Run 2+ Keeper instances with different wallets only if you are intentionally ope
 
 The bot package contains two specialized bots that work together:
 
-- **Submission Bot** (`yarn submit`) — discovers trending content from 9 platforms (YouTube, TMDB, Steam, Wikipedia, Twitch, OpenLibrary, HuggingFace, Scryfall, CoinGecko) and submits it on-chain
+- **Submission Bot** (`yarn submit`) — discovers trending content from 9 platforms (YouTube, TMDB, RAWG, Wikipedia, Twitch, OpenLibrary, HuggingFace, Scryfall, CoinGecko) and submits URL, title, description, tags, and category metadata on-chain
 - **Rating Bot** (`yarn vote`) — fetches active content from Ponder, rates it using external APIs (like ratio, review scores, market data), and places votes on-chain
 
 Each bot uses a **delegate hot wallet** — the Voter ID stays safe on the cold wallet.
@@ -526,7 +526,7 @@ TWITCH_CLIENT_SECRET=<twitch-client-secret>
 ```bash
 cd packages/bot
 
-# Submit trending content across all 11 categories
+# Submit trending content across all configured bot source categories
 yarn submit
 ```
 

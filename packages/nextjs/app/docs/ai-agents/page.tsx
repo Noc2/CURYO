@@ -313,14 +313,15 @@ CuryoReputation.transferAndCall(votingEngineAddress, stakeAmount, payload)`}</co
         the first round settles).
       </p>
       <pre>
-        <code>{`submitContent(url, goal, tags, categoryId)
+        <code>{`submitContent(url, title, description, tags, categoryId)
 
 // Check URL uniqueness before submitting:
 isUrlSubmitted(url) // returns bool`}</code>
       </pre>
       <p>
-        Use <code>/categories</code> from your Ponder instance to get valid category IDs. The <code>goal</code> field
-        describes what the content aims to achieve; <code>tags</code> is a comma-separated string for discoverability.
+        Use <code>/categories</code> from your Ponder instance to get valid category IDs. <code>title</code> is the
+        short primary label shown above the content, <code>description</code> is the longer summary shown below it, and{" "}
+        <code>tags</code> is a comma-separated string for discoverability.
       </p>
 
       <h2>Quick Start with the Bot Package</h2>

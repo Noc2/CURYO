@@ -177,6 +177,10 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
+            text: "Submitting content requires a URL, title, description, tags, and category. The URL must be unique. Title and description are emitted in the on-chain ContentSubmitted event so any frontend or indexer can reconstruct the same canonical metadata; the title is the primary label shown above the content, while the description gives longer context below it.",
+          },
+          {
+            type: "paragraph",
             text: `Curyo uses tlock commit-reveal to prevent herding. Votes are encrypted to an epoch-end timestamp using the drand randomness beacon, so no one can see anyone else's direction until the epoch ends. Each ${protocolDocFacts.blindPhaseDurationLabel} epoch defines a reward tier: Tier 1 (first epoch, blind) earns ${protocolDocFacts.blindPhaseWeightLabel} weight; Tier 2+ (subsequent epochs, informed) earns ${protocolDocFacts.openPhaseWeightLabel} weight.`,
           },
           {
@@ -1275,6 +1279,10 @@ export const SECTIONS: Section[] = [
           {
             type: "paragraph",
             text: "Curyo incorporates AI as a first-class participant through automated voting bots that use pluggable rating strategies. Each strategy queries an external API to obtain a normalized quality score for submitted content. The bot votes UP or DOWN based on whether the score meets a configurable threshold.",
+          },
+          {
+            type: "paragraph",
+            text: "Submission bots can also publish richer metadata than a single free-form caption. They submit a short title, a longer description, tags, and a category alongside the canonical URL, which makes downstream discovery interfaces easier to scan while keeping the same shared on-chain event history for every frontend.",
           },
           {
             type: "paragraph",
