@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
@@ -273,6 +274,7 @@ const HomeInner = () => {
   }, [contentParam]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const queueRailRef = useRef<HTMLDivElement>(null);
 
   // Voting state
   const [stakeModal, setStakeModal] = useState<{
@@ -491,6 +493,12 @@ const HomeInner = () => {
     image.src = nextThumbnailSrc;
   }, [nextQueueItem]);
 
+  useEffect(() => {
+    const rail = queueRailRef.current;
+    if (!rail) return;
+    rail.scrollTo({ left: 0, behavior: "smooth" });
+  }, [primaryItem?.id]);
+
   // Infinite scroll with Intersection Observer
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -575,6 +583,17 @@ const HomeInner = () => {
     replaceContentQueryParam(nextItem.id);
     return true;
   }, [promoteNext, replaceContentQueryParam]);
+
+  const scrollQueueRailBy = useCallback((direction: "prev" | "next") => {
+    const rail = queueRailRef.current;
+    if (!rail) return;
+
+    const delta = Math.max(rail.clientWidth * 0.72, 220);
+    rail.scrollBy({
+      left: direction === "next" ? delta : -delta,
+      behavior: "smooth",
+    });
+  }, []);
 
   const handleToggleWatch = useCallback(
     async (contentId: bigint) => {
@@ -827,11 +846,34 @@ const HomeInner = () => {
                         Scroll, tap, or click a card to promote it into the main voting stage.
                       </p>
                     </div>
-                    <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 text-sm font-medium text-base-content/60">
-                      {queueItems.length} queued
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 text-sm font-medium text-base-content/60">
+                        {queueItems.length} queued
+                      </span>
+                      <div className="hidden items-center gap-1 xl:flex">
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
+                          onClick={() => scrollQueueRailBy("prev")}
+                          aria-label="Scroll queued cards left"
+                        >
+                          <ChevronLeftIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
+                          onClick={() => scrollQueueRailBy("next")}
+                          aria-label="Scroll queued cards right"
+                        >
+                          <ChevronRightIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 xl:flex xl:gap-2.5 xl:overflow-x-auto xl:pb-2 xl:[scrollbar-width:none] xl:[&::-webkit-scrollbar]:hidden">
+                  <div
+                    ref={queueRailRef}
+                    className="grid grid-cols-2 gap-3 xl:flex xl:gap-2.5 xl:overflow-x-auto xl:pb-2 xl:snap-x xl:snap-mandatory xl:[scrollbar-width:none] xl:[&::-webkit-scrollbar]:hidden"
+                  >
                     {queueItems.map((item, index) => (
                       <FeedQueueCard
                         key={item.id.toString()}

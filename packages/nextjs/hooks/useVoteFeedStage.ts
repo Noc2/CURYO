@@ -30,23 +30,23 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
     setActiveContentId(null);
   }, [activeContentId, items]);
 
-  const orderedItems = useMemo(() => {
-    if (activeContentId === null) return items;
+  const activeSourceIndex = useMemo(() => {
+    if (items.length === 0) return -1;
+    if (activeContentId === null) return 0;
 
-    const activeIndex = items.findIndex(item => item.id === activeContentId);
-    if (activeIndex === -1) return items;
-
-    const activeItem = items[activeIndex];
-    return [activeItem, ...items.filter((_, index) => index !== activeIndex)];
+    const index = items.findIndex(item => item.id === activeContentId);
+    return index === -1 ? 0 : index;
   }, [activeContentId, items]);
+
+  const orderedItems = useMemo(() => {
+    if (items.length === 0) return [];
+    if (activeSourceIndex <= 0) return items;
+    return items.slice(activeSourceIndex);
+  }, [activeSourceIndex, items]);
 
   const visibleItems = useMemo(() => orderedItems.slice(0, visibleCount), [orderedItems, visibleCount]);
   const activeItem = visibleItems[0] ?? null;
   const upNextItems = useMemo(() => visibleItems.slice(1), [visibleItems]);
-  const activeSourceIndex = useMemo(() => {
-    if (activeItem === null) return -1;
-    return items.findIndex(item => item.id === activeItem.id);
-  }, [activeItem, items]);
 
   const selectContent = useCallback((contentId: bigint | null) => {
     setActiveContentId(contentId);

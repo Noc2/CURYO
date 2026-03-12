@@ -164,7 +164,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       type="button"
       data-testid="content-thumbnail"
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group w-full cursor-pointer overflow-hidden rounded-xl border text-left transition-colors xl:w-[12.75rem] xl:flex-shrink-0 ${
+      className={`group w-full cursor-pointer overflow-hidden rounded-xl border text-left transition-colors xl:w-[12.75rem] xl:flex-shrink-0 xl:snap-start ${
         isNext
           ? "border-primary/25 bg-primary/[0.05] hover:border-primary/40 hover:bg-primary/[0.08]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
