@@ -378,6 +378,15 @@
   color: #000;
 }
 
+.pill-tab-inactive {
+  background: var(--color-base-300);
+  color: #fff;
+}
+
+.pill-tab-inactive:hover {
+  background: color-mix(in srgb, var(--color-base-300) 78%, white 22%);
+}
+
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
