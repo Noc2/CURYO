@@ -46,7 +46,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             <p className="text-2xl sm:text-3xl text-base-content/60 mt-3 text-center lg:text-left">
               The Reputation Game for the
               <br />
-              Age of AI
+              Age of AI (Beta)
             </p>
             <LandingPageActions />
           </div>
