@@ -844,7 +844,7 @@ const HomeInner = () => {
         ) : (
           <div
             ref={activeCardRegionRef}
-            className="space-y-5 xl:grid xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_clamp(16.5rem,23vh,18rem)] xl:gap-3 xl:overflow-hidden xl:space-y-0 2xl:grid-rows-[minmax(0,1fr)_clamp(18rem,28vh,22rem)]"
+            className="space-y-5 xl:grid xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_clamp(16.5rem,21vh,17rem)] xl:gap-3 xl:overflow-hidden xl:space-y-0"
           >
             {isCommitting ? (
               <div className="flex shrink-0 items-center justify-center">
@@ -905,7 +905,7 @@ const HomeInner = () => {
                 <div
                   ref={queueRailRef}
                   data-disable-queue-wheel="true"
-                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:flex-nowrap xl:gap-2.5 xl:overflow-y-hidden xl:pb-1 xl:snap-x 2xl:grid 2xl:grid-cols-[repeat(auto-fill,minmax(13rem,1fr))] 2xl:auto-rows-[minmax(16.5rem,1fr)] 2xl:content-start 2xl:overflow-x-hidden 2xl:overflow-y-auto 2xl:pb-0 2xl:pr-1 2xl:snap-none"
+                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:flex-nowrap xl:gap-2.5 xl:overflow-y-hidden xl:pb-1 xl:snap-x"
                 >
                   {visibleFeedItems.map(item => (
                     <FeedQueueCard
