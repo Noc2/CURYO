@@ -65,6 +65,7 @@ test.describe("Unanimous settlement (consensus reserve)", () => {
     const success = await submitContentDirect(
       `https://www.youtube.com/watch?v=unanimous_test_${uniqueId}`,
       `Unanimous Test ${uniqueId}`,
+      `Unanimous test description ${uniqueId}`,
       "test",
       1,
       submitter.address,

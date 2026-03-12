@@ -58,7 +58,7 @@ export const tmdbSource: ContentSource = {
         items.push({
           url: `https://www.themoviedb.org/movie/${movie.id}`,
           title: movie.title,
-          goal: (movie.overview || `Popular movie: ${movie.title}`).slice(0, 500),
+          description: (movie.overview || `Popular movie: ${movie.title}`).slice(0, 500),
           tags,
           categoryId: CATEGORY_ID,
         });

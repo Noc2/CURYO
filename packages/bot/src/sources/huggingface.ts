@@ -67,7 +67,7 @@ export const huggingFaceSource: ContentSource = {
         items.push({
           url: `https://huggingface.co/${modelId}`,
           title: modelId,
-          goal: description,
+          description,
           tags: tag,
           categoryId: CATEGORY_ID,
         });

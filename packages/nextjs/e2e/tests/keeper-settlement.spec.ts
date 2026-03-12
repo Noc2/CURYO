@@ -54,6 +54,7 @@ test.describe("Keeper-backed settlement lifecycle", () => {
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=keeper_settlement_${uniqueId}`,
       `Keeper Settlement ${uniqueId}`,
+      `Keeper settlement description ${uniqueId}`,
       "test",
       1,
       submitter.address,

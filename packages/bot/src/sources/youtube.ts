@@ -52,7 +52,7 @@ export const youtubeSource: ContentSource = {
         items.push({
           url: `https://www.youtube.com/watch?v=${video.id}`,
           title: snippet.title,
-          goal: (snippet.description || snippet.title).slice(0, 500),
+          description: (snippet.description || snippet.title).slice(0, 500),
           tags: tag,
           categoryId: CATEGORY_ID,
         });

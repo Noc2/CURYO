@@ -46,6 +46,7 @@ test.describe("RevealFailed lifecycle", () => {
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=reveal_failed_${uniqueId}`,
       `Reveal Failed ${uniqueId}`,
+      `Reveal failed test description ${uniqueId}`,
       "test",
       1,
       submitter.address,

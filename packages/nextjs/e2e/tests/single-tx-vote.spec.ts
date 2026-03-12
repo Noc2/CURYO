@@ -29,6 +29,7 @@ test.describe("Single-transaction vote flow", () => {
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=single_tx_vote_${uniqueId}`,
       `Single Tx Vote ${uniqueId}`,
+      `Single transaction vote description ${uniqueId}`,
       "test",
       1,
       submitter.address,

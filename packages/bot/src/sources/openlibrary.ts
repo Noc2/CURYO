@@ -65,7 +65,7 @@ export const openLibrarySource: ContentSource = {
         items.push({
           url: `https://openlibrary.org${worksKey}`,
           title,
-          goal: description.slice(0, 500),
+          description: description.slice(0, 500),
           tags: tag,
           categoryId: CATEGORY_ID,
         });

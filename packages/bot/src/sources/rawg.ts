@@ -60,7 +60,7 @@ export const rawgSource: ContentSource = {
         items.push({
           url: `https://rawg.io/games/${game.slug}`,
           title: game.name,
-          goal: game.name.slice(0, 500),
+          description: game.name.slice(0, 500),
           tags: tag,
           categoryId: CATEGORY_ID,
         });

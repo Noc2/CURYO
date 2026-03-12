@@ -57,6 +57,7 @@ test.describe("Content moderation", () => {
     const ok = await submitContentDirect(
       url,
       `${suffix} Test ${uniqueId}`,
+      `${suffix} moderation description ${uniqueId}`,
       "test",
       BigInt(1),
       SUBMITTER,

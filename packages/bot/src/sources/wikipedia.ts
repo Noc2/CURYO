@@ -122,7 +122,7 @@ export const wikipediaSource: ContentSource = {
         items.push({
           url: `https://en.wikipedia.org/wiki/${title}`,
           title: title.replace(/_/g, " "),
-          goal: description,
+          description,
           tags: subcategory,
           categoryId: CATEGORY_ID,
         });

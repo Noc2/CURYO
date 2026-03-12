@@ -62,7 +62,7 @@ KEYS=(
   "0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97"  # Account 8 (reused for Spotify)
 )
 
-# Example content from multiple platforms: (url, goal, tags, categoryId)
+# Example content from multiple platforms: (url, title, description, tags, categoryId)
 # CategoryIds: 1=YouTube, 2=Twitch, 3=MTG, 4=Movies (TMDB), 5=People (Wikipedia), 6=Games (RAWG), 7=Books (Open Library), 8=AI (HuggingFace), 9=Crypto Tokens (CoinGecko), 10=Tweets (X), 11=GitHub Repos, 12=Spotify Podcasts
 URLS=(
   "https://www.youtube.com/watch?v=rUCAdMnb1Oc"
@@ -83,7 +83,26 @@ URLS=(
   "https://open.spotify.com/show/5eXZwvvxt3K2dxha3BSaAe"
 )
 
-GOALS=(
+TITLES=(
+  "Ethereum in Practice"
+  "Twitch Gaming Highlights"
+  "Neural Networks, Visualized"
+  "Black Lotus"
+  "The Godfather"
+  "Lionel Messi"
+  "Marie Curie"
+  "Elden Ring"
+  "Baldur's Gate 3"
+  "Fantastic Mr. Fox"
+  "The Hitchhiker's Guide to the Galaxy"
+  "Bitcoin"
+  "Ethereum"
+  "go-ethereum"
+  "Foundry"
+  "Spotify Engineering Stories"
+)
+
+DESCRIPTIONS=(
   "Learn how Ethereum works under the hood — from transactions to the EVM."
   "Gaming highlights and community moments from popular streamers."
   "A visual introduction to neural networks and deep learning fundamentals."
@@ -149,7 +168,8 @@ echo ""
 for i in {0..15}; do
   KEY="${KEYS[$i]}"
   URL="${URLS[$i]}"
-  GOAL="${GOALS[$i]}"
+  TITLE="${TITLES[$i]}"
+  DESCRIPTION="${DESCRIPTIONS[$i]}"
   TAG="${TAGS[$i]}"
   CATEGORY_ID="${CATEGORY_IDS[$i]}"
 
@@ -169,7 +189,7 @@ for i in {0..15}; do
 
   # 2. Submit content with categoryId (cREP-only model, no stakeToken param)
   echo "  Submitting: $URL (categoryId: $CATEGORY_ID)"
-  cast send "$REGISTRY" "submitContent(string,string,string,uint256)" "$URL" "$GOAL" "$TAG" "$CATEGORY_ID" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1 || true
+  cast send "$REGISTRY" "submitContent(string,string,string,string,uint256)" "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1 || true
   echo "  Done!"
   echo ""
 done

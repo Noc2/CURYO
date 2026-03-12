@@ -72,6 +72,7 @@ test.describe("Reward claim lifecycle", () => {
     const success = await submitContentDirect(
       `https://www.youtube.com/watch?v=reward_test_${uniqueId}`,
       `Reward Claim Test ${uniqueId}`,
+      `Reward claim test description ${uniqueId}`,
       "test",
       1,
       submitter.address,
@@ -209,7 +210,10 @@ test.describe("Reward claim lifecycle", () => {
     // .or().first() can pick a hidden element earlier in DOM order.
     await expect(async () => {
       const hasClaimBtn = await page.getByRole("button", { name: "Claim Reward" }).first().isVisible();
-      const hasActive = await page.getByText(/^Active( ·|$)/).first().isVisible();
+      const hasActive = await page
+        .getByText(/^Active( ·|$)/)
+        .first()
+        .isVisible();
       const hasClaimed = await page.getByText("Claimed", { exact: true }).first().isVisible();
       expect(hasClaimBtn || hasActive || hasClaimed).toBeTruthy();
     }).toPass({ timeout: 15_000 });
@@ -387,6 +391,7 @@ test.describe("Reward claim lifecycle", () => {
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=cleanup_test_${uniqueId}`,
       `Cleanup Test ${uniqueId}`,
+      `Cleanup test description ${uniqueId}`,
       "test",
       1,
       submitter.address,

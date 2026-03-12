@@ -5,7 +5,8 @@ export interface PonderContentItem {
   id: string;
   submitter: string;
   url: string;
-  goal: string;
+  title: string;
+  description: string;
   tags: string;
   categoryId: string;
   status: number;

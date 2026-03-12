@@ -76,7 +76,7 @@ export const twitchSource: ContentSource = {
         items.push({
           url: clip.url,
           title: clip.title,
-          goal: `${clip.title} — clipped from ${clip.broadcaster_name}`.slice(0, 500),
+          description: `${clip.title} — clipped from ${clip.broadcaster_name}`.slice(0, 500),
           tags: tag,
           categoryId: CATEGORY_ID,
         });

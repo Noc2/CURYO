@@ -49,7 +49,7 @@ const crepAbi = parseAbi([
 ]);
 
 const registryAbi = parseAbi([
-  "function submitContent(string url, string goal, string tags, uint256 categoryId) returns (uint256)",
+  "function submitContent(string url, string title, string description, string tags, uint256 categoryId) returns (uint256)",
 ]);
 
 const votingEngineAbi = parseAbi([
@@ -235,7 +235,7 @@ async function testFullRoundLifecycle() {
     address: addresses.contentRegistry,
     abi: registryAbi,
     functionName: "submitContent",
-    args: ["https://example.com/lifecycle", "test goal", "test", 0n],
+    args: ["https://example.com/lifecycle", "Lifecycle test", "test goal", "test", 0n],
   });
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   const contentId = 1n;
@@ -310,7 +310,7 @@ async function testCommitRevealSettle() {
     address: addresses.contentRegistry,
     abi: registryAbi,
     functionName: "submitContent",
-    args: ["https://example.com/settle", "test goal", "test", 0n],
+    args: ["https://example.com/settle", "Settlement test", "test goal", "test", 0n],
   });
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   const contentId = 2n;
@@ -413,7 +413,7 @@ async function testDuplicateCommitPrevention() {
     address: addresses.contentRegistry,
     abi: registryAbi,
     functionName: "submitContent",
-    args: ["https://example.com/duplicate", "test goal", "test", 0n],
+    args: ["https://example.com/duplicate", "Duplicate test", "test goal", "test", 0n],
   });
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   const contentId = 3n;
@@ -444,7 +444,7 @@ async function testRoundAdvancementAfterSettlement() {
     address: addresses.contentRegistry,
     abi: registryAbi,
     functionName: "submitContent",
-    args: ["https://example.com/advance", "test goal", "test", 0n],
+    args: ["https://example.com/advance", "Advance test", "test goal", "test", 0n],
   });
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   const contentId = 4n;

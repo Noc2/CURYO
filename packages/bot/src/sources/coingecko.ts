@@ -68,7 +68,7 @@ export const coinGeckoSource: ContentSource = {
         items.push({
           url: `https://www.coingecko.com/en/coins/${slug}`,
           title: coin.name,
-          goal: description,
+          description,
           tags: tag,
           categoryId: CATEGORY_ID,
         });

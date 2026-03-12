@@ -3,7 +3,6 @@ import {
   commitVoteDirect,
   evmIncreaseTime,
   getActiveRoundId,
-  processUnrevealedVotes,
   revealVoteDirect,
   setTestConfig,
   settleRoundDirect,
@@ -57,6 +56,7 @@ test.describe("Settlement lifecycle", () => {
     const success = await submitContentDirect(
       `https://www.youtube.com/watch?v=settlement_test_${uniqueId}`,
       `Settlement Test ${uniqueId}`,
+      `Settlement test description ${uniqueId}`,
       "test",
       1,
       submitter.address,

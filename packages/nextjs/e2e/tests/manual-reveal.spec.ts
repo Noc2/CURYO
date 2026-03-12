@@ -56,6 +56,7 @@ test.describe("Manual reveal fallback", () => {
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=manual_reveal_${uniqueId}`,
       `Manual Reveal ${uniqueId}`,
+      `Manual reveal test description ${uniqueId}`,
       "test",
       1,
       submitter.address,

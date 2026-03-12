@@ -41,7 +41,6 @@ test.describe("Frontend fee claim lifecycle", () => {
   const VOTER_ID_NFT = CONTRACT_ADDRESSES.VoterIdNFT;
   const STAKE = BigInt(10e6);
   const FRONTEND_STAKE = BigInt(1000e6);
-  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const EPOCH_DURATION = 300;
 
   // Shared across serial tests — set by test 1, consumed by test 3.
@@ -99,6 +98,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=frontend_fee_${uniqueId}`,
       `Frontend Fee ${uniqueId}`,
+      `Frontend fee test description ${uniqueId}`,
       "test",
       1,
       submitter.address,

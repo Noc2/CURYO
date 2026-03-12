@@ -71,6 +71,7 @@ test.describe("Contract boundary conditions", () => {
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=double_vote_test_${uniqueId}`,
       `Double Vote Test ${uniqueId}`,
+      `Double vote test description ${uniqueId}`,
       "test",
       1,
       submitter.address,

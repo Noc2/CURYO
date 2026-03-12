@@ -63,6 +63,7 @@ test.describe("Multi-round succession", () => {
     const success = await submitContentDirect(
       `https://www.youtube.com/watch?v=multi_round_test_${uniqueId}`,
       `Multi-Round Test ${uniqueId}`,
+      `Multi-round test description ${uniqueId}`,
       "test",
       1,
       submitter.address,

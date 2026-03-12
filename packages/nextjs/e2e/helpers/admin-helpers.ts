@@ -191,7 +191,8 @@ export async function approveFrontend(
  */
 export async function submitContentDirect(
   url: string,
-  goal: string,
+  title: string,
+  description: string,
   tags: string,
   categoryId: number | bigint,
   fromAddress: string,
@@ -205,7 +206,8 @@ export async function submitContentDirect(
         type: "function",
         inputs: [
           { name: "url", type: "string" },
-          { name: "goal", type: "string" },
+          { name: "title", type: "string" },
+          { name: "description", type: "string" },
           { name: "tags", type: "string" },
           { name: "categoryId", type: "uint256" },
         ],
@@ -214,7 +216,7 @@ export async function submitContentDirect(
       },
     ],
     functionName: "submitContent",
-    args: [url, goal, tags, BigInt(categoryId)],
+    args: [url, title, description, tags, BigInt(categoryId)],
   });
   return sendTx(fromAddress, contractAddress, data);
 }

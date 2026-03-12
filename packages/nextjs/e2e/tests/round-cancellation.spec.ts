@@ -38,6 +38,7 @@ test.describe("Round cancellation", () => {
     const submitted = await submitContentDirect(
       `https://www.youtube.com/watch?v=cancel_test_${uniqueId}`,
       `Cancellation Test ${uniqueId}`,
+      `Cancellation test description ${uniqueId}`,
       "test,cancellation",
       1, // categoryId 1 (Education)
       submitter,

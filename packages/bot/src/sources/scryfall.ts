@@ -46,7 +46,7 @@ export const scryfallSource: ContentSource = {
         items.push({
           url: `https://scryfall.com/card/${set}/${collectorNumber}/${encodeURIComponent(card.name.toLowerCase().replace(/ /g, "-"))}`,
           title: card.name,
-          goal: description,
+          description,
           tags: tag,
           categoryId: CATEGORY_ID,
         });

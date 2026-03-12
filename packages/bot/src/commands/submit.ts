@@ -98,7 +98,7 @@ export async function runSubmit() {
         const submitTx = await wallet.writeContract({
           ...contractConfig.registry,
           functionName: "submitContent",
-          args: [item.url, item.goal, item.tags, item.categoryId],
+          args: [item.url, item.title, item.description, item.tags, item.categoryId],
         });
         await publicClient.waitForTransactionReceipt({ hash: submitTx });
 
