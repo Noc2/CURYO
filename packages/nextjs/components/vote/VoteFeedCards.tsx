@@ -380,7 +380,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:h-full xl:min-h-[14rem] xl:min-w-0 xl:w-auto 2xl:min-h-[15rem] ${
+      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:h-full xl:min-h-[14rem] xl:min-w-0 xl:w-auto xl:max-w-none 2xl:min-h-[15rem] ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
@@ -415,22 +415,20 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col space-y-1.5 p-2.5 xl:space-y-0.5 xl:p-1.5">
+      <div className="flex flex-1 flex-col space-y-1.5 p-2.5 xl:space-y-1 xl:p-2">
         <div className="flex items-center gap-2 text-xs text-base-content/55">
           <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
         </div>
-        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-[0.72rem] xl:leading-snug">{item.title}</p>
-        <p className="line-clamp-2 text-xs text-base-content/65 xl:text-[0.68rem] xl:leading-snug">
-          {item.description}
-        </p>
+        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-sm xl:leading-snug">{item.title}</p>
+        <p className="line-clamp-2 text-xs text-base-content/65 xl:text-xs xl:leading-snug">{item.description}</p>
         <div className="flex items-center gap-2 text-xs text-base-content/50 xl:flex-wrap xl:gap-1.5">
           <span className="rounded-full bg-base-content/[0.05] px-2 py-1 font-medium text-base-content/65">
             {platform.type}
           </span>
-          {item.tags[0] ? <span className="truncate xl:hidden">#{item.tags[0]}</span> : null}
-          <span className="hidden truncate sm:inline xl:hidden">{getDomainLabel(item.url)}</span>
+          {item.tags[0] ? <span className="truncate">#{item.tags[0]}</span> : null}
+          <span className="hidden truncate sm:inline">{getDomainLabel(item.url)}</span>
         </div>
-        <div className="mt-auto text-xs text-base-content/55 xl:hidden">
+        <div className="mt-auto text-xs text-base-content/55">
           <span className="block min-w-0 truncate">{submitterProfile?.username ?? item.submitter}</span>
         </div>
       </div>

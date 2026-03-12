@@ -870,13 +870,13 @@ const HomeInner = () => {
             {visibleFeedItems.length > 0 ? (
               <section
                 key={primaryItem?.id.toString() ?? "queue-empty"}
-                className="motion-safe:animate-vote-queue-settle xl:min-h-[10rem] xl:flex-1 xl:overflow-hidden 2xl:min-h-[16rem]"
+                className="motion-safe:animate-vote-queue-settle xl:min-h-[12rem] xl:flex-1 xl:overflow-hidden 2xl:min-h-[18rem]"
                 aria-label="Up next queue"
               >
                 <div
                   ref={queueRailRef}
                   data-disable-queue-wheel="true"
-                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:gap-2.5 2xl:grid 2xl:auto-cols-[10rem] 2xl:grid-flow-col 2xl:grid-rows-2 2xl:content-start 2xl:gap-2.5"
+                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:grid xl:h-full xl:grid-cols-[repeat(auto-fit,minmax(11.25rem,1fr))] xl:auto-rows-[minmax(14rem,1fr)] xl:content-start xl:gap-2.5 xl:overflow-x-hidden xl:overflow-y-auto xl:snap-none"
                 >
                   {visibleFeedItems.map(item => (
                     <FeedQueueCard
