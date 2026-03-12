@@ -248,7 +248,11 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
-        <div className="min-w-0 flex-1" />
+        <div className="min-w-0 flex-1">
+          <h2 className="line-clamp-1 text-center text-xl font-semibold leading-none text-white xl:text-lg">
+            {item.title}
+          </h2>
+        </div>
         <button
           type="button"
           onClick={onNext}
@@ -259,9 +263,6 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
           <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
-      <h2 className="mt-3 line-clamp-2 text-center text-xl font-semibold leading-tight text-white xl:mt-2 xl:text-lg">
-        {item.title}
-      </h2>
     </div>
   );
 }
