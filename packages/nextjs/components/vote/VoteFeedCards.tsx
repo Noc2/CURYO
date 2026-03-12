@@ -236,8 +236,6 @@ interface FeedContentHeaderProps {
 }
 
 function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: FeedContentHeaderProps) {
-  const platformType = detectPlatform(item.url).type;
-
   return (
     <div className="rounded-2xl bg-black p-4 xl:p-3">
       <div className="flex items-center justify-between gap-3">
@@ -250,12 +248,7 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
-        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-          <span className="truncate rounded-full bg-base-300 px-2.5 py-1 font-medium text-base-content/70">
-            {platformType}
-          </span>
-          {item.tags[0] ? <span className="truncate text-base-content/45">#{item.tags[0]}</span> : null}
-        </div>
+        <div className="min-w-0 flex-1" />
         <button
           type="button"
           onClick={onNext}
@@ -285,6 +278,7 @@ function FeedContentMetaCard({
   onToggleFollow,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
+  const platformType = detectPlatform(item.url).type;
 
   return (
     <>
@@ -319,6 +313,13 @@ function FeedContentMetaCard({
               <ShareIcon className="h-4 w-4" />
             </button>
           </div>
+        </div>
+
+        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-sm text-base-content/55">
+          <span className="truncate rounded-full bg-base-300 px-2.5 py-1 font-medium text-base-content/70">
+            {platformType}
+          </span>
+          {item.tags[0] ? <span className="truncate text-base-content/45">#{item.tags[0]}</span> : null}
         </div>
 
         <div className="mt-3">
