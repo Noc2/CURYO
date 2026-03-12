@@ -473,7 +473,7 @@ const SubmitPage: NextPage = () => {
           <button
             onClick={() => selectTab("content")}
             className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-              submissionType === "content" ? "pill-active" : "pill-tab-inactive"
+              submissionType === "content" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
             }`}
           >
             Content
@@ -481,7 +481,7 @@ const SubmitPage: NextPage = () => {
           <button
             onClick={() => selectTab("category")}
             className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-              submissionType === "category" ? "pill-active" : "pill-tab-inactive"
+              submissionType === "category" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
             }`}
           >
             Platform
@@ -489,7 +489,7 @@ const SubmitPage: NextPage = () => {
           <button
             onClick={() => selectTab("frontend")}
             className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-              submissionType === "frontend" ? "pill-active" : "pill-tab-inactive"
+              submissionType === "frontend" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
             }`}
           >
             Frontend
@@ -655,7 +655,7 @@ const SubmitPage: NextPage = () => {
                           type="button"
                           onClick={() => handleSubcategoryToggle(subcat)}
                           className={`px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                            isSelected ? "pill-active" : "pill-tab-inactive"
+                            isSelected ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
                           }`}
                         >
                           {subcat}

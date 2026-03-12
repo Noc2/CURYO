@@ -82,7 +82,7 @@ function SettingsPageInner() {
               key={tab}
               onClick={() => selectTab(tab)}
               className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === tab ? "pill-active-yellow" : "pill-tab-inactive"
+                activeTab === tab ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
               }`}
             >
               {SETTINGS_TAB_LABELS[tab]}
