@@ -11,36 +11,19 @@ import {
   normalizeProfileFollowReadInput,
 } from "~~/lib/auth/profileFollowChallenge";
 import {
-  ensureSignedActionChallengeTable,
-  mapSignedActionError,
-  verifyAndConsumeSignedActionChallenge,
-} from "~~/lib/auth/signedActions";
-import {
-  PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME,
-  getSignedReadSessionCookie,
-  issueSignedReadSession,
-  verifySignedReadSession,
-} from "~~/lib/auth/signedReadSessions";
-import {
-  PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME,
-  getSignedWriteSessionCookie,
-  issueSignedWriteSession,
-  verifySignedWriteSession,
-} from "~~/lib/auth/signedWriteSessions";
-import { db } from "~~/lib/db";
+  createSignedCollectionReadResponse,
+  hasSignedCollectionReadSession,
+  hasSignedCollectionWriteSession,
+  maybeIssueSignedCollectionWriteSession,
+  verifySignedCollectionChallenge,
+} from "~~/lib/auth/signedCollectionRoute";
+import { PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME } from "~~/lib/auth/signedReadSessions";
+import { PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME } from "~~/lib/auth/signedWriteSessions";
 import { addFollowedProfile, listFollowedProfiles, removeFollowedProfile } from "~~/lib/follows/profileFollow";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 const WRITE_RATE_LIMIT = { limit: 20, windowMs: 60_000 };
-
-async function hasProfileFollowWriteSession(request: NextRequest, walletAddress: `0x${string}`) {
-  return verifySignedWriteSession(
-    request.cookies.get(PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME)?.value,
-    walletAddress,
-    "profile_follows",
-  );
-}
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
@@ -55,8 +38,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    const hasSession = await verifySignedReadSession(
-      request.cookies.get(PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME)?.value,
+    const hasSession = await hasSignedCollectionReadSession(
+      request,
+      PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME,
       normalized.payload.normalizedAddress,
       "profile_follows",
     );
@@ -94,38 +78,29 @@ export async function POST(request: NextRequest) {
 
     const payload = normalized.payload;
     const payloadHash = hashProfileFollowReadPayload(payload);
-    await ensureSignedActionChallengeTable();
-
-    try {
-      await db.transaction(async tx => {
-        await verifyAndConsumeSignedActionChallenge(tx, {
-          challengeId: String(challengeId),
-          action: READ_PROFILE_FOLLOWS_ACTION,
-          walletAddress: payload.normalizedAddress,
+    const challengeFailure = await verifySignedCollectionChallenge({
+      challengeId: String(challengeId),
+      action: READ_PROFILE_FOLLOWS_ACTION,
+      walletAddress: payload.normalizedAddress,
+      payloadHash,
+      signature: signature as `0x${string}`,
+      buildMessage: ({ nonce, expiresAt }) =>
+        buildProfileFollowReadChallengeMessage({
+          address: payload.normalizedAddress,
           payloadHash,
-          signature: signature as `0x${string}`,
-          buildMessage: ({ nonce, expiresAt }) =>
-            buildProfileFollowReadChallengeMessage({
-              address: payload.normalizedAddress,
-              payloadHash,
-              nonce,
-              expiresAt,
-            }),
-        });
-      });
-    } catch (error: unknown) {
-      const mapped = mapSignedActionError(error);
-      if (mapped) {
-        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-      }
-      throw error;
+          nonce,
+          expiresAt,
+        }),
+    });
+    if (challengeFailure) {
+      return challengeFailure;
     }
 
-    const session = await issueSignedReadSession(payload.normalizedAddress, "profile_follows");
     const items = await listFollowedProfiles(payload.normalizedAddress);
-    const response = NextResponse.json({ items, count: items.length });
-    response.cookies.set(getSignedReadSessionCookie("profile_follows", session));
-    return response;
+    return createSignedCollectionReadResponse(payload.normalizedAddress, "profile_follows", {
+      items,
+      count: items.length,
+    });
   } catch (error) {
     console.error("Error fetching followed profiles:", error);
     return NextResponse.json({ error: "Failed to fetch follows" }, { status: 500 });
@@ -146,7 +121,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const payload = normalized.payload;
-    const hasWriteSession = await hasProfileFollowWriteSession(request, payload.normalizedAddress);
+    const hasWriteSession = await hasSignedCollectionWriteSession(
+      request,
+      PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME,
+      payload.normalizedAddress,
+      "profile_follows",
+    );
 
     if (!hasWriteSession) {
       if (!signature || !challengeId) {
@@ -154,42 +134,35 @@ export async function PUT(request: NextRequest) {
       }
 
       const payloadHash = hashProfileFollowPayload(payload);
-      await ensureSignedActionChallengeTable();
-
-      try {
-        await db.transaction(async tx => {
-          await verifyAndConsumeSignedActionChallenge(tx, {
-            challengeId: String(challengeId),
+      const challengeFailure = await verifySignedCollectionChallenge({
+        challengeId: String(challengeId),
+        action: FOLLOW_PROFILE_ACTION,
+        walletAddress: payload.normalizedAddress,
+        payloadHash,
+        signature: signature as `0x${string}`,
+        buildMessage: ({ nonce, expiresAt }) =>
+          buildProfileFollowChallengeMessage({
             action: FOLLOW_PROFILE_ACTION,
-            walletAddress: payload.normalizedAddress,
+            address: payload.normalizedAddress,
             payloadHash,
-            signature: signature as `0x${string}`,
-            buildMessage: ({ nonce, expiresAt }) =>
-              buildProfileFollowChallengeMessage({
-                action: FOLLOW_PROFILE_ACTION,
-                address: payload.normalizedAddress,
-                payloadHash,
-                nonce,
-                expiresAt,
-              }),
-          });
-        });
-      } catch (error: unknown) {
-        const mapped = mapSignedActionError(error);
-        if (mapped) {
-          return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-        }
-        throw error;
+            nonce,
+            expiresAt,
+          }),
+      });
+      if (challengeFailure) {
+        return challengeFailure;
       }
     }
 
     await addFollowedProfile(payload.normalizedAddress, payload.normalizedTargetAddress);
-    const response = NextResponse.json({ ok: true, following: true, targetAddress: payload.normalizedTargetAddress });
-    if (!hasWriteSession) {
-      const session = await issueSignedWriteSession(payload.normalizedAddress, "profile_follows");
-      response.cookies.set(getSignedWriteSessionCookie("profile_follows", session));
-    }
-    return response;
+    return maybeIssueSignedCollectionWriteSession(
+      NextResponse.json({ ok: true, following: true, targetAddress: payload.normalizedTargetAddress }),
+      {
+        hasWriteSession,
+        walletAddress: payload.normalizedAddress,
+        scope: "profile_follows",
+      },
+    );
   } catch (error) {
     console.error("Error following profile:", error);
     return NextResponse.json({ error: "Failed to follow profile" }, { status: 500 });
@@ -210,7 +183,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     const payload = normalized.payload;
-    const hasWriteSession = await hasProfileFollowWriteSession(request, payload.normalizedAddress);
+    const hasWriteSession = await hasSignedCollectionWriteSession(
+      request,
+      PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME,
+      payload.normalizedAddress,
+      "profile_follows",
+    );
 
     if (!hasWriteSession) {
       if (!signature || !challengeId) {
@@ -218,42 +196,35 @@ export async function DELETE(request: NextRequest) {
       }
 
       const payloadHash = hashProfileFollowPayload(payload);
-      await ensureSignedActionChallengeTable();
-
-      try {
-        await db.transaction(async tx => {
-          await verifyAndConsumeSignedActionChallenge(tx, {
-            challengeId: String(challengeId),
+      const challengeFailure = await verifySignedCollectionChallenge({
+        challengeId: String(challengeId),
+        action: UNFOLLOW_PROFILE_ACTION,
+        walletAddress: payload.normalizedAddress,
+        payloadHash,
+        signature: signature as `0x${string}`,
+        buildMessage: ({ nonce, expiresAt }) =>
+          buildProfileFollowChallengeMessage({
             action: UNFOLLOW_PROFILE_ACTION,
-            walletAddress: payload.normalizedAddress,
+            address: payload.normalizedAddress,
             payloadHash,
-            signature: signature as `0x${string}`,
-            buildMessage: ({ nonce, expiresAt }) =>
-              buildProfileFollowChallengeMessage({
-                action: UNFOLLOW_PROFILE_ACTION,
-                address: payload.normalizedAddress,
-                payloadHash,
-                nonce,
-                expiresAt,
-              }),
-          });
-        });
-      } catch (error: unknown) {
-        const mapped = mapSignedActionError(error);
-        if (mapped) {
-          return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-        }
-        throw error;
+            nonce,
+            expiresAt,
+          }),
+      });
+      if (challengeFailure) {
+        return challengeFailure;
       }
     }
 
     await removeFollowedProfile(payload.normalizedAddress, payload.normalizedTargetAddress);
-    const response = NextResponse.json({ ok: true, following: false, targetAddress: payload.normalizedTargetAddress });
-    if (!hasWriteSession) {
-      const session = await issueSignedWriteSession(payload.normalizedAddress, "profile_follows");
-      response.cookies.set(getSignedWriteSessionCookie("profile_follows", session));
-    }
-    return response;
+    return maybeIssueSignedCollectionWriteSession(
+      NextResponse.json({ ok: true, following: false, targetAddress: payload.normalizedTargetAddress }),
+      {
+        hasWriteSession,
+        walletAddress: payload.normalizedAddress,
+        scope: "profile_follows",
+      },
+    );
   } catch (error) {
     console.error("Error unfollowing profile:", error);
     return NextResponse.json({ error: "Failed to unfollow profile" }, { status: 500 });

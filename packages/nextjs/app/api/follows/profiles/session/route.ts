@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { normalizeProfileFollowReadInput } from "~~/lib/auth/profileFollowChallenge";
-import {
-  PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME,
-  verifySignedReadSession,
-} from "~~/lib/auth/signedReadSessions";
-import {
-  PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME,
-  verifySignedWriteSession,
-} from "~~/lib/auth/signedWriteSessions";
+import { getSignedCollectionSessionStatus } from "~~/lib/auth/signedCollectionRoute";
+import { PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME } from "~~/lib/auth/signedReadSessions";
+import { PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME } from "~~/lib/auth/signedWriteSessions";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
@@ -27,16 +22,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const hasReadSession = await verifySignedReadSession(
-      request.cookies.get(PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME)?.value,
-      normalized.payload.normalizedAddress,
-      "profile_follows",
-    );
-    const hasWriteSession = await verifySignedWriteSession(
-      request.cookies.get(PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME)?.value,
-      normalized.payload.normalizedAddress,
-      "profile_follows",
-    );
+    const { hasReadSession, hasWriteSession } = await getSignedCollectionSessionStatus(request, {
+      walletAddress: normalized.payload.normalizedAddress,
+      readCookieName: PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME,
+      readScope: "profile_follows",
+      writeCookieName: PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME,
+      writeScope: "profile_follows",
+    });
 
     return NextResponse.json({
       hasSession: hasReadSession,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME, verifySignedReadSession } from "~~/lib/auth/signedReadSessions";
-import { WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME, verifySignedWriteSession } from "~~/lib/auth/signedWriteSessions";
+import { getSignedCollectionSessionStatus } from "~~/lib/auth/signedCollectionRoute";
+import { WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME } from "~~/lib/auth/signedReadSessions";
+import { WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME } from "~~/lib/auth/signedWriteSessions";
 import { isValidWalletAddress, normalizeWalletAddress } from "~~/lib/watchlist/contentWatch";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -19,16 +20,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const normalizedAddress = normalizeWalletAddress(address);
-    const hasReadSession = await verifySignedReadSession(
-      request.cookies.get(WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME)?.value,
-      normalizedAddress,
-      "watchlist",
-    );
-    const hasWriteSession = await verifySignedWriteSession(
-      request.cookies.get(WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME)?.value,
-      normalizedAddress,
-      "watchlist",
-    );
+    const { hasReadSession, hasWriteSession } = await getSignedCollectionSessionStatus(request, {
+      walletAddress: normalizedAddress,
+      readCookieName: WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME,
+      readScope: "watchlist",
+      writeCookieName: WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME,
+      writeScope: "watchlist",
+    });
 
     return NextResponse.json({
       hasSession: hasReadSession,
