@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
@@ -105,9 +106,9 @@ export function VotingQuestionCard({
       style={embedded ? {} : { background: "var(--color-base-200)" }}
     >
       {/* Content */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
         {/* Question at the top */}
-        <p className="mb-2 line-clamp-3 shrink-0 text-center text-[1.15rem] font-bold leading-snug text-white xl:text-[1.05rem] 2xl:text-[1.15rem]">
+        <p className="mb-2 line-clamp-3 shrink-0 text-center text-[1.05rem] font-bold leading-snug text-white xl:text-[1rem] 2xl:text-[1.05rem]">
           {(() => {
             const ratingSlash = `${currentRatingValue} out of 100`;
             const ratingPercent = `${currentRatingValue}%`;
@@ -229,53 +230,8 @@ export function VotingQuestionCard({
               </div>
             ) : (
               <>
-                <button
-                  onClick={() => onVote(false)}
-                  className="vote-btn vote-no"
-                  disabled={isCommitting}
-                  aria-label="Vote down"
-                >
-                  <span className="vote-bg" />
-                  <span className="vote-symbol">
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="drop-shadow-sm"
-                    >
-                      <path d="M12 18 L6 6 L18 6 Z" />
-                    </svg>
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => onVote(true)}
-                  className="vote-btn vote-yes"
-                  disabled={isCommitting}
-                  aria-label="Vote up"
-                >
-                  <span className="vote-bg" />
-                  <span className="vote-symbol">
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="white"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="drop-shadow-sm"
-                    >
-                      <path d="M12 6 L6 18 L18 18 Z" />
-                    </svg>
-                  </span>
-                </button>
+                <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
+                <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
               </>
             )
           ) : (
@@ -305,7 +261,7 @@ export function VotingQuestionCard({
         </div>
 
         {/* Rating history chart */}
-        <div className="mt-auto min-h-0 pt-1.5 xl:pt-1">
+        <div className="mt-auto shrink-0 pt-1.5 xl:pt-1">
           <RatingHistory contentId={contentId} />
         </div>
       </div>

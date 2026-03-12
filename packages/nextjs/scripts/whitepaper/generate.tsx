@@ -1,3 +1,5 @@
+/* eslint-disable jsx-a11y/alt-text */
+
 /**
  * Whitepaper PDF generator.
  * Run: yarn whitepaper  (or:  npx tsx scripts/whitepaper/generate.tsx)
@@ -13,7 +15,6 @@ const BLUE = "#359EEE";
 const YELLOW = "#FFC43D";
 const PINK = "#EF476F";
 const CYAN = "#03CEA4";
-const COLORS = [BLUE, YELLOW, PINK, CYAN];
 const DARK = "#1a1a2e";
 const GRAY = "#555";
 const LIGHT_BG = "#f5f5f5";

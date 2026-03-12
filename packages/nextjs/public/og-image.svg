@@ -1,73 +1,91 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" fill="none">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#08080c"/>
-      <stop offset="1" stop-color="#0e0e16"/>
+      <stop offset="0" stop-color="#060812" />
+      <stop offset="1" stop-color="#0B0E16" />
     </linearGradient>
-    <radialGradient id="orbGlow" cx="600" cy="260" r="320" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#359EEE" stop-opacity="0.10"/>
-      <stop offset="0.4" stop-color="#03CEA4" stop-opacity="0.05"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    <radialGradient id="halo" cx="600" cy="188" r="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F1D33" stop-opacity="0.5" />
+      <stop offset="0.65" stop-color="#08101D" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#060812" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="orbGlow2" cx="600" cy="260" r="250" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#EF476F" stop-opacity="0.04"/>
-      <stop offset="0.5" stop-color="#FFC43D" stop-opacity="0.03"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0"/>
-    </radialGradient>
+
+    <linearGradient id="curyo-top-right" x1="600" y1="64" x2="724" y2="188" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFC43D" />
+      <stop offset="1" stop-color="#EF476F" />
+    </linearGradient>
+    <linearGradient id="curyo-bottom-right" x1="724" y1="188" x2="600" y2="312" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EF476F" />
+      <stop offset="1" stop-color="#359EEE" />
+    </linearGradient>
+    <linearGradient id="curyo-bottom-left" x1="600" y1="312" x2="476" y2="188" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#359EEE" />
+      <stop offset="1" stop-color="#03CEA4" />
+    </linearGradient>
+    <linearGradient id="curyo-top-left" x1="476" y1="188" x2="600" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#03CEA4" />
+      <stop offset="1" stop-color="#FFC43D" />
+    </linearGradient>
+    <mask id="curyo-ring-mask">
+      <rect width="1200" height="630" fill="black" />
+      <g transform="rotate(-22.5 600 188)">
+        <circle cx="600" cy="188" r="124" fill="white" />
+        <circle cx="600" cy="178.5" r="111" fill="black" />
+      </g>
+    </mask>
   </defs>
 
-  <!-- Background -->
-  <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect width="1200" height="630" fill="url(#orbGlow)"/>
-  <rect width="1200" height="630" fill="url(#orbGlow2)"/>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <circle cx="600" cy="188" r="240" fill="url(#halo)" />
 
-  <!-- Ellipse orb -->
-  <g transform="translate(600,260)">
-    <!-- Outer blue ellipses -->
-    <ellipse rx="240" ry="140" fill="none" stroke="#359EEE" stroke-width="1.0" opacity="0.08" transform="rotate(0)"/>
-    <ellipse rx="232" ry="144" fill="none" stroke="#359EEE" stroke-width="1.0" opacity="0.10" transform="rotate(12)"/>
-    <ellipse rx="224" ry="148" fill="none" stroke="#359EEE" stroke-width="1.0" opacity="0.12" transform="rotate(24)"/>
-    <ellipse rx="216" ry="152" fill="none" stroke="#359EEE" stroke-width="1.1" opacity="0.14" transform="rotate(36)"/>
-    <ellipse rx="208" ry="155" fill="none" stroke="#359EEE" stroke-width="1.1" opacity="0.16" transform="rotate(48)"/>
-    <ellipse rx="200" ry="158" fill="none" stroke="#359EEE" stroke-width="1.2" opacity="0.18" transform="rotate(60)"/>
-
-    <!-- Teal transition -->
-    <ellipse rx="192" ry="160" fill="none" stroke="#03CEA4" stroke-width="1.2" opacity="0.18" transform="rotate(72)"/>
-    <ellipse rx="184" ry="160" fill="none" stroke="#03CEA4" stroke-width="1.2" opacity="0.20" transform="rotate(84)"/>
-    <ellipse rx="176" ry="158" fill="none" stroke="#03CEA4" stroke-width="1.3" opacity="0.22" transform="rotate(96)"/>
-    <ellipse rx="168" ry="155" fill="none" stroke="#03CEA4" stroke-width="1.3" opacity="0.24" transform="rotate(108)"/>
-
-    <!-- Yellow transition -->
-    <ellipse rx="160" ry="150" fill="none" stroke="#FFC43D" stroke-width="1.3" opacity="0.22" transform="rotate(120)"/>
-    <ellipse rx="152" ry="146" fill="none" stroke="#FFC43D" stroke-width="1.4" opacity="0.24" transform="rotate(132)"/>
-    <ellipse rx="144" ry="142" fill="none" stroke="#FFC43D" stroke-width="1.4" opacity="0.26" transform="rotate(144)"/>
-    <ellipse rx="136" ry="138" fill="none" stroke="#FFC43D" stroke-width="1.5" opacity="0.27" transform="rotate(156)"/>
-
-    <!-- Pink inner -->
-    <ellipse rx="128" ry="132" fill="none" stroke="#EF476F" stroke-width="1.4" opacity="0.25" transform="rotate(168)"/>
-    <ellipse rx="120" ry="126" fill="none" stroke="#EF476F" stroke-width="1.5" opacity="0.23" transform="rotate(0)"/>
-    <ellipse rx="112" ry="120" fill="none" stroke="#EF476F" stroke-width="1.5" opacity="0.21" transform="rotate(15)"/>
-
-    <!-- Core ellipses -->
-    <ellipse rx="104" ry="112" fill="none" stroke="#359EEE" stroke-width="1.5" opacity="0.20" transform="rotate(35)"/>
-    <ellipse rx="96" ry="104" fill="none" stroke="#03CEA4" stroke-width="1.5" opacity="0.18" transform="rotate(55)"/>
-    <ellipse rx="88" ry="96" fill="none" stroke="#FFC43D" stroke-width="1.4" opacity="0.16" transform="rotate(75)"/>
-    <ellipse rx="80" ry="88" fill="none" stroke="#EF476F" stroke-width="1.4" opacity="0.14" transform="rotate(95)"/>
-    <ellipse rx="72" ry="80" fill="none" stroke="#359EEE" stroke-width="1.3" opacity="0.12" transform="rotate(115)"/>
-    <ellipse rx="64" ry="72" fill="none" stroke="#03CEA4" stroke-width="1.3" opacity="0.10" transform="rotate(135)"/>
+  <g mask="url(#curyo-ring-mask)" transform="rotate(-22.5 600 188)">
+    <path d="M600 64 A124 124 0 0 1 724 188" stroke="url(#curyo-top-right)" stroke-width="48" stroke-linecap="round" />
+    <path
+      d="M724 188 A124 124 0 0 1 600 312"
+      stroke="url(#curyo-bottom-right)"
+      stroke-width="48"
+      stroke-linecap="round"
+    />
+    <path
+      d="M600 312 A124 124 0 0 1 476 188"
+      stroke="url(#curyo-bottom-left)"
+      stroke-width="48"
+      stroke-linecap="round"
+    />
+    <path d="M476 188 A124 124 0 0 1 600 64" stroke="url(#curyo-top-left)" stroke-width="48" stroke-linecap="round" />
   </g>
 
-  <!-- Title -->
-  <text x="600" y="278" font-family="'Space Grotesk', 'Inter', 'Segoe UI', sans-serif" font-size="120" font-weight="700" fill="white" text-anchor="middle" letter-spacing="10">CURYO</text>
-
-  <!-- Subtitle -->
-  <text x="600" y="335" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', sans-serif" font-size="22" font-weight="400" fill="#888" text-anchor="middle" letter-spacing="4">DECENTRALIZED REPUTATION GAME</text>
-
-  <!-- Tagline -->
-  <text x="600" y="400" font-family="'Inter', 'Segoe UI', 'Helvetica Neue', sans-serif" font-size="20" font-weight="400" fill="#555" text-anchor="middle" letter-spacing="0.5">Stake on your judgment. Surface the best content.</text>
-
-  <!-- Bottom accent line -->
-  <line x1="480" y1="580" x2="720" y2="580" stroke="#359EEE" stroke-width="2" opacity="0.3"/>
-  <circle cx="480" cy="580" r="2" fill="#359EEE" opacity="0.5"/>
-  <circle cx="720" cy="580" r="2" fill="#03CEA4" opacity="0.5"/>
+  <text
+    x="600"
+    y="410"
+    font-family="'Space Grotesk', 'Inter', 'Segoe UI', sans-serif"
+    font-size="116"
+    font-weight="700"
+    fill="white"
+    text-anchor="middle"
+    letter-spacing="8"
+  >
+    CURYO
+  </text>
+  <text
+    x="600"
+    y="468"
+    font-family="'Inter', 'Segoe UI', sans-serif"
+    font-size="22"
+    fill="#8A8F9C"
+    text-anchor="middle"
+    letter-spacing="4"
+  >
+    DECENTRALIZED REPUTATION GAME
+  </text>
+  <text
+    x="600"
+    y="524"
+    font-family="'Inter', 'Segoe UI', sans-serif"
+    font-size="20"
+    fill="#5F6675"
+    text-anchor="middle"
+  >
+    Stake on your judgment. Surface the best content.
+  </text>
 </svg>
