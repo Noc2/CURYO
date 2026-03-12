@@ -751,10 +751,13 @@ const HomeInner = () => {
   });
 
   return (
-    <div className="flex grow flex-col items-center px-4 pt-4 pb-8 xl:h-full xl:max-h-full xl:min-h-0 xl:overflow-hidden xl:px-5 xl:pt-3 xl:pb-3 2xl:px-6">
+    <div className="flex grow flex-col items-center px-4 pt-4 pb-8 xl:h-full xl:max-h-full xl:min-h-0 xl:overflow-hidden xl:px-5 xl:pt-2 xl:pb-2 2xl:px-6">
       <div className="w-full xl:flex xl:h-full xl:min-h-0 xl:max-w-[min(120rem,calc(100vw-18rem))] xl:flex-col 2xl:max-w-[min(136rem,calc(100vw-18rem))]">
         <VotingGuide />
-        <div className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-3 xl:flex-nowrap">
+        <div
+          className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
+          data-disable-queue-wheel="true"
+        >
           <CategoryFilter
             categories={categories}
             activeCategory={activeCategory}
@@ -782,7 +785,7 @@ const HomeInner = () => {
         </div>
 
         {isSearchMode ? (
-          <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2">
+          <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
             <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
               Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
             </div>
@@ -812,7 +815,10 @@ const HomeInner = () => {
               {emptyStateMessage}
             </div>
           ) : (
-            <div className="space-y-5 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:space-y-3">
+            <div
+              ref={activeCardRegionRef}
+              className="space-y-5 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:space-y-2.5"
+            >
               {isCommitting ? (
                 <div className="flex shrink-0 items-center justify-center">
                   <span className="text-base text-base-content/50">
@@ -827,7 +833,6 @@ const HomeInner = () => {
                   <div className="xl:min-h-0 xl:flex-1">
                     <div
                       key={primaryItem.id.toString()}
-                      ref={activeCardRegionRef}
                       className={`touch-pan-y xl:min-h-0 xl:h-full xl:flex-1 ${
                         navigationDirection === "next"
                           ? "motion-safe:animate-vote-card-next"
@@ -861,12 +866,13 @@ const HomeInner = () => {
               {visibleFeedItems.length > 0 ? (
                 <section
                   key={primaryItem?.id.toString() ?? "queue-empty"}
-                  className="surface-card space-y-3 rounded-2xl p-3 ring-1 ring-primary/20 motion-safe:animate-vote-queue-settle xl:flex-none xl:space-y-2 xl:p-2.5"
+                  className="surface-card space-y-3 rounded-2xl p-3 ring-1 ring-primary/20 motion-safe:animate-vote-queue-settle xl:max-h-[10.5rem] xl:flex-none xl:space-y-1.5 xl:p-2"
                   aria-label="Up next queue"
                 >
                   <div
                     ref={queueRailRef}
-                    className="flex min-w-0 gap-2.5 overflow-x-auto pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    data-disable-queue-wheel="true"
+                    className="flex min-w-0 gap-2.5 overflow-x-auto pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:gap-2 xl:pb-1"
                   >
                     {visibleFeedItems.map(item => (
                       <FeedQueueCard

@@ -101,7 +101,7 @@ export function VotingQuestionCard({
 
   return (
     <div
-      className={`relative ${embedded ? "" : "rounded-2xl"} p-4 space-y-3 overflow-visible h-full flex flex-col`}
+      className={`relative ${embedded ? "" : "rounded-2xl"} h-full flex flex-col overflow-visible p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
       style={embedded ? {} : { background: "var(--color-base-200)" }}
     >
       {/* Content */}

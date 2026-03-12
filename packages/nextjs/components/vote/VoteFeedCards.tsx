@@ -91,8 +91,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   canNext = false,
 }: FeedVoteCardProps) {
   return (
-    <div className="surface-card h-full min-h-0 overflow-hidden rounded-2xl p-3 ring-1 ring-primary/20">
-      <div className="mb-3 flex items-center justify-between gap-3 text-sm text-base-content/45">
+    <div className="surface-card h-full min-h-0 overflow-hidden rounded-2xl p-3 ring-1 ring-primary/20 xl:p-2.5">
+      <div className="mb-3 flex items-center justify-between gap-3 text-sm text-base-content/45 xl:mb-2.5">
         <button
           type="button"
           onClick={onPrevious}
@@ -119,7 +119,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-col gap-3 lg:h-[min(50vh,33rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-[min(72vh,52rem)]">
+      <div className="flex min-h-0 flex-col gap-3 lg:h-[min(48vh,31rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
         <div
           className="w-full overflow-hidden rounded-2xl lg:min-h-0 lg:w-3/5"
           style={{ background: "var(--color-base-300)" }}
@@ -189,9 +189,10 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       type="button"
       data-testid="content-thumbnail"
       data-thumbnail-id={item.id.toString()}
+      data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group w-[10.5rem] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[11.5rem] xl:w-[11.25rem] 2xl:w-[12rem] ${
+      className={`group w-[10.5rem] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[11.5rem] xl:w-[9.5rem] 2xl:w-[10rem] ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
@@ -226,11 +227,11 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         )}
       </div>
 
-      <div className="space-y-1.5 p-2.5 xl:space-y-1 xl:p-2">
+      <div className="space-y-1.5 p-2.5 xl:space-y-1 xl:p-1.5">
         <div className="flex items-center gap-2 text-xs text-base-content/55">
           <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
         </div>
-        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-[0.8rem]">{item.goal}</p>
+        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-[0.76rem]">{item.goal}</p>
         <div className="flex items-center gap-2 text-xs text-base-content/50 xl:flex-wrap xl:gap-1.5">
           <span className="rounded-full bg-base-content/[0.05] px-2 py-1 font-medium text-base-content/65">
             {platform.type}
