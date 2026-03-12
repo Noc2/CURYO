@@ -1,11 +1,15 @@
 "use client";
 
 import { memo, useState } from "react";
+import dynamic from "next/dynamic";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ShareIcon } from "@heroicons/react/24/outline";
+import { ContentEmbed } from "~~/components/content/ContentEmbed";
+import { GoalDisplay } from "~~/components/content/GoalDisplay";
+import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
-import { SwipeCard } from "~~/components/swipe/SwipeCard";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
 import { detectPlatform } from "~~/utils/platforms";
@@ -24,6 +28,11 @@ const PROXYABLE_THUMBNAIL_HOSTS = new Set([
   "img.youtube.com",
   "i.ytimg.com",
 ]);
+
+const ShareContentModal = dynamic(
+  () => import("~~/components/shared/ShareContentModal").then(m => m.ShareContentModal),
+  { ssr: false },
+);
 
 function getDomainLabel(url: string) {
   try {
@@ -120,35 +129,27 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       </div>
 
       <div className="flex min-h-0 flex-col gap-3 lg:h-[min(48vh,31rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
-        <div
-          className="w-full overflow-hidden rounded-2xl lg:min-h-0 lg:w-3/5"
-          style={{ background: "var(--color-base-300)" }}
-        >
-          <SwipeCard
-            content={item}
+        <div className="flex w-full min-h-0 flex-col gap-3 lg:w-3/5">
+          <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-base-content/5 bg-base-200">
+            <div className="h-full w-full">
+              <ContentEmbed url={item.url} />
+            </div>
+          </div>
+
+          <FeedContentMetaCard
+            item={item}
             submitterProfile={submitterProfile}
-            isTop
-            index={0}
-            canVote={!!address}
-            standalone
-            embedded
-            enableSwipeVote={false}
-            submitterAction={
-              normalizedAddress && item.submitter.toLowerCase() === normalizedAddress ? null : (
-                <FollowProfileButton
-                  following={following}
-                  pending={followPending}
-                  onClick={() => onToggleFollow(item.submitter)}
-                />
-              )
-            }
-            headerActions={
-              <WatchContentButton watched={watched} pending={watchPending} onClick={() => onToggleWatch(item.id)} />
-            }
+            normalizedAddress={normalizedAddress}
+            following={following}
+            followPending={followPending}
+            watched={watched}
+            watchPending={watchPending}
+            onToggleFollow={onToggleFollow}
+            onToggleWatch={onToggleWatch}
           />
         </div>
 
-        <div className="w-full rounded-2xl lg:min-h-0 lg:w-2/5" style={{ background: "var(--color-base-300)" }}>
+        <div className="w-full rounded-2xl border border-base-content/5 bg-base-200 lg:min-h-0 lg:w-2/5">
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}
@@ -164,6 +165,93 @@ export const FeedVoteCard = memo(function FeedVoteCard({
     </div>
   );
 });
+
+interface FeedContentMetaCardProps {
+  item: ContentItem;
+  submitterProfile?: SubmitterProfile;
+  normalizedAddress?: string;
+  following: boolean;
+  followPending: boolean;
+  watched: boolean;
+  watchPending: boolean;
+  onToggleWatch: (id: bigint) => void;
+  onToggleFollow: (address: string) => void;
+}
+
+function FeedContentMetaCard({
+  item,
+  submitterProfile,
+  normalizedAddress,
+  following,
+  followPending,
+  watched,
+  watchPending,
+  onToggleWatch,
+  onToggleFollow,
+}: FeedContentMetaCardProps) {
+  const [showShare, setShowShare] = useState(false);
+
+  return (
+    <>
+      <div className="rounded-2xl border border-base-content/5 bg-base-200 p-4 xl:p-3">
+        <div className="flex items-center justify-between gap-3">
+          <SubmitterBadge
+            address={item.submitter}
+            username={submitterProfile?.username}
+            profileImageUrl={submitterProfile?.profileImageUrl}
+            winRate={submitterProfile?.winRate}
+            totalSettledVotes={submitterProfile?.totalSettledVotes}
+            size="sm"
+            showAddress={Boolean(submitterProfile?.username)}
+            action={
+              normalizedAddress && item.submitter.toLowerCase() === normalizedAddress ? null : (
+                <FollowProfileButton
+                  following={following}
+                  pending={followPending}
+                  onClick={() => onToggleFollow(item.submitter)}
+                />
+              )
+            }
+          />
+          <div className="flex items-center gap-1">
+            <WatchContentButton watched={watched} pending={watchPending} onClick={() => onToggleWatch(item.id)} />
+            <button
+              type="button"
+              onClick={() => setShowShare(true)}
+              className="btn btn-ghost btn-sm btn-circle text-base-content/50 hover:text-base-content"
+              aria-label="Share content"
+            >
+              <ShareIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <GoalDisplay goal={item.goal} />
+        </div>
+
+        {item.categoryId === 3n ? (
+          <p className="mt-3 text-base leading-tight text-base-content/50">
+            Magic: The Gathering content is unofficial Fan Content permitted under the{" "}
+            <a
+              href="https://company.wizards.com/en/legal/fancontentpolicy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-base-content/70"
+            >
+              Fan Content Policy
+            </a>
+            . Not approved/endorsed by Wizards.
+          </p>
+        ) : null}
+      </div>
+
+      {showShare ? (
+        <ShareContentModal contentId={item.id} goal={item.goal} onClose={() => setShowShare(false)} />
+      ) : null}
+    </>
+  );
+}
 
 interface FeedQueueCardProps {
   item: ContentItem;
