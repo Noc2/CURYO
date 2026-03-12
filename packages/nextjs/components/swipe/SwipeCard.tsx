@@ -21,7 +21,7 @@ const SWIPE_THRESHOLD = 120;
 interface SwipeCardProps {
   content: ContentItem;
   submitterProfile?: SubmitterProfile;
-  onSwipe: (direction: "left" | "right") => void;
+  onSwipe?: (direction: "left" | "right") => void;
   isTop: boolean;
   index: number;
   canVote: boolean;
@@ -34,6 +34,7 @@ interface SwipeCardProps {
   embedded?: boolean;
   headerActions?: React.ReactNode;
   submitterAction?: React.ReactNode;
+  enableSwipeVote?: boolean;
 }
 
 /**
@@ -54,6 +55,7 @@ export function SwipeCard({
   embedded,
   headerActions,
   submitterAction,
+  enableSwipeVote = true,
 }: SwipeCardProps) {
   const [showShare, setShowShare] = useState(false);
   const x = useMotionValue(0);
@@ -63,9 +65,10 @@ export function SwipeCard({
   const stackScale = isTop ? 1 : 1 - index * 0.03;
   const stackY = isTop ? 0 : index * 10;
 
-  const canDrag = isTop && canVote;
+  const canDrag = enableSwipeVote && isTop && canVote && !!onSwipe;
 
   const handleDragEnd = (_: unknown, info: PanInfo) => {
+    if (!onSwipe) return;
     const offsetX = info.offset.x;
     const velocityX = info.velocity.x;
     if (offsetX > SWIPE_THRESHOLD || velocityX > 500) {

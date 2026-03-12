@@ -424,10 +424,8 @@ const HomeInner = () => {
   const {
     activeItem: primaryItem,
     activeSourceIndex,
-    orderedItems: orderedDisplayFeed,
-    promoteNext,
     selectContent,
-    upNextItems: queueItems,
+    selectRelative,
     visibleItems: visibleFeedItems,
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
@@ -456,10 +454,10 @@ const HomeInner = () => {
     return result;
   }, [submitterProfiles, accuracyMap]);
 
-  const canLoadMore = visibleCount < orderedDisplayFeed.length || hasMoreFeed;
+  const canLoadMore = visibleCount < displayFeed.length || hasMoreFeed;
   const activeStagePosition = activeSourceIndex >= 0 ? activeSourceIndex + 1 : 0;
   const stageTotal = totalContent > 0 ? totalContent : displayFeed.length;
-  const nextQueueItem = queueItems[0] ?? null;
+  const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
 
   // Reset visible count when filters change
   useEffect(() => {
@@ -469,7 +467,8 @@ const HomeInner = () => {
   const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const shouldPrefetchQueue = queueItems.length < 8 && (visibleCount < orderedDisplayFeed.length || hasMoreFeed);
+    const remainingLoadedItems = visibleFeedItems.length - (activeSourceIndex + 1);
+    const shouldPrefetchQueue = remainingLoadedItems < 8 && (visibleCount < displayFeed.length || hasMoreFeed);
 
     if (!shouldPrefetchQueue) {
       lastQueuePrefetchVisibleCountRef.current = null;
@@ -482,22 +481,30 @@ const HomeInner = () => {
 
     lastQueuePrefetchVisibleCountRef.current = visibleCount;
     setVisibleCount(prev => prev + FEED_PAGE_SIZE);
-  }, [hasMoreFeed, orderedDisplayFeed.length, queueItems.length, visibleCount]);
+  }, [activeSourceIndex, displayFeed.length, hasMoreFeed, visibleCount, visibleFeedItems.length]);
 
   useEffect(() => {
-    const nextThumbnailSrc = nextQueueItem ? getVoteFeedThumbnailSrc(nextQueueItem) : null;
+    const nextThumbnailSrc = selectedNextItem ? getVoteFeedThumbnailSrc(selectedNextItem) : null;
     if (!nextThumbnailSrc) return;
 
     const image = new window.Image();
     image.decoding = "async";
     image.src = nextThumbnailSrc;
-  }, [nextQueueItem]);
+  }, [selectedNextItem]);
 
   useEffect(() => {
     const rail = queueRailRef.current;
-    if (!rail) return;
-    rail.scrollTo({ left: 0, behavior: "smooth" });
-  }, [primaryItem?.id]);
+    if (!rail || !primaryItem) return;
+
+    const selectedThumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${primaryItem.id.toString()}"]`);
+    if (!selectedThumbnail) return;
+
+    selectedThumbnail.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [primaryItem]);
 
   // Infinite scroll with Intersection Observer
   useEffect(() => {
@@ -521,12 +528,6 @@ const HomeInner = () => {
       }
     };
   }, [canLoadMore]);
-
-  // Vote handlers
-  const handleSwipe = useCallback((item: ContentItem, direction: "left" | "right") => {
-    const isUp = direction === "right";
-    setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
-  }, []);
 
   const handleButtonVote = useCallback((item: ContentItem, isUp: boolean) => {
     setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
@@ -572,28 +573,28 @@ const HomeInner = () => {
       trackContentClick(id, categoryId);
       selectContent(id);
       replaceContentQueryParam(id);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     },
     [replaceContentQueryParam, selectContent],
   );
 
-  const handlePromoteNext = useCallback(() => {
-    const nextItem = promoteNext();
-    if (!nextItem) return false;
-    replaceContentQueryParam(nextItem.id);
-    return true;
-  }, [promoteNext, replaceContentQueryParam]);
+  const handleNavigateSelection = useCallback(
+    (direction: "previous" | "next") => {
+      const nextItem = selectRelative(direction === "next" ? 1 : -1);
+      if (!nextItem) return false;
 
-  const scrollQueueRailBy = useCallback((direction: "prev" | "next") => {
-    const rail = queueRailRef.current;
-    if (!rail) return;
+      replaceContentQueryParam(nextItem.id);
+      return true;
+    },
+    [replaceContentQueryParam, selectRelative],
+  );
 
-    const delta = Math.max(rail.clientWidth * 0.72, 220);
-    rail.scrollBy({
-      left: direction === "next" ? delta : -delta,
-      behavior: "smooth",
-    });
-  }, []);
+  const handleSelectPrevious = useCallback(() => {
+    handleNavigateSelection("previous");
+  }, [handleNavigateSelection]);
+
+  const handleSelectNext = useCallback(() => {
+    handleNavigateSelection("next");
+  }, [handleNavigateSelection]);
 
   const handleToggleWatch = useCallback(
     async (contentId: bigint) => {
@@ -714,8 +715,8 @@ const HomeInner = () => {
   }, [activeCategory, address, scope, searchQuery]);
 
   const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
-    enabled: Boolean(primaryItem && queueItems.length > 0 && !isCommitting && !stakeModal.isOpen),
-    onAdvance: handlePromoteNext,
+    enabled: Boolean(primaryItem && displayFeed.length > 1 && !isCommitting && !stakeModal.isOpen),
+    onNavigate: handleNavigateSelection,
   });
 
   return (
@@ -795,17 +796,19 @@ const HomeInner = () => {
                       <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 font-medium">
                         {activeStagePosition > 0 ? `Card ${activeStagePosition} of ${stageTotal}` : "Live queue"}
                       </span>
-                      {nextQueueItem ? (
+                      {selectedNextItem ? (
                         <span className="rounded-full bg-primary/10 px-3 py-1.5 font-medium text-primary">
-                          Next:{" "}
-                          {nextQueueItem.goal.length > 48
-                            ? `${nextQueueItem.goal.slice(0, 45)}...`
-                            : nextQueueItem.goal}
+                          Up next:{" "}
+                          {selectedNextItem.goal.length > 48
+                            ? `${selectedNextItem.goal.slice(0, 45)}...`
+                            : selectedNextItem.goal}
                         </span>
                       ) : null}
                     </div>
                     <span className="text-base-content/45">
-                      {queueItems.length > 0 ? "Scroll or swipe up to promote the next card." : "No queued cards left."}
+                      {displayFeed.length > 1
+                        ? "Scroll or swipe up and down to browse cards."
+                        : "No other cards left in this feed."}
                     </span>
                   </div>
                   <div
@@ -816,7 +819,6 @@ const HomeInner = () => {
                     <FeedVoteCard
                       item={primaryItem}
                       submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                      onSwipe={handleSwipe}
                       onVote={handleButtonVote}
                       onToggleWatch={handleToggleWatch}
                       onToggleFollow={handleToggleFollow}
@@ -833,7 +835,7 @@ const HomeInner = () => {
                 </div>
               ) : null}
 
-              {queueItems.length > 0 ? (
+              {visibleFeedItems.length > 0 ? (
                 <section
                   key={primaryItem?.id.toString() ?? "queue-empty"}
                   className="space-y-3 motion-safe:animate-vote-queue-settle xl:flex-none"
@@ -841,29 +843,33 @@ const HomeInner = () => {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/45">Up next</p>
+                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/45">
+                        Browse cards
+                      </p>
                       <p className="text-sm text-base-content/55">
-                        Scroll, tap, or click a card to promote it into the main voting stage.
+                        The blue outline marks the selected card. Scroll, swipe, or tap a thumbnail to move.
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 text-sm font-medium text-base-content/60">
-                        {queueItems.length} queued
+                        {visibleFeedItems.length} loaded
                       </span>
                       <div className="hidden items-center gap-1 xl:flex">
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
-                          onClick={() => scrollQueueRailBy("prev")}
-                          aria-label="Scroll queued cards left"
+                          onClick={handleSelectPrevious}
+                          disabled={activeSourceIndex <= 0}
+                          aria-label="Select previous card"
                         >
                           <ChevronLeftIcon className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
-                          onClick={() => scrollQueueRailBy("next")}
-                          aria-label="Scroll queued cards right"
+                          onClick={handleSelectNext}
+                          disabled={activeSourceIndex < 0 || activeSourceIndex >= displayFeed.length - 1}
+                          aria-label="Select next card"
                         >
                           <ChevronRightIcon className="h-4 w-4" />
                         </button>
@@ -874,12 +880,13 @@ const HomeInner = () => {
                     ref={queueRailRef}
                     className="grid grid-cols-2 gap-3 xl:flex xl:gap-2.5 xl:overflow-x-auto xl:pb-2 xl:snap-x xl:snap-mandatory xl:[scrollbar-width:none] xl:[&::-webkit-scrollbar]:hidden"
                   >
-                    {queueItems.map((item, index) => (
+                    {visibleFeedItems.map((item, index) => (
                       <FeedQueueCard
                         key={item.id.toString()}
                         item={item}
                         onSelect={handleSelectCard}
-                        queuePosition={index + 1}
+                        queuePosition={index}
+                        selected={item.id === primaryItem?.id}
                         submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
                       />
                     ))}

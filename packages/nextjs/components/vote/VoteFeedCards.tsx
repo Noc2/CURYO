@@ -53,7 +53,6 @@ export function getVoteFeedThumbnailSrc(item: ContentItem) {
 interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
-  onSwipe: (item: ContentItem, direction: "left" | "right") => void;
   onVote: (item: ContentItem, isUp: boolean) => void;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
@@ -70,7 +69,6 @@ interface FeedVoteCardProps {
 export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
-  onSwipe,
   onVote,
   onToggleWatch,
   onToggleFollow,
@@ -103,12 +101,12 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           <SwipeCard
             content={item}
             submitterProfile={submitterProfile}
-            onSwipe={direction => onSwipe(item, direction)}
             isTop
             index={0}
             canVote={!!address}
             standalone
             embedded
+            enableSwipeVote={false}
             submitterAction={
               normalizedAddress && item.submitter.toLowerCase() === normalizedAddress ? null : (
                 <FollowProfileButton
@@ -146,6 +144,7 @@ interface FeedQueueCardProps {
   onSelect: (id: bigint, categoryId: bigint) => void;
   submitterProfile?: SubmitterProfile;
   queuePosition: number;
+  selected: boolean;
 }
 
 export const FeedQueueCard = memo(function FeedQueueCard({
@@ -153,20 +152,22 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   onSelect,
   submitterProfile,
   queuePosition,
+  selected,
 }: FeedQueueCardProps) {
   const platform = detectPlatform(item.url);
   const [imageError, setImageError] = useState(false);
   const thumbnailSrc = getVoteFeedThumbnailSrc(item);
-  const isNext = queuePosition === 1;
 
   return (
     <button
       type="button"
       data-testid="content-thumbnail"
+      data-thumbnail-id={item.id.toString()}
+      aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
       className={`group w-full cursor-pointer overflow-hidden rounded-xl border text-left transition-colors xl:w-[12.75rem] xl:flex-shrink-0 xl:snap-start ${
-        isNext
-          ? "border-primary/25 bg-primary/[0.05] hover:border-primary/40 hover:bg-primary/[0.08]"
+        selected
+          ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
       }`}
     >
@@ -175,9 +176,9 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
             {queuePosition + 1}
           </span>
-          {isNext ? (
+          {selected ? (
             <span className="rounded-full bg-primary/90 px-2.5 py-1 text-xs font-semibold text-primary-content">
-              Next
+              Selected
             </span>
           ) : null}
         </div>
@@ -201,7 +202,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
 
       <div className="space-y-1.5 p-2.5 xl:space-y-1 xl:p-2">
         <div className="flex items-center gap-2 text-xs text-base-content/55">
-          <span className="font-medium uppercase tracking-wide">{isNext ? "Up next" : "Queued"}</span>
+          <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
         </div>
         <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-[0.82rem]">{item.goal}</p>
         <div className="flex items-center gap-2 text-xs text-base-content/50 xl:flex-wrap xl:gap-1.5">

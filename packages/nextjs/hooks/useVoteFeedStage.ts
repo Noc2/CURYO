@@ -38,40 +38,33 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
     return index === -1 ? 0 : index;
   }, [activeContentId, items]);
 
-  const orderedItems = useMemo(() => {
-    if (items.length === 0) return [];
-    if (activeSourceIndex <= 0) return items;
-    return items.slice(activeSourceIndex);
-  }, [activeSourceIndex, items]);
-
-  const visibleItems = useMemo(() => orderedItems.slice(0, visibleCount), [orderedItems, visibleCount]);
-  const activeItem = visibleItems[0] ?? null;
-  const upNextItems = useMemo(() => visibleItems.slice(1), [visibleItems]);
+  const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
+  const activeItem = activeSourceIndex >= 0 ? (items[activeSourceIndex] ?? null) : null;
 
   const selectContent = useCallback((contentId: bigint | null) => {
     setActiveContentId(contentId);
   }, []);
 
-  const promoteToContent = useCallback((contentId: bigint) => {
-    setActiveContentId(contentId);
-  }, []);
+  const selectRelative = useCallback(
+    (offset: number) => {
+      if (items.length === 0) return null;
 
-  const promoteNext = useCallback(() => {
-    const nextItem = upNextItems[0];
-    if (!nextItem) return null;
-    setActiveContentId(nextItem.id);
-    return nextItem;
-  }, [upNextItems]);
+      const targetIndex = Math.min(Math.max(activeSourceIndex + offset, 0), items.length - 1);
+      if (targetIndex === activeSourceIndex) return null;
+
+      const nextItem = items[targetIndex];
+      setActiveContentId(nextItem.id);
+      return nextItem;
+    },
+    [activeSourceIndex, items],
+  );
 
   return {
     activeContentId,
     activeItem,
     activeSourceIndex,
-    orderedItems,
-    promoteNext,
-    promoteToContent,
     selectContent,
-    upNextItems,
+    selectRelative,
     visibleItems,
   };
 }
