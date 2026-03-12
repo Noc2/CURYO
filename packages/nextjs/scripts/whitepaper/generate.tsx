@@ -12,7 +12,6 @@ import { Document, Image, Page, StyleSheet, Text, View, renderToFile, renderToSt
 
 // ── Brand colors ──
 const BLUE = "#359EEE";
-const YELLOW = "#FFC43D";
 const PINK = "#EF476F";
 const CYAN = "#03CEA4";
 const DARK = "#1a1a2e";
