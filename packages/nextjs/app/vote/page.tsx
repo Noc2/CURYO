@@ -6,7 +6,6 @@ import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
@@ -432,6 +431,7 @@ const HomeInner = () => {
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
     requestedActiveId,
+    windowSize: 7,
   });
 
   const submitterAddresses = useMemo(() => {
@@ -466,7 +466,7 @@ const HomeInner = () => {
   const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const remainingLoadedItems = visibleFeedItems.length - (activeSourceIndex + 1);
+    const remainingLoadedItems = displayFeed.length - (activeSourceIndex + 1);
     const shouldPrefetchQueue = remainingLoadedItems < 8 && (visibleCount < displayFeed.length || hasMoreFeed);
 
     if (!shouldPrefetchQueue) {
@@ -480,7 +480,7 @@ const HomeInner = () => {
 
     lastQueuePrefetchVisibleCountRef.current = visibleCount;
     setVisibleCount(prev => prev + FEED_PAGE_SIZE);
-  }, [activeSourceIndex, displayFeed.length, hasMoreFeed, visibleCount, visibleFeedItems.length]);
+  }, [activeSourceIndex, displayFeed.length, hasMoreFeed, visibleCount]);
 
   useEffect(() => {
     const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
@@ -864,40 +864,20 @@ const HomeInner = () => {
                   className="surface-card space-y-3 rounded-2xl p-3 ring-1 ring-primary/20 motion-safe:animate-vote-queue-settle xl:flex-none"
                   aria-label="Up next queue"
                 >
-                  <div className="flex items-center gap-2 xl:gap-3">
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
-                      onClick={handleSelectPrevious}
-                      disabled={activeSourceIndex <= 0}
-                      aria-label="Select previous card"
-                    >
-                      <ChevronLeftIcon className="h-4 w-4" />
-                    </button>
-                    <div
-                      ref={queueRailRef}
-                      className="grid min-w-0 flex-1 grid-cols-2 gap-3 xl:flex xl:gap-2.5 xl:overflow-x-auto xl:pb-2 xl:snap-x xl:snap-mandatory xl:[scrollbar-width:none] xl:[&::-webkit-scrollbar]:hidden"
-                    >
-                      {visibleFeedItems.map((item, index) => (
-                        <FeedQueueCard
-                          key={item.id.toString()}
-                          item={item}
-                          onSelect={handleSelectCard}
-                          queuePosition={index}
-                          selected={item.id === primaryItem?.id}
-                          submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
-                      onClick={handleSelectNext}
-                      disabled={activeSourceIndex < 0 || activeSourceIndex >= displayFeed.length - 1}
-                      aria-label="Select next card"
-                    >
-                      <ChevronRightIcon className="h-4 w-4" />
-                    </button>
+                  <div
+                    ref={queueRailRef}
+                    className="flex min-w-0 gap-2.5 overflow-x-auto pb-2 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {visibleFeedItems.map(item => (
+                      <FeedQueueCard
+                        key={item.id.toString()}
+                        item={item}
+                        onSelect={handleSelectCard}
+                        queuePosition={displayFeed.findIndex(feedItem => feedItem.id === item.id)}
+                        selected={item.id === primaryItem?.id}
+                        submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                      />
+                    ))}
                   </div>
                 </section>
               ) : null}

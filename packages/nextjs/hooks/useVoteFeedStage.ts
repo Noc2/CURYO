@@ -6,10 +6,11 @@ import type { ContentItem } from "~~/hooks/useContentFeed";
 interface UseVoteFeedStageOptions {
   visibleCount: number;
   requestedActiveId?: bigint | null;
+  windowSize?: number;
 }
 
 export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStageOptions) {
-  const { visibleCount, requestedActiveId } = options;
+  const { visibleCount, requestedActiveId, windowSize = 7 } = options;
   const [activeContentId, setActiveContentId] = useState<bigint | null>(requestedActiveId ?? null);
 
   useEffect(() => {
@@ -38,7 +39,15 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
     return index === -1 ? 0 : index;
   }, [activeContentId, items]);
 
-  const visibleItems = useMemo(() => items.slice(0, visibleCount), [items, visibleCount]);
+  const visibleItems = useMemo(() => {
+    const loadedItems = items.slice(0, visibleCount);
+    if (loadedItems.length <= windowSize) return loadedItems;
+
+    const halfWindow = Math.floor(windowSize / 2);
+    const maxStart = Math.max(loadedItems.length - windowSize, 0);
+    const start = Math.min(Math.max(activeSourceIndex - halfWindow, 0), maxStart);
+    return loadedItems.slice(start, start + windowSize);
+  }, [activeSourceIndex, items, visibleCount, windowSize]);
   const activeItem = activeSourceIndex >= 0 ? (items[activeSourceIndex] ?? null) : null;
 
   const selectContent = useCallback((contentId: bigint | null) => {

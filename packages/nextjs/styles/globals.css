@@ -421,35 +421,51 @@
 
 @keyframes vote-card-next {
   0% {
-    opacity: 0;
-    transform: translateX(30px) scale(0.985);
+    opacity: 0.18;
+    transform: translate3d(44px, 0, 0) scale(0.992);
+    filter: blur(8px);
+  }
+  55% {
+    opacity: 1;
+    transform: translate3d(-4px, 0, 0) scale(1);
+    filter: blur(0);
   }
   100% {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
   }
 }
 
 @keyframes vote-card-prev {
   0% {
-    opacity: 0;
-    transform: translateX(-30px) scale(0.985);
+    opacity: 0.18;
+    transform: translate3d(-44px, 0, 0) scale(0.992);
+    filter: blur(8px);
+  }
+  55% {
+    opacity: 1;
+    transform: translate3d(4px, 0, 0) scale(1);
+    filter: blur(0);
   }
   100% {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
   }
 }
 
 .animate-vote-card-promote,
 .animate-vote-card-next {
-  animation: vote-card-next 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity, filter;
+  animation: vote-card-next 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-vote-card-prev {
-  animation: vote-card-prev 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity, filter;
+  animation: vote-card-prev 320ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-vote-queue-settle {
-  animation: vote-queue-settle 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: vote-queue-settle 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }

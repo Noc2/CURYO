@@ -191,7 +191,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-thumbnail-id={item.id.toString()}
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group w-full cursor-pointer overflow-hidden rounded-xl border text-left transition-colors xl:w-[12.75rem] xl:flex-shrink-0 xl:snap-start ${
+      className={`group w-[11rem] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:w-[12.75rem] ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
