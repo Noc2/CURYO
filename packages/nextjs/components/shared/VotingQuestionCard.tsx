@@ -108,7 +108,7 @@ export function VotingQuestionCard({
       {/* Content */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* Question at the top */}
-        <p className="mb-2 line-clamp-3 shrink-0 text-center text-[1.05rem] font-bold leading-snug text-white xl:text-[1rem] 2xl:text-[1.05rem]">
+        <p className="font-heading mb-3 line-clamp-3 shrink-0 text-center text-[1.3rem] font-bold leading-[1.18] tracking-tight text-white xl:text-[1.35rem] 2xl:text-[1.45rem]">
           {(() => {
             const ratingSlash = `${currentRatingValue} out of 100`;
             const ratingPercent = `${currentRatingValue}%`;
@@ -132,12 +132,12 @@ export function VotingQuestionCard({
             return questionText;
           })()}
           <span
-            className="inline-block ml-1.5 align-middle tooltip tooltip-bottom cursor-help"
+            className="tooltip tooltip-bottom ml-1.5 inline-block cursor-help align-middle"
             data-tip="Illegal content, content that doesn't load, or content with the wrong description should be downvoted."
           >
             <svg
-              width="16"
-              height="16"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
