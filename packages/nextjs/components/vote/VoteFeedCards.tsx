@@ -101,16 +101,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 }: FeedVoteCardProps) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
-      <FeedContentMetaCard
+      <FeedContentHeader
         item={item}
-        submitterProfile={submitterProfile}
-        normalizedAddress={normalizedAddress}
-        following={following}
-        followPending={followPending}
-        watched={watched}
-        watchPending={watchPending}
-        onToggleFollow={onToggleFollow}
-        onToggleWatch={onToggleWatch}
         onPrevious={onPrevious}
         onNext={onNext}
         canPrevious={canPrevious}
@@ -118,12 +110,24 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       />
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:h-[min(48vh,30rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
-        <div className="w-full min-h-0 lg:w-3/5">
+        <div className="grid w-full min-h-0 gap-3 lg:w-3/5 lg:grid-rows-[minmax(0,1fr)_auto]">
           <div className="min-h-0 overflow-hidden rounded-2xl bg-base-200">
             <div className="h-full w-full">
               <ContentEmbed url={item.url} />
             </div>
           </div>
+
+          <FeedContentMetaCard
+            item={item}
+            submitterProfile={submitterProfile}
+            normalizedAddress={normalizedAddress}
+            following={following}
+            followPending={followPending}
+            watched={watched}
+            watchPending={watchPending}
+            onToggleFollow={onToggleFollow}
+            onToggleWatch={onToggleWatch}
+          />
         </div>
 
         <div className="w-full min-h-0 rounded-2xl bg-base-200 lg:w-2/5">
@@ -153,10 +157,49 @@ interface FeedContentMetaCardProps {
   watchPending: boolean;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
+}
+
+interface FeedContentHeaderProps {
+  item: ContentItem;
   onPrevious?: () => void;
   onNext?: () => void;
   canPrevious: boolean;
   canNext: boolean;
+}
+
+function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: FeedContentHeaderProps) {
+  const platformType = detectPlatform(item.url).type;
+
+  return (
+    <div className="rounded-2xl bg-base-200 p-4 xl:p-3">
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onPrevious}
+          disabled={!canPrevious}
+          aria-label="Show previous card"
+          className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/65 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+        </button>
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+          <span className="truncate rounded-full bg-base-300 px-2.5 py-1 font-medium text-base-content/70">
+            {platformType}
+          </span>
+          {item.tags[0] ? <span className="truncate text-base-content/45">#{item.tags[0]}</span> : null}
+        </div>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!canNext}
+          aria-label="Show next card"
+          className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/65 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ChevronRightIcon className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function FeedContentMetaCard({
@@ -169,45 +212,13 @@ function FeedContentMetaCard({
   watchPending,
   onToggleWatch,
   onToggleFollow,
-  onPrevious,
-  onNext,
-  canPrevious,
-  canNext,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
-  const platformType = detectPlatform(item.url).type;
 
   return (
     <>
       <div className="rounded-2xl bg-base-200 p-4 xl:p-3">
         <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onPrevious}
-            disabled={!canPrevious}
-            aria-label="Show previous card"
-            className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/65 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <ChevronLeftIcon className="h-4 w-4" />
-          </button>
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-            <span className="truncate rounded-full bg-base-300 px-2.5 py-1 font-medium text-base-content/70">
-              {platformType}
-            </span>
-            {item.tags[0] ? <span className="truncate text-base-content/45">#{item.tags[0]}</span> : null}
-          </div>
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={!canNext}
-            aria-label="Show next card"
-            className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/65 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-          >
-            <ChevronRightIcon className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
             username={submitterProfile?.username}
