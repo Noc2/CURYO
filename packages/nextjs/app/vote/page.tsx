@@ -734,16 +734,30 @@ const HomeInner = () => {
               ) : null}
 
               {queueItems.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                  {queueItems.map(item => (
-                    <FeedQueueCard
-                      key={item.id.toString()}
-                      item={item}
-                      onSelect={handleSelectCard}
-                      submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
-                    />
-                  ))}
-                </div>
+                <section className="space-y-3" aria-label="Up next queue">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/45">Up next</p>
+                      <p className="text-sm text-base-content/55">
+                        Scroll, tap, or click a card to promote it into the main voting stage.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 text-sm font-medium text-base-content/60">
+                      {queueItems.length} queued
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    {queueItems.map((item, index) => (
+                      <FeedQueueCard
+                        key={item.id.toString()}
+                        item={item}
+                        onSelect={handleSelectCard}
+                        queuePosition={index + 1}
+                        submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                      />
+                    ))}
+                  </div>
+                </section>
               ) : null}
 
               {canLoadMore ? (
