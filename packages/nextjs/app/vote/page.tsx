@@ -457,9 +457,6 @@ const HomeInner = () => {
   }, [submitterProfiles, accuracyMap]);
 
   const canLoadMore = visibleCount < displayFeed.length || hasMoreFeed;
-  const activeStagePosition = activeSourceIndex >= 0 ? activeSourceIndex + 1 : 0;
-  const stageTotal = totalContent > 0 ? totalContent : displayFeed.length;
-  const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
 
   // Reset visible count when filters change
   useEffect(() => {
@@ -486,13 +483,14 @@ const HomeInner = () => {
   }, [activeSourceIndex, displayFeed.length, hasMoreFeed, visibleCount, visibleFeedItems.length]);
 
   useEffect(() => {
+    const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
     const nextThumbnailSrc = selectedNextItem ? getVoteFeedThumbnailSrc(selectedNextItem) : null;
     if (!nextThumbnailSrc) return;
 
     const image = new window.Image();
     image.decoding = "async";
     image.src = nextThumbnailSrc;
-  }, [selectedNextItem]);
+  }, [activeSourceIndex, displayFeed]);
 
   useEffect(() => {
     const rail = queueRailRef.current;
@@ -826,54 +824,50 @@ const HomeInner = () => {
 
               {primaryItem ? (
                 <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
-                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 text-sm">
-                    <div className="flex flex-wrap items-center gap-2 text-base-content/60">
-                      <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 font-medium">
-                        {activeStagePosition > 0 ? `Card ${activeStagePosition} of ${stageTotal}` : "Live queue"}
-                      </span>
-                      {selectedNextItem ? (
-                        <span className="rounded-full bg-primary/10 px-3 py-1.5 font-medium text-primary">
-                          Up next:{" "}
-                          {selectedNextItem.goal.length > 48
-                            ? `${selectedNextItem.goal.slice(0, 45)}...`
-                            : selectedNextItem.goal}
-                        </span>
-                      ) : null}
+                  <div className="relative xl:min-h-0 xl:flex-1">
+                    <button
+                      type="button"
+                      className="btn btn-circle btn-sm absolute top-1/2 left-2 z-20 -translate-y-1/2 border border-base-content/10 bg-base-100/88 text-base-content/70 shadow-lg backdrop-blur hover:border-primary/30 hover:text-primary sm:left-3 sm:btn-md"
+                      onClick={handleSelectPrevious}
+                      disabled={activeSourceIndex <= 0}
+                      aria-label="Show previous card"
+                    >
+                      <ChevronLeftIcon className="h-5 w-5" />
+                    </button>
+                    <div
+                      key={primaryItem.id.toString()}
+                      ref={activeCardRegionRef}
+                      className={`touch-pan-y px-8 sm:px-10 xl:min-h-0 xl:h-full xl:flex-1 ${
+                        navigationDirection === "next"
+                          ? "motion-safe:animate-vote-card-next"
+                          : "motion-safe:animate-vote-card-prev"
+                      }`}
+                    >
+                      <FeedVoteCard
+                        item={primaryItem}
+                        submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                        onVote={handleButtonVote}
+                        onToggleWatch={handleToggleWatch}
+                        onToggleFollow={handleToggleFollow}
+                        watched={watchedContentIds.has(primaryItem.id.toString())}
+                        watchPending={isWatchPending(primaryItem.id)}
+                        following={followedWallets.has(primaryItem.submitter.toLowerCase())}
+                        followPending={isFollowPending(primaryItem.submitter)}
+                        normalizedAddress={normalizedAddress}
+                        isCommitting={isCommitting}
+                        voteError={voteError}
+                        address={address}
+                      />
                     </div>
-                    <span className="text-base-content/45">
-                      {displayFeed.length > 1
-                        ? "Scroll on desktop or swipe left and right on mobile to browse cards."
-                        : "No other cards left in this feed."}
-                    </span>
-                  </div>
-                  <div
-                    key={primaryItem.id.toString()}
-                    ref={activeCardRegionRef}
-                    className={`xl:min-h-0 xl:flex-1 ${
-                      navigationDirection === "next"
-                        ? "motion-safe:animate-vote-card-next"
-                        : "motion-safe:animate-vote-card-prev"
-                    }`}
-                  >
-                    <FeedVoteCard
-                      item={primaryItem}
-                      submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                      onVote={handleButtonVote}
-                      onToggleWatch={handleToggleWatch}
-                      onToggleFollow={handleToggleFollow}
-                      watched={watchedContentIds.has(primaryItem.id.toString())}
-                      watchPending={isWatchPending(primaryItem.id)}
-                      following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                      followPending={isFollowPending(primaryItem.submitter)}
-                      normalizedAddress={normalizedAddress}
-                      isCommitting={isCommitting}
-                      voteError={voteError}
-                      address={address}
-                      onPrevious={handleSelectPrevious}
-                      onNext={handleSelectNext}
-                      canPrevious={activeSourceIndex > 0}
-                      canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
-                    />
+                    <button
+                      type="button"
+                      className="btn btn-circle btn-sm absolute top-1/2 right-2 z-20 -translate-y-1/2 border border-base-content/10 bg-base-100/88 text-base-content/70 shadow-lg backdrop-blur hover:border-primary/30 hover:text-primary sm:right-3 sm:btn-md"
+                      onClick={handleSelectNext}
+                      disabled={activeSourceIndex < 0 || activeSourceIndex >= displayFeed.length - 1}
+                      aria-label="Show next card"
+                    >
+                      <ChevronRightIcon className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
               ) : null}
@@ -884,55 +878,40 @@ const HomeInner = () => {
                   className="space-y-3 motion-safe:animate-vote-queue-settle xl:flex-none"
                   aria-label="Up next queue"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/45">
-                        Browse cards
-                      </p>
-                      <p className="text-sm text-base-content/55">
-                        The blue outline marks the selected card. Scroll, swipe sideways, or tap a thumbnail to move.
-                      </p>
+                  <div className="flex items-center gap-2 xl:gap-3">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
+                      onClick={handleSelectPrevious}
+                      disabled={activeSourceIndex <= 0}
+                      aria-label="Select previous card"
+                    >
+                      <ChevronLeftIcon className="h-4 w-4" />
+                    </button>
+                    <div
+                      ref={queueRailRef}
+                      className="grid min-w-0 flex-1 grid-cols-2 gap-3 xl:flex xl:gap-2.5 xl:overflow-x-auto xl:pb-2 xl:snap-x xl:snap-mandatory xl:[scrollbar-width:none] xl:[&::-webkit-scrollbar]:hidden"
+                    >
+                      {visibleFeedItems.map((item, index) => (
+                        <FeedQueueCard
+                          key={item.id.toString()}
+                          item={item}
+                          onSelect={handleSelectCard}
+                          queuePosition={index}
+                          selected={item.id === primaryItem?.id}
+                          submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                        />
+                      ))}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 text-sm font-medium text-base-content/60">
-                        {visibleFeedItems.length} loaded
-                      </span>
-                      <div className="hidden items-center gap-1 xl:flex">
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
-                          onClick={handleSelectPrevious}
-                          disabled={activeSourceIndex <= 0}
-                          aria-label="Select previous card"
-                        >
-                          <ChevronLeftIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
-                          onClick={handleSelectNext}
-                          disabled={activeSourceIndex < 0 || activeSourceIndex >= displayFeed.length - 1}
-                          aria-label="Select next card"
-                        >
-                          <ChevronRightIcon className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    ref={queueRailRef}
-                    className="grid grid-cols-2 gap-3 xl:flex xl:gap-2.5 xl:overflow-x-auto xl:pb-2 xl:snap-x xl:snap-mandatory xl:[scrollbar-width:none] xl:[&::-webkit-scrollbar]:hidden"
-                  >
-                    {visibleFeedItems.map((item, index) => (
-                      <FeedQueueCard
-                        key={item.id.toString()}
-                        item={item}
-                        onSelect={handleSelectCard}
-                        queuePosition={index}
-                        selected={item.id === primaryItem?.id}
-                        submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
-                      />
-                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm btn-circle border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary"
+                      onClick={handleSelectNext}
+                      disabled={activeSourceIndex < 0 || activeSourceIndex >= displayFeed.length - 1}
+                      aria-label="Select next card"
+                    >
+                      <ChevronRightIcon className="h-4 w-4" />
+                    </button>
                   </div>
                 </section>
               ) : null}
