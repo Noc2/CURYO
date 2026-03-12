@@ -92,54 +92,60 @@ function getActiveMediaLayout(url: string): ActiveMediaLayout {
     case "openlibrary":
     case "tmdb":
       return {
-        gridClass: "lg:grid-cols-[minmax(0,clamp(18rem,30vw,34rem))_minmax(19rem,1fr)]",
-        mediaShellClass: "lg:aspect-[2/3]",
+        gridClass:
+          "lg:grid-cols-[minmax(0,clamp(13.5rem,22vw,20rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(14rem,21vw,21rem))_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:aspect-[2/3] lg:max-h-[min(56vh,34rem)]",
       };
     case "wikipedia":
       return {
-        gridClass: "lg:grid-cols-[minmax(0,clamp(19rem,31vw,35rem))_minmax(19rem,1fr)]",
-        mediaShellClass: "lg:aspect-[3/4]",
+        gridClass:
+          "lg:grid-cols-[minmax(0,clamp(14rem,23vw,22rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(15rem,22vw,23rem))_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:aspect-[3/4] lg:max-h-[min(55vh,33rem)]",
       };
     case "scryfall":
       return {
-        gridClass: "lg:grid-cols-[minmax(0,clamp(18rem,29vw,33rem))_minmax(19rem,1fr)]",
-        mediaShellClass: "lg:aspect-[5/7]",
+        gridClass:
+          "lg:grid-cols-[minmax(0,clamp(13.5rem,21vw,20rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(14rem,20vw,21rem))_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:aspect-[5/7] lg:max-h-[min(54vh,32rem)]",
       };
     case "github":
       return {
-        gridClass: "lg:grid-cols-[minmax(0,clamp(28rem,40vw,46rem))_minmax(19rem,1fr)]",
-        mediaShellClass: "lg:aspect-[16/10]",
+        gridClass:
+          "lg:grid-cols-[minmax(0,clamp(18rem,29vw,28rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(19rem,28vw,30rem))_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:aspect-[16/10] lg:max-h-[min(44vh,26rem)]",
       };
     case "coingecko":
     case "huggingface":
       return {
-        gridClass: "lg:grid-cols-[minmax(0,clamp(22rem,34vw,40rem))_minmax(19rem,1fr)]",
-        mediaShellClass: "lg:aspect-square",
+        gridClass:
+          "lg:grid-cols-[minmax(0,clamp(16rem,24vw,24rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(17rem,23vw,25rem))_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:aspect-square lg:max-h-[min(44vh,25rem)]",
       };
     case "rawg":
     case "youtube":
     case "twitch":
       return {
         gridClass:
-          "lg:grid-cols-[minmax(0,1.55fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.6fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.65fr)_minmax(19rem,1fr)]",
-        mediaShellClass: "lg:aspect-video",
+          "lg:grid-cols-[minmax(0,1.25fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.3fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:aspect-video lg:max-h-[min(42vh,27rem)]",
       };
     case "spotify":
       return {
         gridClass:
-          "lg:grid-cols-[minmax(0,1.6fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.7fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.8fr)_minmax(19rem,1fr)]",
-        mediaShellClass: "",
+          "lg:grid-cols-[minmax(0,1.3fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.45fr)_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:max-h-[min(42vh,27rem)]",
       };
     case "twitter":
       return {
-        gridClass: "lg:grid-cols-[minmax(0,clamp(24rem,42vw,48rem))_minmax(19rem,1fr)]",
-        mediaShellClass: "",
+        gridClass:
+          "lg:grid-cols-[minmax(0,clamp(18rem,30vw,27rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(19rem,29vw,28rem))_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:max-h-[min(48vh,30rem)]",
       };
     default:
       return {
         gridClass:
-          "lg:grid-cols-[minmax(0,1.45fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.5fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.55fr)_minmax(19rem,1fr)]",
-        mediaShellClass: "lg:aspect-video",
+          "lg:grid-cols-[minmax(0,1.25fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.3fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,1fr)]",
+        mediaShellClass: "lg:aspect-video lg:max-h-[min(42vh,27rem)]",
       };
   }
 }
@@ -176,7 +182,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       />
 
       <div
-        className={`grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-rows-[minmax(0,1fr)_auto] lg:items-stretch ${mediaLayout.gridClass}`}
+        className={`grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-rows-[minmax(0,1fr)_minmax(8.25rem,11rem)] lg:items-stretch ${mediaLayout.gridClass}`}
       >
         <div
           className={`order-1 min-h-0 overflow-hidden rounded-2xl bg-base-200 lg:col-start-1 lg:row-start-1 lg:h-full ${mediaLayout.mediaShellClass}`}
@@ -285,7 +291,7 @@ function FeedContentMetaCard({
 
   return (
     <>
-      <div className="max-h-[13rem] overflow-y-auto rounded-2xl bg-black p-4 xl:max-h-[12rem] xl:p-3">
+      <div className="min-h-[8.75rem] max-h-[11rem] overflow-y-auto rounded-2xl bg-black p-4 xl:min-h-[8.25rem] xl:max-h-[10rem] xl:p-3">
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
@@ -384,7 +390,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:min-h-[15rem] xl:min-w-0 xl:w-auto ${
+      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:min-h-[16.5rem] xl:min-w-[13rem] xl:basis-[13rem] xl:w-auto ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
@@ -419,7 +425,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col space-y-1.5 p-2.5 xl:space-y-1 xl:p-2">
+      <div className="flex min-h-[7.25rem] flex-1 flex-col space-y-1.5 p-2.5 xl:min-h-[7.5rem] xl:space-y-1 xl:p-2">
         <div className="flex items-center gap-2 text-xs text-base-content/55">
           <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
         </div>

@@ -101,13 +101,13 @@ export function VotingQuestionCard({
 
   return (
     <div
-      className={`relative ${embedded ? "" : "rounded-2xl"} h-full flex flex-col overflow-visible p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
+      className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
       style={embedded ? {} : { background: "var(--color-base-200)" }}
     >
       {/* Content */}
-      <div className="relative z-10 flex flex-col flex-1">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         {/* Question at the top */}
-        <p className="text-center text-white font-bold mb-2" style={{ fontSize: "20px" }}>
+        <p className="mb-2 line-clamp-3 shrink-0 text-center text-[1.15rem] font-bold leading-snug text-white xl:text-[1.05rem] 2xl:text-[1.15rem]">
           {(() => {
             const ratingSlash = `${currentRatingValue} out of 100`;
             const ratingPercent = `${currentRatingValue}%`;
@@ -202,7 +202,7 @@ export function VotingQuestionCard({
         {error && <p className="text-base text-center text-red-400 mb-2">{error}</p>}
 
         {/* Voting arrows - centered below question */}
-        <div className="flex items-center justify-center gap-2 lg:gap-3 mb-3">
+        <div className="mb-3 flex shrink-0 items-center justify-center gap-2 lg:gap-3">
           {address ? (
             hasMyVote ? (
               /* Already committed — direction hidden until blind phase ends */
@@ -284,13 +284,13 @@ export function VotingQuestionCard({
         </div>
 
         {/* Round progress - left aligned */}
-        <div className="mb-1.5 flex justify-start">
+        <div className="mb-1.5 flex shrink-0 justify-start">
           <RoundProgress snapshot={roundSnapshot} />
         </div>
 
         {/* Urgent countdown (warning/critical only) */}
         {countdownActive && (urgency === "warning" || urgency === "critical") && (
-          <div className="mb-1.5 flex justify-start">
+          <div className="mb-1.5 flex shrink-0 justify-start">
             <span
               className={`text-xs tabular-nums ${urgency === "critical" ? "text-error animate-pulse" : "text-warning"}`}
             >
@@ -300,12 +300,12 @@ export function VotingQuestionCard({
         )}
 
         {/* Round stats - below progress, left aligned */}
-        <div className="mb-3 flex justify-start">
+        <div className="mb-3 flex shrink-0 justify-start">
           <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
         </div>
 
         {/* Rating history chart */}
-        <div className="pt-1.5 xl:pt-1">
+        <div className="mt-auto min-h-0 pt-1.5 xl:pt-1">
           <RatingHistory contentId={contentId} />
         </div>
       </div>
