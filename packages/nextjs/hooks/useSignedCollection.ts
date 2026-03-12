@@ -179,7 +179,7 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
   const queryClient = useQueryClient();
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set());
   const [hasWriteSession, setHasWriteSession] = useState(false);
-  const sessionStatusQueryKey = [...config.queryKey, "sessionStatus"];
+  const sessionStatusQueryKey = useMemo(() => [...config.queryKey, "sessionStatus"], [config.queryKey]);
 
   useEffect(() => {
     setHasWriteSession(false);
