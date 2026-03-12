@@ -3,7 +3,7 @@ import { content, category, profile, globalStats, ratingChange } from "ponder:sc
 import { eq } from "ponder";
 
 ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
-  const { contentId, submitter, contentHash, url, goal, tags, categoryId } =
+  const { contentId, submitter, contentHash, url, title, description, tags, categoryId } =
     event.args;
 
   await context.db
@@ -13,7 +13,8 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
       submitter,
       contentHash,
       url,
-      goal,
+      title,
+      description,
       tags,
       categoryId,
       status: 0,

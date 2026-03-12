@@ -212,7 +212,8 @@ app.get("/content", async (c) => {
     const pattern = `%${search}%`;
     conditions.push(
       sql<boolean>`(
-        lower(${content.goal}) like ${pattern}
+        lower(${content.title}) like ${pattern}
+        or lower(${content.description}) like ${pattern}
         or lower(${content.url}) like ${pattern}
         or lower(${content.tags}) like ${pattern}
       )`,
@@ -382,7 +383,8 @@ app.get("/rounds", async (c) => {
       losingPool: round.losingPool,
       startTime: round.startTime,
       settledAt: round.settledAt,
-      goal: content.goal,
+      title: content.title,
+      description: content.description,
       url: content.url,
       submitter: content.submitter,
       categoryId: content.categoryId,
@@ -610,7 +612,8 @@ app.get("/profile/:address", async (c) => {
       id: content.id,
       submitter: content.submitter,
       url: content.url,
-      goal: content.goal,
+      title: content.title,
+      description: content.description,
       categoryId: content.categoryId,
       categoryName: category.name,
       status: content.status,
@@ -687,7 +690,8 @@ app.get("/discover-signals/:address", async (c) => {
           id: round.id,
           contentId: round.contentId,
           roundId: round.roundId,
-          goal: content.goal,
+          title: content.title,
+          description: content.description,
           url: content.url,
           submitter: content.submitter,
           categoryId: content.categoryId,
@@ -714,7 +718,8 @@ app.get("/discover-signals/:address", async (c) => {
       id: string;
       contentId: bigint;
       roundId: bigint;
-      goal: string;
+      title: string;
+      description: string;
       url: string;
       submitter: string;
       categoryId: bigint;
@@ -765,7 +770,8 @@ app.get("/discover-signals/:address", async (c) => {
     : await db
         .select({
           contentId: content.id,
-          goal: content.goal,
+          title: content.title,
+          description: content.description,
           url: content.url,
           createdAt: content.createdAt,
           categoryId: content.categoryId,
@@ -788,7 +794,8 @@ app.get("/discover-signals/:address", async (c) => {
           roundId: vote.roundId,
           voter: vote.voter,
           isUp: vote.isUp,
-          goal: content.goal,
+          title: content.title,
+          description: content.description,
           url: content.url,
           settledAt: round.settledAt,
           roundState: round.state,
@@ -842,7 +849,8 @@ app.get("/notification-events/:address", async (c) => {
       id: round.id,
       contentId: round.contentId,
       roundId: round.roundId,
-      goal: content.goal,
+      title: content.title,
+      description: content.description,
       url: content.url,
       submitter: content.submitter,
       categoryId: content.categoryId,
@@ -871,7 +879,8 @@ app.get("/notification-events/:address", async (c) => {
           id: round.id,
           contentId: round.contentId,
           roundId: round.roundId,
-          goal: content.goal,
+          title: content.title,
+          description: content.description,
           url: content.url,
           submitter: content.submitter,
           categoryId: content.categoryId,
@@ -920,7 +929,8 @@ app.get("/notification-events/:address", async (c) => {
     : await db
         .select({
           contentId: content.id,
-          goal: content.goal,
+          title: content.title,
+          description: content.description,
           url: content.url,
           createdAt: content.createdAt,
           categoryId: content.categoryId,
@@ -943,7 +953,8 @@ app.get("/notification-events/:address", async (c) => {
           roundId: vote.roundId,
           voter: vote.voter,
           isUp: vote.isUp,
-          goal: content.goal,
+          title: content.title,
+          description: content.description,
           url: content.url,
           settledAt: round.settledAt,
           roundState: round.state,
@@ -976,7 +987,8 @@ app.get("/notification-events/:address", async (c) => {
       roundId: vote.roundId,
       voter: vote.voter,
       isUp: vote.isUp,
-      goal: content.goal,
+      title: content.title,
+      description: content.description,
       url: content.url,
       settledAt: round.settledAt,
       roundState: round.state,
@@ -1011,7 +1023,8 @@ app.get("/notification-events/:address", async (c) => {
           roundId: round.roundId,
           voter: sql<string>`''`,
           isUp: sql<boolean | null>`NULL`,
-          goal: content.goal,
+          title: content.title,
+          description: content.description,
           url: content.url,
           settledAt: round.settledAt,
           roundState: round.state,
@@ -1074,7 +1087,8 @@ app.get("/featured-today", async (c) => {
     id: round.id,
     contentId: round.contentId,
     roundId: round.roundId,
-    goal: content.goal,
+    title: content.title,
+    description: content.description,
     url: content.url,
     submitter: content.submitter,
     categoryId: content.categoryId,

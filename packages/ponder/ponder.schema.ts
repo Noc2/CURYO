@@ -11,7 +11,8 @@ export const content = onchainTable(
     submitter: t.hex().notNull(),
     contentHash: t.hex().notNull(),
     url: t.text().notNull(),
-    goal: t.text().notNull(),
+    title: t.text().notNull(),
+    description: t.text().notNull(),
     tags: t.text().notNull(),
     categoryId: t.bigint().notNull(),
     status: t.integer().notNull(), // 0=Active, 1=Dormant, 2=Cancelled
