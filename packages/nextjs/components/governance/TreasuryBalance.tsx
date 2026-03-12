@@ -20,7 +20,7 @@ type PoolStatProps = {
 
 function PoolStat({ title, description, tooltip, value, isLoading, Icon }: PoolStatProps) {
   return (
-    <div className="bg-base-200 rounded-xl p-4">
+    <div className="bg-base-300 rounded-xl p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-1">
