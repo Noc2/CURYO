@@ -354,7 +354,7 @@ export const Header = () => {
       </div>
 
       {/* Desktop: left sidebar */}
-      <aside className="hidden xl:flex fixed left-0 top-0 z-20 h-screen w-56 flex-col items-stretch py-4 bg-black border-r border-base-200 shrink-0">
+      <aside className="hidden xl:flex fixed left-0 top-0 z-20 h-screen w-56 flex-col items-stretch py-4 bg-base-200 border-r border-base-200 shrink-0">
         <Link href="/" className="flex flex-row items-center gap-2 px-4 mb-4 shrink-0">
           <CuryoLogo className="w-8 h-8 shrink-0" />
           <div className="flex flex-col gap-0.5 items-start">
