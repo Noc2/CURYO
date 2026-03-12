@@ -3,13 +3,7 @@
 import type { ComponentType } from "react";
 import Link from "next/link";
 import { blo } from "blo";
-import {
-  BellAlertIcon,
-  EnvelopeIcon,
-  IdentificationIcon,
-  ShieldCheckIcon,
-  UserCircleIcon,
-} from "@heroicons/react/24/outline";
+import { BellAlertIcon, EnvelopeIcon, ShieldCheckIcon, UserCircleIcon } from "@heroicons/react/24/outline";
 import {
   countEnabledEmailPreferences,
   countEnabledPreferences,
