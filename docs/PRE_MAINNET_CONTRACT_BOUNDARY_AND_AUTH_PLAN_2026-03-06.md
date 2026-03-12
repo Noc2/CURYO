@@ -15,7 +15,7 @@ This document tracks the remaining refactor work after the first cleanup pass. T
 - comments, username, and watchlist already use one-time signed challenges.
 - duplicate ABI outputs have already been removed.
 - the obsolete `packages/nextjs/contracts/deployedContracts.ts` artifact has now been deleted.
-- follows now live on-chain via `FollowRegistry` and no longer use signed API routes.
+- follows now use frontend-local signed API routes instead of an on-chain follow registry.
 
 The remaining work is narrower and should focus on reducing duplication, tightening boundaries, and adding confidence tests before mainnet.
 
@@ -53,8 +53,8 @@ These are the highest-value remaining refactors because they reduce:
   - `packages/nextjs/app/api/username/*`
   - `packages/nextjs/app/api/watchlist/content/*`
 - Follows now use:
-  - `packages/foundry/contracts/FollowRegistry.sol`
-  - `packages/ponder/src/FollowRegistry.ts`
+  - `packages/nextjs/app/api/follows/profiles/*`
+  - `packages/nextjs/lib/follows/profileFollow.ts`
   - `packages/nextjs/hooks/useFollowedProfiles.ts`
 
 ### What is still duplicated

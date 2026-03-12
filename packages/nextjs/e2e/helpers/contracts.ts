@@ -15,7 +15,6 @@ export const CONTRACT_ADDRESSES = {
   RoundVotingEngine: chain31337.RoundVotingEngine.address,
   RoundRewardDistributor: chain31337.RoundRewardDistributor.address,
   FrontendRegistry: chain31337.FrontendRegistry.address,
-  FollowRegistry: chain31337.FollowRegistry.address,
   CategoryRegistry: chain31337.CategoryRegistry.address,
   VoterIdNFT: chain31337.VoterIdNFT.address,
   ParticipationPool: chain31337.ParticipationPool.address,

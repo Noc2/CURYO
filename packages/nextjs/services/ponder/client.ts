@@ -193,20 +193,6 @@ export interface PonderProfile {
   totalRewardsClaimed: string;
 }
 
-export interface PonderFollowItem {
-  walletAddress: string;
-  createdAt: string;
-  profileName: string | null;
-  profileImageUrl: string | null;
-}
-
-export interface PonderFollowResponse {
-  items: PonderFollowItem[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
 export interface PonderDiscoverSignalsSettlingItem {
   id: string;
   contentId: string;
@@ -505,22 +491,7 @@ export const ponderApi = {
     }>(`/profile/${address}`);
   },
 
-  getFollowing(address: string, params?: { limit?: string; offset?: string }) {
-    return ponderGet<PonderFollowResponse>(`/following/${address}`, params);
-  },
-
-  getFollowers(address: string, params?: { limit?: string; offset?: string }) {
-    return ponderGet<PonderFollowResponse>(`/followers/${address}`, params);
-  },
-
-  getFollowState(follower: string, target: string) {
-    return ponderGet<{ follower: string; target: string; following: boolean }>("/follow-state", {
-      follower,
-      target,
-    });
-  },
-
-  getDiscoverSignals(address: string, params?: { watched?: string }) {
+  getDiscoverSignals(address: string, params?: { watched?: string; followed?: string }) {
     return ponderGet<PonderDiscoverSignalsResponse>(`/discover-signals/${address}`, params);
   },
 

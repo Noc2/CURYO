@@ -85,7 +85,13 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const { address: connectedAddress } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { profiles } = useSubmitterProfiles([normalizedAddress]);
-  const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(connectedAddress);
+  const {
+    followedWallets,
+    toggleFollow,
+    isPending: isFollowPending,
+  } = useFollowedProfiles(connectedAddress, {
+    autoRead: true,
+  });
   const { stats, categories } = useVoterAccuracy(normalizedAddress);
   const { data: balance } = useScaffoldReadContract({
     contractName: "CuryoReputation",

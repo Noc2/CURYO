@@ -166,6 +166,59 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "approveAndCall",
+          inputs: [
+            {
+              name: "spender",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "approveAndCall",
+          inputs: [
+            {
+              name: "spender",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "balanceOf",
           inputs: [
             {
@@ -856,7 +909,123 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "transferAndCall",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "transferAndCall",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "transferFrom",
+          inputs: [
+            {
+              name: "from",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "transferFromAndCall",
+          inputs: [
+            {
+              name: "from",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "transferFromAndCall",
           inputs: [
             {
               name: "from",
@@ -1189,6 +1358,81 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "ERC1363ApproveFailed",
+          inputs: [
+            {
+              name: "spender",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1363InvalidReceiver",
+          inputs: [
+            {
+              name: "receiver",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1363InvalidSpender",
+          inputs: [
+            {
+              name: "spender",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1363TransferFailed",
+          inputs: [
+            {
+              name: "receiver",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1363TransferFromFailed",
+          inputs: [
+            {
+              name: "sender",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "receiver",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
           name: "ERC20ExceededSafeSupply",
           inputs: [
             {
@@ -1415,6 +1659,14 @@ const deployedContracts = {
           "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Votes.sol",
         transferFrom:
           "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Votes.sol",
+        approveAndCall:
+          "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC1363.sol",
+        supportsInterface:
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+        transferAndCall:
+          "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC1363.sol",
+        transferFromAndCall:
+          "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC1363.sol",
         DOMAIN_SEPARATOR:
           "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol",
         eip712Domain:
@@ -1454,8 +1706,6 @@ const deployedContracts = {
         renounceRole:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
-        supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
     },
@@ -2238,6 +2488,24 @@ const deployedContracts = {
           inputs: [
             {
               name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "returnSubmitterStakeWithRewardRate",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardRateBps",
               type: "uint256",
               internalType: "uint256",
             },
@@ -4441,6 +4709,40 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "onTransferReceived",
+          inputs: [
+            {
+              name: "operator",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "from",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes4",
+              internalType: "bytes4",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "participationPool",
           inputs: [],
           outputs: [
@@ -6239,6 +6541,8 @@ const deployedContracts = {
         getContentCommitCount: "contracts/interfaces/IRoundVotingEngine.sol",
         hasUnrevealedVotes: "contracts/interfaces/IRoundVotingEngine.sol",
         transferReward: "contracts/interfaces/IRoundVotingEngine.sol",
+        onTransferReceived:
+          "lib/openzeppelin-contracts/contracts/interfaces/IERC1363Receiver.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         getRoleAdmin:
@@ -8289,546 +8593,6 @@ const deployedContracts = {
         getAccumulatedFees: "contracts/interfaces/IFrontendRegistry.sol",
         getFrontendInfo: "contracts/interfaces/IFrontendRegistry.sol",
         isApproved: "contracts/interfaces/IFrontendRegistry.sol",
-        DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        getRoleAdmin:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        grantRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        hasRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        renounceRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        revokeRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        supportsInterface:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-      },
-    },
-    FollowRegistry: {
-      address: "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
-      abi: [
-        {
-          type: "constructor",
-          inputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "ADMIN_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "DEFAULT_ADMIN_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "follow",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "getRoleAdmin",
-          inputs: [
-            {
-              name: "role",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "grantRole",
-          inputs: [
-            {
-              name: "role",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "account",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "hasRole",
-          inputs: [
-            {
-              name: "role",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "account",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "initialize",
-          inputs: [
-            {
-              name: "_admin",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_governance",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "isFollowing",
-          inputs: [
-            {
-              name: "follower",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "renounceRole",
-          inputs: [
-            {
-              name: "role",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "callerConfirmation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "revokeRole",
-          inputs: [
-            {
-              name: "role",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-            {
-              name: "account",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "supportsInterface",
-          inputs: [
-            {
-              name: "interfaceId",
-              type: "bytes4",
-              internalType: "bytes4",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "unfollow",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
-        },
-        {
-          type: "event",
-          name: "Initialized",
-          inputs: [
-            {
-              name: "version",
-              type: "uint64",
-              indexed: false,
-              internalType: "uint64",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "ProfileFollowed",
-          inputs: [
-            {
-              name: "follower",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "followed",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "ProfileUnfollowed",
-          inputs: [
-            {
-              name: "follower",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "followed",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "RoleAdminChanged",
-          inputs: [
-            {
-              name: "role",
-              type: "bytes32",
-              indexed: true,
-              internalType: "bytes32",
-            },
-            {
-              name: "previousAdminRole",
-              type: "bytes32",
-              indexed: true,
-              internalType: "bytes32",
-            },
-            {
-              name: "newAdminRole",
-              type: "bytes32",
-              indexed: true,
-              internalType: "bytes32",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "RoleGranted",
-          inputs: [
-            {
-              name: "role",
-              type: "bytes32",
-              indexed: true,
-              internalType: "bytes32",
-            },
-            {
-              name: "account",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "sender",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "RoleRevoked",
-          inputs: [
-            {
-              name: "role",
-              type: "bytes32",
-              indexed: true,
-              internalType: "bytes32",
-            },
-            {
-              name: "account",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "sender",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "error",
-          name: "AccessControlBadConfirmation",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "AccessControlUnauthorizedAccount",
-          inputs: [
-            {
-              name: "account",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "neededRole",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "AlreadyFollowing",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "InvalidAddress",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "InvalidInitialization",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "NotFollowing",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "NotInitializing",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "SelfFollow",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
-      ],
-      inheritedFunctions: {
-        follow: "contracts/interfaces/IFollowRegistry.sol",
-        isFollowing: "contracts/interfaces/IFollowRegistry.sol",
-        unfollow: "contracts/interfaces/IFollowRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         getRoleAdmin:
@@ -16358,6 +16122,40 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "onTransferReceived",
+          inputs: [
+            {
+              name: "operator",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "from",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes4",
+              internalType: "bytes4",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "participationPool",
           inputs: [],
           outputs: [
@@ -18156,6 +17954,8 @@ const deployedContracts = {
         getContentCommitCount: "contracts/interfaces/IRoundVotingEngine.sol",
         hasUnrevealedVotes: "contracts/interfaces/IRoundVotingEngine.sol",
         transferReward: "contracts/interfaces/IRoundVotingEngine.sol",
+        onTransferReceived:
+          "lib/openzeppelin-contracts/contracts/interfaces/IERC1363Receiver.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         getRoleAdmin:
@@ -18763,6 +18563,59 @@ const deployedContracts = {
               name: "value",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "approveAndCall",
+          inputs: [
+            {
+              name: "spender",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "approveAndCall",
+          inputs: [
+            {
+              name: "spender",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
             },
           ],
           outputs: [
@@ -19466,7 +19319,123 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "transferAndCall",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "transferAndCall",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "transferFrom",
+          inputs: [
+            {
+              name: "from",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "transferFromAndCall",
+          inputs: [
+            {
+              name: "from",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "transferFromAndCall",
           inputs: [
             {
               name: "from",
@@ -19799,6 +19768,81 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "ERC1363ApproveFailed",
+          inputs: [
+            {
+              name: "spender",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1363InvalidReceiver",
+          inputs: [
+            {
+              name: "receiver",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1363InvalidSpender",
+          inputs: [
+            {
+              name: "spender",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1363TransferFailed",
+          inputs: [
+            {
+              name: "receiver",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1363TransferFromFailed",
+          inputs: [
+            {
+              name: "sender",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "receiver",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+        },
+        {
+          type: "error",
           name: "ERC20ExceededSafeSupply",
           inputs: [
             {
@@ -20025,6 +20069,14 @@ const deployedContracts = {
           "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Votes.sol",
         transferFrom:
           "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Votes.sol",
+        approveAndCall:
+          "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC1363.sol",
+        supportsInterface:
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+        transferAndCall:
+          "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC1363.sol",
+        transferFromAndCall:
+          "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC1363.sol",
         DOMAIN_SEPARATOR:
           "lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC20Permit.sol",
         eip712Domain:
@@ -20064,8 +20116,6 @@ const deployedContracts = {
         renounceRole:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
-        supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
     },
@@ -21575,6 +21625,24 @@ const deployedContracts = {
           inputs: [
             {
               name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "returnSubmitterStakeWithRewardRate",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardRateBps",
               type: "uint256",
               internalType: "uint256",
             },

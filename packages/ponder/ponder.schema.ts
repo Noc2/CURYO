@@ -198,21 +198,6 @@ export const profile = onchainTable("profile", (t) => ({
   totalRewardsClaimed: t.bigint().notNull(),
 }));
 
-export const profileFollow = onchainTable(
-  "profile_follow",
-  (t) => ({
-    id: t.text().primaryKey(), // `${follower}-${followed}`
-    follower: t.hex().notNull(),
-    followed: t.hex().notNull(),
-    createdAt: t.bigint().notNull(),
-  }),
-  (table) => ({
-    followerIdx: index().on(table.follower),
-    followedIdx: index().on(table.followed),
-    createdAtIdx: index().on(table.createdAt),
-  }),
-);
-
 // ============================================================
 // VOTER ACCURACY STATS (global per voter)
 // ============================================================

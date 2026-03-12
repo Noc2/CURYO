@@ -86,8 +86,17 @@ const HomeInner = () => {
     toggleWatch,
     isPending: isWatchPending,
   } = useWatchedContent(address, { autoRead: true });
-  const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(address);
-  const { discoverSignals, isLoading: discoverSignalsLoading } = useDiscoverSignals(address, { watchedItems });
+  const {
+    followedItems,
+    followedWallets,
+    isLoading: followedProfilesLoading,
+    toggleFollow,
+    isPending: isFollowPending,
+  } = useFollowedProfiles(address, { autoRead: true });
+  const { discoverSignals, isLoading: discoverSignalsLoading } = useDiscoverSignals(address, {
+    watchedItems,
+    followedItems,
+  });
 
   const feedRequestLimit = contentParam
     ? undefined
@@ -236,7 +245,8 @@ const HomeInner = () => {
   const scopeLoading =
     (scope === "watched" && !!address && watchedLoading) ||
     (scope === "my_votes" && !!address && votesLoading) ||
-    ((scope === "settling_soon" || scope === "followed_curators") && !!address && discoverSignalsLoading);
+    ((scope === "settling_soon" || scope === "followed_curators") && !!address && discoverSignalsLoading) ||
+    (scope === "followed_curators" && !!address && followedProfilesLoading);
   const normalizedAddress = address?.toLowerCase();
 
   useEffect(() => {

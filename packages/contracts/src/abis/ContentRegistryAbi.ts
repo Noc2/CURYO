@@ -784,6 +784,24 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "returnSubmitterStakeWithRewardRate",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardRateBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "reviveContent",
     "inputs": [
       {

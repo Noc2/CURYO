@@ -67,13 +67,6 @@ export type RatingChangeItem = {
   timestamp: string;
 };
 
-export type FollowItem = {
-  walletAddress: string;
-  createdAt: string;
-  profileName: string | null;
-  profileImageUrl: string | null;
-};
-
 /**
  * Fetch a single content item with its rounds and ratings.
  */
@@ -137,26 +130,6 @@ export async function getStats(
 export async function ponderGet(path: string, baseURL = PONDER_URL): Promise<any> {
   const res = await fetchWithRetry(`${baseURL}${path}`);
   if (!res.ok) throw new Error(`GET ${path} returned ${res.status}`);
-  return res.json();
-}
-
-export async function getFollowing(
-  address: string,
-  baseURL = PONDER_URL,
-): Promise<{ items: FollowItem[]; total: number; limit: number; offset: number }> {
-  const res = await fetchWithRetry(`${baseURL}/following/${address}`);
-  if (!res.ok) throw new Error(`GET /following/${address} returned ${res.status}`);
-  return res.json();
-}
-
-export async function getFollowState(
-  follower: string,
-  target: string,
-  baseURL = PONDER_URL,
-): Promise<{ follower: string; target: string; following: boolean }> {
-  const params = new URLSearchParams({ follower, target });
-  const res = await fetchWithRetry(`${baseURL}/follow-state?${params.toString()}`);
-  if (!res.ok) throw new Error(`GET /follow-state returned ${res.status}`);
   return res.json();
 }
 

@@ -21,7 +21,6 @@ Primary focus:
 - `ParticipationPool.sol`
 - `CategoryRegistry.sol`
 - `ProfileRegistry.sol`
-- `FollowRegistry.sol`
 - `CuryoGovernor.sol`
 - `CuryoReputation.sol`
 

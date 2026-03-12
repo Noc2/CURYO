@@ -6,7 +6,6 @@ import {
   CategoryRegistryAbi,
   ContentRegistryAbi,
   CuryoReputationAbi,
-  FollowRegistryAbi,
   FrontendRegistryAbi,
   ProfileRegistryAbi,
   RoundRewardDistributorAbi,
@@ -110,34 +109,9 @@ function getAddress(key: string): `0x${string}` {
   return value as `0x${string}`;
 }
 
-function getOptionalAddress(key: string): `0x${string}` | undefined {
-  const value = process.env[key];
-  if (!value) {
-    return undefined;
-  }
-
-  if (!isAddress(value)) {
-    throw new Error(`${key} must be a valid address.`);
-  }
-
-  return value as `0x${string}`;
-}
-
 function getStartBlock(key: string): number {
   const value = process.env[key];
   if (!value) return 0;
-
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`${key} must be a non-negative integer.`);
-  }
-
-  return Math.floor(parsed);
-}
-
-function getOptionalStartBlock(key: string): number | undefined {
-  const value = process.env[key];
-  if (!value) return undefined;
 
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) {
@@ -153,7 +127,6 @@ const addresses = {
   roundRewardDistributor: getAddress("PONDER_ROUND_REWARD_DISTRIBUTOR_ADDRESS"),
   categoryRegistry: getAddress("PONDER_CATEGORY_REGISTRY_ADDRESS"),
   profileRegistry: getAddress("PONDER_PROFILE_REGISTRY_ADDRESS"),
-  followRegistry: getOptionalAddress("PONDER_FOLLOW_REGISTRY_ADDRESS"),
   frontendRegistry: getAddress("PONDER_FRONTEND_REGISTRY_ADDRESS"),
   voterIdNFT: getAddress("PONDER_VOTER_ID_NFT_ADDRESS"),
   curyoReputation: getAddress("PONDER_CREP_ADDRESS"),
@@ -165,7 +138,6 @@ const startBlocks = {
   roundRewardDistributor: getStartBlock("PONDER_ROUND_REWARD_DISTRIBUTOR_START_BLOCK"),
   categoryRegistry: getStartBlock("PONDER_CATEGORY_REGISTRY_START_BLOCK"),
   profileRegistry: getStartBlock("PONDER_PROFILE_REGISTRY_START_BLOCK"),
-  followRegistry: getOptionalStartBlock("PONDER_FOLLOW_REGISTRY_START_BLOCK"),
   frontendRegistry: getStartBlock("PONDER_FRONTEND_REGISTRY_START_BLOCK"),
   voterIdNFT: getStartBlock("PONDER_VOTER_ID_NFT_START_BLOCK"),
   curyoReputation: getStartBlock("PONDER_CREP_START_BLOCK"),
@@ -210,14 +182,6 @@ export default createConfig({
       abi: ProfileRegistryAbi,
       network: contractOnActiveNetwork(addresses.profileRegistry, startBlocks.profileRegistry),
     },
-    ...(addresses.followRegistry
-      ? {
-          FollowRegistry: {
-            abi: FollowRegistryAbi,
-            network: contractOnActiveNetwork(addresses.followRegistry, startBlocks.followRegistry ?? 0),
-          },
-        }
-      : {}),
     FrontendRegistry: {
       abi: FrontendRegistryAbi,
       network: contractOnActiveNetwork(addresses.frontendRegistry, startBlocks.frontendRegistry),

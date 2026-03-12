@@ -12,7 +12,6 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { FollowRegistry } from "../contracts/FollowRegistry.sol";
 import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
@@ -97,7 +96,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         RoundVotingEngine votingEngineImpl = new RoundVotingEngine();
         RoundRewardDistributor rewardDistributorImpl = new RoundRewardDistributor();
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
-        FollowRegistry followRegistryImpl = new FollowRegistry();
         ProfileRegistry profileRegistryImpl = new ProfileRegistry();
 
         // 5. Deploy proxies with initialization (governance gets all permanent roles)
@@ -108,12 +106,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
             abi.encodeCall(FrontendRegistry.initialize, (deployer, governance, address(crepToken)))
         );
         FrontendRegistry frontendRegistry = FrontendRegistry(address(frontendRegistryProxy));
-
-        // FollowRegistry proxy
-        ERC1967Proxy followRegistryProxy = new ERC1967Proxy(
-            address(followRegistryImpl), abi.encodeCall(FollowRegistry.initialize, (deployer, governance))
-        );
-        FollowRegistry followRegistry = FollowRegistry(address(followRegistryProxy));
 
         // ProfileRegistry proxy
         ERC1967Proxy profileRegistryProxy = new ERC1967Proxy(
@@ -382,7 +374,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 votingEngine: votingEngine,
                 rewardDistributor: rewardDistributor,
                 frontendRegistry: frontendRegistry,
-                followRegistry: followRegistry,
                 profileRegistry: profileRegistry,
                 categoryRegistry: categoryRegistry,
                 voterIdNFT: voterIdNFT,
@@ -398,7 +389,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 14. Register addresses for scaffold-eth ABI generation
         deployments.push(Deployment("CuryoReputation", address(crepToken)));
         deployments.push(Deployment("FrontendRegistry", address(frontendRegistryProxy)));
-        deployments.push(Deployment("FollowRegistry", address(followRegistryProxy)));
         deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));
         deployments.push(Deployment("ContentRegistry", address(registryProxy)));
         deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
@@ -414,7 +404,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         console.log("=== Curyo Protocol Deployed ===");
         console.log("CuryoReputation:", address(crepToken));
         console.log("FrontendRegistry:", address(frontendRegistry));
-        console.log("FollowRegistry:", address(followRegistry));
         console.log("ProfileRegistry:", address(profileRegistry));
         console.log("ContentRegistry:", address(registry));
         console.log("RoundVotingEngine:", address(votingEngine));
@@ -442,7 +431,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         RoundVotingEngine votingEngine,
         RoundRewardDistributor rewardDistributor,
         FrontendRegistry frontendRegistry,
-        FollowRegistry followRegistry,
         ProfileRegistry profileRegistry,
         CategoryRegistry categoryRegistry,
         VoterIdNFT voterIdNFT,
@@ -521,22 +509,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
         _requireLacksRole(
             address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), deployerAddress, "FrontendRegistry deployer admin"
-        );
-
-        _requireHasRole(
-            address(followRegistry),
-            followRegistry.DEFAULT_ADMIN_ROLE(),
-            governance,
-            "FollowRegistry governance default admin"
-        );
-        _requireHasRole(
-            address(followRegistry), followRegistry.ADMIN_ROLE(), governance, "FollowRegistry governance admin"
-        );
-        _requireHasRole(
-            address(followRegistry), followRegistry.UPGRADER_ROLE(), governance, "FollowRegistry governance upgrader"
-        );
-        _requireLacksRole(
-            address(followRegistry), followRegistry.ADMIN_ROLE(), deployerAddress, "FollowRegistry deployer admin"
         );
 
         _requireHasRole(

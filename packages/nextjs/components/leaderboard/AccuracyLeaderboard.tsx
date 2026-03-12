@@ -21,7 +21,13 @@ export function AccuracyLeaderboard() {
   const { address: connectedAddress } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { categories } = useCategoryRegistry();
-  const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(connectedAddress);
+  const {
+    followedWallets,
+    toggleFollow,
+    isPending: isFollowPending,
+  } = useFollowedProfiles(connectedAddress, {
+    autoRead: true,
+  });
 
   const [items, setItems] = useState<PonderAccuracyLeaderboardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);

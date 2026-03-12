@@ -1,50 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  FOLLOW_PROFILE_ACTION,
+  READ_PROFILE_FOLLOWS_ACTION,
+  UNFOLLOW_PROFILE_ACTION,
+  buildProfileFollowChallengeMessage,
+  buildProfileFollowReadChallengeMessage,
+  hashProfileFollowPayload,
+  hashProfileFollowReadPayload,
+  normalizeProfileFollowChallengeInput,
+  normalizeProfileFollowReadInput,
+} from "~~/lib/auth/profileFollowChallenge";
+import {
   ensureSignedActionChallengeTable,
   mapSignedActionError,
   verifyAndConsumeSignedActionChallenge,
 } from "~~/lib/auth/signedActions";
 import {
-  WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME,
+  PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME,
   getSignedReadSessionCookie,
   issueSignedReadSession,
   verifySignedReadSession,
 } from "~~/lib/auth/signedReadSessions";
 import {
-  WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME,
+  PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME,
   getSignedWriteSessionCookie,
   issueSignedWriteSession,
   verifySignedWriteSession,
 } from "~~/lib/auth/signedWriteSessions";
-import {
-  READ_WATCHLIST_ACTION,
-  UNWATCH_CONTENT_ACTION,
-  WATCH_CONTENT_ACTION,
-  buildWatchlistChallengeMessage,
-  buildWatchlistReadChallengeMessage,
-  hashWatchlistChallengePayload,
-  hashWatchlistReadPayload,
-  normalizeWatchlistChallengeInput,
-  normalizeWatchlistReadInput,
-} from "~~/lib/auth/watchlistChallenge";
 import { db } from "~~/lib/db";
-import {
-  addWatchedContent,
-  isValidWalletAddress,
-  listWatchedContent,
-  normalizeWalletAddress,
-  removeWatchedContent,
-} from "~~/lib/watchlist/contentWatch";
+import { addFollowedProfile, listFollowedProfiles, removeFollowedProfile } from "~~/lib/follows/profileFollow";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 const WRITE_RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
-async function hasWatchlistWriteSession(request: NextRequest, walletAddress: `0x${string}`) {
+async function hasProfileFollowWriteSession(request: NextRequest, walletAddress: `0x${string}`) {
   return verifySignedWriteSession(
-    request.cookies.get(WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME)?.value,
+    request.cookies.get(PROFILE_FOLLOWS_SIGNED_WRITE_SESSION_COOKIE_NAME)?.value,
     walletAddress,
-    "watchlist",
+    "profile_follows",
   );
 }
 
@@ -56,26 +50,26 @@ export async function GET(request: NextRequest) {
   if (limited) return limited;
 
   try {
-    if (!address || !isValidWalletAddress(address)) {
-      return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
+    const normalized = normalizeProfileFollowReadInput({ address: typeof address === "string" ? address : undefined });
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    const normalizedAddress = normalizeWalletAddress(address);
     const hasSession = await verifySignedReadSession(
-      request.cookies.get(WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME)?.value,
-      normalizedAddress,
-      "watchlist",
+      request.cookies.get(PROFILE_FOLLOWS_SIGNED_READ_SESSION_COOKIE_NAME)?.value,
+      normalized.payload.normalizedAddress,
+      "profile_follows",
     );
 
     if (!hasSession) {
       return NextResponse.json({ error: "Signed read required" }, { status: 401 });
     }
 
-    const items = await listWatchedContent(normalizedAddress);
+    const items = await listFollowedProfiles(normalized.payload.normalizedAddress);
     return NextResponse.json({ items, count: items.length });
   } catch (error) {
-    console.error("Error fetching watched content:", error);
-    return NextResponse.json({ error: "Failed to fetch watched content" }, { status: 500 });
+    console.error("Error fetching followed profiles:", error);
+    return NextResponse.json({ error: "Failed to fetch follows" }, { status: 500 });
   }
 }
 
@@ -88,29 +82,30 @@ export async function POST(request: NextRequest) {
       signature?: `0x${string}`;
       challengeId?: string;
     };
+
     if (!signature || !challengeId) {
       return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }
 
-    const normalized = normalizeWatchlistReadInput({ address: typeof address === "string" ? address : undefined });
+    const normalized = normalizeProfileFollowReadInput({ address: typeof address === "string" ? address : undefined });
     if (!normalized.ok) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
     const payload = normalized.payload;
-    const payloadHash = hashWatchlistReadPayload(payload);
+    const payloadHash = hashProfileFollowReadPayload(payload);
     await ensureSignedActionChallengeTable();
 
     try {
       await db.transaction(async tx => {
         await verifyAndConsumeSignedActionChallenge(tx, {
           challengeId: String(challengeId),
-          action: READ_WATCHLIST_ACTION,
+          action: READ_PROFILE_FOLLOWS_ACTION,
           walletAddress: payload.normalizedAddress,
           payloadHash,
           signature: signature as `0x${string}`,
           buildMessage: ({ nonce, expiresAt }) =>
-            buildWatchlistReadChallengeMessage({
+            buildProfileFollowReadChallengeMessage({
               address: payload.normalizedAddress,
               payloadHash,
               nonce,
@@ -126,52 +121,52 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    const session = await issueSignedReadSession(payload.normalizedAddress, "watchlist");
-    const items = await listWatchedContent(payload.normalizedAddress);
+    const session = await issueSignedReadSession(payload.normalizedAddress, "profile_follows");
+    const items = await listFollowedProfiles(payload.normalizedAddress);
     const response = NextResponse.json({ items, count: items.length });
-    response.cookies.set(getSignedReadSessionCookie("watchlist", session));
+    response.cookies.set(getSignedReadSessionCookie("profile_follows", session));
     return response;
   } catch (error) {
-    console.error("Error fetching watched content:", error);
-    return NextResponse.json({ error: "Failed to fetch watched content" }, { status: 500 });
+    console.error("Error fetching followed profiles:", error);
+    return NextResponse.json({ error: "Failed to fetch follows" }, { status: 500 });
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const { address, contentId, signature, challengeId } = await request.json();
+    const { address, targetAddress, signature, challengeId } = await request.json();
     const limited = await checkRateLimit(request, WRITE_RATE_LIMIT, {
       extraKeyParts: [typeof address === "string" ? address : undefined],
     });
     if (limited) return limited;
 
-    const normalized = normalizeWatchlistChallengeInput({ address, contentId });
+    const normalized = normalizeProfileFollowChallengeInput({ address, targetAddress });
     if (!normalized.ok) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
     const payload = normalized.payload;
-    const hasWriteSession = await hasWatchlistWriteSession(request, payload.normalizedAddress);
+    const hasWriteSession = await hasProfileFollowWriteSession(request, payload.normalizedAddress);
 
     if (!hasWriteSession) {
       if (!signature || !challengeId) {
         return NextResponse.json({ error: "Signed write required" }, { status: 401 });
       }
 
-      const payloadHash = hashWatchlistChallengePayload(payload);
+      const payloadHash = hashProfileFollowPayload(payload);
       await ensureSignedActionChallengeTable();
 
       try {
         await db.transaction(async tx => {
           await verifyAndConsumeSignedActionChallenge(tx, {
             challengeId: String(challengeId),
-            action: WATCH_CONTENT_ACTION,
+            action: FOLLOW_PROFILE_ACTION,
             walletAddress: payload.normalizedAddress,
             payloadHash,
             signature: signature as `0x${string}`,
             buildMessage: ({ nonce, expiresAt }) =>
-              buildWatchlistChallengeMessage({
-                action: WATCH_CONTENT_ACTION,
+              buildProfileFollowChallengeMessage({
+                action: FOLLOW_PROFILE_ACTION,
                 address: payload.normalizedAddress,
                 payloadHash,
                 nonce,
@@ -188,54 +183,54 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    await addWatchedContent(payload.normalizedAddress, payload.contentId);
-    const response = NextResponse.json({ ok: true, watched: true, contentId: payload.contentId });
+    await addFollowedProfile(payload.normalizedAddress, payload.normalizedTargetAddress);
+    const response = NextResponse.json({ ok: true, following: true, targetAddress: payload.normalizedTargetAddress });
     if (!hasWriteSession) {
-      const session = await issueSignedWriteSession(payload.normalizedAddress, "watchlist");
-      response.cookies.set(getSignedWriteSessionCookie("watchlist", session));
+      const session = await issueSignedWriteSession(payload.normalizedAddress, "profile_follows");
+      response.cookies.set(getSignedWriteSessionCookie("profile_follows", session));
     }
     return response;
   } catch (error) {
-    console.error("Error watching content:", error);
-    return NextResponse.json({ error: "Failed to watch content" }, { status: 500 });
+    console.error("Error following profile:", error);
+    return NextResponse.json({ error: "Failed to follow profile" }, { status: 500 });
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { address, contentId, signature, challengeId } = await request.json();
+    const { address, targetAddress, signature, challengeId } = await request.json();
     const limited = await checkRateLimit(request, WRITE_RATE_LIMIT, {
       extraKeyParts: [typeof address === "string" ? address : undefined],
     });
     if (limited) return limited;
 
-    const normalized = normalizeWatchlistChallengeInput({ address, contentId });
+    const normalized = normalizeProfileFollowChallengeInput({ address, targetAddress });
     if (!normalized.ok) {
       return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
     const payload = normalized.payload;
-    const hasWriteSession = await hasWatchlistWriteSession(request, payload.normalizedAddress);
+    const hasWriteSession = await hasProfileFollowWriteSession(request, payload.normalizedAddress);
 
     if (!hasWriteSession) {
       if (!signature || !challengeId) {
         return NextResponse.json({ error: "Signed write required" }, { status: 401 });
       }
 
-      const payloadHash = hashWatchlistChallengePayload(payload);
+      const payloadHash = hashProfileFollowPayload(payload);
       await ensureSignedActionChallengeTable();
 
       try {
         await db.transaction(async tx => {
           await verifyAndConsumeSignedActionChallenge(tx, {
             challengeId: String(challengeId),
-            action: UNWATCH_CONTENT_ACTION,
+            action: UNFOLLOW_PROFILE_ACTION,
             walletAddress: payload.normalizedAddress,
             payloadHash,
             signature: signature as `0x${string}`,
             buildMessage: ({ nonce, expiresAt }) =>
-              buildWatchlistChallengeMessage({
-                action: UNWATCH_CONTENT_ACTION,
+              buildProfileFollowChallengeMessage({
+                action: UNFOLLOW_PROFILE_ACTION,
                 address: payload.normalizedAddress,
                 payloadHash,
                 nonce,
@@ -252,15 +247,15 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    await removeWatchedContent(payload.normalizedAddress, payload.contentId);
-    const response = NextResponse.json({ ok: true, watched: false, contentId: payload.contentId });
+    await removeFollowedProfile(payload.normalizedAddress, payload.normalizedTargetAddress);
+    const response = NextResponse.json({ ok: true, following: false, targetAddress: payload.normalizedTargetAddress });
     if (!hasWriteSession) {
-      const session = await issueSignedWriteSession(payload.normalizedAddress, "watchlist");
-      response.cookies.set(getSignedWriteSessionCookie("watchlist", session));
+      const session = await issueSignedWriteSession(payload.normalizedAddress, "profile_follows");
+      response.cookies.set(getSignedWriteSessionCookie("profile_follows", session));
     }
     return response;
   } catch (error) {
-    console.error("Error unwatching content:", error);
-    return NextResponse.json({ error: "Failed to unwatch content" }, { status: 500 });
+    console.error("Error unfollowing profile:", error);
+    return NextResponse.json({ error: "Failed to unfollow profile" }, { status: 500 });
   }
 }

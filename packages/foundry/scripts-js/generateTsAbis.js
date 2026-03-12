@@ -353,7 +353,6 @@ const PONDER_CONTRACT_ENV_KEYS = {
   RoundRewardDistributor: "PONDER_ROUND_REWARD_DISTRIBUTOR_ADDRESS",
   CategoryRegistry: "PONDER_CATEGORY_REGISTRY_ADDRESS",
   ProfileRegistry: "PONDER_PROFILE_REGISTRY_ADDRESS",
-  FollowRegistry: "PONDER_FOLLOW_REGISTRY_ADDRESS",
   FrontendRegistry: "PONDER_FRONTEND_REGISTRY_ADDRESS",
   VoterIdNFT: "PONDER_VOTER_ID_NFT_ADDRESS",
   CuryoReputation: "PONDER_CREP_ADDRESS",
@@ -368,7 +367,6 @@ const PONDER_START_BLOCK_ENV_KEYS = {
   RoundRewardDistributor: "PONDER_ROUND_REWARD_DISTRIBUTOR_START_BLOCK",
   CategoryRegistry: "PONDER_CATEGORY_REGISTRY_START_BLOCK",
   ProfileRegistry: "PONDER_PROFILE_REGISTRY_START_BLOCK",
-  FollowRegistry: "PONDER_FOLLOW_REGISTRY_START_BLOCK",
   FrontendRegistry: "PONDER_FRONTEND_REGISTRY_START_BLOCK",
   VoterIdNFT: "PONDER_VOTER_ID_NFT_START_BLOCK",
   CuryoReputation: "PONDER_CREP_START_BLOCK",
@@ -509,7 +507,6 @@ const ABI_TARGETS = [
   { contract: "CuryoReputation", targets: ["contracts/src/abis"] },
   { contract: "VoterIdNFT", targets: ["contracts/src/abis"] },
   { contract: "FrontendRegistry", targets: ["contracts/src/abis"] },
-  { contract: "FollowRegistry", targets: ["contracts/src/abis"] },
   { contract: "RoundRewardDistributor", targets: ["contracts/src/abis"] },
   { contract: "ProfileRegistry", targets: ["contracts/src/abis"] },
 ];

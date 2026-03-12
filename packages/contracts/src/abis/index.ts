@@ -2,7 +2,6 @@ export { CategoryRegistryAbi } from "./CategoryRegistryAbi";
 export { ContentRegistryAbi } from "./ContentRegistryAbi";
 export { CuryoReputationAbi } from "./CuryoReputationAbi";
 export { FrontendRegistryAbi } from "./FrontendRegistryAbi";
-export { FollowRegistryAbi } from "./FollowRegistryAbi";
 export { ProfileRegistryAbi } from "./ProfileRegistryAbi";
 export { RoundRewardDistributorAbi } from "./RoundRewardDistributorAbi";
 export { RoundVotingEngineAbi } from "./RoundVotingEngineAbi";

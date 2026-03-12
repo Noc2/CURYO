@@ -47,7 +47,6 @@ contracts/
 ├── RoundRewardDistributor.sol   # Reward distribution to winning voters
 ├── CategoryRegistry.sol         # Content category management
 ├── ProfileRegistry.sol          # User reputation & metadata
-├── FollowRegistry.sol           # On-chain curator follow graph
 ├── FrontendRegistry.sol         # Frontend operator fee tracking
 ├── VoterIdNFT.sol               # Soulbound NFT for verified voters
 ├── CuryoReputation.sol          # cREP token (staking & reputation)

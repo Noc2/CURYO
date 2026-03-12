@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
 
@@ -25,6 +25,11 @@ interface UseWatchedContentOptions {
   autoRead?: boolean;
 }
 
+interface WatchlistSessionStatus {
+  hasReadSession: boolean;
+  hasWriteSession: boolean;
+}
+
 function isSignatureRejected(error: unknown): boolean {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
   return message.includes("rejected") || message.includes("denied") || message.includes("declined");
@@ -33,18 +38,32 @@ function isSignatureRejected(error: unknown): boolean {
 const EMPTY_WATCHED_ITEMS: WatchedContentItem[] = [];
 const EMPTY_WATCHED_RESPONSE: WatchedContentResponse = { items: [], count: 0 };
 
+async function getWatchlistSessionStatus(address: string): Promise<WatchlistSessionStatus> {
+  const sessionRes = await fetch(`/api/watchlist/content/session?address=${encodeURIComponent(address)}`);
+  const sessionBody = (await sessionRes.json().catch(() => null)) as {
+    hasSession?: boolean;
+    hasReadSession?: boolean;
+    hasWriteSession?: boolean;
+    error?: string;
+  } | null;
+  if (!sessionRes.ok) {
+    throw new Error(sessionBody?.error || "Failed to check watchlist session");
+  }
+
+  return {
+    hasReadSession: sessionBody?.hasReadSession ?? sessionBody?.hasSession ?? false,
+    hasWriteSession: sessionBody?.hasWriteSession ?? false,
+  };
+}
+
 async function readWatchedContent(
   address: string,
   signMessageAsync: (args: { message: string }) => Promise<`0x${string}`>,
   autoRead: boolean,
 ): Promise<WatchedContentResponse> {
-  const sessionRes = await fetch(`/api/watchlist/content/session?address=${encodeURIComponent(address)}`);
-  const sessionBody = (await sessionRes.json().catch(() => null)) as { hasSession?: boolean; error?: string } | null;
-  if (!sessionRes.ok) {
-    throw new Error(sessionBody?.error || "Failed to check watchlist session");
-  }
+  const sessionStatus = await getWatchlistSessionStatus(address);
 
-  if (sessionBody?.hasSession) {
+  if (sessionStatus.hasReadSession) {
     const existingSessionRes = await fetch(`/api/watchlist/content?address=${encodeURIComponent(address)}`);
     if (!existingSessionRes.ok) {
       const body = (await existingSessionRes.json().catch(() => null)) as { error?: string } | null;
@@ -108,7 +127,12 @@ export function useWatchedContent(address?: string, options?: UseWatchedContentO
   const { signMessageAsync } = useSignMessage();
   const queryClient = useQueryClient();
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+  const [hasWriteSession, setHasWriteSession] = useState(false);
   const autoRead = options?.autoRead ?? false;
+
+  useEffect(() => {
+    setHasWriteSession(false);
+  }, [address]);
 
   const queryKey = useMemo(() => ["watchedContent", address] as const, [address]);
 
@@ -182,41 +206,64 @@ export function useWatchedContent(address?: string, options?: UseWatchedContentO
       updatePending(contentIdStr, true);
 
       try {
-        const challengeRes = await fetch("/api/watchlist/content/challenge", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            address,
-            contentId: contentIdStr,
-            action: isWatched ? "unwatch" : "watch",
-          }),
-        });
+        const performSignedToggle = async () => {
+          const challengeRes = await fetch("/api/watchlist/content/challenge", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              address,
+              contentId: contentIdStr,
+              action: isWatched ? "unwatch" : "watch",
+            }),
+          });
 
-        const challengeData = await challengeRes.json();
-        if (!challengeRes.ok) {
-          throw new Error(challengeData.error || "Failed to create signature challenge");
-        }
+          const challengeData = await challengeRes.json();
+          if (!challengeRes.ok) {
+            throw new Error(challengeData.error || "Failed to create signature challenge");
+          }
 
-        const signature = await signMessageAsync({ message: challengeData.message as string });
+          const signature = await signMessageAsync({ message: challengeData.message as string });
+
+          return fetch("/api/watchlist/content", {
+            method: isWatched ? "DELETE" : "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              address,
+              contentId: contentIdStr,
+              signature,
+              challengeId: challengeData.challengeId,
+            }),
+          });
+        };
 
         setOptimisticState(contentIdStr, !isWatched);
+        const canUseWriteSession = hasWriteSession || (await getWatchlistSessionStatus(address)).hasWriteSession;
+        if (canUseWriteSession && !hasWriteSession) {
+          setHasWriteSession(true);
+        }
 
-        const res = await fetch("/api/watchlist/content", {
-          method: isWatched ? "DELETE" : "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            address,
-            contentId: contentIdStr,
-            signature,
-            challengeId: challengeData.challengeId,
-          }),
-        });
+        let res = canUseWriteSession
+          ? await fetch("/api/watchlist/content", {
+              method: isWatched ? "DELETE" : "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                address,
+                contentId: contentIdStr,
+              }),
+            })
+          : await performSignedToggle();
+
+        if (canUseWriteSession && res.status === 401) {
+          setHasWriteSession(false);
+          res = await performSignedToggle();
+        }
 
         if (!res.ok) {
           const body = (await res.json().catch(() => null)) as { error?: string } | null;
           throw new Error(body?.error || "Request failed");
         }
 
+        setHasWriteSession(true);
         return { ok: true, watched: !isWatched };
       } catch (error) {
         queryClient.setQueryData(queryKey, previous);
@@ -235,7 +282,17 @@ export function useWatchedContent(address?: string, options?: UseWatchedContentO
         updatePending(contentIdStr, false);
       }
     },
-    [address, watchedContentIds, queryClient, queryKey, refetch, setOptimisticState, signMessageAsync, updatePending],
+    [
+      address,
+      hasWriteSession,
+      watchedContentIds,
+      queryClient,
+      queryKey,
+      refetch,
+      setOptimisticState,
+      signMessageAsync,
+      updatePending,
+    ],
   );
 
   const isPending = useCallback((contentId: bigint) => pendingIds.has(contentId.toString()), [pendingIds]);

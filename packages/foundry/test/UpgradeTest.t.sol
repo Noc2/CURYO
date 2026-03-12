@@ -11,7 +11,6 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
-import { FollowRegistry } from "../contracts/FollowRegistry.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 
@@ -43,7 +42,6 @@ contract UpgradeTest is Test {
     RoundRewardDistributor public rewardDistributor;
     ProfileRegistry public profileRegistry;
     FrontendRegistry public frontendRegistry;
-    FollowRegistry public followRegistry;
 
     CuryoReputation public crepToken;
     MockVotingEngineForUpgrade public mockVotingEngine;
@@ -103,12 +101,6 @@ contract UpgradeTest is Test {
         ProfileRegistry prImpl = new ProfileRegistry();
         profileRegistry = ProfileRegistry(
             address(new ERC1967Proxy(address(prImpl), abi.encodeCall(ProfileRegistry.initialize, (admin, governance))))
-        );
-
-        // --- FollowRegistry ---
-        FollowRegistry foImpl = new FollowRegistry();
-        followRegistry = FollowRegistry(
-            address(new ERC1967Proxy(address(foImpl), abi.encodeCall(FollowRegistry.initialize, (admin, governance))))
         );
 
         // --- FrontendRegistry ---
@@ -273,41 +265,6 @@ contract UpgradeTest is Test {
     }
 
     // =========================================================================
-    // FollowRegistry upgrade tests
-    // =========================================================================
-
-    function test_FollowRegistry_GovernanceCanUpgrade() public {
-        FollowRegistry newImpl = new FollowRegistry();
-        vm.prank(governance);
-        UUPSUpgradeable(address(followRegistry)).upgradeToAndCall(address(newImpl), "");
-    }
-
-    function test_FollowRegistry_UnauthorizedCannotUpgrade() public {
-        FollowRegistry newImpl = new FollowRegistry();
-        vm.prank(attacker);
-        vm.expectRevert();
-        UUPSUpgradeable(address(followRegistry)).upgradeToAndCall(address(newImpl), "");
-    }
-
-    function test_FollowRegistry_CannotReinitialize() public {
-        vm.prank(admin);
-        vm.expectRevert(Initializable.InvalidInitialization.selector);
-        followRegistry.initialize(admin, governance);
-    }
-
-    function test_FollowRegistry_StatePreservedAfterUpgrade() public {
-        vm.prank(address(10));
-        followRegistry.follow(address(11));
-
-        FollowRegistry newImpl = new FollowRegistry();
-        vm.prank(governance);
-        UUPSUpgradeable(address(followRegistry)).upgradeToAndCall(address(newImpl), "");
-
-        assertTrue(followRegistry.hasRole(UPGRADER_ROLE, governance));
-        assertTrue(followRegistry.isFollowing(address(10), address(11)));
-    }
-
-    // =========================================================================
     // FrontendRegistry upgrade tests
     // =========================================================================
 
@@ -363,10 +320,6 @@ contract UpgradeTest is Test {
         ProfileRegistry prImpl = new ProfileRegistry();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         prImpl.initialize(admin, governance);
-
-        FollowRegistry foImpl = new FollowRegistry();
-        vm.expectRevert(Initializable.InvalidInitialization.selector);
-        foImpl.initialize(admin, governance);
 
         FrontendRegistry frImpl = new FrontendRegistry();
         vm.expectRevert(Initializable.InvalidInitialization.selector);

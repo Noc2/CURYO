@@ -27,7 +27,13 @@ interface LeaderboardTableProps {
 export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   const { address: connectedAddress } = useAccount();
   const { openConnectModal } = useConnectModal();
-  const { followedWallets, toggleFollow, isPending: isFollowPending } = useFollowedProfiles(connectedAddress);
+  const {
+    followedWallets,
+    toggleFollow,
+    isPending: isFollowPending,
+  } = useFollowedProfiles(connectedAddress, {
+    autoRead: true,
+  });
 
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);

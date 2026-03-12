@@ -3,6 +3,7 @@ import "server-only";
 import { db, dbClient } from "~~/lib/db";
 import { notificationEmailDeliveries, notificationEmailSubscriptions, watchedContent } from "~~/lib/db/schema";
 import { getOptionalAppUrl } from "~~/lib/env/server";
+import { getFollowedWalletAddresses } from "~~/lib/follows/profileFollow";
 import { sendResendEmail } from "~~/lib/notifications/resend";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { ponderGet } from "~~/services/ponder/client";
@@ -132,8 +133,10 @@ async function getWatchedContentIds(walletAddress: string) {
 
 async function getNotificationEvents(walletAddress: string): Promise<NotificationEventResponse> {
   const watchedIds = await getWatchedContentIds(walletAddress);
+  const followedWallets = await getFollowedWalletAddresses(walletAddress as `0x${string}`);
   return ponderGet<NotificationEventResponse>(`/notification-events/${walletAddress}`, {
     watched: watchedIds.join(","),
+    followed: followedWallets.join(","),
   });
 }
 

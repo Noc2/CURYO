@@ -8,7 +8,7 @@ test.describe("Watchlist API routes", () => {
       headers: cookie ? { cookie } : undefined,
     });
     expect(res.status).toBe(200);
-    return res.json() as Promise<{ hasSession: boolean }>;
+    return res.json() as Promise<{ hasSession: boolean; hasReadSession: boolean; hasWriteSession: boolean }>;
   }
 
   async function issueReadChallenge(address: string) {
@@ -35,17 +35,27 @@ test.describe("Watchlist API routes", () => {
     address: string,
     contentId: string,
     account: { signMessage: (args: { message: string }) => Promise<`0x${string}`> },
+    cookie?: string,
   ) {
-    const challenge = await issueChallenge(address, contentId, "watch");
-    const signature = await account.signMessage({ message: challenge.message });
-
     const res = await fetch(`${BASE_URL}/api/watchlist/content`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address, contentId, signature, challengeId: challenge.challengeId }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(cookie ? { cookie } : {}),
+      },
+      body: cookie
+        ? JSON.stringify({ address, contentId })
+        : await (async () => {
+            const challenge = await issueChallenge(address, contentId, "watch");
+            const signature = await account.signMessage({ message: challenge.message });
+            return JSON.stringify({ address, contentId, signature, challengeId: challenge.challengeId });
+          })(),
     });
     expect(res.status).toBe(200);
-    return res.json();
+    return {
+      body: await res.json(),
+      cookie: res.headers.get("set-cookie")?.split(";")[0],
+    };
   }
 
   async function createReadSession(
@@ -75,17 +85,27 @@ test.describe("Watchlist API routes", () => {
     address: string,
     contentId: string,
     account: { signMessage: (args: { message: string }) => Promise<`0x${string}`> },
+    cookie?: string,
   ) {
-    const challenge = await issueChallenge(address, contentId, "unwatch");
-    const signature = await account.signMessage({ message: challenge.message });
-
     const res = await fetch(`${BASE_URL}/api/watchlist/content`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address, contentId, signature, challengeId: challenge.challengeId }),
+      headers: {
+        "Content-Type": "application/json",
+        ...(cookie ? { cookie } : {}),
+      },
+      body: cookie
+        ? JSON.stringify({ address, contentId })
+        : await (async () => {
+            const challenge = await issueChallenge(address, contentId, "unwatch");
+            const signature = await account.signMessage({ message: challenge.message });
+            return JSON.stringify({ address, contentId, signature, challengeId: challenge.challengeId });
+          })(),
     });
     expect(res.status).toBe(200);
-    return res.json();
+    return {
+      body: await res.json(),
+      cookie: res.headers.get("set-cookie")?.split(";")[0],
+    };
   }
 
   test("watchlist add/list/remove returns sane createdAt values in descending order", async () => {
@@ -97,6 +117,8 @@ test.describe("Watchlist API routes", () => {
 
     const unsignedSession = await getReadSessionStatus(address);
     expect(unsignedSession.hasSession).toBe(false);
+    expect(unsignedSession.hasReadSession).toBe(false);
+    expect(unsignedSession.hasWriteSession).toBe(false);
 
     const unauthenticatedRes = await fetch(`${BASE_URL}/api/watchlist/content?address=${address}`);
     expect(unauthenticatedRes.status).toBe(401);
@@ -106,17 +128,24 @@ test.describe("Watchlist API routes", () => {
 
     const authorizedSession = await getReadSessionStatus(address, initial.cookie);
     expect(authorizedSession.hasSession).toBe(true);
+    expect(authorizedSession.hasReadSession).toBe(true);
+    expect(authorizedSession.hasWriteSession).toBe(false);
 
     const firstWatch = await watchContent(address, firstContentId, account);
-    expect(firstWatch).toMatchObject({ ok: true, watched: true, contentId: firstContentId });
+    expect(firstWatch.body).toMatchObject({ ok: true, watched: true, contentId: firstContentId });
+    expect(firstWatch.cookie).toContain("curyo_watchlist_write_session=");
 
     await new Promise(resolve => setTimeout(resolve, 1_100));
 
-    const secondWatch = await watchContent(address, secondContentId, account);
-    expect(secondWatch).toMatchObject({ ok: true, watched: true, contentId: secondContentId });
+    const combinedCookie = `${initial.cookie}; ${firstWatch.cookie}`;
+    const writeSessionStatus = await getReadSessionStatus(address, combinedCookie);
+    expect(writeSessionStatus.hasWriteSession).toBe(true);
+
+    const secondWatch = await watchContent(address, secondContentId, account, combinedCookie);
+    expect(secondWatch.body).toMatchObject({ ok: true, watched: true, contentId: secondContentId });
 
     const listRes = await fetch(`${BASE_URL}/api/watchlist/content?address=${address}`, {
-      headers: { cookie: initial.cookie },
+      headers: { cookie: combinedCookie },
     });
     expect(listRes.status).toBe(200);
     const list = await listRes.json();
@@ -133,11 +162,11 @@ test.describe("Watchlist API routes", () => {
     }
     expect(timestamps[0]!.getTime()).toBeGreaterThan(timestamps[1]!.getTime());
 
-    const removed = await unwatchContent(address, secondContentId, account);
-    expect(removed).toMatchObject({ ok: true, watched: false, contentId: secondContentId });
+    const removed = await unwatchContent(address, secondContentId, account, combinedCookie);
+    expect(removed.body).toMatchObject({ ok: true, watched: false, contentId: secondContentId });
 
     const afterDeleteRes = await fetch(`${BASE_URL}/api/watchlist/content?address=${address}`, {
-      headers: { cookie: initial.cookie },
+      headers: { cookie: combinedCookie },
     });
     expect(afterDeleteRes.status).toBe(200);
     const afterDelete = await afterDeleteRes.json();
@@ -181,6 +210,39 @@ test.describe("Watchlist API routes", () => {
       }),
     });
     expect(mismatchRes.status).toBe(401);
+  });
+
+  test("watchlist write session is address-bound and avoids repeat signatures", async () => {
+    const { generatePrivateKey, privateKeyToAccount } = await import("viem/accounts");
+    const account = privateKeyToAccount(generatePrivateKey());
+    const otherAccount = privateKeyToAccount(generatePrivateKey());
+    const address = account.address.toLowerCase();
+    const otherAddress = otherAccount.address.toLowerCase();
+
+    const signedWatch = await watchContent(address, "31", account);
+    expect(signedWatch.cookie).toContain("curyo_watchlist_write_session=");
+
+    const cookie = signedWatch.cookie!;
+
+    const authorizedRes = await fetch(`${BASE_URL}/api/watchlist/content`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        cookie,
+      },
+      body: JSON.stringify({ address, contentId: "32" }),
+    });
+    expect(authorizedRes.status).toBe(200);
+
+    const unauthorizedRes = await fetch(`${BASE_URL}/api/watchlist/content`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        cookie,
+      },
+      body: JSON.stringify({ address: otherAddress, contentId: "33" }),
+    });
+    expect(unauthorizedRes.status).toBe(401);
   });
 
   test("watchlist read session is address-bound", async () => {
