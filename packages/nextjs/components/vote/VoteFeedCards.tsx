@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
@@ -64,6 +65,10 @@ interface FeedVoteCardProps {
   isCommitting: boolean;
   voteError?: string | null;
   address?: string;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  canPrevious?: boolean;
+  canNext?: boolean;
 }
 
 export const FeedVoteCard = memo(function FeedVoteCard({
@@ -80,17 +85,38 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   isCommitting,
   voteError,
   address,
+  onPrevious,
+  onNext,
+  canPrevious = false,
+  canNext = false,
 }: FeedVoteCardProps) {
   return (
     <div className="surface-card h-full min-h-0 overflow-hidden rounded-2xl p-3 ring-1 ring-primary/20">
       <div className="mb-3 flex items-center justify-between gap-3 text-sm text-base-content/45">
-        <div className="flex items-center gap-2">
-          <span className="rounded-full bg-base-content/[0.05] px-2.5 py-1 font-medium text-base-content/60">
+        <button
+          type="button"
+          onClick={onPrevious}
+          disabled={!canPrevious}
+          aria-label="Show previous card"
+          className="btn btn-circle btn-sm border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+        </button>
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+          <span className="truncate rounded-full bg-base-content/[0.05] px-2.5 py-1 font-medium text-base-content/60">
             {detectPlatform(item.url).type}
           </span>
-          {item.tags[0] ? <span className="text-base-content/35">#{item.tags[0]}</span> : null}
+          {item.tags[0] ? <span className="truncate text-base-content/35">#{item.tags[0]}</span> : null}
         </div>
-        <span className="rounded-full bg-primary/12 px-2.5 py-1 font-medium text-primary">Now Voting</span>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={!canNext}
+          aria-label="Show next card"
+          className="btn btn-circle btn-sm border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <ChevronRightIcon className="h-4 w-4" />
+        </button>
       </div>
 
       <div className="flex min-h-0 flex-col gap-3 lg:h-[min(52vh,34rem)] lg:flex-row lg:items-stretch xl:h-full">

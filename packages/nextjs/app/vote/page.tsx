@@ -824,20 +824,11 @@ const HomeInner = () => {
 
               {primaryItem ? (
                 <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
-                  <div className="relative xl:min-h-0 xl:flex-1">
-                    <button
-                      type="button"
-                      className="btn btn-circle btn-sm absolute top-1/2 left-2 z-20 -translate-y-1/2 border border-base-content/10 bg-base-100/88 text-base-content/70 shadow-lg backdrop-blur hover:border-primary/30 hover:text-primary sm:left-3 sm:btn-md"
-                      onClick={handleSelectPrevious}
-                      disabled={activeSourceIndex <= 0}
-                      aria-label="Show previous card"
-                    >
-                      <ChevronLeftIcon className="h-5 w-5" />
-                    </button>
+                  <div className="xl:min-h-0 xl:flex-1">
                     <div
                       key={primaryItem.id.toString()}
                       ref={activeCardRegionRef}
-                      className={`touch-pan-y px-8 sm:px-10 xl:min-h-0 xl:h-full xl:flex-1 ${
+                      className={`touch-pan-y xl:min-h-0 xl:h-full xl:flex-1 ${
                         navigationDirection === "next"
                           ? "motion-safe:animate-vote-card-next"
                           : "motion-safe:animate-vote-card-prev"
@@ -857,17 +848,12 @@ const HomeInner = () => {
                         isCommitting={isCommitting}
                         voteError={voteError}
                         address={address}
+                        onPrevious={handleSelectPrevious}
+                        onNext={handleSelectNext}
+                        canPrevious={activeSourceIndex > 0}
+                        canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
                       />
                     </div>
-                    <button
-                      type="button"
-                      className="btn btn-circle btn-sm absolute top-1/2 right-2 z-20 -translate-y-1/2 border border-base-content/10 bg-base-100/88 text-base-content/70 shadow-lg backdrop-blur hover:border-primary/30 hover:text-primary sm:right-3 sm:btn-md"
-                      onClick={handleSelectNext}
-                      disabled={activeSourceIndex < 0 || activeSourceIndex >= displayFeed.length - 1}
-                      aria-label="Show next card"
-                    >
-                      <ChevronRightIcon className="h-5 w-5" />
-                    </button>
                   </div>
                 </div>
               ) : null}
@@ -875,7 +861,7 @@ const HomeInner = () => {
               {visibleFeedItems.length > 0 ? (
                 <section
                   key={primaryItem?.id.toString() ?? "queue-empty"}
-                  className="space-y-3 motion-safe:animate-vote-queue-settle xl:flex-none"
+                  className="surface-card space-y-3 rounded-2xl p-3 ring-1 ring-primary/20 motion-safe:animate-vote-queue-settle xl:flex-none"
                   aria-label="Up next queue"
                 >
                   <div className="flex items-center gap-2 xl:gap-3">
