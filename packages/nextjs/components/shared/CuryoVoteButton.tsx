@@ -1,5 +1,3 @@
-import { CuryoRingMark } from "~~/components/brand/CuryoRingMark";
-
 interface CuryoVoteButtonProps {
   direction: "up" | "down";
   disabled?: boolean;
@@ -15,16 +13,24 @@ export function CuryoVoteButton({ direction, disabled = false, onClick }: CuryoV
       onClick={onClick}
       disabled={disabled}
       aria-label={direction === "up" ? "Vote up" : "Vote down"}
-      className="group relative h-16 w-16 rounded-full border-0 bg-transparent p-0 transition-transform duration-200 hover:scale-[1.05] active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:scale-100"
+      className={`vote-btn ${isUp ? "vote-yes" : "vote-no"}`}
     >
-      <span
-        className={`absolute inset-0 rounded-full opacity-0 blur-md transition-opacity duration-200 group-hover:opacity-100 ${
-          isUp
-            ? "bg-[radial-gradient(circle,_rgba(3,206,164,0.22),_transparent_68%)]"
-            : "bg-[radial-gradient(circle,_rgba(239,71,111,0.24),_transparent_68%)]"
-        }`}
-      />
-      <CuryoRingMark className="h-full w-full" arrow={direction} palette={isUp ? "positive" : "negative"} />
+      <span className="vote-bg" />
+      <span className="vote-symbol">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="drop-shadow-sm"
+        >
+          <path d={isUp ? "M12 6 L6 18 L18 18 Z" : "M12 18 L6 6 L18 6 Z"} />
+        </svg>
+      </span>
     </button>
   );
 }

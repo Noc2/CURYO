@@ -171,6 +171,80 @@
   background: var(--color-base-200);
 }
 
+/* Filled vote buttons */
+.vote-btn {
+  position: relative;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.vote-btn .vote-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.vote-btn.vote-yes .vote-bg {
+  background: linear-gradient(135deg, #03cea4 0%, #029b7b 100%);
+  box-shadow: 0 2px 8px rgba(3, 206, 164, 0.4);
+}
+
+.vote-btn.vote-no .vote-bg {
+  background: linear-gradient(135deg, #ef476f 0%, #c73559 100%);
+  box-shadow: 0 2px 8px rgba(239, 71, 111, 0.4);
+}
+
+.vote-btn .vote-symbol {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vote-btn:hover .vote-bg {
+  transform: scale(1.08);
+}
+
+.vote-btn.vote-yes:hover .vote-bg {
+  background: linear-gradient(135deg, #1adbb5 0%, #03cea4 100%);
+  box-shadow: 0 4px 12px rgba(3, 206, 164, 0.5);
+}
+
+.vote-btn.vote-no:hover .vote-bg {
+  background: linear-gradient(135deg, #f25c7f 0%, #ef476f 100%);
+  box-shadow: 0 4px 12px rgba(239, 71, 111, 0.5);
+}
+
+.vote-btn:active .vote-bg {
+  transform: scale(0.92);
+}
+
+.vote-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.vote-btn:disabled:hover .vote-bg {
+  transform: none;
+}
+
+.vote-btn:disabled.vote-yes:hover .vote-bg {
+  background: linear-gradient(135deg, #03cea4 0%, #029b7b 100%);
+  box-shadow: 0 2px 8px rgba(3, 206, 164, 0.4);
+}
+
+.vote-btn:disabled.vote-no:hover .vote-bg {
+  background: linear-gradient(135deg, #ef476f 0%, #c73559 100%);
+  box-shadow: 0 2px 8px rgba(239, 71, 111, 0.4);
+}
+
 /* Prose typography for docs pages */
 .prose {
   color: var(--color-base-content);
