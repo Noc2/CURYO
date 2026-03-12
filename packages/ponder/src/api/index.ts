@@ -548,6 +548,9 @@ app.get("/profiles", async (c) => {
 
 app.get("/profile/:address", async (c) => {
   const address = c.req.param("address").toLowerCase() as `0x${string}`;
+  if (!isValidAddress(address)) {
+    return c.json({ error: "Invalid address" }, 400);
+  }
 
   const [item] = await db
     .select()
@@ -555,19 +558,46 @@ app.get("/profile/:address", async (c) => {
     .where(eq(profile.address, address))
     .limit(1);
 
-  if (!item) {
-    return c.json({ error: "Profile not found" }, 404);
-  }
-
-  // Get recent votes
-  const recentVotes = await db
-    .select()
+  const [voteSummary] = await db
+    .select({ count: sql<number>`count(*)` })
     .from(vote)
+    .where(eq(vote.voter, address));
+
+  const [contentSummary] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(content)
+    .where(eq(content.submitter, address));
+
+  const [rewardSummary] = await db
+    .select({ total: sql<bigint>`coalesce(sum(${rewardClaim.crepReward}), 0)` })
+    .from(rewardClaim)
+    .where(eq(rewardClaim.voter, address));
+
+  const recentVotes = await db
+    .select({
+      id: vote.id,
+      contentId: vote.contentId,
+      roundId: vote.roundId,
+      voter: vote.voter,
+      isUp: vote.isUp,
+      stake: vote.stake,
+      epochIndex: vote.epochIndex,
+      revealed: vote.revealed,
+      committedAt: vote.committedAt,
+      revealedAt: vote.revealedAt,
+      roundStartTime: round.startTime,
+      roundState: round.state,
+      roundUpWins: round.upWins,
+    })
+    .from(vote)
+    .leftJoin(
+      round,
+      and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+    )
     .where(eq(vote.voter, address))
     .orderBy(desc(vote.committedAt))
     .limit(20);
 
-  // Get recent rewards
   const recentRewards = await db
     .select()
     .from(rewardClaim)
@@ -575,7 +605,37 @@ app.get("/profile/:address", async (c) => {
     .orderBy(desc(rewardClaim.claimedAt))
     .limit(20);
 
-  return jsonBig(c, { profile: item, recentVotes, recentRewards });
+  const recentSubmissions = await db
+    .select({
+      id: content.id,
+      submitter: content.submitter,
+      url: content.url,
+      goal: content.goal,
+      categoryId: content.categoryId,
+      categoryName: category.name,
+      status: content.status,
+      rating: content.rating,
+      createdAt: content.createdAt,
+      totalVotes: content.totalVotes,
+      totalRounds: content.totalRounds,
+    })
+    .from(content)
+    .leftJoin(category, eq(content.categoryId, category.id))
+    .where(eq(content.submitter, address))
+    .orderBy(desc(content.createdAt))
+    .limit(6);
+
+  return jsonBig(c, {
+    profile: item ?? null,
+    summary: {
+      totalVotes: item?.totalVotes ?? voteSummary?.count ?? 0,
+      totalContent: item?.totalContent ?? contentSummary?.count ?? 0,
+      totalRewardsClaimed: item?.totalRewardsClaimed ?? rewardSummary?.total ?? 0n,
+    },
+    recentVotes,
+    recentRewards,
+    recentSubmissions,
+  });
 });
 
 // ============================================================

@@ -104,7 +104,7 @@ test.describe("Ponder API endpoints", () => {
     expect(data).toHaveProperty("totalRoundsSettled");
   });
 
-  test("GET /profile/:address returns profile or 404", async () => {
+  test("GET /profile/:address returns profile activity payload", async () => {
     const address = ANVIL_ACCOUNTS.account2.address.toLowerCase();
     // Use retry logic — Ponder may return 429 during rapid test runs
     let res = await fetch(`http://localhost:42069/profile/${address}`);
@@ -112,14 +112,25 @@ test.describe("Ponder API endpoints", () => {
       await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
       res = await fetch(`http://localhost:42069/profile/${address}`);
     }
-    // Profile may or may not exist on fresh chain (requires on-chain setProfile tx)
-    expect([200, 404]).toContain(res.status);
+    expect(res.status).toBe(200);
 
-    if (res.status === 200) {
-      const data = await res.json();
-      expect(data).toHaveProperty("profile");
+    const data = await res.json();
+    expect(data).toHaveProperty("profile");
+    expect(data).toHaveProperty("summary");
+    expect(data).toHaveProperty("recentVotes");
+    expect(data).toHaveProperty("recentSubmissions");
+    expect(data).toHaveProperty("recentRewards");
+
+    if (data.profile) {
       expect(data.profile.address).toBe(address);
     }
+
+    expect(data.summary).toHaveProperty("totalVotes");
+    expect(data.summary).toHaveProperty("totalContent");
+    expect(data.summary).toHaveProperty("totalRewardsClaimed");
+    expect(Array.isArray(data.recentVotes)).toBe(true);
+    expect(Array.isArray(data.recentSubmissions)).toBe(true);
+    expect(Array.isArray(data.recentRewards)).toBe(true);
   });
 
   test("GET /votes returns vote list", async () => {

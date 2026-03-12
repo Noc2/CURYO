@@ -193,6 +193,26 @@ export interface PonderProfile {
   totalRewardsClaimed: string;
 }
 
+export interface PonderProfileSummary {
+  totalVotes: number;
+  totalContent: number;
+  totalRewardsClaimed: string;
+}
+
+export interface PonderProfileSubmissionItem {
+  id: string;
+  submitter: string;
+  url: string;
+  goal: string;
+  categoryId: string;
+  categoryName: string | null;
+  status: number;
+  rating: number;
+  createdAt: string;
+  totalVotes: number;
+  totalRounds: number;
+}
+
 export interface PonderDiscoverSignalsSettlingItem {
   id: string;
   contentId: string;
@@ -371,6 +391,14 @@ export interface PonderVotesResponse {
   total: number;
 }
 
+export interface PonderProfileDetailResponse {
+  profile: PonderProfile | null;
+  summary: PonderProfileSummary;
+  recentVotes: PonderVoteItem[];
+  recentRewards: PonderRewardClaim[];
+  recentSubmissions: PonderProfileSubmissionItem[];
+}
+
 export interface PonderVoterStreak {
   currentDailyStreak: number;
   bestDailyStreak: number;
@@ -484,11 +512,7 @@ export const ponderApi = {
   },
 
   getProfile(address: string) {
-    return ponderGet<{
-      profile: PonderProfile;
-      recentVotes: any[];
-      recentRewards: any[];
-    }>(`/profile/${address}`);
+    return ponderGet<PonderProfileDetailResponse>(`/profile/${address}`);
   },
 
   getDiscoverSignals(address: string, params?: { watched?: string; followed?: string }) {

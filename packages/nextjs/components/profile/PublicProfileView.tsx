@@ -15,15 +15,8 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
-import { useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
-import {
-  type PonderCategory,
-  type PonderContentResponse,
-  type PonderProfile,
-  type PonderVoteItem,
-  ponderApi,
-} from "~~/services/ponder/client";
+import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -98,7 +91,6 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const isPageVisible = usePageVisibility();
   const { address: connectedAddress } = useAccount();
   const { openConnectModal } = useConnectModal();
-  const { profiles } = useSubmitterProfiles([normalizedAddress]);
   const {
     followedWallets,
     toggleFollow,
@@ -113,77 +105,43 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     args: [normalizedAddress],
   });
 
-  const { data: summaryResult, isLoading: summaryLoading } = usePonderQuery<PonderProfile | null, PonderProfile | null>(
-    {
-      queryKey: ["publicProfileSummary", normalizedAddress],
-      ponderFn: async () => {
-        const profileMap = await ponderApi.getProfiles([normalizedAddress]);
-        return profileMap[normalizedAddress] ?? null;
+  const { data: profileResult, isLoading: profileLoading } = usePonderQuery<
+    PonderProfileDetailResponse,
+    PonderProfileDetailResponse
+  >({
+    queryKey: ["publicProfile", normalizedAddress],
+    ponderFn: async () => ponderApi.getProfile(normalizedAddress),
+    rpcFn: async () => ({
+      profile: null,
+      summary: {
+        totalVotes: 0,
+        totalContent: 0,
+        totalRewardsClaimed: "0",
       },
-      rpcFn: async () => null,
-      enabled: true,
-      staleTime: 30_000,
-      refetchInterval: isPageVisible ? 60_000 : false,
-    },
-  );
-
-  const { data: votesResult, isLoading: votesLoading } = usePonderQuery<
-    { items: PonderVoteItem[] },
-    { items: PonderVoteItem[] }
-  >({
-    queryKey: ["publicProfileVotes", normalizedAddress],
-    ponderFn: async () => ponderApi.getVotes({ voter: normalizedAddress, limit: "20" }),
-    rpcFn: async () => ({ items: [] }),
-    enabled: true,
-    staleTime: 15_000,
-    refetchInterval: isPageVisible ? 60_000 : false,
-  });
-  const { data: submissionsResult, isLoading: submissionsLoading } = usePonderQuery<
-    PonderContentResponse,
-    PonderContentResponse
-  >({
-    queryKey: ["publicProfileSubmissions", normalizedAddress],
-    ponderFn: async () =>
-      ponderApi.getContent({
-        submitter: normalizedAddress,
-        limit: "6",
-        sortBy: "newest",
-        status: "all",
-      }),
-    rpcFn: async () => ({ items: [], total: 0, limit: 6, offset: 0 }),
+      recentVotes: [],
+      recentRewards: [],
+      recentSubmissions: [],
+    }),
     enabled: true,
     staleTime: 30_000,
     refetchInterval: isPageVisible ? 60_000 : false,
   });
-  const { data: categoriesResult } = usePonderQuery<{ items: PonderCategory[] }, { items: PonderCategory[] }>({
-    queryKey: ["publicProfileCategoryNames"],
-    ponderFn: async () => ponderApi.getCategories("approved"),
-    rpcFn: async () => ({ items: [] }),
-    enabled: true,
-    staleTime: 5 * 60_000,
-    refetchInterval: false,
-  });
 
-  const summary = summaryResult?.data ?? null;
-  const recentVotes = votesResult?.data.items ?? [];
-  const recentSubmissions = submissionsResult?.data.items ?? [];
+  const profileDetail = profileResult?.data ?? null;
+  const summary = profileDetail?.profile ?? null;
+  const recentVotes = profileDetail?.recentVotes ?? [];
+  const recentSubmissions = profileDetail?.recentSubmissions ?? [];
   const ownProfile = connectedAddress?.toLowerCase() === normalizedAddress;
   const following = followedWallets.has(normalizedAddress);
   const pending = isFollowPending(normalizedAddress);
-  const fallbackProfile = profiles[normalizedAddress];
   const backHref = ownProfile ? "/settings" : "/governance";
   const fallbackImageUrl = blo(normalizedAddress);
 
-  const displayName = summary?.name || fallbackProfile?.username || truncateAddress(normalizedAddress);
-  const profileImageUrl =
-    getProxiedProfileImageUrl(summary?.imageUrl || fallbackProfile?.profileImageUrl) || fallbackImageUrl;
-  const totalVotes = summary?.totalVotes ?? 0;
-  const totalContent = summary?.totalContent ?? 0;
-  const totalRewardsClaimed = summary?.totalRewardsClaimed ?? "0";
-  const categoryNamesById = useMemo(
-    () => new Map((categoriesResult?.data.items ?? []).map(category => [category.id, category.name] as const)),
-    [categoriesResult],
-  );
+  const displayName = summary?.name || truncateAddress(normalizedAddress);
+  const profileImageUrl = getProxiedProfileImageUrl(summary?.imageUrl) || fallbackImageUrl;
+  const totalVotes = profileDetail?.summary.totalVotes ?? 0;
+  const totalContent = profileDetail?.summary.totalContent ?? 0;
+  const totalRewardsClaimed = profileDetail?.summary.totalRewardsClaimed ?? "0";
 
   const streakLabel = useMemo(() => {
     if (!stats) return "0";
@@ -275,7 +233,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
                 <div className="mt-2 font-mono text-base text-base-content/55 break-all">{normalizedAddress}</div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base text-base-content/60">
-                    {summaryLoading ? "..." : `${totalVotes} votes`}
+                    {profileLoading ? "..." : `${totalVotes} votes`}
                   </div>
                   <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base text-base-content/60">
                     {totalContent} submissions
@@ -376,11 +334,11 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
               <InfoTooltip text="Latest content this curator has submitted. This is the clearest payoff from following them." />
             </div>
             <span className="text-base tabular-nums text-base-content/45">
-              {submissionsLoading ? "..." : recentSubmissions.length}
+              {profileLoading ? "..." : recentSubmissions.length}
             </span>
           </div>
 
-          {submissionsLoading && recentSubmissions.length === 0 ? (
+          {profileLoading && recentSubmissions.length === 0 ? (
             <div className="flex items-center justify-center py-10">
               <span className="loading loading-spinner loading-sm"></span>
             </div>
@@ -391,8 +349,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {recentSubmissions.map(submission => {
-                const categoryName =
-                  categoryNamesById.get(submission.categoryId) || `Category #${submission.categoryId}`;
+                const categoryName = submission.categoryName || `Category #${submission.categoryId}`;
                 return (
                   <Link
                     key={submission.id}
@@ -488,11 +445,11 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
               <InfoTooltip text="Latest 20 vote commits for this wallet. Outcomes appear once rounds settle." />
             </div>
             <span className="text-base tabular-nums text-base-content/45">
-              {votesLoading ? "..." : recentVotes.length}
+              {profileLoading ? "..." : recentVotes.length}
             </span>
           </div>
 
-          {votesLoading && recentVotes.length === 0 ? (
+          {profileLoading && recentVotes.length === 0 ? (
             <div className="flex items-center justify-center py-10">
               <span className="loading loading-spinner loading-sm"></span>
             </div>
