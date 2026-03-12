@@ -44,6 +44,12 @@ function getThumbnailImageSrc(thumbnailUrl: string) {
   return thumbnailUrl;
 }
 
+export function getVoteFeedThumbnailSrc(item: ContentItem) {
+  const platform = detectPlatform(item.url);
+  const thumbnailUrl = item.thumbnailUrl ?? platform.thumbnailUrl;
+  return thumbnailUrl ? getThumbnailImageSrc(thumbnailUrl) : null;
+}
+
 interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
@@ -147,8 +153,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
 }: FeedQueueCardProps) {
   const platform = detectPlatform(item.url);
   const [imageError, setImageError] = useState(false);
-  const thumbnailUrl = item.thumbnailUrl ?? platform.thumbnailUrl;
-  const thumbnailSrc = thumbnailUrl ? getThumbnailImageSrc(thumbnailUrl) : null;
+  const thumbnailSrc = getVoteFeedThumbnailSrc(item);
   const isNext = queuePosition === 1;
 
   return (

@@ -10,7 +10,7 @@ import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
-import { FeedQueueCard, FeedVoteCard } from "~~/components/vote/VoteFeedCards";
+import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -421,6 +421,7 @@ const HomeInner = () => {
 
   const {
     activeItem: primaryItem,
+    activeSourceIndex,
     orderedItems: orderedDisplayFeed,
     promoteNext,
     selectContent,
@@ -454,11 +455,23 @@ const HomeInner = () => {
   }, [submitterProfiles, accuracyMap]);
 
   const canLoadMore = visibleCount < orderedDisplayFeed.length || hasMoreFeed;
+  const activeStagePosition = activeSourceIndex >= 0 ? activeSourceIndex + 1 : 0;
+  const stageTotal = totalContent > 0 ? totalContent : displayFeed.length;
+  const nextQueueItem = queueItems[0] ?? null;
 
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(FEED_PAGE_SIZE);
   }, [searchQuery, activeCategory, scope, sortBy]);
+
+  useEffect(() => {
+    const nextThumbnailSrc = nextQueueItem ? getVoteFeedThumbnailSrc(nextQueueItem) : null;
+    if (!nextThumbnailSrc) return;
+
+    const image = new window.Image();
+    image.decoding = "async";
+    image.src = nextThumbnailSrc;
+  }, [nextQueueItem]);
 
   // Infinite scroll with Intersection Observer
   useEffect(() => {
@@ -737,27 +750,47 @@ const HomeInner = () => {
               ) : null}
 
               {primaryItem ? (
-                <div
-                  key={primaryItem.id.toString()}
-                  ref={activeCardRegionRef}
-                  className="motion-safe:animate-vote-card-promote"
-                >
-                  <FeedVoteCard
-                    item={primaryItem}
-                    submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                    onSwipe={handleSwipe}
-                    onVote={handleButtonVote}
-                    onToggleWatch={handleToggleWatch}
-                    onToggleFollow={handleToggleFollow}
-                    watched={watchedContentIds.has(primaryItem.id.toString())}
-                    watchPending={isWatchPending(primaryItem.id)}
-                    following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                    followPending={isFollowPending(primaryItem.submitter)}
-                    normalizedAddress={normalizedAddress}
-                    isCommitting={isCommitting}
-                    voteError={voteError}
-                    address={address}
-                  />
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <div className="flex flex-wrap items-center gap-2 text-base-content/60">
+                      <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 font-medium">
+                        {activeStagePosition > 0 ? `Card ${activeStagePosition} of ${stageTotal}` : "Live queue"}
+                      </span>
+                      {nextQueueItem ? (
+                        <span className="rounded-full bg-primary/10 px-3 py-1.5 font-medium text-primary">
+                          Next:{" "}
+                          {nextQueueItem.goal.length > 48
+                            ? `${nextQueueItem.goal.slice(0, 45)}...`
+                            : nextQueueItem.goal}
+                        </span>
+                      ) : null}
+                    </div>
+                    <span className="text-base-content/45">
+                      {queueItems.length > 0 ? "Scroll or swipe up to promote the next card." : "No queued cards left."}
+                    </span>
+                  </div>
+                  <div
+                    key={primaryItem.id.toString()}
+                    ref={activeCardRegionRef}
+                    className="motion-safe:animate-vote-card-promote"
+                  >
+                    <FeedVoteCard
+                      item={primaryItem}
+                      submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                      onSwipe={handleSwipe}
+                      onVote={handleButtonVote}
+                      onToggleWatch={handleToggleWatch}
+                      onToggleFollow={handleToggleFollow}
+                      watched={watchedContentIds.has(primaryItem.id.toString())}
+                      watchPending={isWatchPending(primaryItem.id)}
+                      following={followedWallets.has(primaryItem.submitter.toLowerCase())}
+                      followPending={isFollowPending(primaryItem.submitter)}
+                      normalizedAddress={normalizedAddress}
+                      isCommitting={isCommitting}
+                      voteError={voteError}
+                      address={address}
+                    />
+                  </div>
                 </div>
               ) : null}
 
