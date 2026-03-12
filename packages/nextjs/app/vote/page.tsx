@@ -844,7 +844,7 @@ const HomeInner = () => {
         ) : (
           <div
             ref={activeCardRegionRef}
-            className="space-y-5 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:space-y-2.5"
+            className="space-y-5 xl:grid xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_clamp(15rem,24vh,23rem)] xl:gap-3 xl:overflow-hidden xl:space-y-0"
           >
             {isCommitting ? (
               <div className="flex shrink-0 items-center justify-center">
@@ -856,12 +856,12 @@ const HomeInner = () => {
             ) : null}
 
             {primaryItem ? (
-              <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-none xl:flex-col">
-                <div className="xl:min-h-0 xl:flex-none">
+              <div className="space-y-3 xl:min-h-0 xl:space-y-0">
+                <div className="xl:h-full xl:min-h-0">
                   <motion.div
                     key={primaryItem.id.toString()}
                     data-disable-queue-wheel="true"
-                    className={`touch-pan-y xl:min-h-0 ${
+                    className={`touch-pan-y xl:h-full xl:min-h-0 ${
                       navigationDirection === "next"
                         ? "motion-safe:animate-vote-card-next"
                         : "motion-safe:animate-vote-card-prev"
@@ -899,13 +899,13 @@ const HomeInner = () => {
             {visibleFeedItems.length > 0 ? (
               <section
                 key={primaryItem?.id.toString() ?? "queue-empty"}
-                className="motion-safe:animate-vote-queue-settle xl:min-h-[12rem] [@media(min-height:1150px)]:xl:flex-1 [@media(min-height:1150px)]:xl:overflow-hidden [@media(min-height:1300px)]:xl:min-h-[18rem]"
+                className="motion-safe:animate-vote-queue-settle xl:min-h-0 xl:overflow-hidden"
                 aria-label="Up next queue"
               >
                 <div
                   ref={queueRailRef}
                   data-disable-queue-wheel="true"
-                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:pb-1 [@media(min-height:1150px)]:xl:grid [@media(min-height:1150px)]:xl:h-full [@media(min-height:1150px)]:xl:grid-cols-[repeat(auto-fit,minmax(11.25rem,1fr))] [@media(min-height:1150px)]:xl:auto-rows-[minmax(14rem,1fr)] [@media(min-height:1150px)]:xl:content-start [@media(min-height:1150px)]:xl:gap-2.5 [@media(min-height:1150px)]:xl:overflow-x-hidden [@media(min-height:1150px)]:xl:overflow-y-auto [@media(min-height:1150px)]:xl:pb-0 [@media(min-height:1150px)]:xl:snap-none"
+                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:grid xl:h-full xl:grid-cols-[repeat(auto-fit,minmax(12rem,1fr))] xl:auto-rows-[minmax(15rem,1fr)] xl:content-start xl:gap-2.5 xl:overflow-x-hidden xl:overflow-y-auto xl:pb-0 xl:pr-1 xl:snap-none"
                 >
                   {visibleFeedItems.map(item => (
                     <FeedQueueCard

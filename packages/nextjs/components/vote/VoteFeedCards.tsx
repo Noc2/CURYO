@@ -166,7 +166,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   const mediaLayout = getActiveMediaLayout(item.url);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
+    <div className="flex h-full min-h-0 flex-col gap-3 xl:grid xl:grid-rows-[auto_minmax(0,1fr)] xl:gap-2.5">
       <FeedContentHeader
         item={item}
         onPrevious={onPrevious}
@@ -175,16 +175,18 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         canNext={canNext}
       />
 
-      <div className={`grid min-h-0 flex-1 grid-cols-1 gap-3 lg:items-start ${mediaLayout.gridClass}`}>
+      <div
+        className={`grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-rows-[minmax(0,1fr)_auto] lg:items-stretch ${mediaLayout.gridClass}`}
+      >
         <div
-          className={`order-1 min-h-0 overflow-hidden rounded-2xl bg-base-200 lg:col-start-1 lg:row-start-1 ${mediaLayout.mediaShellClass}`}
+          className={`order-1 min-h-0 overflow-hidden rounded-2xl bg-base-200 lg:col-start-1 lg:row-start-1 lg:h-full ${mediaLayout.mediaShellClass}`}
         >
           <div className="h-full w-full">
             <ContentEmbed url={item.url} />
           </div>
         </div>
 
-        <div className="order-3 lg:col-start-1 lg:row-start-2">
+        <div className="order-3 min-h-0 lg:col-start-1 lg:row-start-2">
           <FeedContentMetaCard
             item={item}
             submitterProfile={submitterProfile}
@@ -283,7 +285,7 @@ function FeedContentMetaCard({
 
   return (
     <>
-      <div className="rounded-2xl bg-black p-4 xl:p-3">
+      <div className="max-h-[13rem] overflow-y-auto rounded-2xl bg-black p-4 xl:max-h-[12rem] xl:p-3">
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
@@ -382,7 +384,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:w-[12.5rem] xl:max-w-none [@media(min-height:1150px)]:xl:h-full [@media(min-height:1150px)]:xl:min-h-[14rem] [@media(min-height:1150px)]:xl:min-w-0 [@media(min-height:1150px)]:xl:w-auto ${
+      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:min-h-[15rem] xl:min-w-0 xl:w-auto ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
