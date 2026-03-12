@@ -101,41 +101,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 }: FeedVoteCardProps) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
-      <div className="flex items-center justify-between gap-3 px-1 text-sm text-base-content/45">
-        <button
-          type="button"
-          onClick={onPrevious}
-          disabled={!canPrevious}
-          aria-label="Show previous card"
-          className="btn btn-circle btn-sm border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-        </button>
-        <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
-          <span className="truncate rounded-full bg-base-content/[0.05] px-2.5 py-1 font-medium text-base-content/60">
-            {detectPlatform(item.url).type}
-          </span>
-          {item.tags[0] ? <span className="truncate text-base-content/35">#{item.tags[0]}</span> : null}
-        </div>
-        <button
-          type="button"
-          onClick={onNext}
-          disabled={!canNext}
-          aria-label="Show next card"
-          className="btn btn-circle btn-sm border border-base-content/10 bg-base-content/[0.04] text-base-content/60 hover:border-primary/25 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
-        >
-          <ChevronRightIcon className="h-4 w-4" />
-        </button>
-      </div>
-
       <div className="flex min-h-0 flex-1 flex-col gap-3 lg:h-[min(52vh,34rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
-        <div className="grid w-full min-h-0 gap-3 lg:w-3/5 lg:grid-rows-[minmax(0,1fr)_auto]">
-          <div className="min-h-0 overflow-hidden rounded-2xl bg-base-200">
-            <div className="h-full w-full">
-              <ContentEmbed url={item.url} />
-            </div>
-          </div>
-
+        <div className="grid w-full min-h-0 gap-3 lg:w-3/5 lg:grid-rows-[auto_minmax(0,1fr)]">
           <FeedContentMetaCard
             item={item}
             submitterProfile={submitterProfile}
@@ -146,7 +113,17 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             watchPending={watchPending}
             onToggleFollow={onToggleFollow}
             onToggleWatch={onToggleWatch}
+            onPrevious={onPrevious}
+            onNext={onNext}
+            canPrevious={canPrevious}
+            canNext={canNext}
           />
+
+          <div className="min-h-0 overflow-hidden rounded-2xl bg-base-200">
+            <div className="h-full w-full">
+              <ContentEmbed url={item.url} />
+            </div>
+          </div>
         </div>
 
         <div className="w-full min-h-0 rounded-2xl bg-base-200 lg:w-2/5">
@@ -176,6 +153,10 @@ interface FeedContentMetaCardProps {
   watchPending: boolean;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  canPrevious: boolean;
+  canNext: boolean;
 }
 
 function FeedContentMetaCard({
@@ -188,12 +169,44 @@ function FeedContentMetaCard({
   watchPending,
   onToggleWatch,
   onToggleFollow,
+  onPrevious,
+  onNext,
+  canPrevious,
+  canNext,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
+  const platformType = detectPlatform(item.url).type;
 
   return (
     <>
       <div className="rounded-2xl bg-base-200 p-4 xl:p-3">
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onPrevious}
+            disabled={!canPrevious}
+            aria-label="Show previous card"
+            className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/65 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-2">
+            <span className="truncate rounded-full bg-base-300 px-2.5 py-1 font-medium text-base-content/70">
+              {platformType}
+            </span>
+            {item.tags[0] ? <span className="truncate text-base-content/45">#{item.tags[0]}</span> : null}
+          </div>
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={!canNext}
+            aria-label="Show next card"
+            className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/65 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
+        </div>
+
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
