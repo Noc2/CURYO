@@ -17,7 +17,13 @@ import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
-import { type PonderProfile, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
+import {
+  type PonderCategory,
+  type PonderContentResponse,
+  type PonderProfile,
+  type PonderVoteItem,
+  ponderApi,
+} from "~~/services/ponder/client";
 import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -45,6 +51,14 @@ function formatTimestamp(timestamp: string) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function getUrlHost(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
 
 function getVoteDirection(vote: PonderVoteItem) {
@@ -124,9 +138,35 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     staleTime: 15_000,
     refetchInterval: isPageVisible ? 60_000 : false,
   });
+  const { data: submissionsResult, isLoading: submissionsLoading } = usePonderQuery<
+    PonderContentResponse,
+    PonderContentResponse
+  >({
+    queryKey: ["publicProfileSubmissions", normalizedAddress],
+    ponderFn: async () =>
+      ponderApi.getContent({
+        submitter: normalizedAddress,
+        limit: "6",
+        sortBy: "newest",
+        status: "all",
+      }),
+    rpcFn: async () => ({ items: [], total: 0, limit: 6, offset: 0 }),
+    enabled: true,
+    staleTime: 30_000,
+    refetchInterval: isPageVisible ? 60_000 : false,
+  });
+  const { data: categoriesResult } = usePonderQuery<{ items: PonderCategory[] }, { items: PonderCategory[] }>({
+    queryKey: ["publicProfileCategoryNames"],
+    ponderFn: async () => ponderApi.getCategories("approved"),
+    rpcFn: async () => ({ items: [] }),
+    enabled: true,
+    staleTime: 5 * 60_000,
+    refetchInterval: false,
+  });
 
   const summary = summaryResult?.data ?? null;
   const recentVotes = votesResult?.data.items ?? [];
+  const recentSubmissions = submissionsResult?.data.items ?? [];
   const ownProfile = connectedAddress?.toLowerCase() === normalizedAddress;
   const following = followedWallets.has(normalizedAddress);
   const pending = isFollowPending(normalizedAddress);
@@ -140,6 +180,10 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const totalVotes = summary?.totalVotes ?? 0;
   const totalContent = summary?.totalContent ?? 0;
   const totalRewardsClaimed = summary?.totalRewardsClaimed ?? "0";
+  const categoryNamesById = useMemo(
+    () => new Map((categoriesResult?.data.items ?? []).map(category => [category.id, category.name] as const)),
+    [categoriesResult],
+  );
 
   const streakLabel = useMemo(() => {
     if (!stats) return "0";
@@ -147,6 +191,35 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     if (stats.currentStreak < 0) return `${Math.abs(stats.currentStreak)}L`;
     return "0";
   }, [stats]);
+  const strongestCategories = useMemo(
+    () =>
+      [...categories]
+        .filter(category => category.categoryName)
+        .sort((a, b) => b.totalSettledVotes - a.totalSettledVotes)
+        .slice(0, 2)
+        .map(category => category.categoryName as string),
+    [categories],
+  );
+  const curatorHeadline = useMemo(() => {
+    if (strongestCategories.length >= 2) {
+      return `Best signal in ${strongestCategories[0]} and ${strongestCategories[1]}`;
+    }
+    if (strongestCategories.length === 1) {
+      return `Best signal in ${strongestCategories[0]}`;
+    }
+    if (totalContent > 0) {
+      return `${totalContent} submissions with a live public track record`;
+    }
+    if (stats && stats.totalSettledVotes > 0) {
+      return `${stats.totalSettledVotes} settled votes building a track record`;
+    }
+    return "Still building a public curator track record";
+  }, [stats, strongestCategories, totalContent]);
+  const followExplanation = ownProfile
+    ? "This is the public view other curators use to decide whether to trust your submissions and follow your activity."
+    : following
+      ? "Following turns this curator into a signal source for you: their new submissions show up in Curators You Follow, and you can enable submission and resolution alerts in Settings."
+      : "Follow to surface this curator's new submissions in Curators You Follow and optionally get alerts when they submit or resolve rounds.";
 
   const handleToggleFollow = useCallback(async () => {
     const result = await toggleFollow(normalizedAddress);
@@ -166,7 +239,11 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
       return;
     }
 
-    notification.success(result.following ? "Following curator" : "Unfollowed curator");
+    notification.success(
+      result.following
+        ? "Following curator. Their new submissions will show up in Curators You Follow."
+        : "Unfollowed curator",
+    );
   }, [normalizedAddress, openConnectModal, toggleFollow]);
 
   return (
@@ -248,6 +325,104 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
             value={stats ? `${stats.bestWinStreak}W` : "0"}
             tooltip="Longest win streak. Current streak is shown below."
           />
+        </div>
+
+        <div className="surface-card rounded-3xl p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Curator snapshot</div>
+              <h2 className="mt-2 text-2xl font-semibold">{curatorHeadline}</h2>
+              <p className="mt-3 text-base leading-7 text-base-content/60">{followExplanation}</p>
+            </div>
+
+            {!ownProfile && following ? (
+              <Link
+                href="/settings"
+                className="inline-flex items-center justify-center rounded-full bg-base-content/[0.06] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-content/[0.1]"
+              >
+                Manage alerts
+              </Link>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {strongestCategories.map(categoryName => (
+              <div
+                key={categoryName}
+                className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base text-base-content/70"
+              >
+                {categoryName}
+              </div>
+            ))}
+            <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
+              <span className="text-base-content/50">Win rate </span>
+              <span className="font-mono tabular-nums">{stats ? `${(stats.winRate * 100).toFixed(1)}%` : "—"}</span>
+            </div>
+            <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
+              <span className="text-base-content/50">Settled votes </span>
+              <span className="font-mono tabular-nums">{stats ? stats.totalSettledVotes : 0}</span>
+            </div>
+            <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
+              <span className="text-base-content/50">Submissions </span>
+              <span className="font-mono tabular-nums">{totalContent}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="surface-card rounded-3xl p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-base font-medium text-base-content/60">Recent submissions</span>
+              <InfoTooltip text="Latest content this curator has submitted. This is the clearest payoff from following them." />
+            </div>
+            <span className="text-base tabular-nums text-base-content/45">
+              {submissionsLoading ? "..." : recentSubmissions.length}
+            </span>
+          </div>
+
+          {submissionsLoading && recentSubmissions.length === 0 ? (
+            <div className="flex items-center justify-center py-10">
+              <span className="loading loading-spinner loading-sm"></span>
+            </div>
+          ) : recentSubmissions.length === 0 ? (
+            <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/55">
+              No submissions yet.
+            </div>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {recentSubmissions.map(submission => {
+                const categoryName =
+                  categoryNamesById.get(submission.categoryId) || `Category #${submission.categoryId}`;
+                return (
+                  <Link
+                    key={submission.id}
+                    href={`/vote?content=${submission.id}`}
+                    className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] p-4 transition-colors hover:bg-base-content/[0.05]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold uppercase tracking-wide text-primary/80">
+                          {categoryName}
+                        </div>
+                        <div className="mt-1 line-clamp-2 text-lg font-semibold leading-7">{submission.goal}</div>
+                      </div>
+                      <div className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-mono text-base-content/70">
+                        {submission.rating}/100
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2 text-sm text-base-content/55">
+                      <span>{getUrlHost(submission.url)}</span>
+                      <span>&bull;</span>
+                      <span>{submission.totalVotes} votes</span>
+                      <span>&bull;</span>
+                      <span>{formatTimestamp(submission.createdAt)}</span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="surface-card rounded-3xl p-6">

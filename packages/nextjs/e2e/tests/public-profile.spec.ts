@@ -5,9 +5,12 @@ test.describe("Public profiles", () => {
   test("public profile page renders without a connected wallet", async ({ page }) => {
     await page.goto(`/profiles/${ANVIL_ACCOUNTS.account9.address}`);
 
-    // PublicProfileView renders the address, "Voting performance", and "Recent votes" sections.
+    // PublicProfileView renders the address, curator summary, recent submissions, and recent votes sections.
     await expect(page.getByText(ANVIL_ACCOUNTS.account9.address.toLowerCase())).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Curator snapshot")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Voting performance")).toBeVisible({ timeout: 15_000 });
+    const recentSubmissions = page.getByText("Recent submissions").or(page.getByText("No submissions yet."));
+    await expect(recentSubmissions.first()).toBeVisible({ timeout: 15_000 });
 
     const recentVotes = page.getByText("Recent votes").or(page.getByText("No recent votes yet."));
     await expect(recentVotes.first()).toBeVisible({ timeout: 15_000 });
