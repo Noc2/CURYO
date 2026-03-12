@@ -751,10 +751,10 @@ const HomeInner = () => {
   });
 
   return (
-    <div className="flex grow flex-col items-center px-4 pt-4 pb-8 xl:h-full xl:min-h-0 xl:overflow-hidden xl:pb-4">
-      <div className="w-full max-w-6xl xl:flex xl:h-full xl:min-h-0 xl:flex-col">
+    <div className="flex grow flex-col items-center px-4 pt-4 pb-8 xl:h-[100dvh] xl:max-h-[100dvh] xl:min-h-0 xl:overflow-hidden xl:px-5 xl:pt-3 xl:pb-3 2xl:px-6">
+      <div className="w-full xl:flex xl:h-full xl:min-h-0 xl:max-w-[min(120rem,calc(100vw-18rem))] xl:flex-col 2xl:max-w-[min(136rem,calc(100vw-18rem))]">
         <VotingGuide />
-        <div className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap">
+        <div className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-3 xl:flex-nowrap">
           <CategoryFilter
             categories={categories}
             activeCategory={activeCategory}
@@ -812,7 +812,7 @@ const HomeInner = () => {
               {emptyStateMessage}
             </div>
           ) : (
-            <div className="space-y-5 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:space-y-4">
+            <div className="space-y-5 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:space-y-3">
               {isCommitting ? (
                 <div className="flex shrink-0 items-center justify-center">
                   <span className="text-base text-base-content/50">
@@ -861,7 +861,7 @@ const HomeInner = () => {
               {visibleFeedItems.length > 0 ? (
                 <section
                   key={primaryItem?.id.toString() ?? "queue-empty"}
-                  className="surface-card space-y-3 rounded-2xl p-3 ring-1 ring-primary/20 motion-safe:animate-vote-queue-settle xl:flex-none"
+                  className="surface-card space-y-3 rounded-2xl p-3 ring-1 ring-primary/20 motion-safe:animate-vote-queue-settle xl:flex-none xl:space-y-2 xl:p-2.5"
                   aria-label="Up next queue"
                 >
                   <div
