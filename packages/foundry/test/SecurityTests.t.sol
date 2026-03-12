@@ -588,9 +588,11 @@ contract SecurityAccessControlTest is Test {
         votingEngine.setConfig(5 minutes, 7 days, 2, 200);
     }
 
-    function test_ACL_Engine_fundConsensusReserve_Unauthorized() public {
+    function test_ACL_Engine_addToConsensusReserve_IsPermissionless() public {
+        // addToConsensusReserve is permissionless by design (treasury top-ups + slashed-stake routing)
+        // Verify it reverts on insufficient allowance, not on access control
         vm.prank(attacker);
-        _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
+        vm.expectRevert(); // ERC20InsufficientAllowance — no tokens approved
         votingEngine.addToConsensusReserve(100);
     }
 

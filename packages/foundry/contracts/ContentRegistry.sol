@@ -173,7 +173,7 @@ contract ContentRegistry is
         emit VoterIdNFTUpdated(_voterIdNFT);
     }
 
-    /// @notice Set the participation pool contract (one-time configuration)
+    /// @notice Set or update the participation pool contract
     /// @param _participationPool Address of the ParticipationPool contract
     function setParticipationPool(address _participationPool) external onlyRole(CONFIG_ROLE) {
         require(_participationPool != address(0), "Invalid address");
@@ -273,7 +273,7 @@ contract ContentRegistry is
 
     /// @notice Cancel content before any votes. Returns submitter stake in cREP.
     /// @dev Only callable by the submitter. VotingEngine must confirm 0 votes.
-    function cancelContent(uint256 contentId) external nonReentrant {
+    function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
         require(bonusPool != address(0), "Bonus pool not set");
         Content storage c = contents[contentId];
         require(c.submitter == msg.sender, "Not submitter");
@@ -360,7 +360,13 @@ contract ContentRegistry is
 
     /// @notice Revive dormant content by staking REVIVAL_STAKE cREP tokens.
     /// @dev Resets the activity timer. Max MAX_REVIVALS revivals per content.
+    ///      Revival stake is sent to treasury (non-refundable).
     function reviveContent(uint256 contentId) external nonReentrant whenNotPaused {
+        // M-4 fix: require Voter ID (same sybil check as submitContent)
+        if (address(voterIdNFT) != address(0)) {
+            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+        }
+
         Content storage c = contents[contentId];
         require(c.status == ContentStatus.Dormant, "Not dormant");
         require(c.dormantCount < MAX_REVIVALS, "Max revivals reached");
@@ -371,7 +377,9 @@ contract ContentRegistry is
             submissionKeyUsed[submissionKey] = true;
         }
 
-        crepToken.safeTransferFrom(msg.sender, address(this), REVIVAL_STAKE);
+        // M-1/M-2 fix: send revival stake to treasury instead of leaving it unaccounted
+        require(treasury != address(0), "Treasury not set");
+        crepToken.safeTransferFrom(msg.sender, treasury, REVIVAL_STAKE);
 
         c.status = ContentStatus.Active;
         c.dormantCount++;

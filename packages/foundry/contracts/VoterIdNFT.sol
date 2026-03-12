@@ -105,6 +105,11 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         super.transferOwnership(newOwner);
     }
 
+    /// @notice Prevent accidental ownership renunciation (L-5 fix)
+    function renounceOwnership() public pure override {
+        revert("Renounce disabled");
+    }
+
     // ====================================================
     // Admin Functions
     // ====================================================
@@ -243,6 +248,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     /// @param amount The stake amount to add
     function recordStake(uint256 contentId, uint256 epochId, uint256 tokenId, uint256 amount) external override {
         if (msg.sender != stakeRecorder) revert OnlyStakeRecorder();
+        require(tokenIdToHolder[tokenId] != address(0), "Token not active"); // L-10: defense-in-depth
 
         _epochContentStake[contentId][epochId][tokenId] += amount;
 

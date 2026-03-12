@@ -117,6 +117,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         }
 
         string memory normalizedDomain = _normalizeDomain(domain);
+        require(bytes(normalizedDomain).length > 0, "Empty domain after normalization"); // L-13 fix
 
         // Check domain uniqueness
         bytes32 domainHash = keccak256(abi.encodePacked(normalizedDomain));
@@ -275,6 +276,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
         // Check domain uniqueness
         string memory normalizedDomain = _normalizeDomain(domain);
+        require(bytes(normalizedDomain).length > 0, "Empty domain after normalization"); // L-13 fix
         bytes32 domainHash = keccak256(abi.encodePacked(normalizedDomain));
         require(_domainToCategory[domainHash] == 0, "Domain already registered");
 

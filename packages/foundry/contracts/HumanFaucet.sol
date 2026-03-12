@@ -100,6 +100,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @notice Emitted when the Voter ID NFT contract is set
     event VoterIdNFTSet(address indexed voterIdNFT);
 
+    /// @notice Emitted when Voter ID minting fails (claim still succeeds)
+    event VoterIdMintFailed(address indexed user, uint256 nullifier);
+
     /// @notice Emitted when the claim tier changes due to reaching a threshold
     event TierChanged(uint256 newTier, uint256 newClaimAmount, uint256 totalClaimantsCount);
 
@@ -142,6 +145,11 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     function transferOwnership(address newOwner) public override onlyOwner {
         require(newOwner == governance, "Can only transfer to governance");
         super.transferOwnership(newOwner);
+    }
+
+    /// @notice Prevent accidental ownership renunciation (L-5 fix)
+    function renounceOwnership() public pure override {
+        revert("Renounce disabled");
     }
 
     // --- Admin Functions ---
@@ -426,10 +434,13 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
         emit TokensClaimed(user, output.nullifier, claimAmount);
 
-        // Mint Voter ID NFT if the contract is set
+        // Mint Voter ID NFT if the contract is set (M-6 fix: try/catch so claims succeed even if mint fails)
         if (address(voterIdNFT) != address(0)) {
-            uint256 tokenId = voterIdNFT.mint(user, output.nullifier);
-            emit VoterIdMinted(user, tokenId, output.nullifier);
+            try voterIdNFT.mint(user, output.nullifier) returns (uint256 tokenId) {
+                emit VoterIdMinted(user, tokenId, output.nullifier);
+            } catch {
+                emit VoterIdMintFailed(user, output.nullifier);
+            }
         }
 
         _claiming = false;

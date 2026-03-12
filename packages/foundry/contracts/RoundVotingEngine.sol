@@ -281,6 +281,7 @@ contract RoundVotingEngine is
     }
 
     function setKeeperReward(uint256 _keeperReward) external onlyRole(CONFIG_ROLE) {
+        if (_keeperReward > 10e6) revert InvalidConfig(); // L-2: cap at 10 cREP
         keeperReward = _keeperReward;
         emit KeeperRewardUpdated(_keeperReward);
     }
@@ -306,7 +307,7 @@ contract RoundVotingEngine is
         onlyRole(CONFIG_ROLE)
     {
         if (_epochDuration < 5 minutes) revert InvalidConfig();
-        if (_maxDuration < 1 days) revert InvalidConfig();
+        if (_maxDuration < 1 days || _maxDuration > 30 days) revert InvalidConfig(); // L-3: cap max duration
         if (_minVoters < 2) revert InvalidConfig();
         if (_maxVoters < _minVoters || _maxVoters > 10000) revert InvalidConfig();
 
@@ -877,8 +878,13 @@ contract RoundVotingEngine is
                 try TokenTransferLib.transfer(crepToken, treasury, forfeitedCrep) {
                     emit ForfeitedFundsAddedToTreasury(contentId, roundId, forfeitedCrep);
                 } catch {
+                    // H-1 fix: fallback to consensus reserve instead of permanently locking funds
+                    consensusReserve += forfeitedCrep;
                     emit SettlementSideEffectFailed(contentId, roundId, REASON_FORFEITED_TRANSFER);
                 }
+            } else {
+                // H-1 fix: route to consensus reserve when treasury is unset
+                consensusReserve += forfeitedCrep;
             }
         }
 

@@ -249,6 +249,8 @@ contract FrontendRegistry is
     // --- Fee Crediting (called by RoundVotingEngine) ---
 
     /// @inheritdoc IFrontendRegistry
+    /// @dev No approval check here — VotingEngine checks approval at commit time,
+    ///      and fees are credited later at settlement/claim time regardless of current status.
     function creditFees(address frontend, uint256 crepAmount) external override onlyRole(FEE_CREDITOR_ROLE) {
         require(crepAmount <= MAX_FEE_CREDIT, "Fee credit too large");
         Frontend storage f = frontends[frontend];

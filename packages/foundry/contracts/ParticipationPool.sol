@@ -58,6 +58,9 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Emitted when tokens are withdrawn from the pool
     event PoolWithdrawal(address indexed to, uint256 amount);
 
+    /// @notice Emitted when a reward is capped due to pool depletion (M-5 fix)
+    event RewardCapped(address indexed recipient, uint256 requested, uint256 actual);
+
     // --- Modifiers ---
 
     modifier onlyAuthorized() {
@@ -80,6 +83,11 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     function transferOwnership(address newOwner) public override onlyOwner {
         require(newOwner == governance, "Can only transfer to governance");
         super.transferOwnership(newOwner);
+    }
+
+    /// @notice Prevent accidental ownership renunciation (L-5 fix)
+    function renounceOwnership() public pure override {
+        revert("Renounce disabled");
     }
 
     // --- Admin Functions ---
@@ -165,7 +173,10 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
 
     /// @dev Internal distribution logic — caps at remaining pool balance
     function _distribute(address recipient, uint256 reward, bool isSubmission) internal returns (uint256 paidAmount) {
-        if (reward > poolBalance) reward = poolBalance;
+        if (reward > poolBalance) {
+            emit RewardCapped(recipient, reward, poolBalance);
+            reward = poolBalance;
+        }
         if (reward == 0) return 0;
 
         totalDistributed += reward;
