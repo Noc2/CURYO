@@ -192,13 +192,13 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group w-[10.5rem] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[11.5rem] xl:w-[9.5rem] 2xl:w-[10rem] ${
+      className={`group w-[10.5rem] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[11.5rem] xl:w-[8.75rem] 2xl:w-[9.25rem] ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
       }`}
     >
-      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200 xl:aspect-[16/10]">
+      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200 xl:aspect-[16/9]">
         <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
             {queuePosition + 1}
@@ -227,11 +227,11 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         )}
       </div>
 
-      <div className="space-y-1.5 p-2.5 xl:space-y-1 xl:p-1.5">
+      <div className="space-y-1.5 p-2.5 xl:space-y-0.5 xl:p-1.5">
         <div className="flex items-center gap-2 text-xs text-base-content/55">
           <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
         </div>
-        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-[0.76rem]">{item.goal}</p>
+        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-[0.72rem] xl:leading-snug">{item.goal}</p>
         <div className="flex items-center gap-2 text-xs text-base-content/50 xl:flex-wrap xl:gap-1.5">
           <span className="rounded-full bg-base-content/[0.05] px-2 py-1 font-medium text-base-content/65">
             {platform.type}

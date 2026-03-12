@@ -304,8 +304,8 @@ export function VotingQuestionCard({
           <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
         </div>
 
-        {/* Rating history chart at the bottom */}
-        <div className="mt-auto">
+        {/* Rating history chart */}
+        <div className="pt-1.5 xl:pt-1">
           <RatingHistory contentId={contentId} />
         </div>
       </div>
