@@ -38,6 +38,11 @@ export function OpenLibraryEmbed({ info, compact }: OpenLibraryEmbedProps) {
   const olId = info.id || (info.metadata?.olId as string);
 
   useEffect(() => {
+    setLoading(true);
+    setBook(null);
+    setImageError(false);
+    setImageLoaded(false);
+
     if (!olId) {
       setLoading(false);
       return;

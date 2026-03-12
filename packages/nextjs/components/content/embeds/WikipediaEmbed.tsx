@@ -38,6 +38,11 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
   const title = info.id || (info.metadata?.title as string);
 
   useEffect(() => {
+    setLoading(true);
+    setPerson(null);
+    setImageError(false);
+    setImageLoaded(false);
+
     if (!title) {
       setLoading(false);
       return;

@@ -37,6 +37,11 @@ export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
   const modelId = info.id || (info.metadata?.modelId as string);
 
   useEffect(() => {
+    setLoading(true);
+    setModel(null);
+    setImageError(false);
+    setImageLoaded(false);
+
     if (!modelId) {
       setLoading(false);
       return;

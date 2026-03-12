@@ -41,6 +41,12 @@ export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
   const movieId = info.id || (info.metadata?.movieId as string);
 
   useEffect(() => {
+    setLoading(true);
+    setMovie(null);
+    setFetchError(false);
+    setImageError(false);
+    setImageLoaded(false);
+
     if (!movieId) {
       setLoading(false);
       return;

@@ -39,6 +39,11 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
   const coinId = info.id || (info.metadata?.coinId as string);
 
   useEffect(() => {
+    setLoading(true);
+    setToken(null);
+    setImageError(false);
+    setImageLoaded(false);
+
     if (!coinId) {
       setLoading(false);
       return;

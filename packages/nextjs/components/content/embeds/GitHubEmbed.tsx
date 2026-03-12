@@ -69,6 +69,11 @@ export function GitHubEmbed({ info, compact }: GitHubEmbedProps) {
     info.id || (info.metadata?.owner && info.metadata?.repo ? `${info.metadata.owner}/${info.metadata.repo}` : null);
 
   useEffect(() => {
+    setLoading(true);
+    setRepo(null);
+    setImageError(false);
+    setImageLoaded(false);
+
     if (!repoSlug) {
       setLoading(false);
       return;

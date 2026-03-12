@@ -51,6 +51,11 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
   const slug = info.id || (info.metadata?.slug as string);
 
   useEffect(() => {
+    setLoading(true);
+    setGame(null);
+    setImageError(false);
+    setImageLoaded(false);
+
     if (!slug) {
       setLoading(false);
       return;

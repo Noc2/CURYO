@@ -80,47 +80,47 @@ export function ContentEmbed({ url, compact = false }: ContentEmbedProps) {
   let embed: React.ReactNode;
   switch (platformInfo.type) {
     case "youtube":
-      embed = <YouTubeEmbed info={platformInfo} compact={compact} />;
+      embed = <YouTubeEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "twitch":
-      embed = <TwitchEmbed info={platformInfo} compact={compact} />;
+      embed = <TwitchEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "scryfall":
-      embed = <ScryfallEmbed info={platformInfo} compact={compact} />;
+      embed = <ScryfallEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "tmdb":
-      embed = <TmdbEmbed info={platformInfo} compact={compact} />;
+      embed = <TmdbEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "wikipedia":
-      embed = <WikipediaEmbed info={platformInfo} compact={compact} />;
+      embed = <WikipediaEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "rawg":
-      embed = <RawgEmbed info={platformInfo} compact={compact} />;
+      embed = <RawgEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "openlibrary":
-      embed = <OpenLibraryEmbed info={platformInfo} compact={compact} />;
+      embed = <OpenLibraryEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "spotify":
-      embed = <SpotifyEmbed info={platformInfo} compact={compact} />;
+      embed = <SpotifyEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "coingecko":
-      embed = <CoinGeckoEmbed info={platformInfo} compact={compact} />;
+      embed = <CoinGeckoEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "huggingface":
-      embed = <HuggingFaceEmbed info={platformInfo} compact={compact} />;
+      embed = <HuggingFaceEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "twitter":
-      embed = <TwitterEmbed info={platformInfo} compact={compact} />;
+      embed = <TwitterEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "github":
-      embed = <GitHubEmbed info={platformInfo} compact={compact} />;
+      embed = <GitHubEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     default:
       return <GenericLinkCard url={url} compact={compact} />;
   }
 
   return (
-    <EmbedErrorBoundary url={url} compact={compact}>
+    <EmbedErrorBoundary key={url} url={url} compact={compact}>
       {embed}
     </EmbedErrorBoundary>
   );
