@@ -652,6 +652,9 @@ All fixes have been implemented and verified with 1287 passing tests.
 | **L-5** | `renounceOwnership()` overridden to revert in ParticipationPool, VoterIdNFT, HumanFaucet | 3 contracts |
 | **L-10** | Added `tokenIdToHolder` existence check in `recordStake` | VoterIdNFT.sol |
 | **L-13** | Added empty-domain-after-normalization check in both `submitCategory` and `addApprovedCategory` | CategoryRegistry.sol |
+| **N-5** | Added derived bound `maxDuration / epochDuration <= 2016` in `setConfig` to limit epoch iterations | RoundVotingEngine.sol |
+| **N-8** | Auto-adjusts `revealGracePeriod` upward when `epochDuration` increases in `setConfig` | RoundVotingEngine.sol |
+| **M-6 (gap)** | Added `retryVoterIdMint(user, nullifier)` owner function for users whose mint failed in try/catch | HumanFaucet.sol |
 
 ### Reverted / Not Implemented (by design)
 

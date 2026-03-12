@@ -180,6 +180,19 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         emit VoterIdNFTSet(_voterIdNFT);
     }
 
+    /// @notice Retry minting a Voter ID for a user whose mint failed during claim (M-6 design gap fix)
+    /// @param user The address that claimed but didn't receive a Voter ID
+    /// @param nullifier The nullifier from the user's original Self.xyz verification
+    function retryVoterIdMint(address user, uint256 nullifier) external onlyOwner {
+        require(addressClaimed[user], "User has not claimed");
+        require(nullifierUsed[nullifier], "Nullifier not used");
+        require(address(voterIdNFT) != address(0), "VoterIdNFT not set");
+        require(!voterIdNFT.hasVoterId(user), "User already has Voter ID");
+
+        uint256 tokenId = voterIdNFT.mint(user, nullifier);
+        emit VoterIdMinted(user, tokenId, nullifier);
+    }
+
     /// @notice Pause the faucet (blocks new claims)
     /// @dev Only callable by owner. Does NOT affect withdrawRemaining().
     function pause() external onlyOwner {

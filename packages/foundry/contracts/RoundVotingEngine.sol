@@ -308,8 +308,15 @@ contract RoundVotingEngine is
     {
         if (_epochDuration < 5 minutes) revert InvalidConfig();
         if (_maxDuration < 1 days || _maxDuration > 30 days) revert InvalidConfig(); // L-3: cap max duration
+        if (_maxDuration / _epochDuration > 2016) revert InvalidConfig(); // N-5: bound epoch iterations
         if (_minVoters < 2) revert InvalidConfig();
         if (_maxVoters < _minVoters || _maxVoters > 10000) revert InvalidConfig();
+
+        // N-8: ensure revealGracePeriod stays >= epochDuration after config change
+        if (revealGracePeriod > 0 && revealGracePeriod < _epochDuration) {
+            revealGracePeriod = _epochDuration;
+            emit RevealGracePeriodUpdated(_epochDuration);
+        }
 
         config = RoundLib.RoundConfig({
             epochDuration: _epochDuration, maxDuration: _maxDuration, minVoters: _minVoters, maxVoters: _maxVoters
