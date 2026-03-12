@@ -100,8 +100,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   canNext = false,
 }: FeedVoteCardProps) {
   return (
-    <div className="surface-card h-full min-h-0 overflow-hidden rounded-2xl p-3 ring-1 ring-primary/20 xl:p-2.5">
-      <div className="mb-3 flex items-center justify-between gap-3 text-sm text-base-content/45 xl:mb-2.5">
+    <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
+      <div className="flex items-center justify-between gap-3 px-1 text-sm text-base-content/45">
         <button
           type="button"
           onClick={onPrevious}
@@ -128,9 +128,9 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-col gap-3 lg:h-[min(48vh,31rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
-        <div className="flex w-full min-h-0 flex-col gap-3 lg:w-3/5">
-          <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-base-content/5 bg-base-200">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:h-[min(52vh,34rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
+        <div className="grid w-full min-h-0 gap-3 lg:w-3/5 lg:grid-rows-[minmax(0,1fr)_auto]">
+          <div className="min-h-0 overflow-hidden rounded-2xl bg-base-200">
             <div className="h-full w-full">
               <ContentEmbed url={item.url} />
             </div>
@@ -149,7 +149,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           />
         </div>
 
-        <div className="w-full rounded-2xl border border-base-content/5 bg-base-200 lg:min-h-0 lg:w-2/5">
+        <div className="w-full min-h-0 rounded-2xl bg-base-200 lg:w-2/5">
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}
@@ -193,7 +193,7 @@ function FeedContentMetaCard({
 
   return (
     <>
-      <div className="rounded-2xl border border-base-content/5 bg-base-200 p-4 xl:p-3">
+      <div className="rounded-2xl bg-base-200 p-4 xl:p-3">
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
