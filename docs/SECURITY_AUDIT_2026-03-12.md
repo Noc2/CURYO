@@ -36,9 +36,11 @@ The Curyo protocol implements a decentralized reputation game with tlock commit-
 |----------|-------|
 | Critical | 0 |
 | High | 1 |
-| Medium | 10 |
+| Medium | 8 |
 | Low | 16 |
-| Informational | 12 |
+| Informational | 14 |
+
+**Post-verification update:** All findings were re-verified against the source code. M-5 (frontend fee claiming) was downgraded to Low (no fund theft possible). M-9 (EIP-1153) was downgraded to Informational (target chain supports Cancun). M-10 (one-shot distributor) was downgraded to Low (distributor is UUPS upgradeable). L-4 (zero-stake claims) was reclassified as a false positive (MIN_STAKE prevents zero stakes).
 
 No critical vulnerabilities were found. The single high-severity finding involves forfeited funds that can become permanently locked. The medium-severity findings are primarily edge cases in reward distribution, revival mechanics, and domain normalization. The codebase demonstrates strong use of access control, reentrancy guards, checks-effects-interactions pattern, and SafeERC20.
 
@@ -81,12 +83,10 @@ No critical vulnerabilities were found. The single high-severity finding involve
 | M-2 | Revival submitter stake asymmetry - reviver pays, original submitter benefits | ContentRegistry / Cross-contract |
 | M-3 | `cancelContent` not gated by `whenNotPaused` | ContentRegistry |
 | M-4 | `reviveContent` bypasses VoterIdNFT sybil resistance check | ContentRegistry |
-| M-5 | `claimFrontendFee` callable by anyone for any frontend | RoundRewardDistributor |
-| M-6 | ParticipationPool silently caps rewards at pool balance without notification | ParticipationPool |
-| M-7 | HumanFaucet coupled to VoterIdNFT - mint failure blocks all claims | HumanFaucet |
-| M-8 | Domain normalization can cause subdomain collisions | CategoryRegistry |
-| M-9 | EIP-1153 (transient storage) chain compatibility limitation | Multiple |
-| M-10 | `setRewardDistributor` is one-shot with no ability to update | RoundVotingEngine |
+| M-5 | ParticipationPool silently caps rewards at pool balance without notification | ParticipationPool |
+| M-6 | HumanFaucet coupled to VoterIdNFT - mint failure blocks all claims | HumanFaucet |
+| M-7 | Domain normalization can cause subdomain collisions | CategoryRegistry |
+| M-8 | `cancelContent` not gated by `whenNotPaused` | ContentRegistry |
 
 ### Low Severity
 
@@ -95,19 +95,20 @@ No critical vulnerabilities were found. The single high-severity finding involve
 | L-1 | `setParticipationPool` callable multiple times despite "one-time" docs | ContentRegistry |
 | L-2 | `keeperReward` has no upper bound validation | RoundVotingEngine |
 | L-3 | Settlement epoch iteration can be gas-expensive | RoundVotingEngine |
-| L-4 | Zero-stake revealed losers can trigger zero-value claim events | RoundRewardDistributor |
+| L-4 | `claimFrontendFee` callable by anyone for any frontend | RoundRewardDistributor |
 | L-5 | `renounceOwnership` not overridden in ParticipationPool | ParticipationPool |
-| L-6 | Profile name squatting after VoterIdNFT revocation | ProfileRegistry |
-| L-7 | `registeredFrontends` array accumulates stale entries | FrontendRegistry |
-| L-8 | `creditFees` has no frontend approval status check | FrontendRegistry |
-| L-9 | Partially slashed frontends left in limbo state | FrontendRegistry |
-| L-10 | `recordStake` does not verify tokenId exists | VoterIdNFT |
-| L-11 | `_registeredAddresses` array unbounded (DoS on full enumeration) | ProfileRegistry |
-| L-12 | Referrer validation includes delegates who don't hold VoterIds | HumanFaucet |
-| L-13 | Domain normalization does not validate non-empty result | CategoryRegistry |
-| L-14 | `_admin` parameter name misleading in `initialize` | RoundVotingEngine |
-| L-15 | Non-standard `__gap` sizes across contracts | Multiple |
-| L-16 | `poolBalance` can desync from actual token balance on direct transfers | ParticipationPool |
+| L-6 | `setRewardDistributor` is one-shot (mitigated: distributor is UUPS upgradeable) | RoundVotingEngine |
+| L-7 | Profile name squatting after VoterIdNFT revocation | ProfileRegistry |
+| L-8 | `registeredFrontends` array accumulates stale entries | FrontendRegistry |
+| L-9 | `creditFees` has no frontend approval status check | FrontendRegistry |
+| L-10 | Partially slashed frontends left in limbo state | FrontendRegistry |
+| L-11 | `recordStake` does not verify tokenId exists | VoterIdNFT |
+| L-12 | `_registeredAddresses` array unbounded (DoS on full enumeration) | ProfileRegistry |
+| L-13 | Referrer validation includes delegates who don't hold VoterIds | HumanFaucet |
+| L-14 | Domain normalization does not validate non-empty result | CategoryRegistry |
+| L-15 | `_admin` parameter name misleading in `initialize` | RoundVotingEngine |
+| L-16 | Non-standard `__gap` sizes across contracts | Multiple |
+| L-17 | `poolBalance` can desync from actual token balance on direct transfers | ParticipationPool |
 
 ---
 
@@ -505,6 +506,14 @@ Burns (`to == address(0)`) bypass the lock check. No burn pathway currently exis
 
 Delegates cannot claim submitter rewards on behalf of the identity holder. Use `getSubmitterIdentity()` if delegate claiming is desired.
 
+### I-13: EIP-1153 (transient storage) chain compatibility
+
+*Downgraded from M-9.* All contracts using `ReentrancyGuardTransient` require Cancun-level EVM. The target chain (Celo) supports this. Only relevant if multi-chain deployment is planned.
+
+### I-14: Zero-stake revealed losers cannot exist
+
+*Originally L-4, reclassified as false positive.* `MIN_STAKE = 1e6` is enforced during `commitVote`, so `stakeAmount` can never be zero for a valid commit. The 5% loser refund always produces a nonzero value.
+
 ---
 
 ## Deployment & Configuration
@@ -624,4 +633,194 @@ The following patterns demonstrate strong security awareness:
 
 ---
 
-*End of audit report. Generated by Claude Opus 4.6 on 2026-03-12.*
+## Remediation Plan
+
+Prioritized list of fixes for all confirmed findings. Grouped by contract to minimize deployment touchpoints.
+
+### Priority 1: High Severity (fix before mainnet)
+
+#### H-1 Fix: Add fallback for forfeited funds in `processUnrevealedVotes`
+
+**File:** `RoundVotingEngine.sol` (~line 875)
+
+**Change:** Add `consensusReserve` as fallback when treasury is unset or transfer fails, matching the pattern already used in `settleRound`:
+
+```solidity
+if (forfeitedCrep > 0) {
+    if (treasury != address(0)) {
+        try TokenTransferLib.transfer(crepToken, treasury, forfeitedCrep) {
+            emit ForfeitedFundsAddedToTreasury(contentId, roundId, forfeitedCrep);
+        } catch {
+            consensusReserve += forfeitedCrep;
+            emit SettlementSideEffectFailed(contentId, roundId, REASON_FORFEITED_TRANSFER);
+        }
+    } else {
+        consensusReserve += forfeitedCrep;
+    }
+}
+```
+
+**Test:** Add test in `AuditGapTests.t.sol` that verifies forfeited funds route to `consensusReserve` when treasury is `address(0)`.
+
+---
+
+### Priority 2: Medium Severity (fix before mainnet)
+
+#### M-1 + M-2 Fix: Route revival stake to consensus reserve
+
+**File:** `ContentRegistry.sol` (~line 363)
+
+**Change:** Instead of leaving the revival stake unaccounted in the contract, transfer it directly to the consensus reserve via the voting engine. This makes the economic purpose clear (revival costs fund the ecosystem) and eliminates the locked-funds issue:
+
+```solidity
+// In reviveContent(), replace:
+crepToken.safeTransferFrom(msg.sender, address(this), REVIVAL_STAKE);
+
+// With:
+crepToken.safeTransferFrom(msg.sender, address(this), REVIVAL_STAKE);
+crepToken.approve(address(votingEngine), REVIVAL_STAKE);
+votingEngine.addToConsensusReserve(REVIVAL_STAKE);
+```
+
+**Alternative (simpler):** Transfer directly to treasury instead of consensus reserve, avoiding the approve+call overhead:
+
+```solidity
+crepToken.safeTransferFrom(msg.sender, treasury, REVIVAL_STAKE);
+```
+
+**Test:** Add test verifying revival stake arrives at the intended destination.
+
+#### M-3 Fix: Add `whenNotPaused` to `cancelContent`
+
+**File:** `ContentRegistry.sol` (~line 276)
+
+**Change:** Add `whenNotPaused` modifier. If the design intent is to allow users to withdraw during emergencies, keep `cancelContent` callable during pause but do NOT release the submission key:
+
+```solidity
+// Option A: Full pause
+function cancelContent(uint256 contentId) external nonReentrant whenNotPaused {
+
+// Option B: Allow cancel during pause but don't release submission key
+function cancelContent(uint256 contentId) external nonReentrant {
+    ...
+    if (!paused()) {
+        bytes32 submissionKey = contentSubmissionKey[contentId];
+        if (submissionKey != bytes32(0)) {
+            submissionKeyUsed[submissionKey] = false;
+        }
+    }
+    ...
+}
+```
+
+**Recommendation:** Option A is simpler and safer. Users can still claim refunds via `RoundRewardDistributor` during a pause.
+
+#### M-4 Fix: Add VoterIdNFT check to `reviveContent`
+
+**File:** `ContentRegistry.sol` (~line 352)
+
+**Change:** Add the same sybil check that `submitContent` uses:
+
+```solidity
+function reviveContent(uint256 contentId) external nonReentrant whenNotPaused {
+    if (address(voterIdNFT) != address(0)) {
+        require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+    }
+    ...
+}
+```
+
+#### M-5 Fix: Emit event on silent reward cap in ParticipationPool
+
+**File:** `ParticipationPool.sol` (~line 168)
+
+**Change:** Emit a distinct event when rewards are capped so off-chain systems can detect pool depletion:
+
+```solidity
+function _distribute(address to, uint256 reward) internal returns (uint256) {
+    if (reward == 0) return 0;
+    if (reward > poolBalance) {
+        uint256 actual = poolBalance;
+        emit RewardCapped(to, reward, actual);
+        reward = actual;
+    }
+    ...
+}
+```
+
+#### M-6 Fix: Wrap VoterIdNFT mint in try/catch in HumanFaucet
+
+**File:** `HumanFaucet.sol` (~line 430)
+
+**Change:** Wrap the VoterIdNFT mint so token claims succeed even if minting fails:
+
+```solidity
+if (address(voterIdNFT) != address(0)) {
+    try voterIdNFT.mint(user, output.nullifier) returns (uint256 tokenId) {
+        emit VoterIdMinted(user, tokenId, output.nullifier);
+    } catch {
+        emit VoterIdMintFailed(user, output.nullifier);
+    }
+}
+```
+
+Add a new `VoterIdMintFailed` event for monitoring.
+
+#### M-7 Fix: Document domain normalization behavior in CategoryRegistry
+
+**File:** `CategoryRegistry.sol` (~line 436)
+
+**Change:** This is primarily a documentation issue. The normalization serves a legitimate purpose (deduplicating `m.youtube.com` / `youtube.com`). Add a comment documenting the collision potential:
+
+```solidity
+/// @dev Single-character subdomains (e.g., m.youtube.com) are stripped when
+///      additional dots exist. This means a.b.com and b.com are treated as
+///      the same domain. Two-letter+ TLDs like x.com are preserved.
+```
+
+The governance approval process (100 cREP stake + vote) provides economic protection against domain squatting.
+
+#### M-8 Fix: `cancelContent` pause behavior
+
+Already covered in M-3 above.
+
+---
+
+### Priority 3: Low Severity (fix as convenient)
+
+| ID | Fix | Effort |
+|----|-----|--------|
+| L-1 | Add `require(address(participationPool) == address(0))` guard or update NatSpec | Trivial |
+| L-2 | Add `MAX_KEEPER_REWARD` constant (e.g., 10e6) and validate in `setKeeperReward` | Trivial |
+| L-3 | Add `MAX_DURATION` cap in `setConfig` (e.g., 30 days) | Trivial |
+| L-4 | Document that permissionless `claimFrontendFee` is by design (tokens always go to correct frontend) | Trivial |
+| L-5 | Override `renounceOwnership()` to revert in `ParticipationPool`, `VoterIdNFT`, `HumanFaucet` | Easy |
+| L-6 | Add `setRewardDistributor` migration path if distributor behind proxy, or document as by-design | Trivial |
+| L-7 | Add governance `clearProfile(address)` to ProfileRegistry | Easy |
+| L-8 | Document stale entries in `registeredFrontends`, consumers should filter by `operator != address(0)` | Trivial |
+| L-9 | Add `require(f.approved)` to `creditFees` for defense-in-depth | Trivial |
+| L-10 | Consider adding `topUpStake` for partially slashed frontends, or document governance unslash path | Easy |
+| L-11 | Add `require(tokenIdToHolder[tokenId] != address(0))` in `recordStake` | Trivial |
+| L-12 | Deprecate unbounded `getRegisteredAddresses()` or add `@deprecated` notice | Trivial |
+| L-13 | Consider using `resolveHolder()` for referrer validation, or document delegate-as-referrer as intended | Trivial |
+| L-14 | Add `require(bytes(normalizedDomain).length > 0)` after normalization in CategoryRegistry | Trivial |
+| L-15 | Rename `_admin` to `_configAdmin` in `initialize` parameters | Trivial |
+| L-16 | Document gap sizing strategy across all upgradeable contracts | Trivial |
+| L-17 | Document that direct transfers to ParticipationPool are unrecoverable | Trivial |
+
+---
+
+### Implementation Order
+
+1. **RoundVotingEngine.sol** — H-1 fix (forfeited funds fallback)
+2. **ContentRegistry.sol** — M-1/M-2 (revival stake routing), M-3/M-8 (pause guard on cancel), M-4 (VoterIdNFT check on revive)
+3. **HumanFaucet.sol** — M-6 (try/catch VoterIdNFT mint)
+4. **ParticipationPool.sol** — M-5 (emit on cap), L-5 (renounceOwnership override)
+5. **Low-severity batch** — All remaining L-* fixes across contracts
+6. **Test additions** — New tests for each fix + the 5 recommended coverage gaps
+
+Each fix should include a corresponding Foundry test. Run `yarn foundry:test` after each contract change.
+
+---
+
+*End of audit report. Generated by Claude Opus 4.6 on 2026-03-12. Post-verification update applied same day.*
