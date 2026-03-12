@@ -77,6 +77,7 @@ const HomeInner = () => {
   const [scope, setScope] = useState<ScopeOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
+  const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
   const isSearchMode = searchQuery.trim().length > 0;
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
@@ -572,10 +573,14 @@ const HomeInner = () => {
   const handleSelectCard = useCallback(
     (id: bigint, categoryId: bigint) => {
       trackContentClick(id, categoryId);
+      const targetIndex = displayFeed.findIndex(item => item.id === id);
+      if (targetIndex !== -1 && activeSourceIndex !== -1 && targetIndex !== activeSourceIndex) {
+        setNavigationDirection(targetIndex > activeSourceIndex ? "next" : "previous");
+      }
       selectContent(id);
       replaceContentQueryParam(id);
     },
-    [replaceContentQueryParam, selectContent],
+    [activeSourceIndex, displayFeed, replaceContentQueryParam, selectContent],
   );
 
   const handleNavigateSelection = useCallback(
@@ -583,6 +588,7 @@ const HomeInner = () => {
       const nextItem = selectRelative(direction === "next" ? 1 : -1);
       if (!nextItem) return false;
 
+      setNavigationDirection(direction);
       replaceContentQueryParam(nextItem.id);
       return true;
     },
@@ -836,14 +842,18 @@ const HomeInner = () => {
                     </div>
                     <span className="text-base-content/45">
                       {displayFeed.length > 1
-                        ? "Scroll or swipe up and down to browse cards."
+                        ? "Scroll on desktop or swipe left and right on mobile to browse cards."
                         : "No other cards left in this feed."}
                     </span>
                   </div>
                   <div
                     key={primaryItem.id.toString()}
                     ref={activeCardRegionRef}
-                    className="motion-safe:animate-vote-card-promote xl:min-h-0 xl:flex-1"
+                    className={`xl:min-h-0 xl:flex-1 ${
+                      navigationDirection === "next"
+                        ? "motion-safe:animate-vote-card-next"
+                        : "motion-safe:animate-vote-card-prev"
+                    }`}
                   >
                     <FeedVoteCard
                       item={primaryItem}
@@ -859,6 +869,10 @@ const HomeInner = () => {
                       isCommitting={isCommitting}
                       voteError={voteError}
                       address={address}
+                      onPrevious={handleSelectPrevious}
+                      onNext={handleSelectNext}
+                      canPrevious={activeSourceIndex > 0}
+                      canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
                     />
                   </div>
                 </div>
@@ -876,7 +890,7 @@ const HomeInner = () => {
                         Browse cards
                       </p>
                       <p className="text-sm text-base-content/55">
-                        The blue outline marks the selected card. Scroll, swipe, or tap a thumbnail to move.
+                        The blue outline marks the selected card. Scroll, swipe sideways, or tap a thumbnail to move.
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

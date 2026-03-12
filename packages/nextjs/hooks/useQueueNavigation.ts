@@ -21,7 +21,7 @@ export function useQueueNavigation<T extends HTMLElement>({
   enabled,
   onNavigate,
   cooldownMs = 320,
-  threshold = 140,
+  threshold = 120,
 }: UseQueueNavigationOptions) {
   const containerRef = useRef<T | null>(null);
   const wheelAccumulatorRef = useRef(0);
@@ -34,9 +34,10 @@ export function useQueueNavigation<T extends HTMLElement>({
     if (typeof window === "undefined") return;
 
     const mediaQuery = window.matchMedia?.("(pointer: fine)");
-    if (mediaQuery && !mediaQuery.matches) return;
+    const supportsFinePointer = !mediaQuery || mediaQuery.matches;
 
     const handleWheel = (event: WheelEvent) => {
+      if (!supportsFinePointer) return;
       if (coolingDownRef.current) return;
       if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       if (isInteractiveTarget(event.target)) return;
@@ -79,10 +80,10 @@ export function useQueueNavigation<T extends HTMLElement>({
       touchStartRef.current = null;
 
       if (duration > 700) return;
-      if (Math.abs(deltaY) < 96) return;
-      if (Math.abs(deltaY) <= Math.abs(deltaX)) return;
+      if (Math.abs(deltaX) < 72) return;
+      if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
 
-      const direction = deltaY > 0 ? "previous" : "next";
+      const direction = deltaX > 0 ? "previous" : "next";
       if (!onNavigate(direction)) return;
 
       coolingDownRef.current = true;
