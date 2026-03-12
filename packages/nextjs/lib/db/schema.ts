@@ -45,9 +45,6 @@ export const watchedContent = sqliteTable(
   }),
 );
 
-export type WatchedContent = typeof watchedContent.$inferSelect;
-export type NewWatchedContent = typeof watchedContent.$inferInsert;
-
 export const profileFollows = sqliteTable(
   "profile_follows",
   {
@@ -65,9 +62,6 @@ export const profileFollows = sqliteTable(
     targetCreatedAtIdx: index("profile_follows_target_created_at_idx").on(table.targetAddress, table.createdAt),
   }),
 );
-
-export type ProfileFollow = typeof profileFollows.$inferSelect;
-export type NewProfileFollow = typeof profileFollows.$inferInsert;
 
 export const notificationPreferences = sqliteTable("notification_preferences", {
   walletAddress: text("wallet_address").primaryKey(),
