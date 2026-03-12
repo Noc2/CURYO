@@ -89,7 +89,6 @@ export function PlatformProposals() {
   return (
     <div className="surface-card rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-4">
-        <GlobeAltIcon className="w-6 h-6 text-primary" />
         <h2 className="text-lg font-semibold">Platform Proposals</h2>
       </div>
 

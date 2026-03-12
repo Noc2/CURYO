@@ -81,9 +81,8 @@ export const TreasuryBalance = () => {
   const treasuryLoading = treasuryAddressLoading || (!!treasuryAddress && balanceLoading);
 
   return (
-    <div className="surface-card rounded-2xl p-6" style={{ background: "#121212" }}>
+    <div className="surface-card rounded-2xl p-6">
       <div className="flex items-center gap-2">
-        <BuildingLibraryIcon className="w-5 h-5 text-primary" />
         <h2 className="text-lg font-semibold">Protocol Pools</h2>
         <InfoTooltip
           text="Live cREP balances across the treasury and protocol-controlled reward pools."

@@ -6,7 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Address, encodeFunctionData, isAddress, parseUnits } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
-import { ArrowsRightLeftIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
+import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { governorAbi, useGovernanceContracts, useGovernanceStats, useGovernanceWrite } from "~~/hooks/useGovernance";
 
@@ -630,7 +630,6 @@ export function GovernanceActionComposer() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Cog6ToothIcon className="w-6 h-6 text-primary" />
             <h2 className="text-lg font-semibold">Governance Action Composer</h2>
           </div>
         </div>

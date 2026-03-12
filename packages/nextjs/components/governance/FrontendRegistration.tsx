@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
 import { useAccount } from "wagmi";
-import { CodeBracketIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
@@ -319,7 +318,6 @@ export function FrontendRegistration() {
   return (
     <div className="surface-card rounded-2xl p-6 space-y-5">
       <div className="flex items-center gap-2">
-        <CodeBracketIcon className="w-6 h-6 text-primary" />
         <h2 className="text-xl font-bold">Frontend Registration</h2>
         <InfoTooltip text="Register as a frontend operator to receive 1% of the losing stakes from votes through your interface" />
       </div>
