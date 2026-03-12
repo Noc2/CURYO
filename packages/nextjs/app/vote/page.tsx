@@ -842,10 +842,7 @@ const HomeInner = () => {
             {emptyStateMessage}
           </div>
         ) : (
-          <div
-            ref={activeCardRegionRef}
-            className="space-y-5 xl:grid xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_clamp(13.5rem,18vh,14.5rem)] xl:gap-3 xl:overflow-hidden xl:space-y-0"
-          >
+          <div ref={activeCardRegionRef} className="flex min-h-0 flex-col gap-5 xl:h-full xl:gap-4">
             {isCommitting ? (
               <div className="flex shrink-0 items-center justify-center">
                 <span className="text-base text-base-content/50">
@@ -856,56 +853,54 @@ const HomeInner = () => {
             ) : null}
 
             {primaryItem ? (
-              <div className="space-y-3 xl:min-h-0 xl:space-y-0">
-                <div className="xl:h-full xl:min-h-0">
-                  <motion.div
-                    key={primaryItem.id.toString()}
-                    data-disable-queue-wheel="true"
-                    className={`touch-pan-y xl:h-full xl:min-h-0 ${
-                      navigationDirection === "next"
-                        ? "motion-safe:animate-vote-card-next"
-                        : "motion-safe:animate-vote-card-prev"
-                    }`}
-                    drag={canSwipeNavigate ? "x" : false}
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.12}
-                    dragMomentum={false}
-                    onDragEnd={handleCardDragEnd}
-                  >
-                    <FeedVoteCard
-                      item={primaryItem}
-                      submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                      onVote={handleButtonVote}
-                      onToggleWatch={handleToggleWatch}
-                      onToggleFollow={handleToggleFollow}
-                      watched={watchedContentIds.has(primaryItem.id.toString())}
-                      watchPending={isWatchPending(primaryItem.id)}
-                      following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                      followPending={isFollowPending(primaryItem.submitter)}
-                      normalizedAddress={normalizedAddress}
-                      isCommitting={isCommitting}
-                      voteError={voteError}
-                      address={address}
-                      onPrevious={handleSelectPrevious}
-                      onNext={handleSelectNext}
-                      canPrevious={activeSourceIndex > 0}
-                      canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
-                    />
-                  </motion.div>
-                </div>
+              <div className="min-h-0">
+                <motion.div
+                  key={primaryItem.id.toString()}
+                  data-disable-queue-wheel="true"
+                  className={`touch-pan-y ${
+                    navigationDirection === "next"
+                      ? "motion-safe:animate-vote-card-next"
+                      : "motion-safe:animate-vote-card-prev"
+                  }`}
+                  drag={canSwipeNavigate ? "x" : false}
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.12}
+                  dragMomentum={false}
+                  onDragEnd={handleCardDragEnd}
+                >
+                  <FeedVoteCard
+                    item={primaryItem}
+                    submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                    onVote={handleButtonVote}
+                    onToggleWatch={handleToggleWatch}
+                    onToggleFollow={handleToggleFollow}
+                    watched={watchedContentIds.has(primaryItem.id.toString())}
+                    watchPending={isWatchPending(primaryItem.id)}
+                    following={followedWallets.has(primaryItem.submitter.toLowerCase())}
+                    followPending={isFollowPending(primaryItem.submitter)}
+                    normalizedAddress={normalizedAddress}
+                    isCommitting={isCommitting}
+                    voteError={voteError}
+                    address={address}
+                    onPrevious={handleSelectPrevious}
+                    onNext={handleSelectNext}
+                    canPrevious={activeSourceIndex > 0}
+                    canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
+                  />
+                </motion.div>
               </div>
             ) : null}
 
             {visibleFeedItems.length > 0 ? (
               <section
                 key={primaryItem?.id.toString() ?? "queue-empty"}
-                className="motion-safe:animate-vote-queue-settle xl:min-h-0 xl:overflow-hidden"
+                className="motion-safe:animate-vote-queue-settle shrink-0"
                 aria-label="Up next queue"
               >
                 <div
                   ref={queueRailRef}
                   data-disable-queue-wheel="true"
-                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:flex-nowrap xl:gap-2.5 xl:overflow-y-hidden xl:pb-0 xl:snap-x"
+                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:flex-nowrap xl:gap-2.5"
                 >
                   {visibleFeedItems.map(item => (
                     <FeedQueueCard
@@ -914,7 +909,6 @@ const HomeInner = () => {
                       onSelect={handleSelectCard}
                       queuePosition={displayFeed.findIndex(feedItem => feedItem.id === item.id)}
                       selected={item.id === primaryItem?.id}
-                      submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
                     />
                   ))}
                 </div>

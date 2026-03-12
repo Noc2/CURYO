@@ -139,14 +139,14 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
             <span className="loading loading-spinner loading-md text-primary"></span>
           </div>
         )}
-        <div className="flex items-center justify-center p-10 bg-gradient-to-br from-base-200 to-base-300 w-full h-full">
+        <div className="flex items-center justify-center p-8 bg-gradient-to-br from-base-200 to-base-300 w-full h-full">
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(token.imageUrl)}`}
             alt={token.name}
             loading="lazy"
             width={192}
             height={192}
-            className={`aspect-square h-auto w-[clamp(11rem,58%,24rem)] max-h-[72%] rounded-full shadow-lg transition-transform group-hover:scale-[1.05] object-cover ${
+            className={`aspect-square h-auto w-[clamp(10rem,48%,18rem)] max-h-[68%] shadow-lg transition-transform group-hover:scale-[1.05] object-contain ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
             onLoad={() => setImageLoaded(true)}

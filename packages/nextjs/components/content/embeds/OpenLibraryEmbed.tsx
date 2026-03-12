@@ -149,7 +149,7 @@ export function OpenLibraryEmbed({ info, compact }: OpenLibraryEmbedProps) {
           alt={book.title}
           loading="lazy"
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
-            compact ? "w-full h-auto aspect-[2/3] object-cover" : "h-full w-full object-cover"
+            compact ? "w-full h-auto aspect-[2/3] object-cover" : "h-full w-full object-contain object-center"
           } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           onLoad={() => setImageLoaded(true)}
           onError={() => setImageError(true)}

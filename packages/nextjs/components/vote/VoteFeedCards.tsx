@@ -34,14 +34,6 @@ const ShareContentModal = dynamic(
   { ssr: false },
 );
 
-function getDomainLabel(url: string) {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
-
 function getThumbnailImageSrc(thumbnailUrl: string) {
   try {
     const parsed = new URL(thumbnailUrl);
@@ -80,73 +72,6 @@ interface FeedVoteCardProps {
   canNext?: boolean;
 }
 
-interface ActiveMediaLayout {
-  mediaHeightClass: string;
-  mediaShellClass: string;
-  mediaFrameClass?: string;
-}
-
-function getActiveMediaLayout(url: string): ActiveMediaLayout {
-  const platformType = detectPlatform(url).type;
-
-  switch (platformType) {
-    case "openlibrary":
-    case "tmdb":
-      return {
-        mediaHeightClass: "h-[min(46vh,32rem)] lg:h-[min(46vh,30rem)]",
-        mediaShellClass: "h-full w-full lg:aspect-[2/3]",
-        mediaFrameClass: "lg:flex lg:justify-center",
-      };
-    case "wikipedia":
-      return {
-        mediaHeightClass: "h-[min(42vh,28rem)] lg:h-[min(42vh,27rem)]",
-        mediaShellClass: "h-full w-full lg:aspect-[3/4]",
-        mediaFrameClass: "lg:flex lg:justify-center",
-      };
-    case "scryfall":
-      return {
-        mediaHeightClass: "h-[min(44vh,29rem)] lg:h-[min(44vh,27rem)]",
-        mediaShellClass: "h-full w-full lg:aspect-[5/7]",
-        mediaFrameClass: "lg:flex lg:justify-center",
-      };
-    case "github":
-      return {
-        mediaHeightClass: "h-[min(32vh,21rem)] lg:h-[min(32vh,19rem)]",
-        mediaShellClass: "h-full w-full lg:aspect-[16/10]",
-      };
-    case "coingecko":
-    case "huggingface":
-      return {
-        mediaHeightClass: "h-[min(30vh,19rem)] lg:h-[min(30vh,18rem)]",
-        mediaShellClass: "h-full w-full lg:aspect-square",
-        mediaFrameClass: "lg:flex lg:justify-center",
-      };
-    case "rawg":
-    case "youtube":
-    case "twitch":
-      return {
-        mediaHeightClass: "h-[min(30vh,20rem)] lg:h-[min(30vh,18.5rem)]",
-        mediaShellClass: "h-full w-full lg:aspect-video",
-      };
-    case "spotify":
-      return {
-        mediaHeightClass: "h-[min(30vh,20rem)] lg:h-[min(30vh,18.5rem)]",
-        mediaShellClass: "h-full w-full",
-      };
-    case "twitter":
-      return {
-        mediaHeightClass: "h-[min(38vh,24rem)] lg:h-[min(38vh,22rem)]",
-        mediaShellClass: "h-full w-full",
-        mediaFrameClass: "lg:flex lg:justify-center",
-      };
-    default:
-      return {
-        mediaHeightClass: "h-[min(30vh,20rem)] lg:h-[min(30vh,18.5rem)]",
-        mediaShellClass: "h-full w-full lg:aspect-video",
-      };
-  }
-}
-
 export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
@@ -166,8 +91,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   canPrevious = false,
   canNext = false,
 }: FeedVoteCardProps) {
-  const mediaLayout = getActiveMediaLayout(item.url);
-
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
       <FeedContentHeader
@@ -178,32 +101,14 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         canNext={canNext}
       />
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,27rem)] lg:items-start">
-        <div className="order-1 flex min-h-0 flex-col gap-3 lg:col-start-1 lg:row-start-1">
-          <div className={`min-h-0 overflow-hidden rounded-2xl bg-base-200 ${mediaLayout.mediaHeightClass}`}>
-            <div className={`h-full w-full ${mediaLayout.mediaFrameClass ?? ""}`}>
-              <div className={mediaLayout.mediaShellClass}>
-                <ContentEmbed url={item.url} />
-              </div>
-            </div>
+      <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:items-stretch">
+        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
+          <div className="h-[clamp(17rem,42vh,28rem)] w-full">
+            <ContentEmbed url={item.url} />
           </div>
-
-          <FeedContentMetaCard
-            item={item}
-            submitterProfile={submitterProfile}
-            normalizedAddress={normalizedAddress}
-            following={following}
-            followPending={followPending}
-            watched={watched}
-            watchPending={watchPending}
-            onToggleFollow={onToggleFollow}
-            onToggleWatch={onToggleWatch}
-          />
         </div>
 
-        <div
-          className={`order-2 w-full min-h-0 self-start overflow-hidden rounded-2xl bg-base-200 lg:col-start-2 lg:row-start-1 ${mediaLayout.mediaHeightClass}`}
-        >
+        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}
@@ -216,6 +121,18 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           />
         </div>
       </div>
+
+      <FeedContentMetaCard
+        item={item}
+        submitterProfile={submitterProfile}
+        normalizedAddress={normalizedAddress}
+        following={following}
+        followPending={followPending}
+        watched={watched}
+        watchPending={watchPending}
+        onToggleFollow={onToggleFollow}
+        onToggleWatch={onToggleWatch}
+      />
     </div>
   );
 });
@@ -288,7 +205,7 @@ function FeedContentMetaCard({
 
   return (
     <>
-      <div className="min-h-[7.5rem] max-h-[9rem] overflow-y-auto rounded-2xl bg-black p-4 xl:min-h-[7rem] xl:max-h-[8.5rem] xl:p-3">
+      <div className="rounded-2xl bg-black p-4 xl:p-3">
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
@@ -363,7 +280,6 @@ function FeedContentMetaCard({
 interface FeedQueueCardProps {
   item: ContentItem;
   onSelect: (id: bigint, categoryId: bigint) => void;
-  submitterProfile?: SubmitterProfile;
   queuePosition: number;
   selected: boolean;
 }
@@ -371,7 +287,6 @@ interface FeedQueueCardProps {
 export const FeedQueueCard = memo(function FeedQueueCard({
   item,
   onSelect,
-  submitterProfile,
   queuePosition,
   selected,
 }: FeedQueueCardProps) {
@@ -387,13 +302,13 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:min-h-[14.25rem] xl:min-w-[12rem] xl:basis-[12rem] xl:w-auto ${
+      className={`group flex w-[11.5rem] min-w-[11.5rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12.25rem] sm:min-w-[12.25rem] xl:w-[12.75rem] xl:min-w-[12.75rem] ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
       }`}
     >
-      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200 xl:h-[6.75rem] xl:aspect-auto">
+      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200">
         <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
             {queuePosition + 1}
@@ -422,22 +337,11 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         )}
       </div>
 
-      <div className="flex min-h-[6.75rem] flex-1 flex-col space-y-1.5 p-2.5 xl:min-h-[6.75rem] xl:space-y-1 xl:p-2">
+      <div className="flex min-h-[4.5rem] flex-1 flex-col space-y-1.5 p-2.5">
         <div className="flex items-center gap-2 text-xs text-base-content/55">
           <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
         </div>
-        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-sm xl:leading-snug">{item.title}</p>
-        <p className="line-clamp-2 text-xs text-base-content/65 xl:text-xs xl:leading-snug">{item.description}</p>
-        <div className="flex items-center gap-2 text-xs text-base-content/50 xl:flex-wrap xl:gap-1.5">
-          <span className="rounded-full bg-base-content/[0.05] px-2 py-1 font-medium text-base-content/65">
-            {platform.type}
-          </span>
-          {item.tags[0] ? <span className="truncate">#{item.tags[0]}</span> : null}
-          <span className="hidden truncate sm:inline">{getDomainLabel(item.url)}</span>
-        </div>
-        <div className="mt-auto text-xs text-base-content/55">
-          <span className="block min-w-0 truncate">{submitterProfile?.username ?? item.submitter}</span>
-        </div>
+        <p className="line-clamp-2 text-sm font-medium leading-snug text-white/90">{item.title}</p>
       </div>
     </button>
   );
