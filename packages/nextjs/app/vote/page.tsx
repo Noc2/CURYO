@@ -21,6 +21,7 @@ import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUserPreferences } from "~~/hooks/useUserPreferences";
+import { useVoteFeedStage } from "~~/hooks/useVoteFeedStage";
 import { useVoteHistory } from "~~/hooks/useVoteHistory";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
@@ -73,7 +74,6 @@ const HomeInner = () => {
   const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
   const [scope, setScope] = useState<ScopeOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
-  const [selectedId, setSelectedId] = useState<bigint | null>(null);
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const isSearchMode = searchQuery.trim().length > 0;
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
@@ -262,19 +262,14 @@ const HomeInner = () => {
     history.replaceState(null, "", hash || window.location.pathname + window.location.search);
   }, []);
 
-  // Deep link: select content from ?content= query param
-  useEffect(() => {
-    if (contentParam && feed.length > 0) {
-      try {
-        const id = BigInt(contentParam);
-        if (feed.some(item => item.id === id)) {
-          setSelectedId(id);
-        }
-      } catch {
-        // ignore invalid content param
-      }
+  const requestedActiveId = useMemo(() => {
+    if (!contentParam) return null;
+    try {
+      return BigInt(contentParam);
+    } catch {
+      return null;
     }
-  }, [contentParam, feed]);
+  }, [contentParam]);
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -423,19 +418,16 @@ const HomeInner = () => {
     followedCuratorOrderMap,
   ]);
 
-  const orderedDisplayFeed = useMemo(() => {
-    if (selectedId === null) return displayFeed;
-
-    const selectedIndex = displayFeed.findIndex(item => item.id === selectedId);
-    if (selectedIndex === -1) return displayFeed;
-
-    const selectedItem = displayFeed[selectedIndex];
-    return [selectedItem, ...displayFeed.filter((_, index) => index !== selectedIndex)];
-  }, [displayFeed, selectedId]);
-
-  const visibleFeedItems = useMemo(() => orderedDisplayFeed.slice(0, visibleCount), [orderedDisplayFeed, visibleCount]);
-  const primaryItem = visibleFeedItems[0];
-  const queueItems = useMemo(() => visibleFeedItems.slice(1), [visibleFeedItems]);
+  const {
+    activeItem: primaryItem,
+    orderedItems: orderedDisplayFeed,
+    selectContent,
+    upNextItems: queueItems,
+    visibleItems: visibleFeedItems,
+  } = useVoteFeedStage(displayFeed, {
+    visibleCount,
+    requestedActiveId,
+  });
 
   const submitterAddresses = useMemo(() => {
     return visibleFeedItems.map(item => item.submitter);
@@ -524,14 +516,17 @@ const HomeInner = () => {
     setStakeModal(prev => ({ ...prev, isOpen: false }));
   };
 
-  const handleSelectCard = useCallback((id: bigint, categoryId: bigint) => {
-    trackContentClick(id, categoryId);
-    setSelectedId(id);
-    const url = new URL(window.location.href);
-    url.searchParams.set("content", id.toString());
-    history.replaceState(null, "", url.toString());
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  const handleSelectCard = useCallback(
+    (id: bigint, categoryId: bigint) => {
+      trackContentClick(id, categoryId);
+      selectContent(id);
+      const url = new URL(window.location.href);
+      url.searchParams.set("content", id.toString());
+      history.replaceState(null, "", url.toString());
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [selectContent],
+  );
 
   const handleToggleWatch = useCallback(
     async (contentId: bigint) => {
