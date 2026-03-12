@@ -464,6 +464,24 @@ const HomeInner = () => {
     setVisibleCount(FEED_PAGE_SIZE);
   }, [searchQuery, activeCategory, scope, sortBy]);
 
+  const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const shouldPrefetchQueue = queueItems.length < 8 && (visibleCount < orderedDisplayFeed.length || hasMoreFeed);
+
+    if (!shouldPrefetchQueue) {
+      lastQueuePrefetchVisibleCountRef.current = null;
+      return;
+    }
+
+    if (lastQueuePrefetchVisibleCountRef.current === visibleCount) {
+      return;
+    }
+
+    lastQueuePrefetchVisibleCountRef.current = visibleCount;
+    setVisibleCount(prev => prev + FEED_PAGE_SIZE);
+  }, [hasMoreFeed, orderedDisplayFeed.length, queueItems.length, visibleCount]);
+
   useEffect(() => {
     const nextThumbnailSrc = nextQueueItem ? getVoteFeedThumbnailSrc(nextQueueItem) : null;
     if (!nextThumbnailSrc) return;
@@ -682,10 +700,10 @@ const HomeInner = () => {
   });
 
   return (
-    <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
-      <div className="w-full max-w-6xl">
+    <div className="flex grow flex-col items-center px-4 pt-4 pb-8 xl:h-full xl:min-h-0 xl:overflow-hidden xl:pb-4">
+      <div className="w-full max-w-6xl xl:flex xl:h-full xl:min-h-0 xl:flex-col">
         <VotingGuide />
-        <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap">
+        <div className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap">
           <CategoryFilter
             categories={categories}
             activeCategory={activeCategory}
@@ -711,7 +729,7 @@ const HomeInner = () => {
         </div>
 
         {isSearchMode ? (
-          <div className="mb-5 flex flex-wrap items-center gap-2">
+          <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2">
             <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
               Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
             </div>
@@ -730,18 +748,20 @@ const HomeInner = () => {
           </div>
         ) : null}
 
-        <div className="min-w-0">
+        <div className="min-w-0 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
           {/* Main content */}
           {isLoading || categoriesLoading || scopeLoading ? (
-            <div className="flex justify-center py-16">
+            <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-0">
               <span className="loading loading-spinner loading-lg text-primary"></span>
             </div>
           ) : displayFeed.length === 0 ? (
-            <div className="text-center py-16 text-base-content/30 text-base">{emptyStateMessage}</div>
+            <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-0">
+              {emptyStateMessage}
+            </div>
           ) : (
-            <div className="space-y-5">
+            <div className="space-y-5 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:space-y-4">
               {isCommitting ? (
-                <div className="flex items-center justify-center">
+                <div className="flex shrink-0 items-center justify-center">
                   <span className="text-base text-base-content/50">
                     <span className="loading loading-spinner loading-xs mr-1.5"></span>
                     Committing...
@@ -750,8 +770,8 @@ const HomeInner = () => {
               ) : null}
 
               {primaryItem ? (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
+                  <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 text-sm">
                     <div className="flex flex-wrap items-center gap-2 text-base-content/60">
                       <span className="rounded-full bg-base-content/[0.05] px-3 py-1.5 font-medium">
                         {activeStagePosition > 0 ? `Card ${activeStagePosition} of ${stageTotal}` : "Live queue"}
@@ -772,7 +792,7 @@ const HomeInner = () => {
                   <div
                     key={primaryItem.id.toString()}
                     ref={activeCardRegionRef}
-                    className="motion-safe:animate-vote-card-promote"
+                    className="motion-safe:animate-vote-card-promote xl:min-h-0 xl:flex-1"
                   >
                     <FeedVoteCard
                       item={primaryItem}
@@ -797,7 +817,7 @@ const HomeInner = () => {
               {queueItems.length > 0 ? (
                 <section
                   key={primaryItem?.id.toString() ?? "queue-empty"}
-                  className="space-y-3 motion-safe:animate-vote-queue-settle"
+                  className="space-y-3 motion-safe:animate-vote-queue-settle xl:flex-none"
                   aria-label="Up next queue"
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -811,7 +831,7 @@ const HomeInner = () => {
                       {queueItems.length} queued
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3 xl:flex xl:gap-2.5 xl:overflow-x-auto xl:pb-2 xl:[scrollbar-width:none] xl:[&::-webkit-scrollbar]:hidden">
                     {queueItems.map((item, index) => (
                       <FeedQueueCard
                         key={item.id.toString()}
@@ -826,7 +846,7 @@ const HomeInner = () => {
               ) : null}
 
               {canLoadMore ? (
-                <div ref={loadMoreRef} className="flex justify-center py-8">
+                <div ref={loadMoreRef} className="flex justify-center py-8 xl:hidden">
                   <span className="loading loading-spinner loading-md text-primary"></span>
                 </div>
               ) : null}
