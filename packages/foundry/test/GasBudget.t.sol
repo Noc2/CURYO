@@ -10,7 +10,8 @@ import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 
 contract GasBudgetTest is RoundIntegrationTest {
-    uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 400_000;
+    // Content submission now resolves canonical URLs through SubmissionCanonicalizer.
+    uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 425_000;
     uint256 internal constant MAX_COMMIT_VOTE_GAS = 800_000;
     uint256 internal constant MAX_REVEAL_VOTE_GAS = 320_000;
     uint256 internal constant MAX_SETTLE_ROUND_GAS = 475_000;
