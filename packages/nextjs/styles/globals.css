@@ -367,11 +367,11 @@
 
 /* Feed scope filter pill — green */
 .pill-filter {
-  background: #03cea4;
-  color: #000;
+  background: var(--color-base-300);
+  color: #fff;
 }
 .pill-filter:hover {
-  background: #02b890;
+  background: color-mix(in srgb, var(--color-base-300) 78%, white 22%);
 }
 .pill-filter-active {
   background: #03cea4;
