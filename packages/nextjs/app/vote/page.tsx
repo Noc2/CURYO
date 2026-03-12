@@ -718,7 +718,9 @@ const HomeInner = () => {
     [displayFeed, handleSelectByIndex],
   );
 
-  const canSwipeNavigate = supportsTouchNavigation && displayFeed.length > 1 && !isCommitting && !stakeModal.isOpen;
+  const canNavigateCards = displayFeed.length > 1 && !isCommitting && !stakeModal.isOpen;
+  const canSwipeNavigate = supportsTouchNavigation && canNavigateCards;
+  const canWheelNavigate = !supportsTouchNavigation && canNavigateCards;
 
   const handleActiveRegionKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -963,8 +965,8 @@ const HomeInner = () => {
   }, [activeCategory, address, scope, searchQuery]);
 
   const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
-    enabled: Boolean(canSwipeNavigate && primaryItem),
-    enableWheel: !supportsTouchNavigation,
+    enabled: Boolean(primaryItem && canNavigateCards),
+    enableWheel: canWheelNavigate,
     onNavigate: handleNavigateSelection,
   });
 

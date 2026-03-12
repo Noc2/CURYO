@@ -622,7 +622,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "YouTube",
             "youtube.com",
             youtubeSubcats,
-            "Is this video entertaining or informative enough to score above {rating} out of 100?"
+            "Is {title} informative or entertaining enough to score above {rating} out of 100?"
         );
 
         // Twitch (categoryId: 2)
@@ -633,7 +633,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         twitchSubcats[3] = "Sports";
         twitchSubcats[4] = "Creative";
         registry.addApprovedCategory(
-            "Twitch", "twitch.tv", twitchSubcats, "Is this stream engaging enough to score above {rating} out of 100?"
+            "Twitch", "twitch.tv", twitchSubcats, "Is {title} engaging enough to score above {rating} out of 100?"
         );
 
         // Magic: The Gathering - Scryfall (categoryId: 3)
@@ -650,7 +650,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "Magic: The Gathering",
             "scryfall.com",
             mtgSubcats,
-            "Is this card powerful or iconic enough to score above {rating} out of 100?"
+            "Is {title} powerful or iconic enough to score above {rating} out of 100?"
         );
 
         // Movies - TMDB (categoryId: 4)
@@ -666,7 +666,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         movieSubcats[8] = "Romance";
         movieSubcats[9] = "Fantasy";
         registry.addApprovedCategory(
-            "Movies", "themoviedb.org", movieSubcats, "Is this movie good enough to score above {rating} out of 100?"
+            "Movies", "themoviedb.org", movieSubcats, "Is {title} good enough to score above {rating} out of 100?"
         );
 
         // People - Wikipedia (categoryId: 5)
@@ -683,7 +683,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "People",
             "en.wikipedia.org",
             peopleSubcats,
-            "Is this person's influence and impact above {rating} out of 100?"
+            "Is the influence and impact of {title} above {rating} out of 100?"
         );
 
         // Games - RAWG (categoryId: 6)
@@ -697,7 +697,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         gameSubcats[6] = "Sports";
         gameSubcats[7] = "Puzzle";
         registry.addApprovedCategory(
-            "Games", "rawg.io", gameSubcats, "Is this game fun and polished enough to score above {rating} out of 100?"
+            "Games", "rawg.io", gameSubcats, "Is {title} fun and polished enough to score above {rating} out of 100?"
         );
 
         // Books - Open Library (categoryId: 7)
@@ -714,7 +714,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "Books",
             "openlibrary.org",
             bookSubcats,
-            "Is this book worth reading enough to score above {rating} out of 100?"
+            "Is {title} worth reading enough to score above {rating} out of 100?"
         );
 
         // AI - Hugging Face (categoryId: 8)
@@ -732,7 +732,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "AI",
             "huggingface.co",
             aiSubcats,
-            "Is this AI model useful and capable enough to score above {rating} out of 100?"
+            "Is {title} useful and capable enough to score above {rating} out of 100?"
         );
 
         // Crypto Tokens - CoinGecko (categoryId: 9)
@@ -749,7 +749,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "Crypto Tokens",
             "coingecko.com",
             cryptoSubcats,
-            "Are this token's fundamentals strong enough to score above {rating} out of 100?"
+            "Are the fundamentals of {title} strong enough to score above {rating} out of 100?"
         );
 
         // Tweets - X/Twitter (categoryId: 10)
@@ -768,7 +768,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "Tweets",
             "x.com",
             tweetSubcats,
-            "Is this tweet insightful or impactful enough to score above {rating} out of 100?"
+            "Is {title} insightful or impactful enough to score above {rating} out of 100?"
         );
 
         // GitHub Repos (categoryId: 11)
@@ -785,7 +785,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "GitHub Repos",
             "github.com",
             githubSubcats,
-            "Is this repository worth adopting or recommending enough to score above {rating} out of 100?"
+            "Is {title} worth adopting or recommending enough to score above {rating} out of 100?"
         );
 
         // Spotify Podcasts (categoryId: 12)
@@ -802,7 +802,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "Spotify Podcasts",
             "open.spotify.com",
             spotifySubcats,
-            "Is this podcast or episode worth listening to enough to score above {rating} out of 100?"
+            "Is {title} worth listening to enough to score above {rating} out of 100?"
         );
     }
 }
