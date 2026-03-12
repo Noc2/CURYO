@@ -106,7 +106,7 @@ export function VotingQuestionCard({
       style={embedded ? {} : { background: "var(--color-base-200)" }}
     >
       {/* Content */}
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* Question at the top */}
         <p className="mb-2 line-clamp-3 shrink-0 text-center text-[1.05rem] font-bold leading-snug text-white xl:text-[1rem] 2xl:text-[1.05rem]">
           {(() => {
@@ -155,7 +155,7 @@ export function VotingQuestionCard({
 
         {/* Voter count icons */}
         {phase === "voting" && (
-          <div className="flex justify-center mb-2">
+          <div className="mb-2 flex shrink-0 justify-center">
             <span className="inline-flex items-center gap-1.5">
               <span className="flex -space-x-1">
                 {Array.from({ length: Math.min(revealedCount, 7) }).map((_, i) => (
@@ -200,7 +200,7 @@ export function VotingQuestionCard({
         )}
 
         {/* Vote error message */}
-        {error && <p className="text-base text-center text-red-400 mb-2">{error}</p>}
+        {error && <p className="mb-2 text-center text-base text-red-400">{error}</p>}
 
         {/* Voting arrows - centered below question */}
         <div className="mb-3 flex shrink-0 items-center justify-center gap-2 lg:gap-3">

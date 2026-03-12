@@ -81,9 +81,9 @@ interface FeedVoteCardProps {
 }
 
 interface ActiveMediaLayout {
-  gridClass: string;
-  gridRowsClass: string;
+  mediaHeightClass: string;
   mediaShellClass: string;
+  mediaFrameClass?: string;
 }
 
 function getActiveMediaLayout(url: string): ActiveMediaLayout {
@@ -93,69 +93,56 @@ function getActiveMediaLayout(url: string): ActiveMediaLayout {
     case "openlibrary":
     case "tmdb":
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,clamp(13.5rem,22vw,20rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(14rem,21vw,21rem))_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(58vh,36rem))_auto]",
-        mediaShellClass: "h-full lg:aspect-[2/3]",
+        mediaHeightClass: "h-[min(46vh,32rem)] lg:h-[min(46vh,30rem)]",
+        mediaShellClass: "h-full w-full lg:aspect-[2/3]",
+        mediaFrameClass: "lg:flex lg:justify-center",
       };
     case "wikipedia":
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,clamp(14rem,23vw,22rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(15rem,22vw,23rem))_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(56vh,34rem))_auto]",
-        mediaShellClass: "h-full lg:aspect-[3/4]",
+        mediaHeightClass: "h-[min(42vh,28rem)] lg:h-[min(42vh,27rem)]",
+        mediaShellClass: "h-full w-full lg:aspect-[3/4]",
+        mediaFrameClass: "lg:flex lg:justify-center",
       };
     case "scryfall":
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,clamp(13.5rem,21vw,20rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(14rem,20vw,21rem))_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(54vh,33rem))_auto]",
-        mediaShellClass: "h-full lg:aspect-[5/7]",
+        mediaHeightClass: "h-[min(44vh,29rem)] lg:h-[min(44vh,27rem)]",
+        mediaShellClass: "h-full w-full lg:aspect-[5/7]",
+        mediaFrameClass: "lg:flex lg:justify-center",
       };
     case "github":
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,clamp(18rem,29vw,28rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(19rem,28vw,30rem))_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(42vh,26rem))_auto]",
-        mediaShellClass: "h-full lg:aspect-[16/10]",
+        mediaHeightClass: "h-[min(32vh,21rem)] lg:h-[min(32vh,19rem)]",
+        mediaShellClass: "h-full w-full lg:aspect-[16/10]",
       };
     case "coingecko":
     case "huggingface":
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,clamp(16rem,24vw,24rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(17rem,23vw,25rem))_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(42vh,25rem))_auto]",
-        mediaShellClass: "h-full lg:aspect-square",
+        mediaHeightClass: "h-[min(30vh,19rem)] lg:h-[min(30vh,18rem)]",
+        mediaShellClass: "h-full w-full lg:aspect-square",
+        mediaFrameClass: "lg:flex lg:justify-center",
       };
     case "rawg":
     case "youtube":
     case "twitch":
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,1.25fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.3fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(40vh,25rem))_auto]",
-        mediaShellClass: "h-full lg:aspect-video",
+        mediaHeightClass: "h-[min(30vh,20rem)] lg:h-[min(30vh,18.5rem)]",
+        mediaShellClass: "h-full w-full lg:aspect-video",
       };
     case "spotify":
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,1.3fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.45fr)_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(40vh,25rem))_auto]",
-        mediaShellClass: "h-full",
+        mediaHeightClass: "h-[min(30vh,20rem)] lg:h-[min(30vh,18.5rem)]",
+        mediaShellClass: "h-full w-full",
       };
     case "twitter":
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,clamp(18rem,30vw,27rem))_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,clamp(19rem,29vw,28rem))_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(48vh,30rem))_auto]",
-        mediaShellClass: "h-full",
+        mediaHeightClass: "h-[min(38vh,24rem)] lg:h-[min(38vh,22rem)]",
+        mediaShellClass: "h-full w-full",
+        mediaFrameClass: "lg:flex lg:justify-center",
       };
     default:
       return {
-        gridClass:
-          "lg:grid-cols-[minmax(0,1.25fr)_minmax(19rem,1fr)] xl:grid-cols-[minmax(0,1.3fr)_minmax(19rem,1fr)] 2xl:grid-cols-[minmax(0,1.35fr)_minmax(19rem,1fr)]",
-        gridRowsClass: "lg:grid-rows-[minmax(0,min(40vh,25rem))_auto]",
-        mediaShellClass: "h-full lg:aspect-video",
+        mediaHeightClass: "h-[min(30vh,20rem)] lg:h-[min(30vh,18.5rem)]",
+        mediaShellClass: "h-full w-full lg:aspect-video",
       };
   }
 }
@@ -182,7 +169,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   const mediaLayout = getActiveMediaLayout(item.url);
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 xl:grid xl:grid-rows-[auto_minmax(0,1fr)] xl:gap-2.5">
+    <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
       <FeedContentHeader
         item={item}
         onPrevious={onPrevious}
@@ -191,18 +178,16 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         canNext={canNext}
       />
 
-      <div
-        className={`grid min-h-0 flex-1 grid-cols-1 gap-3 lg:items-stretch ${mediaLayout.gridClass} ${mediaLayout.gridRowsClass}`}
-      >
-        <div
-          className={`order-1 min-h-0 overflow-hidden rounded-2xl bg-base-200 lg:col-start-1 lg:row-start-1 lg:h-full ${mediaLayout.mediaShellClass}`}
-        >
-          <div className="h-full w-full">
-            <ContentEmbed url={item.url} />
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,26rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,27rem)] lg:items-start">
+        <div className="order-1 flex min-h-0 flex-col gap-3 lg:col-start-1 lg:row-start-1">
+          <div className={`min-h-0 overflow-hidden rounded-2xl bg-base-200 ${mediaLayout.mediaHeightClass}`}>
+            <div className={`h-full w-full ${mediaLayout.mediaFrameClass ?? ""}`}>
+              <div className={mediaLayout.mediaShellClass}>
+                <ContentEmbed url={item.url} />
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="order-3 min-h-0 lg:col-start-1 lg:row-start-2">
           <FeedContentMetaCard
             item={item}
             submitterProfile={submitterProfile}
@@ -216,7 +201,9 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           />
         </div>
 
-        <div className="order-2 w-full min-h-0 self-stretch rounded-2xl bg-base-200 lg:col-start-2 lg:row-start-1 lg:h-full lg:overflow-hidden">
+        <div
+          className={`order-2 w-full min-h-0 self-start overflow-hidden rounded-2xl bg-base-200 lg:col-start-2 lg:row-start-1 ${mediaLayout.mediaHeightClass}`}
+        >
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}
@@ -301,7 +288,7 @@ function FeedContentMetaCard({
 
   return (
     <>
-      <div className="min-h-[8.75rem] max-h-[11rem] overflow-y-auto rounded-2xl bg-black p-4 xl:min-h-[8.25rem] xl:max-h-[9.5rem] xl:p-3">
+      <div className="min-h-[7.5rem] max-h-[9rem] overflow-y-auto rounded-2xl bg-black p-4 xl:min-h-[7rem] xl:max-h-[8.5rem] xl:p-3">
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
@@ -400,13 +387,13 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:min-h-[16.5rem] xl:min-w-[13rem] xl:basis-[13rem] xl:w-auto ${
+      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:min-h-[14.25rem] xl:min-w-[12rem] xl:basis-[12rem] xl:w-auto ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
       }`}
     >
-      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200 xl:aspect-[16/9]">
+      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200 xl:h-[6.75rem] xl:aspect-auto">
         <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
             {queuePosition + 1}
@@ -435,7 +422,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         )}
       </div>
 
-      <div className="flex min-h-[7.25rem] flex-1 flex-col space-y-1.5 p-2.5 xl:min-h-[7.5rem] xl:space-y-1 xl:p-2">
+      <div className="flex min-h-[6.75rem] flex-1 flex-col space-y-1.5 p-2.5 xl:min-h-[6.75rem] xl:space-y-1 xl:p-2">
         <div className="flex items-center gap-2 text-xs text-base-content/55">
           <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
         </div>

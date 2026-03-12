@@ -844,7 +844,7 @@ const HomeInner = () => {
         ) : (
           <div
             ref={activeCardRegionRef}
-            className="space-y-5 xl:grid xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_clamp(16.5rem,21vh,17rem)] xl:gap-3 xl:overflow-hidden xl:space-y-0"
+            className="space-y-5 xl:grid xl:h-full xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_clamp(13.5rem,18vh,14.5rem)] xl:gap-3 xl:overflow-hidden xl:space-y-0"
           >
             {isCommitting ? (
               <div className="flex shrink-0 items-center justify-center">
@@ -905,7 +905,7 @@ const HomeInner = () => {
                 <div
                   ref={queueRailRef}
                   data-disable-queue-wheel="true"
-                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:flex-nowrap xl:gap-2.5 xl:overflow-y-hidden xl:pb-1 xl:snap-x"
+                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:flex-nowrap xl:gap-2.5 xl:overflow-y-hidden xl:pb-0 xl:snap-x"
                 >
                   {visibleFeedItems.map(item => (
                     <FeedQueueCard
