@@ -70,7 +70,13 @@ function NotificationPreferenceToggle({
   );
 }
 
-export function NotificationSettingsPanel({ address }: { address?: string }) {
+export function NotificationSettingsPanel({
+  address,
+  onStatusChange,
+}: {
+  address?: string;
+  onStatusChange?: () => void;
+}) {
   const { openConnectModal } = useConnectModal();
   const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address, {
     autoRead: true,
@@ -149,9 +155,10 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
         return;
       }
 
+      onStatusChange?.();
       notification.success("Notification settings updated");
     },
-    [openConnectModal, updatePreference],
+    [onStatusChange, openConnectModal, updatePreference],
   );
 
   const requestBrowserPermission = useCallback(async () => {
@@ -165,14 +172,16 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
       setBrowserPermission(permission);
 
       if (permission === "granted") {
+        onStatusChange?.();
         notification.success("Browser notifications enabled");
       } else if (permission === "denied") {
+        onStatusChange?.();
         notification.info("Browser notifications are blocked in this browser.");
       }
     } catch {
       notification.error("Failed to request browser notification permission");
     }
-  }, []);
+  }, [onStatusChange]);
 
   const hasEmail = emailDraft.trim().length > 0;
   const emailPayload = useMemo<EmailNotificationSettingsPayload>(
@@ -207,17 +216,20 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
     }
 
     if (!emailPayload.email) {
+      onStatusChange?.();
       notification.success("Email notifications removed");
       return;
     }
 
     if (result.verificationSent) {
+      onStatusChange?.();
       notification.success("Verification email sent");
       return;
     }
 
+    onStatusChange?.();
     notification.success("Email notification settings updated");
-  }, [emailPayload, openConnectModal, updateEmailSettings]);
+  }, [emailPayload, onStatusChange, openConnectModal, updateEmailSettings]);
 
   if (!address) {
     return (
@@ -228,7 +240,7 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
               <BellAlertIcon className="h-4 w-4" />
               Notifications
             </div>
-            <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h1>
+            <h2 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h2>
             <p className="mt-3 text-base text-base-content/60">
               Connect your wallet to choose which in-app, browser, and email alerts you want to receive.
             </p>
@@ -254,7 +266,7 @@ export function NotificationSettingsPanel({ address }: { address?: string }) {
               <BellAlertIcon className="h-4 w-4" />
               Notifications
             </div>
-            <h1 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h1>
+            <h2 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h2>
           </div>
           <div className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3 text-sm text-base-content/60">
             {browserPermission === "granted"

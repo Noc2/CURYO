@@ -11,6 +11,41 @@ import { expect, test } from "@playwright/test";
 test.describe("Profile management", () => {
   const profileAccount = ANVIL_ACCOUNTS.account8;
 
+  test("settings page shows an account overview without notification signature prompts on load", async ({ browser }) => {
+    test.setTimeout(120_000);
+
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const notificationChallengeRequests: string[] = [];
+
+    page.on("request", request => {
+      if (
+        request.method() === "POST" &&
+        /\/api\/notifications\/(preferences|email)\/challenge$/.test(new URL(request.url()).pathname)
+      ) {
+        notificationChallengeRequests.push(request.url());
+      }
+    });
+
+    await setupWallet(page, profileAccount.privateKey);
+    await page.goto("/settings");
+
+    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Account Overview")).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(profileAccount.address)).toBeVisible({ timeout: 5_000 });
+
+    const delegationShortcut = page.getByRole("button", { name: "Open delegation settings" });
+    await expect(delegationShortcut).toBeVisible({ timeout: 5_000 });
+    await delegationShortcut.click();
+
+    await expect(page).toHaveURL(/\/settings\?tab=delegation$/);
+    await expect(page.getByRole("heading", { name: /Delegated Vote ID/i })).toBeVisible({ timeout: 10_000 });
+
+    expect(notificationChallengeRequests).toHaveLength(0);
+
+    await context.close();
+  });
+
   test("can create profile via settings page", async ({ browser }) => {
     test.setTimeout(120_000);
 
