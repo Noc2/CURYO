@@ -5,7 +5,8 @@ import { parseTags } from "~~/constants/categories";
 export interface ContentItem {
   id: bigint;
   url: string;
-  goal: string;
+  title: string;
+  description: string;
   tags: string[];
   submitter: string;
   contentHash: string;
@@ -31,7 +32,8 @@ export function mapContentItem(
   item: {
     id: string;
     url: string;
-    goal: string;
+    title: string;
+    description: string;
     tags: string;
     submitter: string;
     contentHash: string;
@@ -42,7 +44,8 @@ export function mapContentItem(
   return {
     id: BigInt(item.id),
     url: item.url,
-    goal: item.goal,
+    title: item.title,
+    description: item.description,
     tags: parseTags(item.tags),
     submitter: item.submitter,
     contentHash: item.contentHash,
@@ -94,7 +97,8 @@ export function filterRpcFeed(feed: ContentItem[], options: UseContentFeedOption
 
     if (normalizedSearch) {
       const matchesSearch =
-        item.goal.toLowerCase().includes(normalizedSearch) ||
+        item.title.toLowerCase().includes(normalizedSearch) ||
+        item.description.toLowerCase().includes(normalizedSearch) ||
         item.url.toLowerCase().includes(normalizedSearch) ||
         item.tags.some(tag => tag.toLowerCase().includes(normalizedSearch));
       if (!matchesSearch) {

@@ -46,18 +46,20 @@ export function useContentFeedQuery(voterAddress?: string, options: UseContentFe
           submitter?: string;
           contentHash?: string;
           url?: string;
-          goal?: string;
+          title?: string;
+          description?: string;
           tags?: string;
           categoryId?: bigint;
         };
 
-        if (!args.contentId || !args.url || !args.goal) return null;
+        if (!args.contentId || !args.url || !args.title || !args.description) return null;
 
         const eventSubmitter = args.submitter || "";
         return {
           id: args.contentId,
           url: args.url,
-          goal: args.goal,
+          title: args.title,
+          description: args.description,
           tags: parseTags(args.tags || ""),
           submitter: eventSubmitter,
           contentHash: args.contentHash || "",

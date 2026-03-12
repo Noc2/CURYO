@@ -100,7 +100,8 @@ export interface PonderContentItem {
   submitter: string;
   contentHash: string;
   url: string;
-  goal: string;
+  title: string;
+  description: string;
   tags: string;
   categoryId: string;
   status: number;
@@ -149,7 +150,8 @@ export interface PonderRoundItem {
   losingPool: string | null;
   startTime: string | null;
   settledAt: string | null;
-  goal: string | null;
+  title: string | null;
+  description: string | null;
   url: string | null;
   submitter: string | null;
   categoryId: string | null;
@@ -203,7 +205,8 @@ export interface PonderProfileSubmissionItem {
   id: string;
   submitter: string;
   url: string;
-  goal: string;
+  title: string;
+  description: string;
   categoryId: string;
   categoryName: string | null;
   status: number;
@@ -217,7 +220,8 @@ export interface PonderDiscoverSignalsSettlingItem {
   id: string;
   contentId: string;
   roundId: string;
-  goal: string;
+  title: string;
+  description: string;
   url: string;
   submitter: string;
   categoryId: string;
@@ -230,7 +234,8 @@ export interface PonderDiscoverSignalsSettlingItem {
 
 export interface PonderDiscoverSignalsSubmissionItem {
   contentId: string;
-  goal: string;
+  title: string;
+  description: string;
   url: string;
   createdAt: string;
   categoryId: string;
@@ -245,7 +250,8 @@ export interface PonderDiscoverSignalsResolutionItem {
   roundId: string;
   voter: string;
   isUp: boolean | null;
-  goal: string;
+  title: string;
+  description: string;
   url: string;
   settledAt: string | null;
   roundState: RoundState | null;
@@ -265,7 +271,8 @@ export interface PonderFeaturedTodayItem {
   id: string;
   contentId: string;
   roundId: string;
-  goal: string;
+  title: string;
+  description: string;
   url: string;
   submitter: string;
   categoryId: string;

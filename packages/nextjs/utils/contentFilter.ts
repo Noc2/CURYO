@@ -29,7 +29,7 @@ const URL_BLOCKED_TERMS = [
   "bongacams",
 ];
 
-// Terms checked with word-boundary matching in free text (goal, tags, comments)
+// Terms checked with word-boundary matching in free text (title, description, tags, comments)
 const TEXT_BLOCKED_TERMS = ["porn", "pornography", "xxx", "nsfw", "hentai", "rule34", "onlyfans"];
 
 /**
@@ -74,9 +74,15 @@ export function containsBlockedText(text: string): { blocked: boolean; matchedTe
  * Check whether any field of a content item contains blocked content.
  * Suitable for filtering items out of a display feed.
  */
-export function isContentItemBlocked(item: { url: string; goal: string; tags: string[] }): boolean {
+export function isContentItemBlocked(item: {
+  url: string;
+  title: string;
+  description: string;
+  tags: string[];
+}): boolean {
   if (containsBlockedUrl(item.url).blocked) return true;
-  if (containsBlockedText(item.goal).blocked) return true;
+  if (containsBlockedText(item.title).blocked) return true;
+  if (containsBlockedText(item.description).blocked) return true;
   if (item.tags.some(tag => containsBlockedText(tag).blocked)) return true;
   return false;
 }

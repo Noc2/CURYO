@@ -177,11 +177,11 @@ export function SettlementNotifier() {
         !seenFollowedSubmissionKeysRef.current.has(key)
       ) {
         const displayName = item.profileName || `${item.submitter.slice(0, 6)}...${item.submitter.slice(-4)}`;
-        const shortGoal = item.goal.length > 72 ? `${item.goal.slice(0, 69)}...` : item.goal;
+        const shortTitle = item.title.length > 72 ? `${item.title.slice(0, 69)}...` : item.title;
         notifyWithLink(
           "success",
           "Followed curator submitted",
-          `${displayName} submitted "${shortGoal}".`,
+          `${displayName} submitted "${shortTitle}".`,
           `/vote?content=${item.contentId}`,
         );
       }
@@ -197,13 +197,13 @@ export function SettlementNotifier() {
         !seenFollowedResolutionKeysRef.current.has(key)
       ) {
         const displayName = item.profileName || `${item.voter.slice(0, 6)}...${item.voter.slice(-4)}`;
-        const shortGoal = item.goal.length > 72 ? `${item.goal.slice(0, 69)}...` : item.goal;
+        const shortTitle = item.title.length > 72 ? `${item.title.slice(0, 69)}...` : item.title;
         const action = item.outcome === "won" ? "won" : item.outcome === "lost" ? "lost" : "resolved";
 
         notifyWithLink(
           "success",
           "Followed curator resolved",
-          `${displayName} ${action} a call on "${shortGoal}".`,
+          `${displayName} ${action} a call on "${shortTitle}".`,
           `/vote?content=${item.contentId}`,
         );
       }

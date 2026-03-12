@@ -4,8 +4,8 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { PanInfo, motion, useMotionValue, useTransform } from "framer-motion";
 import { ShareIcon } from "@heroicons/react/24/outline";
+import { ContentDescription } from "~~/components/content/ContentDescription";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
-import { GoalDisplay } from "~~/components/content/GoalDisplay";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { SwipeOverlay } from "~~/components/swipe/SwipeOverlay";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -97,6 +97,10 @@ export function SwipeCard({
         {/* Swipe overlays */}
         {canDrag && <SwipeOverlay x={x} />}
 
+        <div className="px-4 pt-4 pb-2">
+          <h2 className="line-clamp-2 text-xl font-semibold leading-tight text-white">{content.title}</h2>
+        </div>
+
         {/* Video / Content embed — hero area */}
         <div className="w-full flex-1 min-h-0">
           <ContentEmbed url={content.url} />
@@ -128,7 +132,7 @@ export function SwipeCard({
               </button>
             </div>
           </div>
-          <GoalDisplay goal={content.goal} />
+          <ContentDescription description={content.description} />
 
           {/* Vote action bar (only on top card) */}
           {isTop && (leftActionBar || actionBar || rightActionBar) && (
@@ -158,7 +162,12 @@ export function SwipeCard({
       </motion.div>
 
       {showShare && (
-        <ShareContentModal contentId={content.id} goal={content.goal} onClose={() => setShowShare(false)} />
+        <ShareContentModal
+          contentId={content.id}
+          title={content.title}
+          description={content.description}
+          onClose={() => setShowShare(false)}
+        />
       )}
     </motion.div>
   );

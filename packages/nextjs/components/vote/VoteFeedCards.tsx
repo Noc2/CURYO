@@ -4,8 +4,8 @@ import { memo, useState } from "react";
 import dynamic from "next/dynamic";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
+import { ContentDescription } from "~~/components/content/ContentDescription";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
-import { GoalDisplay } from "~~/components/content/GoalDisplay";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
@@ -266,6 +266,9 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
           <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
+      <h2 className="mt-3 line-clamp-2 text-center text-xl font-semibold leading-tight text-white xl:mt-2 xl:text-lg">
+        {item.title}
+      </h2>
     </div>
   );
 }
@@ -319,7 +322,7 @@ function FeedContentMetaCard({
         </div>
 
         <div className="mt-3">
-          <GoalDisplay goal={item.goal} />
+          <ContentDescription description={item.description} />
         </div>
 
         {item.categoryId === 3n ? (
@@ -339,7 +342,12 @@ function FeedContentMetaCard({
       </div>
 
       {showShare ? (
-        <ShareContentModal contentId={item.id} goal={item.goal} onClose={() => setShowShare(false)} />
+        <ShareContentModal
+          contentId={item.id}
+          title={item.title}
+          description={item.description}
+          onClose={() => setShowShare(false)}
+        />
       ) : null}
     </>
   );
@@ -372,7 +380,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group w-[11rem] flex-shrink-0 cursor-pointer overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:w-[9.5rem] 2xl:h-full 2xl:w-auto ${
+      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:h-full xl:min-h-[14rem] xl:min-w-0 xl:w-auto 2xl:min-h-[15rem] ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
@@ -401,17 +409,20 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           <div className="flex h-full w-full cursor-pointer items-end bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.16),_transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">{platform.type}</p>
-              <p className="mt-1 line-clamp-2 text-sm font-medium text-white/90">{item.goal}</p>
+              <p className="mt-1 line-clamp-2 text-sm font-medium text-white/90">{item.title}</p>
             </div>
           </div>
         )}
       </div>
 
-      <div className="space-y-1.5 p-2.5 xl:space-y-0.5 xl:p-1.5">
+      <div className="flex flex-1 flex-col space-y-1.5 p-2.5 xl:space-y-0.5 xl:p-1.5">
         <div className="flex items-center gap-2 text-xs text-base-content/55">
           <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
         </div>
-        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-[0.72rem] xl:leading-snug">{item.goal}</p>
+        <p className="line-clamp-2 text-sm font-medium text-white/90 xl:text-[0.72rem] xl:leading-snug">{item.title}</p>
+        <p className="line-clamp-2 text-xs text-base-content/65 xl:text-[0.68rem] xl:leading-snug">
+          {item.description}
+        </p>
         <div className="flex items-center gap-2 text-xs text-base-content/50 xl:flex-wrap xl:gap-1.5">
           <span className="rounded-full bg-base-content/[0.05] px-2 py-1 font-medium text-base-content/65">
             {platform.type}
@@ -419,7 +430,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           {item.tags[0] ? <span className="truncate xl:hidden">#{item.tags[0]}</span> : null}
           <span className="hidden truncate sm:inline xl:hidden">{getDomainLabel(item.url)}</span>
         </div>
-        <div className="text-xs text-base-content/55 xl:hidden">
+        <div className="mt-auto text-xs text-base-content/55 xl:hidden">
           <span className="block min-w-0 truncate">{submitterProfile?.username ?? item.submitter}</span>
         </div>
       </div>

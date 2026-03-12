@@ -7,7 +7,8 @@ import { usePageVisibility } from "~~/hooks/usePageVisibility";
 export interface FrontendClaimableFeeItem {
   contentId: string;
   roundId: string;
-  goal: string | null;
+  title: string | null;
+  description: string | null;
   url: string | null;
   settledAt: string | null;
   claimableFee: string;

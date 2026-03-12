@@ -36,7 +36,8 @@ const publicClient =
 export interface ClaimableFrontendFeeRound {
   contentId: string;
   roundId: string;
-  goal: string | null;
+  title: string | null;
+  description: string | null;
   url: string | null;
   settledAt: string | null;
   claimableFee: string;
@@ -358,7 +359,8 @@ export async function listClaimableFrontendFeeRounds(
       items.push({
         contentId: round.contentId,
         roundId: round.roundId,
-        goal: round.goal,
+        title: round.title,
+        description: round.description,
         url: round.url,
         settledAt: round.settledAt,
         claimableFee: claimableFee.toString(),

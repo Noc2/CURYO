@@ -485,7 +485,7 @@ export function FrontendRegistration() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-medium line-clamp-2">
-                              {item.goal || item.url || `Content ${item.contentId}`}
+                              {item.title || item.url || `Content ${item.contentId}`}
                             </p>
                             <p className="text-sm text-base-content/60">
                               Round {item.roundId}

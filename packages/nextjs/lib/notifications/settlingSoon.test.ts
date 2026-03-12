@@ -9,13 +9,13 @@ test("pickSettlingSoonNotification groups multiple hour alerts into one summary"
       {
         id: "1-1",
         contentId: "1",
-        goal: "The original cryptocurrency",
+        title: "The original cryptocurrency",
         estimatedSettlementTime: "1300",
       },
       {
         id: "2-1",
         contentId: "2",
-        goal: "The leading smart contract platform",
+        title: "The leading smart contract platform",
         estimatedSettlementTime: "1400",
       },
     ],
@@ -38,13 +38,13 @@ test("pickSettlingSoonNotification prefers hour alerts over day alerts", () => {
       {
         id: "day-1",
         contentId: "11",
-        goal: "A watched round later today",
+        title: "A watched round later today",
         estimatedSettlementTime: String(1_000 + 3_600 * 5),
       },
       {
         id: "hour-1",
         contentId: "12",
-        goal: "A watched round this hour",
+        title: "A watched round this hour",
         estimatedSettlementTime: String(1_000 + 900),
       },
     ],
@@ -64,7 +64,7 @@ test("pickSettlingSoonNotification returns null when all candidates were already
       {
         id: "1-1",
         contentId: "1",
-        goal: "Already seen",
+        title: "Already seen",
         estimatedSettlementTime: "1200",
       },
     ],
@@ -82,13 +82,13 @@ test("pickSettlingSoonNotification can fall back to day alerts when hour alerts 
       {
         id: "day-1",
         contentId: "7",
-        goal: "Later today",
+        title: "Later today",
         estimatedSettlementTime: String(1_000 + 7_200),
       },
       {
         id: "hour-1",
         contentId: "8",
-        goal: "Within the hour",
+        title: "Within the hour",
         estimatedSettlementTime: String(1_000 + 1_200),
       },
     ],

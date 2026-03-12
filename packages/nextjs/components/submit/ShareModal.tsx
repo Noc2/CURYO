@@ -6,16 +6,17 @@ import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline
 
 interface ShareModalProps {
   contentId: bigint;
-  goal: string;
+  title: string;
+  description: string;
   onClose: () => void;
 }
 
-export function ShareModal({ contentId, goal, onClose }: ShareModalProps) {
+export function ShareModal({ contentId, title, description, onClose }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/vote?content=${contentId}` : "";
-  const truncatedGoal = goal.length > 50 ? `${goal.slice(0, 50)}...` : goal;
-  const tweetText = `I just submitted "${truncatedGoal}" on Curyo! Vote and build your reputation: ${shareUrl}`;
+  const truncatedTitle = title.length > 50 ? `${title.slice(0, 50)}...` : title;
+  const tweetText = `I just submitted "${truncatedTitle}" on Curyo! Vote and build your reputation: ${shareUrl}`;
 
   const handleCopyLink = async () => {
     try {
@@ -51,9 +52,8 @@ export function ShareModal({ contentId, goal, onClose }: ShareModalProps) {
         </div>
 
         <h3 className="text-xl font-semibold text-center mb-2">Content Submitted!</h3>
-        <p className="text-base text-base-content/60 text-center mb-6">
-          Share your content to attract more voters and grow your reputation.
-        </p>
+        <p className="text-lg font-medium text-center text-white mb-2 line-clamp-2">{title}</p>
+        <p className="text-base text-base-content/60 text-center mb-6">{description}</p>
 
         {/* Share buttons */}
         <div className="space-y-3">

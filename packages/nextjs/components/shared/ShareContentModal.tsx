@@ -5,11 +5,12 @@ import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline
 
 interface ShareContentModalProps {
   contentId: bigint;
-  goal: string;
+  title: string;
+  description: string;
   onClose: () => void;
 }
 
-export function ShareContentModal({ contentId, goal, onClose }: ShareContentModalProps) {
+export function ShareContentModal({ contentId, title, description, onClose }: ShareContentModalProps) {
   const [copied, setCopied] = useState(false);
 
   // Close on Escape key
@@ -22,7 +23,7 @@ export function ShareContentModal({ contentId, goal, onClose }: ShareContentModa
   }, [onClose]);
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/vote?content=${contentId}` : "";
-  const truncatedGoal = goal.length > 80 ? `${goal.slice(0, 80)}...` : goal;
+  const truncatedTitle = title.length > 80 ? `${title.slice(0, 80)}...` : title;
 
   const handleCopyLink = async () => {
     try {
@@ -41,7 +42,7 @@ export function ShareContentModal({ contentId, goal, onClose }: ShareContentModa
     }
   };
 
-  const tweetText = `Check out "${truncatedGoal}" on Curyo! ${shareUrl}`;
+  const tweetText = `Check out "${truncatedTitle}" on Curyo! ${shareUrl}`;
 
   return (
     <div
@@ -58,7 +59,8 @@ export function ShareContentModal({ contentId, goal, onClose }: ShareContentModa
         </button>
 
         <h3 className="text-lg font-semibold text-center mb-1">Share this content</h3>
-        <p className="text-sm text-base-content/60 text-center mb-5 line-clamp-2">{goal}</p>
+        <p className="text-base font-medium text-center text-white mb-2 line-clamp-2">{title}</p>
+        <p className="text-sm text-base-content/60 text-center mb-5 line-clamp-2">{description}</p>
 
         {/* Share buttons */}
         <div className="space-y-2.5">
@@ -90,7 +92,7 @@ export function ShareContentModal({ contentId, goal, onClose }: ShareContentModa
 
           {/* Reddit */}
           <a
-            href={`https://reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(truncatedGoal)}`}
+            href={`https://reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(truncatedTitle)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-outline w-full gap-2"

@@ -1,7 +1,7 @@
 export interface SettlingSoonCandidate {
   id: string;
   contentId: string;
-  goal: string;
+  title: string;
   estimatedSettlementTime: string | null;
 }
 
@@ -16,19 +16,19 @@ export interface SettlingSoonNotificationSummary {
   itemIds: string[];
 }
 
-function truncateGoal(goal: string) {
-  return goal.length > 72 ? `${goal.slice(0, 69)}...` : goal;
+function truncateTitle(title: string) {
+  return title.length > 72 ? `${title.slice(0, 69)}...` : title;
 }
 
-function formatSummaryBody(primaryGoal: string, additionalCount: number, suffix: string) {
-  const shortGoal = truncateGoal(primaryGoal);
+function formatSummaryBody(primaryTitle: string, additionalCount: number, suffix: string) {
+  const shortTitle = truncateTitle(primaryTitle);
 
   if (additionalCount <= 0) {
-    return `"${shortGoal}" ${suffix}`;
+    return `"${shortTitle}" ${suffix}`;
   }
 
   const roundsLabel = additionalCount === 1 ? "other tracked round" : "other tracked rounds";
-  return `"${shortGoal}" and ${additionalCount} ${roundsLabel} ${suffix}`;
+  return `"${shortTitle}" and ${additionalCount} ${roundsLabel} ${suffix}`;
 }
 
 function sortByEstimatedSettlementTime(items: readonly SettlingSoonCandidate[]) {
@@ -64,7 +64,7 @@ function buildSummary(
         : additionalCount > 0
           ? "Rounds settling today"
           : "Watched round settling today",
-    body: formatSummaryBody(primary.goal, additionalCount, suffix),
+    body: formatSummaryBody(primary.title, additionalCount, suffix),
     itemIds: sorted.map(item => item.id),
   };
 }

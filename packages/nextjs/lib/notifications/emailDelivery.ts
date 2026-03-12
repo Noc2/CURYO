@@ -12,7 +12,8 @@ type DeliverySubscription = typeof notificationEmailSubscriptions.$inferSelect;
 
 interface NotificationEventSubmissionItem {
   contentId: string;
-  goal: string;
+  title: string;
+  description: string;
   url: string;
   createdAt: string;
   categoryId: string;
@@ -27,7 +28,8 @@ interface NotificationEventResolutionItem {
   roundId: string;
   voter: string;
   isUp: boolean | null;
-  goal: string;
+  title: string;
+  description: string;
   url: string;
   settledAt: string | null;
   roundState: number | null;
@@ -42,7 +44,8 @@ interface NotificationEventSettlingItem {
   id: string;
   contentId: string;
   roundId: string;
-  goal: string;
+  title: string;
+  description: string;
   url: string;
   submitter: string;
   categoryId: string;
@@ -183,7 +186,7 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
         eventType: "round_resolved",
         contentId: item.contentId,
         subject: "A tracked round just resolved on Curyo",
-        body: `${bodyPrefix}: "${item.goal}".`,
+        body: `${bodyPrefix}: "${item.title}".`,
         href: getAbsoluteVoteUrl(item.contentId),
       });
     }
@@ -226,7 +229,7 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
         eventType: "followed_submission",
         contentId: item.contentId,
         subject: `${displayName} submitted something new on Curyo`,
-        body: `${displayName} just submitted "${item.goal}".`,
+        body: `${displayName} just submitted "${item.title}".`,
         href: getAbsoluteVoteUrl(item.contentId),
       });
     }
@@ -244,7 +247,7 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
         eventType: "followed_resolution",
         contentId: item.contentId,
         subject: `${displayName} ${action} a Curyo call`,
-        body: `${displayName} ${action} a call on "${item.goal}".`,
+        body: `${displayName} ${action} a call on "${item.title}".`,
         href: getAbsoluteVoteUrl(item.contentId),
       });
     }

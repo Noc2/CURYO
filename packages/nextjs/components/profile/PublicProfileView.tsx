@@ -361,7 +361,8 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
                         <div className="text-sm font-semibold uppercase tracking-wide text-primary/80">
                           {categoryName}
                         </div>
-                        <div className="mt-1 line-clamp-2 text-lg font-semibold leading-7">{submission.goal}</div>
+                        <div className="mt-1 line-clamp-2 text-lg font-semibold leading-7">{submission.title}</div>
+                        <p className="mt-1 line-clamp-2 text-sm text-base-content/65">{submission.description}</p>
                       </div>
                       <div className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-mono text-base-content/70">
                         {submission.rating}/100
