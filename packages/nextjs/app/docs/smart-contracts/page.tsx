@@ -257,7 +257,8 @@ const SmartContracts: NextPage = () => {
           to the treasury.
         </li>
         <li>
-          <strong>Auto-return:</strong> After ~4 days once at least one round has settled and no round remains active.
+          <strong>Auto-return:</strong> After ~4 days once a settled round confirms rating stays above 25. If no round
+          ever settles, the stake resolves when the content reaches dormancy.
         </li>
       </ul>
 

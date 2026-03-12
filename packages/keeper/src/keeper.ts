@@ -504,14 +504,14 @@ export async function resolveRounds(
 
       // --- 6. Dormancy sweep ---
       try {
-        const content = (await publicClient.readContract({
+        const dormancyEligible = (await publicClient.readContract({
           address: registryAddr,
           abi: ContentRegistryAbi,
-          functionName: "getContent",
+          functionName: "isDormancyEligible",
           args: [contentId],
-        })) as { status: number; lastActivityAt: bigint };
+        })) as boolean;
 
-        if (content.status === 0 && now > content.lastActivityAt + config.dormancyPeriod) {
+        if (dormancyEligible) {
           await writeContractAndConfirm(publicClient, walletClient, {
             chain,
             account,

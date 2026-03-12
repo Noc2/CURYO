@@ -3017,6 +3017,11 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
+    "name": "DormancyWindowElapsed",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "ERC1967InvalidImplementation",
     "inputs": [
       {

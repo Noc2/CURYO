@@ -650,7 +650,7 @@ contract RoundVotingEngine is
             lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
         }
 
-        // Vote commits count as content activity for dormancy tracking.
+        // Vote commits still refresh UI activity timestamps, but not the dormancy anchor.
         registry.updateActivity(contentId);
 
         emit VoteCommitted(contentId, roundId, voter, commitHash, stakeAmount);

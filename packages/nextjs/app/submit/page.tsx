@@ -752,7 +752,7 @@ const SubmitPage: NextPage = () => {
                     <p className="flex items-center gap-1.5 text-base font-medium text-white">
                       Submission Stake
                       <InfoTooltip
-                        text={`Returned after ~4 days once at least one round has settled, no round remains active, and rating stays above 25. No-vote content unlocks later via dormancy. Settled two-sided rounds allocate ${protocolDocFacts.submitterShareLabel} to the submitter.`}
+                        text={`Returned after ~4 days once a settled round confirms rating stays above 25. If no round ever settles, the stake unlocks when the content reaches dormancy instead. Settled two-sided rounds allocate ${protocolDocFacts.submitterShareLabel} to the submitter.`}
                       />
                     </p>
                   </div>

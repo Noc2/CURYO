@@ -106,6 +106,7 @@ function makeHarness(options: {
   now?: bigint;
   activeRoundId?: bigint;
   latestRoundId?: bigint;
+  dormancyEligible?: boolean;
   round: RoundData;
   roundConfig?: { epochDuration: bigint; maxDuration: bigint; minVoters: bigint; maxVoters: bigint };
   commitKeys?: readonly `0x${string}`[];
@@ -122,6 +123,7 @@ function makeHarness(options: {
   const now = options.now ?? 10_000n;
   const latestRoundId = options.latestRoundId ?? 1n;
   const activeRoundId = options.activeRoundId ?? 0n;
+  const dormancyEligible = options.dormancyEligible ?? false;
   const commitKeys = options.commitKeys ?? [];
   const commits = options.commits ?? {};
   const round = options.round;
@@ -155,8 +157,8 @@ function makeHarness(options: {
           return commitKeys;
         case "getCommit":
           return commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n });
-        case "getContent":
-          return { status: 1, lastActivityAt: now };
+        case "isDormancyEligible":
+          return dormancyEligible;
         default:
           throw new Error(`Unexpected readContract(${functionName})`);
       }

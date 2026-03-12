@@ -2177,6 +2177,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getDormancyAnchorAt",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getRating",
           inputs: [
             {
@@ -2337,6 +2356,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "isDormancyEligible",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "isSubmitterStakeReturned",
           inputs: [
             {
@@ -2447,6 +2485,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "recordMeaningfulActivity",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "renounceRole",
           inputs: [
             {
@@ -2458,6 +2509,19 @@ const deployedContracts = {
               name: "callerConfirmation",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "resolvePendingSubmitterStake",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           outputs: [],
@@ -6272,6 +6336,11 @@ const deployedContracts = {
         {
           type: "error",
           name: "CooldownActive",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "DormancyWindowElapsed",
           inputs: [],
         },
         {
@@ -17689,6 +17758,11 @@ const deployedContracts = {
         },
         {
           type: "error",
+          name: "DormancyWindowElapsed",
+          inputs: [],
+        },
+        {
+          type: "error",
           name: "ERC1967InvalidImplementation",
           inputs: [
             {
@@ -21314,6 +21388,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getDormancyAnchorAt",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getRating",
           inputs: [
             {
@@ -21474,6 +21567,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "isDormancyEligible",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "isSubmitterStakeReturned",
           inputs: [
             {
@@ -21584,6 +21696,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "recordMeaningfulActivity",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "renounceRole",
           inputs: [
             {
@@ -21595,6 +21720,19 @@ const deployedContracts = {
               name: "callerConfirmation",
               type: "address",
               internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "resolvePendingSubmitterStake",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           outputs: [],

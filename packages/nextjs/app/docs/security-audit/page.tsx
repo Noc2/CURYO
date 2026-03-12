@@ -17,16 +17,7 @@ const SecurityAudit: NextPage = () => {
         <strong>no new critical or high-severity issues</strong>. The three residual follow-up items from that review
         have now been addressed on the current branch and are covered by regression tests.
       </p>
-      <p>
-        Full follow-up report:{" "}
-        <a
-          href="https://github.com/Noc2/CURYO/blob/main/docs/SMART_CONTRACT_AUDIT_REPORT_2026-03-11.md"
-          target="_blank"
-          rel="noreferrer"
-        >
-          SMART_CONTRACT_AUDIT_REPORT_2026-03-11.md
-        </a>
-      </p>
+      <p>The follow-up findings are summarized in the latest review section below.</p>
 
       <h2>Latest Follow-Up Review (March 11, 2026)</h2>
       <p>

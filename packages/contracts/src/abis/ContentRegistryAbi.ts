@@ -464,6 +464,25 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "getDormancyAnchorAt",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRating",
     "inputs": [
       {
@@ -624,6 +643,25 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "isDormancyEligible",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "isSubmitterStakeReturned",
     "inputs": [
       {
@@ -734,6 +772,19 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "recordMeaningfulActivity",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "renounceRole",
     "inputs": [
       {
@@ -745,6 +796,19 @@ export const ContentRegistryAbi = [
         "name": "callerConfirmation",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "resolvePendingSubmitterStake",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],

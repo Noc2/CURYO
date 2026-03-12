@@ -919,7 +919,7 @@ contract ContentRegistryCoverageTest is Test {
             crep.approve(address(registry), 5e6);
             registry.reviveContent(id);
             vm.stopPrank();
-            // reviveContent resets lastActivityAt to block.timestamp, so next dormancy starts from t
+            // reviveContent resets both lastActivityAt and the dormancy anchor, so next dormancy starts from t
         }
 
         // Third revival should fail (dormantCount == MAX_REVIVALS == 2)

@@ -863,14 +863,18 @@ export const SECTIONS: Section[] = [
               headers: ["Action", "Stake", "Notes"],
               rows: [
                 ["Vote on content", "1-100 cREP", "Per vote, per round"],
-                ["Submit content", "10 cREP", "Returned after a settled round confirms rating stays above 25"],
+                [
+                  "Submit content",
+                  "10 cREP",
+                  "Returned after a healthy settled round, or at dormancy if no round ever settles",
+                ],
                 ["Register as frontend", "1,000 cREP", "Requires governance approval"],
               ],
             },
           },
           {
             type: "paragraph",
-            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period and a settled round establishes that low rating. Stakes are returned after roughly 4 days once a settled round confirms a healthy rating and no round remains active.",
+            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period and a settled round establishes that low rating. Stakes are returned after roughly 4 days once a settled round confirms a healthy rating. If no round ever settles, the stake instead resolves when the content reaches dormancy.",
           },
         ],
       },
