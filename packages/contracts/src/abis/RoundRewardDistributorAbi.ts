@@ -74,13 +74,8 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
-    "name": "claimParticipationRewardFor",
+    "name": "claimParticipationReward",
     "inputs": [
-      {
-        "name": "voter",
-        "type": "address",
-        "internalType": "address"
-      },
       {
         "name": "contentId",
         "type": "uint256",
@@ -554,6 +549,37 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "event",
+    "name": "FrontendFeeClaimed",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "frontend",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Initialized",
     "inputs": [
       {
@@ -586,6 +612,37 @@ export const RoundRewardDistributorAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ParticipationRewardClaimed",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "voter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -825,6 +882,11 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
+    "name": "FrontendIsSlashed",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
   },
@@ -919,11 +981,6 @@ export const RoundRewardDistributorAbi = [
         "internalType": "bytes32"
       }
     ]
-  },
-  {
-    "type": "error",
-    "name": "Unauthorized",
-    "inputs": []
   },
   {
     "type": "error",

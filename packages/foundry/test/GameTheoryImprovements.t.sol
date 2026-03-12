@@ -8,6 +8,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 
 /// @title Game-Theory Improvement Tests (tlock commit-reveal, epoch-weighted rewards)
 /// @notice Integration tests verifying the tlock commit-reveal flow with epoch weighting:
@@ -90,7 +91,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         // Fund consensus reserve
         crepToken.mint(owner, 200_000e6);
         crepToken.approve(address(engine), 200_000e6);
-        engine.fundConsensusReserve(200_000e6);
+        engine.addToConsensusReserve(200_000e6);
 
         // Fund submitter and voters
         crepToken.mint(submitter, 100_000e6);
@@ -182,7 +183,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         _reveal(dave, cid, roundId, true);
 
         // Verify pools before settlement
-        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(round.revealedCount, 4, "All 4 votes revealed");
 
         // weightedDownPool = 100e6 * 10000 / 10000 = 100e6
@@ -195,7 +196,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
 
         _settle(cid, roundId);
 
-        RoundLib.Round memory settled = engine.getRound(cid, roundId);
+        RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled");
         assertFalse(settled.upWins, "DOWN wins despite raw UP majority - epoch weighting prevails");
     }
@@ -234,7 +235,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         _reveal(bob, cid, roundId, false);
         _reveal(carol, cid, roundId, true);
 
-        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertGt(round.thresholdReachedAt, 0, "threshold reached after 3 reveals");
 
         // weightedUpPool = 100e6 + 25e6 = 125e6
@@ -248,7 +249,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
 
         _settle(cid, roundId);
 
-        RoundLib.Round memory settled = engine.getRound(cid, roundId);
+        RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled");
         assertTrue(settled.upWins, "UP wins (weighted UP pool 125 > DOWN pool 100)");
 
@@ -312,13 +313,13 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         _reveal(bob, cid, roundId, true);
         _reveal(carol, cid, roundId, false);
 
-        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(round.revealedCount, 3, "3 votes revealed");
         assertGt(round.thresholdReachedAt, 0, "threshold reached at 3rd reveal");
 
         _settle(cid, roundId);
 
-        RoundLib.Round memory settled = engine.getRound(cid, roundId);
+        RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled with exactly 3 voters");
         assertTrue(settled.upWins, "UP wins (100 weighted vs 50 weighted, all epoch-1)");
     }
@@ -345,7 +346,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         // cancelExpiredRound should succeed
         engine.cancelExpiredRound(cid, roundId);
 
-        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled after expiry");
 
         // Voters should be able to claim refunds
@@ -390,14 +391,14 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         _reveal(bob, cid, roundId, true);
         _reveal(carol, cid, roundId, true);
 
-        RoundLib.Round memory round = engine.getRound(cid, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(round.revealedCount, 3, "3 votes revealed");
         assertEq(round.downPool, 0, "No DOWN votes - unanimous");
         assertGt(round.thresholdReachedAt, 0, "threshold reached");
 
         _settle(cid, roundId);
 
-        RoundLib.Round memory settled = engine.getRound(cid, roundId);
+        RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, roundId);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round settled");
         assertTrue(settled.upWins, "UP wins (unanimous)");
 

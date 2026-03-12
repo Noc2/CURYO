@@ -8,6 +8,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
@@ -124,7 +125,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
         crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.fundConsensusReserve(reserveAmount);
+        votingEngine.addToConsensusReserve(reserveAmount);
 
         // Mint cREP to all test users
         address[7] memory users = [submitter, voter1, voter2, voter3, voter4, voter5, voter6];
@@ -206,7 +207,7 @@ contract RoundIntegrationTest is VotingTestBase {
         bytes32[] memory commitHashes = new bytes32[](voters.length);
         bytes32[] memory commitKeys = new bytes32[](voters.length);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         // If no active round yet, it will be created on first commit
         bool roundCreated = roundId > 0;
 
@@ -222,7 +223,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
             commitKeys[i] = _commitKey(voters[i], commitHashes[i]);
             if (!roundCreated) {
-                roundId = votingEngine.getActiveRoundId(contentId);
+                roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
                 roundCreated = true;
             }
         }
@@ -237,10 +238,10 @@ contract RoundIntegrationTest is VotingTestBase {
 
     /// @dev Returns the active round ID; if 0 (terminal), falls back to the last created round.
     function _getActiveOrLatestRoundId(uint256 contentId) internal view returns (uint256) {
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         if (roundId == 0) {
             // Round closed between commit and reveal — use last created round
-            roundId = votingEngine.nextRoundId(contentId);
+            roundId = RoundEngineReadHelpers.latestRoundId(votingEngine, contentId);
         }
         return roundId;
     }
@@ -295,11 +296,11 @@ contract RoundIntegrationTest is VotingTestBase {
             commitKeys[i] = _commitKey(voters[i], commitHashes[i]);
         }
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         assertEq(roundId, 1, "Round 1 should be active after commits");
 
         // Verify round state after commits
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(round.voteCount, 3, "Should have 3 committed votes");
 
         // Advance past epoch boundary and reveal all
@@ -309,7 +310,7 @@ contract RoundIntegrationTest is VotingTestBase {
         }
 
         // Check round after reveals
-        round = votingEngine.getRound(contentId, roundId);
+        round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(round.revealedCount, 3, "Should have 3 revealed votes");
         assertEq(round.upPool, 2 * STAKE, "UP raw pool should be 2x");
         assertEq(round.downPool, STAKE, "DOWN raw pool should be 1x");
@@ -319,7 +320,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         votingEngine.settleRound(contentId, roundId);
 
-        round = votingEngine.getRound(contentId, roundId);
+        round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled), "Round should be settled");
         assertTrue(round.upWins, "UP should win");
 
@@ -354,7 +355,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled), "Round should be settled");
         assertFalse(round.upWins, "DOWN should win");
 
@@ -400,9 +401,9 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch3, _testCiphertext(false, salt3, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
-        RoundLib.Round memory rMV0 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory rMV0 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(rMV0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, salt1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, salt2);
@@ -410,7 +411,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         votingEngine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertTrue(round.upWins, "UP should win");
 
         // Both winners claim
@@ -470,13 +471,13 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId2, ch2b, _testCiphertext(false, s2b, contentId2), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 round1 = votingEngine.getActiveRoundId(contentId1);
-        uint256 round2 = votingEngine.getActiveRoundId(contentId2);
+        uint256 round1 = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId1);
+        uint256 round2 = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId2);
         assertEq(round1, 1, "Content 1 should have round 1");
         assertEq(round2, 1, "Content 2 should have round 1");
 
         // Reveal and settle both rounds together
-        RoundLib.Round memory rCC0 = votingEngine.getRound(contentId1, round1);
+        RoundLib.Round memory rCC0 = RoundEngineReadHelpers.round(votingEngine, contentId1, round1);
         vm.warp(rCC0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId1, round1, _commitKey(voter1, ch1a), true, s1a);
         votingEngine.revealVoteByCommitKey(contentId1, round1, _commitKey(voter2, ch1b), false, s1b);
@@ -485,12 +486,12 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // Settle content 1
         votingEngine.settleRound(contentId1, round1);
-        RoundLib.Round memory r1 = votingEngine.getRound(contentId1, round1);
+        RoundLib.Round memory r1 = RoundEngineReadHelpers.round(votingEngine, contentId1, round1);
         assertEq(uint256(r1.state), uint256(RoundLib.RoundState.Tied), "Content 1 round should be tied (equal stakes)");
 
         // Settle content 2 independently
         votingEngine.settleRound(contentId2, round2);
-        RoundLib.Round memory r2 = votingEngine.getRound(contentId2, round2);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(votingEngine, contentId2, round2);
         assertEq(uint256(r2.state), uint256(RoundLib.RoundState.Tied), "Content 2 round should be tied");
     }
 
@@ -542,7 +543,7 @@ contract RoundIntegrationTest is VotingTestBase {
         // Reveal both contents after their epochs end.
         // content1 started at T0=1000, content2 started 5 minutes later at ~1300.
         // To reveal both, warp to the LATER epoch end (content2's epoch end).
-        RoundLib.Round memory rCS0_2 = votingEngine.getRound(contentId2, 1);
+        RoundLib.Round memory rCS0_2 = RoundEngineReadHelpers.round(votingEngine, contentId2, 1);
         vm.warp(rCS0_2.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter1, ch1a), true, s1a);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter2, ch1b), false, s1b);
@@ -554,13 +555,13 @@ contract RoundIntegrationTest is VotingTestBase {
         // Settle content 1
         votingEngine.settleRound(contentId1, 1);
 
-        RoundLib.Round memory r1 = votingEngine.getRound(contentId1, 1);
+        RoundLib.Round memory r1 = RoundEngineReadHelpers.round(votingEngine, contentId1, 1);
         assertEq(uint256(r1.state), uint256(RoundLib.RoundState.Settled), "Content 1 should be settled");
         assertTrue(r1.upWins, "UP should win content 1");
 
         // Settle content 2
         votingEngine.settleRound(contentId2, 1);
-        RoundLib.Round memory r2 = votingEngine.getRound(contentId2, 1);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(votingEngine, contentId2, 1);
         assertEq(uint256(r2.state), uint256(RoundLib.RoundState.Tied), "Content 2 should be tied");
     }
 
@@ -607,12 +608,22 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.stopPrank();
 
         // Verify commits are recorded
-        assertTrue(votingEngine.hasCommitted(contentId1, 1, voter1), "Voter1 should have committed on content 1");
-        assertTrue(votingEngine.hasCommitted(contentId2, 1, voter1), "Voter1 should have committed on content 2");
-        assertFalse(votingEngine.hasCommitted(contentId1, 1, voter3), "Voter3 should not have committed on content 1");
+        assertTrue(
+            votingEngine.voterCommitHash(contentId1, 1, voter1) != bytes32(0),
+            "Voter1 should have committed on content 1"
+        );
+        assertTrue(
+            votingEngine.voterCommitHash(contentId2, 1, voter1) != bytes32(0),
+            "Voter1 should have committed on content 2"
+        );
+        assertEq(
+            votingEngine.voterCommitHash(contentId1, 1, voter3),
+            bytes32(0),
+            "Voter3 should not have committed on content 1"
+        );
 
         // Reveal all after epoch boundary (absolute)
-        RoundLib.Round memory rSV0 = votingEngine.getRound(contentId1, 1);
+        RoundLib.Round memory rSV0 = RoundEngineReadHelpers.round(votingEngine, contentId1, 1);
         vm.warp(rSV0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId1, 1, _commitKey(voter2, ch2), false, s2);
@@ -623,8 +634,8 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.settleRound(contentId1, 1);
         votingEngine.settleRound(contentId2, 1);
 
-        RoundLib.Round memory r1 = votingEngine.getRound(contentId1, 1);
-        RoundLib.Round memory r2 = votingEngine.getRound(contentId2, 1);
+        RoundLib.Round memory r1 = RoundEngineReadHelpers.round(votingEngine, contentId1, 1);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(votingEngine, contentId2, 1);
         assertEq(uint256(r1.state), uint256(RoundLib.RoundState.Tied), "Content 1 should be tied");
         assertEq(uint256(r2.state), uint256(RoundLib.RoundState.Tied), "Content 2 should be tied");
     }
@@ -644,7 +655,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
         // Cannot cancel before expiry
         vm.expectRevert(RoundVotingEngine.RoundNotExpired.selector);
@@ -654,7 +665,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.warp(block.timestamp + 8 days);
         votingEngine.cancelExpiredRound(contentId, roundId);
 
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled), "Round should be cancelled");
 
         // Voter claims refund
@@ -682,7 +693,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
         vm.warp(block.timestamp + 8 days);
         vm.expectRevert(RoundVotingEngine.ThresholdReached.selector);
@@ -700,7 +711,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
         vm.warp(block.timestamp + 8 days);
         votingEngine.cancelExpiredRound(contentId, roundId);
@@ -724,11 +735,11 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 round1Id = votingEngine.getActiveRoundId(contentId);
+        uint256 round1Id = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
         vm.warp(block.timestamp + 8 days);
         votingEngine.cancelExpiredRound(contentId, round1Id);
-        assertEq(uint256(votingEngine.getRound(contentId, round1Id).state), uint256(RoundLib.RoundState.Cancelled));
+        assertEq(uint256(RoundEngineReadHelpers.round(votingEngine, contentId, round1Id).state), uint256(RoundLib.RoundState.Cancelled));
 
         // New commit after cooldown creates round 2
         vm.warp(block.timestamp + 25 hours);
@@ -740,7 +751,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(false, salt2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        assertEq(votingEngine.getActiveRoundId(contentId), 2, "New round should be created");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 2, "New round should be created");
     }
 
     // =========================================================================
@@ -759,7 +770,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied), "Round should be tied");
     }
 
@@ -800,7 +811,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
         assertEq(roundId, 1, "Round 1 should have been used");
-        assertEq(votingEngine.getActiveRoundId(contentId), 0, "No active round after tie");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "No active round after tie");
 
         // New commit after cooldown creates round 2
         vm.warp(block.timestamp + 25 hours);
@@ -812,7 +823,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        assertEq(votingEngine.getActiveRoundId(contentId), 2, "Round 2 should be created");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 2, "Round 2 should be created");
     }
 
     // =========================================================================
@@ -838,10 +849,10 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
         // Advance past epoch boundary and reveal (absolute)
-        RoundLib.Round memory rCU0 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory rCU0 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(rCU0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
@@ -849,7 +860,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 reserveBefore = votingEngine.consensusReserve();
         votingEngine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled), "Should be settled by consensus");
         assertTrue(round.upWins, "UP should win by consensus");
 
@@ -881,16 +892,16 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
-        RoundLib.Round memory rCD0 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory rCD0 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(rCD0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), false, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), false, s2);
 
         votingEngine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled), "Should be settled by consensus");
         assertFalse(round.upWins, "DOWN should win by consensus");
     }
@@ -913,7 +924,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 round1Id = _settleRoundWith(voters, contentId, dirs, STAKE);
         assertEq(round1Id, 1, "Round 1 should have been settled");
-        assertEq(votingEngine.getActiveRoundId(contentId), 0, "No active round after settlement");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "No active round after settlement");
 
         // New commit after cooldown creates round 2
         vm.warp(block.timestamp + 25 hours);
@@ -925,7 +936,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch, _testCiphertext(false, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        assertEq(votingEngine.getActiveRoundId(contentId), 2, "Round 2 should be created");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 2, "Round 2 should be created");
     }
 
     // =========================================================================
@@ -990,7 +1001,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        assertEq(votingEngine.getActiveRoundId(contentId), 2, "New round should be created");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 2, "New round should be created");
     }
 
     // =========================================================================
@@ -1016,10 +1027,10 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         uint256 reserveBefore = votingEngine.consensusReserve();
 
-        RoundLib.Round memory rUR0 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory rUR0 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(rUR0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
@@ -1103,10 +1114,10 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(true, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
         // Verify snapshot matches config at creation
-        RoundLib.RoundConfig memory cfg = votingEngine.getRoundConfig(contentId, roundId);
+        RoundLib.RoundConfig memory cfg = RoundEngineReadHelpers.roundConfig(votingEngine, contentId, roundId);
         assertEq(cfg.epochDuration, EPOCH_DURATION);
         assertEq(cfg.maxDuration, 7 days);
         assertEq(cfg.minVoters, 2);
@@ -1116,11 +1127,11 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.setConfig(EPOCH_DURATION, 7 days, 10, 200);
 
         // Snapshot unchanged
-        cfg = votingEngine.getRoundConfig(contentId, roundId);
+        cfg = RoundEngineReadHelpers.roundConfig(votingEngine, contentId, roundId);
         assertEq(cfg.minVoters, 2, "Snapshot should still have minVoters=2");
 
         // Reveal and settle using snapshotted config (minVoters=2, we have 2 revealed votes)
-        RoundLib.Round memory rCSN0 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory rCSN0 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(rCSN0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
@@ -1128,7 +1139,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.settleRound(contentId, roundId);
 
         assertEq(
-            uint256(votingEngine.getRound(contentId, roundId).state),
+            uint256(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).state),
             uint256(RoundLib.RoundState.Settled),
             "Should settle with snapshotted config"
         );
@@ -1141,7 +1152,7 @@ contract RoundIntegrationTest is VotingTestBase {
     function test_HasCommittedTracking() public {
         uint256 contentId = _submitContent();
 
-        assertFalse(votingEngine.hasCommitted(contentId, 1, voter1), "Should not have committed yet");
+        assertEq(votingEngine.voterCommitHash(contentId, 1, voter1), bytes32(0), "Should not have committed yet");
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
         bytes32 ch = _commitHash(true, salt, contentId);
@@ -1151,9 +1162,13 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        assertTrue(votingEngine.hasCommitted(contentId, roundId, voter1), "Should have committed");
-        assertFalse(votingEngine.hasCommitted(contentId, roundId, voter2), "Voter2 should not have committed");
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        assertTrue(votingEngine.voterCommitHash(contentId, roundId, voter1) != bytes32(0), "Should have committed");
+        assertEq(
+            votingEngine.voterCommitHash(contentId, roundId, voter2),
+            bytes32(0),
+            "Voter2 should not have committed"
+        );
     }
 
     function test_CommitCountTracking() public {
@@ -1167,7 +1182,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        assertEq(votingEngine.getContentCommitCount(contentId), 1, "Content commit count should be 1");
+        assertEq(votingEngine.contentCommitCount(contentId), 1, "Content commit count should be 1");
 
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
         bytes32 ch2 = _commitHash(false, s2, contentId);
@@ -1177,7 +1192,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        assertEq(votingEngine.getContentCommitCount(contentId), 2, "Content commit count should be 2");
+        assertEq(votingEngine.contentCommitCount(contentId), 2, "Content commit count should be 2");
     }
 
     function test_RoundVoterCountAfterReveal() public {
@@ -1205,22 +1220,17 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch3, _testCiphertext(true, s3, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
-        // Voter list is populated during reveal, not commit
-        assertEq(votingEngine.getRoundVoterCount(contentId, roundId), 0, "No voters revealed yet");
+        // Revealed count is populated during reveal, not commit
+        assertEq(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).revealedCount, 0, "No voters revealed yet");
 
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), false, s2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), true, s3);
 
-        assertEq(votingEngine.getRoundVoterCount(contentId, roundId), 3, "Should have 3 revealed voters");
-
-        // Verify voter addresses
-        assertEq(votingEngine.getRoundVoter(contentId, roundId, 0), voter1);
-        assertEq(votingEngine.getRoundVoter(contentId, roundId, 1), voter2);
-        assertEq(votingEngine.getRoundVoter(contentId, roundId, 2), voter3);
+        assertEq(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).revealedCount, 3, "Should have 3 revealed voters");
     }
 
     // =========================================================================
@@ -1267,11 +1277,11 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         bytes32 ck1 = _commitKey(voter1, ch1);
 
         // Verify epochIndex = 0 (epoch-1, blind)
-        RoundLib.Commit memory commit = votingEngine.getCommit(contentId, roundId, ck1);
+        RoundLib.Commit memory commit = RoundEngineReadHelpers.commit(votingEngine, contentId, roundId, ck1);
         assertEq(commit.epochIndex, 0, "First voter should be in epoch-1 (epochIndex=0)");
         assertEq(commit.stakeAmount, STAKE, "Stake should be recorded correctly");
 
@@ -1280,7 +1290,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, s1);
 
         // After reveal, effective weighted pool should reflect 100% weight
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(round.weightedUpPool, STAKE, "Epoch-1 vote should have 100% weight (effectiveStake = stake)");
     }
 
@@ -1298,8 +1308,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // Advance into epoch-2 — use absolute time from round.startTime
         // voter2 commits after epoch-1 ends (epoch-2, epochIndex=1 → 25% weight)
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory rEW0 = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory rEW0 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(rEW0.startTime + EPOCH_DURATION + 1);
 
         // Reveal voter1's vote to make results visible
@@ -1315,7 +1325,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.stopPrank();
 
         bytes32 ck2 = _commitKey(voter2, ch2);
-        RoundLib.Commit memory commit2 = votingEngine.getCommit(contentId, roundId, ck2);
+        RoundLib.Commit memory commit2 = RoundEngineReadHelpers.commit(votingEngine, contentId, roundId, ck2);
         assertEq(commit2.epochIndex, 1, "Second-epoch voter should have epochIndex=1");
 
         // Reveal voter2's vote after another epoch boundary (absolute: startTime + 2 * EPOCH_DURATION + 2)
@@ -1324,14 +1334,14 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, false, s2);
 
         // Verify weighted pools: UP = STAKE (100%), DOWN = STAKE * 2500 / 10000 = STAKE/4
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(round.weightedUpPool, STAKE, "Epoch-1 UP vote should have 100% weight");
         assertEq(round.weightedDownPool, STAKE * 2500 / 10000, "Epoch-2 DOWN vote should have 25% weight");
 
         // UP wins despite equal raw stakes (epoch-weighting penalises late voter)
         votingEngine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory settled = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory settled = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Should be settled");
         assertTrue(settled.upWins, "UP should win due to epoch-1 weight advantage");
     }
@@ -1358,10 +1368,10 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
         // Reveal after epoch boundary (absolute)
-        RoundLib.Round memory rSR0 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory rSR0 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(rSR0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), false, s2);
@@ -1370,7 +1380,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.settleRound(contentId, roundId);
 
         assertEq(
-            uint256(votingEngine.getRound(contentId, roundId).state),
+            uint256(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).state),
             uint256(RoundLib.RoundState.Tied),
             "Should be tied"
         );
@@ -1395,7 +1405,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
         assertEq(
-            uint256(votingEngine.getRound(contentId, roundId).state),
+            uint256(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).state),
             uint256(RoundLib.RoundState.Settled),
             "Settlement should succeed without participation pool"
         );
@@ -1419,7 +1429,7 @@ contract RoundIntegrationTest is VotingTestBase {
         );
         votingEngine.setFrontendRegistry(address(frontendReg));
         frontendReg.setVotingEngine(address(votingEngine));
-        frontendReg.addFeeCreditor(address(votingEngine));
+        frontendReg.addFeeCreditor(address(rewardDistributor));
 
         frontendOp = address(200);
         crepToken.mint(frontendOp, 2000e6);
@@ -1460,9 +1470,9 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, frontend);
         vm.stopPrank();
 
-        roundId = votingEngine.getActiveRoundId(contentId);
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
-        RoundLib.Round memory rFW0 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory rFW0 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(rFW0.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
@@ -1478,7 +1488,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
 
         // Claim frontend fee
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertGt(frontendReg.getAccumulatedFees(frontendOp) - feesBefore, 0, "Frontend fee should be credited");
     }
@@ -1488,11 +1498,11 @@ contract RoundIntegrationTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
         // First claim succeeds
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         // Second claim reverts
         vm.expectRevert(RoundVotingEngine.AlreadyClaimed.selector);
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
     }
 
     function test_ClaimFrontendFee_PaysDeregisteredFrontendDirectly() public {
@@ -1505,7 +1515,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertGt(crepToken.balanceOf(frontendOp) - frontendBalanceBefore, 0);
         assertEq(
@@ -1523,7 +1533,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
         vm.expectRevert(IFrontendRegistry.FrontendIsSlashed.selector);
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertEq(crepToken.balanceOf(frontendOp), frontendBalanceBefore, "slashed frontend must not be paid directly");
         assertEq(
@@ -1547,7 +1557,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.stopPrank();
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertGt(
             frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
@@ -1567,7 +1577,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.stopPrank();
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertGt(
             frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
@@ -1606,15 +1616,15 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(owner);
         frontendReg.revokeFrontend(frontendOp);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
 
         votingEngine.settleRound(contentId, roundId);
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "commit-time approval should remain eligible");
     }
@@ -1651,27 +1661,27 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(owner);
         frontendReg.approveFrontend(frontendOp);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
 
         votingEngine.settleRound(contentId, roundId);
-        vm.expectRevert(RoundVotingEngine.NoPool.selector);
-        votingEngine.claimFrontendFee(contentId, roundId, address(0xBEEF));
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        rewardDistributor.claimFrontendFee(contentId, roundId, address(0xBEEF));
     }
 
     function test_FrontendTracking_KeepsCommitKeysAccessible() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
-        bytes32[] memory commitKeys = votingEngine.getRoundCommitHashes(contentId, roundId);
+        bytes32[] memory commitKeys = RoundEngineReadHelpers.commitKeys(votingEngine, contentId, roundId);
 
         assertEq(commitKeys.length, 3);
 
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
         assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Frontend fee claim should still succeed");
     }
 
@@ -1691,13 +1701,13 @@ contract RoundIntegrationTest is VotingTestBase {
         );
         votingEngine.setFrontendRegistry(address(replacementRegistry));
         replacementRegistry.setVotingEngine(address(votingEngine));
-        replacementRegistry.addFeeCreditor(address(votingEngine));
+        replacementRegistry.addFeeCreditor(address(rewardDistributor));
         vm.stopPrank();
 
         uint256 originalFeesBefore = originalRegistry.getAccumulatedFees(frontendOp);
         uint256 replacementFeesBefore = replacementRegistry.getAccumulatedFees(frontendOp);
 
-        votingEngine.claimFrontendFee(contentId, roundId, frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertGt(
             originalRegistry.getAccumulatedFees(frontendOp) - originalFeesBefore,
@@ -1730,8 +1740,8 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 voterPool = votingEngine.roundVoterPool(contentId, roundId);
         assertGt(voterPool, 0);
 
-        vm.expectRevert(RoundVotingEngine.NoPool.selector);
-        votingEngine.claimFrontendFee(contentId, roundId, address(0xBEEF));
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        rewardDistributor.claimFrontendFee(contentId, roundId, address(0xBEEF));
     }
 
     function _completeFrontendExit(FrontendRegistry frontendReg, address frontendOp) internal {
@@ -1748,7 +1758,7 @@ contract RoundIntegrationTest is VotingTestBase {
     function _settleRoundWithParticipation() internal returns (uint256 contentId, uint256 roundId) {
         vm.startPrank(owner);
         ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
-        pool.setAuthorizedCaller(address(votingEngine), true);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(pool), 1_000_000e6);
         pool.depositPool(1_000_000e6);
@@ -1775,7 +1785,7 @@ contract RoundIntegrationTest is VotingTestBase {
         // Claim participation reward
         uint256 balBefore = crepToken.balanceOf(voter1);
         vm.prank(voter1);
-        votingEngine.claimParticipationReward(contentId, roundId);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
         uint256 balAfter = crepToken.balanceOf(voter1);
 
         uint256 expectedReward = STAKE * 9000 / 10000;
@@ -1786,8 +1796,8 @@ contract RoundIntegrationTest is VotingTestBase {
         ParticipationPool pool1 = new ParticipationPool(address(crepToken), owner);
         ParticipationPool pool2 = new ParticipationPool(address(crepToken), owner);
 
-        pool1.setAuthorizedCaller(address(votingEngine), true);
-        pool2.setAuthorizedCaller(address(votingEngine), true);
+        pool1.setAuthorizedCaller(address(rewardDistributor), true);
+        pool2.setAuthorizedCaller(address(rewardDistributor), true);
         vm.prank(owner);
         crepToken.mint(address(this), 2_000_000e6);
         crepToken.approve(address(pool1), 1_000_000e6);
@@ -1819,7 +1829,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 pool2Before = crepToken.balanceOf(address(pool2));
 
         vm.prank(voter1);
-        votingEngine.claimParticipationReward(contentId, roundId);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
 
         assertEq(crepToken.balanceOf(address(pool1)), pool1Before - expectedReward);
         assertEq(crepToken.balanceOf(address(pool2)), pool2Before);
@@ -1840,116 +1850,28 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
         vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.NoPool.selector);
-        votingEngine.claimParticipationReward(contentId, roundId);
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
 
-        ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
-        pool.setAuthorizedCaller(address(votingEngine), true);
-        vm.prank(owner);
-        crepToken.mint(address(this), 1_000_000e6);
-        crepToken.approve(address(pool), 1_000_000e6);
-        pool.depositPool(1_000_000e6);
-
-        uint256 expectedReward = STAKE * 9000 / 10000;
-        uint256 poolBefore = crepToken.balanceOf(address(pool));
-        uint256 balanceBefore = crepToken.balanceOf(voter1);
-
-        uint256 rateBps = pool.getCurrentRateBps();
-        vm.prank(owner);
-        votingEngine.backfillParticipationRewardSnapshot(contentId, roundId, address(pool), rateBps);
-
-        vm.prank(voter1);
-        votingEngine.claimParticipationReward(contentId, roundId);
-
-        assertEq(crepToken.balanceOf(voter1) - balanceBefore, expectedReward);
-        assertEq(crepToken.balanceOf(address(pool)), poolBefore - expectedReward);
-    }
-
-    function test_BackfillParticipationRewardSnapshot_CannotOverwriteExistingSnapshot() public {
-        ParticipationPool pool1 = new ParticipationPool(address(crepToken), owner);
-        ParticipationPool pool2 = new ParticipationPool(address(crepToken), owner);
-
-        pool1.setAuthorizedCaller(address(votingEngine), true);
-        pool2.setAuthorizedCaller(address(votingEngine), true);
-        vm.prank(owner);
-        crepToken.mint(address(this), 2_000_000e6);
-        crepToken.approve(address(pool1), 1_000_000e6);
-        pool1.depositPool(1_000_000e6);
-        crepToken.approve(address(pool2), 1_000_000e6);
-        pool2.depositPool(1_000_000e6);
-        vm.startPrank(owner);
-        votingEngine.setParticipationPool(address(pool1));
-        vm.stopPrank();
-
-        uint256 contentId = _submitContent();
-
-        address[] memory voters = new address[](3);
-        voters[0] = voter1;
-        voters[1] = voter2;
-        voters[2] = voter3;
-        bool[] memory dirs = new bool[](3);
-        dirs[0] = true;
-        dirs[1] = true;
-        dirs[2] = false;
-
-        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
-
-        uint256 replacementRateBps = pool2.getCurrentRateBps();
-        vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.SnapshotAlreadySet.selector);
-        votingEngine.backfillParticipationRewardSnapshot(contentId, roundId, address(pool2), replacementRateBps);
-    }
-
-    function test_BackfillParticipationRewardSnapshot_RepairsRateWhenPoolAlreadySnapshotted() public {
-        RevertingParticipationPool badPool = new RevertingParticipationPool(address(crepToken));
-        vm.prank(owner);
-        votingEngine.setParticipationPool(address(badPool));
-
-        uint256 contentId = _submitContent();
-        address[] memory voters = new address[](3);
-        voters[0] = voter1;
-        voters[1] = voter2;
-        voters[2] = voter3;
-        bool[] memory dirs = new bool[](3);
-        dirs[0] = true;
-        dirs[1] = true;
-        dirs[2] = false;
-
-        _commitAllThenReveal(voters, contentId, dirs, STAKE);
-        uint256 roundId = _getActiveOrLatestRoundId(contentId);
-        votingEngine.settleRound(contentId, roundId);
-
-        vm.startPrank(owner);
-        crepToken.mint(owner, 1_000_000e6);
-        crepToken.transfer(address(badPool), 1_000_000e6);
-        vm.stopPrank();
-
-        uint256 rateBps = 9000;
-        vm.prank(owner);
-        votingEngine.backfillParticipationRewardSnapshot(contentId, roundId, address(badPool), rateBps);
-
-        uint256 balanceBefore = crepToken.balanceOf(voter1);
-        vm.prank(voter1);
-        votingEngine.claimParticipationReward(contentId, roundId);
-
-        assertEq(crepToken.balanceOf(voter1) - balanceBefore, STAKE * rateBps / 10000);
+        // Legacy participation snapshot backfills were removed to cut engine size.
+        // A round that settles without a participation snapshot now remains permanently ineligible.
     }
 
     function test_ClaimParticipationReward_DoubleClaimReverts() public {
         (uint256 contentId, uint256 roundId) = _settleRoundWithParticipation();
 
         vm.prank(voter1);
-        votingEngine.claimParticipationReward(contentId, roundId);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
 
         vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.AlreadyClaimed.selector);
-        votingEngine.claimParticipationReward(contentId, roundId);
+        vm.expectRevert(RoundRewardDistributor.AlreadyClaimed.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
     }
 
     function test_ClaimParticipationReward_OnlySettledRounds() public {
         vm.startPrank(owner);
         ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
-        pool.setAuthorizedCaller(address(votingEngine), true);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(pool), 1_000_000e6);
         pool.depositPool(1_000_000e6);
@@ -1968,8 +1890,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // Round is Open, not Settled
         vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.RoundNotSettled.selector);
-        votingEngine.claimParticipationReward(contentId, 1);
+        vm.expectRevert(RoundRewardDistributor.RoundNotSettled.selector);
+        rewardDistributor.claimParticipationReward(contentId, 1);
     }
 
     function test_SettlementSideEffectFailure_ParticipationRateSnapshotLeavesRewardsUnclaimable() public {
@@ -2009,8 +1931,8 @@ contract RoundIntegrationTest is VotingTestBase {
 
         assertTrue(foundFailureEvent, "participation rate failure should be logged");
         vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.NoParticipationRate.selector);
-        votingEngine.claimParticipationReward(contentId, roundId);
+        vm.expectRevert(RoundRewardDistributor.NoParticipationRate.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
     }
 
     // =========================================================================

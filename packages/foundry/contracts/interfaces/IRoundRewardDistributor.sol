@@ -2,13 +2,11 @@
 pragma solidity ^0.8.24;
 
 /// @title IRoundRewardDistributor
-/// @notice Minimal interface used by RoundVotingEngine for delegated pull-claim handling.
+/// @notice Minimal interface for direct reward-claim entrypoints.
 interface IRoundRewardDistributor {
-    /// @notice Claim frontend fees for a settled round. Callable through RoundVotingEngine.
+    /// @notice Claim frontend fees for a settled round.
     function claimFrontendFee(uint256 contentId, uint256 roundId, address frontend) external returns (uint256 fee);
 
-    /// @notice Claim a participation reward for a voter. Callable through RoundVotingEngine.
-    function claimParticipationRewardFor(address voter, uint256 contentId, uint256 roundId)
-        external
-        returns (uint256 paidReward);
+    /// @notice Claim a participation reward for the caller on a settled round.
+    function claimParticipationReward(uint256 contentId, uint256 roundId) external returns (uint256 paidReward);
 }

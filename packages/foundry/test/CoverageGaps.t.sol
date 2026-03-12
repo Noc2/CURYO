@@ -12,6 +12,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -29,20 +30,39 @@ contract MockVotingEngineForFR is IRoundVotingEngine {
         totalAdded += amount;
     }
 
-    function getContentCommitCount(uint256) external pure override returns (uint256) {
+    function contentCommitCount(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function getActiveRoundId(uint256) external pure override returns (uint256) {
+    function currentRoundId(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function hasUnrevealedVotes(uint256) external pure override returns (bool) {
-        return false;
+    function rounds(uint256, uint256)
+        external
+        pure
+        override
+        returns (
+            uint256,
+            RoundLib.RoundState,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);
     }
+
     function transferReward(address, uint256) external override { }
-    function claimFrontendFee(uint256, uint256, address) external override { }
-    function claimParticipationReward(uint256, uint256) external override { }
 }
 
 // =========================================================================
@@ -560,7 +580,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
         crep.mint(owner, 1_000_000e6);
         crep.approve(address(engine), 1_000_000e6);
-        engine.fundConsensusReserve(1_000_000e6);
+        engine.addToConsensusReserve(1_000_000e6);
 
         address[3] memory voters = [voter1, voter2, voter3];
         for (uint256 i = 0; i < voters.length; i++) {
@@ -613,7 +633,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
     function test_FundConsensusReserveZeroReverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.ZeroAmount.selector);
-        engine.fundConsensusReserve(0);
+        engine.addToConsensusReserve(0);
     }
 
     function test_AddToConsensusReserveZeroReverts() public {
@@ -708,7 +728,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
         _commit(voter1, contentId, true, 100e6);
 
-        assertGt(engine.getActiveRoundId(contentId), 0);
+        assertGt(RoundEngineReadHelpers.activeRoundId(engine, contentId), 0);
     }
 
     // --- Cancel expired round ---
@@ -717,13 +737,13 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         vm.warp(block.timestamp + 7 days + 1);
 
         vm.prank(keeper);
         engine.cancelExpiredRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled));
     }
 
@@ -731,7 +751,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.prank(keeper);
         vm.expectRevert(RoundVotingEngine.RoundNotExpired.selector);
@@ -808,7 +828,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.stopPrank();
 
         uint256 roundId = 1;
-        RoundLib.Round memory roundBefore = engine2.getRound(contentId, roundId);
+        RoundLib.Round memory roundBefore = RoundEngineReadHelpers.round(engine2, contentId, roundId);
 
         // Warp past epochDuration to reveal
         vm.warp(roundBefore.startTime + 5 minutes + 1);
@@ -820,28 +840,8 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
         engine2.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine2.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine2, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
-    }
-
-    // --- onlySelf wrapper authorization ---
-
-    function test_TransferTokenExternalNotSelfReverts() public {
-        vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
-        engine.transferTokenExternal(voter1, 100);
-    }
-
-    function test_DistributeCategoryFeeExternalNotSelfReverts() public {
-        vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
-        engine.distributeCategoryFeeExternal(1, 1, 100);
-    }
-
-    function test_CheckSubmitterStakeExternalNotSelfReverts() public {
-        vm.prank(voter1);
-        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
-        engine.checkSubmitterStakeExternal(1);
     }
 
     // --- Setter zero address checks ---
@@ -854,7 +854,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
     function test_SetRewardDistributorSecondCallReverts() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.RewardDistributorLocked.selector);
+        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
         engine.setRewardDistributor(address(0xBEEF));
     }
 
@@ -923,7 +923,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         engine.unpause();
 
         _commit(voter1, contentId, true, STAKE);
-        assertGt(engine.getActiveRoundId(contentId), 0);
+        assertGt(RoundEngineReadHelpers.activeRoundId(engine, contentId), 0);
     }
 
     // --- Asymmetric stakes settlement ---
@@ -934,8 +934,8 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         (bytes32 ck1, bytes32 salt1) = _commit(voter1, contentId, true, 100e6);
         (bytes32 ck2, bytes32 salt2) = _commit(voter2, contentId, false, 1e6);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r0 = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Reveal after epochDuration
         vm.warp(r0.startTime + 5 minutes + 1);
@@ -944,7 +944,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
         assertTrue(round.upWins);
         assertEq(round.upPool, 100e6);
@@ -957,7 +957,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         vm.warp(block.timestamp + 7 days + 1);
 
         vm.prank(keeper);
@@ -974,7 +974,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         vm.warp(block.timestamp + 7 days + 1);
 
         vm.prank(keeper);
@@ -992,7 +992,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.prank(voter1);
         vm.expectRevert(RoundVotingEngine.RoundNotCancelledOrTied.selector);
@@ -1005,9 +1005,9 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         uint256 contentId = _submitContent();
         // Only one voter commits
         (bytes32 ck1, bytes32 salt1) = _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        RoundLib.Round memory r0 = engine.getRound(contentId, roundId);
+        RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
         // Reveal the vote (need epoch to end first)
         vm.warp(r0.startTime + 5 minutes + 1);
         engine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
@@ -1016,7 +1016,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.NotEnoughVotes.selector);
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Open), "Still open with < minVoters revealed");
     }
 
@@ -1026,7 +1026,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         assertGt(roundId, 0);
 
         bytes32 salt2 = keccak256("salt2");
@@ -1047,7 +1047,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         vm.warp(block.timestamp + 24 hours); // cooldown
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 newRid = engine.getActiveRoundId(contentId);
+        uint256 newRid = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         assertEq(newRid, 2, "New round created after settlement");
     }
 
@@ -1072,15 +1072,15 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
     // --- View functions ---
 
     function test_GetActiveRoundIdReturnsZeroForNoRound() public view {
-        assertEq(engine.getActiveRoundId(999), 0);
+        assertEq(RoundEngineReadHelpers.activeRoundId(engine, 999), 0);
     }
 
     function test_HasActiveVotes() public {
         uint256 contentId = _submitContent();
-        assertFalse(engine.hasUnrevealedVotes(contentId));
+        assertFalse(_hasUnrevealedVotes(contentId));
 
         _commit(voter1, contentId, true, STAKE);
-        assertTrue(engine.hasUnrevealedVotes(contentId));
+        assertTrue(_hasUnrevealedVotes(contentId));
     }
 
     // =========================================================================
@@ -1109,6 +1109,13 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
+    function _hasUnrevealedVotes(uint256 contentId) internal view returns (bool) {
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        if (roundId == 0) return false;
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        return round.voteCount > round.revealedCount;
+    }
+
     // Not used directly; rounds are settled via _createAndSettleRound or inline reveal+settle.
 
     function _createAndSettleRound() internal returns (uint256 contentId, uint256 roundId) {
@@ -1117,8 +1124,8 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, STAKE);
 
-        roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp past epochDuration to reveal
         vm.warp(r.startTime + 5 minutes + 1);

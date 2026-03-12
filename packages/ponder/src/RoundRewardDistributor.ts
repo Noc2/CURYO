@@ -75,3 +75,70 @@ ponder.on(
       .onConflictDoNothing();
   },
 );
+
+ponder.on(
+  "RoundRewardDistributor:FrontendFeeClaimed",
+  async ({ event, context }) => {
+    const { amount } = event.args;
+
+    await context.db
+      .insert(globalStats)
+      .values({
+        id: "global",
+        totalContent: 0,
+        totalVotes: 0,
+        totalRoundsSettled: 0,
+        totalRewardsClaimed: amount,
+        totalProfiles: 0,
+        totalVoterIds: 0,
+      })
+      .onConflictDoUpdate((row) => ({
+        totalRewardsClaimed: row.totalRewardsClaimed + amount,
+      }));
+  },
+);
+
+ponder.on(
+  "RoundRewardDistributor:ParticipationRewardClaimed",
+  async ({ event, context }) => {
+    const { contentId, roundId, voter, amount } = event.args;
+
+    await context.db
+      .insert(rewardClaim)
+      .values({
+        id: `${event.transaction.hash}-${event.log.logIndex}`,
+        contentId,
+        roundId,
+        source: "participation",
+        voter,
+        stakeReturned: 0n,
+        crepReward: amount,
+        claimedAt: event.block.timestamp,
+      })
+      .onConflictDoNothing();
+
+    const existingProfile = await context.db.find(profile, { address: voter });
+    if (existingProfile) {
+      await context.db
+        .update(profile, { address: voter })
+        .set((row) => ({
+          totalRewardsClaimed: row.totalRewardsClaimed + amount,
+        }));
+    }
+
+    await context.db
+      .insert(globalStats)
+      .values({
+        id: "global",
+        totalContent: 0,
+        totalVotes: 0,
+        totalRoundsSettled: 0,
+        totalRewardsClaimed: amount,
+        totalProfiles: 0,
+        totalVoterIds: 0,
+      })
+      .onConflictDoUpdate((row) => ({
+        totalRewardsClaimed: row.totalRewardsClaimed + amount,
+      }));
+  },
+);

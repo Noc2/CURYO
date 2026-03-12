@@ -6,6 +6,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 contract SubmitterStakeResolutionTest is VotingTestBase {
@@ -74,7 +75,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         crepToken.mint(owner, 500_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);
-        votingEngine.fundConsensusReserve(500_000e6);
+        votingEngine.addToConsensusReserve(500_000e6);
 
         address[5] memory users = [submitter, voter1, voter2, voter3, voter4];
         for (uint256 i = 0; i < users.length; i++) {
@@ -95,7 +96,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         (bytes32 commitKey1, bytes32 salt1) = _commit(voter1, 1, true);
         (bytes32 commitKey2, bytes32 salt2) = _commit(voter2, 1, true);
         (bytes32 commitKey3, bytes32 salt3) = _commit(voter3, 1, false);
-        uint256 firstRoundId = votingEngine.getActiveRoundId(1);
+        uint256 firstRoundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
 
         vm.warp(T0 + 1 hours + 1);
         votingEngine.revealVoteByCommitKey(1, firstRoundId, commitKey1, true, salt1);
@@ -104,7 +105,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         votingEngine.settleRound(1, firstRoundId);
 
         _commit(voter4, 1, true);
-        uint256 activeRoundId = votingEngine.getActiveRoundId(1);
+        uint256 activeRoundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
         assertTrue(activeRoundId != 0 && activeRoundId != firstRoundId, "later round should remain open");
 
         vm.warp(T0 + 4 days + 1);
@@ -127,7 +128,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         vm.stopPrank();
 
         _commit(voter1, 1, true);
-        uint256 activeRoundId = votingEngine.getActiveRoundId(1);
+        uint256 activeRoundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
         assertTrue(activeRoundId != 0, "later round should remain open");
 
         vm.warp(T0 + 31 days);

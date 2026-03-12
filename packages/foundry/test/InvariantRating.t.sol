@@ -8,6 +8,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { VotingHandler } from "./handlers/VotingHandler.sol";
 
 /// @title InvariantRating
@@ -83,7 +84,7 @@ contract InvariantRating is Test {
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
         crepToken.approve(address(engine), reserveAmount);
-        engine.fundConsensusReserve(reserveAmount);
+        engine.addToConsensusReserve(reserveAmount);
 
         // Create voters
         for (uint256 i = 0; i < NUM_VOTERS; i++) {
@@ -132,7 +133,7 @@ contract InvariantRating is Test {
             VotingHandler.RoundRecord memory rec = handler.getRoundRecord(i);
             if (!rec.settled) continue;
 
-            RoundLib.Round memory round = engine.getRound(rec.contentId, rec.roundId);
+            RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, rec.contentId, rec.roundId);
             // Only check rounds where UP side had strictly more raw stake
             if (round.upPool <= round.downPool) continue;
 

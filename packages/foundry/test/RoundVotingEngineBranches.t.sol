@@ -7,6 +7,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
@@ -103,11 +104,11 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
             )
         );
         frontendRegistry.setVotingEngine(address(engine));
-        frontendRegistry.addFeeCreditor(address(engine));
+        frontendRegistry.addFeeCreditor(address(rewardDistributor));
         engine.setFrontendRegistry(address(frontendRegistry));
 
         participationPool = new ParticipationPool(address(crepToken), owner);
-        participationPool.setAuthorizedCaller(address(engine), true);
+        participationPool.setAuthorizedCaller(address(rewardDistributor), true);
         participationPool.setAuthorizedCaller(address(registry), true);
         engine.setParticipationPool(address(participationPool));
 
@@ -115,7 +116,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         crepToken.approve(address(participationPool), 500_000e6);
         participationPool.depositPool(500_000e6);
         crepToken.approve(address(engine), 500_000e6);
-        engine.fundConsensusReserve(500_000e6);
+        engine.addToConsensusReserve(500_000e6);
 
         address[9] memory users = [submitter, voter1, voter2, voter3, voter4, voter5, voter6, frontend1, delegate1];
         for (uint256 i = 0; i < users.length; i++) {
@@ -227,10 +228,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (ck2, s2) = _commit(voter2, contentId, v2Up, STAKE);
         (ck3, s3) = _commit(voter3, contentId, v3Up, STAKE);
 
-        roundId = engine.getActiveRoundId(contentId);
+        roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past epoch end so votes become revealable
-        RoundLib.Round memory r0 = engine.getRound(contentId, roundId);
+        RoundLib.Round memory r0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(r0.startTime + EPOCH + 1);
 
         _reveal(contentId, roundId, ck1, v1Up, s1);
@@ -247,7 +248,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
         assertTrue(round.upWins);
         assertGt(round.settledAt, 0);
@@ -259,9 +260,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         (bytes32 commitKey, bytes32 salt) = _commitWithTransferAndCall(voter1, contentId, true, STAKE, address(0));
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
-        RoundLib.Commit memory commit = engine.getCommit(contentId, roundId, commitKey);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        RoundLib.Commit memory commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKey);
 
         assertEq(round.voteCount, 1, "vote count");
         assertEq(round.totalStake, STAKE, "total stake");
@@ -281,7 +282,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
         assertFalse(round.upWins);
     }
@@ -292,8 +293,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(round.voteCount, 2);
         assertEq(round.totalStake, STAKE * 2);
 
@@ -302,7 +303,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
 
-        round = engine.getRound(contentId, roundId);
+        round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(round.revealedCount, 2);
         assertEq(round.upPool, STAKE);
         assertEq(round.downPool, STAKE);
@@ -323,19 +324,19 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.prank(voter1);
         engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         assertEq(engine.voterCommitHash(contentId, roundId, voter1), commitHash);
-        assertTrue(engine.hasCommitted(contentId, roundId, voter1));
+        assertTrue(engine.voterCommitHash(contentId, roundId, voter1) != bytes32(0));
     }
 
     function test_BasicLifecycle_ContentCommitCountIncrement() public {
         uint256 contentId = _submitContent();
 
         _commit(voter1, contentId, true, STAKE);
-        assertEq(engine.getContentCommitCount(contentId), 1);
+        assertEq(engine.contentCommitCount(contentId), 1);
 
         _commit(voter2, contentId, false, STAKE);
-        assertEq(engine.getContentCommitCount(contentId), 2);
+        assertEq(engine.contentCommitCount(contentId), 2);
     }
 
     function test_BasicLifecycle_VoterPoolAndWinningStake() public {
@@ -354,7 +355,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertGt(round.settledAt, 0);
     }
 
@@ -368,14 +369,14 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter2, contentId, false, STAKE);
         // Only 2 commits — minVoters=3 not reached
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past 7-day max duration
         vm.warp(block.timestamp + 7 days + 1);
 
         engine.cancelExpiredRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Cancelled));
     }
 
@@ -383,7 +384,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Only 1 day elapsed
         vm.warp(block.timestamp + 1 days);
@@ -399,7 +400,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past epoch and reveal all (threshold reached)
         vm.warp(block.timestamp + EPOCH + 1);
@@ -421,7 +422,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter2, contentId, false, STAKE);
         _commit(voter3, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + 7 days + 1);
 
@@ -464,7 +465,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past 24h cooldown — but round is still open and voter already committed
         vm.warp(block.timestamp + 25 hours);
@@ -487,7 +488,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Do NOT warp — epoch has not ended yet
         vm.expectRevert(RoundVotingEngine.EpochNotEnded.selector);
@@ -498,7 +499,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp to exactly one second after epoch end
         vm.warp(block.timestamp + EPOCH + 1);
@@ -506,7 +507,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         // Should not revert
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, true, salt);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(round.revealedCount, 1);
     }
 
@@ -519,7 +520,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // Commit as isUp=true
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
 
@@ -532,7 +533,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         (bytes32 commitKey,) = _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
 
@@ -554,7 +555,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.prank(voter1);
         engine.commitVote(contentId, commitHash, tamperedCiphertext, STAKE, address(0));
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         bytes32 commitKey = keccak256(abi.encodePacked(voter1, commitHash));
 
         vm.warp(block.timestamp + EPOCH + 1);
@@ -566,7 +567,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     function test_Reveal_NonExistentCommitKey_Reverts() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
 
@@ -579,7 +580,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, commitKey, true, salt);
@@ -600,7 +601,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past epoch and reveal all
         vm.warp(block.timestamp + EPOCH + 1);
@@ -611,7 +612,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         // Settlement succeeds immediately after minVoters revealed — no delay required
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
     }
 
@@ -621,7 +622,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         // Settlement succeeds immediately after reveals in _setupThreeVoterRound
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
     }
 
@@ -632,7 +633,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, STAKE);
         // Only 2 voters, minVoters=3
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
@@ -679,7 +680,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 salt2) = _commit(voter2, contentId, false, s2);
         (bytes32 ck3, bytes32 salt3) = _commit(voter3, contentId, true, s3);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, salt1);
@@ -688,7 +689,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
     }
 
@@ -703,7 +704,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 salt2) = _commit(voter2, contentId, false, downStake);
         (bytes32 ck3, bytes32 salt3) = _commit(voter3, contentId, false, downStake);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, salt1);
@@ -712,7 +713,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
     }
 
@@ -726,7 +727,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter1, contentId, true, STAKE);
         _commit(voter2, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + 7 days + 1);
         engine.cancelExpiredRound(contentId, roundId);
@@ -745,7 +746,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter1, contentId, true, STAKE);
         _commit(voter2, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + 7 days + 1);
         engine.cancelExpiredRound(contentId, roundId);
@@ -764,7 +765,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter1, contentId, true, STAKE);
         _commit(voter2, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + 7 days + 1);
         engine.cancelExpiredRound(contentId, roundId);
@@ -778,7 +779,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
         _commit(voter2, contentId, false, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Round is still Open — should revert
         vm.prank(voter1);
@@ -822,7 +823,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 xck2, bytes32 xs2) = _commit(voter2, cid3, false, stakeDown);
         (bytes32 xck3, bytes32 xs3) = _commit(voter3, cid3, true, stakeUp2);
 
-        uint256 xRoundId = engine.getActiveRoundId(cid3);
+        uint256 xRoundId = RoundEngineReadHelpers.activeRoundId(engine, cid3);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(cid3, xRoundId, xck1, true, xs1);
@@ -831,7 +832,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(cid3, xRoundId);
 
-        RoundLib.Round memory round = engine.getRound(cid3, xRoundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid3, xRoundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
 
         // voter1 claims refund from tied round
@@ -856,7 +857,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Reveal after epoch
         vm.warp(block.timestamp + EPOCH + 1);
@@ -866,7 +867,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
         uint256 feesBefore = frontendRegistry.getAccumulatedFees(frontend1);
-        engine.claimFrontendFee(contentId, roundId, frontend1);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
         uint256 feesAfter = frontendRegistry.getAccumulatedFees(frontend1);
 
         assertGt(feesAfter - feesBefore, 0);
@@ -881,7 +882,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
@@ -891,7 +892,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         uint256 feesBefore = frontendRegistry.getAccumulatedFees(frontend1);
-        engine.claimFrontendFee(contentId, roundId, frontend1);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
         uint256 feesAfter = frontendRegistry.getAccumulatedFees(frontend1);
 
         assertGt(feesAfter - feesBefore, 0);
@@ -906,7 +907,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
@@ -915,10 +916,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        engine.claimFrontendFee(contentId, roundId, frontend1);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
 
         vm.expectRevert(RoundVotingEngine.AlreadyClaimed.selector);
-        engine.claimFrontendFee(contentId, roundId, frontend1);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
     }
 
     function test_FrontendFee_UnapprovedFrontend_NotTracked() public {
@@ -933,7 +934,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck1, bytes32 s1) = _commitWithFrontend(voter1, contentId, true, STAKE, frontend1);
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
@@ -942,17 +943,17 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        vm.expectRevert(RoundVotingEngine.NoPool.selector);
-        engine.claimFrontendFee(contentId, roundId, frontend1);
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
     }
 
     function test_FrontendFee_ClaimReverts_RoundNotSettled() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        vm.expectRevert(RoundVotingEngine.RoundNotSettled.selector);
-        engine.claimFrontendFee(contentId, roundId, frontend1);
+        vm.expectRevert(RoundRewardDistributor.RoundNotSettled.selector);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
     }
 
     function test_FrontendFee_ClaimReverts_NoPool() public {
@@ -960,8 +961,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         // No frontend pool (no approved frontends were used)
-        vm.expectRevert(RoundVotingEngine.NoPool.selector);
-        engine.claimFrontendFee(contentId, roundId, frontend1);
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
     }
 
     // =========================================================================
@@ -979,10 +980,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
         (bytes32 ck4, bytes32 s4) = _commit(voter4, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past epoch + reveal grace period (voter1's unrevealed vote no longer blocks settlement)
-        RoundLib.Round memory rPU1start = engine.getRound(contentId, roundId);
+        RoundLib.Round memory rPU1start = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(rPU1start.startTime + EPOCH + engine.revealGracePeriod() + 1);
 
         _reveal(contentId, roundId, ck2, true, s2);
@@ -1013,10 +1014,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past epoch 1 (absolute time) — voter1/2/3 votes become revealable
-        RoundLib.Round memory rPU2start = engine.getRound(contentId, roundId);
+        RoundLib.Round memory rPU2start = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(rPU2start.startTime + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
@@ -1059,8 +1060,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck4, bytes32 s4) = _commit(voter4, contentId, true, STAKE);
         (bytes32 ck5, bytes32 s5) = _commit(voter5, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(round.startTime + EPOCH + engine.revealGracePeriod() + 1);
         _reveal(contentId, roundId, ck3, true, s3);
         _reveal(contentId, roundId, ck4, true, s4);
@@ -1079,13 +1080,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         assertEq(afterFirstBatch - keeperBalBefore, 10e6, "first forfeiture batch should pay keeper");
         assertEq(afterSecondBatch, afterFirstBatch, "later batches in same round must not repay keeper");
-        assertTrue(engine.roundCleanupRewarded(contentId, roundId));
     }
 
     function test_ProcessUnrevealed_RevertsIfRoundOpen() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.expectRevert(RoundVotingEngine.RoundNotSettledOrTied.selector);
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
@@ -1121,10 +1121,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, 3e6);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, true, 1e6);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past epoch + reveal grace period (voter4's unrevealed vote no longer blocks settlement)
-        RoundLib.Round memory rTied = engine.getRound(contentId, roundId);
+        RoundLib.Round memory rTied = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(rTied.startTime + EPOCH + engine.revealGracePeriod() + 1);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
@@ -1133,7 +1133,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied));
 
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
@@ -1150,8 +1150,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter2, contentId, false, STAKE);
         _commit(voter3, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         uint256 finalDeadline = round.startTime + 7 days + engine.revealGracePeriod();
 
         vm.warp(finalDeadline - 1);
@@ -1161,7 +1161,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.warp(finalDeadline);
         engine.finalizeRevealFailedRound(contentId, roundId);
 
-        RoundLib.Round memory failedRound = engine.getRound(contentId, roundId);
+        RoundLib.Round memory failedRound = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(failedRound.state), uint256(RoundLib.RoundState.RevealFailed));
 
         uint256 voter1BalBefore = crepToken.balanceOf(voter1);
@@ -1181,8 +1181,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter2, contentId, false, STAKE);
         _commit(voter3, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(round.startTime + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
 
@@ -1212,14 +1212,14 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter2, contentId, false, STAKE);
         _commit(voter3, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(round.startTime + 7 days + engine.revealGracePeriod() + 1);
 
         _commit(voter4, contentId, true, STAKE);
 
-        RoundLib.Round memory failedRound = engine.getRound(contentId, roundId);
-        uint256 newRoundId = engine.getActiveRoundId(contentId);
+        RoundLib.Round memory failedRound = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        uint256 newRoundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         assertEq(uint256(failedRound.state), uint256(RoundLib.RoundState.RevealFailed));
         assertEq(newRoundId, roundId + 1, "new commits roll into a fresh round after reveal failure");
     }
@@ -1231,15 +1231,15 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter2, contentId, false, STAKE);
         _commit(voter3, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         vm.warp(round.startTime + EPOCH + engine.revealGracePeriod() + 1);
 
         _commit(voter4, contentId, true, STAKE);
 
-        uint256 activeRoundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory sameRound = engine.getRound(contentId, roundId);
+        uint256 activeRoundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory sameRound = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(activeRoundId, roundId, "round should stay open until maxDuration ends");
         assertEq(uint256(sameRound.state), uint256(RoundLib.RoundState.Open), "round remains open");
         assertEq(sameRound.voteCount, 4, "late vote should join the existing round");
@@ -1435,19 +1435,19 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
     function test_GetActiveRoundId_ReturnsZeroWithNoRound() public {
         uint256 contentId = _submitContent();
-        assertEq(engine.getActiveRoundId(contentId), 0);
+        assertEq(RoundEngineReadHelpers.activeRoundId(engine, contentId), 0);
     }
 
     function test_GetActiveRoundId_ReturnsCorrectId() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
-        assertEq(engine.getActiveRoundId(contentId), 1);
+        assertEq(RoundEngineReadHelpers.activeRoundId(engine, contentId), 1);
     }
 
     function test_GetActiveRoundId_ReturnsZeroAfterSettlement() public {
         (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
-        assertEq(engine.getActiveRoundId(contentId), 0);
+        assertEq(RoundEngineReadHelpers.activeRoundId(engine, contentId), 0);
     }
 
     function test_NewRoundCreatedAfterSettlement() public {
@@ -1458,7 +1458,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.warp(block.timestamp + 25 hours);
         _commit(voter1, contentId, true, STAKE);
 
-        uint256 newRoundId = engine.getActiveRoundId(contentId);
+        uint256 newRoundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         assertEq(newRoundId, roundId + 1);
     }
 
@@ -1469,20 +1469,20 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, true, s2);
 
         // Before 3rd reveal, thresholdReachedAt should be 0
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(round.thresholdReachedAt, 0);
 
         uint256 beforeThirdReveal = block.timestamp;
         _reveal(contentId, roundId, ck3, false, s3);
 
-        round = engine.getRound(contentId, roundId);
+        round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(round.thresholdReachedAt, beforeThirdReveal);
     }
 
@@ -1492,10 +1492,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         // voter1 commits in epoch 1
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         // Warp past first epoch — voter2 commits in epoch 2
-        RoundLib.Round memory rEW0 = engine.getRound(contentId, roundId);
+        RoundLib.Round memory rEW0 = RoundEngineReadHelpers.round(engine, contentId, roundId);
         vm.warp(rEW0.startTime + EPOCH + 1);
 
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
@@ -1514,7 +1514,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
         // DOWN should win: weightedDownPool = STAKE * 10000/10000 = STAKE
         // weightedUpPool = STAKE * 2500/10000 * 2 = STAKE/2
@@ -1529,7 +1529,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voter3, contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
@@ -1538,7 +1538,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
         assertTrue(round.upWins);
 
@@ -1568,9 +1568,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.warp(block.timestamp + 25 hours);
 
         // voter1 can now commit to a different content
-        (bytes32 ck2,) = _commit(voter1, cid2, true, STAKE);
-        uint256 rid2 = engine.getActiveRoundId(cid2);
-        assertTrue(engine.hasCommitted(cid2, rid2, voter1));
+        _commit(voter1, cid2, true, STAKE);
+        uint256 rid2 = RoundEngineReadHelpers.activeRoundId(engine, cid2);
+        assertTrue(engine.voterCommitHash(cid2, rid2, voter1) != bytes32(0));
     }
 
     function test_Cooldown_AfterRoundSettles_VoterCanRecommit() public {
@@ -1582,9 +1582,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // voter1 can now commit to a new round
         _commit(voter1, contentId, true, STAKE);
-        uint256 newRoundId = engine.getActiveRoundId(contentId);
+        uint256 newRoundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         assertEq(newRoundId, roundId + 1);
-        assertTrue(engine.hasCommitted(contentId, newRoundId, voter1));
+        assertTrue(engine.voterCommitHash(contentId, newRoundId, voter1) != bytes32(0));
     }
 
     function test_GetRound_ReturnsCorrectData() public {
@@ -1592,8 +1592,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter1, contentId, true, STAKE);
         _commit(voter2, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         assertEq(round.voteCount, 2);
         assertEq(round.totalStake, STAKE * 2);
@@ -1605,9 +1605,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId = _submitContent();
 
         (bytes32 commitKey,) = _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
-        RoundLib.Commit memory commit = engine.getCommit(contentId, roundId, commitKey);
+        RoundLib.Commit memory commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKey);
         assertEq(commit.voter, voter1);
         assertEq(commit.stakeAmount, STAKE);
         assertFalse(commit.revealed);
@@ -1620,8 +1620,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter1, contentId, true, STAKE);
         _commit(voter2, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        bytes32[] memory keys = engine.getRoundCommitHashes(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, contentId, roundId);
         assertEq(keys.length, 2);
     }
 
@@ -1633,19 +1633,19 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
         (bytes32 ck2, bytes32 s2) = _commit(voter2, contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         // epoch-1 weight = 100% -> weightedUpPool = STAKE
         assertEq(round.weightedUpPool, STAKE);
         assertEq(round.weightedDownPool, 0);
 
         _reveal(contentId, roundId, ck2, false, s2);
 
-        round = engine.getRound(contentId, roundId);
+        round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(round.weightedUpPool, STAKE);
         assertEq(round.weightedDownPool, STAKE);
     }
@@ -1657,11 +1657,11 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         _commit(voter1, cid1, true, STAKE);
         _commit(voter2, cid2, false, STAKE);
 
-        assertEq(engine.getActiveRoundId(cid1), 1);
-        assertEq(engine.getActiveRoundId(cid2), 1);
+        assertEq(RoundEngineReadHelpers.activeRoundId(engine, cid1), 1);
+        assertEq(RoundEngineReadHelpers.activeRoundId(engine, cid2), 1);
 
-        RoundLib.Round memory r1 = engine.getRound(cid1, 1);
-        RoundLib.Round memory r2 = engine.getRound(cid2, 1);
+        RoundLib.Round memory r1 = RoundEngineReadHelpers.round(engine, cid1, 1);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, cid2, 1);
 
         assertEq(r1.voteCount, 1);
         assertEq(r2.voteCount, 1);
@@ -1670,23 +1670,30 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     function test_HasUnrevealedVotes_TrueWhenUnrevealed() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);
-        assertTrue(engine.hasUnrevealedVotes(contentId));
+        assertTrue(_hasUnrevealedVotes(contentId));
     }
 
     function test_HasUnrevealedVotes_FalseAfterAllRevealed() public {
         uint256 contentId = _submitContent();
 
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         vm.warp(block.timestamp + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
 
-        assertFalse(engine.hasUnrevealedVotes(contentId));
+        assertFalse(_hasUnrevealedVotes(contentId));
     }
 
     function test_HasUnrevealedVotes_FalseWithNoRound() public {
         uint256 contentId = _submitContent();
-        assertFalse(engine.hasUnrevealedVotes(contentId));
+        assertFalse(_hasUnrevealedVotes(contentId));
+    }
+
+    function _hasUnrevealedVotes(uint256 contentId) internal view returns (bool) {
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        if (roundId == 0) return false;
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
+        return round.voteCount > round.revealedCount;
     }
 }

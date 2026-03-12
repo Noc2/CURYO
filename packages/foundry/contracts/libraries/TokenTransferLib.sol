@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+/// @title TokenTransferLib
+/// @notice Isolates cREP transfer side effects so RoundVotingEngine can try/catch them without
+///         keeping dedicated external wrappers.
+library TokenTransferLib {
+    using SafeERC20 for IERC20;
+
+    function transfer(IERC20 token, address recipient, uint256 amount) external {
+        token.safeTransfer(recipient, amount);
+    }
+}

@@ -9,7 +9,7 @@ import { expect, test } from "@playwright/test";
  *
  * Uses direct contract calls (no browser/UI) to test edge cases with commitVote:
  * 1. Commit with stake below MIN_STAKE (1 cREP) → InvalidStake
- * 2. Commit with stake above MAX_STAKE (100 cREP) → ExceedsMaxStake
+ * 2. Commit with stake above MAX_STAKE (100 cREP) → InvalidStake
  * 3. Self-vote (submitter commits on own content) → SelfVote
  * 4. Double commit in same round → AlreadyCommitted
  *

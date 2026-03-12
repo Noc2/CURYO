@@ -7,6 +7,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
@@ -80,7 +81,7 @@ contract SelectiveRevelationTest is VotingTestBase {
 
         crepToken.mint(owner, 2_000_000e6);
         crepToken.approve(address(engine), 500_000e6);
-        engine.fundConsensusReserve(500_000e6);
+        engine.addToConsensusReserve(500_000e6);
 
         // Set up 10 voters
         for (uint256 i = 0; i < 10; i++) {
@@ -141,8 +142,8 @@ contract SelectiveRevelationTest is VotingTestBase {
             (commitKeys[i], salts[i]) = _commit(voters[i], contentId, directions[i], STAKE);
         }
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp past epoch end
         vm.warp(r.startTime + EPOCH + 1);
@@ -169,8 +170,8 @@ contract SelectiveRevelationTest is VotingTestBase {
             (commitKeys[i], salts[i]) = _commit(voters[i], contentId, directions[i], STAKE);
         }
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         vm.warp(r.startTime + EPOCH + 1);
 
@@ -182,7 +183,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         // Settlement succeeds
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
         assertTrue(round.upWins); // 6 UP vs 4 DOWN
     }
@@ -201,8 +202,8 @@ contract SelectiveRevelationTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voters[1], contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voters[2], contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp to epoch 2 (past epoch-1 end, within epoch-2)
         vm.warp(r.startTime + EPOCH + 1);
@@ -219,7 +220,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         // Settlement succeeds — epoch-2 votes are in current epoch, don't block
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
     }
 
@@ -240,8 +241,8 @@ contract SelectiveRevelationTest is VotingTestBase {
             (commitKeys[i], salts[i]) = _commit(voters[i], contentId, directions[i], STAKE);
         }
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp past epoch end + full grace period
         vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
@@ -254,7 +255,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         // Settlement succeeds — grace period expired, unrevealed vote doesn't block
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
     }
 
@@ -270,8 +271,8 @@ contract SelectiveRevelationTest is VotingTestBase {
             (commitKeys[i], salts[i]) = _commit(voters[i], contentId, directions[i], STAKE);
         }
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp past epoch end but WITHIN grace period (30 min into 60 min grace)
         vm.warp(r.startTime + EPOCH + 30 minutes);
@@ -298,26 +299,23 @@ contract SelectiveRevelationTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voters[1], contentId, false, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voters[2], contentId, true, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         uint256 epochEnd = r.startTime + EPOCH;
 
-        // Counter should be 3 after 3 commits
-        assertEq(engine.epochUnrevealedCount(contentId, roundId, epochEnd), 3);
+        assertEq(r.voteCount, 3);
+        assertEq(r.revealedCount, 0);
 
         vm.warp(epochEnd + 1);
 
-        // Reveal one — counter goes to 2
         _reveal(contentId, roundId, ck1, true, s1);
-        assertEq(engine.epochUnrevealedCount(contentId, roundId, epochEnd), 2);
+        assertEq(RoundEngineReadHelpers.round(engine, contentId, roundId).revealedCount, 1);
 
-        // Reveal second — counter goes to 1
         _reveal(contentId, roundId, ck2, false, s2);
-        assertEq(engine.epochUnrevealedCount(contentId, roundId, epochEnd), 1);
+        assertEq(RoundEngineReadHelpers.round(engine, contentId, roundId).revealedCount, 2);
 
-        // Reveal third — counter goes to 0
         _reveal(contentId, roundId, ck3, true, s3);
-        assertEq(engine.epochUnrevealedCount(contentId, roundId, epochEnd), 0);
+        assertEq(RoundEngineReadHelpers.round(engine, contentId, roundId).revealedCount, 3);
 
         // Settlement succeeds
         engine.settleRound(contentId, roundId);
@@ -360,8 +358,8 @@ contract SelectiveRevelationTest is VotingTestBase {
             (commitKeys[i], salts[i]) = _commit(voters[i], contentId, directions[i], STAKE);
         }
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), GRACE_PERIOD);
 
         vm.prank(owner);
@@ -375,7 +373,7 @@ contract SelectiveRevelationTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
     }
 
@@ -393,8 +391,8 @@ contract SelectiveRevelationTest is VotingTestBase {
             (commitKeys[i], salts[i]) = _commit(voters[i], contentId, directions[i], STAKE);
         }
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), 2 hours);
 
         vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
@@ -409,7 +407,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         vm.warp(r.startTime + EPOCH + 2 hours + 1);
         engine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled));
     }
 
@@ -427,8 +425,8 @@ contract SelectiveRevelationTest is VotingTestBase {
         (bytes32 ck2, bytes32 s2) = _commit(voters[1], contentId, true, STAKE);
         (bytes32 ck3, bytes32 s3) = _commit(voters[2], contentId, false, STAKE);
 
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        RoundLib.Round memory r = engine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Warp to epoch 2
         vm.warp(r.startTime + EPOCH + 1);

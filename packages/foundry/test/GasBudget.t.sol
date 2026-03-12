@@ -6,6 +6,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 
 contract GasBudgetTest is RoundIntegrationTest {
@@ -87,7 +88,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
 
         uint256 gasUsed = _measureCall(
@@ -148,8 +149,8 @@ contract GasBudgetTest is RoundIntegrationTest {
         votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
@@ -177,8 +178,8 @@ contract GasBudgetTest is RoundIntegrationTest {
         votingEngine.commitVote(contentId, commitHash, _testCiphertext(true, salt, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(round.startTime + 7 days + 1);
 
         uint256 gasUsed = _measureCall(
@@ -216,8 +217,8 @@ contract GasBudgetTest is RoundIntegrationTest {
 
         uint256 gasUsed = _measureCallAs(
             voter1,
-            address(votingEngine),
-            abi.encodeCall(RoundVotingEngine.claimParticipationReward, (contentId, roundId))
+            address(rewardDistributor),
+            abi.encodeCall(RoundRewardDistributor.claimParticipationReward, (contentId, roundId))
         );
 
         assertLe(gasUsed, MAX_CLAIM_PARTICIPATION_REWARD_GAS, "claimParticipationReward gas budget exceeded");
@@ -229,7 +230,8 @@ contract GasBudgetTest is RoundIntegrationTest {
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
         uint256 gasUsed = _measureCall(
-            address(votingEngine), abi.encodeCall(RoundVotingEngine.claimFrontendFee, (contentId, roundId, frontendOp))
+            address(rewardDistributor),
+            abi.encodeCall(RoundRewardDistributor.claimFrontendFee, (contentId, roundId, frontendOp))
         );
 
         assertLe(gasUsed, MAX_CLAIM_FRONTEND_FEE_GAS, "claimFrontendFee gas budget exceeded");

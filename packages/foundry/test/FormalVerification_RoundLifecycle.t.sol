@@ -8,6 +8,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 /// @title Formal Verification: Round Lifecycle Edge Cases (Tlock Commit-Reveal)
@@ -82,7 +83,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         // Fund consensus reserve
         crepToken.mint(owner, 100_000e6);
         crepToken.approve(address(engine), 100_000e6);
-        engine.fundConsensusReserve(100_000e6);
+        engine.addToConsensusReserve(100_000e6);
 
         // Fund submitter and voters
         crepToken.mint(submitter, 100_000e6);
@@ -123,13 +124,13 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     }
 
     function _forceSettle(uint256 cid) internal {
-        uint256 roundId = engine.getActiveRoundId(cid);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, cid);
         if (roundId == 0) return;
-        RoundLib.Round memory r = engine.getRound(cid, roundId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, cid, roundId);
         vm.warp(r.startTime + EPOCH_DURATION + 1);
-        bytes32[] memory keys = engine.getRoundCommitHashes(cid, roundId);
+        bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, roundId);
         for (uint256 i = 0; i < keys.length; i++) {
-            RoundLib.Commit memory c = engine.getCommit(cid, roundId, keys[i]);
+            RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 bool up = uint8(c.ciphertext[0]) == 1;
                 bytes32 s;
@@ -138,7 +139,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
                 try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
             }
         }
-        RoundLib.Round memory r2 = engine.getRound(cid, roundId);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, cid, roundId);
         if (r2.thresholdReachedAt > 0) {
             try engine.settleRound(cid, roundId) { } catch { }
         }
@@ -155,12 +156,12 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         (bytes32 ck0,) = _vote(v[0], cid, true, 10e6);
         (bytes32 ck1,) = _vote(v[1], cid, true, 10e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Verify votes were committed in epoch 1 (epochIndex == 0)
-        RoundLib.Commit memory c0 = engine.getCommit(cid, rid, ck0);
-        RoundLib.Commit memory c1 = engine.getCommit(cid, rid, ck1);
+        RoundLib.Commit memory c0 = RoundEngineReadHelpers.commit(engine, cid, rid, ck0);
+        RoundLib.Commit memory c1 = RoundEngineReadHelpers.commit(engine, cid, rid, ck1);
         assertEq(c0.epochIndex, 0, "v[0] in epoch 1 (index 0)");
         assertEq(c1.epochIndex, 0, "v[1] in epoch 1 (index 0)");
         assertEq(round.voteCount, 2, "Two votes committed");
@@ -181,12 +182,12 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         // Second vote is in epoch 2
         (bytes32 ck1,) = _vote(v[1], cid, false, 10e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Commit memory c1 = engine.getCommit(cid, rid, ck1);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Commit memory c1 = RoundEngineReadHelpers.commit(engine, cid, rid, ck1);
         assertEq(c1.epochIndex, 1, "v[1] in epoch 2+ (index 1)");
 
         // Verify round still open and accepts new votes
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Open), "Round still Open after epoch 2 vote");
         assertEq(round.voteCount, 2, "Two votes committed");
     }
@@ -200,14 +201,14 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         // Stay below commit quorum so expiry uses the cancellation path.
         _vote(v[0], cid, true, 10e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // At exactly maxDuration, round is expired
         vm.warp(round.startTime + MAX_DURATION);
         engine.cancelExpiredRound(cid, rid);
 
-        RoundLib.Round memory cancelled = engine.getRound(cid, rid);
+        RoundLib.Round memory cancelled = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(cancelled.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled at max duration");
     }
 
@@ -218,15 +219,15 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         uint256 cid = _submit();
 
         _vote(v[0], cid, true, 10e6);
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // One second before expiry: round still accepts votes
         vm.warp(round.startTime + MAX_DURATION - 1);
         (bytes32 ck1,) = _vote(v[1], cid, true, 10e6);
 
         // Verify v[1] commit was recorded
-        RoundLib.Commit memory c1 = engine.getCommit(cid, rid, ck1);
+        RoundLib.Commit memory c1 = RoundEngineReadHelpers.commit(engine, cid, rid, ck1);
         assertEq(c1.voter, v[1], "v[1] commit accepted before expiry");
         assertGt(c1.stakeAmount, 0, "v[1] stake recorded");
 
@@ -254,17 +255,17 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         _vote(v[1], cid3, false, 10e6);
         _vote(v[2], cid3, true, 10e6);
 
-        uint256 rid1 = engine.getActiveRoundId(cid1);
-        uint256 rid2 = engine.getActiveRoundId(cid2);
-        uint256 rid3 = engine.getActiveRoundId(cid3);
+        uint256 rid1 = RoundEngineReadHelpers.activeRoundId(engine, cid1);
+        uint256 rid2 = RoundEngineReadHelpers.activeRoundId(engine, cid2);
+        uint256 rid3 = RoundEngineReadHelpers.activeRoundId(engine, cid3);
 
         // Force settle only cid3 (warp past epoch end, reveal all, settle)
         _forceSettle(cid3);
 
         // cid3 settled, cid1 and cid2 still open
-        RoundLib.Round memory r1 = engine.getRound(cid1, rid1);
-        RoundLib.Round memory r2 = engine.getRound(cid2, rid2);
-        RoundLib.Round memory r3 = engine.getRound(cid3, rid3);
+        RoundLib.Round memory r1 = RoundEngineReadHelpers.round(engine, cid1, rid1);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, cid2, rid2);
+        RoundLib.Round memory r3 = RoundEngineReadHelpers.round(engine, cid3, rid3);
 
         assertEq(uint256(r1.state), uint256(RoundLib.RoundState.Open), "cid1 still Open");
         assertEq(uint256(r2.state), uint256(RoundLib.RoundState.Open), "cid2 still Open");
@@ -285,14 +286,14 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         (bytes32 ck2,) = _vote(v[0], cid2, false, 20e6);
         (bytes32 ck3,) = _vote(v[0], cid3, true, 30e6);
 
-        uint256 rid1 = engine.getActiveRoundId(cid1);
-        uint256 rid2 = engine.getActiveRoundId(cid2);
-        uint256 rid3 = engine.getActiveRoundId(cid3);
+        uint256 rid1 = RoundEngineReadHelpers.activeRoundId(engine, cid1);
+        uint256 rid2 = RoundEngineReadHelpers.activeRoundId(engine, cid2);
+        uint256 rid3 = RoundEngineReadHelpers.activeRoundId(engine, cid3);
 
         // All commits accepted -- verify by checking commit records
-        RoundLib.Commit memory c1 = engine.getCommit(cid1, rid1, ck1);
-        RoundLib.Commit memory c2 = engine.getCommit(cid2, rid2, ck2);
-        RoundLib.Commit memory c3 = engine.getCommit(cid3, rid3, ck3);
+        RoundLib.Commit memory c1 = RoundEngineReadHelpers.commit(engine, cid1, rid1, ck1);
+        RoundLib.Commit memory c2 = RoundEngineReadHelpers.commit(engine, cid2, rid2, ck2);
+        RoundLib.Commit memory c3 = RoundEngineReadHelpers.commit(engine, cid3, rid3, ck3);
 
         assertEq(c1.voter, v[0], "v[0] committed on cid1");
         assertEq(c2.voter, v[0], "v[0] committed on cid2");
@@ -313,8 +314,8 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         (bytes32 ck0, bytes32 s0) = _vote(v[0], cid, true, 50e6);
         (bytes32 ck1, bytes32 s1) = _vote(v[1], cid, false, 10e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Before epoch ends: reveal should revert with EpochNotEnded
         vm.expectRevert(RoundVotingEngine.EpochNotEnded.selector);
@@ -326,13 +327,13 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         engine.revealVoteByCommitKey(cid, rid, ck1, false, s1);
 
         // After minVoters revealed, thresholdReachedAt is set
-        RoundLib.Round memory afterReveal = engine.getRound(cid, rid);
+        RoundLib.Round memory afterReveal = RoundEngineReadHelpers.round(engine, cid, rid);
         assertGt(afterReveal.thresholdReachedAt, 0, "Threshold reached after minVoters reveals");
 
         // Settlement succeeds immediately after minVoters revealed
         engine.settleRound(cid, rid);
 
-        RoundLib.Round memory settled = engine.getRound(cid, rid);
+        RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Settled after reveals");
     }
 
@@ -347,8 +348,8 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         (bytes32 ck1, bytes32 s1) = _vote(v[1], cid, true, 20e6);
         (bytes32 ck2, bytes32 s2) = _vote(v[2], cid, true, 30e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Reveal all after epoch ends
         vm.warp(round.startTime + EPOCH_DURATION + 1);
@@ -356,13 +357,13 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         engine.revealVoteByCommitKey(cid, rid, ck1, true, s1);
         engine.revealVoteByCommitKey(cid, rid, ck2, true, s2);
 
-        RoundLib.Round memory afterReveal = engine.getRound(cid, rid);
+        RoundLib.Round memory afterReveal = RoundEngineReadHelpers.round(engine, cid, rid);
         assertGt(afterReveal.thresholdReachedAt, 0, "Threshold reached");
 
         // Settle immediately after reveals
         engine.settleRound(cid, rid);
 
-        RoundLib.Round memory afterSettle = engine.getRound(cid, rid);
+        RoundLib.Round memory afterSettle = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(afterSettle.state), uint256(RoundLib.RoundState.Settled), "Consensus settled");
         assertTrue(afterSettle.upWins, "UP wins in one-sided consensus");
     }
@@ -377,21 +378,21 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         (bytes32 ck0, bytes32 s0) = _vote(v[0], cid, true, 50e6);
         (bytes32 ck1, bytes32 s1) = _vote(v[1], cid, false, 50e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Reveal all after epoch ends
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
         engine.revealVoteByCommitKey(cid, rid, ck1, false, s1);
 
-        RoundLib.Round memory afterReveal = engine.getRound(cid, rid);
+        RoundLib.Round memory afterReveal = RoundEngineReadHelpers.round(engine, cid, rid);
         assertGt(afterReveal.thresholdReachedAt, 0, "Threshold reached");
 
         // Settle immediately after reveals
         engine.settleRound(cid, rid);
 
-        RoundLib.Round memory tied = engine.getRound(cid, rid);
+        RoundLib.Round memory tied = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(tied.state), uint256(RoundLib.RoundState.Tied), "Equal weighted stakes produce Tied state");
     }
 
@@ -404,18 +405,18 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         _vote(v[0], cid, true, 50e6);
         _vote(v[1], cid, false, 50e6);
 
-        uint256 rid1 = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round1 = engine.getRound(cid, rid1);
+        uint256 rid1 = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round1 = RoundEngineReadHelpers.round(engine, cid, rid1);
 
         // Long after the old commits became revealable, but still before maxDuration:
         // the round should remain open so additional voters can still rescue it.
         vm.warp(round1.startTime + MAX_DURATION - 1);
         _vote(v[2], cid, true, 50e6);
 
-        uint256 rid2 = engine.getActiveRoundId(cid);
+        uint256 rid2 = RoundEngineReadHelpers.activeRoundId(engine, cid);
         assertEq(rid2, rid1, "Late vote should stay in the same round");
 
-        RoundLib.Round memory sameRound = engine.getRound(cid, rid1);
+        RoundLib.Round memory sameRound = RoundEngineReadHelpers.round(engine, cid, rid1);
         assertEq(uint256(sameRound.state), uint256(RoundLib.RoundState.Open), "Round remains open");
         assertEq(sameRound.voteCount, 3, "Late vote counted in the existing round");
     }
@@ -434,8 +435,8 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         _vote(v[1], cid, false, 20e6);
         _vote(v[2], cid, true, 30e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
@@ -443,7 +444,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         vm.warp(round.startTime + MAX_DURATION + engine.revealGracePeriod());
         engine.finalizeRevealFailedRound(cid, rid);
 
-        RoundLib.Round memory failed = engine.getRound(cid, rid);
+        RoundLib.Round memory failed = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(failed.state), uint256(RoundLib.RoundState.RevealFailed), "RevealFailed finalized");
 
         uint256 voter0Before = crepToken.balanceOf(v[0]);
@@ -466,12 +467,12 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         _vote(v[0], cid, true, 50e6);
         _vote(v[1], cid, false, 10e6);
 
-        uint256 rid1 = engine.getActiveRoundId(cid);
+        uint256 rid1 = RoundEngineReadHelpers.activeRoundId(engine, cid);
         assertEq(rid1, 1, "First round has ID 1");
 
         // Force settle
         _forceSettle(cid);
-        RoundLib.Round memory settled = engine.getRound(cid, rid1);
+        RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, cid, rid1);
         assertEq(uint256(settled.state), uint256(RoundLib.RoundState.Settled), "Round 1 settled");
 
         // Wait for cooldown (24 hours) so same voters can vote again
@@ -479,11 +480,11 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
 
         // New vote on same content creates round 2
         _vote(v[2], cid, true, 10e6);
-        uint256 rid2 = engine.getActiveRoundId(cid);
+        uint256 rid2 = RoundEngineReadHelpers.activeRoundId(engine, cid);
         assertEq(rid2, 2, "New round created after settlement");
         assertGt(rid2, rid1, "Round ID incremented");
 
-        RoundLib.Round memory newRound = engine.getRound(cid, rid2);
+        RoundLib.Round memory newRound = RoundEngineReadHelpers.round(engine, cid, rid2);
         assertEq(uint256(newRound.state), uint256(RoundLib.RoundState.Open), "New round is Open");
         assertEq(newRound.voteCount, 1, "New round has 1 vote");
     }
@@ -506,14 +507,14 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         _vote(v[1], cid, false, 20e6);
         _vote(v[2], cid, true, 30e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Expire after maxDuration
         vm.warp(round.startTime + MAX_DURATION);
         engine.cancelExpiredRound(cid, rid);
 
-        RoundLib.Round memory cancelled = engine.getRound(cid, rid);
+        RoundLib.Round memory cancelled = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(cancelled.state), uint256(RoundLib.RoundState.Cancelled), "Round cancelled");
 
         // Each voter claims refund and gets full stake back

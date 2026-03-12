@@ -8,15 +8,16 @@ import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/Reentran
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { IERC20Permit } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import { IERC1363Receiver } from "@openzeppelin/contracts/interfaces/IERC1363Receiver.sol";
 
 import { ContentRegistry } from "./ContentRegistry.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 import { RewardMath } from "./libraries/RewardMath.sol";
+import { CategoryFeeLib } from "./libraries/CategoryFeeLib.sol";
+import { SubmitterStakeLib } from "./libraries/SubmitterStakeLib.sol";
+import { TokenTransferLib } from "./libraries/TokenTransferLib.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
 import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
-import { IRoundRewardDistributor } from "./interfaces/IRoundRewardDistributor.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
@@ -49,22 +50,17 @@ contract RoundVotingEngine is
     error InvalidStake();
     error ZeroAmount();
     error Unauthorized();
-    error RewardDistributorLocked();
     error VoterIdRequired();
     error SelfVote();
     error ContentNotActive();
     error CooldownActive();
     error CiphertextTooLarge();
     error InvalidCiphertext();
-    error ExceedsMaxStake();
     error RoundNotOpen();
     error RoundNotAccepting();
     error RoundNotExpired();
-    error RoundNotSettled();
     error RoundNotSettledOrTied();
     error RoundNotCancelledOrTied();
-    error ContentNotFound();
-    error ActiveRoundExists();
     error DormancyWindowElapsed();
     error ThresholdReached();
     error RevealGraceActive();
@@ -74,23 +70,14 @@ contract RoundVotingEngine is
     error AlreadyRevealed();
     error AlreadyClaimed();
     error MaxVotersReached();
-    error CommitHashUsed();
     error EpochNotEnded();
     error HashMismatch();
     error NoCommit();
     error NoStake();
-    error NoPool();
-    error NoApprovedStake();
-    error PoolExhausted();
-    error PoolDepleted();
     error VoteNotRevealed();
-    error NoParticipationRate();
     error IndexOutOfBounds();
-    error IdentityAlreadyCommitted();
     error UnrevealedPastEpochVotes();
     error NothingProcessed();
-    error NotWinningSide();
-    error SnapshotAlreadySet();
 
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -107,7 +94,7 @@ contract RoundVotingEngine is
     // --- State ---
     IERC20 public crepToken;
     ContentRegistry public registry;
-    address public rewardDistributor;
+    address internal rewardDistributor;
     ICategoryRegistry public categoryRegistry;
     IFrontendRegistry public frontendRegistry;
     address public treasury;
@@ -119,30 +106,24 @@ contract RoundVotingEngine is
 
     // Per-content round tracking
     mapping(uint256 => uint256) public currentRoundId; // contentId => active round ID (0 = none)
-    mapping(uint256 => uint256) public nextRoundId; // contentId => next round ID to create
+    mapping(uint256 => uint256) internal nextRoundId; // contentId => next round ID to create
 
     // Commits: contentId => roundId => commitKey => Commit
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => RoundLib.Commit))) public commits;
 
     // Track commit keys per round for iteration (reveal/settlement)
-    mapping(uint256 => mapping(uint256 => bytes32[])) internal roundCommitHashes;
-
-    // Track voters per content per round for settlement iteration
-    mapping(uint256 => mapping(uint256 => address[])) internal roundVoters;
+    mapping(uint256 => mapping(uint256 => bytes32[])) public roundCommitHashes;
 
     // Prevent double voting: contentId => roundId => voter => committed
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public hasCommitted;
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal hasCommitted;
 
     // Time-based cooldown: contentId => voter => timestamp of last vote
-    mapping(uint256 => mapping(address => uint256)) public lastVoteTimestamp;
+    mapping(uint256 => mapping(address => uint256)) internal lastVoteTimestamp;
 
     // Reward accounting per round
     mapping(uint256 => mapping(uint256 => uint256)) public roundVoterPool; // contentId => roundId => voter pool
     mapping(uint256 => mapping(uint256 => uint256)) public roundWinningStake; // contentId => roundId => epoch-weighted winning stake
     mapping(uint256 => mapping(uint256 => uint256)) public pendingSubmitterReward; // contentId => roundId => amount
-
-    // Track which frontend each revealed vote used: contentId => roundId => voter => frontend
-    mapping(uint256 => mapping(uint256 => mapping(address => address))) public voteFrontend;
 
     // Cancelled/tied round refund claims: contentId => roundId => voter => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public cancelledRoundRefundClaimed;
@@ -167,30 +148,30 @@ contract RoundVotingEngine is
     uint256 public keeperRewardPool;
 
     // Config snapshot per round: prevents governance config changes from affecting in-progress rounds
-    mapping(uint256 => mapping(uint256 => RoundLib.RoundConfig)) internal roundConfigSnapshot;
+    mapping(uint256 => mapping(uint256 => RoundLib.RoundConfig)) public roundConfigSnapshot;
 
     // Voter to commit hash lookup: contentId => roundId => voter => commitHash (O(1) claim lookups)
     mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) public voterCommitHash;
 
     // Original public commit hash for a commit key.
-    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bytes32))) public commitHashByKey;
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bytes32))) internal commitHashByKey;
 
     // Deprecated: was commitHashToVoter for hash-based reveals (removed). Slot preserved for UUPS layout.
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => address))) private __deprecated_commitHashToVoter;
 
     // Frontend fee aggregation (computed incrementally during revealVote for O(1) settlement)
-    mapping(uint256 => mapping(uint256 => uint256)) internal roundStakeWithApprovedFrontend;
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) internal roundPerFrontendStake;
-    mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendPool;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithApprovedFrontend;
+    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public roundPerFrontendStake;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendPool;
     // Deprecated claim-tracking slots preserved for upgrade safety. RoundRewardDistributor now owns claim state.
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal frontendFeeClaimed;
-    mapping(uint256 => mapping(uint256 => uint256)) internal roundApprovedFrontendCount;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundApprovedFrontendCount;
     mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendClaimedCount;
     mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendClaimedAmount;
 
     // Participation reward snapshots (claim state now lives in RoundRewardDistributor)
-    mapping(uint256 => mapping(uint256 => address)) internal roundParticipationPool;
-    mapping(uint256 => mapping(uint256 => uint256)) internal roundParticipationRateBps;
+    mapping(uint256 => mapping(uint256 => address)) public roundParticipationPool;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRateBps;
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal participationRewardClaimed;
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) internal participationRewardPaid;
 
@@ -215,16 +196,9 @@ contract RoundVotingEngine is
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusSubsidyDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event SettlementSideEffectFailed(uint256 indexed contentId, uint256 indexed roundId, uint8 reason);
-    event FrontendFeeClaimed(
-        uint256 indexed contentId, uint256 indexed roundId, address indexed frontend, uint256 amount
-    );
-    event ParticipationRewardClaimed(
-        uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 amount
-    );
     event ConfigUpdated(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters);
     event FrontendRegistryUpdated(address frontendRegistry);
     event CategoryRegistryUpdated(address categoryRegistry);
-    event VoterIdNFTUpdated(address voterIdNFT);
     event TreasuryUpdated(address treasury);
     event KeeperRewardUpdated(uint256 keeperReward);
     event KeeperRewardPoolFunded(address indexed funder, uint256 amount);
@@ -244,12 +218,6 @@ contract RoundVotingEngine is
     uint8 internal constant OP_CANCEL = 1;
     uint8 internal constant OP_SETTLE = 2;
     uint8 internal constant OP_PROCESS_UNREVEALED = 3;
-    /// @dev Only callable by this contract itself (for try-catch external wrappers).
-    modifier onlySelf() {
-        if (msg.sender != address(this)) revert Unauthorized();
-        _;
-    }
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -290,7 +258,7 @@ contract RoundVotingEngine is
 
     function setRewardDistributor(address _rewardDistributor) external onlyRole(CONFIG_ROLE) {
         if (_rewardDistributor == address(0)) revert InvalidAddress();
-        if (rewardDistributor != address(0)) revert RewardDistributorLocked();
+        if (rewardDistributor != address(0)) revert InvalidConfig();
         rewardDistributor = _rewardDistributor;
     }
 
@@ -326,38 +294,11 @@ contract RoundVotingEngine is
     function setVoterIdNFT(address _voterIdNFT) external onlyRole(CONFIG_ROLE) {
         if (_voterIdNFT == address(0)) revert InvalidAddress();
         voterIdNFT = IVoterIdNFT(_voterIdNFT);
-        emit VoterIdNFTUpdated(_voterIdNFT);
     }
 
     function setParticipationPool(address _participationPool) external onlyRole(CONFIG_ROLE) {
         if (_participationPool == address(0)) revert InvalidAddress();
         participationPool = IParticipationPool(_participationPool);
-    }
-
-    /// @notice One-time governance backfill for settled legacy rounds that lack a pool snapshot.
-    function backfillParticipationRewardSnapshot(
-        uint256 contentId,
-        uint256 roundId,
-        address rewardPoolAddress,
-        uint256 rateBps
-    ) external onlyRole(CONFIG_ROLE) {
-        if (rewardPoolAddress == address(0)) revert InvalidAddress();
-        if (rateBps == 0) revert NoParticipationRate();
-
-        RoundLib.Round storage round = rounds[contentId][roundId];
-        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
-        address existingPool = roundParticipationPool[contentId][roundId];
-        uint256 existingRateBps = roundParticipationRateBps[contentId][roundId];
-        if (existingPool != address(0) && existingPool != rewardPoolAddress) revert SnapshotAlreadySet();
-        if (existingRateBps != 0 && existingRateBps != rateBps) revert InvalidConfig();
-        if (existingPool != address(0) && existingRateBps != 0) revert SnapshotAlreadySet();
-
-        if (existingPool == address(0)) {
-            roundParticipationPool[contentId][roundId] = rewardPoolAddress;
-        }
-        if (existingRateBps == 0) {
-            roundParticipationRateBps[contentId][roundId] = rateBps;
-        }
     }
 
     function setConfig(uint256 _epochDuration, uint256 _maxDuration, uint256 _minVoters, uint256 _maxVoters)
@@ -376,29 +317,16 @@ contract RoundVotingEngine is
         emit ConfigUpdated(_epochDuration, _maxDuration, _minVoters, _maxVoters);
     }
 
-    /// @notice Fund the consensus subsidy reserve (admin-only, initial/top-up funding).
-    /// @dev AUDIT NOTE (I-1): This is the admin-gated entry point for treasury-funded top-ups.
-    ///      `addToConsensusReserve` below is intentionally permissionless so that any contract
-    ///      (e.g. FrontendRegistry slashing) can route forfeited cREP into the reserve via
-    ///      safeTransferFrom, without requiring a role grant.
-    function fundConsensusReserve(uint256 amount) external onlyRole(CONFIG_ROLE) {
-        if (amount == 0) revert ZeroAmount();
-        crepToken.safeTransferFrom(msg.sender, address(this), amount);
-        consensusReserve += amount;
-    }
-
-    /// @notice Add cREP to the consensus reserve (e.g. from slashed stakes).
-    /// @dev Permissionless by design — caller must have approved cREP; see fundConsensusReserve above.
+    /// @notice Add cREP to the consensus reserve.
+    /// @dev Permissionless by design — treasury top-ups and slashed-stake routing both use this same path.
     function addToConsensusReserve(uint256 amount) external {
-        if (amount == 0) revert ZeroAmount();
-        crepToken.safeTransferFrom(msg.sender, address(this), amount);
+        _pullCrepFromSender(amount);
         consensusReserve += amount;
     }
 
     /// @notice Fund the keeper reward pool.
     function fundKeeperRewardPool(uint256 amount) external onlyRole(CONFIG_ROLE) {
-        if (amount == 0) revert ZeroAmount();
-        crepToken.safeTransferFrom(msg.sender, address(this), amount);
+        _pullCrepFromSender(amount);
         keeperRewardPool += amount;
         emit KeeperRewardPoolFunded(msg.sender, amount);
     }
@@ -410,50 +338,6 @@ contract RoundVotingEngine is
         if (crepAmount > 0) {
             crepToken.safeTransfer(recipient, crepAmount);
         }
-    }
-
-    /// @notice Credit or directly pay a frontend fee. Only callable by RewardDistributor.
-    function payoutFrontendFee(uint256 contentId, uint256 roundId, address frontend, uint256 fee) external {
-        if (msg.sender != rewardDistributor) revert Unauthorized();
-        if (fee == 0) return;
-
-        address snapshotRegistryAddress = roundFrontendRegistrySnapshot[contentId][roundId];
-        if (snapshotRegistryAddress == address(0)) {
-            crepToken.safeTransfer(frontend, fee);
-            return;
-        }
-
-        IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
-
-        try snapshotRegistry.getFrontendInfo(frontend) returns (
-            address frontendOperator, uint256, bool, bool frontendSlashed
-        ) {
-            if (frontendOperator == address(0) || frontendSlashed) {
-                if (frontendOperator == address(0)) {
-                    crepToken.safeTransfer(frontend, fee);
-                    return;
-                }
-                revert IFrontendRegistry.FrontendIsSlashed();
-            }
-
-            try snapshotRegistry.creditFees(frontend, fee) {
-                crepToken.safeTransfer(snapshotRegistryAddress, fee);
-            } catch {
-                crepToken.safeTransfer(frontend, fee);
-            }
-        } catch {
-            crepToken.safeTransfer(frontend, fee);
-        }
-    }
-
-    /// @notice Distribute a participation reward from the configured pool snapshot. Only callable by RewardDistributor.
-    function distributeParticipationReward(address rewardPoolAddress, address voter, uint256 rewardAmount)
-        external
-        returns (uint256 paidReward)
-    {
-        if (msg.sender != rewardDistributor) revert Unauthorized();
-        if (rewardPoolAddress == address(0)) revert NoPool();
-        return IParticipationPool(rewardPoolAddress).distributeReward(voter, rewardAmount);
     }
 
     // =========================================================================
@@ -473,26 +357,6 @@ contract RoundVotingEngine is
         uint256 stakeAmount,
         address frontend
     ) external nonReentrant whenNotPaused {
-        _commitVote(msg.sender, contentId, commitHash, ciphertext, stakeAmount, frontend, false);
-    }
-
-    /// @notice Commit a blind vote using ERC2612 permit (single transaction).
-    /// @dev Uses try-catch around permit to mitigate front-running grief (EIP-2612 known issue).
-    ///      If an attacker front-runs the permit signature, the allowance is already set and
-    ///      safeTransferFrom in _commitVote succeeds using the existing allowance.
-    function commitVoteWithPermit(
-        uint256 contentId,
-        bytes32 commitHash,
-        bytes calldata ciphertext,
-        uint256 stakeAmount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s,
-        address frontend
-    ) external nonReentrant whenNotPaused {
-        try IERC20Permit(address(crepToken)).permit(msg.sender, address(this), stakeAmount, deadline, v, r, s) { }
-            catch { }
         _commitVote(msg.sender, contentId, commitHash, ciphertext, stakeAmount, frontend, false);
     }
 
@@ -570,7 +434,7 @@ contract RoundVotingEngine is
 
         // One vote per identity per round (prevents holder + delegate double voting)
         if (address(voterIdNFT) != address(0) && voterId != 0) {
-            if (hasTokenIdCommitted[contentId][roundId][voterId]) revert IdentityAlreadyCommitted();
+            if (hasTokenIdCommitted[contentId][roundId][voterId]) revert AlreadyCommitted();
         }
 
         // Voter cap
@@ -578,12 +442,12 @@ contract RoundVotingEngine is
 
         // Per-voter commit key prevents mempool griefing via copied commit hashes
         bytes32 commitKey = _buildCommitKey(voter, commitHash);
-        if (commits[contentId][roundId][commitKey].voter != address(0)) revert CommitHashUsed();
+        if (commits[contentId][roundId][commitKey].voter != address(0)) revert AlreadyCommitted();
 
         // Check MAX_STAKE per Voter ID per content per round
         if (address(voterIdNFT) != address(0) && voterId != 0) {
             uint256 currentStake = voterIdNFT.getEpochContentStake(contentId, roundId, voterId);
-            if (currentStake + stakeAmount > MAX_STAKE) revert ExceedsMaxStake();
+            if (currentStake + stakeAmount > MAX_STAKE) revert InvalidStake();
         }
 
         // Transfer cREP stake
@@ -838,8 +702,17 @@ contract RoundVotingEngine is
                 }
 
                 if (categorySubmitterShare > 0) {
-                    try this.distributeCategoryFeeExternal(contentId, roundId, categorySubmitterShare) { }
-                    catch {
+                    try CategoryFeeLib.distribute(
+                        crepToken, registry, categoryRegistry, contentId, categorySubmitterShare
+                    ) returns (bool paid, uint256 categoryId, address categorySubmitter) {
+                        if (paid) {
+                            emit CategorySubmitterRewarded(
+                                contentId, categoryId, categorySubmitter, categorySubmitterShare
+                            );
+                        } else {
+                            roundVoterPool[contentId][roundId] += categorySubmitterShare;
+                        }
+                    } catch {
                         roundVoterPool[contentId][roundId] += categorySubmitterShare;
                         emit SettlementSideEffectFailed(contentId, roundId, REASON_CATEGORY_FEE);
                     }
@@ -849,7 +722,7 @@ contract RoundVotingEngine is
             // Transfer treasury fee
             if (treasuryShare > 0) {
                 if (treasury != address(0)) {
-                    try this.transferTokenExternal(treasury, treasuryShare) {
+                    try TokenTransferLib.transfer(crepToken, treasury, treasuryShare) {
                         emit TreasuryFeeDistributed(contentId, roundId, treasuryShare);
                     } catch {
                         roundVoterPool[contentId][roundId] += treasuryShare;
@@ -900,7 +773,7 @@ contract RoundVotingEngine is
         }
 
         // Check submitter stake return/slash conditions
-        try this.checkSubmitterStakeExternal(contentId) { }
+        try SubmitterStakeLib.resolve(registry, participationPool, contentHasSettledRound[contentId], contentId) { }
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_SUBMITTER_STAKE);
         }
@@ -943,27 +816,10 @@ contract RoundVotingEngine is
         emit CancelledRoundRefundClaimed(contentId, roundId, msg.sender, refundAmount);
     }
 
-    // =========================================================================
-    // PULL-BASED CLAIMS (frontend fees, participation rewards)
-    // =========================================================================
-
-    /// @notice Frontend operator claims fees for a settled round. Pull-based, permissionless.
-    function claimFrontendFee(uint256 contentId, uint256 roundId, address frontend) external {
-        uint256 fee = IRoundRewardDistributor(rewardDistributor).claimFrontendFee(contentId, roundId, frontend);
-        emit FrontendFeeClaimed(contentId, roundId, frontend, fee);
-    }
-
-    /// @notice Claim participation reward for a settled round. Pull-based.
-    function claimParticipationReward(uint256 contentId, uint256 roundId) external {
-        uint256 paidReward =
-            IRoundRewardDistributor(rewardDistributor).claimParticipationRewardFor(msg.sender, contentId, roundId);
-        emit ParticipationRewardClaimed(contentId, roundId, msg.sender, paidReward);
-    }
-
     /// @notice Resolve submitter stake once the slash or healthy-return window has elapsed.
     /// @dev Permissionless so idle content cannot bypass the submitter stake policy.
     function resolveSubmitterStake(uint256 contentId) external nonReentrant whenNotPaused {
-        _checkSubmitterStake(contentId);
+        SubmitterStakeLib.resolve(registry, participationPool, contentHasSettledRound[contentId], contentId);
     }
 
     // =========================================================================
@@ -1007,7 +863,7 @@ contract RoundVotingEngine is
                     forfeitedCrep += amount;
                 } else {
                     // Current/future epoch: voter had no chance — refund
-                    try this.transferTokenExternal(commit.voter, amount) {
+                    try TokenTransferLib.transfer(crepToken, commit.voter, amount) {
                         refundedCrep += amount;
                     } catch {
                         forfeitedCrep += amount;
@@ -1018,7 +874,7 @@ contract RoundVotingEngine is
 
         if (forfeitedCrep > 0) {
             if (treasury != address(0)) {
-                try this.transferTokenExternal(treasury, forfeitedCrep) {
+                try TokenTransferLib.transfer(crepToken, treasury, forfeitedCrep) {
                     emit ForfeitedFundsAddedToTreasury(contentId, roundId, forfeitedCrep);
                 } catch {
                     emit SettlementSideEffectFailed(contentId, roundId, REASON_FORFEITED_TRANSFER);
@@ -1049,6 +905,11 @@ contract RoundVotingEngine is
             crepToken.safeTransfer(msg.sender, reward);
             emit KeeperRewarded(msg.sender, reward, operation);
         }
+    }
+
+    function _pullCrepFromSender(uint256 amount) internal {
+        if (amount == 0) revert ZeroAmount();
+        crepToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     function _getRoundConfig(uint256 contentId, uint256 roundId) internal view returns (RoundLib.RoundConfig memory) {
@@ -1131,9 +992,6 @@ contract RoundVotingEngine is
         // Increment revealed count
         round.revealedCount++;
 
-        // Track which frontend this vote used
-        voteFrontend[contentId][roundId][commit.voter] = commit.frontend;
-
         // Update raw pools (used for rating calculation and refund accounting)
         if (isUp) {
             round.upPool += commit.stakeAmount;
@@ -1158,9 +1016,6 @@ contract RoundVotingEngine is
             round.thresholdReachedAt = block.timestamp;
         }
 
-        // Track voter for settlement iteration
-        roundVoters[contentId][roundId].push(commit.voter);
-
         // Aggregate frontend fee data using commit-time eligibility, not reveal-time status.
         if (commit.frontend != address(0) && frontendEligibleAtCommit[contentId][roundId][commitKey]) {
             roundStakeWithApprovedFrontend[contentId][roundId] += commit.stakeAmount;
@@ -1173,159 +1028,16 @@ contract RoundVotingEngine is
         emit VoteRevealed(contentId, roundId, commit.voter, isUp);
     }
 
-    function _distributeCategoryFee(uint256 contentId, uint256 roundId, uint256 categorySubmitterShare) internal {
-        uint256 categoryId = registry.getCategoryId(contentId);
-        if (categoryId > 0 && address(categoryRegistry) != address(0)) {
-            address categorySubmitter = categoryRegistry.getSubmitter(categoryId);
-            if (categorySubmitter != address(0)) {
-                crepToken.safeTransfer(categorySubmitter, categorySubmitterShare);
-                emit CategorySubmitterRewarded(contentId, categoryId, categorySubmitter, categorySubmitterShare);
-                return;
-            }
-        }
-        roundVoterPool[contentId][roundId] += categorySubmitterShare;
-    }
-
-    function _checkSubmitterStake(uint256 contentId) internal {
-        if (registry.isSubmitterStakeReturned(contentId)) return;
-
-        uint256 contentCreatedAt = registry.getCreatedAt(contentId);
-        if (contentCreatedAt == 0) revert ContentNotFound();
-
-        uint256 elapsed = block.timestamp - contentCreatedAt;
-
-        if (!contentHasSettledRound[contentId]) {
-            if (elapsed >= registry.DORMANCY_PERIOD()) {
-                registry.resolvePendingSubmitterStake(contentId);
-            }
-            return;
-        }
-
-        uint256 rating = registry.getRating(contentId);
-
-        if (elapsed >= 24 hours) {
-            if (rating < registry.SLASH_RATING_THRESHOLD()) {
-                registry.slashSubmitterStake(contentId);
-                return;
-            }
-        }
-
-        if (elapsed >= 4 days) {
-            uint256 rewardRateBps;
-            IParticipationPool currentParticipationPool = participationPool;
-            if (address(currentParticipationPool) != address(0)) {
-                try currentParticipationPool.getCurrentRateBps() returns (uint256 rateBps) {
-                    rewardRateBps = rateBps;
-                } catch { }
-            }
-
-            registry.returnSubmitterStakeWithRewardRate(contentId, rewardRateBps);
-        }
-    }
-
-    // =========================================================================
-    // EXTERNAL WRAPPERS (for try-catch in settlement — onlySelf)
-    // =========================================================================
-
-    function distributeCategoryFeeExternal(uint256 contentId, uint256 roundId, uint256 categorySubmitterShare)
-        external
-        onlySelf
-    {
-        _distributeCategoryFee(contentId, roundId, categorySubmitterShare);
-    }
-
-    function transferTokenExternal(address recipient, uint256 amount) external onlySelf {
-        crepToken.safeTransfer(recipient, amount);
-    }
-
-    function checkSubmitterStakeExternal(uint256 contentId) external onlySelf {
-        _checkSubmitterStake(contentId);
-    }
-
     // =========================================================================
     // VIEW FUNCTIONS
     // =========================================================================
 
-    function getRound(uint256 contentId, uint256 roundId) external view returns (RoundLib.Round memory) {
-        return rounds[contentId][roundId];
-    }
-
-    function getActiveRoundId(uint256 contentId) external view returns (uint256) {
-        uint256 roundId = currentRoundId[contentId];
-        if (roundId == 0) return 0;
-        RoundLib.Round storage round = rounds[contentId][roundId];
-        if (RoundLib.isTerminal(round)) return 0;
-        return roundId;
-    }
-
-    /// @notice Get all commit keys for a round (used by keeper for batch reveal).
-    function getRoundCommitHashes(uint256 contentId, uint256 roundId) external view returns (bytes32[] memory) {
-        return roundCommitHashes[contentId][roundId];
-    }
-
-    function getRoundConfig(uint256 contentId, uint256 roundId) external view returns (RoundLib.RoundConfig memory) {
-        return _getRoundConfig(contentId, roundId);
-    }
-
-    function getRoundVoterCount(uint256 contentId, uint256 roundId) external view returns (uint256) {
-        return roundVoters[contentId][roundId].length;
-    }
-
-    function getRoundVoter(uint256 contentId, uint256 roundId, uint256 index) external view returns (address) {
-        return roundVoters[contentId][roundId][index];
-    }
-
-    function getCommit(uint256 contentId, uint256 roundId, bytes32 commitKey)
-        external
-        view
-        returns (RoundLib.Commit memory)
-    {
-        return commits[contentId][roundId][commitKey];
-    }
-
-    function getContentCommitCount(uint256 contentId) external view returns (uint256) {
-        return contentCommitCount[contentId];
-    }
-
-    /// @notice Return the fee-claim snapshot needed by RewardDistributor.
-    function getFrontendFeeSnapshot(uint256 contentId, uint256 roundId, address frontend)
-        external
-        view
-        returns (
-            uint256 totalFrontendPool,
-            uint256 frontendStake,
-            uint256 totalApprovedStake,
-            uint256 totalFrontendClaimants
-        )
-    {
-        return (
-            roundFrontendPool[contentId][roundId],
-            roundPerFrontendStake[contentId][roundId][frontend],
-            roundStakeWithApprovedFrontend[contentId][roundId],
-            roundApprovedFrontendCount[contentId][roundId]
-        );
-    }
-
-    /// @notice Return the snapshotted participation reward pool and rate for a settled round.
-    function getParticipationRewardSnapshot(uint256 contentId, uint256 roundId)
-        external
-        view
-        returns (address rewardPoolAddress, uint256 rateBps)
-    {
-        rewardPoolAddress = roundParticipationPool[contentId][roundId];
-        rateBps = roundParticipationRateBps[contentId][roundId];
-    }
-
-    function hasUnrevealedVotes(uint256 contentId) external view returns (bool) {
-        uint256 roundId = currentRoundId[contentId];
-        if (roundId == 0) return false;
-        RoundLib.Round storage round = rounds[contentId][roundId];
-        if (RoundLib.isTerminal(round)) return false;
-        return round.voteCount > round.revealedCount;
-    }
-
     // Note: computeCurrentEpochEnd removed to fit size limit.
-    // Use config().epochDuration + getRound().startTime to compute off-chain.
+    // Use config().epochDuration plus rounds(contentId, roundId).startTime to compute off-chain.
+
+    function getRoundCommitCount(uint256 contentId, uint256 roundId) external view returns (uint256) {
+        return roundCommitHashes[contentId][roundId].length;
+    }
 
     // --- Admin ---
 
@@ -1357,11 +1069,11 @@ contract RoundVotingEngine is
     mapping(address => uint256) internal __deprecated_voterLastMilestoneDay;
 
     // Per-identity cooldown: contentId => tokenId => timestamp (prevents cooldown bypass via delegation)
-    mapping(uint256 => mapping(uint256 => uint256)) public lastVoteTimestampByToken;
+    mapping(uint256 => mapping(uint256 => uint256)) internal lastVoteTimestampByToken;
 
     // Per-epoch unrevealed commit counter: prevents selective vote revelation (front-running keeper).
     // contentId => roundId => epochEnd => number of unrevealed commits for that epoch.
-    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) public epochUnrevealedCount;
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => uint256))) internal epochUnrevealedCount;
 
     // Minimum time after epoch end during which all past-epoch votes must be revealed before settlement.
     // After this period, unrevealed votes no longer block settlement (forfeited post-settlement).
@@ -1374,16 +1086,16 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) public lastCommitRevealableAfter;
 
     // Commit-time frontend approval snapshot to prevent retroactive fee eligibility changes.
-    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) public frontendEligibleAtCommit;
+    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) internal frontendEligibleAtCommit;
 
     // Keeper cleanup rewards can only be paid once per round, and only when actual forfeitures occur.
-    mapping(uint256 => mapping(uint256 => bool)) public roundCleanupRewarded;
+    mapping(uint256 => mapping(uint256 => bool)) internal roundCleanupRewarded;
 
     // Frontend registry snapshot per round so historical fee claims do not depend on live registry replacement.
-    mapping(uint256 => mapping(uint256 => address)) internal roundFrontendRegistrySnapshot;
+    mapping(uint256 => mapping(uint256 => address)) public roundFrontendRegistrySnapshot;
 
     // Tracks whether a content item has produced at least one settled round.
-    mapping(uint256 => bool) public contentHasSettledRound;
+    mapping(uint256 => bool) internal contentHasSettledRound;
 
     // --- Storage Gap for UUPS Upgradeability ---
     uint256[12] private __gap;

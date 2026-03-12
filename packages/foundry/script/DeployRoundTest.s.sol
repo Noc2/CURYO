@@ -78,7 +78,7 @@ contract DeployRoundTest is Script {
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(deployer, reserveAmount);
         crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.fundConsensusReserve(reserveAmount);
+        votingEngine.addToConsensusReserve(reserveAmount);
 
         // 7. Mint test tokens to Anvil accounts (deployer + accounts 1-3)
         crepToken.mint(deployer, 100_000e6);

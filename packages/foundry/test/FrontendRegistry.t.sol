@@ -7,6 +7,7 @@ import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 
 /// @title Mock RoundVotingEngine for testing FrontendRegistry
 contract MockVotingEngine is IRoundVotingEngine {
@@ -16,21 +17,39 @@ contract MockVotingEngine is IRoundVotingEngine {
         totalAddedToReserve += amount;
     }
 
-    function getContentCommitCount(uint256) external pure override returns (uint256) {
+    function contentCommitCount(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function getActiveRoundId(uint256) external pure override returns (uint256) {
+    function currentRoundId(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function hasUnrevealedVotes(uint256) external pure override returns (bool) {
-        return false;
+    function rounds(uint256, uint256)
+        external
+        pure
+        override
+        returns (
+            uint256,
+            RoundLib.RoundState,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);
     }
 
     function transferReward(address, uint256) external override { }
-    function claimFrontendFee(uint256, uint256, address) external override { }
-    function claimParticipationReward(uint256, uint256) external override { }
 }
 
 /// @title FrontendRegistry Test Suite

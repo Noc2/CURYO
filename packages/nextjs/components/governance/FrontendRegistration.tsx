@@ -33,7 +33,9 @@ export function FrontendRegistration() {
 
   // Contract info
   const { data: frontendRegistryInfo } = useDeployedContractInfo({ contractName: "FrontendRegistry" });
-  const { writeContractAsync: writeVotingEngine } = useScaffoldWriteContract({ contractName: "RoundVotingEngine" });
+  const { writeContractAsync: writeRewardDistributor } = useScaffoldWriteContract({
+    contractName: "RoundRewardDistributor",
+  });
 
   // Read frontend info
   const { data: frontendInfo, refetch: refetchFrontendInfo } = useScaffoldReadContract({
@@ -244,7 +246,7 @@ export function FrontendRegistration() {
     const roundKey = `${contentId}-${roundId}`;
     setClaimingRoundKey(roundKey);
     try {
-      await writeVotingEngine({
+      await writeRewardDistributor({
         functionName: "claimFrontendFee",
         args: [BigInt(contentId), BigInt(roundId), address],
       });
@@ -268,7 +270,7 @@ export function FrontendRegistration() {
     try {
       for (const item of claimableRoundFees) {
         try {
-          await writeVotingEngine({
+          await writeRewardDistributor({
             functionName: "claimFrontendFee",
             args: [BigInt(item.contentId), BigInt(item.roundId), address],
           });

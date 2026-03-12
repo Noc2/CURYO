@@ -34,6 +34,7 @@ test.describe("Frontend fee claim lifecycle", () => {
   test.describe.configure({ mode: "serial" });
 
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
+  const REWARD_DISTRIBUTOR = CONTRACT_ADDRESSES.RoundRewardDistributor;
   const FRONTEND_REGISTRY = CONTRACT_ADDRESSES.FrontendRegistry;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
@@ -165,7 +166,7 @@ test.describe("Frontend fee claim lifecycle", () => {
       BigInt(contentId!),
       roundId,
       ANVIL_ACCOUNTS.account1.address,
-      VOTING_ENGINE,
+      REWARD_DISTRIBUTOR,
     );
     expect(settled, "Frontend-fee round did not settle").toBe(true);
 
@@ -187,7 +188,7 @@ test.describe("Frontend fee claim lifecycle", () => {
       roundId,
       frontendAddress,
       DEPLOYER.address,
-      VOTING_ENGINE,
+      REWARD_DISTRIBUTOR,
     );
     expect(claimed, "Frontend fee claim should succeed for an approved frontend").toBe(true);
 
@@ -202,7 +203,7 @@ test.describe("Frontend fee claim lifecycle", () => {
       roundId,
       frontendAddress,
       DEPLOYER.address,
-      VOTING_ENGINE,
+      REWARD_DISTRIBUTOR,
     );
     expect(doubleClaim, "Frontend fee should not be claimable twice").toBe(false);
   });
@@ -231,7 +232,7 @@ test.describe("Frontend fee claim lifecycle", () => {
       roundId,
       frontendAddress,
       DEPLOYER.address,
-      VOTING_ENGINE,
+      REWARD_DISTRIBUTOR,
     );
     expect(claimed, "Slashed frontend fee claim should fail").toBe(false);
     expect(await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY)).toBe(feesBefore);

@@ -594,7 +594,7 @@ export async function claimSubmitterReward(
 
 /**
  * Claim participation reward after round settlement.
- * Calls RoundVotingEngine.claimParticipationReward(uint256 contentId, uint256 roundId).
+ * Calls RoundRewardDistributor.claimParticipationReward(uint256 contentId, uint256 roundId).
  * Any voter in the round can call — reverts with AlreadyClaimed on double claim.
  */
 export async function claimParticipationReward(
@@ -625,7 +625,7 @@ export async function claimParticipationReward(
 
 /**
  * Claim frontend fees for a settled round.
- * Calls RoundVotingEngine.claimFrontendFee(uint256 contentId, uint256 roundId, address frontend).
+ * Calls RoundRewardDistributor.claimFrontendFee(uint256 contentId, uint256 roundId, address frontend).
  * Permissionless, but the fee is credited or paid to the frontend specified in the round snapshot.
  */
 export async function claimFrontendFee(
@@ -993,7 +993,7 @@ export async function settleRoundDirect(
   const stateData = encodeFunctionData({
     abi: [
       {
-        name: "getRound",
+        name: "rounds",
         type: "function",
         inputs: [
           { name: "contentId", type: "uint256" },
@@ -1012,7 +1012,7 @@ export async function settleRoundDirect(
         stateMutability: "view",
       },
     ],
-    functionName: "getRound",
+    functionName: "rounds",
     args: [BigInt(contentId), BigInt(roundId)],
   });
   try {
@@ -1312,7 +1312,56 @@ export async function readTokenBalance(holder: string, tokenAddress: string): Pr
  * Read the active round ID for a content item.
  */
 export async function getActiveRoundId(contentId: number | bigint, contractAddress: string): Promise<bigint> {
-  return readUint256("getActiveRoundId", contractAddress, [BigInt(contentId)]);
+  const { encodeFunctionData } = await import("viem");
+  const currentRoundId = await readUint256("currentRoundId", contractAddress, [BigInt(contentId)]);
+  if (currentRoundId === 0n) {
+    return 0n;
+  }
+
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "rounds",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+        ],
+        outputs: [
+          {
+            name: "startTime",
+            type: "uint256",
+          },
+          {
+            name: "state",
+            type: "uint8",
+          },
+        ],
+        stateMutability: "view",
+      },
+    ],
+    functionName: "rounds",
+    args: [BigInt(contentId), currentRoundId],
+  });
+
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method: "eth_call",
+      params: [{ to: contractAddress, data }, "latest"],
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error || !json.result) {
+    return 0n;
+  }
+
+  const stateHex = "0x" + json.result.slice(66, 130);
+  const state = parseInt(stateHex, 16);
+  return state === 0 ? currentRoundId : 0n;
 }
 
 /**

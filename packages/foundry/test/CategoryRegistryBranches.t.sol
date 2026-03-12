@@ -64,7 +64,7 @@ contract CategoryRegistryBranchesTest is Test {
         crepToken.mint(admin, 1_000_000e6);
         crepToken.mint(user1, 1_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);
-        votingEngine.fundConsensusReserve(500_000e6);
+        votingEngine.addToConsensusReserve(500_000e6);
 
         vm.stopPrank();
 

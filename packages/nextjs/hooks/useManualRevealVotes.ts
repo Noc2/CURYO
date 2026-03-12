@@ -90,7 +90,7 @@ export function useManualRevealVotes(voter?: Address) {
         contracts: withCommitHashes.map(({ vote, commitKey }) => ({
           address: engineInfo.address,
           abi: engineInfo.abi,
-          functionName: "getCommit",
+          functionName: "commits",
           args: [BigInt(vote.contentId), BigInt(vote.roundId), commitKey],
         })) as any,
       });
@@ -170,7 +170,7 @@ export function useManualRevealVotes(voter?: Address) {
         const latestCommit = (await publicClient.readContract({
           address: engineInfo.address,
           abi: engineInfo.abi,
-          functionName: "getCommit",
+          functionName: "commits",
           args: [vote.contentId, vote.roundId, vote.commitKey],
         })) as CommitData;
 

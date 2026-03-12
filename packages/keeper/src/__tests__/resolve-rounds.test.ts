@@ -134,13 +134,13 @@ function makeHarness(options: {
       switch (functionName) {
         case "nextContentId":
           return 2n;
-        case "getActiveRoundId":
+        case "currentRoundId":
           return activeRoundId;
         case "nextRoundId":
           return latestRoundId;
-        case "getRound":
+        case "rounds":
           return round;
-        case "getRoundConfig":
+        case "roundConfigSnapshot":
           return roundConfig;
         case "roundRevealGracePeriodSnapshot":
           return options.revealGracePeriod ?? 3600n;
@@ -153,9 +153,11 @@ function makeHarness(options: {
               return commit.revealableAfter > max ? commit.revealableAfter : max;
             }, 0n)
           );
-        case "getRoundCommitHashes":
-          return commitKeys;
-        case "getCommit":
+        case "getRoundCommitCount":
+          return BigInt(commitKeys.length);
+        case "roundCommitHashes":
+          return commitKeys[Number(args[2])] ?? zeroHash;
+        case "commits":
           return commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n });
         case "isDormancyEligible":
           return dormancyEligible;

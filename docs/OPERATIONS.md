@@ -175,7 +175,7 @@ is no shared nonce coordinator today.
 4. Calculate the refill amount as `target - currentBalance`.
 5. Submit a governance proposal that batches:
    - `CuryoReputation.approve(<RoundVotingEngine>, amount)` and then
-   - `RoundVotingEngine.fundKeeperRewardPool(amount)` or `RoundVotingEngine.fundConsensusReserve(amount)`
+   - `RoundVotingEngine.fundKeeperRewardPool(amount)` or `RoundVotingEngine.addToConsensusReserve(amount)`
 6. Vote, queue, and execute after the normal timelock delay.
 7. Verify the refill on-chain and in the governance UI, then record the proposal ID, refill amount, and execution time in operator notes.
 

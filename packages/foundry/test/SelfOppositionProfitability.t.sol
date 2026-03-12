@@ -9,6 +9,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
@@ -84,11 +85,11 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         // Fund consensus reserve
         crepToken.mint(owner, 100_000e6);
         crepToken.approve(address(engine), 100_000e6);
-        engine.fundConsensusReserve(100_000e6);
+        engine.addToConsensusReserve(100_000e6);
 
         // Set up ParticipationPool
         pool = new ParticipationPool(address(crepToken), owner);
-        pool.setAuthorizedCaller(address(engine), true);
+        pool.setAuthorizedCaller(address(distributor), true);
 
         // Fund participation pool with 34M cREP
         crepToken.mint(owner, 34_000_000e6);
@@ -137,13 +138,13 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
     }
 
     function _forceSettle(uint256 cid) internal {
-        uint256 roundId = engine.getActiveRoundId(cid);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, cid);
         if (roundId == 0) return;
-        RoundLib.Round memory r = engine.getRound(cid, roundId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, cid, roundId);
         vm.warp(r.startTime + 1 hours + 1);
-        bytes32[] memory keys = engine.getRoundCommitHashes(cid, roundId);
+        bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, roundId);
         for (uint256 i = 0; i < keys.length; i++) {
-            RoundLib.Commit memory c = engine.getCommit(cid, roundId, keys[i]);
+            RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 bool up = uint8(c.ciphertext[0]) == 1;
                 bytes32 s;
@@ -152,7 +153,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
                 try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
             }
         }
-        RoundLib.Round memory r2 = engine.getRound(cid, roundId);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, cid, roundId);
         if (r2.thresholdReachedAt > 0) {
             try engine.settleRound(cid, roundId) { } catch { }
         }
@@ -174,17 +175,17 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         _vote(honest, cid, true, 50e6);
         _forceSettle(cid);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
         if (rid == 0) rid = 1; // round settled, getActiveRoundId may have moved on
 
         // Winner can claim participation
         vm.prank(attackerA);
-        engine.claimParticipationReward(cid, 1);
+        distributor.claimParticipationReward(cid, 1);
 
         // Loser is blocked with NotWinningSide
         vm.prank(attackerB);
-        vm.expectRevert(RoundVotingEngine.NotWinningSide.selector);
-        engine.claimParticipationReward(cid, 1);
+        vm.expectRevert(RoundRewardDistributor.NotWinningSide.selector);
+        distributor.claimParticipationReward(cid, 1);
     }
 
     // ==================== Test 2: Attack is now unprofitable at Tier 0 ====================
@@ -207,7 +208,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
 
         // Claim participation for winner only (loser is blocked)
         vm.prank(attackerA);
-        engine.claimParticipationReward(cid, 1);
+        distributor.claimParticipationReward(cid, 1);
 
         uint256 endA = crepToken.balanceOf(attackerA);
         uint256 endB = crepToken.balanceOf(attackerB);
@@ -254,7 +255,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         vm.prank(attackerA);
         distributor.claimReward(cidA, 1);
         vm.prank(attackerA);
-        engine.claimParticipationReward(cidA, 1);
+        distributor.claimParticipationReward(cidA, 1);
         // walletB cannot claim participation (NotWinningSide)
 
         uint256 endA = crepToken.balanceOf(attackerA) + crepToken.balanceOf(attackerB);
@@ -275,7 +276,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         vm.prank(attackerA);
         distributor.claimReward(cidB, 1);
         vm.prank(attackerA);
-        engine.claimParticipationReward(cidB, 1);
+        distributor.claimParticipationReward(cidB, 1);
 
         uint256 endB_honest = crepToken.balanceOf(attackerA);
         int256 profitHonest = int256(endB_honest) - int256(startB);
@@ -297,11 +298,11 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
 
         // All voters on winning side — all can claim participation
         vm.prank(attackerA);
-        engine.claimParticipationReward(cid, 1);
+        distributor.claimParticipationReward(cid, 1);
         vm.prank(attackerB);
-        engine.claimParticipationReward(cid, 1);
+        distributor.claimParticipationReward(cid, 1);
         vm.prank(honest);
-        engine.claimParticipationReward(cid, 1);
+        distributor.claimParticipationReward(cid, 1);
 
         // No revert means all claims succeeded
     }
@@ -351,12 +352,12 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
 
             // Winner claims fine
             vm.prank(attackerA);
-            engine.claimParticipationReward(cid, rid);
+            distributor.claimParticipationReward(cid, rid);
 
             // Loser blocked at every tier
             vm.prank(attackerB);
-            vm.expectRevert(RoundVotingEngine.NotWinningSide.selector);
-            engine.claimParticipationReward(cid, rid);
+            vm.expectRevert(RoundRewardDistributor.NotWinningSide.selector);
+            distributor.claimParticipationReward(cid, rid);
 
             vm.warp(block.timestamp + 24 hours + 1);
         }

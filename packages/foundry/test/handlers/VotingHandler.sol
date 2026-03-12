@@ -6,6 +6,7 @@ import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../../contracts/RoundRewardDistributor.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
 import { RoundLib } from "../../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "../helpers/RoundEngineReadHelpers.sol";
 import { VotingTestBase } from "../helpers/VotingTestHelpers.sol";
 
 /// @title VotingHandler
@@ -74,6 +75,7 @@ contract VotingHandler is VotingTestBase {
     uint256 public cancelCount;
     uint256 public revealFailedCount;
     uint256 public processCount;
+    uint256 public cleanupRewardCount;
     uint256 public claimCount;
     uint256 public submitterClaimCount;
     uint256 public refundCount;
@@ -113,13 +115,7 @@ contract VotingHandler is VotingTestBase {
         // Skip if voter doesn't have enough balance
         if (crepToken.balanceOf(voter) < stakeAmount) return;
 
-        // Check cooldown
-        uint256 lastVote = engine.lastVoteTimestamp(contentId, voter);
-        if (lastVote > 0 && block.timestamp < lastVote + 24 hours) return;
-
-        // Check if already committed in current round
-        uint256 roundId = engine.getActiveRoundId(contentId);
-        if (roundId > 0 && engine.hasCommitted(contentId, roundId, voter)) return;
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
 
         bytes32 salt = keccak256(abi.encodePacked(voter, contentId, isUp, block.timestamp, commitCount));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
@@ -131,8 +127,7 @@ contract VotingHandler is VotingTestBase {
             vm.stopPrank();
 
             // Get the round ID that was used/created
-            roundId = engine.getActiveRoundId(contentId);
-            if (roundId == 0) roundId = engine.nextRoundId(contentId);
+            roundId = RoundEngineReadHelpers.latestRoundId(engine, contentId);
 
             bytes32 commitKey = keccak256(abi.encodePacked(voter, commitHash));
 
@@ -172,13 +167,13 @@ contract VotingHandler is VotingTestBase {
         if (!record.committed || record.revealed) return;
 
         uint256 roundId = record.roundId;
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
         // Round must still be open
         if (round.state != RoundLib.RoundState.Open) return;
 
         // Get the commit to check epoch end
-        RoundLib.Commit memory commit = engine.getCommit(contentId, roundId, record.commitKey);
+        RoundLib.Commit memory commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, record.commitKey);
         if (commit.voter == address(0)) return;
 
         // Warp past epoch end if needed
@@ -200,16 +195,16 @@ contract VotingHandler is VotingTestBase {
 
     function settleRound(uint256 contentSeed) external {
         uint256 contentId = contentIds[contentSeed % contentIds.length];
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         if (roundId == 0) {
-            roundId = engine.nextRoundId(contentId);
+            roundId = RoundEngineReadHelpers.latestRoundId(engine, contentId);
             if (roundId == 0) return;
         }
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         if (round.state != RoundLib.RoundState.Open) return;
 
-        RoundLib.RoundConfig memory cfg = engine.getRoundConfig(contentId, roundId);
+        RoundLib.RoundConfig memory cfg = RoundEngineReadHelpers.roundConfig(engine, contentId, roundId);
         if (round.revealedCount < cfg.minVoters) return;
 
         uint256 reserveBefore = engine.consensusReserve();
@@ -223,7 +218,7 @@ contract VotingHandler is VotingTestBase {
             _ensureRoundRecord(contentId, roundId);
             uint256 idx = roundRecordIndex[contentId][roundId] - 1;
 
-            RoundLib.Round memory settled = engine.getRound(contentId, roundId);
+            RoundLib.Round memory settled = RoundEngineReadHelpers.round(engine, contentId, roundId);
             if (settled.state == RoundLib.RoundState.Settled) {
                 roundRecords[idx].settled = true;
             } else if (settled.state == RoundLib.RoundState.Tied) {
@@ -246,7 +241,7 @@ contract VotingHandler is VotingTestBase {
         if (!record.revealed || record.claimed) return;
 
         uint256 roundId = record.roundId;
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) return;
 
         // Check if already claimed on-chain
@@ -279,11 +274,15 @@ contract VotingHandler is VotingTestBase {
         uint256 contentId = contentIds[contentSeed % contentIds.length];
 
         // Find a settled round for this content
-        uint256 maxRound = engine.nextRoundId(contentId);
-        if (maxRound == 0) return;
+        uint256 recordCount = roundRecords.length;
+        if (recordCount == 0) return;
 
-        for (uint256 roundId = 1; roundId <= maxRound; roundId++) {
-            RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        for (uint256 i = 0; i < recordCount; i++) {
+            RoundRecord memory rec = roundRecords[i];
+            if (rec.contentId != contentId) continue;
+
+            uint256 roundId = rec.roundId;
+            RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
             if (round.state != RoundLib.RoundState.Settled) continue;
             if (distributor.submitterRewardClaimed(contentId, roundId)) continue;
 
@@ -320,7 +319,7 @@ contract VotingHandler is VotingTestBase {
         if (!record.committed || record.claimed) return;
 
         uint256 roundId = record.roundId;
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         if (round.state == RoundLib.RoundState.Cancelled) {
             // Full refunds are allowed for all committed votes.
         } else if (round.state == RoundLib.RoundState.Tied || round.state == RoundLib.RoundState.RevealFailed) {
@@ -368,10 +367,10 @@ contract VotingHandler is VotingTestBase {
 
     function cancelExpiredRound(uint256 contentSeed) external {
         uint256 contentId = contentIds[contentSeed % contentIds.length];
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         if (roundId == 0) return;
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         if (round.state != RoundLib.RoundState.Open) return;
 
         try engine.cancelExpiredRound(contentId, roundId) {
@@ -390,10 +389,10 @@ contract VotingHandler is VotingTestBase {
 
     function finalizeRevealFailedRound(uint256 contentSeed) external {
         uint256 contentId = contentIds[contentSeed % contentIds.length];
-        uint256 roundId = engine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         if (roundId == 0) return;
 
-        RoundLib.Round memory round = engine.getRound(contentId, roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         if (round.state != RoundLib.RoundState.Open) return;
 
         try engine.finalizeRevealFailedRound(contentId, roundId) {
@@ -415,7 +414,7 @@ contract VotingHandler is VotingTestBase {
         if (recordCount == 0) return;
 
         RoundRecord memory rec = roundRecords[roundSeed % recordCount];
-        RoundLib.Round memory round = engine.getRound(rec.contentId, rec.roundId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, rec.contentId, rec.roundId);
         if (
             round.state != RoundLib.RoundState.Settled && round.state != RoundLib.RoundState.Tied
                 && round.state != RoundLib.RoundState.RevealFailed
@@ -423,7 +422,7 @@ contract VotingHandler is VotingTestBase {
             return;
         }
 
-        bytes32[] memory commitKeys = engine.getRoundCommitHashes(rec.contentId, rec.roundId);
+        bytes32[] memory commitKeys = RoundEngineReadHelpers.commitKeys(engine, rec.contentId, rec.roundId);
         uint256 len = commitKeys.length;
         if (len == 0) return;
 
@@ -432,15 +431,21 @@ contract VotingHandler is VotingTestBase {
         uint256 count = bound(countSeed, 0, maxCount);
 
         uint256 voterBalancesBefore = _sumTrackedVoterBalances();
+        uint256 handlerBalanceBefore = crepToken.balanceOf(address(this));
 
         try engine.processUnrevealedVotes(rec.contentId, rec.roundId, startIndex, count) {
             uint256 voterBalancesAfter = _sumTrackedVoterBalances();
+            uint256 handlerBalanceAfter = crepToken.balanceOf(address(this));
             uint256 idx = roundRecordIndex[rec.contentId][rec.roundId] - 1;
 
             if (voterBalancesAfter > voterBalancesBefore) {
                 uint256 refundDelta = voterBalancesAfter - voterBalancesBefore;
                 ghost_totalRefunded += refundDelta;
                 roundRecords[idx].totalRefunded += refundDelta;
+            }
+
+            if (handlerBalanceAfter > handlerBalanceBefore) {
+                cleanupRewardCount++;
             }
 
             processCount++;
@@ -512,7 +517,7 @@ contract VotingHandler is VotingTestBase {
             ? commitKeys.length
             : startIndex + count;
         for (uint256 i = startIndex; i < endIndex; i++) {
-            RoundLib.Commit memory commit = engine.getCommit(contentId, roundId, commitKeys[i]);
+            RoundLib.Commit memory commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKeys[i]);
             if (commit.voter == address(0) || commit.stakeAmount != 0) continue;
 
             VoteRecord storage record = voteRecords[commit.voter][contentId];

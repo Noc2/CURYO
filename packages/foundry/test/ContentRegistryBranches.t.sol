@@ -9,6 +9,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { ICategoryRegistry } from "../contracts/interfaces/ICategoryRegistry.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
@@ -220,13 +221,13 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         participationPool = new ParticipationPool(address(crepToken), owner);
         participationPool.setAuthorizedCaller(address(registry), true);
-        participationPool.setAuthorizedCaller(address(votingEngine), true);
+        participationPool.setAuthorizedCaller(address(rewardDistributor), true);
 
         crepToken.mint(owner, 2_000_000e6);
         crepToken.approve(address(participationPool), 500_000e6);
         participationPool.depositPool(500_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);
-        votingEngine.fundConsensusReserve(500_000e6);
+        votingEngine.addToConsensusReserve(500_000e6);
 
         address[6] memory users = [submitter, voter1, voter2, voter3, keeper, delegate];
         for (uint256 i = 0; i < users.length; i++) {
@@ -701,13 +702,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, 1, true);
-        uint256 roundId = votingEngine.getActiveRoundId(1);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
 
         vm.warp(T0 + 1 hours + 1);
         votingEngine.revealVoteByCommitKey(1, roundId, commitKey, true, salt);
 
-        assertEq(votingEngine.getActiveRoundId(1), roundId, "Round should still be open");
-        assertFalse(votingEngine.hasUnrevealedVotes(1), "All votes are revealed");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, 1), roundId, "Round should still be open");
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, 1, roundId);
+        assertEq(round.voteCount, round.revealedCount, "All votes are revealed");
 
         vm.warp(T0 + 31 days);
         vm.expectRevert("Content has active round");
@@ -723,7 +725,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 29 days);
         _vote(voter1, 1, true);
 
-        uint256 roundId = votingEngine.getActiveRoundId(1);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
         vm.warp(T0 + 29 days + 7 days + 1);
         votingEngine.cancelExpiredRound(1, roundId);
 
@@ -742,7 +744,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 29 days);
         _vote(voter1, 1, true);
 
-        uint256 roundId = votingEngine.getActiveRoundId(1);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
         vm.warp(T0 + 29 days + 7 days + 1);
         votingEngine.cancelExpiredRound(1, roundId);
 

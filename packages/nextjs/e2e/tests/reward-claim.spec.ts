@@ -43,6 +43,7 @@ test.describe("Reward claim lifecycle", () => {
   test.describe.configure({ mode: "serial" });
 
   const VOTING_ENGINE = CONTRACT_ADDRESSES.RoundVotingEngine;
+  const REWARD_DISTRIBUTOR = CONTRACT_ADDRESSES.RoundRewardDistributor;
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const CONTENT_REGISTRY = CONTRACT_ADDRESSES.ContentRegistry;
   const STAKE = BigInt(10e6); // 10 cREP (above MIN_STAKE_FOR_RATING threshold)
@@ -318,7 +319,12 @@ test.describe("Reward claim lifecycle", () => {
 
     // Account #3 voted UP (winning side) — claim participation reward
     const voter = ANVIL_ACCOUNTS.account3;
-    const success = await claimParticipationReward(BigInt(settledContentId!), roundId, voter.address, VOTING_ENGINE);
+    const success = await claimParticipationReward(
+      BigInt(settledContentId!),
+      roundId,
+      voter.address,
+      REWARD_DISTRIBUTOR,
+    );
     expect(success, "Participation reward claim should succeed").toBe(true);
 
     // Double claim should revert (AlreadyClaimed)
@@ -326,7 +332,7 @@ test.describe("Reward claim lifecycle", () => {
       BigInt(settledContentId!),
       roundId,
       voter.address,
-      VOTING_ENGINE,
+      REWARD_DISTRIBUTOR,
     );
     expect(doubleClaim, "Double participation reward claim should revert").toBe(false);
   });
@@ -336,7 +342,12 @@ test.describe("Reward claim lifecycle", () => {
     test.setTimeout(60_000);
 
     const loser = ANVIL_ACCOUNTS.account7;
-    const result = await claimParticipationReward(BigInt(settledContentId!), roundId, loser.address, VOTING_ENGINE);
+    const result = await claimParticipationReward(
+      BigInt(settledContentId!),
+      roundId,
+      loser.address,
+      REWARD_DISTRIBUTOR,
+    );
     expect(result, "Losing voter participation reward claim should revert with NotWinningSide").toBe(false);
   });
 

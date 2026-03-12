@@ -712,7 +712,7 @@ batch**.
 4. Create a governance proposal executed by the timelock with these calls, in order:
    - `CuryoReputation.approve(<RoundVotingEngine>, amount)`
    - `RoundVotingEngine.fundKeeperRewardPool(amount)`
-   - or `RoundVotingEngine.fundConsensusReserve(amount)`
+   - or `RoundVotingEngine.addToConsensusReserve(amount)`
 5. Vote, queue, and execute the proposal after the standard **2-day timelock**.
 6. Verify the refill:
    - Governance UI pool balances updated
@@ -723,7 +723,7 @@ If both pools are low, batch all three calls into a single proposal:
 
 1. `approve(<RoundVotingEngine>, keeperAmount + reserveAmount)`
 2. `fundKeeperRewardPool(keeperAmount)`
-3. `fundConsensusReserve(reserveAmount)`
+3. `addToConsensusReserve(reserveAmount)`
 
 This keeps the approval scope minimal and avoids leaving a large standing allowance from the treasury to
 `RoundVotingEngine`.

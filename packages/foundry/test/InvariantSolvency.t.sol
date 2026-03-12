@@ -9,6 +9,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { VotingHandler } from "./handlers/VotingHandler.sol";
 
@@ -88,7 +89,7 @@ contract InvariantSolvency is Test {
         uint256 keeperPoolAmount = 100_000e6;
         crepToken.mint(owner, reserveAmount + keeperPoolAmount);
         crepToken.approve(address(engine), reserveAmount + keeperPoolAmount);
-        engine.fundConsensusReserve(reserveAmount);
+        engine.addToConsensusReserve(reserveAmount);
         engine.setKeeperReward(1e6);
         engine.fundKeeperRewardPool(keeperPoolAmount);
         initialKeeperRewardPool = keeperPoolAmount;
@@ -136,7 +137,7 @@ contract InvariantSolvency is Test {
             if (!rec.settled) continue;
 
             uint256 voterPool = engine.roundVoterPool(rec.contentId, rec.roundId);
-            RoundLib.Round memory round = engine.getRound(rec.contentId, rec.roundId);
+            RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, rec.contentId, rec.roundId);
 
             uint256 losingRawPool = round.upWins ? round.downPool : round.upPool;
             uint256 loserRefundPool = RewardMath.calculateRevealedLoserRefund(losingRawPool);
@@ -194,7 +195,7 @@ contract InvariantSolvency is Test {
         uint256 recordCount = handler.getRoundRecordCount();
         for (uint256 i = 0; i < recordCount; i++) {
             VotingHandler.RoundRecord memory rec = handler.getRoundRecord(i);
-            RoundLib.Round memory round = engine.getRound(rec.contentId, rec.roundId);
+            RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, rec.contentId, rec.roundId);
 
             if (round.state == RoundLib.RoundState.Open) {
                 // Open rounds: full totalStake is held
@@ -234,16 +235,7 @@ contract InvariantSolvency is Test {
         uint256 handlerBalance = crepToken.balanceOf(address(handler));
         assertEq(handlerBalance, initialKeeperRewardPool - engine.keeperRewardPool(), "keeper payout != pool delta");
 
-        uint256 cleanupRewardedRounds = 0;
-        uint256 recordCount = handler.getRoundRecordCount();
-        for (uint256 i = 0; i < recordCount; i++) {
-            VotingHandler.RoundRecord memory rec = handler.getRoundRecord(i);
-            if (engine.roundCleanupRewarded(rec.contentId, rec.roundId)) {
-                cleanupRewardedRounds++;
-            }
-        }
-
-        uint256 maxRewardableOps = handler.settleCount() + handler.cancelCount() + cleanupRewardedRounds;
+        uint256 maxRewardableOps = handler.settleCount() + handler.cancelCount() + handler.cleanupRewardCount();
         assertLe(
             handlerBalance,
             engine.keeperReward() * maxRewardableOps,
@@ -290,9 +282,9 @@ contract InvariantSolvency is Test {
         view
         returns (uint256 pending)
     {
-        bytes32[] memory commitKeys = engine.getRoundCommitHashes(contentId, roundId);
+        bytes32[] memory commitKeys = RoundEngineReadHelpers.commitKeys(engine, contentId, roundId);
         for (uint256 i = 0; i < commitKeys.length; i++) {
-            RoundLib.Commit memory commit = engine.getCommit(contentId, roundId, commitKeys[i]);
+            RoundLib.Commit memory commit = RoundEngineReadHelpers.commit(engine, contentId, roundId, commitKeys[i]);
             if (commit.stakeAmount == 0) continue;
 
             if (round.state == RoundLib.RoundState.Cancelled) {

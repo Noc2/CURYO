@@ -29,8 +29,9 @@ const FrontendCodes: NextPage = () => {
           <code>CuryoReputation.transferAndCall()</code>.
         </li>
         <li>
-          <strong>Claim:</strong> First call <code>claimFrontendFee(contentId, roundId, frontend)</code> on each settled
-          round, then withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>.
+          <strong>Claim:</strong> First call{" "}
+          <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> on each settled round, then
+          withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>.
         </li>
       </ol>
 

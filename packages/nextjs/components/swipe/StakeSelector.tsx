@@ -7,6 +7,7 @@ import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
+import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
 
 interface StakeSelectorProps {
@@ -31,13 +32,7 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
   const hasVoterId = voterIdData.hasVoterId;
   const tokenId = voterIdData.tokenId as bigint;
 
-  // Read current round for stake capacity check
-  const { data: activeRoundIdData } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine" as any,
-    functionName: "getActiveRoundId" as any,
-    args: [contentId] as any,
-  } as any);
-  const currentRoundId = activeRoundIdData as bigint | undefined;
+  const { roundId: currentRoundId } = useRoundSnapshot(contentId);
 
   // Get remaining stake capacity for this Voter ID on this content in this round
   const { remainingCapacity } = useVoterIdStake(contentId, currentRoundId, tokenId);

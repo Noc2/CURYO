@@ -57,10 +57,11 @@ const votingEngineAbi = parseAbi([
   "function commitVote(uint256 contentId, bytes32 commitHash, bytes ciphertext, uint256 stakeAmount, address frontend)",
   "function revealVoteByCommitKey(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)",
   "function settleRound(uint256 contentId, uint256 roundId)",
-  "function getActiveRoundId(uint256 contentId) view returns (uint256)",
-  "function getRound(uint256 contentId, uint256 roundId) view returns ((uint256 startTime, uint8 state, uint256 voteCount, uint256 revealedCount, uint256 totalStake, uint256 upPool, uint256 downPool, uint256 upCount, uint256 downCount, bool upWins, uint256 settledAt, uint256 thresholdReachedAt, uint256 weightedUpPool, uint256 weightedDownPool))",
-  "function getRoundCommitHashes(uint256 contentId, uint256 roundId) view returns (bytes32[])",
-  "function getCommit(uint256 contentId, uint256 roundId, bytes32 commitKey) view returns ((address voter, uint256 stakeAmount, bytes ciphertext, address frontend, uint256 revealableAfter, bool revealed, bool isUp, uint32 epochIndex))",
+  "function currentRoundId(uint256 contentId) view returns (uint256)",
+  "function rounds(uint256 contentId, uint256 roundId) view returns (uint256 startTime, uint8 state, uint256 voteCount, uint256 revealedCount, uint256 totalStake, uint256 upPool, uint256 downPool, uint256 upCount, uint256 downCount, bool upWins, uint256 settledAt, uint256 thresholdReachedAt, uint256 weightedUpPool, uint256 weightedDownPool)",
+  "function getRoundCommitCount(uint256 contentId, uint256 roundId) view returns (uint256)",
+  "function roundCommitHashes(uint256 contentId, uint256 roundId, uint256 index) view returns (bytes32)",
+  "function commits(uint256 contentId, uint256 roundId, bytes32 commitKey) view returns (address voter, uint256 stakeAmount, bytes ciphertext, address frontend, uint256 revealableAfter, bool revealed, bool isUp, uint32 epochIndex)",
   "function voterCommitHash(uint256 contentId, uint256 roundId, address voter) view returns (bytes32)",
   "function cancelExpiredRound(uint256 contentId, uint256 roundId)",
   "function claimCancelledRoundRefund(uint256 contentId, uint256 roundId)",
@@ -79,6 +80,26 @@ const publicClient = createPublicClient({ chain: foundry, transport });
 
 function walletClient(account: ReturnType<typeof privateKeyToAccount>) {
   return createWalletClient({ chain: foundry, transport, account });
+}
+
+async function readActiveRoundId(contentId: bigint) {
+  const roundId = await publicClient.readContract({
+    address: addresses.votingEngine,
+    abi: votingEngineAbi,
+    functionName: "currentRoundId",
+    args: [contentId],
+  });
+  if (roundId === 0n) {
+    return 0n;
+  }
+
+  const round = await publicClient.readContract({
+    address: addresses.votingEngine,
+    abi: votingEngineAbi,
+    functionName: "rounds",
+    args: [contentId, roundId],
+  });
+  return round.state === 0 ? roundId : 0n;
 }
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as Address;
@@ -231,12 +252,7 @@ async function testFullRoundLifecycle() {
   const { salt: s1, ck: ck1 } = await commitVote(ACCOUNTS.voter1, contentId, true, 1);
   const { salt: s2, ck: ck2 } = await commitVote(ACCOUNTS.voter2, contentId, false, 2);
 
-  const roundId = await publicClient.readContract({
-    address: addresses.votingEngine,
-    abi: votingEngineAbi,
-    functionName: "getActiveRoundId",
-    args: [contentId],
-  });
+  const roundId = await readActiveRoundId(contentId);
   assert(roundId === 1n, `Active round should be 1 (got ${roundId})`);
 
   // Verify commits were recorded (voterCommitHash != zero)
@@ -254,7 +270,7 @@ async function testFullRoundLifecycle() {
   const round = await publicClient.readContract({
     address: addresses.votingEngine,
     abi: votingEngineAbi,
-    functionName: "getRound",
+    functionName: "rounds",
     args: [contentId, roundId],
   });
   assert(round.voteCount === 2n, `Vote count should be 2 (got ${round.voteCount})`);
@@ -269,7 +285,7 @@ async function testFullRoundLifecycle() {
   const roundAfterReveal = await publicClient.readContract({
     address: addresses.votingEngine,
     abi: votingEngineAbi,
-    functionName: "getRound",
+    functionName: "rounds",
     args: [contentId, roundId],
   });
   assert(roundAfterReveal.revealedCount === 2n, `Revealed count should be 2 (got ${roundAfterReveal.revealedCount})`);
@@ -311,12 +327,7 @@ async function testCommitRevealSettle() {
   const { salt: s2, ck: ck2 } = await commitVote(ACCOUNTS.voter2, contentId, true, 20);
   const { salt: s3, ck: ck3 } = await commitVote(ACCOUNTS.voter3, contentId, false, 30);
 
-  const roundId = await publicClient.readContract({
-    address: addresses.votingEngine,
-    abi: votingEngineAbi,
-    functionName: "getActiveRoundId",
-    args: [contentId],
-  });
+  const roundId = await readActiveRoundId(contentId);
   assert(roundId === 1n, `Round should be 1 (got ${roundId})`);
 
   // Advance past epoch end
@@ -331,7 +342,7 @@ async function testCommitRevealSettle() {
   const roundAfterReveal = await publicClient.readContract({
     address: addresses.votingEngine,
     abi: votingEngineAbi,
-    functionName: "getRound",
+    functionName: "rounds",
     args: [contentId, roundId],
   });
   assert(roundAfterReveal.revealedCount === 3n, `Should have 3 revealed votes`);
@@ -354,7 +365,7 @@ async function testCommitRevealSettle() {
     const settled = await publicClient.readContract({
       address: addresses.votingEngine,
       abi: votingEngineAbi,
-      functionName: "getRound",
+      functionName: "rounds",
       args: [contentId, roundId],
     });
     // State 1 = Settled
@@ -453,12 +464,7 @@ async function testRoundAdvancementAfterSettlement() {
   const { salt: s2, ck: ck2 } = await commitVote(ACCOUNTS.voter2, contentId, true, 201);
   const { salt: s3, ck: ck3 } = await commitVote(ACCOUNTS.voter3, contentId, false, 202);
 
-  const round1Id = await publicClient.readContract({
-    address: addresses.votingEngine,
-    abi: votingEngineAbi,
-    functionName: "getActiveRoundId",
-    args: [contentId],
-  });
+  const round1Id = await readActiveRoundId(contentId);
   assert(round1Id === 1n, `First round should be 1`);
 
   // Advance past epoch so reveals can happen
@@ -484,24 +490,14 @@ async function testRoundAdvancementAfterSettlement() {
   }
 
   // No active round after settlement
-  const noActive = await publicClient.readContract({
-    address: addresses.votingEngine,
-    abi: votingEngineAbi,
-    functionName: "getActiveRoundId",
-    args: [contentId],
-  });
+  const noActive = await readActiveRoundId(contentId);
   assert(noActive === 0n, "No active round after settlement");
 
   // Advance past 24h cooldown, then start round 2
   await advanceTime(25 * 60 * 60);
   await commitVote(ACCOUNTS.voter3, contentId, false, 203);
 
-  const round2Id = await publicClient.readContract({
-    address: addresses.votingEngine,
-    abi: votingEngineAbi,
-    functionName: "getActiveRoundId",
-    args: [contentId],
-  });
+  const round2Id = await readActiveRoundId(contentId);
   assert(round2Id === 2n, `New round should be 2 (got ${round2Id})`);
 }
 

@@ -12,6 +12,7 @@ import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
 
 /// @title ContentRegistry
 /// @notice Manages content lifecycle: submission → active → dormant → revived / cancelled.
@@ -261,7 +262,7 @@ contract ContentRegistry is
         require(c.submitter == msg.sender, "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
         if (votingEngine != address(0)) {
-            require(IRoundVotingEngine(votingEngine).getContentCommitCount(contentId) == 0, "Content has votes");
+            require(IRoundVotingEngine(votingEngine).contentCommitCount(contentId) == 0, "Content has votes");
         }
 
         c.status = ContentStatus.Cancelled;
@@ -319,7 +320,12 @@ contract ContentRegistry is
         require(block.timestamp > _getDormancyAnchor(contentId, c) + DORMANCY_PERIOD, "Dormancy period not elapsed");
         // Prevent dormancy while any round is still open, even if all votes have been revealed.
         if (votingEngine != address(0)) {
-            require(IRoundVotingEngine(votingEngine).getActiveRoundId(contentId) == 0, "Content has active round");
+            uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
+            if (activeRoundId != 0) {
+                (, RoundLib.RoundState roundState,,,,,,,,,,,,) =
+                    IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
+                require(roundState != RoundLib.RoundState.Open, "Content has active round");
+            }
         }
 
         c.status = ContentStatus.Dormant;

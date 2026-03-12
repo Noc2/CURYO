@@ -110,8 +110,26 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
       {
         address: votingEngine.address,
         abi: votingEngine.abi,
-        functionName: "getFrontendFeeSnapshot" as const,
+        functionName: "roundFrontendPool" as const,
+        args: [contentId, roundId],
+      },
+      {
+        address: votingEngine.address,
+        abi: votingEngine.abi,
+        functionName: "roundPerFrontendStake" as const,
         args: [contentId, roundId, frontend],
+      },
+      {
+        address: votingEngine.address,
+        abi: votingEngine.abi,
+        functionName: "roundStakeWithApprovedFrontend" as const,
+        args: [contentId, roundId],
+      },
+      {
+        address: votingEngine.address,
+        abi: votingEngine.abi,
+        functionName: "roundApprovedFrontendCount" as const,
+        args: [contentId, roundId],
       },
       {
         address: rewardDistributor.address,
@@ -151,21 +169,31 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
     });
 
     return rounds.map((_, index) => {
-      const snapshotResult = results[index * 4];
-      const claimedResult = results[index * 4 + 1];
-      const claimedCountResult = results[index * 4 + 2];
-      const claimedAmountResult = results[index * 4 + 3];
-
-      const snapshot =
-        snapshotResult?.status === "success"
-          ? (snapshotResult.result as readonly [bigint, bigint, bigint, bigint])
-          : null;
+      const totalFrontendPoolResult = results[index * 7];
+      const frontendStakeResult = results[index * 7 + 1];
+      const totalApprovedStakeResult = results[index * 7 + 2];
+      const totalFrontendClaimantsResult = results[index * 7 + 3];
+      const claimedResult = results[index * 7 + 4];
+      const claimedCountResult = results[index * 7 + 5];
+      const claimedAmountResult = results[index * 7 + 6];
 
       return {
-        totalFrontendPool: snapshot?.[0] ?? 0n,
-        frontendStake: snapshot?.[1] ?? 0n,
-        totalApprovedStake: snapshot?.[2] ?? 0n,
-        totalFrontendClaimants: snapshot?.[3] ?? 0n,
+        totalFrontendPool:
+          totalFrontendPoolResult?.status === "success" && typeof totalFrontendPoolResult.result === "bigint"
+            ? totalFrontendPoolResult.result
+            : 0n,
+        frontendStake:
+          frontendStakeResult?.status === "success" && typeof frontendStakeResult.result === "bigint"
+            ? frontendStakeResult.result
+            : 0n,
+        totalApprovedStake:
+          totalApprovedStakeResult?.status === "success" && typeof totalApprovedStakeResult.result === "bigint"
+            ? totalApprovedStakeResult.result
+            : 0n,
+        totalFrontendClaimants:
+          totalFrontendClaimantsResult?.status === "success" && typeof totalFrontendClaimantsResult.result === "bigint"
+            ? totalFrontendClaimantsResult.result
+            : 0n,
         alreadyClaimed: claimedResult?.status === "success" ? Boolean(claimedResult.result) : false,
         claimedCount:
           claimedCountResult?.status === "success" && typeof claimedCountResult.result === "bigint"
@@ -185,13 +213,39 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
       const roundId = BigInt(item.roundId);
 
       try {
-        const [snapshot, alreadyClaimed, claimedCount, claimedAmount] = await Promise.all([
+        const [
+          totalFrontendPool,
+          frontendStake,
+          totalApprovedStake,
+          totalFrontendClaimants,
+          alreadyClaimed,
+          claimedCount,
+          claimedAmount,
+        ] = await Promise.all([
           publicClient.readContract({
             address: votingEngine.address,
             abi: votingEngine.abi,
-            functionName: "getFrontendFeeSnapshot",
+            functionName: "roundFrontendPool",
+            args: [contentId, roundId],
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: votingEngine.address,
+            abi: votingEngine.abi,
+            functionName: "roundPerFrontendStake",
             args: [contentId, roundId, frontend],
-          }) as Promise<readonly [bigint, bigint, bigint, bigint]>,
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: votingEngine.address,
+            abi: votingEngine.abi,
+            functionName: "roundStakeWithApprovedFrontend",
+            args: [contentId, roundId],
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            address: votingEngine.address,
+            abi: votingEngine.abi,
+            functionName: "roundApprovedFrontendCount",
+            args: [contentId, roundId],
+          }) as Promise<bigint>,
           publicClient.readContract({
             address: rewardDistributor.address,
             abi: rewardDistributor.abi,
@@ -213,10 +267,10 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
         ]);
 
         rows.push({
-          totalFrontendPool: snapshot[0],
-          frontendStake: snapshot[1],
-          totalApprovedStake: snapshot[2],
-          totalFrontendClaimants: snapshot[3],
+          totalFrontendPool,
+          frontendStake,
+          totalApprovedStake,
+          totalFrontendClaimants,
           alreadyClaimed,
           claimedCount,
           claimedAmount,

@@ -6,6 +6,7 @@ import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
 import { ICategoryRegistry } from "../contracts/interfaces/ICategoryRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 
@@ -56,21 +57,39 @@ contract MockVotingEngine is IRoundVotingEngine {
         totalAddedToReserve += amount;
     }
 
-    function getContentCommitCount(uint256) external pure override returns (uint256) {
+    function contentCommitCount(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function getActiveRoundId(uint256) external pure override returns (uint256) {
+    function currentRoundId(uint256) external pure override returns (uint256) {
         return 0;
     }
 
-    function hasUnrevealedVotes(uint256) external pure override returns (bool) {
-        return false;
+    function rounds(uint256, uint256)
+        external
+        pure
+        override
+        returns (
+            uint256,
+            RoundLib.RoundState,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            bool,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);
     }
 
     function transferReward(address, uint256) external override { }
-    function claimFrontendFee(uint256, uint256, address) external override { }
-    function claimParticipationReward(uint256, uint256) external override { }
 }
 
 /// @title CategoryRegistry Test Suite

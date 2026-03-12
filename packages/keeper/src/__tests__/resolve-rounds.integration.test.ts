@@ -235,7 +235,7 @@ describe("resolveRounds integration", () => {
     const roundId = (await publicClient.readContract({
       address: CONTRACTS.roundVotingEngine,
       abi: RoundVotingEngineAbi,
-      functionName: "getActiveRoundId",
+      functionName: "currentRoundId",
       args: [contentId],
     })) as bigint;
     expect(roundId).toBeGreaterThan(0n);
@@ -255,7 +255,7 @@ describe("resolveRounds integration", () => {
     const round = (await publicClient.readContract({
       address: CONTRACTS.roundVotingEngine,
       abi: RoundVotingEngineAbi,
-      functionName: "getRound",
+      functionName: "rounds",
       args: [contentId, roundId],
     })) as {
       state: number;

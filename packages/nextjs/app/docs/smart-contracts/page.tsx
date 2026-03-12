@@ -335,8 +335,8 @@ const SmartContracts: NextPage = () => {
           bounds.
         </li>
         <li>
-          <code>commitVote(...)</code> / <code>commitVoteWithPermit(...)</code> &mdash; Lower-level integration paths
-          still supported for bots, tests, and direct contract callers.
+          <code>commitVote(...)</code> &mdash; Lower-level integration path for bots, tests, and direct contract callers
+          that prefer explicit approvals instead of the default single-transaction transfer-and-call flow.
         </li>
         <li>
           <code>revealVoteByCommitKey(contentId, roundId, commitKey, isUp, salt)</code> &mdash; Reveal a previously
@@ -351,12 +351,12 @@ const SmartContracts: NextPage = () => {
           epoch-weighted stakes, splits reward pools, and updates content rating.
         </li>
         <li>
-          <code>claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators claim their
-          proportional share of the 1% frontend fee pool. Pull-based, permissionless.
+          <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators
+          claim their proportional share of the 1% frontend fee pool. Pull-based, permissionless.
         </li>
         <li>
-          <code>claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim participation rewards (rate
-          snapshotted at settlement time for fairness). Pull-based.
+          <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim
+          participation rewards (rate snapshotted at settlement time for fairness). Pull-based.
         </li>
         <li>
           <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (

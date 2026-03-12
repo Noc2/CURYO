@@ -166,7 +166,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         // Wire FrontendRegistry to VotingEngine for slashing
         frontendRegistry.setVotingEngine(address(votingEngine));
-        frontendRegistry.addFeeCreditor(address(votingEngine));
+        frontendRegistry.addFeeCreditor(address(rewardDistributor));
 
         // 9. Seed initial categories
         _seedCategories(categoryRegistry);
@@ -190,7 +190,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
         crepToken.mint(deployer, consensusPoolAmount);
         crepToken.approve(address(votingEngine), consensusPoolAmount);
-        votingEngine.fundConsensusReserve(consensusPoolAmount);
+        votingEngine.addToConsensusReserve(consensusPoolAmount);
         console.log("Funded 4M cREP to consensus reserve");
 
         // 12a. Fund keeper reward pool (dedicated pool so keeper rewards don't drain user stakes)
@@ -207,7 +207,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         // 12b. Deploy and fund ParticipationPool (34M cREP)
         ParticipationPool participationPool = new ParticipationPool(address(crepToken), governance);
-        participationPool.setAuthorizedCaller(address(votingEngine), true);
+        participationPool.setAuthorizedCaller(address(rewardDistributor), true);
         participationPool.setAuthorizedCaller(address(registry), true);
         uint256 participationAmount = 34_000_000 * 1e6; // 34M cREP
         crepToken.mint(deployer, participationAmount);

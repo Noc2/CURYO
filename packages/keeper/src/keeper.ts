@@ -194,7 +194,7 @@ async function readRound(
   return (await publicClient.readContract({
     address: engineAddr,
     abi: RoundVotingEngineAbi,
-    functionName: "getRound",
+    functionName: "rounds",
     args: [contentId, roundId],
   })) as RoundData;
 }
@@ -205,12 +205,38 @@ async function readRoundConfigForRound(
   contentId: bigint,
   roundId: bigint,
 ): Promise<RoundVotingConfig> {
-  return (await publicClient.readContract({
+  const snapshot = (await publicClient.readContract({
     address: engineAddr,
     abi: RoundVotingEngineAbi,
-    functionName: "getRoundConfig",
+    functionName: "roundConfigSnapshot",
     args: [contentId, roundId],
   })) as RoundVotingConfig;
+
+  if (snapshot.epochDuration > 0n) {
+    return snapshot;
+  }
+
+  return readRoundVotingConfig(publicClient, engineAddr);
+}
+
+async function readActiveRoundId(
+  publicClient: Pick<PublicClient, "readContract">,
+  engineAddr: `0x${string}`,
+  contentId: bigint,
+): Promise<bigint> {
+  const roundId = (await publicClient.readContract({
+    address: engineAddr,
+    abi: RoundVotingEngineAbi,
+    functionName: "currentRoundId",
+    args: [contentId],
+  })) as bigint;
+
+  if (roundId === 0n) {
+    return 0n;
+  }
+
+  const round = await readRound(publicClient, engineAddr, contentId, roundId);
+  return round.state === RoundState.Open ? roundId : 0n;
 }
 
 async function readRoundRevealGracePeriod(
@@ -236,6 +262,35 @@ async function readRoundRevealGracePeriod(
     functionName: "revealGracePeriod",
     args: [],
   })) as bigint;
+}
+
+async function readRoundCommitKeys(
+  publicClient: Pick<PublicClient, "readContract">,
+  engineAddr: `0x${string}`,
+  contentId: bigint,
+  roundId: bigint,
+): Promise<readonly `0x${string}`[]> {
+  const count = (await publicClient.readContract({
+    address: engineAddr,
+    abi: RoundVotingEngineAbi,
+    functionName: "getRoundCommitCount",
+    args: [contentId, roundId],
+  })) as bigint;
+
+  if (count === 0n) {
+    return [];
+  }
+
+  return (await Promise.all(
+    Array.from({ length: Number(count) }, (_, index) =>
+      publicClient.readContract({
+        address: engineAddr,
+        abi: RoundVotingEngineAbi,
+        functionName: "roundCommitHashes",
+        args: [contentId, roundId, BigInt(index)],
+      }) as Promise<`0x${string}`>,
+    ),
+  )) as readonly `0x${string}`[];
 }
 
 async function discoverCleanupCandidate(
@@ -334,12 +389,7 @@ export async function resolveRounds(
       let latestRoundId: bigint;
       try {
         [activeRoundId, latestRoundId] = (await Promise.all([
-          publicClient.readContract({
-            address: engineAddr,
-            abi: RoundVotingEngineAbi,
-            functionName: "getActiveRoundId",
-            args: [contentId],
-          }) as Promise<bigint>,
+          readActiveRoundId(publicClient, engineAddr, contentId),
           publicClient.readContract({
             address: engineAddr,
             abi: RoundVotingEngineAbi,
@@ -588,12 +638,7 @@ async function _revealCommits(
   // Get all commit keys for this round
   let commitKeys: readonly `0x${string}`[];
   try {
-    commitKeys = (await publicClient.readContract({
-      address: engineAddr,
-      abi: RoundVotingEngineAbi,
-      functionName: "getRoundCommitHashes",
-      args: [contentId, roundId],
-    })) as readonly `0x${string}`[];
+    commitKeys = await readRoundCommitKeys(publicClient, engineAddr, contentId, roundId);
   } catch {
     return 0;
   }
@@ -604,7 +649,7 @@ async function _revealCommits(
       const commit = (await publicClient.readContract({
         address: engineAddr,
         abi: RoundVotingEngineAbi,
-        functionName: "getCommit",
+        functionName: "commits",
         args: [contentId, roundId, commitKey],
       })) as CommitData;
 
@@ -747,12 +792,7 @@ async function _processRoundCleanupBatch(
 ): Promise<{ batchesProcessed: number; done: boolean; nextIndex: number }> {
   let commitKeys: readonly `0x${string}`[];
   try {
-    commitKeys = (await publicClient.readContract({
-      address: engineAddr,
-      abi: RoundVotingEngineAbi,
-      functionName: "getRoundCommitHashes",
-      args: [contentId, roundId],
-    })) as readonly `0x${string}`[];
+    commitKeys = await readRoundCommitKeys(publicClient, engineAddr, contentId, roundId);
   } catch {
     return { batchesProcessed: 0, done: false, nextIndex: startIndex };
   }
@@ -834,7 +874,7 @@ async function _findNextPendingCleanupIndex(
     const commit = (await publicClient.readContract({
       address: engineAddr,
       abi: RoundVotingEngineAbi,
-      functionName: "getCommit",
+      functionName: "commits",
       args: [contentId, roundId, commitKeys[i]],
     })) as CommitData;
 

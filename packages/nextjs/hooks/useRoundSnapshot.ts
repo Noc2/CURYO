@@ -15,9 +15,9 @@ export function useRoundSnapshot(contentId?: bigint) {
   const isPageVisible = usePageVisibility();
   const refetchInterval = isPageVisible ? 10_000 : false;
 
-  const { data: rawActiveRoundId, isLoading: isRoundIdLoading } = useScaffoldReadContract({
+  const { data: rawCurrentRoundId, isLoading: isRoundIdLoading } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
-    functionName: "getActiveRoundId" as any,
+    functionName: "currentRoundId" as any,
     args: [contentId] as any,
     watch: true,
     query: {
@@ -25,22 +25,25 @@ export function useRoundSnapshot(contentId?: bigint) {
       refetchInterval,
     },
   } as any);
-  const roundId = (rawActiveRoundId as unknown as bigint | undefined) ?? 0n;
+  const currentRoundId = (rawCurrentRoundId as unknown as bigint | undefined) ?? 0n;
 
   const { data: rawRoundData, isLoading: isRoundLoading } = useScaffoldReadContract({
     contractName: "RoundVotingEngine" as any,
-    functionName: "getRound" as any,
-    args: [contentId, roundId] as any,
+    functionName: "rounds" as any,
+    args: [contentId, currentRoundId] as any,
     watch: true,
     query: {
-      enabled: contentId !== undefined && roundId > 0n,
+      enabled: contentId !== undefined && currentRoundId > 0n,
       refetchInterval,
     },
   } as any);
 
+  const parsedRound = parseRound(rawRoundData);
+  const roundId = parsedRound?.state === 0 ? currentRoundId : 0n;
+
   const snapshot = deriveRoundSnapshot({
     roundId,
-    round: parseRound(rawRoundData),
+    round: roundId > 0n ? parsedRound : undefined,
     config,
     optimisticDelta,
     now,

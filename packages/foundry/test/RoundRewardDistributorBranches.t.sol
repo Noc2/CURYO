@@ -7,6 +7,7 @@ import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 
 /// @title RoundRewardDistributor branch coverage tests (tlock commit-reveal)
@@ -75,7 +76,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
 
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);
-        votingEngine.fundConsensusReserve(500_000e6);
+        votingEngine.addToConsensusReserve(500_000e6);
 
         address[5] memory users = [submitter, voter1, voter2, voter3, keeper];
         for (uint256 i = 0; i < users.length; i++) {
@@ -108,9 +109,9 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
     }
 
     function _revealAll(uint256 contentId, uint256 roundId) internal {
-        bytes32[] memory keys = votingEngine.getRoundCommitHashes(contentId, roundId);
+        bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(votingEngine, contentId, roundId);
         for (uint256 i = 0; i < keys.length; i++) {
-            RoundLib.Commit memory c = votingEngine.getCommit(contentId, roundId, keys[i]);
+            RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, contentId, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 bytes memory ct = c.ciphertext;
                 bool isUp = uint8(ct[0]) == 1;
@@ -124,14 +125,14 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
     }
 
     function _forceSettle(uint256 contentId) internal {
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         if (roundId == 0) return;
 
-        RoundLib.Round memory r = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         vm.warp(r.startTime + EPOCH_DURATION + 1);
         _revealAll(contentId, roundId);
 
-        RoundLib.Round memory r2 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         if (r2.thresholdReachedAt > 0) {
             try votingEngine.settleRound(contentId, roundId) { } catch { }
         }
@@ -148,7 +149,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         _vote(voter2, contentId, true);
         _vote(voter3, contentId, false);
 
-        roundId = votingEngine.getActiveRoundId(contentId);
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         _forceSettle(contentId);
     }
 
@@ -175,7 +176,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
 
         _vote(voter1, 1, true);
 
-        uint256 roundId = votingEngine.getActiveRoundId(1);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
 
         vm.prank(voter1);
         vm.expectRevert("Round not settled");
@@ -244,7 +245,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
 
         _vote(voter1, 1, true);
 
-        uint256 roundId = votingEngine.getActiveRoundId(1);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
 
         vm.prank(submitter);
         vm.expectRevert("Round not settled");

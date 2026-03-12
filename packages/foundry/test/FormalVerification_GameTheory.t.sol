@@ -8,6 +8,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
@@ -85,7 +86,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         // Fund consensus reserve: 100K cREP
         crepToken.mint(owner, 100_000e6);
         crepToken.approve(address(engine), 100_000e6);
-        engine.fundConsensusReserve(100_000e6);
+        engine.addToConsensusReserve(100_000e6);
 
         // Fund submitter and voters
         crepToken.mint(submitter, 100_000e6);
@@ -126,13 +127,13 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
     }
 
     function _forceSettle(uint256 cid) internal {
-        uint256 roundId = engine.getActiveRoundId(cid);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, cid);
         if (roundId == 0) return;
-        RoundLib.Round memory r = engine.getRound(cid, roundId);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, cid, roundId);
         vm.warp(r.startTime + 1 hours + 1);
-        bytes32[] memory keys = engine.getRoundCommitHashes(cid, roundId);
+        bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, roundId);
         for (uint256 i = 0; i < keys.length; i++) {
-            RoundLib.Commit memory c = engine.getCommit(cid, roundId, keys[i]);
+            RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, roundId, keys[i]);
             if (!c.revealed && c.stakeAmount > 0) {
                 bool up = uint8(c.ciphertext[0]) == 1;
                 bytes32 s;
@@ -141,7 +142,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
                 try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
             }
         }
-        RoundLib.Round memory r2 = engine.getRound(cid, roundId);
+        RoundLib.Round memory r2 = RoundEngineReadHelpers.round(engine, cid, roundId);
         if (r2.thresholdReachedAt > 0) {
             try engine.settleRound(cid, roundId) { } catch { }
         }
@@ -159,7 +160,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[3], cid, false, 50e6);
         _vote(v[4], cid, false, 50e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         // Force settle past maxEpochBlocks
         _forceSettle(cid);
@@ -202,7 +203,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[8], cid, false, 90e6);
         _vote(v[9], cid, false, 100e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         _forceSettle(cid);
 
@@ -230,11 +231,11 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[3], cid, true, 10e6);
         _vote(v[4], cid, false, 100e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         _forceSettle(cid);
 
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
         assertFalse(round.upWins, "DOWN wins - stake weight, not voter count, decides outcome");
 
         // Whale gets stake + reward from 40e6 losing pool
@@ -256,7 +257,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[3], cid, true, 100e6);
         _vote(v[4], cid, false, 1e6); // innocent victim
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         _forceSettle(cid);
 
@@ -286,7 +287,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[3], cid, true, 50e6);
         _vote(v[4], cid, true, 50e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         // Consensus settlement after maxEpochBlocks
         _forceSettle(cid);
@@ -333,7 +334,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[8], cid, false, 10e6);
         _vote(v[9], cid, false, 10e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         _forceSettle(cid);
 
@@ -379,7 +380,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[3], cid, false, 1e6);
         _vote(v[4], cid, false, 1e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         _forceSettle(cid);
 
@@ -412,11 +413,11 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[8], cid, true, 50e6);
         _vote(v[9], cid, true, 50e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         _forceSettle(cid);
 
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
         assertTrue(round.upWins, "Minnows outweigh whale (450 > 100)");
 
         // Whale gets only the fixed 5% revealed-loser rebate
@@ -442,7 +443,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[3], cid, true, 50e6); // honest
         _vote(v[4], cid, true, 50e6); // honest
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         _forceSettle(cid);
 
@@ -480,12 +481,12 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
             }
 
             // Capture round ID before settlement (getActiveRoundId returns 0 after settling)
-            uint256 rid = engine.getActiveRoundId(cid);
+            uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
             // Consensus settlement: wait for epoch end, reveal all, settle
             _forceSettle(cid);
 
-            RoundLib.Round memory round = engine.getRound(cid, rid);
+            RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
             assertEq(uint256(round.state), uint256(RoundLib.RoundState.Settled), "Round settled");
 
             // Claim rewards so voters have tokens back for next round
@@ -549,14 +550,14 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[3], cid, false, 50e6);
         _vote(v[4], cid, false, 50e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
 
         // Reveal all after epoch ends
         vm.warp(round.startTime + 1 hours + 1);
-        bytes32[] memory keys = engine.getRoundCommitHashes(cid, rid);
+        bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, cid, rid);
         for (uint256 i = 0; i < keys.length; i++) {
-            RoundLib.Commit memory c = engine.getCommit(cid, rid, keys[i]);
+            RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, cid, rid, keys[i]);
             bool up = uint8(c.ciphertext[0]) == 1;
             bytes32 s;
             bytes memory ct = c.ciphertext;
@@ -567,7 +568,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         // Settlement succeeds immediately after minVoters revealed
         engine.settleRound(cid, rid);
 
-        RoundLib.Round memory afterForce = engine.getRound(cid, rid);
+        RoundLib.Round memory afterForce = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(afterForce.state), uint256(RoundLib.RoundState.Settled), "Round settled after reveals");
     }
 
@@ -580,8 +581,8 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         (bytes32 ck1, bytes32 s1) = _vote(v[0], cid, true, 50e6);
         // Only 1 voter — minVoters=2 not reached
 
-        uint256 rid = engine.getActiveRoundId(cid);
-        RoundLib.Round memory r = engine.getRound(cid, rid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
+        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, cid, rid);
 
         vm.warp(r.startTime + 1 hours + 1);
         engine.revealVoteByCommitKey(cid, rid, ck1, true, s1);
@@ -615,12 +616,12 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         _vote(v[8], cid, false, 50e6);
         _vote(v[9], cid, false, 50e6);
 
-        uint256 rid = engine.getActiveRoundId(cid);
+        uint256 rid = RoundEngineReadHelpers.activeRoundId(engine, cid);
 
         // Force settle past maxEpochBlocks
         _forceSettle(cid);
 
-        RoundLib.Round memory round = engine.getRound(cid, rid);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, cid, rid);
         assertEq(uint256(round.state), uint256(RoundLib.RoundState.Tied), "Equal pools -> Tied");
 
         // All voters claim refund

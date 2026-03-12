@@ -8,6 +8,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
@@ -103,7 +104,7 @@ contract SecurityReentrancyTest is VotingTestBase {
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
         crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.fundConsensusReserve(reserveAmount);
+        votingEngine.addToConsensusReserve(reserveAmount);
 
         address[4] memory users = [submitter, voter1, voter2, attacker];
         for (uint256 i = 0; i < users.length; i++) {
@@ -157,7 +158,7 @@ contract SecurityReentrancyTest is VotingTestBase {
         _commit(voter1, contentId, true);
         _commit(voter2, contentId, false);
 
-        RoundLib.Round memory round = votingEngine.getRound(contentId, 1);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, 1);
         assertEq(round.voteCount, 2, "Both commits should be recorded");
     }
 
@@ -168,8 +169,8 @@ contract SecurityReentrancyTest is VotingTestBase {
         bytes32 ck1 = _commit(voter1, contentId, true);
         bytes32 ck2 = _commit(voter2, contentId, false);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
         // Reveal after epoch ends
         vm.warp(round.startTime + EPOCH_DURATION + 1);
@@ -179,31 +180,15 @@ contract SecurityReentrancyTest is VotingTestBase {
         // Settle
         votingEngine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round2 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round2 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertTrue(
             round2.state == RoundLib.RoundState.Settled || round2.state == RoundLib.RoundState.Tied,
             "Round should be settled or tied"
         );
     }
 
-    /// @notice onlySelf functions revert when called externally
-    function test_OnlySelf_BlocksExternalCallers() public {
-        vm.startPrank(attacker);
-
-        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
-        votingEngine.transferTokenExternal(attacker, 100e6);
-
-        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
-        votingEngine.distributeCategoryFeeExternal(1, 1, 50);
-
-        vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
-        votingEngine.checkSubmitterStakeExternal(1);
-
-        vm.stopPrank();
-    }
-
     function _revealFromCiphertext(uint256 cid, uint256 roundId, bytes32 commitKey) internal {
-        RoundLib.Commit memory c = votingEngine.getCommit(cid, roundId, commitKey);
+        RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, cid, roundId, commitKey);
         if (c.revealed || c.stakeAmount == 0) return;
         bool up = uint8(c.ciphertext[0]) == 1;
         bytes32 s;
@@ -216,208 +201,7 @@ contract SecurityReentrancyTest is VotingTestBase {
 }
 
 // ============================================================================
-// Section 2 — ERC20Permit Tests
-// ============================================================================
-
-contract SecurityPermitTest is VotingTestBase {
-    CuryoReputation crepToken;
-    ContentRegistry registry;
-    RoundVotingEngine votingEngine;
-
-    address owner = address(0xA);
-    address treasury = address(0xB);
-    address submitter = address(0xC);
-
-    uint256 voterPk;
-    address voter;
-
-    uint256 constant STAKE = 10e6;
-    uint256 constant EPOCH_DURATION = 5 minutes;
-
-    function setUp() public {
-        vm.warp(1000);
-
-        (voter, voterPk) = makeAddrAndKey("voter");
-
-        vm.startPrank(owner);
-
-        crepToken = new CuryoReputation(owner, owner);
-        crepToken.grantRole(crepToken.MINTER_ROLE(), owner);
-
-        ContentRegistry registryImpl = new ContentRegistry();
-        RoundVotingEngine engineImpl = new RoundVotingEngine();
-
-        registry = ContentRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(registryImpl),
-                    abi.encodeCall(ContentRegistry.initialize, (owner, owner, address(crepToken)))
-                )
-            )
-        );
-
-        votingEngine = RoundVotingEngine(
-            address(
-                new ERC1967Proxy(
-                    address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
-                )
-            )
-        );
-
-        registry.setVotingEngine(address(votingEngine));
-        votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
-
-        uint256 reserveAmount = 1_000_000e6;
-        crepToken.mint(owner, reserveAmount);
-        crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.fundConsensusReserve(reserveAmount);
-
-        crepToken.mint(submitter, 10_000e6);
-        crepToken.mint(voter, 10_000e6);
-
-        vm.stopPrank();
-    }
-
-    function _signPermit(uint256 pk, address signer, address spender, uint256 value, uint256 nonce, uint256 deadline)
-        internal
-        view
-        returns (uint8 v, bytes32 r, bytes32 s)
-    {
-        bytes32 PERMIT_TYPEHASH =
-            keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, signer, spender, value, nonce, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", crepToken.DOMAIN_SEPARATOR(), structHash));
-        (v, r, s) = vm.sign(pk, digest);
-    }
-
-    function _submitContent() internal returns (uint256) {
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "test goal", "test", 0);
-        vm.stopPrank();
-        return 1;
-    }
-
-    /// @notice Valid permit signature allows commitVoteWithPermit in a single tx
-    function test_Permit_ValidSignature_CommitsWithPermit() public {
-        uint256 contentId = _submitContent();
-
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
-
-        uint256 deadline = block.timestamp + 1 hours;
-        uint256 nonce = crepToken.nonces(voter);
-        (uint8 v, bytes32 r, bytes32 s) = _signPermit(voterPk, voter, address(votingEngine), STAKE, nonce, deadline);
-
-        vm.prank(voter);
-        votingEngine.commitVoteWithPermit(contentId, commitHash, ciphertext, STAKE, deadline, v, r, s, address(0));
-
-        RoundLib.Round memory round = votingEngine.getRound(contentId, 1);
-        assertEq(round.voteCount, 1, "Commit should be recorded");
-        assertEq(crepToken.allowance(voter, address(votingEngine)), 0, "Allowance should be consumed");
-        assertEq(crepToken.nonces(voter), nonce + 1, "Nonce should be incremented");
-    }
-
-    /// @notice Expired deadline causes permit to silently fail (try-catch for front-run protection),
-    ///         then transferFrom reverts with ERC20InsufficientAllowance since no allowance exists.
-    function test_Permit_ExpiredDeadline_Reverts() public {
-        uint256 contentId = _submitContent();
-
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
-
-        uint256 deadline = block.timestamp - 1;
-        uint256 nonce = crepToken.nonces(voter);
-        (uint8 v, bytes32 r, bytes32 s) = _signPermit(voterPk, voter, address(votingEngine), STAKE, nonce, deadline);
-
-        vm.prank(voter);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                bytes4(keccak256("ERC20InsufficientAllowance(address,uint256,uint256)")),
-                address(votingEngine),
-                0,
-                STAKE
-            )
-        );
-        votingEngine.commitVoteWithPermit(contentId, commitHash, ciphertext, STAKE, deadline, v, r, s, address(0));
-    }
-
-    /// @notice Signature from wrong private key reverts with ERC2612InvalidSigner
-    function test_Permit_WrongSigner_Reverts() public {
-        uint256 contentId = _submitContent();
-
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
-
-        uint256 deadline = block.timestamp + 1 hours;
-        uint256 nonce = crepToken.nonces(voter);
-        (, uint256 wrongPk) = makeAddrAndKey("wrongSigner");
-        (uint8 v, bytes32 r, bytes32 s) = _signPermit(wrongPk, voter, address(votingEngine), STAKE, nonce, deadline);
-
-        vm.prank(voter);
-        vm.expectRevert();
-        votingEngine.commitVoteWithPermit(contentId, commitHash, ciphertext, STAKE, deadline, v, r, s, address(0));
-    }
-
-    /// @notice Replayed signature (same nonce) reverts on second use
-    function test_Permit_ReplayedNonce_Reverts() public {
-        uint256 contentId = _submitContent();
-
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
-
-        uint256 deadline = block.timestamp + 1 hours;
-        uint256 nonce = crepToken.nonces(voter);
-        (uint8 v, bytes32 r, bytes32 s) = _signPermit(voterPk, voter, address(votingEngine), STAKE, nonce, deadline);
-
-        // First use succeeds
-        vm.prank(voter);
-        votingEngine.commitVoteWithPermit(contentId, commitHash, ciphertext, STAKE, deadline, v, r, s, address(0));
-
-        // Submit new content
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/2", "test goal", "test", 0);
-        vm.stopPrank();
-
-        bytes32 salt2 = keccak256(abi.encodePacked(voter, block.timestamp, uint256(2)));
-        bytes32 commitHash2 = _commitHash(true, salt2, uint256(2));
-        bytes memory ciphertext2 = abi.encodePacked(uint8(1), salt2, uint256(2));
-
-        // Second use of same signature should revert (nonce consumed)
-        vm.prank(voter);
-        vm.expectRevert();
-        votingEngine.commitVoteWithPermit(2, commitHash2, ciphertext2, STAKE, deadline, v, r, s, address(0));
-    }
-
-    /// @notice Permit signed for different amount than stakeAmount reverts
-    function test_Permit_WrongAmount_Reverts() public {
-        uint256 contentId = _submitContent();
-
-        bytes32 salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId));
-        bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory ciphertext = abi.encodePacked(uint8(1), salt, contentId);
-
-        uint256 deadline = block.timestamp + 1 hours;
-        uint256 nonce = crepToken.nonces(voter);
-        uint256 permitAmount = 1e6;
-        (uint8 v, bytes32 r, bytes32 s) =
-            _signPermit(voterPk, voter, address(votingEngine), permitAmount, nonce, deadline);
-
-        vm.prank(voter);
-        vm.expectRevert();
-        votingEngine.commitVoteWithPermit(contentId, commitHash, ciphertext, STAKE, deadline, v, r, s, address(0));
-    }
-}
-
-// ============================================================================
-// Section 3 — ERC1363 transferAndCall Tests
+// Section 2 — ERC1363 transferAndCall Tests
 // ============================================================================
 
 contract SecurityTransferAndCallTest is VotingTestBase {
@@ -469,7 +253,7 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
         crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.fundConsensusReserve(reserveAmount);
+        votingEngine.addToConsensusReserve(reserveAmount);
 
         crepToken.mint(submitter, 10_000e6);
         crepToken.mint(voter, 10_000e6);
@@ -517,7 +301,7 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.Unauthorized.selector);
         crepToken.transferFromAndCall(voter, address(votingEngine), STAKE, payload);
 
-        assertEq(votingEngine.getActiveRoundId(contentId), 0, "no round created");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "no round created");
         assertEq(crepToken.balanceOf(voter), voterBalanceBefore, "voter balance unchanged");
         assertEq(crepToken.balanceOf(address(votingEngine)), 1_000_000e6, "engine only holds reserve");
     }
@@ -530,7 +314,7 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         vm.expectRevert();
         crepToken.transferAndCall(address(votingEngine), STAKE, hex"1234");
 
-        assertEq(votingEngine.getActiveRoundId(contentId), 0, "no round created");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "no round created");
         assertEq(crepToken.balanceOf(voter), voterBalanceBefore, "voter balance unchanged");
         assertEq(crepToken.balanceOf(address(votingEngine)), 1_000_000e6, "engine only holds reserve");
     }
@@ -541,7 +325,7 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         vm.prank(voter);
         crepToken.transfer(address(votingEngine), STAKE);
 
-        assertEq(votingEngine.getActiveRoundId(contentId), 0, "plain transfers do not create rounds");
+        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "plain transfers do not create rounds");
         assertEq(crepToken.balanceOf(address(votingEngine)), 1_000_000e6 + STAKE, "tokens transferred without vote");
     }
 }
@@ -599,7 +383,7 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
         crepToken.approve(address(votingEngine), reserveAmount);
-        votingEngine.fundConsensusReserve(reserveAmount);
+        votingEngine.addToConsensusReserve(reserveAmount);
 
         address[3] memory users = [submitter, voter1, voter2];
         for (uint256 i = 0; i < users.length; i++) {
@@ -629,7 +413,7 @@ contract SecuritySettlementTimingTest is VotingTestBase {
     }
 
     function _revealFromCiphertext(uint256 cid, uint256 roundId, bytes32 commitKey) internal {
-        RoundLib.Commit memory c = votingEngine.getCommit(cid, roundId, commitKey);
+        RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, cid, roundId, commitKey);
         if (c.revealed || c.stakeAmount == 0) return;
         bool up = uint8(c.ciphertext[0]) == 1;
         bytes32 s;
@@ -645,12 +429,12 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         uint256 contentId = _submitContent();
         bytes32 ck1 = _commit(voter1, contentId, true);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
         // Still before epoch end — reveal should revert
         vm.warp(round.startTime + EPOCH_DURATION - 1);
-        RoundLib.Commit memory c = votingEngine.getCommit(contentId, roundId, ck1);
+        RoundLib.Commit memory c = RoundEngineReadHelpers.commit(votingEngine, contentId, roundId, ck1);
         bool up = uint8(c.ciphertext[0]) == 1;
         bytes32 s;
         bytes memory ct = c.ciphertext;
@@ -667,8 +451,8 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         bytes32 ck1 = _commit(voter1, contentId, true);
         bytes32 ck2 = _commit(voter2, contentId, false);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         _revealFromCiphertext(contentId, roundId, ck1);
@@ -676,7 +460,7 @@ contract SecuritySettlementTimingTest is VotingTestBase {
 
         votingEngine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round2 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round2 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertTrue(
             round2.state == RoundLib.RoundState.Settled || round2.state == RoundLib.RoundState.Tied,
             "Round should be settled at maxEpochBlocks"
@@ -691,8 +475,8 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         bytes32 ck1 = _commit(voter1, contentId, true);
         bytes32 ck2 = _commit(voter2, contentId, true);
 
-        uint256 roundId = votingEngine.getActiveRoundId(contentId);
-        RoundLib.Round memory round = votingEngine.getRound(contentId, roundId);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
 
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         _revealFromCiphertext(contentId, roundId, ck1);
@@ -700,7 +484,7 @@ contract SecuritySettlementTimingTest is VotingTestBase {
 
         votingEngine.settleRound(contentId, roundId);
 
-        RoundLib.Round memory round2 = votingEngine.getRound(contentId, roundId);
+        RoundLib.Round memory round2 = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
         assertEq(uint8(round2.state), uint8(RoundLib.RoundState.Settled), "Should settle as consensus");
         assertTrue(round2.upWins, "UP should win in one-sided UP round");
     }
@@ -807,7 +591,7 @@ contract SecurityAccessControlTest is Test {
     function test_ACL_Engine_fundConsensusReserve_Unauthorized() public {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.fundConsensusReserve(100);
+        votingEngine.addToConsensusReserve(100);
     }
 
     function test_ACL_Engine_fundKeeperRewardPool_Unauthorized() public {
