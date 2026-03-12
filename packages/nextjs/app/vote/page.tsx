@@ -715,26 +715,32 @@ const HomeInner = () => {
               ) : null}
 
               {primaryItem ? (
-                <FeedVoteCard
-                  item={primaryItem}
-                  submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                  onSwipe={handleSwipe}
-                  onVote={handleButtonVote}
-                  onToggleWatch={handleToggleWatch}
-                  onToggleFollow={handleToggleFollow}
-                  watched={watchedContentIds.has(primaryItem.id.toString())}
-                  watchPending={isWatchPending(primaryItem.id)}
-                  following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                  followPending={isFollowPending(primaryItem.submitter)}
-                  normalizedAddress={normalizedAddress}
-                  isCommitting={isCommitting}
-                  voteError={voteError}
-                  address={address}
-                />
+                <div key={primaryItem.id.toString()} className="motion-safe:animate-vote-card-promote">
+                  <FeedVoteCard
+                    item={primaryItem}
+                    submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                    onSwipe={handleSwipe}
+                    onVote={handleButtonVote}
+                    onToggleWatch={handleToggleWatch}
+                    onToggleFollow={handleToggleFollow}
+                    watched={watchedContentIds.has(primaryItem.id.toString())}
+                    watchPending={isWatchPending(primaryItem.id)}
+                    following={followedWallets.has(primaryItem.submitter.toLowerCase())}
+                    followPending={isFollowPending(primaryItem.submitter)}
+                    normalizedAddress={normalizedAddress}
+                    isCommitting={isCommitting}
+                    voteError={voteError}
+                    address={address}
+                  />
+                </div>
               ) : null}
 
               {queueItems.length > 0 ? (
-                <section className="space-y-3" aria-label="Up next queue">
+                <section
+                  key={primaryItem?.id.toString() ?? "queue-empty"}
+                  className="space-y-3 motion-safe:animate-vote-queue-settle"
+                  aria-label="Up next queue"
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-base-content/45">Up next</p>
