@@ -751,7 +751,7 @@ const HomeInner = () => {
   });
 
   return (
-    <div className="flex grow flex-col items-center px-4 pt-4 pb-8 xl:h-[100dvh] xl:max-h-[100dvh] xl:min-h-0 xl:overflow-hidden xl:px-5 xl:pt-3 xl:pb-3 2xl:px-6">
+    <div className="flex grow flex-col items-center px-4 pt-4 pb-8 xl:h-full xl:max-h-full xl:min-h-0 xl:overflow-hidden xl:px-5 xl:pt-3 xl:pb-3 2xl:px-6">
       <div className="w-full xl:flex xl:h-full xl:min-h-0 xl:max-w-[min(120rem,calc(100vw-18rem))] xl:flex-col 2xl:max-w-[min(136rem,calc(100vw-18rem))]">
         <VotingGuide />
         <div className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-3 xl:flex-nowrap">
