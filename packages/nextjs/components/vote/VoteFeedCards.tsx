@@ -380,7 +380,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       onClick={() => onSelect(item.id, item.categoryId)}
-      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:h-full xl:min-h-[14rem] xl:min-w-0 xl:w-auto xl:max-w-none 2xl:min-h-[15rem] ${
+      className={`group flex w-[11rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12rem] xl:w-[12.5rem] xl:max-w-none [@media(min-height:1150px)]:xl:h-full [@media(min-height:1150px)]:xl:min-h-[14rem] [@media(min-height:1150px)]:xl:min-w-0 [@media(min-height:1150px)]:xl:w-auto ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
           : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"

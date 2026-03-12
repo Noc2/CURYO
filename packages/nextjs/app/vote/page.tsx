@@ -870,13 +870,13 @@ const HomeInner = () => {
             {visibleFeedItems.length > 0 ? (
               <section
                 key={primaryItem?.id.toString() ?? "queue-empty"}
-                className="motion-safe:animate-vote-queue-settle xl:min-h-[12rem] xl:flex-1 xl:overflow-hidden 2xl:min-h-[18rem]"
+                className="motion-safe:animate-vote-queue-settle xl:min-h-[12rem] [@media(min-height:1150px)]:xl:flex-1 [@media(min-height:1150px)]:xl:overflow-hidden [@media(min-height:1300px)]:xl:min-h-[18rem]"
                 aria-label="Up next queue"
               >
                 <div
                   ref={queueRailRef}
                   data-disable-queue-wheel="true"
-                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:grid xl:h-full xl:grid-cols-[repeat(auto-fit,minmax(11.25rem,1fr))] xl:auto-rows-[minmax(14rem,1fr)] xl:content-start xl:gap-2.5 xl:overflow-x-hidden xl:overflow-y-auto xl:snap-none"
+                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:pb-1 [@media(min-height:1150px)]:xl:grid [@media(min-height:1150px)]:xl:h-full [@media(min-height:1150px)]:xl:grid-cols-[repeat(auto-fit,minmax(11.25rem,1fr))] [@media(min-height:1150px)]:xl:auto-rows-[minmax(14rem,1fr)] [@media(min-height:1150px)]:xl:content-start [@media(min-height:1150px)]:xl:gap-2.5 [@media(min-height:1150px)]:xl:overflow-x-hidden [@media(min-height:1150px)]:xl:overflow-y-auto [@media(min-height:1150px)]:xl:pb-0 [@media(min-height:1150px)]:xl:snap-none"
                 >
                   {visibleFeedItems.map(item => (
                     <FeedQueueCard
