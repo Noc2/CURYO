@@ -10,10 +10,12 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
+import { renderRankingQuestion } from "~~/lib/categories/rankingQuestionTemplate";
 
 interface VotingQuestionCardProps {
   contentId: bigint;
   categoryId: bigint;
+  title?: string;
   onVote: (isUp: boolean) => void;
   isCommitting: boolean;
   address?: string;
@@ -48,6 +50,7 @@ function getCountdownUrgency(seconds: number): CountdownUrgency {
 export function VotingQuestionCard({
   contentId,
   categoryId,
+  title,
   onVote,
   isCommitting,
   address,
@@ -71,11 +74,12 @@ export function VotingQuestionCard({
 
   // Build the question text from the category's ranking question
   const questionText = useMemo(() => {
-    if (category?.rankingQuestion) {
-      return category.rankingQuestion.replace("{rating}", currentRatingValue.toString());
-    }
-    return `Should this ${contentLabel} be rated higher or lower than ${currentRatingValue} out of 100?`;
-  }, [category, currentRatingValue, contentLabel]);
+    return renderRankingQuestion(category?.rankingQuestion, {
+      title,
+      rating: currentRatingValue,
+      fallbackLabel: contentLabel,
+    });
+  }, [category?.rankingQuestion, contentLabel, currentRatingValue, title]);
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId);
