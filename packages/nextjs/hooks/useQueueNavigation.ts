@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 interface UseQueueNavigationOptions {
   enabled: boolean;
   onNavigate: (direction: "previous" | "next") => boolean;
+  enableWheel?: boolean;
   cooldownMs?: number;
   threshold?: number;
 }
@@ -17,13 +18,33 @@ function isInteractiveTarget(target: EventTarget | null) {
   );
 }
 
+function getScrollableAncestor(target: EventTarget | null, container: HTMLElement) {
+  if (!(target instanceof HTMLElement)) return null;
+
+  let current: HTMLElement | null = target;
+  while (current && current !== container) {
+    const style = window.getComputedStyle(current);
+    const canScrollY = /(auto|scroll|overlay)/.test(style.overflowY) && current.scrollHeight > current.clientHeight + 1;
+
+    if (canScrollY) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return null;
+}
+
 export function useQueueNavigation<T extends HTMLElement>({
   enabled,
   onNavigate,
+  enableWheel = false,
   cooldownMs = 320,
   threshold = 72,
 }: UseQueueNavigationOptions) {
   const containerRef = useRef<T | null>(null);
+  const wheelAccumulatorRef = useRef(0);
   const coolingDownRef = useRef(false);
   const touchGestureRef = useRef<{
     startX: number;
@@ -38,6 +59,37 @@ export function useQueueNavigation<T extends HTMLElement>({
     const node = containerRef.current;
     if (!node || !enabled) return;
     if (typeof window === "undefined") return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (!enableWheel) return;
+      if (coolingDownRef.current) return;
+      if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      if (isInteractiveTarget(event.target)) return;
+
+      const scrollableAncestor = getScrollableAncestor(event.target, node);
+      if (scrollableAncestor) {
+        const canScrollDown =
+          scrollableAncestor.scrollTop + scrollableAncestor.clientHeight < scrollableAncestor.scrollHeight - 1;
+        const canScrollUp = scrollableAncestor.scrollTop > 1;
+
+        if ((event.deltaY > 0 && canScrollDown) || (event.deltaY < 0 && canScrollUp)) {
+          return;
+        }
+      }
+
+      wheelAccumulatorRef.current += event.deltaY;
+      if (Math.abs(wheelAccumulatorRef.current) < threshold) return;
+
+      const direction = wheelAccumulatorRef.current > 0 ? "next" : "previous";
+      wheelAccumulatorRef.current = 0;
+      if (!onNavigate(direction)) return;
+
+      event.preventDefault();
+      coolingDownRef.current = true;
+      window.setTimeout(() => {
+        coolingDownRef.current = false;
+      }, cooldownMs);
+    };
 
     const handleTouchStart = (event: TouchEvent) => {
       if (coolingDownRef.current || event.touches.length !== 1) return;
@@ -103,18 +155,20 @@ export function useQueueNavigation<T extends HTMLElement>({
       touchGestureRef.current = null;
     };
 
+    node.addEventListener("wheel", handleWheel, { passive: false });
     node.addEventListener("touchstart", handleTouchStart, { passive: true });
     node.addEventListener("touchmove", handleTouchMove, { passive: false });
     node.addEventListener("touchend", handleTouchEnd, { passive: true });
     node.addEventListener("touchcancel", handleTouchCancel, { passive: true });
 
     return () => {
+      node.removeEventListener("wheel", handleWheel);
       node.removeEventListener("touchstart", handleTouchStart);
       node.removeEventListener("touchmove", handleTouchMove);
       node.removeEventListener("touchend", handleTouchEnd);
       node.removeEventListener("touchcancel", handleTouchCancel);
     };
-  }, [cooldownMs, enabled, onNavigate, threshold]);
+  }, [cooldownMs, enableWheel, enabled, onNavigate, threshold]);
 
   return containerRef;
 }

@@ -755,6 +755,50 @@ const HomeInner = () => {
     [displayFeed.length, handleNavigateSelection, handleSelectByIndex],
   );
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (stakeModal.isOpen) return;
+
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest(
+          "input,textarea,select,button,[contenteditable='true'],[role='textbox'],[role='searchbox'],[data-disable-queue-wheel='true']",
+        )
+      ) {
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        handleNavigateSelection("previous");
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        handleNavigateSelection("next");
+        return;
+      }
+
+      if (event.key === "Home" || event.key === "PageUp") {
+        event.preventDefault();
+        handleSelectByIndex(0);
+        return;
+      }
+
+      if (event.key === "End" || event.key === "PageDown") {
+        event.preventDefault();
+        handleSelectByIndex(displayFeed.length - 1);
+      }
+    };
+
+    window.addEventListener("keydown", handleWindowKeyDown);
+    return () => window.removeEventListener("keydown", handleWindowKeyDown);
+  }, [displayFeed.length, handleNavigateSelection, handleSelectByIndex, stakeModal.isOpen]);
+
   const handleCardDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
       if (!canSwipeNavigate) return;
@@ -920,6 +964,7 @@ const HomeInner = () => {
 
   const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
     enabled: Boolean(canSwipeNavigate && primaryItem),
+    enableWheel: !supportsTouchNavigation,
     onNavigate: handleNavigateSelection,
   });
 
@@ -1008,7 +1053,6 @@ const HomeInner = () => {
                   <motion.div
                     key={primaryItem.id.toString()}
                     custom={navigationDirection}
-                    data-disable-queue-wheel="true"
                     className="touch-pan-y"
                     variants={voteCardVariants}
                     initial="enter"
