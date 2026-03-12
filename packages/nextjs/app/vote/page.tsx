@@ -8,6 +8,7 @@ import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
+import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
@@ -300,7 +301,8 @@ const HomeInner = () => {
       const q = searchQuery.toLowerCase();
       items = items.filter(
         item =>
-          item.goal.toLowerCase().includes(q) ||
+          item.title.toLowerCase().includes(q) ||
+          item.description.toLowerCase().includes(q) ||
           item.url.toLowerCase().includes(q) ||
           item.tags.some(tag => tag.toLowerCase().includes(q)),
       );
@@ -751,151 +753,152 @@ const HomeInner = () => {
   });
 
   return (
-    <div className="flex grow flex-col items-center px-4 pt-4 pb-8 xl:h-full xl:max-h-full xl:min-h-0 xl:overflow-hidden xl:px-5 xl:pt-2 xl:pb-2 2xl:px-6">
-      <div className="w-full xl:flex xl:h-full xl:min-h-0 xl:max-w-[min(120rem,calc(100vw-18rem))] xl:flex-col 2xl:max-w-[min(136rem,calc(100vw-18rem))]">
-        <VotingGuide />
-        <div
-          className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
-          data-disable-queue-wheel="true"
-        >
-          <CategoryFilter
-            categories={categories}
-            activeCategory={activeCategory}
-            onSelect={selectCategory}
-            pillClassName={(cat, isActive) => {
-              if (cat !== BROKEN_FILTER) return undefined;
-              return isActive
-                ? "bg-warning/20 text-warning border border-warning/40"
-                : "bg-base-200 text-warning/70 hover:bg-warning/10";
+    <AppPageShell
+      outerClassName="xl:h-full xl:max-h-full xl:min-h-0 xl:overflow-hidden"
+      contentClassName="xl:flex xl:h-full xl:min-h-0 xl:flex-col"
+    >
+      <VotingGuide />
+      <div
+        className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
+        data-disable-queue-wheel="true"
+      >
+        <CategoryFilter
+          categories={categories}
+          activeCategory={activeCategory}
+          onSelect={selectCategory}
+          pillClassName={(cat, isActive) => {
+            if (cat !== BROKEN_FILTER) return undefined;
+            return isActive
+              ? "bg-warning/20 text-warning border border-warning/40"
+              : "bg-base-200 text-warning/70 hover:bg-warning/10";
+          }}
+        />
+        {address ? (
+          <FeedScopeFilter
+            value={scope}
+            options={SCOPE_OPTIONS}
+            onChange={value => {
+              void handleScopeChange(value as ScopeOption);
             }}
+            label="Feed"
           />
-          {address ? (
-            <FeedScopeFilter
-              value={scope}
-              options={SCOPE_OPTIONS}
-              onChange={value => {
-                void handleScopeChange(value as ScopeOption);
-              }}
-              label="Feed"
-            />
-          ) : null}
-          <div className="shrink-0 flex items-center">
-            <StreakCounter />
-          </div>
-        </div>
-
-        {isSearchMode ? (
-          <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
-            <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-              Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
-            </div>
-            <select
-              value={effectiveSearchSortBy}
-              onChange={e => setSortBy(e.target.value as SearchSortOption)}
-              className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
-              aria-label="Sort search results"
-            >
-              {SEARCH_SORT_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
         ) : null}
-
-        <div className="min-w-0 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
-          {/* Main content */}
-          {isLoading || categoriesLoading || scopeLoading ? (
-            <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-0">
-              <span className="loading loading-spinner loading-lg text-primary"></span>
-            </div>
-          ) : displayFeed.length === 0 ? (
-            <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-0">
-              {emptyStateMessage}
-            </div>
-          ) : (
-            <div
-              ref={activeCardRegionRef}
-              className="space-y-5 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:space-y-2.5"
-            >
-              {isCommitting ? (
-                <div className="flex shrink-0 items-center justify-center">
-                  <span className="text-base text-base-content/50">
-                    <span className="loading loading-spinner loading-xs mr-1.5"></span>
-                    Committing...
-                  </span>
-                </div>
-              ) : null}
-
-              {primaryItem ? (
-                <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-none xl:flex-col">
-                  <div className="xl:min-h-0 xl:flex-none">
-                    <div
-                      key={primaryItem.id.toString()}
-                      className={`touch-pan-y xl:min-h-0 ${
-                        navigationDirection === "next"
-                          ? "motion-safe:animate-vote-card-next"
-                          : "motion-safe:animate-vote-card-prev"
-                      }`}
-                    >
-                      <FeedVoteCard
-                        item={primaryItem}
-                        submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                        onVote={handleButtonVote}
-                        onToggleWatch={handleToggleWatch}
-                        onToggleFollow={handleToggleFollow}
-                        watched={watchedContentIds.has(primaryItem.id.toString())}
-                        watchPending={isWatchPending(primaryItem.id)}
-                        following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                        followPending={isFollowPending(primaryItem.submitter)}
-                        normalizedAddress={normalizedAddress}
-                        isCommitting={isCommitting}
-                        voteError={voteError}
-                        address={address}
-                        onPrevious={handleSelectPrevious}
-                        onNext={handleSelectNext}
-                        canPrevious={activeSourceIndex > 0}
-                        canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {visibleFeedItems.length > 0 ? (
-                <section
-                  key={primaryItem?.id.toString() ?? "queue-empty"}
-                  className="motion-safe:animate-vote-queue-settle xl:min-h-[10rem] xl:flex-1 xl:overflow-hidden 2xl:min-h-[16rem]"
-                  aria-label="Up next queue"
-                >
-                  <div
-                    ref={queueRailRef}
-                    data-disable-queue-wheel="true"
-                    className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:gap-2.5 2xl:grid 2xl:auto-cols-[10rem] 2xl:grid-flow-col 2xl:grid-rows-2 2xl:content-start 2xl:gap-2.5"
-                  >
-                    {visibleFeedItems.map(item => (
-                      <FeedQueueCard
-                        key={item.id.toString()}
-                        item={item}
-                        onSelect={handleSelectCard}
-                        queuePosition={displayFeed.findIndex(feedItem => feedItem.id === item.id)}
-                        selected={item.id === primaryItem?.id}
-                        submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-
-              {canLoadMore ? (
-                <div ref={loadMoreRef} className="flex justify-center py-8 xl:hidden">
-                  <span className="loading loading-spinner loading-md text-primary"></span>
-                </div>
-              ) : null}
-            </div>
-          )}
+        <div className="shrink-0 flex items-center">
+          <StreakCounter />
         </div>
+      </div>
+
+      {isSearchMode ? (
+        <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
+          <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
+            Results for <span className="font-medium text-white">&quot;{searchQuery.trim()}&quot;</span>
+          </div>
+          <select
+            value={effectiveSearchSortBy}
+            onChange={e => setSortBy(e.target.value as SearchSortOption)}
+            className="select select-sm bg-base-200 text-base font-medium border-none focus:outline-none w-auto"
+            aria-label="Sort search results"
+          >
+            {SEARCH_SORT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      <div className="min-w-0 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
+        {/* Main content */}
+        {isLoading || categoriesLoading || scopeLoading ? (
+          <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-0">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+          </div>
+        ) : displayFeed.length === 0 ? (
+          <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-0">
+            {emptyStateMessage}
+          </div>
+        ) : (
+          <div
+            ref={activeCardRegionRef}
+            className="space-y-5 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden xl:space-y-2.5"
+          >
+            {isCommitting ? (
+              <div className="flex shrink-0 items-center justify-center">
+                <span className="text-base text-base-content/50">
+                  <span className="loading loading-spinner loading-xs mr-1.5"></span>
+                  Committing...
+                </span>
+              </div>
+            ) : null}
+
+            {primaryItem ? (
+              <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-none xl:flex-col">
+                <div className="xl:min-h-0 xl:flex-none">
+                  <div
+                    key={primaryItem.id.toString()}
+                    className={`touch-pan-y xl:min-h-0 ${
+                      navigationDirection === "next"
+                        ? "motion-safe:animate-vote-card-next"
+                        : "motion-safe:animate-vote-card-prev"
+                    }`}
+                  >
+                    <FeedVoteCard
+                      item={primaryItem}
+                      submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                      onVote={handleButtonVote}
+                      onToggleWatch={handleToggleWatch}
+                      onToggleFollow={handleToggleFollow}
+                      watched={watchedContentIds.has(primaryItem.id.toString())}
+                      watchPending={isWatchPending(primaryItem.id)}
+                      following={followedWallets.has(primaryItem.submitter.toLowerCase())}
+                      followPending={isFollowPending(primaryItem.submitter)}
+                      normalizedAddress={normalizedAddress}
+                      isCommitting={isCommitting}
+                      voteError={voteError}
+                      address={address}
+                      onPrevious={handleSelectPrevious}
+                      onNext={handleSelectNext}
+                      canPrevious={activeSourceIndex > 0}
+                      canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {visibleFeedItems.length > 0 ? (
+              <section
+                key={primaryItem?.id.toString() ?? "queue-empty"}
+                className="motion-safe:animate-vote-queue-settle xl:min-h-[10rem] xl:flex-1 xl:overflow-hidden 2xl:min-h-[16rem]"
+                aria-label="Up next queue"
+              >
+                <div
+                  ref={queueRailRef}
+                  data-disable-queue-wheel="true"
+                  className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:gap-2.5 2xl:grid 2xl:auto-cols-[10rem] 2xl:grid-flow-col 2xl:grid-rows-2 2xl:content-start 2xl:gap-2.5"
+                >
+                  {visibleFeedItems.map(item => (
+                    <FeedQueueCard
+                      key={item.id.toString()}
+                      item={item}
+                      onSelect={handleSelectCard}
+                      queuePosition={displayFeed.findIndex(feedItem => feedItem.id === item.id)}
+                      selected={item.id === primaryItem?.id}
+                      submitterProfile={enrichedProfiles[item.submitter.toLowerCase()]}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {canLoadMore ? (
+              <div ref={loadMoreRef} className="flex justify-center py-8 xl:hidden">
+                <span className="loading loading-spinner loading-md text-primary"></span>
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* Stake selector modal */}
@@ -907,7 +910,7 @@ const HomeInner = () => {
         onConfirm={handleConfirmStake}
         onCancel={handleCancelStake}
       />
-    </div>
+    </AppPageShell>
   );
 };
 

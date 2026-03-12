@@ -10,6 +10,7 @@ import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
 import { FrontendRegistration } from "~~/components/governance/FrontendRegistration";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -141,13 +142,19 @@ const SubmitPage: NextPage = () => {
   // Content form state
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
-  const [goal, setGoal] = useState("");
-  const [goalError, setGoalError] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedContent, setSubmittedContent] = useState<{ id: bigint; goal: string } | null>(null);
+  const [submittedContent, setSubmittedContent] = useState<{
+    id: bigint;
+    title: string;
+    description: string;
+  } | null>(null);
 
   // Platform dropdown state
   const [platformSearch, setPlatformSearch] = useState("");
@@ -333,10 +340,16 @@ const SubmitPage: NextPage = () => {
   });
   const isUrlAlreadySubmitted = Boolean(canonicalUrl && isUrlSubmitted);
 
-  const handleGoalChange = (value: string) => {
-    setGoal(value);
+  const handleTitleChange = (value: string) => {
+    setTitle(value);
     const check = containsBlockedText(value);
-    setGoalError(check.blocked ? "Your description contains prohibited content" : null);
+    setTitleError(check.blocked ? "Your title contains prohibited content" : null);
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setDescription(value);
+    const check = containsBlockedText(value);
+    setDescriptionError(check.blocked ? "Your description contains prohibited content" : null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -348,9 +361,8 @@ const SubmitPage: NextPage = () => {
       return;
     }
 
-    // Check goal text for prohibited content
-    if (containsBlockedText(goal).blocked) {
-      notification.warning("Your title/description contains prohibited content and cannot be submitted");
+    if (containsBlockedText(title).blocked || containsBlockedText(description).blocked) {
+      notification.warning("Your title or description contains prohibited content and cannot be submitted");
       return;
     }
 
@@ -364,7 +376,8 @@ const SubmitPage: NextPage = () => {
     if (!accepted) return;
 
     setIsSubmitting(true);
-    const submittedGoal = goal; // Save goal before clearing
+    const submittedTitle = title;
+    const submittedDescription = description;
     try {
       // Capture the contentId that will be assigned (nextContentId before submission)
       const contentId = nextContentId ?? BigInt(1);
@@ -390,7 +403,7 @@ const SubmitPage: NextPage = () => {
 
       await writeRegistry({
         functionName: "submitContent",
-        args: [canonicalUrl, goal, serializeTags(selectedSubcategories), selectedCategory.id],
+        args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
       });
 
       // Refetch to update the nextContentId for future submissions
@@ -399,13 +412,15 @@ const SubmitPage: NextPage = () => {
       notification.success("Content submitted! Staked 10 cREP.");
 
       // Show share modal
-      setSubmittedContent({ id: contentId, goal: submittedGoal });
+      setSubmittedContent({ id: contentId, title: submittedTitle, description: submittedDescription });
 
       // Clear form
       setUrl("");
       setUrlError(null);
-      setGoal("");
-      setGoalError(null);
+      setTitle("");
+      setTitleError(null);
+      setDescription("");
+      setDescriptionError(null);
       setSelectedCategory(null);
       setSelectedSubcategories([]);
       setCustomSubcategory("");
@@ -466,41 +481,43 @@ const SubmitPage: NextPage = () => {
   }
 
   return (
-    <div className="flex flex-col items-center grow px-4 pt-8 pb-12">
-      <div className="w-full max-w-lg">
-        {/* Submission Type Tabs */}
-        <div className="flex gap-2 mb-6">
-          <button
-            onClick={() => selectTab("content")}
-            className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-              submissionType === "content" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
-            }`}
-          >
-            Content
-          </button>
-          <button
-            onClick={() => selectTab("category")}
-            className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-              submissionType === "category" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
-            }`}
-          >
-            Platform
-          </button>
-          <button
-            onClick={() => selectTab("frontend")}
-            className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-              submissionType === "frontend" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
-            }`}
-          >
-            Frontend
-          </button>
-        </div>
+    <AppPageShell>
+      <div className="mb-6 flex flex-wrap gap-2">
+        <button
+          onClick={() => selectTab("content")}
+          className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+            submissionType === "content" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
+          }`}
+        >
+          Content
+        </button>
+        <button
+          onClick={() => selectTab("category")}
+          className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+            submissionType === "category" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
+          }`}
+        >
+          Platform
+        </button>
+        <button
+          onClick={() => selectTab("frontend")}
+          className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+            submissionType === "frontend" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
+          }`}
+        >
+          Frontend
+        </button>
+      </div>
 
-        {submissionType === "content" ? (
-          <div className="surface-card rounded-2xl p-6 space-y-5">
-            <h1 className="text-2xl font-semibold">Submit Content</h1>
+      {submissionType === "content" ? (
+        <div className="surface-card rounded-2xl p-6 space-y-5">
+          <h1 className="text-2xl font-semibold">Submit Content</h1>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+          <form
+            onSubmit={handleSubmit}
+            className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start"
+          >
+            <div className="space-y-5">
               {/* Platform Selection - Searchable Dropdown */}
               <div ref={platformDropdownRef} className="relative">
                 <label className="block text-base font-medium mb-2">Select Platform</label>
@@ -623,20 +640,38 @@ const SubmitPage: NextPage = () => {
                 )}
               </div>
 
-              {/* Goal Input */}
+              {/* Title Input */}
               <div>
-                <label className="block text-base font-medium mb-2">Title / Description</label>
+                <label className="block text-base font-medium mb-2">Title</label>
+                <input
+                  type="text"
+                  placeholder="Add a short title for this content"
+                  className={`input input-bordered w-full bg-base-100 ${titleError ? "input-error" : ""}`}
+                  value={title}
+                  onChange={e => handleTitleChange(e.target.value)}
+                  required
+                  maxLength={160}
+                />
+                {titleError && <p className="text-error text-base mt-1">{titleError}</p>}
+                <div className="text-right mt-1">
+                  <span className="text-base text-base-content/30">{title.length}/160</span>
+                </div>
+              </div>
+
+              {/* Description Input */}
+              <div>
+                <label className="block text-base font-medium mb-2">Description</label>
                 <textarea
-                  placeholder="Add a title and description to help others discover this content"
-                  className={`textarea textarea-bordered w-full h-24 bg-base-100 ${goalError ? "textarea-error" : ""}`}
-                  value={goal}
-                  onChange={e => handleGoalChange(e.target.value)}
+                  placeholder="Add a description to help others discover this content"
+                  className={`textarea textarea-bordered w-full h-24 bg-base-100 ${descriptionError ? "textarea-error" : ""}`}
+                  value={description}
+                  onChange={e => handleDescriptionChange(e.target.value)}
                   required
                   maxLength={500}
                 />
-                {goalError && <p className="text-error text-base mt-1">{goalError}</p>}
+                {descriptionError && <p className="text-error text-base mt-1">{descriptionError}</p>}
                 <div className="text-right mt-1">
-                  <span className="text-base text-base-content/30">{goal.length}/500</span>
+                  <span className="text-base text-base-content/30">{description.length}/500</span>
                 </div>
               </div>
 
@@ -708,13 +743,15 @@ const SubmitPage: NextPage = () => {
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* Preview */}
-              {url && isValidUrl && (
+            <div className="space-y-4 xl:sticky xl:top-24">
+              {url && isValidUrl ? (
                 <div className="surface-card rounded-2xl p-4 space-y-3">
                   <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
+                  {title ? <h3 className="text-lg font-semibold text-white line-clamp-2">{title}</h3> : null}
                   <ContentEmbed url={url} compact />
-                  {goal && <p className="text-base text-base-content/70">{goal}</p>}
+                  {description ? <p className="text-base text-base-content/70">{description}</p> : null}
                   {selectedSubcategories.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {selectedSubcategories.map(tag => (
@@ -728,9 +765,15 @@ const SubmitPage: NextPage = () => {
                     </div>
                   )}
                 </div>
+              ) : (
+                <div className="surface-card rounded-2xl p-4 space-y-3">
+                  <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
+                  <p className="text-base text-base-content/50">
+                    Pick a platform and paste a supported URL to preview how your submission will appear.
+                  </p>
+                </div>
               )}
 
-              {/* Prohibited Content Warning */}
               <div className="bg-error/10 rounded-lg p-4">
                 <p className="text-base font-medium text-error mb-2">Prohibited Content</p>
                 <p className="text-base text-base-content/70">
@@ -773,14 +816,15 @@ const SubmitPage: NextPage = () => {
                 )}
               </div>
 
-              {/* Submit */}
               <button
                 type="submit"
                 className="btn btn-submit w-full"
                 disabled={
                   !isValidUrl ||
-                  !goal ||
-                  !!goalError ||
+                  !title ||
+                  !!titleError ||
+                  !description ||
+                  !!descriptionError ||
                   !selectedCategory ||
                   selectedSubcategories.length === 0 ||
                   isSubmitting ||
@@ -797,20 +841,25 @@ const SubmitPage: NextPage = () => {
                   "Submit Content"
                 )}
               </button>
-            </form>
-          </div>
-        ) : submissionType === "category" ? (
-          <CategorySubmissionForm />
-        ) : (
-          <FrontendRegistration />
-        )}
-      </div>
+            </div>
+          </form>
+        </div>
+      ) : submissionType === "category" ? (
+        <CategorySubmissionForm />
+      ) : (
+        <FrontendRegistration />
+      )}
 
       {/* Share Modal */}
       {submittedContent && (
-        <ShareModal contentId={submittedContent.id} goal={submittedContent.goal} onClose={handleCloseShareModal} />
+        <ShareModal
+          contentId={submittedContent.id}
+          title={submittedContent.title}
+          description={submittedContent.description}
+          onClose={handleCloseShareModal}
+        />
       )}
-    </div>
+    </AppPageShell>
   );
 };
 

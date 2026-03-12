@@ -9,6 +9,7 @@ import { ProfileForm } from "~~/components/profile/ProfileForm";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
 import { SettingsAccountSummary } from "~~/components/settings/SettingsAccountSummary";
+import { AppPageShell } from "~~/components/shared/AppPageShell";
 
 type SettingsTab = "profile" | "delegation" | "referrals" | "notifications";
 
@@ -66,41 +67,39 @@ function SettingsPageInner() {
   }
 
   return (
-    <div className="flex flex-col items-center grow px-4 pt-8 pb-12">
-      <div className="w-full max-w-4xl space-y-6">
-        {summaryAddress ? (
-          <SettingsAccountSummary
-            address={summaryAddress}
-            refreshNonce={summaryRefreshNonce}
-            onSelectTab={tab => selectTab(tab)}
-          />
-        ) : null}
+    <AppPageShell contentClassName="space-y-6">
+      {summaryAddress ? (
+        <SettingsAccountSummary
+          address={summaryAddress}
+          refreshNonce={summaryRefreshNonce}
+          onSelectTab={tab => selectTab(tab)}
+        />
+      ) : null}
 
-        <div className="flex flex-wrap gap-2">
-          {settingsTabs.map(tab => (
-            <button
-              key={tab}
-              onClick={() => selectTab(tab)}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === tab ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
-              }`}
-            >
-              {SETTINGS_TAB_LABELS[tab]}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === "profile" && <ProfileForm />}
-        {activeTab === "delegation" && <DelegationSection />}
-        {activeTab === "referrals" && <ReferralSection />}
-        {activeTab === "notifications" && (
-          <NotificationSettingsPanel
-            address={address}
-            onStatusChange={() => setSummaryRefreshNonce(value => value + 1)}
-          />
-        )}
+      <div className="flex flex-wrap gap-2">
+        {settingsTabs.map(tab => (
+          <button
+            key={tab}
+            onClick={() => selectTab(tab)}
+            className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              activeTab === tab ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+            }`}
+          >
+            {SETTINGS_TAB_LABELS[tab]}
+          </button>
+        ))}
       </div>
-    </div>
+
+      {activeTab === "profile" && <ProfileForm />}
+      {activeTab === "delegation" && <DelegationSection />}
+      {activeTab === "referrals" && <ReferralSection />}
+      {activeTab === "notifications" && (
+        <NotificationSettingsPanel
+          address={address}
+          onStatusChange={() => setSummaryRefreshNonce(value => value + 1)}
+        />
+      )}
+    </AppPageShell>
   );
 }
 

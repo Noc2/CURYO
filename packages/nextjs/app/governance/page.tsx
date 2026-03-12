@@ -19,6 +19,7 @@ import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
 import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
 import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGovernanceContracts } from "~~/hooks/useGovernance";
 
@@ -121,77 +122,82 @@ function GovernancePageInner() {
   }
 
   return (
-    <div className="flex flex-col items-center grow px-4 pt-8 pb-12">
-      <div className="w-full max-w-2xl space-y-6">
-        {/* Tab Navigation */}
-        <div className="flex gap-2">
-          {hasZeroBalance ? (
+    <AppPageShell contentClassName="space-y-6">
+      <div className="flex flex-wrap gap-2">
+        {hasZeroBalance ? (
+          <button
+            onClick={() => selectTab("faucet")}
+            className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+              activeTab === "faucet" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+            }`}
+          >
+            Faucet
+          </button>
+        ) : (
+          <>
             <button
-              onClick={() => selectTab("faucet")}
-              className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === "faucet" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+              onClick={() => selectTab("leaderboard")}
+              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+                activeTab === "leaderboard" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
               }`}
             >
-              Faucet
+              Leaderboard
             </button>
-          ) : (
-            <>
-              <button
-                onClick={() => selectTab("leaderboard")}
-                className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                  activeTab === "leaderboard" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
-                }`}
-              >
-                Leaderboard
-              </button>
-              <button
-                onClick={() => selectTab("accuracy")}
-                className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                  activeTab === "accuracy" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
-                }`}
-              >
-                Accuracy
-              </button>
-              <button
-                onClick={() => selectTab("governance")}
-                className={`flex-1 px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                  activeTab === "governance" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
-                }`}
-              >
-                Governance
-              </button>
-            </>
-          )}
-        </div>
+            <button
+              onClick={() => selectTab("accuracy")}
+              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+                activeTab === "accuracy" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+              }`}
+            >
+              Accuracy
+            </button>
+            <button
+              onClick={() => selectTab("governance")}
+              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+                activeTab === "governance" ? "pill-active-yellow" : "bg-base-200 text-white hover:bg-base-300"
+              }`}
+            >
+              Governance
+            </button>
+          </>
+        )}
+      </div>
 
-        {/* Faucet Tab - only when zero balance */}
-        {activeTab === "faucet" && <FaucetSection referrer={referrer} />}
+      {activeTab === "faucet" && <FaucetSection referrer={referrer} />}
 
-        {/* Leaderboard Tab */}
-        {activeTab === "leaderboard" && (
-          <>
+      {activeTab === "leaderboard" && (
+        <div className="space-y-6">
+          <div className="grid gap-6 xl:grid-cols-2">
             <BalanceHistory />
             <StakeBreakdown />
-            <LeaderboardTable />
-          </>
-        )}
+          </div>
+          <LeaderboardTable />
+        </div>
+      )}
 
-        {/* Accuracy Tab */}
-        {activeTab === "accuracy" && (
-          <>
-            <VoterAccuracyStats />
-            <AccuracyLeaderboard />
-          </>
-        )}
+      {activeTab === "accuracy" && (
+        <>
+          <VoterAccuracyStats />
+          <AccuracyLeaderboard />
+        </>
+      )}
 
-        {/* Governance Tab */}
-        {activeTab === "governance" && (
-          <>
-            <TokenManagement />
-            <TreasuryBalance />
-            <GovernanceStats />
-            <GovernanceActionComposer />
-            <ProposalList />
+      {activeTab === "governance" && (
+        <div className="space-y-6">
+          <div className="grid gap-6 xl:grid-cols-3">
+            <div className="xl:col-span-1">
+              <TokenManagement />
+            </div>
+            <div className="xl:col-span-2">
+              <TreasuryBalance />
+            </div>
+            <div className="xl:col-span-3">
+              <GovernanceStats />
+            </div>
+          </div>
+          <GovernanceActionComposer />
+          <ProposalList />
+          <div className="grid gap-6 xl:grid-cols-2">
             <PlatformProposals />
             {hasGovernorContract ? (
               <CategorySubmissionForm />
@@ -204,11 +210,11 @@ function GovernancePageInner() {
                 </p>
               </div>
             )}
-            <FrontendRegistration />
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+          <FrontendRegistration />
+        </div>
+      )}
+    </AppPageShell>
   );
 }
 
