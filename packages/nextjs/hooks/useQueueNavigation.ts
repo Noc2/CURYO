@@ -26,6 +26,7 @@ export function useQueueNavigation<T extends HTMLElement>({
   const containerRef = useRef<T | null>(null);
   const wheelAccumulatorRef = useRef(0);
   const coolingDownRef = useRef(false);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   useEffect(() => {
     const node = containerRef.current;
@@ -58,10 +59,54 @@ export function useQueueNavigation<T extends HTMLElement>({
       }, cooldownMs);
     };
 
+    const handleTouchStart = (event: TouchEvent) => {
+      if (coolingDownRef.current || event.touches.length !== 1) return;
+      if (isInteractiveTarget(event.target)) return;
+
+      const touch = event.touches[0];
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now(),
+      };
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      if (coolingDownRef.current) return;
+      if (!touchStartRef.current || event.changedTouches.length !== 1) return;
+      if (isInteractiveTarget(event.target)) return;
+
+      const touch = event.changedTouches[0];
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touchStartRef.current.y - touch.clientY;
+      const duration = Date.now() - touchStartRef.current.time;
+      touchStartRef.current = null;
+
+      if (duration > 700) return;
+      if (deltaY < 96) return;
+      if (Math.abs(deltaY) <= Math.abs(deltaX)) return;
+      if (!onAdvance()) return;
+
+      coolingDownRef.current = true;
+      window.setTimeout(() => {
+        coolingDownRef.current = false;
+      }, cooldownMs);
+    };
+
+    const handleTouchCancel = () => {
+      touchStartRef.current = null;
+    };
+
     node.addEventListener("wheel", handleWheel, { passive: false });
+    node.addEventListener("touchstart", handleTouchStart, { passive: true });
+    node.addEventListener("touchend", handleTouchEnd, { passive: true });
+    node.addEventListener("touchcancel", handleTouchCancel, { passive: true });
 
     return () => {
       node.removeEventListener("wheel", handleWheel);
+      node.removeEventListener("touchstart", handleTouchStart);
+      node.removeEventListener("touchend", handleTouchEnd);
+      node.removeEventListener("touchcancel", handleTouchCancel);
     };
   }, [cooldownMs, enabled, onAdvance, threshold]);
 
