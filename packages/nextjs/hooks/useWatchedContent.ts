@@ -2,6 +2,7 @@
 
 import { useSignMessage } from "wagmi";
 import {
+  type SignedCollectionReadAccessResult,
   type SignedCollectionResponse,
   type SignedCollectionToggleResult,
   useSignedCollection,
@@ -27,7 +28,10 @@ const EMPTY_WATCHED_RESPONSE: WatchedContentResponse = { items: [], count: 0 };
 export function useWatchedContent(address?: string, options?: UseWatchedContentOptions) {
   const { signMessageAsync } = useSignMessage();
   const autoRead = options?.autoRead ?? false;
-  const { items, itemKeys, isLoading, toggleItem, isPending } = useSignedCollection<WatchedContentItem, bigint>({
+  const { items, itemKeys, isLoading, hasReadSession, toggleItem, requestReadAccess, isPending } = useSignedCollection<
+    WatchedContentItem,
+    bigint
+  >({
     address,
     autoRead,
     queryKey: ["watchedContent", address],
@@ -66,6 +70,8 @@ export function useWatchedContent(address?: string, options?: UseWatchedContentO
     watchedItems: items,
     watchedContentIds: itemKeys,
     isLoading,
+    hasReadSession,
+    requestReadAccess: async (): Promise<SignedCollectionReadAccessResult> => requestReadAccess(),
     toggleWatch: async (contentId: bigint): Promise<ToggleWatchResult> => {
       const result = await toggleItem(contentId);
       return {

@@ -2,6 +2,7 @@
 
 import { useSignMessage } from "wagmi";
 import {
+  type SignedCollectionReadAccessResult,
   type SignedCollectionResponse,
   type SignedCollectionToggleResult,
   useSignedCollection,
@@ -28,7 +29,7 @@ export function useFollowedProfiles(address?: string, options?: UseFollowedProfi
   const { signMessageAsync } = useSignMessage();
   const autoRead = options?.autoRead ?? false;
   const normalizedAddress = address?.toLowerCase();
-  const { items, itemKeys, isLoading, toggleItem, isPending } = useSignedCollection<
+  const { items, itemKeys, isLoading, hasReadSession, toggleItem, requestReadAccess, isPending } = useSignedCollection<
     FollowedProfileItem,
     string,
     "self_follow"
@@ -72,6 +73,8 @@ export function useFollowedProfiles(address?: string, options?: UseFollowedProfi
     followedItems: items,
     followedWallets: itemKeys,
     isLoading,
+    hasReadSession,
+    requestReadAccess: async (): Promise<SignedCollectionReadAccessResult> => requestReadAccess(),
     toggleFollow: async (targetAddress: string): Promise<ToggleFollowResult> => {
       const result = await toggleItem(targetAddress);
       return {

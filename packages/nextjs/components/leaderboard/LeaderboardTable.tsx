@@ -30,9 +30,10 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   const {
     followedWallets,
     toggleFollow,
+    requestReadAccess,
     isPending: isFollowPending,
   } = useFollowedProfiles(connectedAddress, {
-    autoRead: true,
+    autoRead: false,
   });
 
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
@@ -104,6 +105,32 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
     [openConnectModal, toggleFollow],
   );
 
+  const handleScopeChange = useCallback(
+    async (nextScope: "all" | "following") => {
+      if (nextScope === "all") {
+        setScope("all");
+        return;
+      }
+
+      const result = await requestReadAccess();
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          notification.info("Connect your wallet to filter by curators you follow.");
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason !== "rejected") {
+          notification.error(result.error || "Failed to unlock your follow list");
+        }
+        return;
+      }
+
+      setScope("following");
+    },
+    [openConnectModal, requestReadAccess],
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -132,7 +159,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
     <div className="surface-card rounded-2xl p-6 overflow-x-auto">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <span className="text-base font-medium text-base-content/60">cREP leaderboard</span>
-        <FollowScopeToggle value={scope} onChange={setScope} />
+        <FollowScopeToggle value={scope} onChange={value => void handleScopeChange(value)} />
       </div>
 
       {scope === "following" && visibleEntries.length === 0 ? (

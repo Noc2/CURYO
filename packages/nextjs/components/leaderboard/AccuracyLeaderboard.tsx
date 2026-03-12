@@ -24,9 +24,10 @@ export function AccuracyLeaderboard() {
   const {
     followedWallets,
     toggleFollow,
+    requestReadAccess,
     isPending: isFollowPending,
   } = useFollowedProfiles(connectedAddress, {
-    autoRead: true,
+    autoRead: false,
   });
 
   const [items, setItems] = useState<PonderAccuracyLeaderboardItem[]>([]);
@@ -111,13 +112,39 @@ export function AccuracyLeaderboard() {
     [openConnectModal, toggleFollow],
   );
 
+  const handleScopeChange = useCallback(
+    async (nextScope: "all" | "following") => {
+      if (nextScope === "all") {
+        setScope("all");
+        return;
+      }
+
+      const result = await requestReadAccess();
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          notification.info("Connect your wallet to filter by curators you follow.");
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason !== "rejected") {
+          notification.error(result.error || "Failed to unlock your follow list");
+        }
+        return;
+      }
+
+      setScope("following");
+    },
+    [openConnectModal, requestReadAccess],
+  );
+
   return (
     <div className="surface-card rounded-2xl p-6 space-y-3">
       <span className="text-base font-medium text-base-content/60">Accuracy leaderboard</span>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
-        <FollowScopeToggle value={scope} onChange={setScope} />
+        <FollowScopeToggle value={scope} onChange={value => void handleScopeChange(value)} />
 
         <select
           className="select select-sm bg-base-200 text-base rounded-full"

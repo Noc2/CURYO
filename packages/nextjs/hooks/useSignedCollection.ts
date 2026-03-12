@@ -20,6 +20,12 @@ export interface SignedCollectionToggleResult<TExtraReason extends string = neve
   error?: string;
 }
 
+export interface SignedCollectionReadAccessResult {
+  ok: boolean;
+  reason?: "not_connected" | "rejected" | "request_failed";
+  error?: string;
+}
+
 interface SignedChallengeResponse {
   challengeId?: string;
   message?: string;
@@ -104,7 +110,10 @@ async function readSignedCollection<TItem>(
     | "signMessageAsync"
   >,
   address: string,
-): Promise<SignedCollectionResponse<TItem>> {
+): Promise<{
+  response: SignedCollectionResponse<TItem>;
+  sessionStatus: SignedCollectionSessionStatus;
+}> {
   const sessionStatus = await getSignedCollectionSessionStatus(config.sessionPath, address);
 
   if (sessionStatus.hasReadSession) {
@@ -115,13 +124,19 @@ async function readSignedCollection<TItem>(
     );
 
     return {
-      items: Array.isArray(body.items) ? body.items : [],
-      count: Array.isArray(body.items) ? body.items.length : 0,
+      response: {
+        items: Array.isArray(body.items) ? body.items : [],
+        count: Array.isArray(body.items) ? body.items.length : 0,
+      },
+      sessionStatus,
     };
   }
 
   if (!config.autoRead) {
-    return config.emptyResponse;
+    return {
+      response: config.emptyResponse,
+      sessionStatus,
+    };
   }
 
   const challengeRes = await fetch(config.challengePath, {
@@ -147,8 +162,14 @@ async function readSignedCollection<TItem>(
   const body = await readResponseBody<Partial<SignedCollectionResponse<TItem>>>(response, "Failed to fetch collection");
 
   return {
-    items: Array.isArray(body.items) ? body.items : [],
-    count: Array.isArray(body.items) ? body.items.length : 0,
+    response: {
+      items: Array.isArray(body.items) ? body.items : [],
+      count: Array.isArray(body.items) ? body.items.length : 0,
+    },
+    sessionStatus: {
+      ...sessionStatus,
+      hasReadSession: true,
+    },
   };
 }
 
@@ -158,10 +179,25 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
   const queryClient = useQueryClient();
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set());
   const [hasWriteSession, setHasWriteSession] = useState(false);
+  const sessionStatusQueryKey = [...config.queryKey, "sessionStatus"];
 
   useEffect(() => {
     setHasWriteSession(false);
   }, [config.address]);
+
+  const { data: sessionStatus } = useQuery({
+    queryKey: sessionStatusQueryKey,
+    queryFn: async () => {
+      if (!config.address) {
+        return { hasReadSession: false, hasWriteSession: false };
+      }
+
+      return getSignedCollectionSessionStatus(config.sessionPath, config.address);
+    },
+    enabled: Boolean(config.address),
+    staleTime: 30_000,
+    refetchInterval: false,
+  });
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: config.queryKey,
@@ -171,7 +207,9 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
       }
 
       try {
-        return await readSignedCollection<TItem>(config, config.address);
+        const result = await readSignedCollection<TItem>(config, config.address);
+        queryClient.setQueryData(sessionStatusQueryKey, result.sessionStatus);
+        return result.response;
       } catch (error) {
         if (isSignatureRejected(error)) {
           return config.emptyResponse;
@@ -317,11 +355,36 @@ export function useSignedCollection<TItem, TId, TExtraReason extends string = ne
 
   const isPending = useCallback((id: TId) => pendingKeys.has(config.normalizeId(id)), [config, pendingKeys]);
 
+  const requestReadAccess = useCallback(async (): Promise<SignedCollectionReadAccessResult> => {
+    if (!config.address) {
+      return { ok: false, reason: "not_connected" };
+    }
+
+    try {
+      const result = await readSignedCollection<TItem>({ ...config, autoRead: true }, config.address);
+      queryClient.setQueryData(sessionStatusQueryKey, result.sessionStatus);
+      queryClient.setQueryData(config.queryKey, result.response);
+      return { ok: true };
+    } catch (error) {
+      if (isSignatureRejected(error)) {
+        return { ok: false, reason: "rejected" };
+      }
+
+      return {
+        ok: false,
+        reason: "request_failed",
+        error: error instanceof Error ? error.message : "Failed to unlock collection",
+      };
+    }
+  }, [config, queryClient, sessionStatusQueryKey]);
+
   return {
     items,
     itemKeys,
     isLoading,
+    hasReadSession: sessionStatus?.hasReadSession ?? false,
     toggleItem,
+    requestReadAccess,
     isPending,
   };
 }

@@ -96,7 +96,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     toggleFollow,
     isPending: isFollowPending,
   } = useFollowedProfiles(connectedAddress, {
-    autoRead: true,
+    autoRead: false,
   });
   const { stats, categories } = useVoterAccuracy(normalizedAddress);
   const { data: balance } = useScaffoldReadContract({

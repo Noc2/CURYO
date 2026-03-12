@@ -93,8 +93,9 @@ const HomeInner = () => {
     followedWallets,
     isLoading: followedProfilesLoading,
     toggleFollow,
+    requestReadAccess: requestFollowReadAccess,
     isPending: isFollowPending,
-  } = useFollowedProfiles(address, { autoRead: true });
+  } = useFollowedProfiles(address, { autoRead: false });
   const { discoverSignals, isLoading: discoverSignalsLoading } = useDiscoverSignals(address, {
     watchedItems,
     followedItems,
@@ -644,6 +645,32 @@ const HomeInner = () => {
     [openConnectModal, toggleFollow],
   );
 
+  const handleScopeChange = useCallback(
+    async (nextScope: ScopeOption) => {
+      if (nextScope !== "followed_curators") {
+        setScope(nextScope);
+        return;
+      }
+
+      const result = await requestFollowReadAccess();
+      if (!result.ok) {
+        if (result.reason === "not_connected") {
+          notification.info("Connect your wallet to view curators you follow.");
+          openConnectModal?.();
+          return;
+        }
+
+        if (result.reason !== "rejected") {
+          notification.error(result.error || "Failed to unlock your follow list");
+        }
+        return;
+      }
+
+      setScope("followed_curators");
+    },
+    [openConnectModal, requestFollowReadAccess],
+  );
+
   // Count broken URLs for the filter pill
   const brokenCount = useMemo(() => {
     return feed.filter(item => !isContentItemBlocked(item) && item.isValidUrl === false).length;
@@ -739,7 +766,9 @@ const HomeInner = () => {
             <FeedScopeFilter
               value={scope}
               options={SCOPE_OPTIONS}
-              onChange={value => setScope(value as ScopeOption)}
+              onChange={value => {
+                void handleScopeChange(value as ScopeOption);
+              }}
               label="Feed"
             />
           ) : null}
