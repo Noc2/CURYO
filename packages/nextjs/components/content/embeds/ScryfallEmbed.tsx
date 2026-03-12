@@ -54,7 +54,7 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
     <SafeExternalLink
       href={info.url}
       className={`block w-full overflow-hidden rounded-xl bg-base-200 relative group ${
-        compact ? "max-w-[200px] mx-auto" : "max-w-[350px] mx-auto"
+        compact ? "max-w-[200px] mx-auto" : "h-full max-w-full flex flex-col"
       }`}
     >
       {!imageLoaded && (
@@ -66,9 +66,9 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
         src={`/api/image-proxy?url=${encodeURIComponent(info.thumbnailUrl)}`}
         alt={formattedName}
         loading="lazy"
-        className={`w-full h-auto rounded-xl shadow-lg transition-transform group-hover:scale-[1.02] aspect-[5/7] object-cover ${
-          imageLoaded ? "opacity-100" : "opacity-0"
-        }`}
+        className={`shadow-lg transition-transform group-hover:scale-[1.02] ${
+          compact ? "w-full h-auto rounded-xl aspect-[5/7] object-cover" : "h-full w-full rounded-xl object-cover"
+        } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setImageLoaded(true)}
         onError={() => setImageError(true)}
       />

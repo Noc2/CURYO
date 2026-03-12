@@ -41,10 +41,7 @@ export function TwitterEmbed({ info, compact }: TwitterEmbedProps) {
   }
 
   return (
-    <div
-      className={`w-full overflow-hidden ${compact ? "max-w-[300px] mx-auto" : "max-w-[550px] mx-auto"}`}
-      data-theme="dark"
-    >
+    <div className={`w-full overflow-hidden ${compact ? "max-w-[300px] mx-auto" : "max-w-full"}`} data-theme="dark">
       <Tweet
         id={tweetId}
         fallback={

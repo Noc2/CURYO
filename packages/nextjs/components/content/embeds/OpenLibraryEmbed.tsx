@@ -130,10 +130,10 @@ export function OpenLibraryEmbed({ info, compact }: OpenLibraryEmbedProps) {
   return (
     <div
       className={`block w-full overflow-hidden rounded-xl bg-base-200 relative ${
-        compact ? "max-w-[200px] mx-auto" : "max-w-[350px] mx-auto"
+        compact ? "max-w-[200px] mx-auto" : "h-full max-w-full flex flex-col"
       }`}
     >
-      <SafeExternalLink href={info.url} className="block relative group">
+      <SafeExternalLink href={info.url} className={`relative group ${compact ? "block" : "flex-1 min-h-0"}`}>
         {!imageLoaded && (
           <div className="absolute inset-0 flex items-center justify-center bg-base-200">
             <span className="loading loading-spinner loading-md text-primary"></span>
@@ -143,9 +143,9 @@ export function OpenLibraryEmbed({ info, compact }: OpenLibraryEmbedProps) {
           src={book.coverUrl}
           alt={book.title}
           loading="lazy"
-          className={`w-full h-auto rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] aspect-[2/3] object-cover ${
-            imageLoaded ? "opacity-100" : "opacity-0"
-          }`}
+          className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
+            compact ? "w-full h-auto aspect-[2/3] object-cover" : "h-full w-full object-cover"
+          } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
           onLoad={() => setImageLoaded(true)}
           onError={() => setImageError(true)}
         />

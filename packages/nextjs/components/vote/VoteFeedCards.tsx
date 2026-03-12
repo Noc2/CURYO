@@ -80,6 +80,67 @@ interface FeedVoteCardProps {
   canNext?: boolean;
 }
 
+interface ActiveMediaLayout {
+  contentColumnClass: string;
+  mediaShellClass: string;
+}
+
+function getActiveMediaLayout(url: string): ActiveMediaLayout {
+  const platformType = detectPlatform(url).type;
+
+  switch (platformType) {
+    case "openlibrary":
+    case "tmdb":
+      return {
+        contentColumnClass: "lg:w-[min(26rem,30vw)] xl:w-[min(30rem,28vw)] 2xl:w-[min(34rem,27vw)] lg:flex-none",
+        mediaShellClass: "lg:aspect-[2/3]",
+      };
+    case "wikipedia":
+      return {
+        contentColumnClass: "lg:w-[min(27rem,31vw)] xl:w-[min(31rem,29vw)] 2xl:w-[min(35rem,28vw)] lg:flex-none",
+        mediaShellClass: "lg:aspect-[3/4]",
+      };
+    case "scryfall":
+      return {
+        contentColumnClass: "lg:w-[min(25rem,29vw)] xl:w-[min(29rem,27vw)] 2xl:w-[min(33rem,26vw)] lg:flex-none",
+        mediaShellClass: "lg:aspect-[5/7]",
+      };
+    case "github":
+      return {
+        contentColumnClass: "lg:w-[min(34rem,40vw)] xl:w-[min(40rem,40vw)] 2xl:w-[min(46rem,38vw)] lg:flex-none",
+        mediaShellClass: "lg:aspect-[16/10]",
+      };
+    case "coingecko":
+    case "huggingface":
+      return {
+        contentColumnClass: "lg:w-[min(30rem,34vw)] xl:w-[min(36rem,34vw)] 2xl:w-[min(40rem,32vw)] lg:flex-none",
+        mediaShellClass: "lg:aspect-square",
+      };
+    case "rawg":
+    case "youtube":
+    case "twitch":
+      return {
+        contentColumnClass: "lg:flex-[1.55] xl:flex-[1.6] 2xl:flex-[1.65]",
+        mediaShellClass: "lg:aspect-video",
+      };
+    case "spotify":
+      return {
+        contentColumnClass: "lg:flex-[1.6] xl:flex-[1.7] 2xl:flex-[1.8]",
+        mediaShellClass: "",
+      };
+    case "twitter":
+      return {
+        contentColumnClass: "lg:w-[min(38rem,42vw)] xl:w-[min(44rem,42vw)] 2xl:w-[min(48rem,40vw)] lg:flex-none",
+        mediaShellClass: "",
+      };
+    default:
+      return {
+        contentColumnClass: "lg:flex-[1.45] xl:flex-[1.5] 2xl:flex-[1.55]",
+        mediaShellClass: "lg:aspect-video",
+      };
+  }
+}
+
 export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
@@ -99,6 +160,8 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   canPrevious = false,
   canNext = false,
 }: FeedVoteCardProps) {
+  const mediaLayout = getActiveMediaLayout(item.url);
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
       <FeedContentHeader
@@ -109,9 +172,9 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         canNext={canNext}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:h-[min(48vh,30rem)] lg:flex-row lg:items-stretch xl:h-full 2xl:h-full">
-        <div className="grid w-full min-h-0 gap-3 lg:w-3/5 lg:grid-rows-[minmax(0,1fr)_auto]">
-          <div className="min-h-0 overflow-hidden rounded-2xl bg-base-200">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:items-stretch lg:justify-center">
+        <div className={`grid w-full min-h-0 gap-3 ${mediaLayout.contentColumnClass}`}>
+          <div className={`min-h-0 overflow-hidden rounded-2xl bg-base-200 ${mediaLayout.mediaShellClass}`}>
             <div className="h-full w-full">
               <ContentEmbed url={item.url} />
             </div>
@@ -130,7 +193,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           />
         </div>
 
-        <div className="w-full min-h-0 rounded-2xl bg-base-200 lg:w-2/5">
+        <div className="w-full min-h-0 rounded-2xl bg-base-200 lg:min-w-[19rem] lg:flex-1">
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}

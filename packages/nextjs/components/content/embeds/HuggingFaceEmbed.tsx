@@ -139,7 +139,7 @@ export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
             loading="lazy"
             width={192}
             height={192}
-            className={`w-40 h-40 lg:w-48 lg:h-48 rounded-2xl shadow-lg transition-transform group-hover:scale-[1.05] ${
+            className={`aspect-square h-auto w-[clamp(11rem,58%,24rem)] max-h-[72%] rounded-2xl shadow-lg transition-transform group-hover:scale-[1.05] object-cover ${
               imageLoaded ? "opacity-100" : "opacity-0"
             }`}
             onLoad={() => setImageLoaded(true)}
