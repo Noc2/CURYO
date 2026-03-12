@@ -6,6 +6,8 @@ interface CuryoRingMarkProps {
   className?: string;
   arrow?: ArrowDirection;
   animate?: boolean;
+  animateMask?: boolean;
+  animateColors?: boolean;
   title?: string;
   maskDurationSeconds?: number;
   colorDurationSeconds?: number;
@@ -40,6 +42,8 @@ export function CuryoRingMark({
   className = "h-8 w-8",
   arrow,
   animate = false,
+  animateMask,
+  animateColors,
   title,
   maskDurationSeconds = 18,
   colorDurationSeconds = 24,
@@ -50,6 +54,9 @@ export function CuryoRingMark({
   const bottomLeftGradientId = `${id}-ring-bottom-left`;
   const topLeftGradientId = `${id}-ring-top-left`;
   const maskId = `${id}-ring-mask`;
+
+  const shouldAnimateMask = animateMask ?? animate;
+  const shouldAnimateColors = animateColors ?? animate;
 
   const maskValues = `${ROTATION} ${CENTER} ${CENTER}; ${ROTATION + 360} ${CENTER} ${CENTER}`;
   const colorValues = `${ROTATION} ${CENTER} ${CENTER}; ${ROTATION - 360} ${CENTER} ${CENTER}`;
@@ -86,7 +93,7 @@ export function CuryoRingMark({
         <mask id={maskId}>
           <rect width="128" height="128" fill="black" />
           <g transform={`rotate(${ROTATION} ${CENTER} ${CENTER})`}>
-            {animate ? (
+            {shouldAnimateMask ? (
               <animateTransform
                 attributeName="transform"
                 type="rotate"
@@ -102,7 +109,7 @@ export function CuryoRingMark({
       </defs>
 
       <g mask={`url(#${maskId})`} transform={`rotate(${ROTATION} ${CENTER} ${CENTER})`}>
-        {animate ? (
+        {shouldAnimateColors ? (
           <animateTransform
             attributeName="transform"
             type="rotate"
