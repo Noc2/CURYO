@@ -1784,7 +1784,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "MAX_GOAL_LENGTH",
+          name: "MAX_DESCRIPTION_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -1811,6 +1811,19 @@ const deployedContracts = {
         {
           type: "function",
           name: "MAX_TAGS_LENGTH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "MAX_TITLE_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -2734,7 +2747,12 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "goal",
+              name: "title",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "description",
               type: "string",
               internalType: "string",
             },
@@ -2946,7 +2964,13 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "goal",
+              name: "title",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "description",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -19410,7 +19434,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "MAX_GOAL_LENGTH",
+          name: "MAX_DESCRIPTION_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -19437,6 +19461,19 @@ const deployedContracts = {
         {
           type: "function",
           name: "MAX_TAGS_LENGTH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "MAX_TITLE_LENGTH",
           inputs: [],
           outputs: [
             {
@@ -20360,7 +20397,12 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "goal",
+              name: "title",
+              type: "string",
+              internalType: "string",
+            },
+            {
+              name: "description",
               type: "string",
               internalType: "string",
             },
@@ -20572,7 +20614,13 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "goal",
+              name: "title",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "description",
               type: "string",
               indexed: false,
               internalType: "string",
