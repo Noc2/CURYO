@@ -6,18 +6,7 @@
 import React from "react";
 import { ContentBlock, EXECUTIVE_SUMMARY, META, SECTIONS, TableData } from "./content";
 import { renderLatex } from "./latex";
-import {
-  Document,
-  G,
-  Page,
-  Path,
-  StyleSheet,
-  Svg,
-  Text,
-  View,
-  renderToFile,
-  renderToStream,
-} from "@react-pdf/renderer";
+import { Document, Image, Page, StyleSheet, Text, View, renderToFile, renderToStream } from "@react-pdf/renderer";
 
 // ── Brand colors ──
 const BLUE = "#359EEE";
@@ -35,27 +24,6 @@ const SECTION_COLORS = [BLUE, CYAN, PINK, YELLOW_TEXT, BLUE, CYAN, PINK];
 
 // Module-level map populated during first render pass (for TOC page numbers)
 const sectionPageMap: Record<number, number> = {};
-
-// ── Helpers ──
-function hexToRgb(hex: string) {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255] as const;
-}
-
-function lerpColor(a: string, b: string, t: number) {
-  const [r1, g1, b1] = hexToRgb(a);
-  const [r2, g2, b2] = hexToRgb(b);
-  const r = Math.round(r1 + (r2 - r1) * t);
-  const g = Math.round(g1 + (g2 - g1) * t);
-  const bl = Math.round(b1 + (b2 - b1) * t);
-  return `rgb(${r},${g},${bl})`;
-}
-
-function interpolateColor(t: number) {
-  const seg = t * (COLORS.length - 1);
-  const i = Math.min(Math.floor(seg), COLORS.length - 2);
-  return lerpColor(COLORS[i], COLORS[i + 1], seg - i);
-}
 
 // ── Styles ──
 const s = StyleSheet.create({
@@ -122,50 +90,10 @@ const s = StyleSheet.create({
   },
 });
 
-// ── Build an SVG path `d` string for a rotated ellipse ──
-function ellipsePath(cx: number, cy: number, rx: number, ry: number, angleDeg: number, steps = 72): string {
-  const rad = (angleDeg * Math.PI) / 180;
-  const cosA = Math.cos(rad);
-  const sinA = Math.sin(rad);
-  const parts: string[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const t = (i / steps) * 2 * Math.PI;
-    const x = cx + rx * Math.cos(t) * cosA - ry * Math.sin(t) * sinA;
-    const y = cy + rx * Math.cos(t) * sinA + ry * Math.sin(t) * cosA;
-    parts.push(`${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`);
-  }
-  parts.push("Z");
-  return parts.join(" ");
-}
+const coverLogoPath = new URL("../../public/logo.png", import.meta.url).pathname;
 
-// ── Cover Circle (static SVG replicating CuryoLogo pattern) ──
 function CoverCircle() {
-  const COUNT = 20;
-  const CX = 200;
-  const CY = 200;
-  const paths: React.ReactElement[] = [];
-  for (let i = 0; i < COUNT; i++) {
-    const t = i / (COUNT - 1);
-    const rotation = i * 9;
-    const rx = 50 + i * 4;
-    const ry = 140 - i * 3;
-    const opacity = 0.3 + 0.5 * (1 - t);
-    paths.push(
-      <Path
-        key={i}
-        d={ellipsePath(CX, CY, rx, ry, rotation)}
-        fill="none"
-        stroke={interpolateColor(t)}
-        strokeWidth={1.8}
-        opacity={opacity}
-      />,
-    );
-  }
-  return (
-    <Svg viewBox="0 0 400 400" style={{ width: 280, height: 280 }}>
-      <G>{paths}</G>
-    </Svg>
-  );
+  return <Image src={coverLogoPath} style={{ width: 280, height: 280 }} />;
 }
 
 // ── PDF Table component ──

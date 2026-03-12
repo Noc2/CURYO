@@ -1,7 +1,14 @@
+import { useId } from "react";
+
 /**
- * Curyo logo — orbital ellipses forming a sphere.
+ * Curyo logo — clean gradient ring derived from the landing-page palette.
  */
 export function CuryoLogo({ className = "w-8 h-8" }: { className?: string }) {
+  const id = useId();
+  const gradientId = `${id}-curyo-ring-gradient`;
+  const innerGradientId = `${id}-curyo-ring-inner-gradient`;
+  const glowId = `${id}-curyo-ring-glow`;
+
   return (
     <svg
       className={className}
@@ -10,24 +17,36 @@ export function CuryoLogo({ className = "w-8 h-8" }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       aria-label="Curyo logo"
     >
-      <g transform="translate(64,64)">
-        <ellipse rx="48" ry="28" fill="none" stroke="#359EEE" strokeWidth="1.5" opacity="0.3" transform="rotate(0)" />
-        <ellipse rx="48" ry="28" fill="none" stroke="#359EEE" strokeWidth="1.5" opacity="0.35" transform="rotate(30)" />
-        <ellipse rx="48" ry="28" fill="none" stroke="#359EEE" strokeWidth="1.5" opacity="0.4" transform="rotate(60)" />
-        <ellipse rx="44" ry="32" fill="none" stroke="#03CEA4" strokeWidth="1.5" opacity="0.45" transform="rotate(90)" />
-        <ellipse rx="42" ry="34" fill="none" stroke="#03CEA4" strokeWidth="1.5" opacity="0.5" transform="rotate(120)" />
-        <ellipse
-          rx="40"
-          ry="36"
+      <defs>
+        <linearGradient id={gradientId} x1="22" y1="108" x2="106" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#03CEA4" />
+          <stop offset="0.28" stopColor="#359EEE" />
+          <stop offset="0.62" stopColor="#EF476F" />
+          <stop offset="1" stopColor="#FFC43D" />
+        </linearGradient>
+        <linearGradient id={innerGradientId} x1="32" y1="98" x2="96" y2="34" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#03CEA4" stopOpacity="0.45" />
+          <stop offset="0.5" stopColor="#359EEE" stopOpacity="0.2" />
+          <stop offset="1" stopColor="#EF476F" stopOpacity="0.32" />
+        </linearGradient>
+        <filter id={glowId} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="4.5" />
+        </filter>
+      </defs>
+
+      <g transform="rotate(-22 64 64)">
+        <circle
+          cx="64"
+          cy="64"
+          r="46"
           fill="none"
-          stroke="#FFC43D"
-          strokeWidth="1.8"
-          opacity="0.55"
-          transform="rotate(150)"
+          stroke={`url(#${gradientId})`}
+          strokeWidth="18"
+          opacity="0.24"
+          filter={`url(#${glowId})`}
         />
-        <ellipse rx="38" ry="38" fill="none" stroke="#FFC43D" strokeWidth="1.8" opacity="0.6" transform="rotate(0)" />
-        <ellipse rx="36" ry="40" fill="none" stroke="#EF476F" strokeWidth="2" opacity="0.7" transform="rotate(45)" />
-        <ellipse rx="34" ry="42" fill="none" stroke="#EF476F" strokeWidth="2" opacity="0.8" transform="rotate(90)" />
+        <circle cx="64" cy="64" r="46" fill="none" stroke={`url(#${gradientId})`} strokeWidth="11" />
+        <circle cx="64" cy="64" r="31.5" fill="none" stroke={`url(#${innerGradientId})`} strokeWidth="2" />
       </g>
     </svg>
   );

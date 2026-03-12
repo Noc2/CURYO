@@ -177,14 +177,14 @@ export const FeedVoteCard = memo(function FeedVoteCard({
 
       <div className={`grid min-h-0 flex-1 grid-cols-1 gap-3 lg:items-start ${mediaLayout.gridClass}`}>
         <div
-          className={`min-h-0 overflow-hidden rounded-2xl bg-base-200 lg:col-start-1 lg:row-start-1 ${mediaLayout.mediaShellClass}`}
+          className={`order-1 min-h-0 overflow-hidden rounded-2xl bg-base-200 lg:col-start-1 lg:row-start-1 ${mediaLayout.mediaShellClass}`}
         >
           <div className="h-full w-full">
             <ContentEmbed url={item.url} />
           </div>
         </div>
 
-        <div className="lg:col-start-1 lg:row-start-2">
+        <div className="order-3 lg:col-start-1 lg:row-start-2">
           <FeedContentMetaCard
             item={item}
             submitterProfile={submitterProfile}
@@ -198,7 +198,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           />
         </div>
 
-        <div className="w-full min-h-0 rounded-2xl bg-base-200 lg:col-start-2 lg:row-start-1 lg:h-full">
+        <div className="order-2 w-full min-h-0 rounded-2xl bg-base-200 lg:col-start-2 lg:row-start-1 lg:h-full">
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}

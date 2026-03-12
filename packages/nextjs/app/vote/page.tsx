@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { type PanInfo, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
@@ -55,6 +56,7 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
 
 const FEED_PAGE_SIZE = 20;
 const FEED_PREFETCH_BUFFER = 20;
+const CARD_SWIPE_THRESHOLD = 96;
 
 const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
   { value: "all", label: "All" },
@@ -603,6 +605,27 @@ const HomeInner = () => {
     handleNavigateSelection("next");
   }, [handleNavigateSelection]);
 
+  const canSwipeNavigate = displayFeed.length > 1 && !isCommitting && !stakeModal.isOpen;
+
+  const handleCardDragEnd = useCallback(
+    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      if (!canSwipeNavigate) return;
+
+      const offsetX = info.offset.x;
+      const velocityX = info.velocity.x;
+
+      if (offsetX <= -CARD_SWIPE_THRESHOLD || velocityX <= -500) {
+        handleNavigateSelection("next");
+        return;
+      }
+
+      if (offsetX >= CARD_SWIPE_THRESHOLD || velocityX >= 500) {
+        handleNavigateSelection("previous");
+      }
+    },
+    [canSwipeNavigate, handleNavigateSelection],
+  );
+
   const handleToggleWatch = useCallback(
     async (contentId: bigint) => {
       const result = await toggleWatch(contentId);
@@ -835,13 +858,19 @@ const HomeInner = () => {
             {primaryItem ? (
               <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-none xl:flex-col">
                 <div className="xl:min-h-0 xl:flex-none">
-                  <div
+                  <motion.div
                     key={primaryItem.id.toString()}
+                    data-disable-queue-wheel="true"
                     className={`touch-pan-y xl:min-h-0 ${
                       navigationDirection === "next"
                         ? "motion-safe:animate-vote-card-next"
                         : "motion-safe:animate-vote-card-prev"
                     }`}
+                    drag={canSwipeNavigate ? "x" : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.12}
+                    dragMomentum={false}
+                    onDragEnd={handleCardDragEnd}
                   >
                     <FeedVoteCard
                       item={primaryItem}
@@ -862,7 +891,7 @@ const HomeInner = () => {
                       canPrevious={activeSourceIndex > 0}
                       canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
                     />
-                  </div>
+                  </motion.div>
                 </div>
               </div>
             ) : null}
