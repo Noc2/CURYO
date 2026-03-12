@@ -4,7 +4,6 @@ import { memo, useState } from "react";
 import dynamic from "next/dynamic";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
-import { ContentDescription } from "~~/components/content/ContentDescription";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
@@ -238,15 +237,14 @@ function FeedContentMetaCard({
           </div>
         </div>
 
-        <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 text-sm text-base-content/55">
-          <span className="truncate rounded-full bg-base-300 px-2.5 py-1 font-medium text-base-content/70">
+        <div className="mt-3 text-base leading-relaxed text-base-content/85">
+          <span>{item.description}</span>
+          <span className="ml-2 inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 align-middle text-sm font-medium leading-none text-base-content/70">
             {platformType}
           </span>
-          {item.tags[0] ? <span className="truncate text-base-content/45">#{item.tags[0]}</span> : null}
-        </div>
-
-        <div className="mt-3">
-          <ContentDescription description={item.description} />
+          {item.tags[0] ? (
+            <span className="ml-2 inline text-sm text-base-content/55 align-middle">#{item.tags[0]}</span>
+          ) : null}
         </div>
 
         {item.categoryId === 3n ? (
