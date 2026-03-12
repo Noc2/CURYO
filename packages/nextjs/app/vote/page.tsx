@@ -829,11 +829,11 @@ const HomeInner = () => {
               ) : null}
 
               {primaryItem ? (
-                <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
-                  <div className="xl:min-h-0 xl:flex-1">
+                <div className="space-y-3 xl:flex xl:min-h-0 xl:flex-none xl:flex-col">
+                  <div className="xl:min-h-0 xl:flex-none">
                     <div
                       key={primaryItem.id.toString()}
-                      className={`touch-pan-y xl:min-h-0 xl:h-full xl:flex-1 ${
+                      className={`touch-pan-y xl:min-h-0 ${
                         navigationDirection === "next"
                           ? "motion-safe:animate-vote-card-next"
                           : "motion-safe:animate-vote-card-prev"
@@ -866,13 +866,13 @@ const HomeInner = () => {
               {visibleFeedItems.length > 0 ? (
                 <section
                   key={primaryItem?.id.toString() ?? "queue-empty"}
-                  className="motion-safe:animate-vote-queue-settle xl:flex-none"
+                  className="motion-safe:animate-vote-queue-settle xl:min-h-[10rem] xl:flex-1 xl:overflow-hidden 2xl:min-h-[16rem]"
                   aria-label="Up next queue"
                 >
                   <div
                     ref={queueRailRef}
                     data-disable-queue-wheel="true"
-                    className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:gap-2.5"
+                    className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:h-full xl:gap-2.5 2xl:grid 2xl:auto-cols-[10rem] 2xl:grid-flow-col 2xl:grid-rows-2 2xl:content-start 2xl:gap-2.5"
                   >
                     {visibleFeedItems.map(item => (
                       <FeedQueueCard
