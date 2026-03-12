@@ -18,6 +18,7 @@ import { useContentFeed } from "~~/hooks/useContentFeed";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
+import { useQueueNavigation } from "~~/hooks/useQueueNavigation";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUserPreferences } from "~~/hooks/useUserPreferences";
@@ -421,6 +422,7 @@ const HomeInner = () => {
   const {
     activeItem: primaryItem,
     orderedItems: orderedDisplayFeed,
+    promoteNext,
     selectContent,
     upNextItems: queueItems,
     visibleItems: visibleFeedItems,
@@ -516,17 +518,32 @@ const HomeInner = () => {
     setStakeModal(prev => ({ ...prev, isOpen: false }));
   };
 
+  const replaceContentQueryParam = useCallback((contentId: bigint | null) => {
+    const url = new URL(window.location.href);
+    if (contentId === null) {
+      url.searchParams.delete("content");
+    } else {
+      url.searchParams.set("content", contentId.toString());
+    }
+    history.replaceState(null, "", url.toString());
+  }, []);
+
   const handleSelectCard = useCallback(
     (id: bigint, categoryId: bigint) => {
       trackContentClick(id, categoryId);
       selectContent(id);
-      const url = new URL(window.location.href);
-      url.searchParams.set("content", id.toString());
-      history.replaceState(null, "", url.toString());
+      replaceContentQueryParam(id);
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
-    [selectContent],
+    [replaceContentQueryParam, selectContent],
   );
+
+  const handlePromoteNext = useCallback(() => {
+    const nextItem = promoteNext();
+    if (!nextItem) return false;
+    replaceContentQueryParam(nextItem.id);
+    return true;
+  }, [promoteNext, replaceContentQueryParam]);
 
   const handleToggleWatch = useCallback(
     async (contentId: bigint) => {
@@ -646,6 +663,11 @@ const HomeInner = () => {
     return `No content found in "${activeCategory}".`;
   }, [activeCategory, address, scope, searchQuery]);
 
+  const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
+    enabled: Boolean(primaryItem && queueItems.length > 0 && !isCommitting && !stakeModal.isOpen),
+    onAdvance: handlePromoteNext,
+  });
+
   return (
     <div className="flex flex-col items-center grow px-4 pt-4 pb-12">
       <div className="w-full max-w-6xl">
@@ -715,7 +737,11 @@ const HomeInner = () => {
               ) : null}
 
               {primaryItem ? (
-                <div key={primaryItem.id.toString()} className="motion-safe:animate-vote-card-promote">
+                <div
+                  key={primaryItem.id.toString()}
+                  ref={activeCardRegionRef}
+                  className="motion-safe:animate-vote-card-promote"
+                >
                   <FeedVoteCard
                     item={primaryItem}
                     submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
