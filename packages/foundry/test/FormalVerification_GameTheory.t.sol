@@ -105,9 +105,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         contentNonce++;
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent(
-            string(abi.encodePacked("https://t.co/gt", vm.toString(contentNonce))), "Goal", "tag", 0
-        );
+        uint256 id = registry.submitContent(string(abi.encodePacked("https://t.co/gt", vm.toString(contentNonce))), "Goal", "Goal", "tag", 0);
         vm.stopPrank();
         return id;
     }

@@ -99,8 +99,8 @@ contract InvariantRating is Test {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://example.com/rating1", "test", "test", 0);
-        registry.submitContent("https://example.com/rating2", "test", "test", 0);
+        registry.submitContent("https://example.com/rating1", "test", "test", "test", 0);
+        registry.submitContent("https://example.com/rating2", "test", "test", "test", 0);
         vm.stopPrank();
 
         contentIds.push(1);

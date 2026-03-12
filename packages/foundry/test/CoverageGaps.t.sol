@@ -806,7 +806,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/zero-reserve", "goal", "test", 0);
+        registry.submitContent("https://example.com/zero-reserve", "goal", "goal", "test", 0);
         vm.stopPrank();
         uint256 contentId = 1;
 
@@ -1090,7 +1090,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/coverage", "goal", "test", 0);
+        registry.submitContent("https://example.com/coverage", "goal", "goal", "test", 0);
         vm.stopPrank();
         contentId = 1;
     }

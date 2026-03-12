@@ -141,7 +141,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
     function _setupSettledRound() internal returns (uint256 contentId, uint256 roundId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
         contentId = 1;
 
@@ -171,7 +171,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
     function test_ClaimReward_RoundNotSettled_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         _vote(voter1, 1, true);
@@ -240,7 +240,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
     function test_ClaimSubmitterReward_RoundNotSettled_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         _vote(voter1, 1, true);

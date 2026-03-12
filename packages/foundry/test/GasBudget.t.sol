@@ -51,7 +51,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 gasUsed = _measureCallAs(
             submitter,
             address(registry),
-            abi.encodeCall(ContentRegistry.submitContent, ("https://example.com/gas-submit", "test goal", "test", 0))
+            abi.encodeCall(ContentRegistry.submitContent, ("https://example.com/gas-submit", "test goal", "test goal", "test", 0))
         );
 
         assertLe(gasUsed, MAX_SUBMIT_CONTENT_GAS, "submitContent gas budget exceeded");

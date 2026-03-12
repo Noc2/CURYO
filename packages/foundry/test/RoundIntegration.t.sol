@@ -143,7 +143,7 @@ contract RoundIntegrationTest is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "test goal", "test", 0);
+        registry.submitContent("https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         contentId = 1;
     }
@@ -153,7 +153,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         string memory url = string(abi.encodePacked("https://example.com/", vm.toString(n)));
-        registry.submitContent(url, "test goal", "test", 0);
+        registry.submitContent(url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
         contentId = n;
     }

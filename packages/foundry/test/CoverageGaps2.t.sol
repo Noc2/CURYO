@@ -626,6 +626,17 @@ contract HumanFaucetBranchTest is Test {
 // =========================================================================
 
 contract ContentRegistryCoverageTest is Test {
+    event ContentSubmitted(
+        uint256 indexed contentId,
+        address indexed submitter,
+        bytes32 contentHash,
+        string url,
+        string title,
+        string description,
+        string tags,
+        uint256 indexed categoryId
+    );
+
     ContentRegistry public registry;
     CuryoReputation public crep;
     MockVoterIdNFT public voterNFT;
@@ -664,7 +675,7 @@ contract ContentRegistryCoverageTest is Test {
     function test_SubmitContentSuccess() public {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/test", "goal", "tag1", 0);
+        uint256 id = registry.submitContent("https://example.com/test", "goal", "goal", "tag1", 0);
         vm.stopPrank();
 
         assertEq(id, 1);
@@ -675,13 +686,32 @@ contract ContentRegistryCoverageTest is Test {
         assertEq(c.submitterStake, 10e6);
     }
 
+    function test_SubmitContentSplitMetadataSuccess() public {
+        string memory url = "https://example.com/split";
+        string memory title = "Ethereum reference client";
+        string memory description = "Official Go implementation of Ethereum.";
+        string memory tags = "tag1";
+        bytes32 expectedHash = keccak256(abi.encode(url, title, description, tags));
+
+        vm.startPrank(submitter);
+        crep.approve(address(registry), 10e6);
+        vm.expectEmit(true, true, false, true);
+        emit ContentSubmitted(1, submitter, expectedHash, url, title, description, tags, 0);
+        uint256 id = registry.submitContent(url, title, description, tags, 0);
+        vm.stopPrank();
+
+        assertEq(id, 1);
+        ContentRegistry.Content memory c = registry.getContent(id);
+        assertEq(c.contentHash, expectedHash);
+    }
+
     // --- submitContent: empty URL ---
 
     function test_SubmitContentEmptyURLReverts() public {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("URL required");
-        registry.submitContent("", "goal", "tag1", 0);
+        registry.submitContent("", "goal", "goal", "tag1", 0);
         vm.stopPrank();
     }
 
@@ -695,31 +725,71 @@ contract ContentRegistryCoverageTest is Test {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("URL too long");
-        registry.submitContent(string(longUrl), "goal", "tag1", 0);
+        registry.submitContent(string(longUrl), "goal", "goal", "tag1", 0);
         vm.stopPrank();
     }
 
-    // --- submitContent: empty goal ---
+    // --- submitContent: empty title ---
 
-    function test_SubmitContentEmptyGoalReverts() public {
+    function test_SubmitContentEmptyTitleReverts_LegacyShape() public {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Goal required");
-        registry.submitContent("https://example.com/test", "", "tag1", 0);
+        vm.expectRevert("Title required");
+        registry.submitContent("https://example.com/test", "", "", "tag1", 0);
         vm.stopPrank();
     }
 
-    // --- submitContent: goal too long ---
+    // --- submitContent: title too long ---
 
-    function test_SubmitContentGoalTooLongReverts() public {
+    function test_SubmitContentTitleTooLongReverts_LegacyShape() public {
         bytes memory longGoal = new bytes(501);
         for (uint256 i = 0; i < 501; i++) {
             longGoal[i] = "b";
         }
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("Goal too long");
-        registry.submitContent("https://example.com/test", string(longGoal), "tag1", 0);
+        vm.expectRevert("Title too long");
+        registry.submitContent("https://example.com/test", string(longGoal), string(longGoal), "tag1", 0);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContentEmptyTitleReverts() public {
+        vm.startPrank(submitter);
+        crep.approve(address(registry), 10e6);
+        vm.expectRevert("Title required");
+        registry.submitContent("https://example.com/test", "", "description", "tag1", 0);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContentEmptyDescriptionReverts() public {
+        vm.startPrank(submitter);
+        crep.approve(address(registry), 10e6);
+        vm.expectRevert("Description required");
+        registry.submitContent("https://example.com/test", "title", "", "tag1", 0);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContentTitleTooLongReverts() public {
+        bytes memory longTitle = new bytes(501);
+        for (uint256 i = 0; i < 501; i++) {
+            longTitle[i] = "b";
+        }
+        vm.startPrank(submitter);
+        crep.approve(address(registry), 10e6);
+        vm.expectRevert("Title too long");
+        registry.submitContent("https://example.com/test", string(longTitle), "description", "tag1", 0);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContentDescriptionTooLongReverts() public {
+        bytes memory longDescription = new bytes(501);
+        for (uint256 i = 0; i < 501; i++) {
+            longDescription[i] = "b";
+        }
+        vm.startPrank(submitter);
+        crep.approve(address(registry), 10e6);
+        vm.expectRevert("Description too long");
+        registry.submitContent("https://example.com/test", "title", string(longDescription), "tag1", 0);
         vm.stopPrank();
     }
 
@@ -729,7 +799,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Tags required");
-        registry.submitContent("https://example.com/test", "goal", "", 0);
+        registry.submitContent("https://example.com/test", "goal", "goal", "", 0);
         vm.stopPrank();
     }
 
@@ -743,7 +813,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Tags too long");
-        registry.submitContent("https://example.com/test", "goal", string(longTags), 0);
+        registry.submitContent("https://example.com/test", "goal", "goal", string(longTags), 0);
         vm.stopPrank();
     }
 
@@ -752,9 +822,9 @@ contract ContentRegistryCoverageTest is Test {
     function test_SubmitContentDuplicateURLReverts() public {
         vm.startPrank(submitter);
         crep.approve(address(registry), 20e6);
-        registry.submitContent("https://example.com/dup", "goal", "tag1", 0);
+        registry.submitContent("https://example.com/dup", "goal", "goal", "tag1", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://example.com/dup", "goal2", "tag2", 0);
+        registry.submitContent("https://example.com/dup", "goal2", "goal2", "tag2", 0);
         vm.stopPrank();
     }
 
@@ -767,7 +837,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Voter ID required");
-        registry.submitContent("https://example.com/nft", "goal", "tag1", 0);
+        registry.submitContent("https://example.com/nft", "goal", "goal", "tag1", 0);
         vm.stopPrank();
     }
 
@@ -778,7 +848,7 @@ contract ContentRegistryCoverageTest is Test {
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/nft2", "goal", "tag1", 0);
+        uint256 id = registry.submitContent("https://example.com/nft2", "goal", "goal", "tag1", 0);
         vm.stopPrank();
         assertEq(id, 1);
     }
@@ -789,7 +859,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("CategoryRegistry not set");
-        registry.submitContent("https://example.com/cat", "goal", "tag1", 1);
+        registry.submitContent("https://example.com/cat", "goal", "goal", "tag1", 1);
         vm.stopPrank();
     }
 
@@ -842,7 +912,7 @@ contract ContentRegistryCoverageTest is Test {
         // URL should be reusable
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        uint256 id2 = registry.submitContent("https://example.com/reuse", "new goal", "tag", 0);
+        uint256 id2 = registry.submitContent("https://example.com/reuse", "new goal", "new goal", "tag", 0);
         vm.stopPrank();
         assertEq(id2, 2);
     }
@@ -865,7 +935,7 @@ contract ContentRegistryCoverageTest is Test {
 
         vm.startPrank(submitter);
         crep.approve(address(reg2), 10e6);
-        uint256 id = reg2.submitContent("https://example.com/nobonus", "goal", "tag1", 0);
+        uint256 id = reg2.submitContent("https://example.com/nobonus", "goal", "goal", "tag1", 0);
         vm.expectRevert("Bonus pool not set");
         reg2.cancelContent(id);
         vm.stopPrank();
@@ -1089,7 +1159,7 @@ contract ContentRegistryCoverageTest is Test {
 
         vm.startPrank(submitter);
         crep.approve(address(reg2), 10e6);
-        uint256 id = reg2.submitContent("https://example.com/notreasury", "goal", "tag1", 0);
+        uint256 id = reg2.submitContent("https://example.com/notreasury", "goal", "goal", "tag1", 0);
         vm.stopPrank();
 
         vm.expectRevert("Treasury not set");
@@ -1135,7 +1205,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert();
-        registry.submitContent("https://example.com/paused", "goal", "tag1", 0);
+        registry.submitContent("https://example.com/paused", "goal", "goal", "tag1", 0);
         vm.stopPrank();
     }
 
@@ -1200,7 +1270,7 @@ contract ContentRegistryCoverageTest is Test {
     function _submitContent(address who, string memory url) internal returns (uint256) {
         vm.startPrank(who);
         crep.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent(url, "goal", "tag1", 0);
+        uint256 id = registry.submitContent(url, "goal", "goal", "tag1", 0);
         vm.stopPrank();
         return id;
     }
@@ -1807,9 +1877,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
         contentId = registry.nextContentId();
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        registry.submitContent(
-            string(abi.encodePacked("https://example.com/test-", vm.toString(contentId))), "goal", "test", 0
-        );
+        registry.submitContent(string(abi.encodePacked("https://example.com/test-", vm.toString(contentId))), "goal", "goal", "test", 0);
         vm.stopPrank();
     }
 

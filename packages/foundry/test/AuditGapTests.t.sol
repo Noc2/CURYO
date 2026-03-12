@@ -145,7 +145,7 @@ contract AuditGapTests is VotingTestBase {
     function _submitContent(string memory url) internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent(url, "test goal", "test", 0);
+        registry.submitContent(url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return registry.nextContentId() - 1;
     }
@@ -276,7 +276,7 @@ contract AuditGapTests is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert(); // EnforcedPause
-        registry.submitContent("https://pause-test-6.com", "goal", "tag", 0);
+        registry.submitContent("https://pause-test-6.com", "goal", "goal", "tag", 0);
         vm.stopPrank();
     }
 

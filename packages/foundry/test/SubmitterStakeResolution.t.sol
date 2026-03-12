@@ -90,7 +90,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         (bytes32 commitKey1, bytes32 salt1) = _commit(voter1, 1, true);
@@ -124,7 +124,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/no-settlement", "goal", "tags", 0);
+        registry.submitContent("https://example.com/no-settlement", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         _commit(voter1, 1, true);

@@ -1257,7 +1257,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/gap3", "goal", "test", 0);
+        registry.submitContent("https://example.com/gap3", "goal", "goal", "test", 0);
         vm.stopPrank();
         contentId = 1;
     }

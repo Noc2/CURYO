@@ -263,7 +263,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Voter ID required");
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
     }
 
@@ -274,7 +274,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        uint256 id = registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
         assertEq(id, 1);
     }
@@ -289,7 +289,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(delegate);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/delegate-submit", "goal", "tags", 0);
+        uint256 id = registry.submitContent("https://example.com/delegate-submit", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         assertEq(registry.getSubmitter(id), delegate, "raw submitter should remain delegate wallet");
@@ -299,7 +299,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_GetSubmitterIdentity_ResolvesLegacyRawSubmitterViaCurrentDelegateMapping() public {
         vm.startPrank(delegate);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/legacy-delegate-submit", "goal", "tags", 0);
+        uint256 id = registry.submitContent("https://example.com/legacy-delegate-submit", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         assertEq(registry.getSubmitterIdentity(id), delegate, "legacy content should default to raw submitter");
@@ -316,7 +316,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_BackfillSubmitterIdentity_OverridesLegacyRawIdentity() public {
         vm.startPrank(delegate);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/backfill-submit", "goal", "tags", 0);
+        uint256 id = registry.submitContent("https://example.com/backfill-submit", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         assertEq(registry.getSubmitterIdentity(id), delegate, "legacy content should start with raw identity");
@@ -335,7 +335,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         // No voterIdNFT set — should skip check
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        uint256 id = registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
         assertEq(id, 1);
     }
@@ -344,7 +344,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitContent("javascript:alert(1)", "goal", "tags", 0);
+        registry.submitContent("javascript:alert(1)", "goal", "goal", "tags", 0);
         vm.stopPrank();
     }
 
@@ -352,7 +352,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Invalid URL");
-        registry.submitContent("https://example.com/ bad", "goal", "tags", 0);
+        registry.submitContent("https://example.com/ bad", "goal", "goal", "tags", 0);
         vm.stopPrank();
     }
 
@@ -364,14 +364,14 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Category not approved");
-        registry.submitContent("https://example.com/1", "goal", "tags", 99);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 99);
         vm.stopPrank();
     }
 
     function test_SubmitContent_CategoryZero_SkipsValidation_WhenRegistryUnset() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        uint256 id = registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
         assertEq(id, 1);
     }
@@ -383,7 +383,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 balBefore = crepToken.balanceOf(submitter);
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         uint256 balAfter = crepToken.balanceOf(submitter);
@@ -397,7 +397,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 balBefore = crepToken.balanceOf(submitter);
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 4 days + 1);
@@ -415,7 +415,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 balBefore = crepToken.balanceOf(submitter);
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/dormancy-return", "goal", "tags", 0);
+        registry.submitContent("https://example.com/dormancy-return", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 31 days);
@@ -432,7 +432,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/dormancy-slash", "goal", "tags", 0);
+        registry.submitContent("https://example.com/dormancy-slash", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.prank(address(votingEngine));
@@ -455,7 +455,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 balBefore = crepToken.balanceOf(submitter);
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         uint256 balAfter = crepToken.balanceOf(submitter);
@@ -471,11 +471,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("URL too long");
-        registry.submitContent(string(longUrl), "goal", "tags", 0);
+        registry.submitContent(string(longUrl), "goal", "goal", "tags", 0);
         vm.stopPrank();
     }
 
-    function test_SubmitContent_GoalTooLong_Reverts() public {
+    function test_SubmitContent_TitleTooLong_Reverts() public {
         bytes memory longGoal = new bytes(501);
         for (uint256 i = 0; i < longGoal.length; i++) {
             longGoal[i] = "a";
@@ -483,8 +483,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Goal too long");
-        registry.submitContent("https://example.com/1", string(longGoal), "tags", 0);
+        vm.expectRevert("Title too long");
+        registry.submitContent("https://example.com/1", string(longGoal), string(longGoal), "tags", 0);
         vm.stopPrank();
     }
 
@@ -497,16 +497,16 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Tags too long");
-        registry.submitContent("https://example.com/1", "goal", string(longTags), 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", string(longTags), 0);
         vm.stopPrank();
     }
 
     function test_SubmitContent_DuplicateUrl_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://example.com/1", "goal2", "tags2", 0);
+        registry.submitContent("https://example.com/1", "goal2", "goal2", "tags2", 0);
         vm.stopPrank();
     }
 
@@ -514,15 +514,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("URL required");
-        registry.submitContent("", "goal", "tags", 0);
+        registry.submitContent("", "goal", "goal", "tags", 0);
         vm.stopPrank();
     }
 
-    function test_SubmitContent_EmptyGoal_Reverts() public {
+    function test_SubmitContent_EmptyTitle_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        vm.expectRevert("Goal required");
-        registry.submitContent("https://example.com/1", "", "tags", 0);
+        vm.expectRevert("Title required");
+        registry.submitContent("https://example.com/1", "", "", "tags", 0);
         vm.stopPrank();
     }
 
@@ -530,7 +530,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Tags required");
-        registry.submitContent("https://example.com/1", "goal", "", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "", 0);
         vm.stopPrank();
     }
 
@@ -541,7 +541,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_CancelContent_NotSubmitter_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.prank(voter1);
@@ -552,7 +552,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_CancelContent_NotActive_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         registry.cancelContent(1);
 
         vm.expectRevert("Not active");
@@ -563,7 +563,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_CancelContent_HasVotes_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         // Add a vote
@@ -592,7 +592,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(reg2), 10e6);
-        reg2.submitContent("https://example.com/1", "goal", "tags", 0);
+        reg2.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         reg2.cancelContent(1);
         vm.stopPrank();
 
@@ -603,7 +603,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_CancelContent_FeeSentToConfiguredSink() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
 
         uint256 bonusBefore = crepToken.balanceOf(bonusPool);
         registry.cancelContent(1);
@@ -619,7 +619,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/treasury", "goal", "tags", 0);
+        registry.submitContent("https://example.com/treasury", "goal", "goal", "tags", 0);
 
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
         registry.cancelContent(1);
@@ -636,7 +636,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_MarkDormant_PeriodNotElapsed_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.expectRevert("Dormancy period not elapsed");
@@ -659,7 +659,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(reg2), 10e6);
-        reg2.submitContent("https://example.com/1", "goal", "tags", 0);
+        reg2.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 31 days);
@@ -672,7 +672,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_MarkDormant_Success() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 31 days);
@@ -685,7 +685,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_VoteCommit_UpdatesLastActivityAt() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/activity", "goal", "tags", 0);
+        registry.submitContent("https://example.com/activity", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 29 days);
@@ -698,7 +698,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_MarkDormant_ActiveRound_AllVotesRevealed_Reverts() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/open-round", "goal", "tags", 0);
+        registry.submitContent("https://example.com/open-round", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         (bytes32 commitKey, bytes32 salt) = _commit(voter1, 1, true);
@@ -719,7 +719,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_MarkDormant_CancelledRound_UsesDormancyAnchor() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/recent-vote", "goal", "tags", 0);
+        registry.submitContent("https://example.com/recent-vote", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 29 days);
@@ -738,7 +738,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_CommitVote_DormancyEligibleContent_CannotStartNewRoundAfterCancellation() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/dormancy-guard", "goal", "tags", 0);
+        registry.submitContent("https://example.com/dormancy-guard", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 29 days);
@@ -762,7 +762,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_MarkDormant_ReleasesUrlForResubmission() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://example.com/dormant-url", "goal", "tags", 0);
+        registry.submitContent("https://example.com/dormant-url", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         // URL should be marked as submitted
@@ -778,7 +778,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         // Should be able to resubmit the same URL
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/dormant-url", "goal2", "tags2", 0);
+        registry.submitContent("https://example.com/dormant-url", "goal2", "goal2", "tags2", 0);
         vm.stopPrank();
 
         // New content created with same URL
@@ -789,7 +789,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_MarkDormant_LowRatedContent_SlashesUnresolvedStake() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/dormant-slash", "goal", "tags", 0);
+        registry.submitContent("https://example.com/dormant-slash", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         uint256 treasuryBefore = crepToken.balanceOf(treasury);
@@ -814,7 +814,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent(url, "goal", "tags", 0);
+        registry.submitContent(url, "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 31 days);
@@ -828,7 +828,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(voter2);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("URL already submitted");
-        registry.submitContent(url, "goal2", "tags2", 0);
+        registry.submitContent(url, "goal2", "goal2", "tags2", 0);
         vm.stopPrank();
     }
 
@@ -837,7 +837,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent(url, "goal", "tags", 0);
+        registry.submitContent(url, "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.warp(T0 + 31 days);
@@ -845,7 +845,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(voter1);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent(url, "goal2", "tags2", 0);
+        registry.submitContent(url, "goal2", "goal2", "tags2", 0);
         vm.stopPrank();
 
         vm.startPrank(voter2);
@@ -876,7 +876,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(reg2), 10e6);
-        reg2.submitContent("https://example.com/1", "goal", "tags", 0);
+        reg2.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         vm.prank(address(votingEngine));
@@ -891,7 +891,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_UpdateRatingDirect_CappedAt100() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         // Set rating to 110 → should clamp to 100
@@ -904,7 +904,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_UpdateRatingDirect_FlooredAt0() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         // Set rating to 0
@@ -917,7 +917,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_UpdateRatingDirect_SameValue_NoChange() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "tags", 0);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         // Set same rating (50) → no change, no event
@@ -935,7 +935,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/1", "goal", "tags", 1);
+        uint256 id = registry.submitContent("https://example.com/1", "goal", "goal", "tags", 1);
         vm.stopPrank();
         assertEq(id, 1);
         assertEq(registry.getCategoryId(1), 1);
@@ -949,7 +949,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/auto", "goal", "tags", 0);
+        uint256 id = registry.submitContent("https://example.com/auto", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         assertEq(id, 1);
@@ -965,7 +965,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Domain not approved");
-        registry.submitContent("https://example.com/not-approved", "goal", "tags", 0);
+        registry.submitContent("https://example.com/not-approved", "goal", "goal", "tags", 0);
         vm.stopPrank();
     }
 
@@ -980,7 +980,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Category mismatch");
-        registry.submitContent("https://example.com/mismatch", "goal", "tags", 2);
+        registry.submitContent("https://example.com/mismatch", "goal", "goal", "tags", 2);
         vm.stopPrank();
     }
 
@@ -992,9 +992,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://youtu.be/dQw4w9WgXcQ", "goal", "tags", 0);
+        registry.submitContent("https://youtu.be/dQw4w9WgXcQ", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "goal2", "tags2", 1);
+        registry.submitContent("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1006,9 +1006,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://twitter.com/openai/status/12345", "goal", "tags", 0);
+        registry.submitContent("https://twitter.com/openai/status/12345", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://x.com/openai/status/12345", "goal2", "tags2", 1);
+        registry.submitContent("https://x.com/openai/status/12345", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1020,9 +1020,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://github.com/foundry-rs/foundry/tree/master/crates", "goal", "tags", 0);
+        registry.submitContent("https://github.com/foundry-rs/foundry/tree/master/crates", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://www.github.com/foundry-rs/foundry", "goal2", "tags2", 1);
+        registry.submitContent("https://www.github.com/foundry-rs/foundry", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1034,9 +1034,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://scryfall.com/card/lea/232/black-lotus?utm_source=test", "goal", "tags", 0);
+        registry.submitContent("https://scryfall.com/card/lea/232/black-lotus?utm_source=test", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://scryfall.com/card/lea/232/black-lotus", "goal2", "tags2", 1);
+        registry.submitContent("https://scryfall.com/card/lea/232/black-lotus", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1048,9 +1048,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://www.themoviedb.org/movie/238-the-godfather", "goal", "tags", 0);
+        registry.submitContent("https://www.themoviedb.org/movie/238-the-godfather", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://themoviedb.org/movie/238", "goal2", "tags2", 1);
+        registry.submitContent("https://themoviedb.org/movie/238", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1062,9 +1062,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://en.wikipedia.org/wiki/Lionel_Messi?oldformat=true", "goal", "tags", 0);
+        registry.submitContent("https://en.wikipedia.org/wiki/Lionel_Messi?oldformat=true", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://en.wikipedia.org/wiki/Lionel_Messi", "goal2", "tags2", 1);
+        registry.submitContent("https://en.wikipedia.org/wiki/Lionel_Messi", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1076,9 +1076,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://rawg.io/games/elden-ring?ref=feed", "goal", "tags", 0);
+        registry.submitContent("https://rawg.io/games/elden-ring?ref=feed", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://rawg.io/games/elden-ring", "goal2", "tags2", 1);
+        registry.submitContent("https://rawg.io/games/elden-ring", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1090,9 +1090,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://openlibrary.org/works/OL45883W/Fantastic_Mr_Fox", "goal", "tags", 0);
+        registry.submitContent("https://openlibrary.org/works/OL45883W/Fantastic_Mr_Fox", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://openlibrary.org/works/OL45883W", "goal2", "tags2", 1);
+        registry.submitContent("https://openlibrary.org/works/OL45883W", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1104,9 +1104,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://huggingface.co/Qwen/Qwen3.5-397B-A17B/tree/main", "goal", "tags", 0);
+        registry.submitContent("https://huggingface.co/Qwen/Qwen3.5-397B-A17B/tree/main", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://huggingface.co/Qwen/Qwen3.5-397B-A17B", "goal2", "tags2", 1);
+        registry.submitContent("https://huggingface.co/Qwen/Qwen3.5-397B-A17B", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1118,9 +1118,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://www.coingecko.com/en/coins/bitcoin", "goal", "tags", 0);
+        registry.submitContent("https://www.coingecko.com/en/coins/bitcoin", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://coingecko.com/coins/bitcoin", "goal2", "tags2", 1);
+        registry.submitContent("https://coingecko.com/coins/bitcoin", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 
@@ -1132,9 +1132,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://open.spotify.com/embed/show/5eXZwvvxt3K2dxha3BSaAe", "goal", "tags", 0);
+        registry.submitContent("https://open.spotify.com/embed/show/5eXZwvvxt3K2dxha3BSaAe", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://open.spotify.com/intl-de/show/5eXZwvvxt3K2dxha3BSaAe", "goal2", "tags2", 1);
+        registry.submitContent("https://open.spotify.com/intl-de/show/5eXZwvvxt3K2dxha3BSaAe", "goal2", "goal2", "tags2", 1);
         vm.stopPrank();
     }
 }

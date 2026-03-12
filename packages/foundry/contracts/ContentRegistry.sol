@@ -17,7 +17,7 @@ import { SubmissionCanonicalizer } from "./SubmissionCanonicalizer.sol";
 
 /// @title ContentRegistry
 /// @notice Manages content lifecycle: submission → active → dormant → revived / cancelled.
-/// @dev Stores only content hash on-chain; full URL/goal emitted in events.
+/// @dev Stores only a metadata hash on-chain; full URL/title/description are emitted in events.
 contract ContentRegistry is
     Initializable,
     AccessControlUpgradeable,
@@ -45,7 +45,8 @@ contract ContentRegistry is
 
     // String length limits (prevent storage bloat)
     uint256 public constant MAX_URL_LENGTH = 2048;
-    uint256 public constant MAX_GOAL_LENGTH = 500;
+    uint256 public constant MAX_TITLE_LENGTH = 160;
+    uint256 public constant MAX_DESCRIPTION_LENGTH = 500;
     uint256 public constant MAX_TAGS_LENGTH = 256;
 
     // --- Enums ---
@@ -108,7 +109,8 @@ contract ContentRegistry is
         address indexed submitter,
         bytes32 contentHash,
         string url,
-        string goal,
+        string title,
+        string description,
         string tags,
         uint256 indexed categoryId
     );
@@ -194,11 +196,18 @@ contract ContentRegistry is
 
     /// @notice Submit new content. Locks MIN_SUBMITTER_STAKE cREP tokens.
     /// @param url The content URL (stored in event only).
-    /// @param goal The goal description (stored in event only).
+    /// @param title The content title (stored in event only).
+    /// @param description The content description (stored in event only).
     /// @param tags Comma-separated subcategory tags (stored in event only).
     /// @param categoryId The category ID hint. When CategoryRegistry is configured, the URL determines the
     ///        effective category and this hint must either match or be 0.
-    function submitContent(string calldata url, string calldata goal, string calldata tags, uint256 categoryId)
+    function submitContent(
+        string calldata url,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId
+    )
         external
         nonReentrant
         whenNotPaused
@@ -212,8 +221,10 @@ contract ContentRegistry is
         require(bytes(url).length > 0, "URL required");
         require(bytes(url).length <= MAX_URL_LENGTH, "URL too long");
         require(_isValidSubmissionUrl(url), "Invalid URL");
-        require(bytes(goal).length > 0, "Goal required");
-        require(bytes(goal).length <= MAX_GOAL_LENGTH, "Goal too long");
+        require(bytes(title).length > 0, "Title required");
+        require(bytes(title).length <= MAX_TITLE_LENGTH, "Title too long");
+        require(bytes(description).length > 0, "Description required");
+        require(bytes(description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
         require(bytes(tags).length > 0, "Tags required");
         require(bytes(tags).length <= MAX_TAGS_LENGTH, "Tags too long");
 
@@ -231,7 +242,7 @@ contract ContentRegistry is
         require(!submissionKeyUsed[submissionKey], "URL already submitted");
         submissionKeyUsed[submissionKey] = true;
 
-        bytes32 contentHash = keccak256(abi.encode(url, goal, tags));
+        bytes32 contentHash = keccak256(abi.encode(url, title, description, tags));
         address submitterIdentity = _resolveSubmitterIdentity(msg.sender);
 
         crepToken.safeTransferFrom(msg.sender, address(this), MIN_SUBMITTER_STAKE);
@@ -255,7 +266,7 @@ contract ContentRegistry is
         });
         dormancyAnchorAt[contentId] = block.timestamp;
 
-        emit ContentSubmitted(contentId, msg.sender, contentHash, url, goal, tags, resolvedCategoryId);
+        emit ContentSubmitted(contentId, msg.sender, contentHash, url, title, description, tags, resolvedCategoryId);
 
         return contentId;
     }

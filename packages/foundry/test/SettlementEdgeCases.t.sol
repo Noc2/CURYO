@@ -149,7 +149,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "test goal", "test", 0);
+        registry.submitContent("https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         contentId = 1;
     }
@@ -158,7 +158,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         string memory url = string(abi.encodePacked("https://example.com/", vm.toString(n)));
-        registry.submitContent(url, "test goal", "test", 0);
+        registry.submitContent(url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return registry.nextContentId() - 1;
     }
@@ -506,7 +506,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         // Submit content
         vm.startPrank(submitter);
         crepToken2.approve(address(registry2), 10e6);
-        registry2.submitContent("https://example.com/zero-reserve", "test", "test", 0);
+        registry2.submitContent("https://example.com/zero-reserve", "test", "test", "test", 0);
         vm.stopPrank();
         uint256 contentId = 1;
 
