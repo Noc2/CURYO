@@ -204,6 +204,8 @@ contract RoundVotingEngine is
     event KeeperRewardPoolFunded(address indexed funder, uint256 amount);
     event KeeperRewarded(address indexed keeper, uint256 amount, uint8 operation);
     event RevealGracePeriodUpdated(uint256 revealGracePeriod);
+    event VoterIdNFTUpdated(address voterIdNFT);
+    event ParticipationPoolUpdated(address participationPool);
 
     // Settlement side-effect failure reason codes
     uint8 internal constant REASON_CATEGORY_FEE = 1;
@@ -295,11 +297,13 @@ contract RoundVotingEngine is
     function setVoterIdNFT(address _voterIdNFT) external onlyRole(CONFIG_ROLE) {
         if (_voterIdNFT == address(0)) revert InvalidAddress();
         voterIdNFT = IVoterIdNFT(_voterIdNFT);
+        emit VoterIdNFTUpdated(_voterIdNFT);
     }
 
     function setParticipationPool(address _participationPool) external onlyRole(CONFIG_ROLE) {
         if (_participationPool == address(0)) revert InvalidAddress();
         participationPool = IParticipationPool(_participationPool);
+        emit ParticipationPoolUpdated(_participationPool);
     }
 
     function setConfig(uint256 _epochDuration, uint256 _maxDuration, uint256 _minVoters, uint256 _maxVoters)

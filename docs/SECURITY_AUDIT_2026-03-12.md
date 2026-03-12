@@ -654,7 +654,8 @@ All fixes have been implemented and verified with 1287 passing tests.
 | **L-13** | Added empty-domain-after-normalization check in both `submitCategory` and `addApprovedCategory` | CategoryRegistry.sol |
 | **N-5** | Added derived bound `maxDuration / epochDuration <= 2016` in `setConfig` to limit epoch iterations | RoundVotingEngine.sol |
 | **N-8** | Auto-adjusts `revealGracePeriod` upward when `epochDuration` increases in `setConfig` | RoundVotingEngine.sol |
-| **M-6 (gap)** | Added `retryVoterIdMint(user, nullifier)` owner function for users whose mint failed in try/catch | HumanFaucet.sol |
+| **M-6 (gap)** | Added `claimNullifier` mapping + `retryVoterIdMint(user)` owner function (nullifier derived from stored claim data, not admin-supplied) | HumanFaucet.sol |
+| **I-8** | Added missing events for `setVoterIdNFT` and `setParticipationPool` | RoundVotingEngine.sol |
 
 ### Reverted / Not Implemented (by design)
 
