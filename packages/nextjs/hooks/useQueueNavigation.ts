@@ -24,7 +24,6 @@ export function useQueueNavigation<T extends HTMLElement>({
   threshold = 72,
 }: UseQueueNavigationOptions) {
   const containerRef = useRef<T | null>(null);
-  const wheelAccumulatorRef = useRef(0);
   const coolingDownRef = useRef(false);
   const touchGestureRef = useRef<{
     startX: number;
@@ -39,29 +38,6 @@ export function useQueueNavigation<T extends HTMLElement>({
     const node = containerRef.current;
     if (!node || !enabled) return;
     if (typeof window === "undefined") return;
-
-    const mediaQuery = window.matchMedia?.("(pointer: fine)");
-    const supportsFinePointer = !mediaQuery || mediaQuery.matches;
-
-    const handleWheel = (event: WheelEvent) => {
-      if (!supportsFinePointer) return;
-      if (coolingDownRef.current) return;
-      if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-      if (isInteractiveTarget(event.target)) return;
-
-      wheelAccumulatorRef.current += event.deltaY;
-      if (Math.abs(wheelAccumulatorRef.current) < threshold) return;
-
-      const direction = wheelAccumulatorRef.current > 0 ? "next" : "previous";
-      wheelAccumulatorRef.current = 0;
-      if (!onNavigate(direction)) return;
-
-      event.preventDefault();
-      coolingDownRef.current = true;
-      window.setTimeout(() => {
-        coolingDownRef.current = false;
-      }, cooldownMs);
-    };
 
     const handleTouchStart = (event: TouchEvent) => {
       if (coolingDownRef.current || event.touches.length !== 1) return;
@@ -111,7 +87,7 @@ export function useQueueNavigation<T extends HTMLElement>({
 
       if (duration > 900) return;
       if (axis !== "x") return;
-      if (Math.abs(deltaX) < 48) return;
+      if (Math.abs(deltaX) < threshold) return;
       if (Math.abs(deltaX) <= Math.abs(deltaY)) return;
 
       const direction = deltaX > 0 ? "previous" : "next";
@@ -127,14 +103,12 @@ export function useQueueNavigation<T extends HTMLElement>({
       touchGestureRef.current = null;
     };
 
-    node.addEventListener("wheel", handleWheel, { passive: false });
     node.addEventListener("touchstart", handleTouchStart, { passive: true });
     node.addEventListener("touchmove", handleTouchMove, { passive: false });
     node.addEventListener("touchend", handleTouchEnd, { passive: true });
     node.addEventListener("touchcancel", handleTouchCancel, { passive: true });
 
     return () => {
-      node.removeEventListener("wheel", handleWheel);
       node.removeEventListener("touchstart", handleTouchStart);
       node.removeEventListener("touchmove", handleTouchMove);
       node.removeEventListener("touchend", handleTouchEnd);

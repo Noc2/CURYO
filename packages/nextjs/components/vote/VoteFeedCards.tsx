@@ -278,6 +278,7 @@ function FeedContentMetaCard({
 interface FeedQueueCardProps {
   item: ContentItem;
   onSelect: (id: bigint, categoryId: bigint) => void;
+  onNavigate?: (action: "previous" | "next" | "first" | "last", currentId: bigint) => void;
   queuePosition: number;
   selected: boolean;
 }
@@ -285,6 +286,7 @@ interface FeedQueueCardProps {
 export const FeedQueueCard = memo(function FeedQueueCard({
   item,
   onSelect,
+  onNavigate,
   queuePosition,
   selected,
 }: FeedQueueCardProps) {
@@ -299,7 +301,32 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-thumbnail-id={item.id.toString()}
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
+      tabIndex={selected ? 0 : -1}
       onClick={() => onSelect(item.id, item.categoryId)}
+      onKeyDown={event => {
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          onNavigate?.("previous", item.id);
+          return;
+        }
+
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          onNavigate?.("next", item.id);
+          return;
+        }
+
+        if (event.key === "Home" || event.key === "PageUp") {
+          event.preventDefault();
+          onNavigate?.("first", item.id);
+          return;
+        }
+
+        if (event.key === "End" || event.key === "PageDown") {
+          event.preventDefault();
+          onNavigate?.("last", item.id);
+        }
+      }}
       className={`group flex w-[11.5rem] min-w-[11.5rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[12.25rem] sm:min-w-[12.25rem] xl:w-[12.75rem] xl:min-w-[12.75rem] ${
         selected
           ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"

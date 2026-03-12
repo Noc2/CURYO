@@ -1,10 +1,18 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { type PanInfo, motion } from "framer-motion";
+import { AnimatePresence, type PanInfo, type Variants, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
@@ -57,6 +65,28 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
 const FEED_PAGE_SIZE = 20;
 const FEED_PREFETCH_BUFFER = 20;
 const CARD_SWIPE_THRESHOLD = 96;
+const VOTE_CARD_TRANSITION_EASE = [0.22, 1, 0.36, 1] as const;
+
+const voteCardVariants: Variants = {
+  enter: (direction: "previous" | "next") => ({
+    opacity: 0.38,
+    x: direction === "next" ? 22 : -22,
+    y: 10,
+    scale: 0.992,
+  }),
+  center: {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    scale: 1,
+  },
+  exit: (direction: "previous" | "next") => ({
+    opacity: 0.72,
+    x: direction === "next" ? -14 : 14,
+    y: 4,
+    scale: 0.997,
+  }),
+};
 
 const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
   { value: "all", label: "All" },
@@ -80,6 +110,7 @@ const HomeInner = () => {
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
+  const [supportsTouchNavigation, setSupportsTouchNavigation] = useState(false);
   const isSearchMode = searchQuery.trim().length > 0;
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
@@ -430,7 +461,6 @@ const HomeInner = () => {
     activeItem: primaryItem,
     activeSourceIndex,
     selectContent,
-    selectRelative,
     visibleItems: visibleFeedItems,
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
@@ -466,6 +496,28 @@ const HomeInner = () => {
   useEffect(() => {
     setVisibleCount(FEED_PAGE_SIZE);
   }, [searchQuery, activeCategory, scope, sortBy]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+
+    const mediaQuery = window.matchMedia("(pointer: coarse), (hover: none)");
+    const updatePointerMode = () => {
+      setSupportsTouchNavigation(mediaQuery.matches);
+    };
+
+    updatePointerMode();
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updatePointerMode);
+      return () => {
+        mediaQuery.removeEventListener("change", updatePointerMode);
+      };
+    }
+
+    mediaQuery.addListener(updatePointerMode);
+    return () => {
+      mediaQuery.removeListener(updatePointerMode);
+    };
+  }, []);
 
   const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
 
@@ -572,29 +624,67 @@ const HomeInner = () => {
     history.replaceState(null, "", url.toString());
   }, []);
 
+  const focusQueueThumbnail = useCallback((contentId: bigint | null) => {
+    if (contentId === null || typeof window === "undefined") return;
+
+    window.requestAnimationFrame(() => {
+      const rail = queueRailRef.current;
+      if (!rail) return;
+
+      const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
+      thumbnail?.focus({ preventScroll: true });
+    });
+  }, []);
+
+  const handleSelectByIndex = useCallback(
+    (targetIndex: number, options?: { focusQueue?: boolean }) => {
+      if (targetIndex < 0 || targetIndex >= displayFeed.length) return false;
+
+      const targetItem = displayFeed[targetIndex];
+      if (!targetItem) return false;
+
+      if (activeSourceIndex !== -1 && targetIndex === activeSourceIndex) {
+        if (options?.focusQueue) {
+          focusQueueThumbnail(targetItem.id);
+        }
+        return false;
+      }
+
+      if (activeSourceIndex !== -1) {
+        setNavigationDirection(targetIndex > activeSourceIndex ? "next" : "previous");
+      }
+
+      selectContent(targetItem.id);
+      replaceContentQueryParam(targetItem.id);
+
+      if (options?.focusQueue) {
+        focusQueueThumbnail(targetItem.id);
+      }
+
+      return true;
+    },
+    [activeSourceIndex, displayFeed, focusQueueThumbnail, replaceContentQueryParam, selectContent],
+  );
+
   const handleSelectCard = useCallback(
     (id: bigint, categoryId: bigint) => {
       trackContentClick(id, categoryId);
       const targetIndex = displayFeed.findIndex(item => item.id === id);
-      if (targetIndex !== -1 && activeSourceIndex !== -1 && targetIndex !== activeSourceIndex) {
-        setNavigationDirection(targetIndex > activeSourceIndex ? "next" : "previous");
-      }
-      selectContent(id);
-      replaceContentQueryParam(id);
+      if (targetIndex === -1) return;
+      handleSelectByIndex(targetIndex);
     },
-    [activeSourceIndex, displayFeed, replaceContentQueryParam, selectContent],
+    [displayFeed, handleSelectByIndex],
   );
 
   const handleNavigateSelection = useCallback(
-    (direction: "previous" | "next") => {
-      const nextItem = selectRelative(direction === "next" ? 1 : -1);
-      if (!nextItem) return false;
+    (direction: "previous" | "next", options?: { focusQueue?: boolean }) => {
+      if (displayFeed.length === 0 || activeSourceIndex === -1) return false;
 
-      setNavigationDirection(direction);
-      replaceContentQueryParam(nextItem.id);
-      return true;
+      const delta = direction === "next" ? 1 : -1;
+      const nextIndex = Math.min(Math.max(activeSourceIndex + delta, 0), displayFeed.length - 1);
+      return handleSelectByIndex(nextIndex, options);
     },
-    [replaceContentQueryParam, selectRelative],
+    [activeSourceIndex, displayFeed.length, handleSelectByIndex],
   );
 
   const handleSelectPrevious = useCallback(() => {
@@ -605,7 +695,65 @@ const HomeInner = () => {
     handleNavigateSelection("next");
   }, [handleNavigateSelection]);
 
-  const canSwipeNavigate = displayFeed.length > 1 && !isCommitting && !stakeModal.isOpen;
+  const handleQueueKeyboardNavigate = useCallback(
+    (action: "previous" | "next" | "first" | "last", currentId: bigint) => {
+      if (displayFeed.length === 0) return;
+
+      if (action === "first") {
+        handleSelectByIndex(0, { focusQueue: true });
+        return;
+      }
+
+      if (action === "last") {
+        handleSelectByIndex(displayFeed.length - 1, { focusQueue: true });
+        return;
+      }
+
+      const currentIndex = displayFeed.findIndex(item => item.id === currentId);
+      if (currentIndex === -1) return;
+
+      const nextIndex = Math.min(Math.max(currentIndex + (action === "next" ? 1 : -1), 0), displayFeed.length - 1);
+      handleSelectByIndex(nextIndex, { focusQueue: true });
+    },
+    [displayFeed, handleSelectByIndex],
+  );
+
+  const canSwipeNavigate = supportsTouchNavigation && displayFeed.length > 1 && !isCommitting && !stakeModal.isOpen;
+
+  const handleActiveRegionKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement | null;
+      const isNestedInteractive =
+        target !== event.currentTarget &&
+        Boolean(target?.closest("a,button,input,select,textarea,label,summary,[role='button']"));
+
+      if (isNestedInteractive) return;
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        handleNavigateSelection("previous");
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        handleNavigateSelection("next");
+        return;
+      }
+
+      if (event.key === "Home" || event.key === "PageUp") {
+        event.preventDefault();
+        handleSelectByIndex(0);
+        return;
+      }
+
+      if (event.key === "End" || event.key === "PageDown") {
+        event.preventDefault();
+        handleSelectByIndex(displayFeed.length - 1);
+      }
+    },
+    [displayFeed.length, handleNavigateSelection, handleSelectByIndex],
+  );
 
   const handleCardDragEnd = useCallback(
     (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -771,15 +919,12 @@ const HomeInner = () => {
   }, [activeCategory, address, scope, searchQuery]);
 
   const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
-    enabled: Boolean(primaryItem && displayFeed.length > 1 && !isCommitting && !stakeModal.isOpen),
+    enabled: Boolean(canSwipeNavigate && primaryItem),
     onNavigate: handleNavigateSelection,
   });
 
   return (
-    <AppPageShell
-      outerClassName="xl:h-full xl:max-h-full xl:min-h-0 xl:overflow-hidden"
-      contentClassName="xl:flex xl:h-full xl:min-h-0 xl:flex-col"
-    >
+    <AppPageShell>
       <VotingGuide />
       <div
         className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
@@ -831,18 +976,23 @@ const HomeInner = () => {
         </div>
       ) : null}
 
-      <div className="min-w-0 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
+      <div className="min-w-0">
         {/* Main content */}
         {isLoading || categoriesLoading || scopeLoading ? (
-          <div className="flex justify-center py-16 xl:h-full xl:items-center xl:py-0">
+          <div className="flex justify-center py-16 xl:py-10">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
         ) : displayFeed.length === 0 ? (
-          <div className="py-16 text-center text-base text-base-content/30 xl:flex xl:h-full xl:items-center xl:justify-center xl:py-0">
-            {emptyStateMessage}
-          </div>
+          <div className="py-16 text-center text-base text-base-content/30 xl:py-10">{emptyStateMessage}</div>
         ) : (
-          <div ref={activeCardRegionRef} className="flex min-h-0 flex-col gap-5 xl:h-full xl:gap-4">
+          <div
+            ref={activeCardRegionRef}
+            className="flex min-h-0 flex-col gap-5 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 focus-visible:ring-offset-2 focus-visible:ring-offset-base-100 xl:gap-4"
+            tabIndex={0}
+            role="region"
+            aria-label="Discover feed"
+            onKeyDown={handleActiveRegionKeyDown}
+          >
             {isCommitting ? (
               <div className="flex shrink-0 items-center justify-center">
                 <span className="text-base text-base-content/50">
@@ -854,65 +1004,77 @@ const HomeInner = () => {
 
             {primaryItem ? (
               <div className="min-h-0">
-                <motion.div
-                  key={primaryItem.id.toString()}
-                  data-disable-queue-wheel="true"
-                  className={`touch-pan-y ${
-                    navigationDirection === "next"
-                      ? "motion-safe:animate-vote-card-next"
-                      : "motion-safe:animate-vote-card-prev"
-                  }`}
-                  drag={canSwipeNavigate ? "x" : false}
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.12}
-                  dragMomentum={false}
-                  onDragEnd={handleCardDragEnd}
-                >
-                  <FeedVoteCard
-                    item={primaryItem}
-                    submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                    onVote={handleButtonVote}
-                    onToggleWatch={handleToggleWatch}
-                    onToggleFollow={handleToggleFollow}
-                    watched={watchedContentIds.has(primaryItem.id.toString())}
-                    watchPending={isWatchPending(primaryItem.id)}
-                    following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                    followPending={isFollowPending(primaryItem.submitter)}
-                    normalizedAddress={normalizedAddress}
-                    isCommitting={isCommitting}
-                    voteError={voteError}
-                    address={address}
-                    onPrevious={handleSelectPrevious}
-                    onNext={handleSelectNext}
-                    canPrevious={activeSourceIndex > 0}
-                    canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
-                  />
-                </motion.div>
+                <AnimatePresence initial={false} mode="wait" custom={navigationDirection}>
+                  <motion.div
+                    key={primaryItem.id.toString()}
+                    custom={navigationDirection}
+                    data-disable-queue-wheel="true"
+                    className="touch-pan-y"
+                    variants={voteCardVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{
+                      duration: 0.24,
+                      ease: VOTE_CARD_TRANSITION_EASE,
+                    }}
+                    drag={canSwipeNavigate ? "x" : false}
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.12}
+                    dragMomentum={false}
+                    onDragEnd={handleCardDragEnd}
+                  >
+                    <FeedVoteCard
+                      item={primaryItem}
+                      submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                      onVote={handleButtonVote}
+                      onToggleWatch={handleToggleWatch}
+                      onToggleFollow={handleToggleFollow}
+                      watched={watchedContentIds.has(primaryItem.id.toString())}
+                      watchPending={isWatchPending(primaryItem.id)}
+                      following={followedWallets.has(primaryItem.submitter.toLowerCase())}
+                      followPending={isFollowPending(primaryItem.submitter)}
+                      normalizedAddress={normalizedAddress}
+                      isCommitting={isCommitting}
+                      voteError={voteError}
+                      address={address}
+                      onPrevious={handleSelectPrevious}
+                      onNext={handleSelectNext}
+                      canPrevious={activeSourceIndex > 0}
+                      canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
+                    />
+                  </motion.div>
+                </AnimatePresence>
               </div>
             ) : null}
 
             {visibleFeedItems.length > 0 ? (
-              <section
+              <motion.section
                 key={primaryItem?.id.toString() ?? "queue-empty"}
-                className="motion-safe:animate-vote-queue-settle shrink-0"
+                className="shrink-0"
                 aria-label="Up next queue"
+                initial={{ opacity: 0.82, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.18, ease: VOTE_CARD_TRANSITION_EASE }}
               >
                 <div
                   ref={queueRailRef}
                   data-disable-queue-wheel="true"
                   className="flex min-w-0 items-stretch gap-3 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:flex-nowrap xl:gap-2.5"
+                  aria-label="Content queue"
                 >
                   {visibleFeedItems.map(item => (
                     <FeedQueueCard
                       key={item.id.toString()}
                       item={item}
                       onSelect={handleSelectCard}
+                      onNavigate={handleQueueKeyboardNavigate}
                       queuePosition={displayFeed.findIndex(feedItem => feedItem.id === item.id)}
                       selected={item.id === primaryItem?.id}
                     />
                   ))}
                 </div>
-              </section>
+              </motion.section>
             ) : null}
 
             {canLoadMore ? (
