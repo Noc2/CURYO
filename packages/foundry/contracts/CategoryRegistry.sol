@@ -85,7 +85,8 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     /// @param name The category name (e.g., "YouTube", "MTG")
     /// @param domain The category domain (e.g., "youtube.com", "gatherer.wizards.com")
     /// @param subcategories Array of subcategory names (e.g., ["Education", "Gaming"])
-    /// @param rankingQuestion The ranking question (e.g., "What is the best YouTube video?")
+    /// @param rankingQuestion The ranking question template (e.g.,
+    ///        "Is {title} informative enough to score above {rating} out of 100?")
     /// @return categoryId The ID of the submitted category
     function submitCategory(
         string calldata name,
@@ -102,10 +103,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         // Validate inputs
         require(bytes(name).length > 0 && bytes(name).length <= MAX_NAME_LENGTH, "Invalid name length");
         require(bytes(domain).length > 0 && bytes(domain).length <= MAX_DOMAIN_LENGTH, "Invalid domain length");
-        require(
-            bytes(rankingQuestion).length > 0 && bytes(rankingQuestion).length <= MAX_QUESTION_LENGTH,
-            "Invalid question length"
-        );
+        _validateRankingQuestionTemplate(rankingQuestion);
         require(subcategories.length > 0 && subcategories.length <= MAX_SUBCATEGORIES, "Invalid subcategories count");
 
         // Validate subcategories
@@ -268,10 +266,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         // Validate inputs
         require(bytes(name).length > 0 && bytes(name).length <= MAX_NAME_LENGTH, "Invalid name length");
         require(bytes(domain).length > 0 && bytes(domain).length <= MAX_DOMAIN_LENGTH, "Invalid domain length");
-        require(
-            bytes(rankingQuestion).length > 0 && bytes(rankingQuestion).length <= MAX_QUESTION_LENGTH,
-            "Invalid question length"
-        );
+        _validateRankingQuestionTemplate(rankingQuestion);
         require(subcategories.length > 0 && subcategories.length <= MAX_SUBCATEGORIES, "Invalid subcategories count");
 
         // Check domain uniqueness
@@ -406,6 +401,33 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     }
 
     // --- Internal Helpers ---
+
+    function _validateRankingQuestionTemplate(string calldata rankingQuestion) internal pure {
+        bytes memory questionBytes = bytes(rankingQuestion);
+        require(questionBytes.length > 0 && questionBytes.length <= MAX_QUESTION_LENGTH, "Invalid question length");
+        require(_containsPlaceholder(questionBytes, bytes("{title}")), "Question missing {title}");
+        require(_containsPlaceholder(questionBytes, bytes("{rating}")), "Question missing {rating}");
+    }
+
+    function _containsPlaceholder(bytes memory haystack, bytes memory needle) internal pure returns (bool) {
+        uint256 haystackLength = haystack.length;
+        uint256 needleLength = needle.length;
+
+        if (needleLength == 0 || haystackLength < needleLength) return false;
+
+        for (uint256 i = 0; i <= haystackLength - needleLength; i++) {
+            bool matches = true;
+            for (uint256 j = 0; j < needleLength; j++) {
+                if (haystack[i + j] != needle[j]) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) return true;
+        }
+
+        return false;
+    }
 
     function _isLinkableProposalState(IGovernor.ProposalState proposalState) internal pure returns (bool) {
         return proposalState == IGovernor.ProposalState.Pending || proposalState == IGovernor.ProposalState.Active

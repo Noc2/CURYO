@@ -16,7 +16,7 @@ interface ICategoryRegistry {
         string name;
         string domain;
         string[] subcategories;
-        string rankingQuestion;
+        string rankingQuestion; // Template with {title} and {rating} placeholders.
         address submitter;
         uint256 stakeAmount;
         CategoryStatus status;
