@@ -1850,6 +1850,19 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
+    "name": "ParticipationPoolUpdated",
+    "inputs": [
+      {
+        "name": "participationPool",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Paused",
     "inputs": [
       {
@@ -2195,6 +2208,19 @@ export const RoundVotingEngineAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "VoterIdNFTUpdated",
+    "inputs": [
+      {
+        "name": "voterIdNFT",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
@@ -2214,6 +2240,11 @@ export const RoundVotingEngineAbi = [
         "internalType": "bytes32"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "ActiveRoundStillOpen",
+    "inputs": []
   },
   {
     "type": "error",
