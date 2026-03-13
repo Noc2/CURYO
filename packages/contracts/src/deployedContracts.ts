@@ -6,8 +6,56 @@ import type { GenericContractsDeclaration } from "./types";
 
 const deployedContracts = {
   31337: {
+    CategoryFeeLib: {
+      address: "0x20d959f8896fb721cd116be225c905090a7557c4",
+      abi: [
+        {
+          type: "error",
+          name: "SafeERC20FailedOperation",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 1,
+    },
+    TokenTransferLib: {
+      address: "0x05b7e0e01dd70628ee883eb41fcdaf5cfca1b8ff",
+      abi: [
+        {
+          type: "error",
+          name: "SafeERC20FailedOperation",
+          inputs: [
+            {
+              name: "token",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 2,
+    },
+    SubmitterStakeLib: {
+      address: "0xaefac9cea9c55f30978fea99014db183edac6fd3",
+      abi: [
+        {
+          type: "error",
+          name: "ContentNotFound",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 3,
+    },
     CuryoReputation: {
-      address: "0x700b6A60ce7EaaEA56F065753d8dcB9653dbAD35",
+      address: "0x8ce361602B935680E8DeC218b820ff5056BeB7af",
       abi: [
         {
           type: "constructor",
@@ -1710,7 +1758,7 @@ const deployedContracts = {
       },
     },
     ContentRegistry: {
-      address: "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
+      address: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
       abi: [
         {
           type: "constructor",
@@ -1966,6 +2014,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "claimSubmitterParticipationReward",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "paidAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "contents",
           inputs: [
             {
@@ -2053,163 +2120,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getCategoryId",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getContent",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "tuple",
-              internalType: "struct ContentRegistry.Content",
-              components: [
-                {
-                  name: "id",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "contentHash",
-                  type: "bytes32",
-                  internalType: "bytes32",
-                },
-                {
-                  name: "submitter",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "submitterStake",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "createdAt",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "lastActivityAt",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "status",
-                  type: "uint8",
-                  internalType: "enum ContentRegistry.ContentStatus",
-                },
-                {
-                  name: "dormantCount",
-                  type: "uint8",
-                  internalType: "uint8",
-                },
-                {
-                  name: "reviver",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "submitterStakeReturned",
-                  type: "bool",
-                  internalType: "bool",
-                },
-                {
-                  name: "rating",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "categoryId",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-              ],
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getCreatedAt",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getDormancyAnchorAt",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getRating",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -2223,25 +2133,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSubmitter",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -2332,25 +2223,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isActive",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "isDormancyEligible",
           inputs: [
             {
@@ -2370,12 +2242,12 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isSubmitterStakeReturned",
+          name: "isUrlSubmitted",
           inputs: [
             {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
+              name: "url",
+              type: "string",
+              internalType: "string",
             },
           ],
           outputs: [
@@ -2502,6 +2374,25 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "resolveSubmissionKey",
+          inputs: [
+            {
+              name: "url",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          outputs: [
+            {
+              name: "submissionKey",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -2706,6 +2597,82 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationRewardOwed",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationRewardPaid",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationRewardPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationRewardReserved",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -3049,6 +3016,62 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "SubmitterParticipationRewardAccrued",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "submitter",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SubmitterParticipationRewardClaimed",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "submitter",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "SubmitterStakeReturned",
           inputs: [
             {
@@ -3256,7 +3279,7 @@ const deployedContracts = {
       },
     },
     RoundVotingEngine: {
-      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
+      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
       abi: [
         {
           type: "constructor",
@@ -5109,6 +5132,19 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "ParticipationPoolUpdated",
+          inputs: [
+            {
+              name: "participationPool",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "Paused",
           inputs: [
             {
@@ -5454,6 +5490,19 @@ const deployedContracts = {
           anonymous: false,
         },
         {
+          type: "event",
+          name: "VoterIdNFTUpdated",
+          inputs: [
+            {
+              name: "voterIdNFT",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -5473,6 +5522,11 @@ const deployedContracts = {
               internalType: "bytes32",
             },
           ],
+        },
+        {
+          type: "error",
+          name: "ActiveRoundStillOpen",
+          inputs: [],
         },
         {
           type: "error",
@@ -5752,7 +5806,7 @@ const deployedContracts = {
       },
     },
     RoundRewardDistributor: {
-      address: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
+      address: "0x05B4CB126885fb10464fdD12666FEb25E2563B76",
       abi: [
         {
           type: "constructor",
@@ -6637,11 +6691,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "FrontendIsSlashed",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "InvalidInitialization",
           inputs: [],
         },
@@ -6767,7 +6816,7 @@ const deployedContracts = {
       },
     },
     FrontendRegistry: {
-      address: "0x0C8E79F3534B00D9a3D4a856B665Bf4eBC22f2ba",
+      address: "0x12975173B87F7595EE45dFFb2Ab812ECE596Bf84",
       abi: [
         {
           type: "constructor",
@@ -6964,13 +7013,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "deregister",
-          inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "frontendExitAvailableAt",
           inputs: [
             {
@@ -7053,19 +7095,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getFrontendCount",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getFrontendInfo",
           inputs: [
             {
@@ -7094,19 +7123,6 @@ const deployedContracts = {
               name: "slashed",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getRegisteredFrontends",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address[]",
-              internalType: "address[]",
             },
           ],
           stateMutability: "view",
@@ -7857,7 +7873,7 @@ const deployedContracts = {
       },
     },
     ProfileRegistry: {
-      address: "0xeD1DB453C3156Ff3155a97AD217b3087D5Dc5f6E",
+      address: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
       abi: [
         {
           type: "constructor",
@@ -8011,32 +8027,6 @@ const deployedContracts = {
                   internalType: "uint256",
                 },
               ],
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getProfileCount",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getRegisteredAddresses",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address[]",
-              internalType: "address[]",
             },
           ],
           stateMutability: "view",
@@ -8584,7 +8574,7 @@ const deployedContracts = {
       },
     },
     ERC1967Proxy: {
-      address: "0x0c8e79f3534b00d9a3d4a856b665bf4ebc22f2ba",
+      address: "0x12975173b87f7595ee45dffb2ab812ece596bf84",
       abi: [
         {
           type: "constructor",
@@ -8658,10 +8648,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 7,
+      deployedOnBlock: 10,
     },
     CategoryRegistry: {
-      address: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
+      address: "0x2a264F26859166C5BF3868A54593eE716AeBC848",
       abi: [
         {
           type: "constructor",
@@ -8860,19 +8850,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "approvedCategoryCount",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "cancelUnlinkedCategory",
           inputs: [
             {
@@ -8917,19 +8894,6 @@ const deployedContracts = {
               name: "proposalId",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getApprovedCategoryIds",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256[]",
-              internalType: "uint256[]",
             },
           ],
           stateMutability: "view",
@@ -9744,7 +9708,8 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {
-        getApprovedCategoryIds: "contracts/interfaces/ICategoryRegistry.sol",
+        getApprovedCategoryIdsPaginated:
+          "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
         getSubmitter: "contracts/interfaces/ICategoryRegistry.sol",
@@ -9767,7 +9732,7 @@ const deployedContracts = {
       },
     },
     VoterIdNFT: {
-      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
+      address: "0xd04fF4A75Edd737A73E92b2F2274Cb887d96E110",
       abi: [
         {
           type: "constructor",
@@ -10268,7 +10233,7 @@ const deployedContracts = {
           name: "renounceOwnership",
           inputs: [],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",
@@ -11000,7 +10965,7 @@ const deployedContracts = {
       },
     },
     ParticipationPool: {
-      address: "0xc8c25Aab3eeA991E083d2d0240eE4D693c59bDAC",
+      address: "0x25C74B7124baE93364213a6124a5e45bB0e98889",
       abi: [
         {
           type: "constructor",
@@ -11180,10 +11145,90 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "recoverSurplus",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "recoveredAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "renounceOwnership",
           inputs: [],
           outputs: [],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "reserveReward",
+          inputs: [
+            {
+              name: "beneficiary",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "reservedAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "reservedBalance",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "reservedRewards",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -11281,6 +11326,30 @@ const deployedContracts = {
             },
           ],
           outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "withdrawReservedReward",
+          inputs: [
+            {
+              name: "recipient",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "paidAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
           stateMutability: "nonpayable",
         },
         {
@@ -11385,6 +11454,100 @@ const deployedContracts = {
           anonymous: false,
         },
         {
+          type: "event",
+          name: "ReservedRewardWithdrawn",
+          inputs: [
+            {
+              name: "beneficiary",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "recipient",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RewardCapped",
+          inputs: [
+            {
+              name: "recipient",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "requested",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "actual",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RewardReserved",
+          inputs: [
+            {
+              name: "beneficiary",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "totalDistributedAfter",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SurplusRecovered",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "error",
           name: "OwnableInvalidOwner",
           inputs: [
@@ -11426,8 +11589,10 @@ const deployedContracts = {
       inheritedFunctions: {
         distributeReward: "contracts/interfaces/IParticipationPool.sol",
         getCurrentRateBps: "contracts/interfaces/IParticipationPool.sol",
+        reserveReward: "contracts/interfaces/IParticipationPool.sol",
         rewardSubmission: "contracts/interfaces/IParticipationPool.sol",
         rewardVote: "contracts/interfaces/IParticipationPool.sol",
+        withdrawReservedReward: "contracts/interfaces/IParticipationPool.sol",
         owner: "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         renounceOwnership:
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
@@ -11436,7 +11601,7 @@ const deployedContracts = {
       },
     },
     MockIdentityVerificationHub: {
-      address: "0xc624801dd98bef87c0718ddb43ad3a566cc51ecc",
+      address: "0x49ea5126fd67f877b62ddc0144dbeb42591df7bb",
       abi: [
         {
           type: "function",
@@ -11806,10 +11971,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 61,
+      deployedOnBlock: 64,
     },
     HumanFaucet: {
-      address: "0x5D1ce2A19Aa885765aBcef89b7590E213422a8b9",
+      address: "0x2fb5e98f1eFE95aE50F9BecAfCE660701aD8D9be",
       abi: [
         {
           type: "constructor",
@@ -11990,6 +12155,25 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "claimNullifier",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -12383,6 +12567,19 @@ const deployedContracts = {
           name: "renounceOwnership",
           inputs: [],
           outputs: [],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "retryVoterIdMint",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -12680,6 +12877,25 @@ const deployedContracts = {
               type: "address",
               indexed: false,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "VoterIdMintFailed",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "nullifier",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -13017,13 +13233,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "deregister",
-          inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "frontendExitAvailableAt",
           inputs: [
             {
@@ -13106,19 +13315,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getFrontendCount",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getFrontendInfo",
           inputs: [
             {
@@ -13147,19 +13343,6 @@ const deployedContracts = {
               name: "slashed",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getRegisteredFrontends",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address[]",
-              internalType: "address[]",
             },
           ],
           stateMutability: "view",
@@ -15763,6 +15946,19 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "ParticipationPoolUpdated",
+          inputs: [
+            {
+              name: "participationPool",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "Paused",
           inputs: [
             {
@@ -16108,6 +16304,19 @@ const deployedContracts = {
           anonymous: false,
         },
         {
+          type: "event",
+          name: "VoterIdNFTUpdated",
+          inputs: [
+            {
+              name: "voterIdNFT",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -16127,6 +16336,11 @@ const deployedContracts = {
               internalType: "bytes32",
             },
           ],
+        },
+        {
+          type: "error",
+          name: "ActiveRoundStillOpen",
+          inputs: [],
         },
         {
           type: "error",
@@ -16586,10 +16800,90 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "recoverSurplus",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "recoveredAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "renounceOwnership",
           inputs: [],
           outputs: [],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "reserveReward",
+          inputs: [
+            {
+              name: "beneficiary",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "reservedAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "reservedBalance",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "reservedRewards",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -16687,6 +16981,30 @@ const deployedContracts = {
             },
           ],
           outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "withdrawReservedReward",
+          inputs: [
+            {
+              name: "recipient",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "paidAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
           stateMutability: "nonpayable",
         },
         {
@@ -16791,6 +17109,100 @@ const deployedContracts = {
           anonymous: false,
         },
         {
+          type: "event",
+          name: "ReservedRewardWithdrawn",
+          inputs: [
+            {
+              name: "beneficiary",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "recipient",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RewardCapped",
+          inputs: [
+            {
+              name: "recipient",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "requested",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "actual",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RewardReserved",
+          inputs: [
+            {
+              name: "beneficiary",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "totalDistributedAfter",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SurplusRecovered",
+          inputs: [
+            {
+              name: "to",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
           type: "error",
           name: "OwnableInvalidOwner",
           inputs: [
@@ -16832,8 +17244,10 @@ const deployedContracts = {
       inheritedFunctions: {
         distributeReward: "contracts/interfaces/IParticipationPool.sol",
         getCurrentRateBps: "contracts/interfaces/IParticipationPool.sol",
+        reserveReward: "contracts/interfaces/IParticipationPool.sol",
         rewardSubmission: "contracts/interfaces/IParticipationPool.sol",
         rewardVote: "contracts/interfaces/IParticipationPool.sol",
+        withdrawReservedReward: "contracts/interfaces/IParticipationPool.sol",
         owner: "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         renounceOwnership:
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
@@ -18705,32 +19119,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getProfileCount",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getRegisteredAddresses",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address[]",
-              internalType: "address[]",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getRegisteredAddressesPaginated",
           inputs: [
             {
@@ -19528,6 +19916,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "claimSubmitterParticipationReward",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "paidAmount",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "contents",
           inputs: [
             {
@@ -19615,163 +20022,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getCategoryId",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getContent",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "tuple",
-              internalType: "struct ContentRegistry.Content",
-              components: [
-                {
-                  name: "id",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "contentHash",
-                  type: "bytes32",
-                  internalType: "bytes32",
-                },
-                {
-                  name: "submitter",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "submitterStake",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "createdAt",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "lastActivityAt",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "status",
-                  type: "uint8",
-                  internalType: "enum ContentRegistry.ContentStatus",
-                },
-                {
-                  name: "dormantCount",
-                  type: "uint8",
-                  internalType: "uint8",
-                },
-                {
-                  name: "reviver",
-                  type: "address",
-                  internalType: "address",
-                },
-                {
-                  name: "submitterStakeReturned",
-                  type: "bool",
-                  internalType: "bool",
-                },
-                {
-                  name: "rating",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-                {
-                  name: "categoryId",
-                  type: "uint256",
-                  internalType: "uint256",
-                },
-              ],
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getCreatedAt",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getDormancyAnchorAt",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getRating",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -19785,25 +20035,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getSubmitter",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
             },
           ],
           stateMutability: "view",
@@ -19894,25 +20125,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isActive",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "isDormancyEligible",
           inputs: [
             {
@@ -19932,12 +20144,12 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isSubmitterStakeReturned",
+          name: "isUrlSubmitted",
           inputs: [
             {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
+              name: "url",
+              type: "string",
+              internalType: "string",
             },
           ],
           outputs: [
@@ -20064,6 +20276,25 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "resolveSubmissionKey",
+          inputs: [
+            {
+              name: "url",
+              type: "string",
+              internalType: "string",
+            },
+          ],
+          outputs: [
+            {
+              name: "submissionKey",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -20268,6 +20499,82 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationRewardOwed",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationRewardPaid",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationRewardPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationRewardReserved",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -20605,6 +20912,62 @@ const deployedContracts = {
               type: "address",
               indexed: true,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SubmitterParticipationRewardAccrued",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "submitter",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SubmitterParticipationRewardClaimed",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "submitter",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -21703,11 +22066,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "FrontendIsSlashed",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "InvalidInitialization",
           inputs: [],
         },
@@ -22032,19 +22390,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "approvedCategoryCount",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "cancelUnlinkedCategory",
           inputs: [
             {
@@ -22089,19 +22434,6 @@ const deployedContracts = {
               name: "proposalId",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getApprovedCategoryIds",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256[]",
-              internalType: "uint256[]",
             },
           ],
           stateMutability: "view",
@@ -22916,7 +23248,8 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {
-        getApprovedCategoryIds: "contracts/interfaces/ICategoryRegistry.sol",
+        getApprovedCategoryIdsPaginated:
+          "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
         getSubmitter: "contracts/interfaces/ICategoryRegistry.sol",
@@ -23120,6 +23453,25 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "claimNullifier",
+          inputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -23513,6 +23865,19 @@ const deployedContracts = {
           name: "renounceOwnership",
           inputs: [],
           outputs: [],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "retryVoterIdMint",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -23810,6 +24175,25 @@ const deployedContracts = {
               type: "address",
               indexed: false,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "VoterIdMintFailed",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "nullifier",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -24449,7 +24833,7 @@ const deployedContracts = {
           name: "renounceOwnership",
           inputs: [],
           outputs: [],
-          stateMutability: "nonpayable",
+          stateMutability: "pure",
         },
         {
           type: "function",

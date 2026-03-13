@@ -626,7 +626,7 @@ export const ContentRegistryAbi = [
     ],
     "outputs": [
       {
-        "name": "",
+        "name": "submissionKey",
         "type": "bytes32",
         "internalType": "bytes32"
       }

@@ -882,11 +882,6 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
-    "name": "FrontendIsSlashed",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "InvalidInitialization",
     "inputs": []
   },
