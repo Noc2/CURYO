@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 520" width="1600" height="520" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#060812" />
+      <stop offset="0.55" stop-color="#050814" />
+      <stop offset="1" stop-color="#0A0E18" />
+    </linearGradient>
+    <radialGradient id="glow-left" cx="430" cy="230" r="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0F1D33" stop-opacity="0.62" />
+      <stop offset="0.58" stop-color="#08101D" stop-opacity="0.22" />
+      <stop offset="1" stop-color="#060812" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glow-right" cx="1120" cy="250" r="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10182B" stop-opacity="0.2" />
+      <stop offset="1" stop-color="#060812" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="curyo-top-right" x1="430" y1="122" x2="538" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFC43D" />
+      <stop offset="1" stop-color="#EF476F" />
+    </linearGradient>
+    <linearGradient id="curyo-bottom-right" x1="538" y1="230" x2="430" y2="338" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EF476F" />
+      <stop offset="1" stop-color="#359EEE" />
+    </linearGradient>
+    <linearGradient id="curyo-bottom-left" x1="430" y1="338" x2="322" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#359EEE" />
+      <stop offset="1" stop-color="#03CEA4" />
+    </linearGradient>
+    <linearGradient id="curyo-top-left" x1="322" y1="230" x2="430" y2="122" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#03CEA4" />
+      <stop offset="1" stop-color="#FFC43D" />
+    </linearGradient>
+
+    <mask id="curyo-ring-mask">
+      <rect width="1600" height="520" fill="black" />
+      <g transform="rotate(-22.5 430 230)">
+        <circle cx="430" cy="230" r="108" fill="white" />
+        <circle cx="430" cy="221.5" r="96" fill="black" />
+      </g>
+    </mask>
+  </defs>
+
+  <rect width="1600" height="520" fill="url(#bg)" />
+  <circle cx="430" cy="230" r="300" fill="url(#glow-left)" />
+  <circle cx="1120" cy="250" r="420" fill="url(#glow-right)" />
+
+  <g mask="url(#curyo-ring-mask)" transform="rotate(-22.5 430 230)">
+    <path d="M430 122 A108 108 0 0 1 538 230" stroke="url(#curyo-top-right)" stroke-width="42" stroke-linecap="round" />
+    <path d="M538 230 A108 108 0 0 1 430 338" stroke="url(#curyo-bottom-right)" stroke-width="42" stroke-linecap="round" />
+    <path d="M430 338 A108 108 0 0 1 322 230" stroke="url(#curyo-bottom-left)" stroke-width="42" stroke-linecap="round" />
+    <path d="M322 230 A108 108 0 0 1 430 122" stroke="url(#curyo-top-left)" stroke-width="42" stroke-linecap="round" />
+  </g>
+
+  <rect x="700" y="340" width="420" height="2" rx="1" fill="#1D2840" />
+
+  <text
+    x="700"
+    y="250"
+    font-family="'Space Grotesk', 'Inter', 'Segoe UI', sans-serif"
+    font-size="132"
+    font-weight="700"
+    fill="white"
+    letter-spacing="6"
+  >
+    CURYO
+  </text>
+  <text
+    x="700"
+    y="318"
+    font-family="'Inter', 'Segoe UI', sans-serif"
+    font-size="34"
+    fill="#8A8F9C"
+    letter-spacing="1.3"
+  >
+    The Reputation Game for the Age of AI
+  </text>
+</svg>
