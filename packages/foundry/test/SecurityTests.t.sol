@@ -11,6 +11,7 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // ============================================================================
 // Section 1 — Reentrancy Tests
@@ -98,6 +99,10 @@ contract SecurityReentrancyTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setTreasury(treasury);
         votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
@@ -247,6 +252,10 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setTreasury(treasury);
         votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
@@ -377,6 +386,10 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setTreasury(treasury);
         votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
@@ -539,6 +552,10 @@ contract SecurityAccessControlTest is Test {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setTreasury(treasury);
         votingEngine.setConfig(5 minutes, 7 days, 2, 200);
 

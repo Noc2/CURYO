@@ -8,6 +8,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 contract SubmitterStakeResolutionTest is VotingTestBase {
     CuryoReputation internal crepToken;
@@ -69,7 +70,11 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setRewardDistributor(address(rewardDistributor));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setTreasury(owner);
         votingEngine.setConfig(1 hours, 7 days, 3, 1000);
 

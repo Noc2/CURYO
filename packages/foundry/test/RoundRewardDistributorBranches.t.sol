@@ -9,6 +9,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title RoundRewardDistributor branch coverage tests (tlock commit-reveal)
 contract RoundRewardDistributorBranchesTest is VotingTestBase {
@@ -69,7 +70,11 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setRewardDistributor(address(rewardDistributor));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setTreasury(treasury);
         // 4 params: epochDuration, maxDuration, minVoters, maxVoters
         votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);

@@ -88,6 +88,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         mockVoterIdNFT = new MockVoterIdNFT();
         mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
 
         participationPool = new ParticipationPool(address(crepToken), owner);
         participationPool.setAuthorizedCaller(address(registry), true);
@@ -231,14 +234,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.expectRevert("Category not approved");
         registry.submitContent("https://example.com/1", "goal", "goal", "tags", 99);
         vm.stopPrank();
-    }
-
-    function test_SubmitContent_CategoryZero_SkipsValidation_WhenRegistryUnset() public {
-        vm.startPrank(submitter);
-        crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-        assertEq(id, 1);
     }
 
     function test_SubmitContent_ParticipationPool_DoesNotRewardImmediately() public {
@@ -511,6 +506,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             )
         );
         reg2.setBonusPool(bonusPool);
+        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
+        mockCategoryRegistry2.seedDefaultTestCategories();
+        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
         // DON'T set votingEngine
         vm.stopPrank();
 
@@ -578,6 +576,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
                 )
             )
         );
+        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
+        mockCategoryRegistry2.seedDefaultTestCategories();
+        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
         // DON'T set votingEngine
         vm.stopPrank();
 
@@ -789,6 +790,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             )
         );
         reg2.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
+        mockCategoryRegistry2.seedDefaultTestCategories();
+        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
         // DON'T set treasury
         vm.stopPrank();
 

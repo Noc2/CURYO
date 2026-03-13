@@ -12,6 +12,7 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title Self-Opposition Profitability Analysis (Post-Fix)
 /// @notice Verifies that the NotWinningSide fix blocks self-opposition attacks.
@@ -75,8 +76,12 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setTreasury(treasuryAddr);
         engine.setRewardDistributor(address(distributor));
+        engine.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setTreasury(treasuryAddr);
 
         // Config: epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=200

@@ -11,6 +11,7 @@ import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title Audit Gap Tests — Priority-1 test coverage for gaps identified during security audit.
 /// @dev Covers:
@@ -102,7 +103,11 @@ contract AuditGapTests is VotingTestBase {
 
         // Wire up
         registry.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setRewardDistributor(address(rewardDistributor));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setTreasury(treasury);
         votingEngine.setFrontendRegistry(address(frontendRegistry));
         votingEngine.setParticipationPool(address(participationPool));

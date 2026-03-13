@@ -10,6 +10,7 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title SelectiveRevelationTest
 /// @notice Tests for the selective vote revelation (front-running keeper) fix.
@@ -74,7 +75,11 @@ contract SelectiveRevelationTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setRewardDistributor(address(rewardDistributor));
+        engine.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setTreasury(treasury);
         engine.setConfig(EPOCH, 7 days, 3, 1000);
         engine.setRevealGracePeriod(GRACE_PERIOD);

@@ -9,17 +9,67 @@ contract MockCategoryRegistry is ICategoryRegistry {
     mapping(uint256 => string) public domains;
     mapping(bytes32 => uint256) public domainToId;
 
-    function seedApprovedCategory(uint256 id, string calldata domain, address submitter) external {
+    function seedApprovedCategory(uint256 id, string memory domain, address submitter) external {
         setDomain(id, domain);
         setSubmitter(id, submitter);
         setApproved(id, true);
+    }
+
+    function seedDefaultTestCategories() external {
+        string[24] memory defaultDomains = [
+            "example.com",
+            "batch-test-1.com",
+            "batch-test-2.com",
+            "batch-test-3.com",
+            "batch-test-4.com",
+            "consensus-test.com",
+            "cooldown-test-1.com",
+            "cooldown-test-2.com",
+            "full-claim-test.com",
+            "pause-test-1.com",
+            "pause-test-2.com",
+            "pause-test-3.com",
+            "pause-test-4.com",
+            "pause-test-5.com",
+            "pause-test-6.com",
+            "solvency-test.com",
+            "unpause-test.com",
+            "youtube.com",
+            "x.com",
+            "github.com",
+            "themoviedb.org",
+            "en.wikipedia.org",
+            "rawg.io",
+            "openlibrary.org"
+        ];
+
+        for (uint256 i = 0; i < defaultDomains.length; i++) {
+            uint256 categoryId = i + 1;
+            setDomain(categoryId, defaultDomains[i]);
+            setApproved(categoryId, true);
+        }
+
+        setDomain(25, "huggingface.co");
+        setApproved(25, true);
+        setDomain(26, "coingecko.com");
+        setApproved(26, true);
+        setDomain(27, "open.spotify.com");
+        setApproved(27, true);
+        setDomain(28, "scryfall.com");
+        setApproved(28, true);
+        setDomain(29, "t.co");
+        setApproved(29, true);
+        setDomain(30, "twitter.com");
+        setApproved(30, true);
+        setDomain(31, "youtu.be");
+        setApproved(31, true);
     }
 
     function setApproved(uint256 id, bool val) public {
         approved[id] = val;
     }
 
-    function setDomain(uint256 id, string calldata domain) public {
+    function setDomain(uint256 id, string memory domain) public {
         string memory normalized = _normalizeDomain(domain);
         domains[id] = normalized;
         domainToId[keccak256(bytes(normalized))] = id;

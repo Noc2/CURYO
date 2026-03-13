@@ -10,6 +10,7 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title Formal Verification: Round Lifecycle Edge Cases (Tlock Commit-Reveal)
 /// @notice 12 scenarios verifying epoch boundaries, expiry, concurrent rounds,
@@ -73,8 +74,12 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setTreasury(treasuryAddr);
         engine.setRewardDistributor(address(distributor));
+        engine.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setTreasury(treasuryAddr);
 
         // Config: epochDuration=5min, maxDuration=7d, minVoters=2, maxVoters=200

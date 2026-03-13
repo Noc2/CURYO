@@ -12,6 +12,7 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // =========================================================================
 // TEST CONTRACT: Settlement Edge Cases
@@ -87,7 +88,11 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setRewardDistributor(address(rewardDistributor));
+        engine.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setTreasury(treasury);
 
         // epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=1000
@@ -489,7 +494,11 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         );
 
         registry2.setVotingEngine(address(engine2));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry2.setCategoryRegistry(address(mockCategoryRegistry));
         engine2.setRewardDistributor(address(dist2));
+        engine2.setCategoryRegistry(address(mockCategoryRegistry));
         engine2.setTreasury(treasury);
         engine2.setConfig(1 hours, 7 days, 3, 1000);
 

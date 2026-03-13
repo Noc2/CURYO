@@ -14,6 +14,7 @@ import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 contract RevertingParticipationPool {
     IERC20 public immutable token;
@@ -114,7 +115,11 @@ contract RoundIntegrationTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setRewardDistributor(address(rewardDistributor));
+        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
         votingEngine.setTreasury(treasury);
 
         // setConfig(epochDuration, maxDuration, minVoters, maxVoters)

@@ -12,6 +12,7 @@ import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @title AdversarialTests
 /// @notice Pre-deployment adversarial tests covering reward exhaustion, state transition
@@ -79,7 +80,11 @@ contract AdversarialTests is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setRewardDistributor(address(distributor));
+        engine.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setTreasury(treasury);
         engine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
@@ -550,7 +555,11 @@ contract AdversarialTests is VotingTestBase {
         );
 
         reg2.setVotingEngine(address(eng2));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        reg2.setCategoryRegistry(address(mockCategoryRegistry));
         eng2.setRewardDistributor(address(dist2));
+        eng2.setCategoryRegistry(address(mockCategoryRegistry));
         eng2.setTreasury(treasury);
         eng2.setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
