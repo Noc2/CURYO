@@ -305,6 +305,7 @@ const HomeInner = () => {
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const queueRailRef = useRef<HTMLDivElement>(null);
+  const queueLayout = useVoteQueueLayout(queueRailRef);
 
   // Voting state
   const [stakeModal, setStakeModal] = useState<{
@@ -460,7 +461,7 @@ const HomeInner = () => {
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
     requestedActiveId,
-    windowSize: 7,
+    windowSize: queueLayout.rows === 2 ? Math.max(8, queueLayout.pageSize) : 7,
   });
 
   const submitterAddresses = useMemo(() => {
@@ -473,7 +474,6 @@ const HomeInner = () => {
     });
     return positions;
   }, [displayFeed]);
-  const queueLayout = useVoteQueueLayout(queueRailRef);
   const queuePages = useMemo(() => {
     if (queueLayout.rows === 1) {
       return [visibleFeedItems];
@@ -973,7 +973,7 @@ const HomeInner = () => {
   });
 
   return (
-    <AppPageShell contentClassName="2xl:max-w-[1600px]">
+    <AppPageShell>
       <VotingGuide />
       <div
         className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
