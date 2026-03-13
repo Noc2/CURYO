@@ -24,4 +24,18 @@ interface IParticipationPool {
     /// @param amount The pre-computed reward amount.
     /// @return paidAmount The actual amount distributed (can be less than requested if pool is depleted).
     function distributeReward(address voter, uint256 amount) external returns (uint256 paidAmount);
+
+    /// @notice Reserve a reward amount for a beneficiary contract without paying it out yet.
+    /// @dev Used to snapshot claimable rewards so later claims do not rely entirely on future authorization state.
+    /// @param beneficiary The contract that will later withdraw the reserved reward.
+    /// @param amount The amount to reserve.
+    /// @return reservedAmount The actual amount reserved (capped by the currently available pool balance).
+    function reserveReward(address beneficiary, uint256 amount) external returns (uint256 reservedAmount);
+
+    /// @notice Withdraw previously reserved rewards to a recipient.
+    /// @dev Callable only by the beneficiary contract that owns the reserved balance.
+    /// @param recipient The address that should receive the withdrawn reward.
+    /// @param amount The amount to withdraw.
+    /// @return paidAmount The amount withdrawn.
+    function withdrawReservedReward(address recipient, uint256 amount) external returns (uint256 paidAmount);
 }

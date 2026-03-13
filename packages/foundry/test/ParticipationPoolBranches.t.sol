@@ -131,6 +131,30 @@ contract ParticipationPoolBranchesTest is Test {
         assertEq(paid, 5e6);
     }
 
+    function test_ReserveReward_TracksReservedBalance() public {
+        vm.prank(authorizedCaller);
+        uint256 reserved = pool.reserveReward(authorizedCaller, 5e6);
+
+        assertEq(reserved, 5e6);
+        assertEq(pool.reservedRewards(authorizedCaller), 5e6);
+        assertEq(pool.reservedBalance(), 5e6);
+        assertEq(pool.poolBalance(), 34_000_000e6 - 5e6);
+    }
+
+    function test_WithdrawReservedReward_PaysBeneficiaryBalance() public {
+        vm.prank(authorizedCaller);
+        pool.reserveReward(authorizedCaller, 5e6);
+
+        uint256 balanceBefore = crepToken.balanceOf(user1);
+        vm.prank(authorizedCaller);
+        uint256 paid = pool.withdrawReservedReward(user1, 3e6);
+
+        assertEq(paid, 3e6);
+        assertEq(crepToken.balanceOf(user1) - balanceBefore, 3e6);
+        assertEq(pool.reservedRewards(authorizedCaller), 2e6);
+        assertEq(pool.reservedBalance(), 2e6);
+    }
+
     // =========================================================================
     // Authorization / ownership
     // =========================================================================
@@ -221,6 +245,15 @@ contract ParticipationPoolBranchesTest is Test {
     }
 
     function test_RecoverSurplus_NoSurplusReverts() public {
+        vm.prank(admin);
+        vm.expectRevert("Nothing to recover");
+        pool.recoverSurplus(user1, type(uint256).max);
+    }
+
+    function test_RecoverSurplus_DoesNotTouchReservedRewards() public {
+        vm.prank(authorizedCaller);
+        pool.reserveReward(authorizedCaller, 5e6);
+
         vm.prank(admin);
         vm.expectRevert("Nothing to recover");
         pool.recoverSurplus(user1, type(uint256).max);

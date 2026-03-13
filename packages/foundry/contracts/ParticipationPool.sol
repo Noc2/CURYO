@@ -39,8 +39,14 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Remaining cREP balance tracked internally
     uint256 public poolBalance;
 
+    /// @notice Total cREP reserved for future pull-based claims but not yet withdrawn.
+    uint256 public reservedBalance;
+
     /// @notice Addresses authorized to trigger rewards (VotingEngine, ContentRegistry)
     mapping(address => bool) public authorizedCallers;
+
+    /// @notice Reserved reward balances keyed by beneficiary contract.
+    mapping(address => uint256) public reservedRewards;
 
     // --- Events ---
 
@@ -63,6 +69,12 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
 
     /// @notice Emitted when a reward is capped due to pool depletion (M-5 fix)
     event RewardCapped(address indexed recipient, uint256 requested, uint256 actual);
+
+    /// @notice Emitted when rewards are reserved for later withdrawal.
+    event RewardReserved(address indexed beneficiary, uint256 amount, uint256 totalDistributedAfter);
+
+    /// @notice Emitted when reserved rewards are withdrawn.
+    event ReservedRewardWithdrawn(address indexed beneficiary, address indexed recipient, uint256 amount);
 
     // --- Modifiers ---
 
@@ -132,7 +144,8 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         require(to != address(0), "Invalid address");
 
         uint256 actualBalance = crepToken.balanceOf(address(this));
-        uint256 surplus = actualBalance > poolBalance ? actualBalance - poolBalance : 0;
+        uint256 accountedBalance = poolBalance + reservedBalance;
+        uint256 surplus = actualBalance > accountedBalance ? actualBalance - accountedBalance : 0;
         recoveredAmount = amount > surplus ? surplus : amount;
         require(recoveredAmount > 0, "Nothing to recover");
 
@@ -187,6 +200,48 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         returns (uint256 paidAmount)
     {
         return _distribute(voter, amount, false);
+    }
+
+    /// @inheritdoc IParticipationPool
+    function reserveReward(address beneficiary, uint256 amount)
+        external
+        onlyAuthorized
+        nonReentrant
+        returns (uint256 reservedAmount)
+    {
+        require(beneficiary != address(0), "Invalid beneficiary");
+        if (amount > poolBalance) {
+            emit RewardCapped(beneficiary, amount, poolBalance);
+            amount = poolBalance;
+        }
+        if (amount == 0) return 0;
+
+        totalDistributed += amount;
+        poolBalance -= amount;
+        reservedBalance += amount;
+        reservedRewards[beneficiary] += amount;
+
+        emit RewardReserved(beneficiary, amount, totalDistributed);
+        return amount;
+    }
+
+    /// @inheritdoc IParticipationPool
+    function withdrawReservedReward(address recipient, uint256 amount)
+        external
+        nonReentrant
+        returns (uint256 paidAmount)
+    {
+        require(recipient != address(0), "Invalid recipient");
+
+        uint256 reservedForBeneficiary = reservedRewards[msg.sender];
+        paidAmount = amount > reservedForBeneficiary ? reservedForBeneficiary : amount;
+        require(paidAmount > 0, "No reserved reward");
+
+        reservedRewards[msg.sender] = reservedForBeneficiary - paidAmount;
+        reservedBalance -= paidAmount;
+        crepToken.safeTransfer(recipient, paidAmount);
+
+        emit ReservedRewardWithdrawn(msg.sender, recipient, paidAmount);
     }
 
     /// @dev Internal distribution logic — caps at remaining pool balance

@@ -311,7 +311,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertTrue(submitterStakeReturned, "healthy settlement should return stake");
         assertEq(registry.submitterParticipationRewardPool(1), address(tinyPool), "reward pool should be snapshotted");
         assertEq(registry.submitterParticipationRewardOwed(1), 9e6, "reward should be snapshotted at the healthy rate");
-        assertEq(registry.submitterParticipationRewardPaid(1), 4e6, "initial best-effort payout should be tracked");
+        assertEq(registry.submitterParticipationRewardReserved(1), 4e6, "available pool balance should be reserved");
+        assertEq(registry.submitterParticipationRewardPaid(1), 0, "submitter rewards should remain pull-based");
 
         vm.startPrank(owner);
         crepToken.approve(address(tinyPool), 5e6);
@@ -321,9 +322,39 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
         vm.prank(submitter);
         uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
-        assertEq(paidAmount, 5e6, "claim should pay the remaining reward once the pool is refilled");
-        assertEq(crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim, 5e6, "submitter should receive the remaining reward");
+        assertEq(paidAmount, 9e6, "claim should pay the reserved reward plus any newly available remainder");
+        assertEq(crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim, 9e6, "submitter should receive the full snapshotted reward");
         assertEq(registry.submitterParticipationRewardPaid(1), 9e6, "all snapshotted rewards should be accounted for");
+    }
+
+    function test_ClaimSubmitterParticipationReward_ReservedPortionSurvivesPoolDeauthorization() public {
+        vm.startPrank(owner);
+        ParticipationPool tinyPool = new ParticipationPool(address(crepToken), owner);
+        tinyPool.setAuthorizedCaller(address(registry), true);
+        crepToken.approve(address(tinyPool), 4e6);
+        tinyPool.depositPool(4e6);
+        registry.setParticipationPool(address(tinyPool));
+        votingEngine.setParticipationPool(address(tinyPool));
+        vm.stopPrank();
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/submitter-reserved-reward", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 4 days + 1);
+        _settleHealthyRound(1);
+
+        vm.prank(owner);
+        tinyPool.setAuthorizedCaller(address(registry), false);
+
+        uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
+        vm.prank(submitter);
+        uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
+
+        assertEq(paidAmount, 4e6, "reserved rewards should remain claimable even after deauthorization");
+        assertEq(crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim, 4e6, "submitter should receive the reserved amount");
+        assertEq(registry.submitterParticipationRewardPaid(1), 4e6, "paid amount should track the reserved payout");
     }
 
     function test_ClaimSubmitterParticipationReward_OnlySubmitter() public {

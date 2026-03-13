@@ -92,6 +92,9 @@ contract ContentRegistry is
     /// @notice Amount of the snapshotted submitter participation reward already paid.
     mapping(uint256 => uint256) public submitterParticipationRewardPaid;
 
+    /// @notice Amount of the snapshotted reward that was durably reserved for this content's future claim.
+    mapping(uint256 => uint256) public submitterParticipationRewardReserved;
+
     /// @notice Participation pool snapshot used to pay submitter participation rewards.
     mapping(uint256 => address) public submitterParticipationRewardPool;
 
@@ -501,10 +504,9 @@ contract ContentRegistry is
         submitterParticipationRewardOwed[contentId] = rewardAmount;
         emit SubmitterParticipationRewardAccrued(contentId, c.submitter, rewardPool, rewardAmount);
 
-        try participationPool.distributeReward(c.submitter, rewardAmount) returns (uint256 paidAmount) {
-            if (paidAmount > 0) {
-                submitterParticipationRewardPaid[contentId] = paidAmount;
-                emit SubmitterParticipationRewardClaimed(contentId, c.submitter, paidAmount);
+        try participationPool.reserveReward(address(this), rewardAmount) returns (uint256 reservedAmount) {
+            if (reservedAmount > 0) {
+                submitterParticipationRewardReserved[contentId] = reservedAmount;
             }
         } catch { }
     }
@@ -522,11 +524,25 @@ contract ContentRegistry is
         address rewardPool = submitterParticipationRewardPool[contentId];
         require(rewardPool != address(0), "No reward pool");
 
-        remainingReward = totalReward - alreadyPaid;
-        paidAmount = IParticipationPool(rewardPool).distributeReward(c.submitter, remainingReward);
+        uint256 reservedAmount = submitterParticipationRewardReserved[contentId];
+        uint256 reservedRemaining = reservedAmount > alreadyPaid ? reservedAmount - alreadyPaid : 0;
+        if (reservedRemaining > 0) {
+            uint256 reservedPayout = IParticipationPool(rewardPool).withdrawReservedReward(c.submitter, reservedRemaining);
+            paidAmount += reservedPayout;
+            alreadyPaid += reservedPayout;
+        }
+
+        if (alreadyPaid < totalReward) {
+            remainingReward = totalReward - alreadyPaid;
+            try IParticipationPool(rewardPool).distributeReward(c.submitter, remainingReward) returns (uint256 streamedReward) {
+                paidAmount += streamedReward;
+                alreadyPaid += streamedReward;
+            } catch { }
+        }
+
         require(paidAmount > 0, "Pool depleted");
 
-        submitterParticipationRewardPaid[contentId] = alreadyPaid + paidAmount;
+        submitterParticipationRewardPaid[contentId] = alreadyPaid;
         emit SubmitterParticipationRewardClaimed(contentId, c.submitter, paidAmount);
     }
 
