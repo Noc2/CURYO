@@ -110,11 +110,19 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Governance lock</td>
-              <td>7 days (voting power locked after voting or proposing)</td>
+              <td>7 days (transfer lock after voting or proposing)</td>
             </tr>
           </tbody>
         </table>
       </div>
+      <p>
+        The proposal threshold is a snapshot eligibility check, not a bonded deposit. In the current governor design,
+        the same voting power can back multiple live proposals as long as it satisfied the threshold at proposal
+        creation time. The 7-day governance lock is a flat transfer restriction that begins when an account proposes or
+        votes; because proposal timing is block-based, that lock can expire before the full voting delay plus voting
+        period ends. Proposal-spam resistance therefore comes primarily from quorum, majority voting, and the timelock,
+        not from per-proposal collateral.
+      </p>
 
       <h2>Round Voting Parameters</h2>
       <p>

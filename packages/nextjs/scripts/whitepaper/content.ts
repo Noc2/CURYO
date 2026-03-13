@@ -385,7 +385,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The dynamic quorum mechanism (4% of circulating supply, floored at 10,000 cREP) resists early capture: among the first 1,000 faucet claimants (1,000 cREP each), a minimum coalition of 40 users (4%) is required to meet quorum. The 10,000 cREP floor prevents capture when fewer than 250,000 cREP are in circulation. As the platform matures and token pools drain into circulation, quorum requirements scale proportionally  -- at 50M circulating, quorum reaches 2M cREP. The 7-day governance lock prevents vote-then-sell attacks while still allowing content voting during the lock period.",
+            text: "The dynamic quorum mechanism (4% of circulating supply, floored at 10,000 cREP) resists early capture: among the first 1,000 faucet claimants (1,000 cREP each), a minimum coalition of 40 users (4%) is required to meet quorum. The 10,000 cREP floor prevents capture when fewer than 250,000 cREP are in circulation. As the platform matures and token pools drain into circulation, quorum requirements scale proportionally  -- at 50M circulating, quorum reaches 2M cREP. The 7-day governance lock is a transfer restriction that mitigates vote-then-sell attacks while still allowing content voting during the lock period; it is not a per-proposal bond.",
           },
         ],
       },
@@ -999,7 +999,7 @@ export const SECTIONS: Section[] = [
                 ["Voting period", "~1 week (50,400 blocks)"],
                 ["Quorum", "4% of circulating supply (min 10K cREP)"],
                 ["Timelock delay", "2 days"],
-                ["Governance lock", "7 days (voting power locked after voting or proposing)"],
+                ["Governance lock", "7 days transfer-locked (after voting or proposing)"],
               ],
             },
           },
@@ -1200,7 +1200,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "After deployment, no admin keys, multisigs, or privileged roles exist. The timelock controller is the sole owner of all protocol contracts, and it can only execute transactions that have passed the full governance lifecycle (proposal, voting, timelock). The proposal threshold is deliberately low (100 cREP) to encourage participation  -- the real protection is the combination of dynamic quorum (4% of circulating supply with a 10K cREP floor), majority vote, and timelock delay, not proposal gating.",
+            text: "After deployment, no admin keys, multisigs, or privileged roles exist. The timelock controller is the sole owner of all protocol contracts, and it can only execute transactions that have passed the full governance lifecycle (proposal, voting, timelock). The proposal threshold is deliberately low (100 cREP) to encourage participation  -- the real protection is the combination of dynamic quorum (4% of circulating supply with a 10K cREP floor), majority vote, and timelock delay, not proposal gating. Proposal eligibility is snapshot-based, so the same voting power can back multiple concurrent proposals, and the 7-day governance lock does not add marginal collateral per live proposal.",
           },
         ],
       },

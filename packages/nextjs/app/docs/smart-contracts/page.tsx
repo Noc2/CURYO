@@ -101,8 +101,8 @@ const SmartContracts: NextPage = () => {
           <strong>Governance voting power:</strong> Delegates can vote on proposals via CuryoGovernor.
         </li>
         <li>
-          <strong>Governance lock:</strong> Tokens are locked for 7 days when proposing or voting on governance
-          proposals.
+          <strong>Governance lock:</strong> Tokens become non-transferable for 7 days when proposing or voting on
+          governance proposals. This is a transfer lock, not a per-proposal escrowed bond.
         </li>
         <li>
           <strong>Flash-loan protection:</strong> Tracks first-receive block to prevent same-block vote attacks.
@@ -544,7 +544,7 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td>Governance lock</td>
-              <td>7 days (when proposing or voting)</td>
+              <td>7 days transfer-locked (when proposing or voting)</td>
             </tr>
           </tbody>
         </table>
@@ -605,8 +605,9 @@ const SmartContracts: NextPage = () => {
           cap of 100 cREP per content per round.
         </li>
         <li>
-          <strong>Governance Lock:</strong> Tokens locked for 7 days when proposing or voting on governance, preventing
-          vote-and-sell attacks.
+          <strong>Governance Lock:</strong> Tokens are transfer-locked for 7 days when proposing or voting on
+          governance. Proposal eligibility is checked from the prior voting-power snapshot, so the threshold is not a
+          per-proposal bond and the same voting power can support multiple concurrent proposals.
         </li>
         <li>
           <strong>Pausable:</strong> ContentRegistry, RoundVotingEngine, and HumanFaucet can be paused.
