@@ -409,7 +409,20 @@ contract RoundVotingEngine is
         if (effectiveVoter == registry.getSubmitterIdentity(contentId)) revert SelfVote();
 
         // Content must be active
-        if (!registry.isActive(contentId)) revert ContentNotActive();
+        (
+            uint256 existingContentId,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ContentRegistry.ContentStatus contentStatus,
+            ,
+            ,
+            ,
+            ,
+        ) = registry.contents(contentId);
+        if (existingContentId == 0 || contentStatus != ContentRegistry.ContentStatus.Active) revert ContentNotActive();
 
         // Time-based cooldown (24 hours) — per identity when VoterID is configured
         if (address(voterIdNFT) != address(0) && voterId != 0) {

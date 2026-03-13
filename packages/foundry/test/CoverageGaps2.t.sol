@@ -173,7 +173,7 @@ contract FrontendRegistryBranchTest is Test {
     function test_ReRegisterAfterDeregister() public {
         _registerFrontend(frontend1);
         vm.prank(frontend1);
-        reg.deregister();
+        reg.requestDeregister();
 
         _completeDeregister(frontend1);
 
@@ -198,7 +198,7 @@ contract FrontendRegistryBranchTest is Test {
         reg.creditFees(frontend1, 500e6);
 
         vm.prank(frontend1);
-        reg.deregister();
+        reg.requestDeregister();
         uint256 balBefore = crep.balanceOf(frontend1);
         _completeDeregister(frontend1);
         uint256 balAfter = crep.balanceOf(frontend1);
@@ -268,7 +268,7 @@ contract FrontendRegistryBranchTest is Test {
 
         vm.prank(frontend1);
         vm.expectRevert("Frontend is slashed");
-        reg.deregister();
+        reg.requestDeregister();
     }
 
     // --- Slash redirects to consensus reserve ---
@@ -1042,7 +1042,8 @@ contract ContentRegistryCoverageTest is Test {
 
         // Content starts at rating 50. Set to 150 (should cap at 100)
         registry.updateRatingDirect(id, 150);
-        assertEq(registry.getRating(id), 100);
+        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        assertEq(rating, 100);
     }
 
     // --- updateRatingDirect: set to 0 ---
@@ -1055,7 +1056,8 @@ contract ContentRegistryCoverageTest is Test {
 
         // Content starts at rating 50. Set directly to 0
         registry.updateRatingDirect(id, 0);
-        assertEq(registry.getRating(id), 0);
+        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        assertEq(rating, 0);
     }
 
     // --- updateRatingDirect: same rating is no-op ---
@@ -1068,7 +1070,8 @@ contract ContentRegistryCoverageTest is Test {
 
         // Set to same rating (50) — should be a no-op
         registry.updateRatingDirect(id, 50);
-        assertEq(registry.getRating(id), 50);
+        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        assertEq(rating, 50);
     }
 
     // --- updateRatingDirect: set higher ---
@@ -1078,7 +1081,8 @@ contract ContentRegistryCoverageTest is Test {
         vm.prank(admin);
         registry.setVotingEngine(address(this));
         registry.updateRatingDirect(id, 55);
-        assertEq(registry.getRating(id), 55);
+        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        assertEq(rating, 55);
     }
 
     // --- updateRatingDirect: set lower ---
@@ -1088,7 +1092,8 @@ contract ContentRegistryCoverageTest is Test {
         vm.prank(admin);
         registry.setVotingEngine(address(this));
         registry.updateRatingDirect(id, 45);
-        assertEq(registry.getRating(id), 45);
+        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        assertEq(rating, 45);
     }
 
     // --- updateActivity: only voting engine ---
@@ -1181,24 +1186,29 @@ contract ContentRegistryCoverageTest is Test {
 
     function test_IsActive() public {
         uint256 id = _submitContent(submitter, "https://example.com/active");
-        assertTrue(registry.isActive(id));
-        assertFalse(registry.isActive(999)); // Non-existent
+        (uint256 existingId, , , , , , ContentRegistry.ContentStatus status, , , , ,) = registry.contents(id);
+        assertTrue(existingId != 0 && status == ContentRegistry.ContentStatus.Active);
+        (uint256 missingId, , , , , , ContentRegistry.ContentStatus missingStatus, , , , ,) = registry.contents(999);
+        assertFalse(missingId != 0 && missingStatus == ContentRegistry.ContentStatus.Active); // Non-existent
     }
 
     function test_GetSubmitter() public {
         uint256 id = _submitContent(submitter, "https://example.com/getsub");
-        assertEq(registry.getSubmitter(id), submitter);
+        (, , address storedSubmitter,,,,,,,,,) = registry.contents(id);
+        assertEq(storedSubmitter, submitter);
     }
 
     function test_GetCreatedAt() public {
         vm.warp(1000);
         uint256 id = _submitContent(submitter, "https://example.com/created");
-        assertEq(registry.getCreatedAt(id), 1000);
+        (, , , , uint256 createdAt,,,,,,,) = registry.contents(id);
+        assertEq(createdAt, 1000);
     }
 
     function test_GetCategoryId() public {
         uint256 id = _submitContent(submitter, "https://example.com/catid");
-        assertEq(registry.getCategoryId(id), 1);
+        (, , , , , , , , , , , uint256 categoryId) = registry.contents(id);
+        assertEq(categoryId, 1);
     }
 
     // --- Pause/Unpause ---

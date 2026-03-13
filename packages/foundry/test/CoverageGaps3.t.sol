@@ -67,7 +67,7 @@ contract MockVotingEngine3 is IRoundVotingEngine {
 }
 
 // =========================================================================
-// 1. FRONTEND REGISTRY — register() / deregister() EDGE CASES
+// 1. FRONTEND REGISTRY — register() / requestDeregister() EDGE CASES
 // =========================================================================
 
 contract FrontendRegistryEdgeCaseTest is Test {
@@ -206,19 +206,19 @@ contract FrontendRegistryEdgeCaseTest is Test {
         assertEq(registeredAt, 12345);
     }
 
-    // --- deregister() with zero pending fees (refund == stake only) ---
+    // --- requestDeregister() with zero pending fees (refund == stake only) ---
 
     function test_DeregisterZeroFees_RefundsStakeOnly() public {
         _registerFrontend(frontend1);
 
         vm.prank(frontend1);
-        reg.deregister();
+        reg.requestDeregister();
         uint256 balBefore = crep.balanceOf(frontend1);
         _completeDeregister(frontend1);
         assertEq(crep.balanceOf(frontend1) - balBefore, STAKE);
     }
 
-    // --- deregister() emits FeesClaimed only when fees > 0 ---
+    // --- requestDeregister() emits FeesClaimed only when fees > 0 ---
 
     function test_DeregisterWithFees_EmitsFeesClaimedEvent() public {
         _registerFrontend(frontend1);
@@ -227,7 +227,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
         reg.creditFees(frontend1, 500e6);
 
         vm.prank(frontend1);
-        reg.deregister();
+        reg.requestDeregister();
 
         vm.expectEmit(true, false, false, true);
         emit FrontendRegistry.FeesClaimed(frontend1, 500e6);
@@ -240,7 +240,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
 
         vm.recordLogs();
         vm.prank(frontend1);
-        reg.deregister();
+        reg.requestDeregister();
         _completeDeregister(frontend1);
 
         // Check that FeesClaimed was NOT emitted
@@ -251,7 +251,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
         }
     }
 
-    // --- deregister() allows re-registration with fresh state ---
+    // --- requestDeregister() allows re-registration with fresh state ---
 
     function test_DeregisterThenReregister_FreshState() public {
         _registerFrontend(frontend1);
@@ -263,7 +263,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
         reg.approveFrontend(frontend1);
 
         vm.prank(frontend1);
-        reg.deregister();
+        reg.requestDeregister();
         _completeDeregister(frontend1);
 
         // Re-register
@@ -299,7 +299,7 @@ contract FrontendRegistryEdgeCaseTest is Test {
         reg.creditFees(frontend1, 100e6);
 
         vm.prank(frontend1);
-        reg.deregister();
+        reg.requestDeregister();
         _completeDeregister(frontend1);
 
         vm.prank(frontend1);
@@ -997,7 +997,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         uint256 contentId = _submitContent();
 
         // Get initial rating
-        uint256 ratingBefore = registry.getRating(contentId);
+        (, , , , , , , , , , uint256 ratingBefore,) = registry.contents(contentId);
 
         _commit(voter1, contentId, true, STAKE);
 
@@ -1008,7 +1008,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         engine.cancelExpiredRound(contentId, roundId);
 
         // Rating should be restored to epoch-start
-        uint256 ratingAfterCancel = registry.getRating(contentId);
+        (, , , , , , , , , , uint256 ratingAfterCancel,) = registry.contents(contentId);
         assertEq(ratingAfterCancel, ratingBefore);
     }
 

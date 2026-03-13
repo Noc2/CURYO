@@ -69,7 +69,7 @@ contract ContentRegistry is
         address reviver;
         bool submitterStakeReturned;
         uint256 rating; // 0-100, starts at 50
-        uint256 categoryId; // Reference to approved category (0 only for legacy/unconfigured setups)
+        uint256 categoryId; // Reference to approved category
     }
 
     // --- State ---
@@ -553,10 +553,6 @@ contract ContentRegistry is
         return contents[contentId];
     }
 
-    function getSubmitter(uint256 contentId) external view returns (address) {
-        return contents[contentId].submitter;
-    }
-
     function getSubmitterIdentity(uint256 contentId) external view returns (address) {
         address submitterIdentity = contentSubmitterIdentity[contentId];
         address submitter = contents[contentId].submitter;
@@ -569,37 +565,10 @@ contract ContentRegistry is
         return submitterIdentity;
     }
 
-    function isActive(uint256 contentId) external view returns (bool) {
-        Content storage c = contents[contentId];
-        return c.id != 0 && c.status == ContentStatus.Active;
-    }
-
-    function getRating(uint256 contentId) external view returns (uint256) {
-        return contents[contentId].rating;
-    }
-
-    function getCreatedAt(uint256 contentId) external view returns (uint256) {
-        return contents[contentId].createdAt;
-    }
-
-    function getDormancyAnchorAt(uint256 contentId) external view returns (uint256) {
-        Content storage c = contents[contentId];
-        if (c.id == 0) return 0;
-        return _getDormancyAnchor(contentId, c);
-    }
-
-    function isSubmitterStakeReturned(uint256 contentId) external view returns (bool) {
-        return contents[contentId].submitterStakeReturned;
-    }
-
     function isDormancyEligible(uint256 contentId) external view returns (bool) {
         Content storage c = contents[contentId];
         if (c.id == 0 || c.status != ContentStatus.Active) return false;
         return block.timestamp > _getDormancyAnchor(contentId, c) + DORMANCY_PERIOD;
-    }
-
-    function getCategoryId(uint256 contentId) external view returns (uint256) {
-        return contents[contentId].categoryId;
     }
 
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {

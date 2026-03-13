@@ -1069,8 +1069,9 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
-        assertLt(registry.getRating(contentId), registry.SLASH_RATING_THRESHOLD(), "round should be slashable");
-        assertTrue(registry.isSubmitterStakeReturned(contentId), "submitter stake should be resolved");
+        (, , , , , , , , , bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
+        assertLt(rating, registry.SLASH_RATING_THRESHOLD(), "round should be slashable");
+        assertTrue(submitterStakeReturned, "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter stake should not be returned");
         assertEq(crepToken.balanceOf(treasury) - treasuryBalanceBefore, 10e6, "slash amount should be sent to treasury");
     }
@@ -1091,8 +1092,9 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
-        assertGe(registry.getRating(contentId), registry.SLASH_RATING_THRESHOLD(), "round should not be slashable");
-        assertTrue(registry.isSubmitterStakeReturned(contentId), "submitter stake should be resolved");
+        (, , , , , , , , , bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
+        assertGe(rating, registry.SLASH_RATING_THRESHOLD(), "round should not be slashable");
+        assertTrue(submitterStakeReturned, "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter) - submitterBalanceBefore, 10e6, "submitter stake should be returned");
         assertEq(crepToken.balanceOf(treasury), treasuryBalanceBefore, "treasury should not receive a slash");
     }
@@ -1515,7 +1517,7 @@ contract RoundIntegrationTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
         vm.prank(frontendOp);
-        frontendReg.deregister();
+        frontendReg.requestDeregister();
         _completeFrontendExit(frontendReg, frontendOp);
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
@@ -1552,7 +1554,7 @@ contract RoundIntegrationTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
         vm.startPrank(frontendOp);
-        frontendReg.deregister();
+        frontendReg.requestDeregister();
         vm.stopPrank();
 
         _completeFrontendExit(frontendReg, frontendOp);

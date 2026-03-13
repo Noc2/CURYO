@@ -249,21 +249,21 @@ export async function cancelContent(
 
 /**
  * Deregister a frontend (operator only — must call from the registered address).
- * Calls FrontendRegistry.deregister(). This only starts the unbonding period.
+ * Calls FrontendRegistry.requestDeregister(). This only starts the unbonding period.
  */
 export async function deregisterFrontend(fromAddress: string, contractAddress: string): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
   const data = encodeFunctionData({
     abi: [
       {
-        name: "deregister",
+        name: "requestDeregister",
         type: "function",
         inputs: [],
         outputs: [],
         stateMutability: "nonpayable",
       },
     ],
-    functionName: "deregister",
+    functionName: "requestDeregister",
     args: [],
   });
   return sendTx(fromAddress, contractAddress, data);

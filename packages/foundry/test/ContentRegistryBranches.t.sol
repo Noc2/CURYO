@@ -178,7 +178,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 id = registry.submitContent("https://example.com/delegate-submit", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
-        assertEq(registry.getSubmitter(id), delegate, "raw submitter should remain delegate wallet");
+        (, , address rawSubmitter,,,,,,,,,) = registry.contents(id);
+        assertEq(rawSubmitter, delegate, "raw submitter should remain delegate wallet");
         assertEq(registry.getSubmitterIdentity(id), submitter, "submitter identity should snapshot the holder");
     }
 
@@ -265,7 +266,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         uint256 balAfter = crepToken.balanceOf(submitter);
         assertEq(balAfter, balBefore - 10e6, "no-vote content should not unlock through healthy resolution");
-        assertFalse(registry.isSubmitterStakeReturned(1), "no-vote content should remain unresolved");
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertFalse(submitterStakeReturned, "no-vote content should remain unresolved");
     }
 
     function test_ResolveSubmitterStake_NoSettledRound_ReturnsAfterDormancyPeriod() public {
@@ -283,7 +285,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         uint256 balAfter = crepToken.balanceOf(submitter);
         assertEq(balAfter, balBefore, "dormancy fallback should return the locked stake without a submission reward");
-        assertTrue(registry.isSubmitterStakeReturned(1), "stake should resolve after the dormancy period");
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertTrue(submitterStakeReturned, "stake should resolve after the dormancy period");
     }
 
     function test_HealthyResolution_SnapshotsAndAllowsRetryableSubmitterParticipationReward() public {
@@ -304,7 +307,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 4 days + 1);
         _settleHealthyRound(1);
 
-        assertTrue(registry.isSubmitterStakeReturned(1), "healthy settlement should return stake");
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertTrue(submitterStakeReturned, "healthy settlement should return stake");
         assertEq(registry.submitterParticipationRewardPool(1), address(tinyPool), "reward pool should be snapshotted");
         assertEq(registry.submitterParticipationRewardOwed(1), 9e6, "reward should be snapshotted at the healthy rate");
         assertEq(registry.submitterParticipationRewardPaid(1), 4e6, "initial best-effort payout should be tracked");
@@ -366,7 +370,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             submitterBefore - 10e6,
             "submitter should not recover stake after dormant fallback slash"
         );
-        assertTrue(registry.isSubmitterStakeReturned(1), "stake should resolve after dormant fallback slash");
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertTrue(submitterStakeReturned, "stake should resolve after dormant fallback slash");
     }
 
     function test_SubmitContent_NoParticipationPool_NoReward() public {
@@ -820,7 +825,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(address(votingEngine));
         registry.updateRatingDirect(1, 110);
 
-        assertEq(registry.getRating(1), 100);
+        (, , , , , , , , , , uint256 rating,) = registry.contents(1);
+        assertEq(rating, 100);
     }
 
     function test_UpdateRatingDirect_FlooredAt0() public {
@@ -833,7 +839,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(address(votingEngine));
         registry.updateRatingDirect(1, 0);
 
-        assertEq(registry.getRating(1), 0);
+        (, , , , , , , , , , uint256 rating,) = registry.contents(1);
+        assertEq(rating, 0);
     }
 
     function test_UpdateRatingDirect_SameValue_NoChange() public {
@@ -846,7 +853,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(address(votingEngine));
         registry.updateRatingDirect(1, 50);
 
-        assertEq(registry.getRating(1), 50); // unchanged
+        (, , , , , , , , , , uint256 rating,) = registry.contents(1);
+        assertEq(rating, 50); // unchanged
     }
 
     function test_SubmitContent_CategoryApproved_Succeeds() public {
@@ -860,7 +868,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 id = registry.submitContent("https://example.com/1", "goal", "goal", "tags", 1);
         vm.stopPrank();
         assertEq(id, 1);
-        assertEq(registry.getCategoryId(1), 1);
+        (, , , , , , , , , , , uint256 categoryId) = registry.contents(1);
+        assertEq(categoryId, 1);
     }
 
     function test_SubmitContent_CategoryRegistryConfigured_AutoResolvesCategoryFromUrl() public {
@@ -875,7 +884,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         assertEq(id, 1);
-        assertEq(registry.getCategoryId(id), 7, "configured registries should derive the category from the URL");
+        (, , , , , , , , , , , uint256 categoryId) = registry.contents(id);
+        assertEq(categoryId, 7, "configured registries should derive the category from the URL");
     }
 
     function test_SubmitContent_CategoryRegistryConfigured_UnapprovedDomainReverts() public {

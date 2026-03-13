@@ -194,13 +194,6 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "deregister",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "frontendExitAvailableAt",
     "inputs": [
       {

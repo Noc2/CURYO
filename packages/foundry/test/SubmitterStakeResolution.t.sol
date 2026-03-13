@@ -116,7 +116,8 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
-        assertFalse(registry.isSubmitterStakeReturned(1), "submitter stake must remain locked while a later round is open");
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertFalse(submitterStakeReturned, "submitter stake must remain locked while a later round is open");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged");
     }
 
@@ -147,7 +148,8 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         votingEngine.resolveSubmitterStake(1);
 
-        assertTrue(registry.isSubmitterStakeReturned(1), "submitter stake should resolve even if a later round is open");
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertTrue(submitterStakeReturned, "submitter stake should resolve even if a later round is open");
         assertEq(
             crepToken.balanceOf(submitter) - submitterBalanceAfterSubmit,
             10e6,
@@ -170,7 +172,8 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
-        assertFalse(registry.isSubmitterStakeReturned(1), "dormancy fallback must keep stake locked while the round is open");
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertFalse(submitterStakeReturned, "dormancy fallback must keep stake locked while the round is open");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged");
     }
 

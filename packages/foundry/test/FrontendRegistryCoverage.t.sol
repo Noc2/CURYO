@@ -420,7 +420,7 @@ contract FrontendRegistryCoverageTest is Test {
         vm.stopPrank();
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
         uint256 balanceBefore = crepToken.balanceOf(frontend1);
         _completeDeregister(frontend1);
         uint256 balanceAfter = crepToken.balanceOf(frontend1);
@@ -439,7 +439,7 @@ contract FrontendRegistryCoverageTest is Test {
         vm.stopPrank();
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
         _completeDeregister(frontend1); // Should not revert even with total=0
 
         (address operator,,,) = registry.getFrontendInfo(frontend1);
@@ -588,7 +588,7 @@ contract FrontendRegistryCoverageTest is Test {
         _registerFrontend(frontend2);
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         // frontend1 is still in the list while unbonding
         address[] memory frontends = registry.getRegisteredFrontends();
@@ -679,7 +679,7 @@ contract FrontendRegistryCoverageTest is Test {
         _registerFrontend(frontend1);
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         vm.expectEmit(true, false, false, false);
         emit FrontendRegistry.FrontendDeregistered(frontend1);
@@ -693,7 +693,7 @@ contract FrontendRegistryCoverageTest is Test {
         registry.creditFees(frontend1, 200e6);
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         vm.expectEmit(true, false, false, true);
         emit FrontendRegistry.FeesClaimed(frontend1, 200e6);
@@ -783,7 +783,7 @@ contract FrontendRegistryCoverageTest is Test {
         _registerFrontend(frontend2);
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         // frontend1 still in array while unbonding, total unchanged
         (address[] memory addrs, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);

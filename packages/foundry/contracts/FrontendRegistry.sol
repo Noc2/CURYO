@@ -194,11 +194,6 @@ contract FrontendRegistry is
         _requestDeregister(msg.sender);
     }
 
-    /// @notice Backward-compatible alias for requestDeregister().
-    function deregister() external nonReentrant {
-        _requestDeregister(msg.sender);
-    }
-
     /// @notice Complete deregistration after the unbonding window has elapsed.
     function completeDeregister() external nonReentrant {
         Frontend storage f = frontends[msg.sender];

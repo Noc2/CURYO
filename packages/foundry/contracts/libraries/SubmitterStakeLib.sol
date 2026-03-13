@@ -18,10 +18,21 @@ library SubmitterStakeLib {
         bool hasSettledRound,
         uint256 contentId
     ) external {
-        if (registry.isSubmitterStakeReturned(contentId)) return;
-
-        uint256 contentCreatedAt = registry.getCreatedAt(contentId);
-        if (contentCreatedAt == 0) revert ContentNotFound();
+        (
+            uint256 existingContentId,
+            ,
+            ,
+            ,
+            uint256 contentCreatedAt,
+            ,
+            ,
+            ,
+            ,
+            bool submitterStakeReturned,
+            uint256 rating,
+        ) = registry.contents(contentId);
+        if (submitterStakeReturned) return;
+        if (existingContentId == 0) revert ContentNotFound();
 
         uint256 elapsed = block.timestamp - contentCreatedAt;
 
@@ -31,8 +42,6 @@ library SubmitterStakeLib {
             }
             return;
         }
-
-        uint256 rating = registry.getRating(contentId);
 
         if (elapsed >= 24 hours && rating < registry.SLASH_RATING_THRESHOLD()) {
             registry.slashSubmitterStake(contentId);

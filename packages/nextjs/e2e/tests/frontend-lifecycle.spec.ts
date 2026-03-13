@@ -150,7 +150,7 @@ test.describe("Frontend lifecycle", () => {
     test.skip(!slashed, "Frontend not slashed in previous test");
     test.setTimeout(90_000);
 
-    // deregister() requires !slashed — unslash first
+    // requestDeregister() requires !slashed — unslash first
     const unslashOk = await unslashFrontend(OPERATOR, DEPLOYER.address, FRONTEND_REGISTRY);
     expect(unslashOk, "Unslashing frontend should succeed").toBe(true);
 

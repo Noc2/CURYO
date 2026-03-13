@@ -179,7 +179,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     function claimSubmitterReward(uint256 contentId, uint256 roundId) external nonReentrant {
         require(!submitterRewardClaimed[contentId][roundId], "Already claimed");
 
-        address submitter = registry.getSubmitter(contentId);
+        (, , address submitter,,,,,,,,,) = registry.contents(contentId);
         require(msg.sender == submitter, "Not submitter");
 
         RoundLib.Round memory round = _readRound(contentId, roundId);

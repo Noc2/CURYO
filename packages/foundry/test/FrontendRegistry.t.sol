@@ -150,7 +150,7 @@ contract FrontendRegistryTest is Test {
         vm.stopPrank();
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         uint256 availableAt = registry.frontendExitAvailableAt(frontend1);
         assertEq(availableAt, block.timestamp + registry.UNBONDING_PERIOD());
@@ -170,7 +170,7 @@ contract FrontendRegistryTest is Test {
     function test_RevertDeregisterNotRegistered() public {
         vm.prank(frontend1);
         vm.expectRevert("Not registered");
-        registry.deregister();
+        registry.requestDeregister();
     }
 
     function test_RevertDeregisterSlashed() public {
@@ -184,7 +184,7 @@ contract FrontendRegistryTest is Test {
 
         vm.prank(frontend1);
         vm.expectRevert("Frontend is slashed");
-        registry.deregister();
+        registry.requestDeregister();
     }
 
     function test_DeregisterWithPendingFees() public {
@@ -198,7 +198,7 @@ contract FrontendRegistryTest is Test {
         registry.creditFees(frontend1, 200e6);
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         uint256 balanceBefore = crepToken.balanceOf(frontend1);
         _completeDeregister(frontend1);
@@ -221,7 +221,7 @@ contract FrontendRegistryTest is Test {
         registry.creditFees(frontend1, 100e6);
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         vm.prank(frontend1);
         vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);
@@ -232,7 +232,7 @@ contract FrontendRegistryTest is Test {
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
-        registry.deregister();
+        registry.requestDeregister();
         vm.stopPrank();
 
         _completeDeregister(frontend1);
@@ -260,7 +260,7 @@ contract FrontendRegistryTest is Test {
         vm.stopPrank();
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         uint256 balanceBefore = crepToken.balanceOf(frontend1);
         _completeDeregister(frontend1);
@@ -316,7 +316,7 @@ contract FrontendRegistryTest is Test {
         vm.stopPrank();
 
         vm.prank(frontend1);
-        registry.deregister();
+        registry.requestDeregister();
 
         vm.prank(admin);
         vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);

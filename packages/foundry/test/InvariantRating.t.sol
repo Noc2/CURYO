@@ -126,7 +126,7 @@ contract InvariantRating is Test {
             VotingHandler.RoundRecord memory rec = handler.getRoundRecord(i);
             if (!rec.settled) continue;
 
-            uint256 rating = registry.getRating(rec.contentId);
+            (, , , , , , , , , , uint256 rating,) = registry.contents(rec.contentId);
             assertLe(rating, 100, "rating exceeds 100");
         }
     }
@@ -142,7 +142,7 @@ contract InvariantRating is Test {
             // Only check rounds where UP side had strictly more raw stake
             if (round.upPool <= round.downPool) continue;
 
-            uint256 rating = registry.getRating(rec.contentId);
+            (, , , , , , , , , , uint256 rating,) = registry.contents(rec.contentId);
             assertGe(rating, 50, "UP-majority round produced rating < 50");
         }
     }

@@ -231,7 +231,7 @@ contract FrontendRegistryCoverageTest is Test {
         assertTrue(reg.isApproved(frontend1));
 
         vm.prank(frontend1);
-        reg.deregister();
+        reg.requestDeregister();
 
         assertFalse(reg.isApproved(frontend1));
     }

@@ -423,8 +423,8 @@ const SmartContracts: NextPage = () => {
           <code>register()</code> &mdash; Register as frontend operator (fixed 1,000 cREP stake). Requires Voter ID.
         </li>
         <li>
-          <code>deregister()</code> / <code>completeDeregister()</code> &mdash; Start voluntary exit, then withdraw
-          stake + pending fees after the unbonding window elapses.
+          <code>requestDeregister()</code> / <code>completeDeregister()</code> &mdash; Start voluntary exit, then
+          withdraw stake + pending fees after the unbonding window elapses.
         </li>
         <li>
           <code>approveFrontend(address)</code> / <code>revokeFrontend(address)</code> &mdash; Governance controls

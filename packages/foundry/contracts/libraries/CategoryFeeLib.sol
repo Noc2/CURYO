@@ -20,7 +20,7 @@ library CategoryFeeLib {
         uint256 contentId,
         uint256 amount
     ) external returns (bool paid, uint256 categoryId, address categorySubmitter) {
-        categoryId = registry.getCategoryId(contentId);
+        (, , , , , , , , , , , categoryId) = registry.contents(contentId);
         if (categoryId == 0 || address(categoryRegistry) == address(0)) {
             return (false, categoryId, address(0));
         }

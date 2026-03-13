@@ -110,7 +110,20 @@ contract VotingHandler is VotingTestBase {
         if (voteRecords[voter][contentId].committed && !voteRecords[voter][contentId].claimed) return;
 
         // Skip if content not active
-        if (!registry.isActive(contentId)) return;
+        (
+            uint256 existingContentId,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ContentRegistry.ContentStatus status,
+            ,
+            ,
+            ,
+            ,
+        ) = registry.contents(contentId);
+        if (existingContentId == 0 || status != ContentRegistry.ContentStatus.Active) return;
 
         // Skip if voter doesn't have enough balance
         if (crepToken.balanceOf(voter) < stakeAmount) return;
@@ -286,7 +299,7 @@ contract VotingHandler is VotingTestBase {
             if (round.state != RoundLib.RoundState.Settled) continue;
             if (distributor.submitterRewardClaimed(contentId, roundId)) continue;
 
-            address submitter = registry.getSubmitter(contentId);
+            (, , address submitter,,,,,,,,,) = registry.contents(contentId);
             uint256 balBefore = crepToken.balanceOf(submitter);
 
             vm.prank(submitter);
