@@ -7,6 +7,7 @@ import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 /// @notice Minimal deployment for TypeScript round integration tests.
 /// @dev Deploys CuryoReputation, ContentRegistry, RoundVotingEngine,
@@ -65,9 +66,14 @@ contract DeployRoundTest is Script {
             )
         );
 
+        MockCategoryRegistry categoryRegistry = new MockCategoryRegistry();
+        categoryRegistry.seedApprovedCategory(1, "example.com", address(0));
+
         // 4. Wire contracts
         registry.setVotingEngine(address(votingEngine));
+        registry.setCategoryRegistry(address(categoryRegistry));
         votingEngine.setRewardDistributor(address(rewardDistributor));
+        votingEngine.setCategoryRegistry(address(categoryRegistry));
         votingEngine.setTreasury(deployer);
         crepToken.setContentVotingContracts(address(votingEngine), address(registry));
 
@@ -104,6 +110,9 @@ contract DeployRoundTest is Script {
                 vm.toString(address(votingEngine)),
                 '","rewardDistributor":"',
                 vm.toString(address(rewardDistributor)),
+                '","categoryRegistry":"',
+                vm.toString(address(categoryRegistry)),
+                '","defaultCategoryId":"1',
                 '","deployer":"',
                 vm.toString(deployer),
                 '"}'
@@ -116,6 +125,7 @@ contract DeployRoundTest is Script {
         console.log("ContentRegistry:", address(registry));
         console.log("RoundVotingEngine:", address(votingEngine));
         console.log("RoundRewardDistributor:", address(rewardDistributor));
+        console.log("CategoryRegistry:", address(categoryRegistry));
         console.log("Addresses written to test-addresses.json");
     }
 }
