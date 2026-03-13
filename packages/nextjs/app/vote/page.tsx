@@ -973,7 +973,7 @@ const HomeInner = () => {
   });
 
   return (
-    <AppPageShell>
+    <AppPageShell contentClassName="2xl:max-w-[1600px]">
       <VotingGuide />
       <div
         className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"

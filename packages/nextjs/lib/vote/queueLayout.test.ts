@@ -17,10 +17,10 @@ test("computeVoteQueueLayout keeps one row on standard desktop heights", () => {
 
 test("computeVoteQueueLayout enables two rows only on extra-large viewports with enough height", () => {
   const layout = computeVoteQueueLayout({
-    viewportWidth: 2100,
-    viewportHeight: 1400,
-    containerWidth: 1800,
-    availableHeight: 540,
+    viewportWidth: 1800,
+    viewportHeight: 1100,
+    containerWidth: 1500,
+    availableHeight: 520,
     rootFontSize: 16,
   });
 
