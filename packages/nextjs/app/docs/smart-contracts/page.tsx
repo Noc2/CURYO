@@ -14,6 +14,10 @@ const SmartContracts: NextPage = () => {
         All core contracts use <strong>UUPS upgradeable proxies</strong> (except CuryoReputation, VoterIdNFT,
         HumanFaucet, and CategoryRegistry which are non-upgradeable).
       </p>
+      <p>
+        The current production surface also includes one stateless helper contract, <code>SubmissionCanonicalizer</code>
+        , plus the protocol libraries used by the registries and voting engine.
+      </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
           <thead>
@@ -60,6 +64,11 @@ const SmartContracts: NextPage = () => {
               <td>No</td>
             </tr>
             <tr>
+              <td className="font-mono text-[#EF476F]">ParticipationPool</td>
+              <td>Halving-tier participation rewards used by submitter and voter reward claims</td>
+              <td>No</td>
+            </tr>
+            <tr>
               <td className="font-mono text-[#EF476F]">ProfileRegistry</td>
               <td>On-chain user profiles with unique names and images</td>
               <td>UUPS</td>
@@ -67,6 +76,11 @@ const SmartContracts: NextPage = () => {
             <tr>
               <td className="font-mono text-[#EF476F]">HumanFaucet</td>
               <td>Sybil-resistant token distribution via Self.xyz passport verification</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">SubmissionCanonicalizer</td>
+              <td>Stateless URL/domain canonicalization helper used by ContentRegistry submissions</td>
               <td>No</td>
             </tr>
             <tr>
@@ -82,6 +96,21 @@ const SmartContracts: NextPage = () => {
             <tr>
               <td className="font-mono text-[#EF476F]">RewardMath</td>
               <td>Library: pool split (82/5/10/2/1) and reward calculations</td>
+              <td>&mdash;</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">CategoryFeeLib</td>
+              <td>Library: category-fee routing for settled rounds</td>
+              <td>&mdash;</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">SubmitterStakeLib</td>
+              <td>Library: submitter stake return/slash policy helpers</td>
+              <td>&mdash;</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">TokenTransferLib</td>
+              <td>Library: narrow token transfer helpers used by reward settlement paths</td>
               <td>&mdash;</td>
             </tr>
           </tbody>
@@ -187,6 +216,10 @@ const SmartContracts: NextPage = () => {
       <p>
         Manages content lifecycle. Each item has a unique ID and content hash stored on-chain; full URL and metadata are
         emitted via events.
+      </p>
+      <p>
+        Submission canonicalization is delegated to <code>SubmissionCanonicalizer</code>, which normalizes supported
+        platform URLs into a deterministic submission key before duplicate checks are applied.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">

@@ -22,8 +22,8 @@ const SecurityAudit: NextPage = () => {
       <h2>Latest Follow-Up Review (March 11, 2026)</h2>
       <p>
         The latest review re-ran the full Foundry suite, performed a fresh manual audit of the production contracts, and
-        drove a final remediation pass for the remaining medium/low findings. Current full-suite status:
-        <strong> 1296 passed, 0 failed, 0 skipped</strong>.
+        drove a final remediation pass for the remaining medium/low findings. The reviewed branch passed the full
+        Foundry suite cleanly at the time of that follow-up review.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -117,7 +117,7 @@ const SecurityAudit: NextPage = () => {
 
       <h2>Scope</h2>
       <p>
-        The audit covers all 11 production contracts and 2 libraries deployed on-chain (~3,600 lines of Solidity). Mock
+        The audit covers the current production contract surface: 12 deployed contracts and 5 supporting libraries. Mock
         and test contracts are excluded.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -203,6 +203,13 @@ const SecurityAudit: NextPage = () => {
               <td>Self.xyz verified claims, referrals, Pausable</td>
             </tr>
             <tr>
+              <td className="font-mono text-[#EF476F]">SubmissionCanonicalizer</td>
+              <td>
+                <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
+              </td>
+              <td>Stateless URL/domain canonicalization helper used during content submission</td>
+            </tr>
+            <tr>
               <td className="font-mono text-[#EF476F]">CuryoGovernor</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
@@ -223,6 +230,27 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td>Round states, timing, settlement probability</td>
             </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">CategoryFeeLib</td>
+              <td>
+                <span className="badge badge-secondary whitespace-nowrap">Library</span>
+              </td>
+              <td>Category-fee settlement helpers</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">SubmitterStakeLib</td>
+              <td>
+                <span className="badge badge-secondary whitespace-nowrap">Library</span>
+              </td>
+              <td>Submitter stake return/slash helpers</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-[#EF476F]">TokenTransferLib</td>
+              <td>
+                <span className="badge badge-secondary whitespace-nowrap">Library</span>
+              </td>
+              <td>Narrow token transfer helpers used by reward settlement flows</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -234,8 +262,8 @@ const SecurityAudit: NextPage = () => {
           8 medium, 30 low, 63 informational (most from OZ dependencies or informational patterns).
         </li>
         <li>
-          <strong>Manual review</strong> &mdash; Line-by-line review of all 13 files: token flows, state transitions,
-          access control, and upgrade safety.
+          <strong>Manual review</strong> &mdash; Line-by-line review of the production contract and library surface:
+          token flows, state transitions, access control, and upgrade safety.
         </li>
         <li>
           <strong>Storage layout verification</strong> &mdash; <code>forge inspect</code> on all 5 UUPS contracts to
