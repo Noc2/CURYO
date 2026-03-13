@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="packages/nextjs/public/banner.png" alt="CURYO — Decentralized Reputation Game" width="100%" />
+  <img src="packages/nextjs/public/og-image.png" alt="CURYO — Decentralized Reputation Game" width="100%" />
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 - [Architecture](#architecture)
 - [Install](#install)
 - [Usage](#usage)
-- [API](#api)
+- [Docs and APIs](#docs-and-apis)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -35,10 +35,11 @@ See the in-app documentation at `/docs` for detailed game theory analysis and se
 
 ## Architecture
 
-Curyo is a monorepo with six packages:
+Curyo is a monorepo with seven packages:
 
 | Package | Description |
 |---|---|
+| `packages/contracts` | Shared ABIs and deployed-address metadata consumed by the app and services |
 | `packages/foundry` | Solidity smart contracts, tests, and deployment scripts |
 | `packages/nextjs` | Next.js frontend with in-app documentation at `/docs` |
 | `packages/ponder` | Ponder indexer for on-chain event processing and API |
@@ -47,11 +48,12 @@ Curyo is a monorepo with six packages:
 | `packages/mcp-server` | Read-only MCP server exposing Curyo data to AI agents |
 
 ```
-foundry (compile) → ABIs + addresses
-ponder  (index)   → REST API at localhost:42069
-nextjs  (frontend)→ reads contracts via wagmi + Ponder API
-keeper  (service) → settles rounds via settleRound(), cancels expired rounds, marks dormant content
-mcp-server (tools)→ exposes read-only MCP tools backed by the Ponder API
+foundry   (compile) → deployments + artifacts
+contracts (shared)  → ABIs + deployed addresses for apps/services
+ponder    (index)   → REST API at localhost:42069
+nextjs    (frontend)→ reads contracts via wagmi + Ponder API
+keeper    (service) → settles rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant content
+mcp-server (tools)  → exposes read-only MCP tools backed by the Ponder API
 ```
 
 Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, RainbowKit, wagmi, and viem.
@@ -77,7 +79,7 @@ For protocol review, security review, and contribution planning, treat Curyo-own
 
 ### Prerequisites
 
-- [Node.js >= 20](https://nodejs.org/)
+- [Node.js >= 20.18.3](https://nodejs.org/)
 - [Yarn v3](https://yarnpkg.com/)
 - [Foundry](https://book.getfoundry.sh/getting-started/installation)
 - [Git](https://git-scm.com/)
@@ -89,6 +91,8 @@ git clone https://github.com/Noc2/CURYO.git
 cd CURYO
 yarn install
 ```
+
+For Celo mainnet deployment, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Usage
 
@@ -119,6 +123,13 @@ yarn start
 ```
 
 Visit [http://localhost:3000](http://localhost:3000).
+
+**Optional 5. Start the keeper** to exercise automatic reveals, settlement, unrevealed-vote cleanup, cancellations, and
+dormancy flows locally:
+
+```bash
+yarn keeper:dev
+```
 
 ### Run the Keeper
 
@@ -159,6 +170,9 @@ docker run --env-file .env curyo-keeper
 ### Run Tests
 
 ```bash
+# TypeScript / Node test suites across app + services
+yarn test:ts
+
 # Solidity unit tests
 yarn foundry:test
 
@@ -169,7 +183,7 @@ yarn e2e
 yarn e2e:ui
 ```
 
-## API
+## Docs and APIs
 
 In-app documentation is available at `/docs` when running the frontend, covering:
 
@@ -179,6 +193,11 @@ In-app documentation is available at `/docs` when running the frontend, covering
 - Governance
 - Smart Contracts
 - Security Audit
+
+Additional local interfaces:
+
+- Ponder REST API at `http://localhost:42069` after `yarn ponder:dev`
+- MCP server via `yarn mcp:dev` (stdio) or `yarn mcp:dev:http` (streamable HTTP)
 
 ## Contributing
 
