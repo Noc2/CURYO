@@ -117,7 +117,11 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
   return (
     <div ref={containerRef} className="shrink-0 sm:flex-1 sm:min-w-0 relative">
       {/* Hidden measurement row */}
-      <div ref={measureRef} className="flex gap-2 absolute invisible pointer-events-none h-0 overflow-hidden">
+      <div
+        ref={measureRef}
+        aria-hidden="true"
+        className="absolute inset-x-0 flex h-0 max-w-full gap-2 overflow-hidden invisible pointer-events-none"
+      >
         {categories.map(category => (
           <span key={category} className="px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap shrink-0">
             {category}
