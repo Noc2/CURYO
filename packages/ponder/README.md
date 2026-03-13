@@ -78,7 +78,7 @@ The REST API is built with Hono. Key routes:
 | `GET /content/by-url?url=...` | Look up a single content item by URL |
 | `GET /votes` | List votes with filters |
 | `GET /profile/:address` | User profile and reputation |
-| `GET /category` | List content categories |
+| `GET /categories` | List content categories |
 
 Routes `/health` and `/status` are reserved by Ponder.
 

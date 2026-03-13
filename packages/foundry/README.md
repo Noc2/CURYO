@@ -22,10 +22,13 @@ yarn foundry:test # Run test suite
 | `yarn format` | Format Solidity and JS files |
 | `yarn lint` | Check code formatting |
 | `yarn flatten` | Output flattened contracts |
-| `yarn verify` | Verify contracts on Etherscan |
+| `yarn verify` | Verify contracts on Etherscan-compatible networks |
 | `yarn account` | Check keystore account balance |
 | `yarn account:generate` | Create a new keystore account |
 | `yarn account:import` | Import an existing account into keystore |
+
+On Celo and Celo Sepolia, deploys use a Foundry keystore selected via `--keystore <name>` and skip Forge's
+auto-verification flow. Verify those contracts manually with `make verify-blockscout`.
 
 ## Configuration
 
@@ -33,10 +36,12 @@ Create a `.env` file (see `.env.example`):
 
 | Variable | Description |
 |---|---|
-| `DEPLOYER_PRIVATE_KEY` | Auto-filled by `yarn account:generate` |
-| `ALCHEMY_API_KEY` | RPC provider for testnet/mainnet deploys |
-| `ETHERSCAN_API_KEY` | For contract verification |
+| `ALCHEMY_API_KEY` | Optional RPC provider key for testnet/mainnet deploys |
+| `ETHERSCAN_API_KEY` | Optional explorer API key for Etherscan-compatible networks |
 | `LOCALHOST_KEYSTORE_ACCOUNT` | Keystore account name for local development |
+
+Live-network deploys are keystore-based rather than private-key-based. Generate or import a Foundry keystore, then run
+`yarn deploy --network <network> --keystore <name>`.
 
 ## Project Structure
 
