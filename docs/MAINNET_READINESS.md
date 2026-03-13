@@ -89,7 +89,9 @@ This document tracks every item that must be resolved (BLOCKING) or should be re
   `commitHash` is bound to `keccak256(ciphertext)`, so reveals are tied to the exact ciphertext bytes that were
   committed. That closes the byte-binding gap, but the reveal path still verifies commit consistency rather than
   proving on-chain that the ciphertext was honestly decryptable, so public docs now describe reveal as a
-  keeper/drand-assisted off-chain decryption flow with a manual fallback for users who know the plaintext.
+  keeper/drand-assisted off-chain decryption flow with a manual fallback for users who know the plaintext. A future
+  upgrade path could replace that operational trust assumption with verifiable reveal proofs, likely via zk proofs of
+  correct decryption.
   _Ref: `packages/foundry/contracts/RoundVotingEngine.sol`, `packages/nextjs/app/docs/how-it-works/page.tsx`, `packages/nextjs/app/docs/smart-contracts/page.tsx`_
 
 - [ ] **ParticipationPool halving schedule transparency**

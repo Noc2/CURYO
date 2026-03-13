@@ -401,7 +401,10 @@ const Tokenomics = () => {
             <tr>
               <td>Submit content</td>
               <td className="font-mono">10 cREP</td>
-              <td>Returned after a healthy settled round, or at dormancy if no round ever settles</td>
+              <td>
+                Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever
+                settles
+              </td>
             </tr>
             <tr>
               <td>Register as frontend</td>

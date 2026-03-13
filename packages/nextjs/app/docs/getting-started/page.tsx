@@ -279,7 +279,7 @@ const GettingStarted: NextPage = () => {
       <ul>
         <li>
           <strong>Returned:</strong> After about 4 days once a settled round confirms rating stays above 25. If no round
-          ever settles, the stake unlocks when the content reaches dormancy.
+          ever settles, the stake unlocks when the content reaches dormancy after all open rounds have been closed.
         </li>
         <li>
           <strong>Forfeited:</strong> If a settled round establishes a rating below 25 after the 24-hour grace period.

@@ -258,8 +258,14 @@ const SmartContracts: NextPage = () => {
           to the treasury.
         </li>
         <li>
-          <strong>Auto-return:</strong> After ~4 days once a settled round confirms rating stays above 25. If no round
-          ever settles, the stake resolves when the content reaches dormancy.
+          <strong>Auto-return:</strong> After ~4 days once a settled round confirms rating stays above 25 and no later
+          round remains open. If no round ever settles, the stake resolves when the content reaches dormancy after all
+          open rounds have been closed.
+        </li>
+        <li>
+          <strong>Submitter participation reward:</strong> Healthy submitter rewards are snapshotted when the stake
+          returns. If the ParticipationPool is temporarily depleted, the remaining amount stays claimable later instead
+          of being lost.
         </li>
       </ul>
 
@@ -344,6 +350,9 @@ const SmartContracts: NextPage = () => {
           committed vote after the epoch ends. Normally called by the keeper after off-chain drand/tlock decryption, but
           any caller that knows the plaintext <code>(isUp, salt)</code> can submit it. The production UI keeps this
           mostly hidden, but connected users also have a small manual fallback link if an auto-reveal appears delayed.
+          The chain binds the reveal to the exact submitted ciphertext via <code>keccak256(ciphertext)</code>, but it
+          still does not prove on-chain that the ciphertext was honestly decryptable. A future hardening path here would
+          be zk-based reveal proofs.
         </li>
         <li>
           <code>settleRound(contentId, roundId)</code> &mdash; Settle the current round once at least{" "}
@@ -353,11 +362,17 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators
-          claim their proportional share of the 1% frontend fee pool. Pull-based, permissionless.
+          claim their proportional share of the 1% frontend fee pool. Pull-based, permissionless. If the snapshotted
+          frontend was later slashed, that historical fee share is routed to treasury instead of remaining stuck.
         </li>
         <li>
           <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim
           participation rewards (rate snapshotted at settlement time for fairness). Pull-based.
+        </li>
+        <li>
+          <code>ContentRegistry.claimSubmitterParticipationReward(contentId)</code> &mdash; Claim any remaining
+          submitter participation reward after a healthy stake return if the initial best-effort payout was only
+          partial.
         </li>
         <li>
           <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (

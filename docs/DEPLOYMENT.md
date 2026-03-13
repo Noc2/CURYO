@@ -548,9 +548,9 @@ The rating bot will:
 2. Fetch active content from the Ponder indexer
 3. For each item, call the matching rating strategy (YouTube like ratio, TMDB score, Steam reviews, etc.)
 4. Determine vote direction: score >= `VOTE_THRESHOLD` → UP, otherwise → DOWN
-5. Commit the vote on-chain via `commitVote(contentId, commitHash, ciphertext, stakeAmount, frontend)` — the vote direction is encrypted with tlock timelock encryption and hidden until reveal (up to `MAX_VOTES_PER_RUN`)
+5. Commit the vote on-chain via `CuryoReputation.transferAndCall(votingEngine, stakeAmount, abi.encode(contentId, commitHash, ciphertext, frontend))` — the vote direction is encrypted with tlock timelock encryption and hidden until reveal (up to `MAX_VOTES_PER_RUN`)
 
-After each blind phase ends, the Keeper service reveals committed votes using `revealVoteByCommitKey()`, settles or finalizes rounds once eligible, and sweeps unrevealed-vote cleanup on terminal rounds. Each content item is voted on only once (the bot tracks previous votes).
+After each blind phase ends, the Keeper service reveals committed votes using `revealVoteByCommitKey()`, settles or finalizes rounds once eligible, and sweeps unrevealed-vote cleanup on terminal rounds. The reveal path is still a keeper/drand-assisted off-chain decryption flow: the chain checks commit consistency against `keccak256(ciphertext)`, but it does not yet prove on-chain that the ciphertext was honestly decryptable. If the protocol is hardened further later, this is a natural place to add zk-based reveal proofs. Each content item is voted on only once (the bot tracks previous votes).
 
 ### 8e. Verify the full loop
 

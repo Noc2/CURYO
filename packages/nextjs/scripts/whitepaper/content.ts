@@ -615,7 +615,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `The reveal transaction is open to any caller who knows the plaintext \`(isUp, salt)\` for a commit. In normal operation the keeper derives that plaintext off-chain from the tlock ciphertext after epoch end. Connected users can also self-reveal from the fallback flow. If the keeper is offline, settlement is delayed until an honest party reveals the needed votes or the reveal grace period expires. Below commit quorum the round can still cancel; after commit quorum, missing reveal quorum can end in RevealFailed and unrevealed stakes are forfeited during cleanup.`,
+            text: `The reveal transaction is open to any caller who knows the plaintext \`(isUp, salt)\` for a commit. In normal operation the keeper derives that plaintext off-chain from the tlock ciphertext after epoch end. Connected users can also self-reveal from the fallback flow. If the keeper is offline, settlement is delayed until an honest party reveals the needed votes or the reveal grace period expires. Below commit quorum the round can still cancel; after commit quorum, missing reveal quorum can end in RevealFailed and unrevealed stakes are forfeited during cleanup. The chain binds each reveal to the exact submitted ciphertext, but it still does not prove on-chain that the ciphertext was honestly decryptable; a future hardening path here would be zk-based reveal proofs.`,
           },
           {
             type: "sub_heading",
@@ -801,7 +801,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters) and marking dormant content. The drand randomness beacon is public, so anyone can run the off-chain decryption flow, but the current protocol verifies commit consistency rather than proving on-chain that the stored ciphertext was honestly decryptable. In practice the reveal path is a keeper/drand-assisted off-chain flow with a user fallback, not a fully trustless ciphertext proof system.",
+            text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters) and marking dormant content. The drand randomness beacon is public, so anyone can run the off-chain decryption flow, but the current protocol verifies commit consistency rather than proving on-chain that the stored ciphertext was honestly decryptable. In practice the reveal path is a keeper/drand-assisted off-chain flow with a user fallback, not a fully trustless ciphertext proof system. If Curyo later wants to close that trust gap entirely, zk proofs of correct decryption are the most natural upgrade path.",
           },
           {
             type: "paragraph",
@@ -870,7 +870,7 @@ export const SECTIONS: Section[] = [
                 [
                   "Submit content",
                   "10 cREP",
-                  "Returned after a healthy settled round, or at dormancy if no round ever settles",
+                  "Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever settles",
                 ],
                 ["Register as frontend", "1,000 cREP", "Requires governance approval"],
               ],
@@ -878,7 +878,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period and a settled round establishes that low rating. Stakes are returned after roughly 4 days once a settled round confirms a healthy rating. If no round ever settles, the stake instead resolves when the content reaches dormancy.",
+            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period and a settled round establishes that low rating. Stakes are returned after roughly 4 days once a settled round confirms a healthy rating and no later round remains open. If no round ever settles, the stake instead resolves when the content reaches dormancy. Healthy submitter participation rewards are snapshotted at that return point and can be claimed later if the pool was only able to pay a partial amount immediately.",
           },
         ],
       },
