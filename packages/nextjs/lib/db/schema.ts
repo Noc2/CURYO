@@ -1,16 +1,5 @@
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-export const comments = sqliteTable("comments", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  contentId: text("content_id").notNull(),
-  walletAddress: text("wallet_address").notNull(),
-  body: text("body").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-});
-
-export type Comment = typeof comments.$inferSelect;
-export type NewComment = typeof comments.$inferInsert;
-
 export const signedActionChallenges = sqliteTable(
   "signed_action_challenges",
   {

@@ -5,14 +5,6 @@ CREATE TABLE `api_rate_limits` (
 	`expires_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `comments` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`content_id` text NOT NULL,
-	`wallet_address` text NOT NULL,
-	`body` text NOT NULL,
-	`created_at` integer NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE `content_metadata` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`url` text NOT NULL,

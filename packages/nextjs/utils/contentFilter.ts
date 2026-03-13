@@ -29,7 +29,7 @@ const URL_BLOCKED_TERMS = [
   "bongacams",
 ];
 
-// Terms checked with word-boundary matching in free text (title, description, tags, comments)
+// Terms checked with word-boundary matching in free text (title, description, tags)
 const TEXT_BLOCKED_TERMS = ["porn", "pornography", "xxx", "nsfw", "hentai", "rule34", "onlyfans"];
 
 /**

@@ -68,7 +68,7 @@ test("resolveRateLimitSubject trusts configured proxy IP headers in production",
   env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for, x-real-ip";
 
   const subject = rateLimit.resolveRateLimitSubject(
-    makeRequest("/api/comments", "POST", {
+    makeRequest("/api/watchlist/content", "POST", {
       "x-forwarded-for": "203.0.113.5, 10.0.0.1",
       "user-agent": "test-agent",
     }),
@@ -108,7 +108,7 @@ test("resolveRateLimitSubject uses x-forwarded-for automatically in development"
   env.NODE_ENV = "development";
 
   const subject = rateLimit.resolveRateLimitSubject(
-    makeRequest("/api/comments", "POST", {
+    makeRequest("/api/watchlist/content", "POST", {
       "x-forwarded-for": "198.51.100.10, 10.0.0.2",
     }),
   );
@@ -120,8 +120,8 @@ test("checkRateLimit scopes counters by HTTP method on the same path", async () 
   env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
   const headers = { "x-forwarded-for": "203.0.113.12" };
 
-  const getRequest = makeRequest("/api/comments", "GET", headers);
-  const postRequest = makeRequest("/api/comments", "POST", headers);
+  const getRequest = makeRequest("/api/watchlist/content", "GET", headers);
+  const postRequest = makeRequest("/api/watchlist/content", "POST", headers);
   const config = { limit: 1, windowMs: 60_000 };
 
   assert.equal(await rateLimit.checkRateLimit(getRequest, config), null);

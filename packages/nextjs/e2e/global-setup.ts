@@ -121,7 +121,7 @@ async function globalSetup() {
     );
   }
 
-  // Ensure SQLite tables exist for API routes that still use local persistence (comments, follows, watchlist, etc.)
+  // Ensure SQLite tables exist for API routes that still use local persistence (follows, watchlist, etc.)
   await ensureDatabaseSchema();
 
   // Top up keeper balance to prevent gas exhaustion during settlements

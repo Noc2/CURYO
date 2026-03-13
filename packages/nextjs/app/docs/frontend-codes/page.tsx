@@ -125,7 +125,7 @@ const FrontendCodes: NextPage = () => {
       <ul>
         <li>
           <strong>Blocks submissions</strong> containing prohibited terms in URLs, titles, descriptions, platform names,
-          domains, and comments.
+          and domains.
         </li>
         <li>
           <strong>Filters the feed</strong> so that content matching the blocklist is hidden from users automatically.

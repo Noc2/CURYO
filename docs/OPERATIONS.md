@@ -22,7 +22,7 @@ Use this flow for every production schema change in `packages/nextjs/drizzle/`.
    cd packages/nextjs
    DATABASE_URL=<staging-url> DATABASE_AUTH_TOKEN=<staging-token> yarn db:push
    ```
-3. Smoke-test the signed-action and watchlist/comment APIs against staging after the push.
+3. Smoke-test the signed-action and watchlist/notification APIs against staging after the push.
 4. Freeze production writes for the release window if the change is not known to be backward-compatible.
 
 ### Create rollback artifacts before touching production
@@ -47,7 +47,7 @@ DATABASE_URL=<prod-url> DATABASE_AUTH_TOKEN=<prod-token> yarn db:push
 ### Post-migration verification
 
 1. Hit the production app health paths and the API routes that depend on the new schema.
-2. Verify comments, watchlist, notifications, and URL validation still read/write successfully.
+2. Verify watchlist, notifications, and URL validation still read/write successfully.
 3. Confirm application logs do not show Drizzle/SQLite schema errors for at least 10 minutes.
 
 ---
@@ -89,7 +89,7 @@ Then repoint production to the restored database and redeploy.
 
 Rollback immediately if any of these happen after `yarn db:push`:
 
-- API writes fail for comments, watchlist, or notifications
+- API writes fail for watchlist or notifications
 - the app logs schema mismatch / missing column errors
 - data integrity checks fail during smoke tests
 
