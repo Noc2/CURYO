@@ -1,6 +1,6 @@
 "use client";
 
-import { RefObject, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { type VoteQueueLayout, computeVoteQueueLayout } from "~~/lib/vote/queueLayout";
 
 const DEFAULT_QUEUE_LAYOUT: VoteQueueLayout = {
@@ -11,20 +11,18 @@ const DEFAULT_QUEUE_LAYOUT: VoteQueueLayout = {
   gapPx: 10,
 };
 
-export function useVoteQueueLayout(containerRef: RefObject<HTMLElement | null>) {
+export function useVoteQueueLayout(containerElement: HTMLElement | null) {
   const [layout, setLayout] = useState<VoteQueueLayout>(DEFAULT_QUEUE_LAYOUT);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     let animationFrame = 0;
-    const observedElement = containerRef.current;
-    if (!observedElement) return;
+    if (!containerElement) return;
 
     const updateLayout = () => {
       animationFrame = 0;
-      const element = containerRef.current;
-      if (!element) return;
+      const element = containerElement;
 
       const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
       const rect = element.getBoundingClientRect();
@@ -61,7 +59,7 @@ export function useVoteQueueLayout(containerRef: RefObject<HTMLElement | null>) 
     const observer = new ResizeObserver(() => {
       scheduleUpdate();
     });
-    observer.observe(observedElement);
+    observer.observe(containerElement);
     window.addEventListener("resize", scheduleUpdate);
 
     return () => {
@@ -71,7 +69,7 @@ export function useVoteQueueLayout(containerRef: RefObject<HTMLElement | null>) 
         window.cancelAnimationFrame(animationFrame);
       }
     };
-  }, [containerRef]);
+  }, [containerElement]);
 
   return layout;
 }

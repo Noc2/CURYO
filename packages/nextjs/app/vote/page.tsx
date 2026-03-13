@@ -305,7 +305,8 @@ const HomeInner = () => {
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const queueRailRef = useRef<HTMLDivElement>(null);
-  const queueLayout = useVoteQueueLayout(queueRailRef);
+  const [queueRailElement, setQueueRailElement] = useState<HTMLDivElement | null>(null);
+  const queueLayout = useVoteQueueLayout(queueRailElement);
 
   // Voting state
   const [stakeModal, setStakeModal] = useState<{
@@ -972,6 +973,11 @@ const HomeInner = () => {
     onNavigate: handleNavigateSelection,
   });
 
+  const handleQueueRailRef = useCallback((node: HTMLDivElement | null) => {
+    queueRailRef.current = node;
+    setQueueRailElement(node);
+  }, []);
+
   return (
     <AppPageShell>
       <VotingGuide />
@@ -1099,7 +1105,7 @@ const HomeInner = () => {
                 transition={{ duration: 0.18, ease: VOTE_CARD_TRANSITION_EASE }}
               >
                 <div
-                  ref={queueRailRef}
+                  ref={handleQueueRailRef}
                   data-disable-queue-wheel="true"
                   className={`min-w-0 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
                     queueLayout.rows === 2 ? "flex items-start gap-4 xl:gap-3" : "flex items-stretch gap-3 xl:gap-2.5"
