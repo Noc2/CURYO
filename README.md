@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Noc2/CURYO/main/packages/nextjs/public/banner.png" alt="CURYO — Decentralized Reputation Game" width="100%" />
-</p>
+![CURYO — Decentralized Reputation Game](packages/nextjs/public/banner.png)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>
