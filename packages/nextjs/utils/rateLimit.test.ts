@@ -29,10 +29,16 @@ function makeRequest(pathname: string, method = "GET", headers: Record<string, s
 
 before(async () => {
   env.NODE_ENV = "production";
+  env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
   rateLimit = await import("./rateLimit");
   dbModule = await import("../lib/db");
 
-  await rateLimit.checkRateLimit(makeRequest("/__rate_limit_init__"), { limit: 10, windowMs: 60_000 });
+  await rateLimit.checkRateLimit(
+    makeRequest("/__rate_limit_init__", "GET", {
+      "x-forwarded-for": "127.0.0.1",
+    }),
+    { limit: 10, windowMs: 60_000 },
+  );
 });
 
 beforeEach(async () => {

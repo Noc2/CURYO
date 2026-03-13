@@ -10,8 +10,25 @@ on:
 
 jobs:
   e2e:
+    name: E2E (${{ matrix.suite }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: smoke
+            command: yarn e2e
+            timeout: 30
+            start_keeper: false
+          - suite: lifecycle
+            command: yarn workspace @curyo/nextjs e2e:ci:lifecycle
+            timeout: 45
+            start_keeper: false
+          - suite: keeper
+            command: yarn workspace @curyo/nextjs e2e:ci:keeper
+            timeout: 35
+            start_keeper: true
 
     steps:
       - name: Checkout
@@ -67,8 +84,24 @@ jobs:
           timeout 120 bash -c 'until curl -s "http://localhost:42069/content?limit=1" > /dev/null 2>&1; do sleep 2; done'
           echo "✓ Ponder ready"
 
+      - name: Start keeper service
+        if: matrix.start_keeper
+        env:
+          RPC_URL: http://127.0.0.1:8545
+          CHAIN_ID: "31337"
+          KEEPER_PRIVATE_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+          METRICS_ENABLED: "true"
+          METRICS_PORT: "9090"
+        run: yarn keeper:start &
+
+      - name: Wait for keeper
+        if: matrix.start_keeper
+        run: |
+          timeout 120 bash -c 'until curl -sf http://127.0.0.1:9090/health > /dev/null 2>&1; do sleep 2; done'
+          echo "✓ Keeper ready"
+
       - name: Run E2E tests
-        run: yarn e2e
+        run: ${{ matrix.command }}
         env:
           CI: true
           # Anvil/Hardhat account #2 — well-known test key, no real funds
@@ -78,6 +111,6 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.suite }}
           path: packages/nextjs/e2e/playwright-report/
           retention-days: 14

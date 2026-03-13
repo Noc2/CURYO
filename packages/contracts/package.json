@@ -12,6 +12,7 @@
     "./voting": "./src/voting.ts"
   },
   "scripts": {
+    "test": "node ../../scripts/run-node-tests.mjs src",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/node": "~18.19.50",
+    "tsx": "^4.21.0",
     "typescript": "~5.8.2"
   },
   "license": "MIT",
