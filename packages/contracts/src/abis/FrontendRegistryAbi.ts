@@ -276,19 +276,6 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getFrontendCount",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getFrontendInfo",
     "inputs": [
       {
@@ -317,19 +304,6 @@ export const FrontendRegistryAbi = [
         "name": "slashed",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getRegisteredFrontends",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address[]",
-        "internalType": "address[]"
       }
     ],
     "stateMutability": "view"

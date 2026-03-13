@@ -36,7 +36,8 @@ contract ProfileRegistryTest is Test {
         assertEq(registry.MIN_NAME_LENGTH(), 3);
         assertEq(registry.MAX_NAME_LENGTH(), 20);
         assertEq(registry.MAX_IMAGE_URL_LENGTH(), 512);
-        assertEq(registry.getProfileCount(), 0);
+        (, uint256 total) = registry.getRegisteredAddressesPaginated(0, 10);
+        assertEq(total, 0);
     }
 
     // --- Set Profile Tests ---
@@ -52,7 +53,8 @@ contract ProfileRegistryTest is Test {
         assertTrue(profile.updatedAt > 0);
 
         assertTrue(registry.hasProfile(user1));
-        assertEq(registry.getProfileCount(), 1);
+        (, uint256 total) = registry.getRegisteredAddressesPaginated(0, 10);
+        assertEq(total, 1);
     }
 
     function test_SetProfileUpdate() public {
@@ -238,28 +240,32 @@ contract ProfileRegistryTest is Test {
         assertEq(registry.getAddressByName("ALICE"), user1); // Case insensitive
     }
 
-    function test_GetProfileCount() public {
-        assertEq(registry.getProfileCount(), 0);
+    function test_GetRegisteredAddressesPaginatedTotal() public {
+        (, uint256 total) = registry.getRegisteredAddressesPaginated(0, 10);
+        assertEq(total, 0);
 
         vm.prank(user1);
         registry.setProfile("alice", "");
 
-        assertEq(registry.getProfileCount(), 1);
+        (, total) = registry.getRegisteredAddressesPaginated(0, 10);
+        assertEq(total, 1);
 
         vm.prank(user2);
         registry.setProfile("bob", "");
 
-        assertEq(registry.getProfileCount(), 2);
+        (, total) = registry.getRegisteredAddressesPaginated(0, 10);
+        assertEq(total, 2);
     }
 
-    function test_GetRegisteredAddresses() public {
+    function test_GetRegisteredAddressesPaginatedWholeList() public {
         vm.prank(user1);
         registry.setProfile("alice", "");
 
         vm.prank(user2);
         registry.setProfile("bob", "");
 
-        address[] memory addresses = registry.getRegisteredAddresses();
+        (address[] memory addresses, uint256 total) = registry.getRegisteredAddressesPaginated(0, 10);
+        assertEq(total, 2);
         assertEq(addresses.length, 2);
         assertEq(addresses[0], user1);
         assertEq(addresses[1], user2);
@@ -300,7 +306,8 @@ contract ProfileRegistryTest is Test {
 
         assertEq(registry.getAddressByName("alice"), user1);
         assertEq(registry.getAddressByName("bob"), user2);
-        assertEq(registry.getProfileCount(), 2);
+        (, uint256 total) = registry.getRegisteredAddressesPaginated(0, 10);
+        assertEq(total, 2);
     }
 
     // --- Pagination Tests ---

@@ -291,19 +291,22 @@ contract FrontendRegistryBranchTest is Test {
 
     // --- View functions ---
 
-    function test_GetRegisteredFrontends() public {
+    function test_GetRegisteredFrontendsPaginated() public {
         _registerFrontend(frontend1);
         _registerFrontend(frontend2);
-        address[] memory frontends = reg.getRegisteredFrontends();
+        (address[] memory frontends, uint256 total) = reg.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 2);
         assertEq(frontends.length, 2);
         assertEq(frontends[0], frontend1);
         assertEq(frontends[1], frontend2);
     }
 
-    function test_GetFrontendCount() public {
-        assertEq(reg.getFrontendCount(), 0);
+    function test_GetRegisteredFrontendsPaginatedCount() public {
+        (, uint256 initialTotal) = reg.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(initialTotal, 0);
         _registerFrontend(frontend1);
-        assertEq(reg.getFrontendCount(), 1);
+        (, uint256 total) = reg.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 1);
     }
 
     // --- isApproved: approved && slashed returns false ---

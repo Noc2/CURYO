@@ -583,6 +583,29 @@ contract ContentRegistry is
         return block.timestamp > _getDormancyAnchor(contentId, c) + DORMANCY_PERIOD;
     }
 
+    function isUrlSubmitted(string calldata url) external view returns (bool) {
+        if (bytes(url).length == 0 || !_isValidSubmissionUrl(url)) return false;
+
+        if (address(categoryRegistry) == address(0)) {
+            return submissionKeyUsed[keccak256(abi.encodePacked(url))];
+        }
+
+        try SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, 0) returns (
+            uint256,
+            bytes32 submissionKey
+        ) {
+            return submissionKeyUsed[submissionKey];
+        } catch {
+            return false;
+        }
+    }
+
+    /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
+    function resolveSubmissionKey(string calldata url) external view returns (bytes32 submissionKey) {
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+        (, submissionKey) = SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, 0);
+    }
+
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {
         if (submitter == address(0)) return address(0);
         if (address(voterIdNFT) != address(0)) {

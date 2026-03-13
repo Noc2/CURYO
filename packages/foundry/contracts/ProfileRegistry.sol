@@ -143,16 +143,6 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         return _nameToAddress[nameHash];
     }
 
-    /// @notice Get total number of registered profiles
-    function getProfileCount() external view returns (uint256) {
-        return _registeredAddresses.length;
-    }
-
-    /// @notice Get all registered addresses (for enumeration)
-    function getRegisteredAddresses() external view returns (address[] memory) {
-        return _registeredAddresses;
-    }
-
     /// @notice Get registered addresses with pagination
     /// @param offset The starting index
     /// @param limit The maximum number of addresses to return

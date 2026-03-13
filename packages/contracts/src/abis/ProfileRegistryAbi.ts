@@ -157,32 +157,6 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getProfileCount",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getRegisteredAddresses",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address[]",
-        "internalType": "address[]"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getRegisteredAddressesPaginated",
     "inputs": [
       {

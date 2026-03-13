@@ -283,9 +283,8 @@ contract FrontendRegistryEdgeCaseTest is Test {
         _registerFrontend(frontend1);
         _registerFrontend(frontend2);
 
-        assertEq(reg.getFrontendCount(), 2);
-
-        address[] memory list = reg.getRegisteredFrontends();
+        (address[] memory list, uint256 total) = reg.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 2);
         assertEq(list[0], frontend1);
         assertEq(list[1], frontend2);
     }

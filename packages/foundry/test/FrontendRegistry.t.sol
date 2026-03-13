@@ -127,8 +127,10 @@ contract FrontendRegistryTest is Test {
         assertFalse(approved);
         assertFalse(slashed);
 
-        assertEq(registry.getFrontendCount(), 1);
-        assertEq(registry.getRegisteredFrontends()[0], frontend1);
+        (address[] memory frontends, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 1);
+        assertEq(frontends.length, 1);
+        assertEq(frontends[0], frontend1);
     }
 
     function test_RevertRegisterAlreadyRegistered() public {

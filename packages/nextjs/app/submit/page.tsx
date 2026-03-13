@@ -3,8 +3,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { ContentRegistryAbi } from "@curyo/contracts/abis";
 import type { NextPage } from "next";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { ChevronDownIcon, IdentificationIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
@@ -328,13 +329,13 @@ const SubmitPage: NextPage = () => {
     if (!url || urlError) return undefined;
     return canonicalizeUrl(url);
   }, [url, urlError]);
-  const { data: isUrlSubmitted } = useScaffoldReadContract({
-    contractName: "ContentRegistry",
+  const { data: isUrlSubmitted } = useReadContract({
+    address: registryInfo?.address,
+    abi: ContentRegistryAbi,
     functionName: "isUrlSubmitted",
     args: canonicalUrl ? [canonicalUrl] : undefined,
-    watch: false,
     query: {
-      enabled: Boolean(canonicalUrl),
+      enabled: Boolean(registryInfo?.address && canonicalUrl),
       staleTime: 30_000,
     },
   });

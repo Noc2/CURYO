@@ -726,9 +726,13 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.submitContent("https://example.com/dormant-url", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
+        assertTrue(registry.isUrlSubmitted("https://example.com/dormant-url"));
+
         // Mark dormant after 31 days
         vm.warp(T0 + 31 days);
         registry.markDormant(1);
+
+        assertFalse(registry.isUrlSubmitted("https://example.com/dormant-url"));
 
         // Should be able to resubmit the same URL
         vm.startPrank(submitter);
@@ -739,6 +743,32 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         // New content created with same URL
         (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(2);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
+    }
+
+    function test_IsUrlSubmitted_UsesCanonicalAliasUrls() public {
+        string memory shortUrl = "https://youtu.be/dQw4w9WgXcQ";
+        string memory canonicalUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent(shortUrl, "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        assertTrue(registry.isUrlSubmitted(shortUrl));
+        assertTrue(registry.isUrlSubmitted(canonicalUrl));
+    }
+
+    function test_ResolveSubmissionKey_CanonicalizesEquivalentUrls() public view {
+        bytes32 shortKey = registry.resolveSubmissionKey("https://youtu.be/dQw4w9WgXcQ");
+        bytes32 canonicalKey = registry.resolveSubmissionKey("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+
+        assertEq(shortKey, canonicalKey);
+    }
+
+    function test_IsUrlSubmitted_ReturnsFalseForInvalidOrUnapprovedUrls() public view {
+        assertFalse(registry.isUrlSubmitted(""));
+        assertFalse(registry.isUrlSubmitted("javascript:alert(1)"));
+        assertFalse(registry.isUrlSubmitted("https://not-approved.example/path"));
     }
 
     function test_MarkDormant_LowRatedContent_SlashesUnresolvedStake() public {

@@ -1003,10 +1003,10 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>I-04</td>
               <td>
-                <strong>Unbounded view function arrays.</strong> <code>ProfileRegistry.getRegisteredAddresses()</code>{" "}
-                and <code>CategoryRegistry.getApprovedCategoryIds()</code> return unbounded arrays. While not
-                exploitable (view functions don&apos;t consume on-chain gas), external callers could hit RPC gas limits.
-                Pagination added.
+                <strong>Unbounded view function arrays.</strong> Historical full-array enumeration on{" "}
+                <code>ProfileRegistry</code> has been removed, and scalable callers should use paginated enumeration.
+                <code>CategoryRegistry.getApprovedCategoryIds()</code> still has a paginated counterpart for RPC-safe
+                access patterns.
               </td>
               <td className="font-mono text-[#EF476F]">ProfileRegistry, CategoryRegistry</td>
               <td>

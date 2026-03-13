@@ -566,17 +566,19 @@ contract FrontendRegistryCoverageTest is Test {
         assertFalse(slashed);
     }
 
-    function test_GetRegisteredFrontends_Empty() public view {
-        address[] memory frontends = registry.getRegisteredFrontends();
+    function test_GetRegisteredFrontendsPaginated_EmptyList() public view {
+        (address[] memory frontends, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 0);
         assertEq(frontends.length, 0);
     }
 
-    function test_GetFrontendCount_AfterMultipleRegistrations() public {
+    function test_GetRegisteredFrontendsPaginated_TotalAfterMultipleRegistrations() public {
         _registerFrontend(frontend1);
         _registerFrontend(frontend2);
         _registerFrontend(frontend3);
 
-        assertEq(registry.getFrontendCount(), 3);
+        (, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 1);
+        assertEq(total, 3);
     }
 
     // =========================================================================
@@ -591,7 +593,8 @@ contract FrontendRegistryCoverageTest is Test {
         registry.requestDeregister();
 
         // frontend1 is still in the list while unbonding
-        address[] memory frontends = registry.getRegisteredFrontends();
+        (address[] memory frontends, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(total, 2);
         assertEq(frontends.length, 2);
     }
 
