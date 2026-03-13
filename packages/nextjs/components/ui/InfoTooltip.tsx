@@ -11,6 +11,25 @@ interface InfoTooltipProps {
   className?: string;
 }
 
+function measureTooltipLayout(
+  triggerElement: HTMLButtonElement | null,
+  tooltipElement: HTMLSpanElement | null,
+  position: TooltipPosition,
+) {
+  if (!triggerElement || !tooltipElement || typeof window === "undefined") return null;
+
+  const triggerRect = triggerElement.getBoundingClientRect();
+  const tooltipRect = tooltipElement.getBoundingClientRect();
+
+  return computeTooltipPlacement({
+    triggerRect,
+    tooltipSize: { width: tooltipRect.width, height: tooltipRect.height },
+    preferredPosition: position,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+  });
+}
+
 function getArrowStyle(layout: TooltipPlacement) {
   return { left: layout.arrowLeft, top: layout.arrowTop };
 }
@@ -31,32 +50,20 @@ export const InfoTooltip = ({ text, position = "top", className = "" }: InfoTool
     setIsMounted(true);
   }, []);
 
-  const updateLayout = () => {
-    if (!triggerRef.current || !tooltipRef.current || typeof window === "undefined") return;
-
-    const triggerRect = triggerRef.current.getBoundingClientRect();
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
-
-    setLayout(
-      computeTooltipPlacement({
-        triggerRect,
-        tooltipSize: { width: tooltipRect.width, height: tooltipRect.height },
-        preferredPosition: position,
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
-      }),
-    );
-  };
-
   useLayoutEffect(() => {
     if (!isOpen || !isMounted) return;
-    updateLayout();
+    const nextLayout = measureTooltipLayout(triggerRef.current, tooltipRef.current, position);
+    if (nextLayout) setLayout(nextLayout);
   }, [isMounted, isOpen, position, text]);
 
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") return;
 
-    const handleViewportChange = () => updateLayout();
+    const handleViewportChange = () => {
+      const nextLayout = measureTooltipLayout(triggerRef.current, tooltipRef.current, position);
+      if (nextLayout) setLayout(nextLayout);
+    };
+
     window.addEventListener("resize", handleViewportChange);
     window.addEventListener("scroll", handleViewportChange, true);
 
