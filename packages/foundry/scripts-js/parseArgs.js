@@ -4,6 +4,7 @@ import { join, dirname } from "path";
 import { readFileSync, existsSync } from "fs";
 import { parse } from "toml";
 import { fileURLToPath } from "url";
+import { DEPLOY_HELP_TEXT, parseDeployArgs } from "./deployArgs.js";
 import { selectOrCreateKeystore } from "./selectOrCreateKeystore.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -11,33 +12,20 @@ config({ path: join(__dirname, "..", ".env") });
 
 // Get all arguments after the script name
 const args = process.argv.slice(2);
-let network = "localhost";
-let keystoreArg = null;
+let network;
+let keystoreArg;
 
-// Show help message if --help is provided
-if (args.includes("--help") || args.includes("-h")) {
-  console.log(`
-Usage: yarn deploy [options]
-Options:
-  --network <network>   Specify the network (default: localhost)
-  --keystore <name>     Specify the keystore account to use (bypasses selection prompt)
-  --help, -h           Show this help message
-Examples:
-  yarn deploy --network sepolia --keystore my-account
-  yarn deploy
-  `);
-  process.exit(0);
-}
-
-// Parse arguments
-for (let i = 0; i < args.length; i++) {
-  if (args[i] === "--network" && args[i + 1]) {
-    network = args[i + 1];
-    i++; // Skip next arg since we used it
-  } else if (args[i] === "--keystore" && args[i + 1]) {
-    keystoreArg = args[i + 1];
-    i++; // Skip next arg since we used it
+try {
+  const parsedArgs = parseDeployArgs(args);
+  if (parsedArgs.showHelp) {
+    console.log(DEPLOY_HELP_TEXT);
+    process.exit(0);
   }
+  network = parsedArgs.network;
+  keystoreArg = parsedArgs.keystoreArg;
+} catch (error) {
+  console.error(`\n❌ Error: ${error.message}`);
+  process.exit(1);
 }
 
 // Function to check if a keystore exists

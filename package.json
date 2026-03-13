@@ -24,7 +24,6 @@
     "foundry:clean": "yarn workspace @curyo/foundry clean",
     "foundry:compile": "yarn workspace @curyo/foundry compile",
     "foundry:deploy": "yarn workspace @curyo/foundry deploy",
-    "foundry:deploy-verify": "yarn workspace @curyo/foundry deploy:verify",
     "foundry:flatten": "yarn workspace @curyo/foundry flatten",
     "foundry:fork": "yarn workspace @curyo/foundry fork",
     "foundry:format": "yarn workspace @curyo/foundry format",
