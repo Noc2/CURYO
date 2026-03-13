@@ -203,25 +203,3 @@ export async function readCRepBalances(addresses: string[]): Promise<Record<stri
 
   return balances;
 }
-
-export async function listRegisteredProfileAddresses(params: { limit: number; offset?: number }) {
-  if (!profileRegistry || !publicClient || params.limit <= 0) {
-    return { addresses: [] as `0x${string}`[], total: 0 };
-  }
-
-  const offset = Math.max(params.offset ?? 0, 0);
-  const result = await publicClient.readContract({
-    address: profileRegistry.address,
-    abi: profileRegistry.abi,
-    functionName: "getRegisteredAddressesPaginated",
-    args: [BigInt(offset), BigInt(params.limit)],
-  });
-
-  const tuple = result as readonly [readonly string[], bigint];
-  const addresses = Array.isArray(tuple[0])
-    ? tuple[0].filter((address): address is `0x${string}` => isAddress(address)).map(normalizeAddress)
-    : [];
-  const total = typeof tuple[1] === "bigint" ? Number(tuple[1]) : addresses.length;
-
-  return { addresses, total };
-}

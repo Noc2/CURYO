@@ -14,11 +14,6 @@ import { youtubeHandler } from "./handlers/youtube";
 import type { PlatformHandler, PlatformInfo } from "./types";
 
 /**
- * List of supported video platform names for display purposes.
- */
-export const SUPPORTED_VIDEO_PLATFORMS = ["YouTube", "Twitch"] as const;
-
-/**
  * Video platform handlers (in priority order).
  */
 const videoHandlers: PlatformHandler[] = [youtubeHandler, twitchHandler];
@@ -75,14 +70,6 @@ export function getThumbnailUrl(url: string, quality?: string): string | null {
   const info = detectPlatform(url);
   const handler = handlers.find(h => h.matches(url)) ?? genericHandler;
   return handler.getThumbnail(info, quality);
-}
-
-/**
- * Check if a URL is from a supported embed platform (has inline embed support).
- */
-export function isEmbeddable(url: string): boolean {
-  const info = detectPlatform(url);
-  return info.type !== "generic" && info.embedUrl !== null;
 }
 
 /**

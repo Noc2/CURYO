@@ -267,13 +267,6 @@ export function getCategoryIdFromUrl(url: string, domainMap: Map<string, bigint>
   return 0n; // Legacy/unknown category
 }
 
-/**
- * Check if a URL is from an approved platform.
- */
-export function isApprovedPlatform(url: string, domainMap: Map<string, bigint>): boolean {
-  return getCategoryIdFromUrl(url, domainMap) !== 0n;
-}
-
 /** Map platform domains to human-friendly content type labels. */
 const DOMAIN_CONTENT_LABELS: Record<string, string> = {
   "youtube.com": "video",

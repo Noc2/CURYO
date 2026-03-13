@@ -24,7 +24,3 @@ const allSources: ContentSource[] = [
 export function getAllSources(): ContentSource[] {
   return allSources;
 }
-
-export function getSource(categoryId: bigint): ContentSource | undefined {
-  return allSources.find(s => s.categoryId === categoryId);
-}
