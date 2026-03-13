@@ -98,6 +98,42 @@ function makeCommit(overrides: Partial<CommitData> = {}): CommitData {
   };
 }
 
+function toRoundTuple(round: RoundData) {
+  return [
+    round.startTime,
+    round.state,
+    round.voteCount,
+    round.revealedCount,
+    0n,
+    0n,
+    0n,
+    0n,
+    0n,
+    false,
+    round.settledAt,
+    round.thresholdReachedAt,
+    0n,
+    0n,
+  ] as const;
+}
+
+function toCommitTuple(commit: CommitData) {
+  return [
+    commit.voter,
+    commit.stakeAmount,
+    commit.ciphertext,
+    commit.frontend,
+    commit.revealableAfter,
+    commit.revealed,
+    commit.isUp,
+    commit.epochIndex,
+  ] as const;
+}
+
+function toRoundConfigTuple(config: { epochDuration: bigint; maxDuration: bigint; minVoters: bigint; maxVoters: bigint }) {
+  return [config.epochDuration, config.maxDuration, config.minVoters, config.maxVoters] as const;
+}
+
 function makePlaintext(isUp: boolean, fillByte: number): Buffer {
   return Buffer.concat([Buffer.from([isUp ? 1 : 0]), Buffer.alloc(32, fillByte)]);
 }
@@ -106,6 +142,8 @@ function makeHarness(options: {
   now?: bigint;
   activeRoundId?: bigint;
   latestRoundId?: bigint;
+  currentRoundId?: bigint;
+  tupleResults?: boolean;
   dormancyEligible?: boolean;
   round: RoundData;
   roundConfig?: { epochDuration: bigint; maxDuration: bigint; minVoters: bigint; maxVoters: bigint };
@@ -123,6 +161,8 @@ function makeHarness(options: {
   const now = options.now ?? 10_000n;
   const latestRoundId = options.latestRoundId ?? 1n;
   const activeRoundId = options.activeRoundId ?? 0n;
+  const currentRoundId = options.currentRoundId ?? (latestRoundId > 0n ? latestRoundId : activeRoundId);
+  const tupleResults = options.tupleResults ?? false;
   const dormancyEligible = options.dormancyEligible ?? false;
   const commitKeys = options.commitKeys ?? [];
   const commits = options.commits ?? {};
@@ -135,13 +175,13 @@ function makeHarness(options: {
         case "nextContentId":
           return 2n;
         case "currentRoundId":
-          return activeRoundId;
+          return currentRoundId;
         case "nextRoundId":
           return latestRoundId;
         case "rounds":
-          return round;
+          return tupleResults ? toRoundTuple(round) : round;
         case "roundConfigSnapshot":
-          return roundConfig;
+          return tupleResults ? toRoundConfigTuple(roundConfig) : roundConfig;
         case "roundRevealGracePeriodSnapshot":
           return options.revealGracePeriod ?? 3600n;
         case "revealGracePeriod":
@@ -158,7 +198,9 @@ function makeHarness(options: {
         case "roundCommitHashes":
           return commitKeys[Number(args[2])] ?? zeroHash;
         case "commits":
-          return commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n });
+          return tupleResults
+            ? toCommitTuple(commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n }))
+            : commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n });
         case "isDormancyEligible":
           return dormancyEligible;
         default:
@@ -329,6 +371,53 @@ describe("resolveRounds", () => {
     expect(walletClient.writeContract).toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "settleRound" }),
     );
+    expect(commits[COMMIT_KEY_1].revealed).toBe(true);
+    expect(commits[COMMIT_KEY_2].revealed).toBe(true);
+    expect(round.state).toBe(1);
+  });
+
+  it("handles tuple-shaped viem reads from live contracts", async () => {
+    timelockDecrypt
+      .mockResolvedValueOnce(makePlaintext(true, 1))
+      .mockResolvedValueOnce(makePlaintext(true, 2))
+      .mockResolvedValueOnce(makePlaintext(false, 3));
+
+    const round = makeRound({
+      state: 0,
+      voteCount: 3n,
+      revealedCount: 0n,
+    });
+    const { publicClient, walletClient, commits } = makeHarness({
+      activeRoundId: 1n,
+      latestRoundId: 1n,
+      tupleResults: true,
+      round,
+      commitKeys: [COMMIT_KEY_1, COMMIT_KEY_2, "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"],
+      commits: {
+        [COMMIT_KEY_1]: makeCommit({ revealableAfter: 100n, ciphertext: "0xaaaa" }),
+        [COMMIT_KEY_2]: makeCommit({ revealableAfter: 100n, ciphertext: "0xbbbb" }),
+        "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc": makeCommit({
+          revealableAfter: 100n,
+          ciphertext: "0xcccc",
+          isUp: false,
+        }),
+      },
+      now: 1_000n,
+    });
+    const logger = makeLogger();
+
+    const result = await resolveRounds(
+      publicClient as any,
+      walletClient as any,
+      {} as any,
+      { address: ACCOUNT } as any,
+      logger as any,
+    );
+
+    expect(result).toMatchObject({
+      votesRevealed: 3,
+      roundsSettled: 1,
+    });
     expect(commits[COMMIT_KEY_1].revealed).toBe(true);
     expect(commits[COMMIT_KEY_2].revealed).toBe(true);
     expect(round.state).toBe(1);
