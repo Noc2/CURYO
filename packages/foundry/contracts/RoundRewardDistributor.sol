@@ -342,22 +342,11 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
 
-        try snapshotRegistry.getFrontendInfo(frontend) returns (
-            address frontendOperator, uint256, bool, bool frontendSlashed
-        ) {
-            if (frontendOperator == address(0) || frontendSlashed) {
-                if (frontendOperator == address(0)) {
-                    votingEngine.transferReward(frontend, fee);
-                    return;
-                }
-                address treasury = votingEngine.treasury();
-                if (treasury == address(0)) {
-                    revert IFrontendRegistry.FrontendIsSlashed();
-                }
-                votingEngine.transferReward(treasury, fee);
+        try snapshotRegistry.getFrontendInfo(frontend) returns (address frontendOperator, uint256, bool, bool) {
+            if (frontendOperator == address(0)) {
+                votingEngine.transferReward(frontend, fee);
                 return;
             }
-
             try snapshotRegistry.creditFees(frontend, fee) {
                 votingEngine.transferReward(snapshotRegistryAddress, fee);
             } catch {

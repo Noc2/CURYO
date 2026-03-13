@@ -333,17 +333,16 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 100e6);
     }
 
-    function test_CreditFees_ToSlashedFrontend_Reverts() public {
+    function test_CreditFees_ToSlashedFrontend_Succeeds() public {
         _registerFrontend(frontend1);
 
         vm.prank(admin);
         registry.slashFrontend(frontend1, 100e6, "test");
 
         vm.prank(feeCreditor);
-        vm.expectRevert(IFrontendRegistry.FrontendIsSlashed.selector);
         registry.creditFees(frontend1, 100e6);
 
-        assertEq(registry.getAccumulatedFees(frontend1), 0);
+        assertEq(registry.getAccumulatedFees(frontend1), 100e6);
     }
 
     // =========================================================================
@@ -622,7 +621,7 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
-    function test_ClaimFees_WhileSlashed_RevertsAndPreservesFees() public {
+    function test_ClaimFees_WhileSlashed_Succeeds() public {
         _registerFrontend(frontend1);
 
         vm.prank(feeCreditor);
@@ -631,11 +630,13 @@ contract FrontendRegistryCoverageTest is Test {
         vm.prank(admin);
         registry.slashFrontend(frontend1, 100e6, "test");
 
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+
         vm.prank(frontend1);
-        vm.expectRevert(IFrontendRegistry.FrontendIsSlashed.selector);
         registry.claimFees();
 
-        assertEq(registry.getAccumulatedFees(frontend1), 500e6);
+        assertEq(crepToken.balanceOf(frontend1) - balanceBefore, 500e6);
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
     // =========================================================================

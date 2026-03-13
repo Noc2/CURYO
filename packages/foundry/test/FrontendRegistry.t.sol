@@ -213,7 +213,7 @@ contract FrontendRegistryTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
-    function test_RevertClaimFeesWhileExitPending() public {
+    function test_ClaimFeesWhileExitPending() public {
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
@@ -225,9 +225,13 @@ contract FrontendRegistryTest is Test {
         vm.prank(frontend1);
         registry.requestDeregister();
 
+        uint256 balanceBefore = crepToken.balanceOf(frontend1);
+
         vm.prank(frontend1);
-        vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);
         registry.claimFees();
+
+        assertEq(crepToken.balanceOf(frontend1) - balanceBefore, 100e6);
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
     function test_ReregisterAfterDeregister() public {

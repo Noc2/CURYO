@@ -1530,7 +1530,7 @@ contract RoundIntegrationTest is VotingTestBase {
         );
     }
 
-    function test_ClaimFrontendFee_RoutesSlashedFrontendShareToTreasury() public {
+    function test_ClaimFrontendFee_PreservesHistoricalShareWhileFrontendIsSlashed() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
@@ -1539,14 +1539,14 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
-        uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertEq(crepToken.balanceOf(frontendOp), frontendBalanceBefore, "slashed frontend must not be paid directly");
-        assertEq(
-            frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend should not receive credited fees"
+        assertGt(
+            frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
+            0,
+            "historical fees should remain claimable even while slashed"
         );
-        assertGt(crepToken.balanceOf(treasury) - treasuryBalanceBefore, 0, "treasury should receive slashed frontend fees");
     }
 
     function test_ClaimFrontendFee_SucceedsAfterFrontendReregistersWithoutReapproval() public {

@@ -362,8 +362,8 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators
-          claim their proportional share of the 1% frontend fee pool. Pull-based, permissionless. If the snapshotted
-          frontend was later slashed, that historical fee share is routed to treasury instead of remaining stuck.
+          claim their proportional share of the 1% frontend fee pool. Pull-based, permissionless. Historical fee shares
+          stay claimable by the frontend that earned them even if that frontend is later slashed.
         </li>
         <li>
           <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim

@@ -216,8 +216,6 @@ contract FrontendRegistry is
     function claimFees() external nonReentrant {
         Frontend storage f = frontends[msg.sender];
         require(f.operator != address(0), "Not registered");
-        if (f.slashed) revert FrontendIsSlashed();
-        if (frontendExitAvailableAt[msg.sender] != 0) revert FrontendExitPending();
 
         uint256 crepAmount = f.crepFees;
 
@@ -239,7 +237,6 @@ contract FrontendRegistry is
         require(crepAmount <= MAX_FEE_CREDIT, "Fee credit too large");
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
-        if (f.slashed) revert FrontendIsSlashed();
         f.crepFees += crepAmount;
         emit FeesCredited(frontend, crepAmount);
     }
