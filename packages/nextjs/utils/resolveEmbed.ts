@@ -1,3 +1,4 @@
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { getTmdbApiKey } from "~~/lib/env/server";
 import { ResponseTooLargeError, readResponseJson, readResponseText } from "~~/utils/fetchBodyLimit";
 
@@ -6,18 +7,7 @@ import { ResponseTooLargeError, readResponseJson, readResponseText } from "~~/ut
  * Used by /api/thumbnail and /api/url-validation routes.
  */
 
-export interface EmbedResult {
-  thumbnailUrl: string | null;
-  title?: string;
-  description?: string;
-  imageUrl?: string;
-  authors?: string[];
-  releaseYear?: string;
-  symbol?: string;
-  stars?: number;
-  forks?: number;
-  language?: string;
-}
+export type EmbedResult = ContentMetadataResult;
 
 const CACHE_OPTIONS = { next: { revalidate: 86400 } }; // 24h cache
 const MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB cap on external API responses

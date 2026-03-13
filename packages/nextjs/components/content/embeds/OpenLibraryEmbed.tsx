@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface OpenLibraryEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  prefetchedMetadata?: ContentMetadataResult;
 }
 
 interface OpenLibraryBook {
@@ -25,11 +27,22 @@ function BookIcon({ className }: { className?: string }) {
   );
 }
 
+function getPrefetchedOpenLibraryBook(prefetchedMetadata?: ContentMetadataResult): OpenLibraryBook | null {
+  if (!prefetchedMetadata?.title) return null;
+
+  return {
+    title: prefetchedMetadata.title,
+    description: prefetchedMetadata.description,
+    coverUrl: prefetchedMetadata.imageUrl ?? prefetchedMetadata.thumbnailUrl ?? undefined,
+    authors: prefetchedMetadata.authors,
+  };
+}
+
 /**
  * Open Library book embed component.
  * Fetches book data via server-side proxy (resolves authors server-side, cached 24h).
  */
-export function OpenLibraryEmbed({ info, compact }: OpenLibraryEmbedProps) {
+export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibraryEmbedProps) {
   const [book, setBook] = useState<OpenLibraryBook | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -38,15 +51,23 @@ export function OpenLibraryEmbed({ info, compact }: OpenLibraryEmbedProps) {
   const olId = info.id || (info.metadata?.olId as string);
 
   useEffect(() => {
-    setLoading(true);
-    setBook(null);
     setImageError(false);
     setImageLoaded(false);
 
     if (!olId) {
+      setBook(null);
       setLoading(false);
       return;
     }
+
+    if (prefetchedMetadata !== undefined) {
+      setBook(getPrefetchedOpenLibraryBook(prefetchedMetadata));
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setBook(null);
 
     let cancelled = false;
 
@@ -70,7 +91,7 @@ export function OpenLibraryEmbed({ info, compact }: OpenLibraryEmbedProps) {
     return () => {
       cancelled = true;
     };
-  }, [olId, info.url]);
+  }, [olId, info.url, prefetchedMetadata]);
 
   // Loading state
   if (loading) {

@@ -3,6 +3,7 @@
 import React from "react";
 import dynamic from "next/dynamic";
 import { GenericLinkCard } from "./embeds";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { detectPlatform } from "~~/utils/platforms";
 
 const EmbedSpinner = () => (
@@ -49,6 +50,7 @@ const TwitterEmbed = dynamic(() => import("./embeds/TwitterEmbed").then(m => m.T
 interface ContentEmbedProps {
   url: string;
   compact?: boolean;
+  prefetchedMetadata?: ContentMetadataResult;
 }
 
 /** Error boundary that catches render errors in embed components and falls back to a link card. */
@@ -74,7 +76,7 @@ class EmbedErrorBoundary extends React.Component<
  * Renders platform-appropriate embedded content.
  * Embeds are code-split via next/dynamic — only the needed embed is loaded.
  */
-export function ContentEmbed({ url, compact = false }: ContentEmbedProps) {
+export function ContentEmbed({ url, compact = false, prefetchedMetadata }: ContentEmbedProps) {
   const platformInfo = detectPlatform(url);
 
   let embed: React.ReactNode;
@@ -89,31 +91,39 @@ export function ContentEmbed({ url, compact = false }: ContentEmbedProps) {
       embed = <ScryfallEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "tmdb":
-      embed = <TmdbEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = <TmdbEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />;
       break;
     case "wikipedia":
-      embed = <WikipediaEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = (
+        <WikipediaEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />
+      );
       break;
     case "rawg":
       embed = <RawgEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "openlibrary":
-      embed = <OpenLibraryEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = (
+        <OpenLibraryEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />
+      );
       break;
     case "spotify":
       embed = <SpotifyEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "coingecko":
-      embed = <CoinGeckoEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = (
+        <CoinGeckoEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />
+      );
       break;
     case "huggingface":
-      embed = <HuggingFaceEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = (
+        <HuggingFaceEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />
+      );
       break;
     case "twitter":
       embed = <TwitterEmbed key={url} info={platformInfo} compact={compact} />;
       break;
     case "github":
-      embed = <GitHubEmbed key={url} info={platformInfo} compact={compact} />;
+      embed = <GitHubEmbed key={url} info={platformInfo} compact={compact} prefetchedMetadata={prefetchedMetadata} />;
       break;
     default:
       return <GenericLinkCard url={url} compact={compact} />;

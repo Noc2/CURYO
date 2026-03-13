@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface HuggingFaceEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  prefetchedMetadata?: ContentMetadataResult;
 }
 
 interface HuggingFaceModel {
@@ -24,11 +26,21 @@ function HuggingFaceIcon({ className }: { className?: string }) {
   );
 }
 
+function getPrefetchedHuggingFaceModel(modelId: string, prefetchedMetadata?: ContentMetadataResult): HuggingFaceModel {
+  const displayName = modelId.includes("/") ? modelId.split("/")[1] : modelId;
+
+  return {
+    name: prefetchedMetadata?.title ?? displayName,
+    description: prefetchedMetadata?.description,
+    imageUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+  };
+}
+
 /**
  * HuggingFace model embed component.
  * Fetches model data and org avatar via server-side proxy.
  */
-export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
+export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingFaceEmbedProps) {
   const [model, setModel] = useState<HuggingFaceModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -37,15 +49,23 @@ export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
   const modelId = info.id || (info.metadata?.modelId as string);
 
   useEffect(() => {
-    setLoading(true);
-    setModel(null);
     setImageError(false);
     setImageLoaded(false);
 
     if (!modelId) {
+      setModel(null);
       setLoading(false);
       return;
     }
+
+    if (prefetchedMetadata !== undefined) {
+      setModel(getPrefetchedHuggingFaceModel(modelId, prefetchedMetadata));
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setModel(null);
 
     let cancelled = false;
     const displayName = modelId.includes("/") ? modelId.split("/")[1] : modelId;
@@ -71,7 +91,7 @@ export function HuggingFaceEmbed({ info, compact }: HuggingFaceEmbedProps) {
     return () => {
       cancelled = true;
     };
-  }, [modelId, info.url]);
+  }, [modelId, info.url, prefetchedMetadata]);
 
   if (loading) {
     return (

@@ -47,7 +47,7 @@ function getThumbnailImageSrc(thumbnailUrl: string) {
 
 export function getVoteFeedThumbnailSrc(item: ContentItem) {
   const platform = detectPlatform(item.url);
-  const thumbnailUrl = item.thumbnailUrl ?? platform.thumbnailUrl;
+  const thumbnailUrl = item.contentMetadata?.thumbnailUrl ?? item.thumbnailUrl ?? platform.thumbnailUrl;
   return thumbnailUrl ? getThumbnailImageSrc(thumbnailUrl) : null;
 }
 
@@ -103,7 +103,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:items-stretch">
         <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
           <div className="h-[clamp(17rem,42vh,28rem)] w-full">
-            <ContentEmbed url={item.url} />
+            <ContentEmbed url={item.url} prefetchedMetadata={item.contentMetadata} />
           </div>
         </div>
 

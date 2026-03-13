@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface TmdbEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  prefetchedMetadata?: ContentMetadataResult;
 }
 
 interface TmdbMovie {
@@ -26,12 +28,23 @@ function TmdbIcon({ className }: { className?: string }) {
   );
 }
 
+function getPrefetchedTmdbMovie(prefetchedMetadata?: ContentMetadataResult): TmdbMovie | null {
+  if (!prefetchedMetadata?.title) return null;
+
+  return {
+    title: prefetchedMetadata.title,
+    overview: prefetchedMetadata.description,
+    posterUrl: prefetchedMetadata.imageUrl ?? prefetchedMetadata.thumbnailUrl ?? undefined,
+    releaseYear: prefetchedMetadata.releaseYear,
+  };
+}
+
 /**
  * TMDB movie embed component.
  * Fetches movie data via server-side proxy to hide API key and cache results.
  * Includes required TMDB attribution.
  */
-export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
+export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps) {
   const [movie, setMovie] = useState<TmdbMovie | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -41,16 +54,24 @@ export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
   const movieId = info.id || (info.metadata?.movieId as string);
 
   useEffect(() => {
-    setLoading(true);
-    setMovie(null);
     setFetchError(false);
     setImageError(false);
     setImageLoaded(false);
 
     if (!movieId) {
+      setMovie(null);
       setLoading(false);
       return;
     }
+
+    if (prefetchedMetadata !== undefined) {
+      setMovie(getPrefetchedTmdbMovie(prefetchedMetadata));
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setMovie(null);
 
     let cancelled = false;
 
@@ -76,7 +97,7 @@ export function TmdbEmbed({ info, compact }: TmdbEmbedProps) {
     return () => {
       cancelled = true;
     };
-  }, [movieId, info.url]);
+  }, [movieId, info.url, prefetchedMetadata]);
 
   // Loading state
   if (loading) {

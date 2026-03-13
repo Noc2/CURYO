@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface CoinGeckoEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  prefetchedMetadata?: ContentMetadataResult;
 }
 
 interface CoinGeckoToken {
@@ -26,11 +28,23 @@ function CoinGeckoIcon({ className }: { className?: string }) {
   );
 }
 
+function getCoinDisplayName(coinId: string) {
+  return coinId.charAt(0).toUpperCase() + coinId.slice(1).replace(/-/g, " ");
+}
+
+function getPrefetchedCoinGeckoToken(coinId: string, prefetchedMetadata?: ContentMetadataResult): CoinGeckoToken {
+  return {
+    name: prefetchedMetadata?.title ?? getCoinDisplayName(coinId),
+    symbol: prefetchedMetadata?.symbol ?? coinId.toUpperCase().replace(/-/g, ""),
+    imageUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+  };
+}
+
 /**
  * CoinGecko token embed component.
  * Fetches coin image via server-side proxy to avoid CORS/rate-limit issues.
  */
-export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
+export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoEmbedProps) {
   const [token, setToken] = useState<CoinGeckoToken | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -39,18 +53,26 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
   const coinId = info.id || (info.metadata?.coinId as string);
 
   useEffect(() => {
-    setLoading(true);
-    setToken(null);
     setImageError(false);
     setImageLoaded(false);
 
     if (!coinId) {
+      setToken(null);
       setLoading(false);
       return;
     }
 
+    if (prefetchedMetadata !== undefined) {
+      setToken(getPrefetchedCoinGeckoToken(coinId, prefetchedMetadata));
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setToken(null);
+
     let cancelled = false;
-    const name = coinId.charAt(0).toUpperCase() + coinId.slice(1).replace(/-/g, " ");
+    const name = getCoinDisplayName(coinId);
     const symbol = coinId.toUpperCase().replace(/-/g, "");
 
     // Fetch coin image through the thumbnail proxy (prefer large image)
@@ -69,7 +91,7 @@ export function CoinGeckoEmbed({ info, compact }: CoinGeckoEmbedProps) {
     return () => {
       cancelled = true;
     };
-  }, [coinId, info.url]);
+  }, [coinId, info.url, prefetchedMetadata]);
 
   // Loading state
   if (loading) {

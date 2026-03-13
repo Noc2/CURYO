@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface WikipediaEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  prefetchedMetadata?: ContentMetadataResult;
 }
 
 interface WikipediaPerson {
@@ -25,11 +27,21 @@ function WikipediaIcon({ className }: { className?: string }) {
   );
 }
 
+function getPrefetchedWikipediaPerson(prefetchedMetadata?: ContentMetadataResult): WikipediaPerson | null {
+  if (!prefetchedMetadata?.title) return null;
+
+  return {
+    title: prefetchedMetadata.title,
+    description: prefetchedMetadata.description,
+    imageUrl: prefetchedMetadata.imageUrl ?? prefetchedMetadata.thumbnailUrl ?? undefined,
+  };
+}
+
 /**
  * Wikipedia person/article embed component.
  * Fetches data via server-side proxy to avoid CORS and cache results.
  */
-export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
+export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaEmbedProps) {
   const [person, setPerson] = useState<WikipediaPerson | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -38,15 +50,23 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
   const title = info.id || (info.metadata?.title as string);
 
   useEffect(() => {
-    setLoading(true);
-    setPerson(null);
     setImageError(false);
     setImageLoaded(false);
 
     if (!title) {
+      setPerson(null);
       setLoading(false);
       return;
     }
+
+    if (prefetchedMetadata !== undefined) {
+      setPerson(getPrefetchedWikipediaPerson(prefetchedMetadata));
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setPerson(null);
 
     let cancelled = false;
 
@@ -69,7 +89,7 @@ export function WikipediaEmbed({ info, compact }: WikipediaEmbedProps) {
     return () => {
       cancelled = true;
     };
-  }, [title, info.url]);
+  }, [title, info.url, prefetchedMetadata]);
 
   // Loading state
   if (loading) {

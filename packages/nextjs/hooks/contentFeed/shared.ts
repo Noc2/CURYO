@@ -1,6 +1,7 @@
 "use client";
 
 import { parseTags } from "~~/constants/categories";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 
 export interface ContentItem {
   id: bigint;
@@ -14,6 +15,7 @@ export interface ContentItem {
   categoryId: bigint;
   isValidUrl: boolean | null;
   thumbnailUrl: string | null;
+  contentMetadata?: ContentMetadataResult;
 }
 
 export type FeedSort = "newest" | "oldest" | "highest_rated" | "lowest_rated" | "most_votes";
@@ -54,6 +56,23 @@ export function mapContentItem(
     isValidUrl: null,
     thumbnailUrl: null,
   };
+}
+
+export function mergeContentFeedMetadata(
+  feed: ContentItem[],
+  metadataMap: Record<string, ContentMetadataResult>,
+  validationMap: Record<string, boolean | null>,
+): ContentItem[] {
+  return feed.map(item => {
+    const contentMetadata = metadataMap[item.url] ?? item.contentMetadata;
+
+    return {
+      ...item,
+      contentMetadata,
+      isValidUrl: validationMap[item.url] ?? item.isValidUrl,
+      thumbnailUrl: contentMetadata?.thumbnailUrl ?? item.thumbnailUrl,
+    };
+  });
 }
 
 export function sortRpcFeed(feed: ContentItem[], sortBy: FeedSort): ContentItem[] {

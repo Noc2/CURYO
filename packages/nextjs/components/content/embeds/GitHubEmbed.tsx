@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { SafeExternalLink } from "~~/components/shared/SafeExternalLink";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import type { PlatformInfo } from "~~/utils/platforms";
 
 interface GitHubEmbedProps {
   info: PlatformInfo;
   compact?: boolean;
+  prefetchedMetadata?: ContentMetadataResult;
 }
 
 interface GitHubRepo {
@@ -55,11 +57,22 @@ function formatCount(n: number): string {
   return n.toString();
 }
 
+function getPrefetchedGitHubRepo(repoSlug: string, prefetchedMetadata?: ContentMetadataResult): GitHubRepo {
+  return {
+    name: prefetchedMetadata?.title ?? repoSlug,
+    description: prefetchedMetadata?.description,
+    imageUrl: prefetchedMetadata?.imageUrl ?? prefetchedMetadata?.thumbnailUrl ?? undefined,
+    stars: prefetchedMetadata?.stars,
+    forks: prefetchedMetadata?.forks,
+    language: prefetchedMetadata?.language,
+  };
+}
+
 /**
  * GitHub repository embed component.
  * Fetches repo data via server-side proxy and displays a rich card.
  */
-export function GitHubEmbed({ info, compact }: GitHubEmbedProps) {
+export function GitHubEmbed({ info, compact, prefetchedMetadata }: GitHubEmbedProps) {
   const [repo, setRepo] = useState<GitHubRepo | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -69,15 +82,23 @@ export function GitHubEmbed({ info, compact }: GitHubEmbedProps) {
     info.id || (info.metadata?.owner && info.metadata?.repo ? `${info.metadata.owner}/${info.metadata.repo}` : null);
 
   useEffect(() => {
-    setLoading(true);
-    setRepo(null);
     setImageError(false);
     setImageLoaded(false);
 
     if (!repoSlug) {
+      setRepo(null);
       setLoading(false);
       return;
     }
+
+    if (prefetchedMetadata !== undefined) {
+      setRepo(getPrefetchedGitHubRepo(repoSlug, prefetchedMetadata));
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setRepo(null);
 
     let cancelled = false;
     const displayName = repoSlug;
@@ -106,7 +127,7 @@ export function GitHubEmbed({ info, compact }: GitHubEmbedProps) {
     return () => {
       cancelled = true;
     };
-  }, [repoSlug, info.url]);
+  }, [repoSlug, info.url, prefetchedMetadata]);
 
   if (loading) {
     return (

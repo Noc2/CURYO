@@ -3,65 +3,91 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ContentItem } from "~~/hooks/contentFeed/shared";
+import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
+
+const THUMBNAIL_BATCH_SIZE = 40;
+const VALIDATION_BATCH_SIZE = 10;
+
+function chunkItems<T>(items: T[], batchSize: number): T[][] {
+  const batches: T[][] = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    batches.push(items.slice(i, i + batchSize));
+  }
+  return batches;
+}
+
+async function fetchThumbnailMetadataBatch(batch: string[]): Promise<Record<string, ContentMetadataResult>> {
+  try {
+    const response = await fetch("/api/thumbnails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: batch }),
+    });
+    if (!response.ok) return {};
+
+    const data = (await response.json()) as { items?: Record<string, ContentMetadataResult> };
+    return data.items ?? {};
+  } catch {
+    // Metadata is optional; keep rendering even when enrichment fails.
+    return {};
+  }
+}
+
+async function fetchValidationBatch(batch: string[]): Promise<Record<string, boolean | null>> {
+  try {
+    const response = await fetch("/api/url-validation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ urls: batch }),
+    });
+    if (!response.ok) return {};
+
+    const data = (await response.json()) as { results?: Record<string, { isValid: boolean }> };
+    return Object.fromEntries(
+      Object.entries(data.results ?? {}).map(([url, result]) => [url, result.isValid] satisfies [string, boolean]),
+    );
+  } catch {
+    // Treat failures as unknown validity and keep rendering.
+    return {};
+  }
+}
+
+function mergeBatchMaps<T>(batches: Record<string, T>[]): Record<string, T> {
+  return Object.assign({}, ...batches);
+}
+
+export function getContentFeedMetadataUrls(feed: ContentItem[]): string[] {
+  return [...new Set(feed.map(item => item.url))].sort();
+}
+
+export function getContentFeedMetadataCacheKey(urls: string[]): string {
+  return JSON.stringify(urls);
+}
 
 export function useContentFeedMetadata(feed: ContentItem[]) {
-  const feedUrls = useMemo(() => [...new Set(feed.map(item => item.url))], [feed]);
-  const feedUrlsKey = useMemo(() => feedUrls.join(","), [feedUrls]);
+  const feedUrls = useMemo(() => getContentFeedMetadataUrls(feed), [feed]);
+  const feedUrlsKey = useMemo(() => getContentFeedMetadataCacheKey(feedUrls), [feedUrls]);
 
   const { data: metadataResult } = useQuery({
     queryKey: ["contentFeedMetadata", feedUrlsKey],
     enabled: feedUrls.length > 0,
     staleTime: 60_000,
     queryFn: async () => {
-      const thumbnailMap: Record<string, string | null> = {};
-      const validationMap: Record<string, boolean | null> = {};
+      // The batches are independent, so parallelizing them keeps hydration time from growing linearly with feed size.
+      const [metadataBatches, validationBatches] = await Promise.all([
+        Promise.all(chunkItems(feedUrls, THUMBNAIL_BATCH_SIZE).map(fetchThumbnailMetadataBatch)),
+        Promise.all(chunkItems(feedUrls, VALIDATION_BATCH_SIZE).map(fetchValidationBatch)),
+      ]);
 
-      const thumbnailBatchSize = 40;
-      for (let i = 0; i < feedUrls.length; i += thumbnailBatchSize) {
-        const batch = feedUrls.slice(i, i + thumbnailBatchSize);
-        try {
-          const response = await fetch("/api/thumbnails", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ urls: batch }),
-          });
-          if (!response.ok) continue;
-          const data = (await response.json()) as {
-            items?: Record<string, { thumbnailUrl?: string | null; imageUrl?: string | null }>;
-          };
-          for (const [url, item] of Object.entries(data.items ?? {})) {
-            thumbnailMap[url] = item.thumbnailUrl ?? item.imageUrl ?? null;
-          }
-        } catch {
-          // Metadata is optional; keep rendering even when enrichment fails.
-        }
-      }
-
-      const validationBatchSize = 10;
-      for (let i = 0; i < feedUrls.length; i += validationBatchSize) {
-        const batch = feedUrls.slice(i, i + validationBatchSize);
-        try {
-          const response = await fetch("/api/url-validation", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ urls: batch }),
-          });
-          if (!response.ok) continue;
-          const data = (await response.json()) as { results?: Record<string, { isValid: boolean }> };
-          for (const [url, result] of Object.entries(data.results ?? {})) {
-            validationMap[url] = result.isValid;
-          }
-        } catch {
-          // Treat failures as unknown validity and keep rendering.
-        }
-      }
-
-      return { thumbnailMap, validationMap };
+      return {
+        metadataMap: mergeBatchMaps(metadataBatches),
+        validationMap: mergeBatchMaps(validationBatches),
+      };
     },
   });
 
   return {
-    thumbnailMap: metadataResult?.thumbnailMap ?? {},
+    metadataMap: metadataResult?.metadataMap ?? {},
     validationMap: metadataResult?.validationMap ?? {},
   };
 }
