@@ -3,16 +3,18 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
+import { RoundVotingEngineAbi } from "@curyo/contracts";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, type PanInfo, type Variants, motion } from "framer-motion";
 import type { NextPage } from "next";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -62,6 +64,7 @@ const FEED_PAGE_SIZE = 20;
 const FEED_PREFETCH_BUFFER = 20;
 const CARD_SWIPE_THRESHOLD = 96;
 const VOTE_CARD_TRANSITION_EASE = [0.22, 1, 0.36, 1] as const;
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
@@ -340,6 +343,7 @@ const HomeInner = () => {
     categoryId: bigint;
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
   const { commitVote, isCommitting, error: voteError } = useRoundVote();
+  const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
   // Apply search, category filter, and scope before sorting
   const filteredFeed = useMemo(() => {
     let items = feed.filter(item => !isContentItemBlocked(item));
@@ -534,14 +538,56 @@ const HomeInner = () => {
   }, [submitterProfiles, accuracyMap]);
 
   const canLoadMore = visibleCount < displayFeed.length || hasMoreFeed;
-  const primaryItemCooldownSeconds = primaryItem ? (voteCooldownByContentId.get(primaryItem.id.toString()) ?? 0) : 0;
+  const getContentCooldownSeconds = useCallback(
+    (contentId: bigint, onChainRemaining?: bigint) => {
+      const indexedRemaining = voteCooldownByContentId.get(contentId.toString()) ?? 0;
+      const onChainSeconds = Number(onChainRemaining ?? 0n);
+      return Math.max(indexedRemaining, onChainSeconds);
+    },
+    [voteCooldownByContentId],
+  );
+
+  const primaryItemCooldownQueryEnabled = Boolean(votingEngineInfo?.address && primaryItem && address);
+  const { data: primaryItemCooldownData, refetch: refetchPrimaryItemCooldown } = useReadContract({
+    address: votingEngineInfo?.address,
+    abi: RoundVotingEngineAbi,
+    functionName: "getVoteCooldownRemaining",
+    args: [primaryItem?.id ?? 0n, address ?? ZERO_ADDRESS],
+    query: {
+      enabled: primaryItemCooldownQueryEnabled,
+      refetchInterval: primaryItemCooldownQueryEnabled ? 60_000 : false,
+    },
+  });
+
+  const stakeModalCooldownQueryEnabled = Boolean(votingEngineInfo?.address && stakeModal.isOpen && address);
+  const { data: stakeModalCooldownData, refetch: refetchStakeModalCooldown } = useReadContract({
+    address: votingEngineInfo?.address,
+    abi: RoundVotingEngineAbi,
+    functionName: "getVoteCooldownRemaining",
+    args: [stakeModal.contentId, address ?? ZERO_ADDRESS],
+    query: {
+      enabled: stakeModalCooldownQueryEnabled,
+    },
+  });
+
+  const primaryItemCooldownSeconds = primaryItem
+    ? getContentCooldownSeconds(primaryItem.id, primaryItemCooldownData)
+    : 0;
   const stakeModalCooldownSeconds =
-    stakeModal.contentId > 0n ? (voteCooldownByContentId.get(stakeModal.contentId.toString()) ?? 0) : 0;
+    stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId, stakeModalCooldownData) : 0;
 
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(FEED_PAGE_SIZE);
   }, [searchQuery, activeCategory, scope, sortBy]);
+
+  useEffect(() => {
+    if (!voteError?.includes("You already voted on this content within the last")) return;
+    void refetchPrimaryItemCooldown();
+    if (stakeModal.isOpen) {
+      void refetchStakeModalCooldown();
+    }
+  }, [refetchPrimaryItemCooldown, refetchStakeModalCooldown, stakeModal.isOpen, voteError]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -633,7 +679,8 @@ const HomeInner = () => {
 
   const handleButtonVote = useCallback(
     (item: ContentItem, isUp: boolean) => {
-      const cooldownSeconds = voteCooldownByContentId.get(item.id.toString()) ?? 0;
+      const cooldownSeconds =
+        primaryItem && item.id === primaryItem.id ? primaryItemCooldownSeconds : getContentCooldownSeconds(item.id);
       if (cooldownSeconds > 0) {
         notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
         return;
@@ -641,12 +688,12 @@ const HomeInner = () => {
 
       setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
     },
-    [voteCooldownByContentId],
+    [getContentCooldownSeconds, primaryItem, primaryItemCooldownSeconds],
   );
 
   const handleConfirmStake = useCallback(
     async (stakeAmount: number) => {
-      const cooldownSeconds = voteCooldownByContentId.get(stakeModal.contentId.toString()) ?? 0;
+      const cooldownSeconds = stakeModalCooldownSeconds;
       if (cooldownSeconds > 0) {
         notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
         setStakeModal(prev => ({ ...prev, isOpen: false }));
@@ -660,6 +707,8 @@ const HomeInner = () => {
         stakeAmount,
         submitter: item?.submitter,
       });
+      void refetchPrimaryItemCooldown();
+      void refetchStakeModalCooldown();
       setStakeModal(prev => ({ ...prev, isOpen: false }));
       if (success) {
         notification.success(`Vote committed! Stake: ${stakeAmount} cREP`);
@@ -669,7 +718,16 @@ const HomeInner = () => {
         }
       }
     },
-    [commitVote, displayFeed, isFirstVote, markVoteCompleted, stakeModal, voteCooldownByContentId],
+    [
+      commitVote,
+      displayFeed,
+      isFirstVote,
+      markVoteCompleted,
+      refetchPrimaryItemCooldown,
+      refetchStakeModalCooldown,
+      stakeModal,
+      stakeModalCooldownSeconds,
+    ],
   );
 
   const handleCancelStake = () => {

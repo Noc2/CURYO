@@ -1072,6 +1072,26 @@ contract RoundVotingEngine is
         return roundCommitHashes[contentId][roundId].length;
     }
 
+    function getVoteCooldownRemaining(uint256 contentId, address voter) external view returns (uint256) {
+        if (voter == address(0)) return 0;
+
+        uint256 lastVote;
+        if (address(voterIdNFT) != address(0) && voterIdNFT.hasVoterId(voter)) {
+            uint256 voterId = voterIdNFT.getTokenId(voter);
+            if (voterId == 0) return 0;
+            lastVote = lastVoteTimestampByToken[contentId][voterId];
+        } else {
+            lastVote = lastVoteTimestamp[contentId][voter];
+        }
+
+        if (lastVote == 0) return 0;
+
+        uint256 cooldownEndsAt = lastVote + VOTE_COOLDOWN;
+        if (block.timestamp >= cooldownEndsAt) return 0;
+
+        return cooldownEndsAt - block.timestamp;
+    }
+
     // --- Admin ---
 
     function pause() external onlyRole(PAUSER_ROLE) {

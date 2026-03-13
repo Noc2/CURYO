@@ -1391,6 +1391,20 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_GetVoteCooldownRemaining_ReturnsRemainingTime() public {
+        uint256 contentId = _submitContent();
+
+        _commit(voter1, contentId, true, STAKE);
+
+        assertEq(engine.getVoteCooldownRemaining(contentId, voter1), 24 hours);
+
+        vm.warp(block.timestamp + 1 hours);
+        assertEq(engine.getVoteCooldownRemaining(contentId, voter1), 23 hours);
+
+        vm.warp(block.timestamp + 23 hours);
+        assertEq(engine.getVoteCooldownRemaining(contentId, voter1), 0);
+    }
+
     function test_Commit_RoundNotAccepting_ExpiredRound_Reverts() public {
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);

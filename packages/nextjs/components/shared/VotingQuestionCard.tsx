@@ -96,6 +96,8 @@ export function VotingQuestionCard({
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
+  const displayError =
+    cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
 
   // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
@@ -223,7 +225,7 @@ export function VotingQuestionCard({
         )}
 
         {/* Vote error message */}
-        {error && <p className="mb-2 text-center text-base text-red-400">{error}</p>}
+        {displayError && <p className="mb-2 text-center text-base text-red-400">{displayError}</p>}
 
         {/* Voting arrows - centered below question */}
         <div className="mb-3 flex shrink-0 items-center justify-center gap-2 lg:gap-3">
