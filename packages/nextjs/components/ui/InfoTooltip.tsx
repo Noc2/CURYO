@@ -1,32 +1,115 @@
+"use client";
+
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { type TooltipPlacement, type TooltipPosition, computeTooltipPlacement } from "~~/lib/ui/tooltipPosition";
 
 interface InfoTooltipProps {
   text: string;
-  position?: "top" | "bottom" | "left" | "right";
+  position?: TooltipPosition;
   className?: string;
 }
 
+function getArrowStyle(layout: TooltipPlacement) {
+  return { left: layout.arrowLeft, top: layout.arrowTop };
+}
+
 /**
- * Reusable info icon with tooltip on hover.
- * Uses DaisyUI tooltip component.
+ * Reusable info icon with a viewport-aware tooltip.
+ * Renders into a portal so the tooltip is not clipped by overflow-hidden parents.
  */
 export const InfoTooltip = ({ text, position = "top", className = "" }: InfoTooltipProps) => {
-  const positionClass = {
-    top: "tooltip-top",
-    bottom: "tooltip-bottom",
-    left: "tooltip-left",
-    right: "tooltip-right",
-  }[position];
+  const tooltipId = useId();
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const tooltipRef = useRef<HTMLSpanElement | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [layout, setLayout] = useState<TooltipPlacement | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const updateLayout = () => {
+    if (!triggerRef.current || !tooltipRef.current || typeof window === "undefined") return;
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+
+    setLayout(
+      computeTooltipPlacement({
+        triggerRect,
+        tooltipSize: { width: tooltipRect.width, height: tooltipRect.height },
+        preferredPosition: position,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      }),
+    );
+  };
+
+  useLayoutEffect(() => {
+    if (!isOpen || !isMounted) return;
+    updateLayout();
+  }, [isMounted, isOpen, position, text]);
+
+  useEffect(() => {
+    if (!isOpen || typeof window === "undefined") return;
+
+    const handleViewportChange = () => updateLayout();
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [isOpen, position, text]);
 
   return (
-    <span
-      className={`tooltip ${positionClass} ${className}`}
-      data-tip={text}
-      tabIndex={0}
-      role="note"
-      aria-label={text}
-    >
-      <InformationCircleIcon className="w-4 h-4 text-base-content/40 hover:text-base-content/60 cursor-help" />
-    </span>
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`inline-flex cursor-help items-center align-middle ${className}`}
+        aria-label={text}
+        aria-describedby={isOpen ? tooltipId : undefined}
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => setIsOpen(false)}
+      >
+        <InformationCircleIcon className="h-4 w-4 text-base-content/40 hover:text-base-content/60" />
+      </button>
+
+      {isMounted && isOpen
+        ? createPortal(
+            <span
+              ref={tooltipRef}
+              id={tooltipId}
+              role="tooltip"
+              className="pointer-events-none fixed z-[1000] block"
+              style={{
+                left: layout?.left ?? 0,
+                top: layout?.top ?? 0,
+                visibility: layout ? "visible" : "hidden",
+                maxWidth: "min(20rem, calc(100vw - 1rem))",
+              }}
+            >
+              <span className="relative block rounded-2xl bg-neutral px-3 py-2 text-sm leading-snug text-neutral-content shadow-2xl">
+                {text}
+                {layout ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute block h-2 w-2 rotate-45 bg-neutral"
+                    style={getArrowStyle(layout)}
+                  />
+                ) : null}
+              </span>
+            </span>,
+            document.body,
+          )
+        : null}
+    </>
   );
 };

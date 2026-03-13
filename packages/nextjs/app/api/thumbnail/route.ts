@@ -10,7 +10,9 @@ const RATE_LIMIT = { limit: 200, windowMs: 60_000 }; // 200 req/min per IP
  * Avoids CORS issues, hides API keys, and caches results via Next.js fetch cache.
  *
  * Usage: GET /api/thumbnail?url=https://en.wikipedia.org/wiki/Bitcoin
- * Returns: { thumbnailUrl, title?, description?, imageUrl?, authors?, releaseYear?, symbol? }
+ * Returns: `ContentMetadataResult` from `lib/contentMetadata/types.ts`, including
+ * `thumbnailUrl`, `title`, `description`, `imageUrl`, `authors`, `releaseYear`,
+ * `symbol`, `stars`, `forks`, and `language` when available.
  */
 export async function GET(request: NextRequest) {
   const limited = await checkRateLimit(request, RATE_LIMIT);

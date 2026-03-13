@@ -41,15 +41,16 @@ export const tmdbHandler: PlatformHandler = {
       type: "tmdb",
       id: movieId,
       url,
-      thumbnailUrl: null, // Fetched async by the embed component via TMDB API
+      thumbnailUrl: null, // Resolved later by shared metadata enrichment or the embed fallback fetch
       embedUrl: null, // No iframe embed for TMDB
       metadata: movieId ? { movieId } : undefined,
     };
   },
 
   getThumbnail(): string | null {
-    // Cannot construct thumbnail URL without the poster_path
-    // which requires an API call. The embed component handles this.
+    // Cannot construct a deterministic thumbnail URL without the poster_path,
+    // which requires an API call. Shared metadata resolution or the embed
+    // fallback fetch handles enrichment.
     return null;
   },
 

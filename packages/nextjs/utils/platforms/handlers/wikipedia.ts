@@ -42,15 +42,15 @@ export const wikipediaHandler: PlatformHandler = {
       type: "wikipedia",
       id: title,
       url,
-      thumbnailUrl: null, // Fetched async by the embed component via Wikipedia API
+      thumbnailUrl: null, // Resolved later by shared metadata enrichment or the embed fallback fetch
       embedUrl: null, // No iframe embed for Wikipedia
       metadata: title ? { title } : undefined,
     };
   },
 
   getThumbnail(): string | null {
-    // Cannot construct thumbnail URL without an API call.
-    // The embed component handles this.
+    // Cannot construct a deterministic thumbnail URL without an API call.
+    // Shared metadata resolution or the embed fallback fetch handles enrichment.
     return null;
   },
 

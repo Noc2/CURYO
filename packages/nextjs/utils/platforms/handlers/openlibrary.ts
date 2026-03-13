@@ -45,7 +45,7 @@ export const openLibraryHandler: PlatformHandler = {
       type: "openlibrary",
       id: result ? result.id : null,
       url,
-      thumbnailUrl: null, // Fetched async by the embed component via Open Library API
+      thumbnailUrl: null, // Resolved later by shared metadata enrichment or the embed fallback fetch
       embedUrl: null, // No iframe embed for Open Library
       metadata: result ? { olId: result.id, olType: result.type } : undefined,
     };
