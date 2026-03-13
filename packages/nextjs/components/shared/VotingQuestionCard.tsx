@@ -11,6 +11,7 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { renderRankingQuestion } from "~~/lib/categories/rankingQuestionTemplate";
+import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 
 interface VotingQuestionCardProps {
   contentId: bigint;
@@ -89,6 +90,7 @@ export function VotingQuestionCard({
   const countdownLabel = formatRoundCountdown(countdownTimeLeft);
   const countdownActive = countdownTimeLeft > 0;
   const pendingRevealCount = Math.max(0, voteCount - revealedCount);
+  const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
 
   // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
@@ -157,12 +159,12 @@ export function VotingQuestionCard({
           </span>
         </p>
 
-        {/* Voter count icons */}
+        {/* Committed voter icons */}
         {phase === "voting" && (
           <div className="mb-2 flex shrink-0 justify-center">
             <span className="inline-flex items-center gap-1.5">
               <span className="flex -space-x-1">
-                {Array.from({ length: Math.min(revealedCount, 7) }).map((_, i) => (
+                {Array.from({ length: filledVoteIcons }).map((_, i) => (
                   <svg
                     key={`filled-${i}`}
                     xmlns="http://www.w3.org/2000/svg"
@@ -177,9 +179,7 @@ export function VotingQuestionCard({
                     />
                   </svg>
                 ))}
-                {Array.from({
-                  length: Math.min(Math.max(0, minVoters - revealedCount), 7 - Math.min(revealedCount, 7)),
-                }).map((_, i) => (
+                {Array.from({ length: emptyVoteIcons }).map((_, i) => (
                   <svg
                     key={`empty-${i}`}
                     xmlns="http://www.w3.org/2000/svg"
@@ -196,7 +196,7 @@ export function VotingQuestionCard({
                 ))}
               </span>
               <InfoTooltip
-                text={`${revealedCount} of ${minVoters} votes revealed.${pendingRevealCount > 0 ? ` ${pendingRevealCount} commit${pendingRevealCount === 1 ? "" : "s"} still pending reveal.` : ""} ${Math.max(0, minVoters - revealedCount) > 0 ? `${Math.max(0, minVoters - revealedCount)} more revealed vote${Math.max(0, minVoters - revealedCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."}`}
+                text={`${voteCount} vote${voteCount === 1 ? "" : "s"} committed in this round. ${revealedCount} revealed.${pendingRevealCount > 0 ? ` ${pendingRevealCount} commit${pendingRevealCount === 1 ? "" : "s"} still pending reveal.` : ""} ${Math.max(0, minVoters - revealedCount) > 0 ? `${Math.max(0, minVoters - revealedCount)} more revealed vote${Math.max(0, minVoters - revealedCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."}`}
                 position="bottom"
               />
             </span>
