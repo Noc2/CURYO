@@ -344,6 +344,19 @@ contract GovernanceTest is Test {
         vm.stopPrank();
     }
 
+    function test_GovernorPoolsRejectOversizedArray() public {
+        vm.startPrank(deployer);
+        CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
+        uint256 holderCount = freshGovernor.MAX_EXCLUDED_HOLDERS() + 1;
+        address[] memory holders = new address[](holderCount);
+        for (uint256 i = 0; i < holderCount; i++) {
+            holders[i] = address(uint160(i + 1));
+        }
+        vm.expectRevert("Too many excluded holders");
+        freshGovernor.initializePools(holders);
+        vm.stopPrank();
+    }
+
     function test_GovernorPoolsInitializedOnce() public {
         // initializePools can only be called once
         address[] memory holders = new address[](3);
@@ -366,6 +379,23 @@ contract GovernanceTest is Test {
         assertEq(holders[5], mockContentRegistry);
         assertEq(holders[6], mockFrontendRegistry);
         assertEq(holders[7], mockCategoryRegistry);
+    }
+
+    function test_GovernorRejectsProposalsBeforePoolsInitialization() public {
+        vm.startPrank(deployer);
+        CuryoGovernor freshGovernor = new CuryoGovernor(IVotes(address(token)), timelock);
+        vm.stopPrank();
+
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(timelock);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+
+        vm.prank(voter1);
+        vm.expectRevert("Pools not initialized");
+        freshGovernor.propose(targets, values, calldatas, "Test");
     }
 
     function _excludedHolders() internal view returns (address[] memory holders) {

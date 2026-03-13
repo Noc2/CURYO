@@ -41,6 +41,8 @@ contract CuryoGovernor is
     bool public poolsInitialized;
     /// @notice Minimum quorum regardless of circulating supply (10K cREP with 6 decimals)
     uint256 public constant MINIMUM_QUORUM = 10_000 * 1e6;
+    /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
+    uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
 
     /// @notice Deploy the governor with cREP token and timelock
     /// @param _crepToken The cREP voting token address
@@ -70,6 +72,7 @@ contract CuryoGovernor is
         require(!poolsInitialized, "Pools already initialized");
         require(msg.sender == poolsInitializer, "Only pools initializer");
         require(excludedHolders.length > 0, "No excluded holders");
+        require(excludedHolders.length <= MAX_EXCLUDED_HOLDERS, "Too many excluded holders");
 
         for (uint256 i = 0; i < excludedHolders.length; i++) {
             address holder = excludedHolders[i];
@@ -106,7 +109,8 @@ contract CuryoGovernor is
     function quorum(uint256 blockNumber) public view override(Governor, GovernorVotesQuorumFraction) returns (uint256) {
         uint256 totalSupply = token().getPastTotalSupply(blockNumber);
         uint256 locked;
-        for (uint256 i = 0; i < _excludedHolders.length; i++) {
+        uint256 excludedHoldersLength = _excludedHolders.length;
+        for (uint256 i = 0; i < excludedHoldersLength; i++) {
             locked += crepToken.getPastVotes(_excludedHolders[i], blockNumber);
         }
         uint256 circulating = totalSupply > locked ? totalSupply - locked : 0;
@@ -186,6 +190,7 @@ contract CuryoGovernor is
         bytes[] memory calldatas,
         string memory description
     ) public virtual override(Governor) returns (uint256) {
+        require(poolsInitialized, "Pools not initialized");
         uint256 proposalId = super.propose(targets, values, calldatas, description);
 
         // Lock proposal threshold amount for the proposer
