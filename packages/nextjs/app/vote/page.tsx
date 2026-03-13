@@ -21,7 +21,6 @@ import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useQueueNavigation } from "~~/hooks/useQueueNavigation";
-import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUnixTime } from "~~/hooks/useUnixTime";
@@ -117,7 +116,6 @@ const HomeInner = () => {
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { votes, isLoading: votesLoading } = useVoteHistoryQuery(address);
-  const { votes: recentVotes } = useRecentUserVotes(address);
   const {
     watchedItems,
     watchedContentIds,
@@ -236,7 +234,8 @@ const HomeInner = () => {
   const voteCooldownByContentId = useMemo(() => {
     const cooldowns = new Map<string, number>();
 
-    for (const vote of recentVotes) {
+    for (const vote of votes) {
+      if (!vote.committedAt) continue;
       const remainingSeconds = getVoteCooldownRemainingSeconds(vote.committedAt, nowSeconds);
       if (remainingSeconds <= 0) continue;
 
@@ -248,7 +247,7 @@ const HomeInner = () => {
     }
 
     return cooldowns;
-  }, [nowSeconds, recentVotes]);
+  }, [nowSeconds, votes]);
 
   // Filter & sort state
   const votedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
@@ -632,9 +631,18 @@ const HomeInner = () => {
     };
   }, [canLoadMore]);
 
-  const handleButtonVote = useCallback((item: ContentItem, isUp: boolean) => {
-    setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
-  }, []);
+  const handleButtonVote = useCallback(
+    (item: ContentItem, isUp: boolean) => {
+      const cooldownSeconds = voteCooldownByContentId.get(item.id.toString()) ?? 0;
+      if (cooldownSeconds > 0) {
+        notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
+        return;
+      }
+
+      setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
+    },
+    [voteCooldownByContentId],
+  );
 
   const handleConfirmStake = useCallback(
     async (stakeAmount: number) => {

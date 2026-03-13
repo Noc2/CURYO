@@ -8,6 +8,7 @@ import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { getRecentUserVotesQueryKey } from "~~/hooks/useRecentUserVotes";
+import { getVoteHistoryQueryKey } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
 import {
@@ -185,6 +186,7 @@ export function useRoundVote() {
       });
       queryClient.invalidateQueries({ queryKey: ["ponder-fallback", "votingStakes", address] });
       queryClient.invalidateQueries({ queryKey: getRecentUserVotesQueryKey(address) });
+      queryClient.invalidateQueries({ queryKey: getVoteHistoryQueryKey(address) });
 
       return true;
     } catch (e: any) {

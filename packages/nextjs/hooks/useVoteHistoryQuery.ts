@@ -13,6 +13,10 @@ interface UseVoteHistoryQueryOptions {
   limit?: number;
 }
 
+export function getVoteHistoryQueryKey(voter?: string) {
+  return ["ponder-fallback", "voteHistory", voter] as const;
+}
+
 export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQueryOptions = {}) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
   const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
@@ -23,6 +27,7 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
   const { data: commitEvents, isLoading: commitsLoading } = useScaffoldEventHistory({
     contractName: "RoundVotingEngine",
     eventName: "VoteCommitted",
+    blockData: true,
     filters: { voter },
     watch: rpcFallbackActive && isPageVisible,
     enabled: rpcFallbackActive && Boolean(voter) && isPageVisible,
@@ -60,6 +65,9 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
             roundId: args.roundId,
             stake: args.stake,
             isSettled: settledRoundKeys.has(roundKey),
+            committedAt: event.blockData?.timestamp
+              ? new Date(Number(event.blockData.timestamp) * 1000).toISOString()
+              : null,
           } satisfies VoteHistoryItem;
         })
         .filter((item): item is VoteHistoryItem => item !== null) ?? []
