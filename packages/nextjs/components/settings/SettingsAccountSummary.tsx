@@ -307,9 +307,6 @@ export function SettingsAccountSummary({
             </div>
             <div>
               <h1 className="text-3xl font-semibold text-white sm:text-4xl">Settings</h1>
-              <p className="mt-2 text-base text-base-content/60">
-                Use this page as your home base for profile, delegation, referrals, and alert configuration.
-              </p>
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-base-content/70">Current wallet</p>
