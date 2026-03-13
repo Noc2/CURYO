@@ -1107,7 +1107,7 @@ const HomeInner = () => {
                 <div
                   ref={handleQueueRailRef}
                   data-disable-queue-wheel="true"
-                  className={`min-w-0 overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
+                  className={`scrollbar-hide min-w-0 overflow-x-auto snap-x snap-mandatory ${
                     queueLayout.rows === 2 ? "flex items-start gap-4 xl:gap-3" : "flex items-stretch gap-3 xl:gap-2.5"
                   }`}
                   aria-label="Content queue"
