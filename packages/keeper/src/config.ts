@@ -1,3 +1,4 @@
+import deployedContracts from "@curyo/contracts/deployedContracts";
 import { config as loadDotenv } from "dotenv";
 import { isAddress } from "viem";
 
@@ -11,6 +12,8 @@ const CHAIN_NAMES: Record<number, string> = {
 };
 
 const isProduction = process.env.NODE_ENV === "production";
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const sharedDeployments = deployedContracts as Record<number, Record<string, { address?: string }>>;
 
 function readEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
@@ -83,19 +86,61 @@ function requireAddressEnv(name: string, errors: string[]): `0x${string}` {
   const value = readEnv(name);
   if (!value) {
     errors.push(`${name} is required`);
-    return "0x0000000000000000000000000000000000000000";
+    return ZERO_ADDRESS;
   }
 
   if (!isAddress(value)) {
     errors.push(`${name} must be a valid address`);
-    return "0x0000000000000000000000000000000000000000";
+    return ZERO_ADDRESS;
   }
 
   return value as `0x${string}`;
 }
 
+function getSharedDeploymentAddress(chainId: number, contractName: string): `0x${string}` | undefined {
+  const address = sharedDeployments[chainId]?.[contractName]?.address;
+  if (!address || !isAddress(address)) {
+    return undefined;
+  }
+
+  return address as `0x${string}`;
+}
+
+function resolveContractAddress(params: {
+  chainId: number;
+  envName: string;
+  contractName: string;
+  errors: string[];
+  warnings: string[];
+}): `0x${string}` {
+  const { chainId, envName, contractName, errors, warnings } = params;
+  const sharedAddress = getSharedDeploymentAddress(chainId, contractName);
+  const envValue = readEnv(envName);
+
+  if (sharedAddress) {
+    if (envValue) {
+      if (isAddress(envValue)) {
+        if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+          warnings.push(
+            `Ignoring ${envName}=${envValue} for chain ${chainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+          );
+        }
+      } else {
+        warnings.push(
+          `Ignoring invalid ${envName} value for chain ${chainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+        );
+      }
+    }
+
+    return sharedAddress;
+  }
+
+  return requireAddressEnv(envName, errors);
+}
+
 function loadConfig() {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const chainId = requireIntEnv("CHAIN_ID", errors);
   const keystoreAccount = readEnv("KEYSTORE_ACCOUNT");
   const privateKey = readEnv("KEEPER_PRIVATE_KEY") as `0x${string}` | undefined;
@@ -112,8 +157,20 @@ function loadConfig() {
 
     // Contracts
     contracts: {
-      votingEngine: requireAddressEnv("VOTING_ENGINE_ADDRESS", errors),
-      contentRegistry: requireAddressEnv("CONTENT_REGISTRY_ADDRESS", errors),
+      votingEngine: resolveContractAddress({
+        chainId,
+        envName: "VOTING_ENGINE_ADDRESS",
+        contractName: "RoundVotingEngine",
+        errors,
+        warnings,
+      }),
+      contentRegistry: resolveContractAddress({
+        chainId,
+        envName: "CONTENT_REGISTRY_ADDRESS",
+        contractName: "ContentRegistry",
+        errors,
+        warnings,
+      }),
     },
 
     // Wallet
@@ -142,6 +199,10 @@ function loadConfig() {
 
   if (errors.length > 0) {
     throw new Error(`Invalid keeper configuration:\n- ${errors.join("\n- ")}`);
+  }
+
+  for (const warning of warnings) {
+    console.warn(`[keeper config] ${warning}`);
   }
 
   return loadedConfig;

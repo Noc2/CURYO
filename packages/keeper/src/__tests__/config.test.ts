@@ -1,14 +1,19 @@
+import deployedContracts from "@curyo/contracts/deployedContracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const chain11142220 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[11142220];
+const chain31337 = (deployedContracts as Record<number, Record<string, { address: `0x${string}` }>>)[31337];
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
   RPC_URL: "https://rpc.example.com",
   CHAIN_ID: "11142220",
-  VOTING_ENGINE_ADDRESS: "0x1111111111111111111111111111111111111111",
-  CONTENT_REGISTRY_ADDRESS: "0x2222222222222222222222222222222222222222",
+  VOTING_ENGINE_ADDRESS: chain11142220?.RoundVotingEngine?.address ?? "0x1111111111111111111111111111111111111111",
+  CONTENT_REGISTRY_ADDRESS: chain11142220?.ContentRegistry?.address ?? "0x2222222222222222222222222222222222222222",
   KEYSTORE_ACCOUNT: "keeper",
   KEYSTORE_PASSWORD: "secret",
 };
+const LOCAL_VOTING_ENGINE = chain31337?.RoundVotingEngine?.address ?? "0x0000000000000000000000000000000000000000";
+const LOCAL_CONTENT_REGISTRY = chain31337?.ContentRegistry?.address ?? "0x0000000000000000000000000000000000000000";
 
 async function loadKeeperConfig(
   overrides: Record<string, string | undefined> = {},
@@ -22,7 +27,7 @@ async function loadKeeperConfig(
   };
 
   for (const key of removals) {
-    delete process.env[key];
+    process.env[key] = "";
   }
 
   return import("../config.js");
@@ -81,5 +86,42 @@ describe("keeper config", () => {
         KEEPER_CLEANUP_BATCH_SIZE: "0",
       }),
     ).rejects.toThrow("KEEPER_CLEANUP_BATCH_SIZE must be a positive integer");
+  });
+
+  it("derives local contract addresses from shared deployment artifacts", async () => {
+    const { config } = await loadKeeperConfig(
+      {
+        CHAIN_ID: "31337",
+      },
+      ["VOTING_ENGINE_ADDRESS", "CONTENT_REGISTRY_ADDRESS"],
+    );
+
+    expect(config.contracts.votingEngine).toBe(LOCAL_VOTING_ENGINE);
+    expect(config.contracts.contentRegistry).toBe(LOCAL_CONTENT_REGISTRY);
+  });
+
+  it("ignores stale local contract env values in favor of shared deployment artifacts", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { config } = await loadKeeperConfig({
+      CHAIN_ID: "31337",
+      VOTING_ENGINE_ADDRESS: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
+      CONTENT_REGISTRY_ADDRESS: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
+    });
+
+    expect(config.contracts.votingEngine).toBe(LOCAL_VOTING_ENGINE);
+    expect(config.contracts.contentRegistry).toBe(LOCAL_CONTENT_REGISTRY);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring VOTING_ENGINE_ADDRESS"));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring CONTENT_REGISTRY_ADDRESS"));
+  });
+
+  it("still requires contract env values when no shared deployment artifact exists for the chain", async () => {
+    await expect(
+      loadKeeperConfig(
+        {
+          CHAIN_ID: "999999",
+        },
+        ["VOTING_ENGINE_ADDRESS", "CONTENT_REGISTRY_ADDRESS"],
+      ),
+    ).rejects.toThrow("VOTING_ENGINE_ADDRESS is required");
   });
 });

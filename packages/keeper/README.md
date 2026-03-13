@@ -29,8 +29,8 @@ Copy `.env.example` to `.env.local` and configure:
 |---|---|---|
 | `RPC_URL` | — | Blockchain RPC endpoint (required) |
 | `CHAIN_ID` | — | Network chain ID (required) |
-| `VOTING_ENGINE_ADDRESS` | — | Deployed VotingEngine contract address |
-| `CONTENT_REGISTRY_ADDRESS` | — | Deployed ContentRegistry contract address |
+| `VOTING_ENGINE_ADDRESS` | Auto-derived for supported chains | Fallback RoundVotingEngine address when no shared deployment artifact exists for `CHAIN_ID` |
+| `CONTENT_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback ContentRegistry address when no shared deployment artifact exists for `CHAIN_ID` |
 | `CHAIN_NAME` | Auto-derived from `CHAIN_ID` | Optional human-readable chain label |
 | `KEYSTORE_ACCOUNT` | — | Foundry keystore account name (preferred) |
 | `KEYSTORE_PASSWORD` | — | Keystore decryption password |
