@@ -1,3 +1,4 @@
+import { getTwitterSyndicationTokens } from "@curyo/contracts";
 import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
@@ -13,10 +14,6 @@ function extractTweetId(url: string): string | null {
   }
 }
 
-function getToken(id: string): string {
-  return ((Number(id) / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, "");
-}
-
 export const twitterStrategy: RatingStrategy = {
   name: "twitter",
 
@@ -27,14 +24,20 @@ export const twitterStrategy: RatingStrategy = {
     if (!tweetId) return null;
 
     try {
-      const token = getToken(tweetId);
-      const res = await fetchWithTimeout(
-        `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en&token=${token}`,
-      );
-      if (!res.ok) return null;
+      let data: any = null;
 
-      const data = await res.json();
-      if (!data || data.__typename === "TweetTombstone") return null;
+      for (const token of getTwitterSyndicationTokens(tweetId)) {
+        const res = await fetchWithTimeout(
+          `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en&token=${token}`,
+        );
+        if (!res.ok) continue;
+
+        data = await res.json();
+        if (data?.__typename === "TweetTombstone") return null;
+        if (data && Object.keys(data).length > 0) break;
+      }
+
+      if (!data || Object.keys(data).length === 0) return null;
 
       const likes: number = data.favorite_count ?? 0;
       const replies: number = data.conversation_count ?? 0;

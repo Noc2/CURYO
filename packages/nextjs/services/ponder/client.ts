@@ -314,6 +314,18 @@ export interface PonderTokenTransfer {
   timestamp: string;
 }
 
+export interface PonderTokenHolder {
+  address: string;
+  firstSeenAt: string;
+}
+
+export interface PonderTokenHoldersResponse {
+  items: PonderTokenHolder[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface PonderSubmitterRewardClaim {
   id: string;
   contentId: string;
@@ -535,6 +547,19 @@ export const ponderApi = {
       type,
       limit,
     });
+  },
+
+  getTokenHolders(params?: { limit?: string; offset?: string }) {
+    return ponderGet<PonderTokenHoldersResponse>("/token-holders", params);
+  },
+
+  async getAllTokenHolders() {
+    return getAllPages(offset =>
+      this.getTokenHolders({
+        limit: String(PONDER_PAGE_LIMIT),
+        offset: String(offset),
+      }),
+    );
   },
 
   getRewards(voter: string, limit?: string) {

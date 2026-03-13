@@ -1207,6 +1207,29 @@ app.get("/leaderboard", async (c) => {
   return jsonBig(c, { items, type });
 });
 
+app.get("/token-holders", async (c) => {
+  const limit = safeLimit(c.req.query("limit"), 200, 500);
+  const offset = safeOffset(c.req.query("offset"));
+
+  const items = await db
+    .select()
+    .from(tokenHolder)
+    .orderBy(asc(tokenHolder.firstSeenAt), asc(tokenHolder.address))
+    .limit(limit)
+    .offset(offset);
+
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(tokenHolder);
+
+  return jsonBig(c, {
+    items,
+    total: countResult?.count ?? 0,
+    limit,
+    offset,
+  });
+});
+
 // ============================================================
 // ACCURACY LEADERBOARD
 // ============================================================

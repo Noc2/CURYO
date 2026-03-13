@@ -336,8 +336,15 @@ export async function deliverNotificationEmails() {
   };
 
   for (const subscription of subscriptions) {
-    const events = await getNotificationEvents(subscription.walletAddress);
-    const candidates = buildCandidates(subscription, events);
+    let candidates: EmailCandidate[];
+    try {
+      const events = await getNotificationEvents(subscription.walletAddress);
+      candidates = buildCandidates(subscription, events);
+    } catch (error) {
+      console.error("Failed to prepare notification email candidates:", subscription.walletAddress, error);
+      result.failed += 1;
+      continue;
+    }
 
     for (const candidate of candidates) {
       result.attempted += 1;

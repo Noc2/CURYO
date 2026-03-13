@@ -26,6 +26,7 @@ const EMPTY_PROFILE: ProfileRegistryProfile = {
   createdAt: null,
   updatedAt: null,
 };
+const MULTICALL_BATCH_SIZE = 200;
 
 const targetNetwork = scaffoldConfig.targetNetworks[0];
 const contractsForChain = (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id];
@@ -43,6 +44,16 @@ const publicClient = profileRegistry
 
 function normalizeAddress(address: string): `0x${string}` {
   return address.toLowerCase() as `0x${string}`;
+}
+
+function chunkAddresses(addresses: readonly `0x${string}`[], size = MULTICALL_BATCH_SIZE): `0x${string}`[][] {
+  const chunks: `0x${string}`[][] = [];
+
+  for (let index = 0; index < addresses.length; index += size) {
+    chunks.push(addresses.slice(index, index + size));
+  }
+
+  return chunks;
 }
 
 function normalizeUniqueAddresses(addresses: string[]): `0x${string}`[] {
@@ -94,38 +105,40 @@ export async function readProfileRegistryProfiles(
     return profiles;
   }
 
-  try {
-    const results = await publicClient.multicall({
-      allowFailure: true,
-      contracts: normalizedAddresses.map(address => ({
-        address: profileRegistry.address,
-        abi: profileRegistry.abi,
-        functionName: "getProfile",
-        args: [address],
-      })),
-    });
+  for (const batch of chunkAddresses(normalizedAddresses)) {
+    try {
+      const results = await publicClient.multicall({
+        allowFailure: true,
+        contracts: batch.map(address => ({
+          address: profileRegistry.address,
+          abi: profileRegistry.abi,
+          functionName: "getProfile",
+          args: [address],
+        })),
+      });
 
-    results.forEach((result, index) => {
-      const address = normalizedAddresses[index];
-      profiles[address] = result.status === "success" ? parseProfile(result.result) : EMPTY_PROFILE;
-    });
-  } catch {
-    // Fallback to individual calls when multicall3 is unavailable (e.g. local Anvil)
-    await Promise.all(
-      normalizedAddresses.map(async address => {
-        try {
-          const result = await publicClient.readContract({
-            address: profileRegistry.address,
-            abi: profileRegistry.abi,
-            functionName: "getProfile",
-            args: [address],
-          });
-          profiles[address] = parseProfile(result);
-        } catch {
-          profiles[address] = EMPTY_PROFILE;
-        }
-      }),
-    );
+      results.forEach((result, index) => {
+        const address = batch[index];
+        profiles[address] = result.status === "success" ? parseProfile(result.result) : EMPTY_PROFILE;
+      });
+    } catch {
+      // Fallback to individual calls when multicall3 is unavailable (e.g. local Anvil)
+      await Promise.all(
+        batch.map(async address => {
+          try {
+            const result = await publicClient.readContract({
+              address: profileRegistry.address,
+              abi: profileRegistry.abi,
+              functionName: "getProfile",
+              args: [address],
+            });
+            profiles[address] = parseProfile(result);
+          } catch {
+            profiles[address] = EMPTY_PROFILE;
+          }
+        }),
+      );
+    }
   }
 
   return profiles;
@@ -153,37 +166,39 @@ export async function readCRepBalances(addresses: string[]): Promise<Record<stri
     return balances;
   }
 
-  try {
-    const results = await publicClient.multicall({
-      allowFailure: true,
-      contracts: normalizedAddresses.map(address => ({
-        address: crepToken.address,
-        abi: crepToken.abi,
-        functionName: "balanceOf",
-        args: [address],
-      })),
-    });
+  for (const batch of chunkAddresses(normalizedAddresses)) {
+    try {
+      const results = await publicClient.multicall({
+        allowFailure: true,
+        contracts: batch.map(address => ({
+          address: crepToken.address,
+          abi: crepToken.abi,
+          functionName: "balanceOf",
+          args: [address],
+        })),
+      });
 
-    results.forEach((result, index) => {
-      const address = normalizedAddresses[index];
-      balances[address] = result.status === "success" && typeof result.result === "bigint" ? result.result : 0n;
-    });
-  } catch {
-    await Promise.all(
-      normalizedAddresses.map(async address => {
-        try {
-          const result = await publicClient.readContract({
-            address: crepToken.address,
-            abi: crepToken.abi,
-            functionName: "balanceOf",
-            args: [address],
-          });
-          balances[address] = typeof result === "bigint" ? result : 0n;
-        } catch {
-          balances[address] = 0n;
-        }
-      }),
-    );
+      results.forEach((result, index) => {
+        const address = batch[index];
+        balances[address] = result.status === "success" && typeof result.result === "bigint" ? result.result : 0n;
+      });
+    } catch {
+      await Promise.all(
+        batch.map(async address => {
+          try {
+            const result = await publicClient.readContract({
+              address: crepToken.address,
+              abi: crepToken.abi,
+              functionName: "balanceOf",
+              args: [address],
+            });
+            balances[address] = typeof result === "bigint" ? result : 0n;
+          } catch {
+            balances[address] = 0n;
+          }
+        }),
+      );
+    }
   }
 
   return balances;

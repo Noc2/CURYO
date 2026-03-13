@@ -1,3 +1,4 @@
+import { getTwitterSyndicationTokens } from "@curyo/contracts";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { getTmdbApiKey } from "~~/lib/env/server";
 import { ResponseTooLargeError, readResponseJson, readResponseText } from "~~/utils/fetchBodyLimit";
@@ -13,6 +14,22 @@ const CACHE_OPTIONS = { next: { revalidate: 86400 } }; // 24h cache
 const MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB cap on external API responses
 const MAX_AUTHORS = 3; // Cap author lookups per book (limits amplification)
 const MAX_DESCRIPTION_LENGTH = 500;
+const TWITTER_SYNDICATION_FEATURES = [
+  "tfw_timeline_list:",
+  "tfw_follower_count_sunset:true",
+  "tfw_tweet_edit_backend:on",
+  "tfw_refsrc_session:on",
+  "tfw_fosnr_soft_interventions_enabled:on",
+  "tfw_show_birdwatch_pivots_enabled:on",
+  "tfw_show_business_verified_badge:on",
+  "tfw_duplicate_scribes_to_settings:on",
+  "tfw_use_profile_image_shape_enabled:on",
+  "tfw_show_blue_verified_badge:on",
+  "tfw_legacy_timeline_sunset:true",
+  "tfw_show_gov_verified_badge:on",
+  "tfw_show_business_affiliate_badge:on",
+  "tfw_tweet_edit_frontend:on",
+].join(";");
 
 /** Fetch JSON with a response-size guard to prevent memory abuse. */
 async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
@@ -291,15 +308,25 @@ async function resolveGitHub(repoSlug: string): Promise<EmbedResult> {
   };
 }
 
-function getSyndicationToken(id: string): string {
-  return ((Number(id) / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, "");
-}
-
 async function resolveTwitter(tweetId: string): Promise<EmbedResult> {
-  const token = getSyndicationToken(tweetId);
-  const data = await safeFetchJson(
-    `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en&token=${token}`,
-  );
+  let data: any = null;
+
+  for (const token of getTwitterSyndicationTokens(tweetId)) {
+    const url = new URL("https://cdn.syndication.twimg.com/tweet-result");
+    url.searchParams.set("id", tweetId);
+    url.searchParams.set("lang", "en");
+    url.searchParams.set("features", TWITTER_SYNDICATION_FEATURES);
+    url.searchParams.set("token", token);
+
+    data = await safeFetchJson(url.toString());
+    if (data?.__typename === "TweetTombstone") {
+      return { thumbnailUrl: null };
+    }
+    if (data?.user) {
+      break;
+    }
+  }
+
   if (!data?.user) return { thumbnailUrl: null };
 
   return {
