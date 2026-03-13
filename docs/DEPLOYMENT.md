@@ -130,9 +130,10 @@ Fund with CELO for gas (server-side operations).
 ```bash
 # packages/foundry/.env
 ALCHEMY_API_KEY=<your-alchemy-key>        # Optional, Celo has free public RPC
-ETHERSCAN_API_KEY=<not-used-for-celo>
-LOCALHOST_KEYSTORE_ACCOUNT=scaffold-eth-default
 ```
+
+`LOCALHOST_KEYSTORE_ACCOUNT` only affects localhost deploys. For Celo mainnet, use a dedicated non-default keystore
+via `--keystore deployer`.
 
 ### 2b. Run deployment
 
@@ -146,7 +147,7 @@ This will:
 3. Deploy all UUPS proxy contracts (ContentRegistry, RoundVotingEngine, RoundRewardDistributor, ProfileRegistry, FrontendRegistry) and non-upgradeable contracts (CategoryRegistry, VoterIdNFT, ParticipationPool, HumanFaucet)
 4. Wire cross-contract references
 5. Seed 12 content categories, each with a ranking-question template that includes `{title}` and `{rating}`
-6. Mint token allocations: 52M→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 10M→Treasury
+6. Mint token allocations: 51,899,900→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 100K→KeeperRewardPool, 10M→Treasury
 7. **Renounce deployer's temporary admin roles** — governance transfers fully to TimelockController
 8. **Automatically verify** that governance owns the expected roles and the deployer retained none
 
@@ -184,7 +185,16 @@ The indexer must be running **before** the frontend can display content. Deploy 
 
 ### 3a. Configure
 
-Update `ponder.config.ts` with the deployed contract addresses from Step 2d (they are already baked in from the deployment).
+The deploy step already refreshes `packages/ponder/.env.local` with the latest `PONDER_*_ADDRESS` and
+`PONDER_*_START_BLOCK` values for Celo. Use that file as the source of truth for production.
+
+For Railway, make sure the service has:
+- `PONDER_NETWORK=celo`
+- `PONDER_RPC_URL_42220=https://forno.celo.org` (or your paid RPC)
+- All contract address and start-block vars from `packages/ponder/.env.local`
+- `CORS_ORIGIN=https://<your-frontend-domain>`
+- `RATE_LIMIT_TRUSTED_IP_HEADERS=x-forwarded-for` (or the header Railway/your proxy overwrites)
+- `DATABASE_URL=<managed-postgres-url>`
 
 ### 3b. Deploy to Railway
 
@@ -194,17 +204,21 @@ cd packages/ponder
 railway service create curyo-ponder
 
 # Set environment variables
+railway variables set PONDER_NETWORK=celo
 railway variables set PONDER_RPC_URL_42220=https://forno.celo.org
+railway variables set CORS_ORIGIN=https://<your-frontend-domain>
+railway variables set RATE_LIMIT_TRUSTED_IP_HEADERS=x-forwarded-for
+railway variables set DATABASE_URL=<managed-postgres-url>
 
 # Deploy
 railway up
 ```
 
-Ponder uses PGlite for local storage. Attach a **Railway volume** to persist the indexed data across deploys:
-1. In the Railway dashboard, go to the Ponder service
-2. Click **+ New** → **Volume**
-3. Mount path: `/app/.ponder`
-4. This prevents re-indexing from scratch on every redeploy
+Then copy the generated `PONDER_*_ADDRESS` and `PONDER_*_START_BLOCK` variables from
+`packages/ponder/.env.local` into Railway.
+
+Use managed PostgreSQL in production. PGlite remains fine for local development, but the Ponder package treats it as
+dev-only because it is single-process and harder to back up or recover after corruption.
 
 Expose a public domain in the Railway dashboard — you'll need the URL for `NEXT_PUBLIC_PONDER_URL` in Vercel.
 
@@ -228,20 +242,25 @@ Create production env vars (on Vercel dashboard or `.env.production`):
 NEXT_PUBLIC_ALCHEMY_API_KEY=<alchemy-key>
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=<walletconnect-project-id>
 NEXT_PUBLIC_TARGET_NETWORKS=42220
-TMDB_API_KEY=<tmdb-api-key>
 NEXT_PUBLIC_PONDER_URL=https://<your-ponder-domain>
 NEXT_PUBLIC_FRONTEND_CODE=<your-frontend-address>   # Set after Step 5
 NEXT_PUBLIC_DEV_FAUCET=false
 
 # Server-side only
-NEXTAUTH_URL=https://<your-domain>
-NEXTAUTH_SECRET=<random-32-byte-hex>
+APP_URL=https://<your-domain>
 DATABASE_URL=<turso-database-url>                    # e.g., libsql://your-db.turso.io
 DATABASE_AUTH_TOKEN=<turso-auth-token>
+TMDB_API_KEY=<tmdb-api-key>
+RAWG_API_KEY=<rawg-api-key>
 KEYSTORE_ACCOUNT=server
 KEYSTORE_PASSWORD=<server-keystore-password>
 RATE_LIMIT_TRUSTED_IP_HEADERS=x-forwarded-for        # Or your platform's trusted client-IP header
 DEV_FAUCET_ENABLED=false
+
+# Optional: email notifications
+RESEND_API_KEY=<resend-api-key>
+RESEND_FROM_EMAIL=<verified-from-address>
+NOTIFICATION_DELIVERY_SECRET=<random-secret>
 ```
 
 ### 4b. Set up Turso database (production)
@@ -261,8 +280,9 @@ cd packages/nextjs
 DATABASE_URL=<turso-url> DATABASE_AUTH_TOKEN=<token> yarn db:push
 ```
 
-Before running `yarn db:push` against production, follow the migration rollout / rollback procedure in
-`docs/OPERATIONS.md`.
+Before running `yarn db:push` against production, take a fresh Turso backup/export, test the migration against a copy
+or staging database first, and keep the previous Vercel deployment available until the new schema has been exercised in
+production.
 
 ### 4c. Deploy to Vercel
 
@@ -430,6 +450,9 @@ railway variables set RPC_URL=https://forno.celo.org
 railway variables set CHAIN_ID=42220
 railway variables set VOTING_ENGINE_ADDRESS=<RoundVotingEngine-address>
 railway variables set CONTENT_REGISTRY_ADDRESS=<ContentRegistry-address>
+
+# Railway usually uses the raw key fallback because the container does not ship
+# with ~/.foundry/keystores by default.
 railway variables set KEEPER_PRIVATE_KEY=<keeper-private-key>
 railway variables set KEEPER_INTERVAL_MS=30000
 railway variables set METRICS_ENABLED=true
@@ -465,8 +488,8 @@ Run 2+ Keeper instances with different wallets only if you are intentionally ope
 - Keep the standby healthy and funded, but only promote it when the primary is unhealthy.
 - If you do run more than one active writer, use `KEEPER_STARTUP_JITTER_MS` and accept that duplicate transactions can
   still race and waste gas because there is no nonce coordinator.
-
-`docs/OPERATIONS.md` documents this trade-off and the manual failover procedure.
+- Document a manual failover procedure up front: disable the primary, confirm the standby has gas and a healthy
+  `/health` endpoint, then promote only one instance back to active transaction sending.
 
 ---
 
@@ -496,6 +519,11 @@ yarn status
 RPC_URL=https://forno.celo.org
 CHAIN_ID=42220
 PONDER_URL=https://<your-ponder-domain>
+CREP_TOKEN_ADDRESS=<CuryoReputation-address>
+CONTENT_REGISTRY_ADDRESS=<ContentRegistry-address>
+VOTING_ENGINE_ADDRESS=<RoundVotingEngine-address>
+VOTER_ID_NFT_ADDRESS=<VoterIdNFT-address>
+CATEGORY_REGISTRY_ADDRESS=<CategoryRegistry-address>
 
 # --- Submission Bot Identity ---
 SUBMIT_KEYSTORE_ACCOUNT=submit-bot
@@ -519,6 +547,7 @@ TMDB_API_KEY=<tmdb-api-key>
 YOUTUBE_API_KEY=<youtube-api-key>
 TWITCH_CLIENT_ID=<twitch-client-id>
 TWITCH_CLIENT_SECRET=<twitch-client-secret>
+RAWG_API_KEY=<rawg-api-key>
 ```
 
 ### 8c. Submit initial content
@@ -574,8 +603,8 @@ security add-generic-password -s "submit-bot" -a "$USER" -w "<password>"
 security add-generic-password -s "rate-bot" -a "$USER" -w "<password>"
 
 # Add to crontab (crontab -e)
-0 */6 * * * cd ~/source/curyo/packages/bot && SUBMIT_KEYSTORE_ACCOUNT=submit-bot SUBMIT_KEYSTORE_PASSWORD=$(security find-generic-password -s "submit-bot" -w) yarn submit >> /tmp/curyo-submit.log 2>&1
-0 * * * *   cd ~/source/curyo/packages/bot && RATE_KEYSTORE_ACCOUNT=rate-bot RATE_KEYSTORE_PASSWORD=$(security find-generic-password -s "rate-bot" -w) yarn vote >> /tmp/curyo-vote.log 2>&1
+0 */6 * * * cd ~/source/curyo-release/packages/bot && SUBMIT_KEYSTORE_ACCOUNT=submit-bot SUBMIT_KEYSTORE_PASSWORD=$(security find-generic-password -s "submit-bot" -w) yarn submit >> /tmp/curyo-submit.log 2>&1
+0 * * * *   cd ~/source/curyo-release/packages/bot && RATE_KEYSTORE_ACCOUNT=rate-bot RATE_KEYSTORE_PASSWORD=$(security find-generic-password -s "rate-bot" -w) yarn vote >> /tmp/curyo-vote.log 2>&1
 ```
 
 **Option B: Railway (acceptable with delegation)**
@@ -589,8 +618,14 @@ railway service create curyo-bot
 railway variables set RPC_URL=https://forno.celo.org
 railway variables set CHAIN_ID=42220
 railway variables set PONDER_URL=https://<ponder>.up.railway.app
+railway variables set CREP_TOKEN_ADDRESS=<CuryoReputation-address>
+railway variables set CONTENT_REGISTRY_ADDRESS=<ContentRegistry-address>
+railway variables set VOTING_ENGINE_ADDRESS=<RoundVotingEngine-address>
+railway variables set VOTER_ID_NFT_ADDRESS=<VoterIdNFT-address>
+railway variables set CATEGORY_REGISTRY_ADDRESS=<CategoryRegistry-address>
 railway variables set TMDB_API_KEY=<tmdb-api-key>
 railway variables set YOUTUBE_API_KEY=<youtube-api-key>
+railway variables set RAWG_API_KEY=<rawg-api-key>
 railway variables set SUBMIT_PRIVATE_KEY=<submit-bot-private-key>
 railway variables set RATE_PRIVATE_KEY=<rate-bot-private-key>
 ```
@@ -657,7 +692,7 @@ These parameters can be updated via governance proposal (2-day timelock delay). 
 - [ ] Watch for unusual governance proposals (TimelockController events)
 - [ ] Monitor for unexpected transactions from bot or cold wallet addresses (Blockscout watch)
 
-Use `docs/OPERATIONS.md` as the source of truth for concrete alert thresholds and incident response steps.
+Treat the thresholds in this section as the baseline runbook and attach your pager/incident workflow directly to them.
 
 #### Protocol pool monitoring
 
@@ -736,7 +771,7 @@ This keeps the approval scope minimal and avoids leaving a large standing allowa
 | Submit-bot keystore | On compromise | Create new delegate wallet, update delegation from Cold Wallet A, fund, update env |
 | Rate-bot keystore | On compromise | Create new delegate wallet, update delegation from Cold Wallet B, fund, update env |
 | Server keystore | On compromise | Create new wallet, fund, update Vercel env |
-| NEXTAUTH_SECRET | Quarterly | Regenerate, update Vercel env |
+| NOTIFICATION_DELIVERY_SECRET (if enabled) | Quarterly | Regenerate, update Vercel env and cron caller |
 | DATABASE_AUTH_TOKEN | Quarterly | `turso db tokens create`, update Vercel env |
 | ALCHEMY_API_KEY | On compromise | Rotate in Alchemy dashboard |
 
