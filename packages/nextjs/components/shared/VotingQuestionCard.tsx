@@ -147,7 +147,7 @@ export function VotingQuestionCard({
               {questionDisplay.beforeTitle ? (
                 <span className="block">{renderQuestionSegment(questionDisplay.beforeTitle)}</span>
               ) : null}
-              <span className="mt-1 block text-[1.18em] leading-[1.15]">{questionDisplay.title}</span>
+              <span className="mt-1 block">{questionDisplay.title}</span>
               {questionDisplay.afterTitle ? (
                 <span className="mt-1 block">{renderQuestionSegment(questionDisplay.afterTitle)}</span>
               ) : null}
