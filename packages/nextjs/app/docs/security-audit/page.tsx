@@ -1004,9 +1004,8 @@ const SecurityAudit: NextPage = () => {
               <td>I-04</td>
               <td>
                 <strong>Unbounded view function arrays.</strong> Historical full-array enumeration on{" "}
-                <code>ProfileRegistry</code> has been removed, and scalable callers should use paginated enumeration.
-                <code>CategoryRegistry.getApprovedCategoryIds()</code> still has a paginated counterpart for RPC-safe
-                access patterns.
+                <code>ProfileRegistry</code> and <code>CategoryRegistry</code> has been removed, and scalable callers
+                should use paginated enumeration.
               </td>
               <td className="font-mono text-[#EF476F]">ProfileRegistry, CategoryRegistry</td>
               <td>

@@ -196,19 +196,6 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "approvedCategoryCount",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "cancelUnlinkedCategory",
     "inputs": [
       {
@@ -253,19 +240,6 @@ export const CategoryRegistryAbi = [
         "name": "proposalId",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getApprovedCategoryIds",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256[]",
-        "internalType": "uint256[]"
       }
     ],
     "stateMutability": "view"

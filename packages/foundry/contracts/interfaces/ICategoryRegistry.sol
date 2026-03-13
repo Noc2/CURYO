@@ -43,8 +43,11 @@ interface ICategoryRegistry {
     /// @notice Get category by domain
     function getCategoryByDomain(string calldata domain) external view returns (Category memory);
 
-    /// @notice Get all approved category IDs
-    function getApprovedCategoryIds() external view returns (uint256[] memory);
+    /// @notice Get approved category IDs with pagination
+    function getApprovedCategoryIdsPaginated(uint256 offset, uint256 limit)
+        external
+        view
+        returns (uint256[] memory categoryIds, uint256 total);
 
     /// @notice Check if a domain is already registered
     function isDomainRegistered(string calldata domain) external view returns (bool);

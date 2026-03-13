@@ -325,11 +325,6 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     }
 
     /// @inheritdoc ICategoryRegistry
-    function getApprovedCategoryIds() external view override returns (uint256[] memory) {
-        return _approvedCategoryIds;
-    }
-
-    /// @notice Get approved category IDs with pagination
     /// @param offset The starting index
     /// @param limit The maximum number of IDs to return
     /// @return categoryIds The paginated array of approved category IDs
@@ -358,11 +353,6 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     function isDomainRegistered(string calldata domain) external view override returns (bool) {
         bytes32 domainHash = keccak256(abi.encodePacked(_normalizeDomain(domain)));
         return _domainToCategory[domainHash] != 0;
-    }
-
-    /// @notice Get the number of approved categories
-    function approvedCategoryCount() external view returns (uint256) {
-        return _approvedCategoryIds.length;
     }
 
     /// @notice Compute the governor proposal ID for approving a category with the supplied description hash.

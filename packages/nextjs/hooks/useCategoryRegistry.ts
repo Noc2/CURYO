@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { useReadContracts } from "wagmi";
-import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { CategoryRegistryAbi } from "@curyo/contracts/abis";
+import { useReadContract, useReadContracts } from "wagmi";
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { ponderApi } from "~~/services/ponder/client";
 
@@ -24,26 +25,47 @@ export interface Category {
  * Uses Ponder API when available, falls back to on-chain multicall.
  */
 export function useCategoryRegistry() {
-  // --- RPC fallback: fetch from contract ---
+  const { data: registryInfo } = useDeployedContractInfo({ contractName: "CategoryRegistry" });
+
   const {
-    data: approvedIds,
-    isLoading: idsLoading,
-    refetch,
-  } = useScaffoldReadContract({
-    contractName: "CategoryRegistry",
-    functionName: "getApprovedCategoryIds",
+    data: approvedIdsMeta,
+    isLoading: metaLoading,
+    refetch: refetchMeta,
+  } = useReadContract({
+    address: registryInfo?.address,
+    abi: CategoryRegistryAbi,
+    functionName: "getApprovedCategoryIdsPaginated",
+    args: [0n, 0n],
     query: {
+      enabled: Boolean(registryInfo?.address),
       refetchInterval: 300_000,
     },
   });
 
-  const { data: registryInfo } = useDeployedContractInfo({ contractName: "CategoryRegistry" });
+  const approvedCategoryTotal = (approvedIdsMeta?.[1] as bigint | undefined) ?? 0n;
+
+  const {
+    data: approvedIdsPage,
+    isLoading: idsPageLoading,
+    refetch: refetchIds,
+  } = useReadContract({
+    address: registryInfo?.address,
+    abi: CategoryRegistryAbi,
+    functionName: "getApprovedCategoryIdsPaginated",
+    args: [0n, approvedCategoryTotal],
+    query: {
+      enabled: Boolean(registryInfo?.address) && approvedCategoryTotal > 0n,
+      refetchInterval: 300_000,
+    },
+  });
+
+  const approvedIds = useMemo(() => (approvedIdsPage?.[0] as bigint[] | undefined) ?? [], [approvedIdsPage]);
 
   const categoryCalls = useMemo(() => {
-    if (!registryInfo || !approvedIds || (approvedIds as bigint[]).length === 0) return [];
-    return (approvedIds as bigint[]).map(id => ({
+    if (!registryInfo || approvedIds.length === 0) return [];
+    return approvedIds.map(id => ({
       address: registryInfo.address,
-      abi: registryInfo.abi,
+      abi: CategoryRegistryAbi,
       functionName: "getCategory" as const,
       args: [id],
     }));
@@ -172,8 +194,11 @@ export function useCategoryRegistry() {
     categories,
     domainToCategoryId,
     categoryNameToId,
-    isLoading: ponderLoading && (idsLoading || categoriesLoading),
-    refetch,
+    isLoading: ponderLoading && (metaLoading || idsPageLoading || categoriesLoading),
+    refetch: async () => {
+      await refetchMeta();
+      await refetchIds();
+    },
   };
 }
 

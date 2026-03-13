@@ -418,7 +418,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         if (!isLocalDev) {
             console.log("CuryoGovernor:", governorAddr);
         }
-        console.log("Seeded categories:", categoryRegistry.approvedCategoryCount());
+        (, uint256 seededCategoryCount) = categoryRegistry.getApprovedCategoryIdsPaginated(0, 0);
+        console.log("Seeded categories:", seededCategoryCount);
         console.log("Local dev:", isLocalDev);
     }
 

@@ -43,7 +43,8 @@ contract DeployCategoryRegistry is Script {
         // Output deployment summary
         console.log("\n=== CategoryRegistry Deployment Summary ===");
         console.log("CategoryRegistry:", address(categoryRegistry));
-        console.log("Seeded categories:", categoryRegistry.approvedCategoryCount());
+        (, uint256 seededCount) = categoryRegistry.getApprovedCategoryIdsPaginated(0, 0);
+        console.log("Seeded categories:", seededCount);
         console.log("\nNext steps:");
         console.log("1. Delegate voting power to CategoryRegistry for proposal creation");
         console.log("2. Update frontend to use CategoryRegistry");

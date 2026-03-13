@@ -637,7 +637,7 @@ contract CategoryRegistryTest is Test {
         assertEq(cat.name, "YouTube");
     }
 
-    function test_GetApprovedCategoryIds() public {
+    function test_GetApprovedCategoryIdsPaginatedWholeList() public {
         string[] memory subcategories = new string[](1);
         subcategories[0] = "General";
 
@@ -646,23 +646,26 @@ contract CategoryRegistryTest is Test {
         registry.addApprovedCategory("Twitch", "twitch.tv", subcategories, DEFAULT_TEMPLATE);
         vm.stopPrank();
 
-        uint256[] memory ids = registry.getApprovedCategoryIds();
+        (uint256[] memory ids, uint256 total) = registry.getApprovedCategoryIdsPaginated(0, 10);
+        assertEq(total, 2);
         assertEq(ids.length, 2);
         assertEq(ids[0], 1);
         assertEq(ids[1], 2);
     }
 
-    function test_ApprovedCategoryCount() public {
+    function test_GetApprovedCategoryIdsPaginatedTotal() public {
         string[] memory subcategories = new string[](1);
         subcategories[0] = "General";
 
-        assertEq(registry.approvedCategoryCount(), 0);
+        (, uint256 totalBefore) = registry.getApprovedCategoryIdsPaginated(0, 0);
+        assertEq(totalBefore, 0);
 
         vm.startPrank(admin);
         registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
         vm.stopPrank();
 
-        assertEq(registry.approvedCategoryCount(), 1);
+        (, uint256 totalAfter) = registry.getApprovedCategoryIdsPaginated(0, 0);
+        assertEq(totalAfter, 1);
     }
 
     function test_GetSubcategories() public {

@@ -99,8 +99,8 @@ contract MockCategoryRegistry is ICategoryRegistry {
         return _category(categoryId);
     }
 
-    function getApprovedCategoryIds() external pure override returns (uint256[] memory) {
-        return new uint256[](0);
+    function getApprovedCategoryIdsPaginated(uint256, uint256) external pure override returns (uint256[] memory, uint256) {
+        return (new uint256[](0), 0);
     }
 
     function isDomainRegistered(string calldata domain) external view override returns (bool) {
