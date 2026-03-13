@@ -86,6 +86,15 @@ contract ContentRegistry is
     /// @notice Participation pool for rewarding submitters
     IParticipationPool public participationPool;
 
+    /// @notice Snapshotted submitter participation reward entitlement per content.
+    mapping(uint256 => uint256) public submitterParticipationRewardOwed;
+
+    /// @notice Amount of the snapshotted submitter participation reward already paid.
+    mapping(uint256 => uint256) public submitterParticipationRewardPaid;
+
+    /// @notice Participation pool snapshot used to pay submitter participation rewards.
+    mapping(uint256 => address) public submitterParticipationRewardPool;
+
     /// @notice Canonical submission key per content ID (for releasing/reserving uniqueness on status changes)
     mapping(uint256 => bytes32) internal contentSubmissionKey;
 
@@ -101,7 +110,7 @@ contract ContentRegistry is
     SubmissionCanonicalizer internal immutable SUBMISSION_CANONICALIZER;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[47] private __gap;
+    uint256[44] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -119,6 +128,10 @@ contract ContentRegistry is
     event ContentRevived(uint256 indexed contentId, address indexed reviver);
     event SubmitterStakeReturned(uint256 indexed contentId, uint256 amount);
     event SubmitterStakeSlashed(uint256 indexed contentId, uint256 slashedAmount);
+    event SubmitterParticipationRewardAccrued(
+        uint256 indexed contentId, address indexed submitter, address indexed rewardPool, uint256 amount
+    );
+    event SubmitterParticipationRewardClaimed(uint256 indexed contentId, address indexed submitter, uint256 amount);
     event SubmitterIdentityBackfilled(uint256 indexed contentId, address indexed submitterIdentity);
     event RatingUpdated(uint256 indexed contentId, uint256 oldRating, uint256 newRating);
     event VoterIdNFTUpdated(address voterIdNFT);
@@ -455,19 +468,18 @@ contract ContentRegistry is
         c.submitterStakeReturned = true;
         crepToken.safeTransfer(c.submitter, c.submitterStake);
 
-        // Submission participation rewards are only earned once the stake resolves on the healthy path.
-        if (address(participationPool) != address(0)) {
-            if (useSnapshottedReward) {
-                uint256 rewardAmount = c.submitterStake * rewardRateBps / 10000;
-                if (rewardAmount > 0) {
-                    try participationPool.distributeReward(c.submitter, rewardAmount) { } catch { }
-                }
-            } else {
-                try participationPool.rewardSubmission(c.submitter, c.submitterStake) { } catch { }
-            }
-        }
+        _accrueSubmitterParticipationReward(contentId, c, rewardRateBps, useSnapshottedReward);
 
         emit SubmitterStakeReturned(contentId, c.submitterStake);
+    }
+
+    /// @notice Claim a snapshotted submitter participation reward after the healthy submitter path resolves.
+    /// @dev Uses the participation pool snapshot captured when the submitter stake was returned.
+    function claimSubmitterParticipationReward(uint256 contentId) external nonReentrant returns (uint256 paidAmount) {
+        Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
+        require(msg.sender == c.submitter, "Not submitter");
+        (paidAmount,) = _claimSubmitterParticipationReward(contentId, c);
     }
 
     function _resolvePendingSubmitterStake(uint256 contentId, Content storage c) internal {
@@ -484,6 +496,59 @@ contract ContentRegistry is
         c.submitterStakeReturned = true;
         crepToken.safeTransfer(c.submitter, c.submitterStake);
         emit SubmitterStakeReturned(contentId, c.submitterStake);
+    }
+
+    function _accrueSubmitterParticipationReward(
+        uint256 contentId,
+        Content storage c,
+        uint256 rewardRateBps,
+        bool useSnapshottedReward
+    ) internal {
+        if (address(participationPool) == address(0)) return;
+
+        uint256 rewardAmount;
+        if (useSnapshottedReward) {
+            rewardAmount = c.submitterStake * rewardRateBps / 10000;
+        } else {
+            try participationPool.getCurrentRateBps() returns (uint256 liveRateBps) {
+                rewardAmount = c.submitterStake * liveRateBps / 10000;
+            } catch { }
+        }
+
+        if (rewardAmount == 0) return;
+
+        address rewardPool = address(participationPool);
+        submitterParticipationRewardPool[contentId] = rewardPool;
+        submitterParticipationRewardOwed[contentId] = rewardAmount;
+        emit SubmitterParticipationRewardAccrued(contentId, c.submitter, rewardPool, rewardAmount);
+
+        try participationPool.distributeReward(c.submitter, rewardAmount) returns (uint256 paidAmount) {
+            if (paidAmount > 0) {
+                submitterParticipationRewardPaid[contentId] = paidAmount;
+                emit SubmitterParticipationRewardClaimed(contentId, c.submitter, paidAmount);
+            }
+        } catch { }
+    }
+
+    function _claimSubmitterParticipationReward(uint256 contentId, Content storage c)
+        internal
+        returns (uint256 paidAmount, uint256 remainingReward)
+    {
+        uint256 totalReward = submitterParticipationRewardOwed[contentId];
+        require(totalReward > 0, "No reward");
+
+        uint256 alreadyPaid = submitterParticipationRewardPaid[contentId];
+        require(alreadyPaid < totalReward, "Already claimed");
+
+        address rewardPool = submitterParticipationRewardPool[contentId];
+        require(rewardPool != address(0), "No reward pool");
+
+        remainingReward = totalReward - alreadyPaid;
+        paidAmount = IParticipationPool(rewardPool).distributeReward(c.submitter, remainingReward);
+        require(paidAmount > 0, "Pool depleted");
+
+        submitterParticipationRewardPaid[contentId] = alreadyPaid + paidAmount;
+        emit SubmitterParticipationRewardClaimed(contentId, c.submitter, paidAmount);
     }
 
     /// @notice Called by VotingEngine to slash submitter stake after milestone 0 resolves unfavorably.

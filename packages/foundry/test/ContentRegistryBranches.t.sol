@@ -252,6 +252,19 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         commitKey = keccak256(abi.encodePacked(voter, commitHash));
     }
 
+    function _settleHealthyRound(uint256 contentId) internal returns (uint256 roundId) {
+        (bytes32 ck1, bytes32 salt1) = _commit(voter1, contentId, true);
+        (bytes32 ck2, bytes32 salt2) = _commit(voter2, contentId, true);
+        (bytes32 ck3, bytes32 salt3) = _commit(voter3, contentId, false);
+
+        roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
+        vm.warp(block.timestamp + 1 hours + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck1, true, salt1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck2, true, salt2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, ck3, false, salt3);
+        votingEngine.settleRound(contentId, roundId);
+    }
+
     // =========================================================================
     // submitContent BRANCHES
     // =========================================================================
@@ -424,6 +437,65 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 balAfter = crepToken.balanceOf(submitter);
         assertEq(balAfter, balBefore, "dormancy fallback should return the locked stake without a submission reward");
         assertTrue(registry.isSubmitterStakeReturned(1), "stake should resolve after the dormancy period");
+    }
+
+    function test_HealthyResolution_SnapshotsAndAllowsRetryableSubmitterParticipationReward() public {
+        vm.startPrank(owner);
+        ParticipationPool tinyPool = new ParticipationPool(address(crepToken), owner);
+        tinyPool.setAuthorizedCaller(address(registry), true);
+        crepToken.approve(address(tinyPool), 4e6);
+        tinyPool.depositPool(4e6);
+        registry.setParticipationPool(address(tinyPool));
+        votingEngine.setParticipationPool(address(tinyPool));
+        vm.stopPrank();
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/retryable-submitter-reward", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 4 days + 1);
+        _settleHealthyRound(1);
+
+        assertTrue(registry.isSubmitterStakeReturned(1), "healthy settlement should return stake");
+        assertEq(registry.submitterParticipationRewardPool(1), address(tinyPool), "reward pool should be snapshotted");
+        assertEq(registry.submitterParticipationRewardOwed(1), 9e6, "reward should be snapshotted at the healthy rate");
+        assertEq(registry.submitterParticipationRewardPaid(1), 4e6, "initial best-effort payout should be tracked");
+
+        vm.startPrank(owner);
+        crepToken.approve(address(tinyPool), 5e6);
+        tinyPool.depositPool(5e6);
+        vm.stopPrank();
+
+        uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
+        vm.prank(submitter);
+        uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
+        assertEq(paidAmount, 5e6, "claim should pay the remaining reward once the pool is refilled");
+        assertEq(crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim, 5e6, "submitter should receive the remaining reward");
+        assertEq(registry.submitterParticipationRewardPaid(1), 9e6, "all snapshotted rewards should be accounted for");
+    }
+
+    function test_ClaimSubmitterParticipationReward_OnlySubmitter() public {
+        vm.startPrank(owner);
+        ParticipationPool tinyPool = new ParticipationPool(address(crepToken), owner);
+        tinyPool.setAuthorizedCaller(address(registry), true);
+        crepToken.approve(address(tinyPool), 4e6);
+        tinyPool.depositPool(4e6);
+        registry.setParticipationPool(address(tinyPool));
+        votingEngine.setParticipationPool(address(tinyPool));
+        vm.stopPrank();
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/submitter-only", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        vm.warp(T0 + 4 days + 1);
+        _settleHealthyRound(1);
+
+        vm.prank(voter1);
+        vm.expectRevert("Not submitter");
+        registry.claimSubmitterParticipationReward(1);
     }
 
     function test_ResolveSubmitterStake_NoSettledRound_LowRatingSlashesAfterDormancyPeriod() public {
