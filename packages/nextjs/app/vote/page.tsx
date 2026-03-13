@@ -114,8 +114,9 @@ const HomeInner = () => {
     watchedContentIds,
     isLoading: watchedLoading,
     toggleWatch,
+    requestReadAccess: requestWatchReadAccess,
     isPending: isWatchPending,
-  } = useWatchedContent(address, { autoRead: true });
+  } = useWatchedContent(address, { autoRead: false });
   const {
     followedItems,
     followedWallets,
@@ -852,6 +853,25 @@ const HomeInner = () => {
 
   const handleScopeChange = useCallback(
     async (nextScope: ScopeOption) => {
+      if (nextScope === "watched") {
+        const result = await requestWatchReadAccess();
+        if (!result.ok) {
+          if (result.reason === "not_connected") {
+            notification.info("Connect your wallet to view your watchlist.");
+            openConnectModal?.();
+            return;
+          }
+
+          if (result.reason !== "rejected") {
+            notification.error(result.error || "Failed to unlock your watchlist");
+          }
+          return;
+        }
+
+        setScope("watched");
+        return;
+      }
+
       if (nextScope !== "followed_curators") {
         setScope(nextScope);
         return;
@@ -873,7 +893,7 @@ const HomeInner = () => {
 
       setScope("followed_curators");
     },
-    [openConnectModal, requestFollowReadAccess],
+    [openConnectModal, requestFollowReadAccess, requestWatchReadAccess],
   );
 
   // Count broken URLs for the filter pill

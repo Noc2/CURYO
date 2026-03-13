@@ -5,6 +5,26 @@ import { waitForFeedLoaded } from "../helpers/wait-helpers";
 import { expect, test } from "@playwright/test";
 
 test.describe("Voting flow — 3-voter threshold", () => {
+  test("vote page does not auto-request watchlist signatures on load", async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    let watchlistChallengeRequests = 0;
+
+    page.on("request", request => {
+      if (request.method() === "POST" && request.url().includes("/api/watchlist/content/challenge")) {
+        watchlistChallengeRequests += 1;
+      }
+    });
+
+    await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
+    await page.goto("/vote");
+    await waitForFeedLoaded(page);
+    await page.waitForTimeout(1_000);
+
+    expect(watchlistChallengeRequests).toBe(0);
+    await context.close();
+  });
+
   test("vote buttons visible on non-own content", async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();

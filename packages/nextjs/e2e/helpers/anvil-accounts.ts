@@ -10,7 +10,7 @@
  *
  * Content seeded by `SeedContent.sh`:
  *   #1 = Account #2 (YouTube/Ethereum)           [cat 1: YouTube]
- *   #2 = Account #3 (Twitch)                     [cat 2: Twitch]
+ *   #2 = Account #3 (YouTube/API Demo)           [cat 1: YouTube]
  *   #3 = Account #4 (YouTube/Neural Networks)     [cat 1: YouTube]
  *   #4 = Account #5 (Scryfall/Black Lotus)        [cat 3: MTG]
  *   #5 = Account #6 (TMDB/Godfather)              [cat 4: Movies]

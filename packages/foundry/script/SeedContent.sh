@@ -66,7 +66,7 @@ KEYS=(
 # CategoryIds: 1=YouTube, 2=Twitch, 3=MTG, 4=Movies (TMDB), 5=People (Wikipedia), 6=Games (RAWG), 7=Books (Open Library), 8=AI (HuggingFace), 9=Crypto Tokens (CoinGecko), 10=Tweets (X), 11=GitHub Repos, 12=Spotify Podcasts
 URLS=(
   "https://www.youtube.com/watch?v=rUCAdMnb1Oc"
-  "https://www.twitch.tv/videos/2aborhwf"
+  "https://www.youtube.com/watch?v=M7lc1UVf-VE"
   "https://www.youtube.com/watch?v=aircAruvnKk"
   "https://scryfall.com/card/lea/232/black-lotus"
   "https://www.themoviedb.org/movie/238-the-godfather"
@@ -85,7 +85,7 @@ URLS=(
 
 TITLES=(
   "Ethereum in Practice"
-  "Twitch Gaming Highlights"
+  "YouTube Player API Demo"
   "Neural Networks, Visualized"
   "Black Lotus"
   "The Godfather"
@@ -104,7 +104,7 @@ TITLES=(
 
 DESCRIPTIONS=(
   "Learn how Ethereum works under the hood — from transactions to the EVM."
-  "Gaming highlights and community moments from popular streamers."
+  "Official demo video used for testing YouTube embeds and player integrations."
   "A visual introduction to neural networks and deep learning fundamentals."
   "The most iconic and valuable card in Magic history — the legendary Black Lotus."
   "Francis Ford Coppola's masterpiece — widely considered one of the greatest films ever made."
@@ -123,7 +123,7 @@ DESCRIPTIONS=(
 
 TAGS=(
   "Technology,Education"
-  "Gaming,Entertainment"
+  "Technology,Testing,Video"
   "Science,Education,Technology"
   "Artifacts,Commanders"
   "Drama,Crime"
@@ -143,7 +143,7 @@ TAGS=(
 # CategoryIds mapping to URLs (1=YouTube, 2=Twitch, 3=MTG, 4=Movies, 5=People, 6=Games, 7=Books, 8=AI, 9=Crypto, 10=Tweets, 11=GitHub, 12=Spotify)
 CATEGORY_IDS=(
   1   # YouTube
-  2   # Twitch
+  1   # YouTube
   1   # YouTube
   3   # MTG (Scryfall)
   4   # Movies (TMDB)
@@ -164,8 +164,10 @@ echo "=== Seeding example content from multiple platforms ==="
 echo "(Test accounts were pre-funded with cREP during deployment)"
 echo ""
 
+TOTAL_ITEMS="${#URLS[@]}"
+
 # Submit content from accounts 2-10 (some reused for later categories)
-for i in {0..15}; do
+for ((i = 0; i < TOTAL_ITEMS; i++)); do
   KEY="${KEYS[$i]}"
   URL="${URLS[$i]}"
   TITLE="${TITLES[$i]}"
@@ -174,7 +176,7 @@ for i in {0..15}; do
   CATEGORY_ID="${CATEGORY_IDS[$i]}"
 
   ADDR=$(cast wallet address "$KEY")
-  echo "[$((i+1))/15] Account: $ADDR"
+  echo "[$((i+1))/$TOTAL_ITEMS] Account: $ADDR"
 
   # Ensure account has ETH for gas (Anvil only pre-funds first 10 accounts)
   ETH_BAL=$(cast balance "$ADDR" --rpc-url "$RPC" 2>/dev/null || echo "0")
@@ -194,7 +196,7 @@ for i in {0..15}; do
   echo ""
 done
 
-echo "=== Seed complete: 16 content items submitted ==="
+echo "=== Seed complete: $TOTAL_ITEMS content items submitted ==="
 echo ""
 
 # --- Voting Section ---
