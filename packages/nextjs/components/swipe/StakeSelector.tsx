@@ -9,12 +9,14 @@ import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
+import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
 
 interface StakeSelectorProps {
   isOpen: boolean;
   isUp: boolean;
   contentId: bigint;
   categoryId?: bigint;
+  cooldownSecondsRemaining?: number;
   onConfirm: (stakeAmount: number) => void;
   onCancel: () => void;
 }
@@ -24,7 +26,15 @@ const PRESET_AMOUNTS = [1, 5, 25, 50, 100];
 /**
  * Bottom-sheet modal to select stake amount before committing a vote.
  */
-export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, onCancel }: StakeSelectorProps) {
+export function StakeSelector({
+  isOpen,
+  isUp,
+  contentId,
+  categoryId,
+  cooldownSecondsRemaining = 0,
+  onConfirm,
+  onCancel,
+}: StakeSelectorProps) {
   const contentLabel = useContentLabel(categoryId);
   const [amount, setAmount] = useState(5);
   const { address } = useAccount();
@@ -71,6 +81,8 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
   const maxStake = Math.min(maxByBalance, maxByCapacity);
   const sliderMax = Math.max(1, maxStake);
   const isCapacityLimited = maxByCapacity < maxByBalance;
+  const cooldownActive = cooldownSecondsRemaining > 0;
+  const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
 
   return (
     <AnimatePresence>
@@ -235,12 +247,17 @@ export function StakeSelector({ isOpen, isUp, contentId, categoryId, onConfirm, 
               <button
                 onClick={() => onConfirm(amount)}
                 className={`btn flex-1 text-white ${isUp ? "bg-success hover:bg-success/90" : "bg-error hover:bg-error/90"}`}
-                disabled={!hasVoterId || amount < 1 || amount > maxStake || maxStake < 1}
+                disabled={!hasVoterId || cooldownActive || amount < 1 || amount > maxStake || maxStake < 1}
               >
                 Stake {amount} {symbol}
               </button>
             </div>
 
+            {cooldownActive && (
+              <p className="text-center text-base text-warning mt-3">
+                You already voted on this content recently. Try again in {cooldownLabel}.
+              </p>
+            )}
             {!hasVoterId && (
               <p className="text-center text-base text-warning mt-3">
                 Voter ID required.{" "}

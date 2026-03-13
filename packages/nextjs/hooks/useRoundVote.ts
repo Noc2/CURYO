@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { getRecentUserVotesQueryKey } from "~~/hooks/useRecentUserVotes";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
@@ -15,7 +16,9 @@ import {
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
 import { buildCommitVoteParams } from "~~/lib/contracts/roundVotingEngine";
+import { VOTE_COOLDOWN_SECONDS } from "~~/lib/vote/cooldown";
 import scaffoldConfig from "~~/scaffold.config";
+import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
 
 interface RoundVoteParams {
   contentId: bigint;
@@ -23,6 +26,31 @@ interface RoundVoteParams {
   stakeAmount: number; // In whole tokens (e.g., 5 = 5 cREP)
   frontendCode?: `0x${string}`; // Optional frontend operator address for fee distribution
   submitter?: string; // Content submitter address (for self-vote prevention)
+}
+
+function normalizeRoundVoteError(message: string) {
+  if (message.includes("CooldownActive")) {
+    return `You already voted on this content within the last ${Math.round(VOTE_COOLDOWN_SECONDS / 3600)} hours. Try again after the cooldown ends.`;
+  }
+  if (message.includes("AlreadyCommitted")) {
+    return "You already have a vote committed on this content in the current round.";
+  }
+  if (message.includes("MaxVotersReached")) {
+    return "This round is full. Wait for the next round to vote again.";
+  }
+  if (message.includes("SelfVote")) {
+    return "You cannot vote on your own content.";
+  }
+  if (message.includes("ContentNotActive")) {
+    return "This content is no longer active for voting.";
+  }
+  if (message.includes("RoundNotAccepting") || message.includes("RoundNotOpen")) {
+    return "This round is not accepting votes right now.";
+  }
+  if (message.includes("VoterIdRequired")) {
+    return "Voter ID required. Please verify your identity to vote.";
+  }
+  return message;
 }
 
 /**
@@ -35,6 +63,7 @@ interface RoundVoteParams {
  */
 export function useRoundVote() {
   const { address } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
   const { hasVoterId, tokenId } = useVoterIdNFT(address);
   const [isCommitting, setIsCommitting] = useState(false);
   const commitLock = useRef(false);
@@ -160,7 +189,8 @@ export function useRoundVote() {
       return true;
     } catch (e: any) {
       console.error("Round vote commit failed:", e);
-      setError(e?.shortMessage || e?.message || "Failed to submit vote");
+      const parsedError = getParsedErrorWithAllAbis(e, targetNetwork.id as any);
+      setError(normalizeRoundVoteError(parsedError || e?.shortMessage || e?.message || "Failed to submit vote"));
       return false;
     } finally {
       commitLock.current = false;

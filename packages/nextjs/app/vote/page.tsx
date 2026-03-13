@@ -21,14 +21,17 @@ import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useQueueNavigation } from "~~/hooks/useQueueNavigation";
+import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
+import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useUserPreferences } from "~~/hooks/useUserPreferences";
 import { useVoteFeedStage } from "~~/hooks/useVoteFeedStage";
 import { useVoteHistoryQuery } from "~~/hooks/useVoteHistoryQuery";
 import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
+import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
 import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
@@ -60,6 +63,10 @@ const FEED_PAGE_SIZE = 20;
 const FEED_PREFETCH_BUFFER = 20;
 const CARD_SWIPE_THRESHOLD = 96;
 const VOTE_CARD_TRANSITION_EASE = [0.22, 1, 0.36, 1] as const;
+
+function getVoteCooldownMessage(seconds: number) {
+  return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
+}
 
 const voteCardVariants: Variants = {
   enter: (direction: "previous" | "next") => ({
@@ -97,6 +104,7 @@ const HomeInner = () => {
   const contentParam = searchParams?.get("content");
 
   const { address } = useAccount();
+  const nowSeconds = useUnixTime(60_000);
   const { openConnectModal } = useConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
   const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
@@ -109,6 +117,7 @@ const HomeInner = () => {
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
   const { votes, isLoading: votesLoading } = useVoteHistoryQuery(address);
+  const { votes: recentVotes } = useRecentUserVotes(address);
   const {
     watchedItems,
     watchedContentIds,
@@ -224,6 +233,22 @@ const HomeInner = () => {
   const hasMoreFeed = scopedContentIds ? feed.length < totalContent : serverHasMoreFeed;
   const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
   const voteCounts = useCategoryPopularity(feed);
+  const voteCooldownByContentId = useMemo(() => {
+    const cooldowns = new Map<string, number>();
+
+    for (const vote of recentVotes) {
+      const remainingSeconds = getVoteCooldownRemainingSeconds(vote.committedAt, nowSeconds);
+      if (remainingSeconds <= 0) continue;
+
+      const key = vote.contentId.toString();
+      const previous = cooldowns.get(key) ?? 0;
+      if (remainingSeconds > previous) {
+        cooldowns.set(key, remainingSeconds);
+      }
+    }
+
+    return cooldowns;
+  }, [nowSeconds, recentVotes]);
 
   // Filter & sort state
   const votedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
@@ -510,6 +535,9 @@ const HomeInner = () => {
   }, [submitterProfiles, accuracyMap]);
 
   const canLoadMore = visibleCount < displayFeed.length || hasMoreFeed;
+  const primaryItemCooldownSeconds = primaryItem ? (voteCooldownByContentId.get(primaryItem.id.toString()) ?? 0) : 0;
+  const stakeModalCooldownSeconds =
+    stakeModal.contentId > 0n ? (voteCooldownByContentId.get(stakeModal.contentId.toString()) ?? 0) : 0;
 
   // Reset visible count when filters change
   useEffect(() => {
@@ -610,6 +638,13 @@ const HomeInner = () => {
 
   const handleConfirmStake = useCallback(
     async (stakeAmount: number) => {
+      const cooldownSeconds = voteCooldownByContentId.get(stakeModal.contentId.toString()) ?? 0;
+      if (cooldownSeconds > 0) {
+        notification.info(getVoteCooldownMessage(cooldownSeconds), { duration: 6000 });
+        setStakeModal(prev => ({ ...prev, isOpen: false }));
+        return;
+      }
+
       const item = displayFeed.find(i => i.id === stakeModal.contentId);
       const success = await commitVote({
         contentId: stakeModal.contentId,
@@ -626,7 +661,7 @@ const HomeInner = () => {
         }
       }
     },
-    [commitVote, displayFeed, isFirstVote, markVoteCompleted, stakeModal],
+    [commitVote, displayFeed, isFirstVote, markVoteCompleted, stakeModal, voteCooldownByContentId],
   );
 
   const handleCancelStake = () => {
@@ -1084,6 +1119,7 @@ const HomeInner = () => {
                       normalizedAddress={normalizedAddress}
                       isCommitting={isCommitting}
                       voteError={voteError}
+                      cooldownSecondsRemaining={primaryItemCooldownSeconds}
                       address={address}
                       onPrevious={handleSelectPrevious}
                       onNext={handleSelectNext}
@@ -1163,6 +1199,7 @@ const HomeInner = () => {
         isUp={stakeModal.isUp}
         contentId={stakeModal.contentId}
         categoryId={stakeModal.categoryId}
+        cooldownSecondsRemaining={stakeModalCooldownSeconds}
         onConfirm={handleConfirmStake}
         onCancel={handleCancelStake}
       />

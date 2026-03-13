@@ -64,6 +64,7 @@ interface FeedVoteCardProps {
   normalizedAddress?: string;
   isCommitting: boolean;
   voteError?: string | null;
+  cooldownSecondsRemaining?: number;
   address?: string;
   onPrevious?: () => void;
   onNext?: () => void;
@@ -84,6 +85,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   normalizedAddress,
   isCommitting,
   voteError,
+  cooldownSecondsRemaining = 0,
   address,
   onPrevious,
   onNext,
@@ -116,6 +118,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             isCommitting={isCommitting}
             address={address}
             error={voteError}
+            cooldownSecondsRemaining={cooldownSecondsRemaining}
             isOwnContent={item.isOwnContent}
             embedded
           />

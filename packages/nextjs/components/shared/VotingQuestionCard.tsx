@@ -11,6 +11,7 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { buildRankingQuestionDisplay } from "~~/lib/categories/rankingQuestionTemplate";
+import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
 import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 
 interface VotingQuestionCardProps {
@@ -21,6 +22,7 @@ interface VotingQuestionCardProps {
   isCommitting: boolean;
   address?: string;
   error?: string | null;
+  cooldownSecondsRemaining?: number;
   isOwnContent?: boolean;
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
@@ -56,6 +58,7 @@ export function VotingQuestionCard({
   isCommitting,
   address,
   error,
+  cooldownSecondsRemaining = 0,
   isOwnContent,
   embedded,
 }: VotingQuestionCardProps) {
@@ -91,6 +94,8 @@ export function VotingQuestionCard({
   const countdownActive = countdownTimeLeft > 0;
   const pendingRevealCount = Math.max(0, voteCount - revealedCount);
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
+  const cooldownActive = cooldownSecondsRemaining > 0;
+  const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
 
   // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
@@ -242,6 +247,14 @@ export function VotingQuestionCard({
                 data-tip="Content submitters cannot vote on their own submissions."
               >
                 <span className="text-base text-base-content/40">Your submission</span>
+              </div>
+            ) : cooldownActive ? (
+              <div
+                className="tooltip tooltip-bottom cursor-help flex items-center gap-2 px-4 py-2 rounded-full bg-base-content/5 border border-base-content/10"
+                data-tip={`You already voted on this content within the last 24 hours. Try again in ${cooldownLabel}.`}
+              >
+                <span className="text-base font-medium text-base-content/55">Cooldown</span>
+                <span className="text-base text-base-content/35">{cooldownLabel}</span>
               </div>
             ) : isRoundFull ? (
               <div
