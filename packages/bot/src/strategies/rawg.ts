@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractRawgSlug(url: string): string | null {
@@ -22,7 +23,7 @@ export const rawgStrategy: RatingStrategy = {
     if (!slug || !config.rawgApiKey) return null;
 
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://api.rawg.io/api/games/${slug}?key=${config.rawgApiKey}`,
       );
       if (!res.ok) return null;

@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractCoinGeckoSlug(url: string): string | null {
@@ -21,7 +22,7 @@ export const coinGeckoStrategy: RatingStrategy = {
     if (!coinId) return null;
 
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false`,
       );
       if (!res.ok) return null;

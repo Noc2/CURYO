@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractOpenLibraryWorksKey(url: string): string | null {
@@ -21,7 +22,7 @@ export const openLibraryStrategy: RatingStrategy = {
     if (!worksKey) return null;
 
     try {
-      const res = await fetch(`https://openlibrary.org${worksKey}/ratings.json`);
+      const res = await fetchWithTimeout(`https://openlibrary.org${worksKey}/ratings.json`);
       if (!res.ok) return null;
 
       const data = await res.json();

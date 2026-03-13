@@ -1,4 +1,5 @@
 import { config, log } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
 const CATEGORY_ID = 9n; // Movies
@@ -36,7 +37,7 @@ export const tmdbSource: ContentSource = {
     }
 
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://api.themoviedb.org/3/movie/popular?api_key=${config.tmdbApiKey}&page=1`,
       );
       if (!res.ok) {

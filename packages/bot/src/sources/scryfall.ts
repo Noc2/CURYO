@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
 const CATEGORY_ID = 10n; // MTG Cards
@@ -22,8 +23,9 @@ export const scryfallSource: ContentSource = {
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {
       // Fetch recently released notable cards
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://api.scryfall.com/cards/search?q=is:new+is:firstprint&order=released&dir=desc&unique=cards`,
+        15_000,
         { headers: { "User-Agent": "CuryoBot/1.0" } },
       );
       if (!res.ok) {

@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractYoutubeVideoId(url: string): string | null {
@@ -26,7 +27,7 @@ export const youtubeStrategy: RatingStrategy = {
 
     try {
       // Use the Return YouTube Dislike community API (free, no auth)
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://returnyoutubedislikeapi.com/votes?videoId=${videoId}`,
       );
       if (!res.ok) return null;

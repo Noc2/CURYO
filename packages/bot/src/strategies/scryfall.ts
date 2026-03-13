@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractScryfallCard(url: string): { set: string; number: string } | null {
@@ -21,8 +22,9 @@ export const scryfallStrategy: RatingStrategy = {
     if (!card) return null;
 
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://api.scryfall.com/cards/${card.set}/${card.number}`,
+        15_000,
         { headers: { "User-Agent": "CuryoBot/1.0" } },
       );
       if (!res.ok) return null;

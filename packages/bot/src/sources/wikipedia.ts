@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
 const CATEGORY_ID = 5n;
@@ -29,7 +30,7 @@ const OCCUPATION_MAP: Record<string, string> = {
 async function isPersonArticle(title: string): Promise<string | null> {
   // Use Wikidata to check if this is a person and get their occupation
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://www.wikidata.org/w/api.php?action=wbgetentities&sites=enwiki&titles=${encodeURIComponent(title)}&props=claims&format=json`,
     );
     if (!res.ok) return null;
@@ -74,7 +75,7 @@ export const wikipediaSource: ContentSource = {
       const month = String(yesterday.getMonth() + 1).padStart(2, "0");
       const day = String(yesterday.getDate()).padStart(2, "0");
 
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/${year}/${month}/${day}`,
       );
       if (!res.ok) {
@@ -108,7 +109,7 @@ export const wikipediaSource: ContentSource = {
         // Get article summary for description
         let description = title.replace(/_/g, " ");
         try {
-          const summaryRes = await fetch(
+          const summaryRes = await fetchWithTimeout(
             `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
           );
           if (summaryRes.ok) {

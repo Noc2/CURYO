@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractHuggingFaceModelId(url: string): string | null {
@@ -25,7 +26,7 @@ export const huggingFaceStrategy: RatingStrategy = {
     if (!modelId) return null;
 
     try {
-      const res = await fetch(`https://huggingface.co/api/models/${modelId}`);
+      const res = await fetchWithTimeout(`https://huggingface.co/api/models/${modelId}`);
       if (!res.ok) return null;
 
       const data = await res.json();

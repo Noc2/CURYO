@@ -1,4 +1,5 @@
 import { config, log } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
 const CATEGORY_ID = 1n;
@@ -33,7 +34,7 @@ export const youtubeSource: ContentSource = {
     }
 
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://www.googleapis.com/youtube/v3/videos?chart=mostPopular&regionCode=US&maxResults=${limit}&part=snippet&key=${config.youtubeApiKey}`,
       );
       if (!res.ok) {

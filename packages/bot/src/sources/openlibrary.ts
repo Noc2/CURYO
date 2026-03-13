@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
 const CATEGORY_ID = 7n;
@@ -39,7 +40,7 @@ export const openLibrarySource: ContentSource = {
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {
-      const res = await fetch(`https://openlibrary.org/trending/daily.json?limit=${limit}`);
+      const res = await fetchWithTimeout(`https://openlibrary.org/trending/daily.json?limit=${limit}`);
       if (!res.ok) {
         log.warn(`Open Library trending API error: ${res.status}`);
         return [];

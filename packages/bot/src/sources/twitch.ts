@@ -1,4 +1,5 @@
 import { config, log } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
 const CATEGORY_ID = 2n;
@@ -17,7 +18,7 @@ async function getTwitchToken(): Promise<string | null> {
   if (!config.twitchClientId || !config.twitchClientSecret) return null;
 
   try {
-    const res = await fetch("https://id.twitch.tv/oauth2/token", {
+    const res = await fetchWithTimeout("https://id.twitch.tv/oauth2/token", 15_000, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -52,8 +53,9 @@ export const twitchSource: ContentSource = {
 
     try {
       // Get top clips from the past day
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://api.twitch.tv/helix/clips?first=${limit}&started_at=${new Date(Date.now() - 86400000).toISOString()}`,
+        15_000,
         {
           headers: {
             "Client-Id": config.twitchClientId,

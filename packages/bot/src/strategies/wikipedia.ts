@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractWikipediaTitle(url: string): string | null {
@@ -33,7 +34,7 @@ export const wikipediaStrategy: RatingStrategy = {
 
     // Try WikiProject quality assessment first
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://en.wikipedia.org/w/api.php?action=query&prop=pageassessments&titles=${encodeURIComponent(title)}&format=json`,
       );
       if (res.ok) {
@@ -64,7 +65,7 @@ export const wikipediaStrategy: RatingStrategy = {
       const fmt = (d: Date) =>
         `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/all-agents/${encodeURIComponent(title)}/monthly/${fmt(start)}/${fmt(end)}`,
       );
       if (!res.ok) return null;

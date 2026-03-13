@@ -1,4 +1,5 @@
 import { config, log } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
 const CATEGORY_ID = 6n;
@@ -37,7 +38,7 @@ export const rawgSource: ContentSource = {
     }
 
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://api.rawg.io/api/games?key=${config.rawgApiKey}&ordering=-added&page_size=${limit}`,
       );
       if (!res.ok) {

@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractTmdbMovieId(url: string): string | null {
@@ -22,7 +23,7 @@ export const tmdbStrategy: RatingStrategy = {
     if (!movieId || !config.tmdbApiKey) return null;
 
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://api.themoviedb.org/3/movie/${movieId}?api_key=${config.tmdbApiKey}`,
       );
       if (!res.ok) return null;

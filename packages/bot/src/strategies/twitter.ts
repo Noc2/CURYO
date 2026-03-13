@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "../utils.js";
 import type { RatingStrategy } from "./types.js";
 
 function extractTweetId(url: string): string | null {
@@ -27,7 +28,7 @@ export const twitterStrategy: RatingStrategy = {
 
     try {
       const token = getToken(tweetId);
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&lang=en&token=${token}`,
       );
       if (!res.ok) return null;

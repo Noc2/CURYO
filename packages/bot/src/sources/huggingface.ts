@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
 const CATEGORY_ID = 8n;
@@ -38,7 +39,7 @@ export const huggingFaceSource: ContentSource = {
 
   async fetchTrending(limit: number): Promise<ContentItem[]> {
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://huggingface.co/api/models?sort=trending&limit=${limit}`,
       );
       if (!res.ok) {
