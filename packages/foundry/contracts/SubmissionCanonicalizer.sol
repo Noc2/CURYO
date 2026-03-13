@@ -23,14 +23,6 @@ contract SubmissionCanonicalizer {
         submissionKey = _deriveSubmissionKey(url, category.domain);
     }
 
-    function resolveSubmissionKey(ICategoryRegistry categoryRegistry, string calldata url)
-        external
-        view
-        returns (bytes32 submissionKey)
-    {
-        (, submissionKey) = this.resolveCategoryAndSubmissionKey(categoryRegistry, url, 0);
-    }
-
     function _resolveApprovedCategory(ICategoryRegistry categoryRegistry, string memory url)
         internal
         view

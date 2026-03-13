@@ -565,10 +565,6 @@ contract ContentRegistry is
 
     // --- View functions ---
 
-    function getContent(uint256 contentId) external view returns (Content memory) {
-        return contents[contentId];
-    }
-
     function getSubmitterIdentity(uint256 contentId) external view returns (address) {
         address submitterIdentity = contentSubmitterIdentity[contentId];
         address submitter = contents[contentId].submitter;

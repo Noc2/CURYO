@@ -554,8 +554,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         reg2.cancelContent(1);
         vm.stopPrank();
 
-        ContentRegistry.Content memory c = reg2.getContent(1);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Cancelled));
+        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = reg2.contents(1);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Cancelled));
     }
 
     function test_CancelContent_FeeSentToConfiguredSink() public {
@@ -626,8 +626,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         reg2.markDormant(1);
 
-        ContentRegistry.Content memory c = reg2.getContent(1);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Dormant));
+        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = reg2.contents(1);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
     }
 
     function test_MarkDormant_Success() public {
@@ -639,8 +639,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         registry.markDormant(1);
 
-        ContentRegistry.Content memory c = registry.getContent(1);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Dormant));
+        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(1);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
     }
 
     function test_VoteCommit_UpdatesLastActivityAt() public {
@@ -652,8 +652,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(T0 + 29 days);
         _vote(voter1, 1, true);
 
-        ContentRegistry.Content memory c = registry.getContent(1);
-        assertEq(c.lastActivityAt, block.timestamp, "Commit should refresh lastActivityAt");
+        (,,,,, uint256 lastActivityAt,,,,,,) = registry.contents(1);
+        assertEq(lastActivityAt, block.timestamp, "Commit should refresh lastActivityAt");
     }
 
     function test_MarkDormant_ActiveRound_AllVotesRevealed_Reverts() public {
@@ -692,8 +692,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         registry.markDormant(1);
 
-        ContentRegistry.Content memory c = registry.getContent(1);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Dormant));
+        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(1);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
     }
 
     function test_CommitVote_DormancyEligibleContent_CannotStartNewRoundAfterCancellation() public {
@@ -737,8 +737,8 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         // New content created with same URL
-        ContentRegistry.Content memory c2 = registry.getContent(2);
-        assertEq(uint256(c2.status), uint256(ContentRegistry.ContentStatus.Active));
+        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(2);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
     }
 
     function test_MarkDormant_LowRatedContent_SlashesUnresolvedStake() public {

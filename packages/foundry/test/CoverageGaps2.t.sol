@@ -684,11 +684,23 @@ contract ContentRegistryCoverageTest is Test {
         vm.stopPrank();
 
         assertEq(id, 1);
-        ContentRegistry.Content memory c = registry.getContent(1);
-        assertEq(c.submitter, submitter);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Active));
-        assertEq(c.rating, 50);
-        assertEq(c.submitterStake, 10e6);
+        (
+            ,
+            ,
+            address storedSubmitter,
+            uint256 submitterStake,
+            ,
+            ,
+            ContentRegistry.ContentStatus status,
+            ,
+            ,
+            ,
+            uint256 rating,
+        ) = registry.contents(1);
+        assertEq(storedSubmitter, submitter);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
+        assertEq(rating, 50);
+        assertEq(submitterStake, 10e6);
     }
 
     function test_SubmitContentSplitMetadataSuccess() public {
@@ -706,8 +718,8 @@ contract ContentRegistryCoverageTest is Test {
         vm.stopPrank();
 
         assertEq(id, 1);
-        ContentRegistry.Content memory c = registry.getContent(id);
-        assertEq(c.contentHash, expectedHash);
+        (, bytes32 contentHash,,,,,,,,,,) = registry.contents(id);
+        assertEq(contentHash, expectedHash);
     }
 
     // --- submitContent: empty URL ---
@@ -877,8 +889,8 @@ contract ContentRegistryCoverageTest is Test {
         vm.prank(submitter);
         registry.cancelContent(id);
 
-        ContentRegistry.Content memory c = registry.getContent(id);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Cancelled));
+        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Cancelled));
 
         // Gets refund minus 1 cREP cancellation fee
         uint256 balAfter = crep.balanceOf(submitter);
@@ -959,8 +971,8 @@ contract ContentRegistryCoverageTest is Test {
         registry.markDormant(id);
         uint256 balAfter = crep.balanceOf(submitter);
 
-        ContentRegistry.Content memory c = registry.getContent(id);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Dormant));
+        (,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant));
         assertEq(balAfter - balBefore, 10e6); // Full stake return
     }
 
@@ -986,10 +998,22 @@ contract ContentRegistryCoverageTest is Test {
         registry.reviveContent(id);
         vm.stopPrank();
 
-        ContentRegistry.Content memory c = registry.getContent(id);
-        assertEq(uint256(c.status), uint256(ContentRegistry.ContentStatus.Active));
-        assertEq(c.dormantCount, 1);
-        assertEq(c.reviver, other);
+        (
+            ,
+            ,
+            ,
+            ,
+            ,
+            ,
+            ContentRegistry.ContentStatus status,
+            uint8 dormantCount,
+            address reviver,
+            ,
+            ,
+        ) = registry.contents(id);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
+        assertEq(dormantCount, 1);
+        assertEq(reviver, other);
     }
 
     // --- reviveContent: not dormant ---
