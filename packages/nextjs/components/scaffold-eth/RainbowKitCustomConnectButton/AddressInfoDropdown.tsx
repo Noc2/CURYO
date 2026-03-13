@@ -88,6 +88,7 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
   const submissionStake = Number(summary?.submissionStakedMicro ?? 0n) / 1e6;
   const frontendStake = Number(summary?.frontendStakedMicro ?? 0n) / 1e6;
   const votingStake = Number(summary?.votingStakedMicro ?? 0n) / 1e6;
+  const pendingStake = Number(summary?.pendingStakedMicro ?? 0n) / 1e6;
 
   if (submissionStake > 0) stakeParts.push(`${submissionStake} cREP submissions`);
   if (votingStake > 0) {
@@ -97,6 +98,7 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
     stakeParts.push(votingLabel);
   }
   if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
+  if (pendingStake > 0) stakeParts.push(`${pendingStake} cREP syncing`);
   const stakeTooltip = stakeParts.join(" · ");
 
   return (

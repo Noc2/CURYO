@@ -9,7 +9,11 @@ import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { getRecentUserVotesQueryKey } from "~~/hooks/useRecentUserVotes";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
-import { type WalletDisplaySummary, getWalletDisplaySummaryQueryKey } from "~~/hooks/useWalletDisplaySummary";
+import {
+  type WalletDisplaySummary,
+  getWalletDisplaySummaryQueryKey,
+  persistWalletDisplaySummarySnapshot,
+} from "~~/hooks/useWalletDisplaySummary";
 import { buildCommitVoteParams } from "~~/lib/contracts/roundVotingEngine";
 import scaffoldConfig from "~~/scaffold.config";
 
@@ -122,7 +126,7 @@ export function useRoundVote() {
         getWalletDisplaySummaryQueryKey(address.toLowerCase()),
         current => {
           if (!current || current.liquidMicro < stakeWei) return current;
-          return {
+          const nextSnapshot: WalletDisplaySummary = {
             ...current,
             liquidMicro: current.liquidMicro - stakeWei,
             votingStakedMicro: current.votingStakedMicro + stakeWei,
@@ -130,6 +134,8 @@ export function useRoundVote() {
             totalMicro: current.totalMicro,
             updatedAt: Date.now(),
           };
+          persistWalletDisplaySummarySnapshot(address.toLowerCase(), nextSnapshot);
+          return nextSnapshot;
         },
       );
 
