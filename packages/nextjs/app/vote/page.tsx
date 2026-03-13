@@ -25,7 +25,7 @@ import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUserPreferences } from "~~/hooks/useUserPreferences";
 import { useVoteFeedStage } from "~~/hooks/useVoteFeedStage";
-import { useVoteHistory } from "~~/hooks/useVoteHistory";
+import { useVoteHistoryQuery } from "~~/hooks/useVoteHistoryQuery";
 import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
@@ -108,7 +108,7 @@ const HomeInner = () => {
   const isSearchMode = searchQuery.trim().length > 0;
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
-  const { votes, isLoading: votesLoading } = useVoteHistory(address);
+  const { votes, isLoading: votesLoading } = useVoteHistoryQuery(address);
   const {
     watchedItems,
     watchedContentIds,

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { GlobeAltIcon, IdentificationIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
+import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
-import { LandingPageAnimation } from "~~/components/home/LandingPageAnimation";
 
 const STEPS = [
   {
@@ -37,7 +37,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
         <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-8">
           {/* Animation (right on large screens) */}
           <div className="lg:flex-1">
-            <LandingPageAnimation />
+            <CuryoAnimation />
           </div>
 
           {/* Title (left on large screens) */}
