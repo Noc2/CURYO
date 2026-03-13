@@ -101,12 +101,13 @@ const TermsPage: NextPage = () => {
             undiscovered bugs, vulnerabilities, or exploits that could result in partial or total loss of tokens
           </li>
           <li>
-            <strong>Immutability:</strong> Once deployed, smart contract code generally cannot be modified. Bugs or
-            vulnerabilities may be impossible to fix without migrating to new contracts
+            <strong>Contract Design and Governance:</strong> Some contracts may be immutable, while others may include
+            governance-controlled pause or upgrade mechanisms. Those mechanisms can fail, be misused, or introduce new
+            risks
           </li>
           <li>
-            <strong>Upgrade Risks:</strong> If the Protocol includes upgrade mechanisms, upgrades carry their own risks
-            including potential for malicious upgrades or upgrade failures
+            <strong>Upgrade Risks:</strong> Upgrades or other governance actions may change contract behavior,
+            permissions, or economics, and may fail or be executed maliciously
           </li>
           <li>
             <strong>Economic Attacks:</strong> The Protocol may be susceptible to economic attacks, flash loan attacks,
