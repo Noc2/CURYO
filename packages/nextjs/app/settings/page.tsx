@@ -8,7 +8,6 @@ import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { ProfileForm } from "~~/components/profile/ProfileForm";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
-import { SettingsAccountSummary } from "~~/components/settings/SettingsAccountSummary";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 
 type SettingsTab = "profile" | "delegation" | "referrals" | "notifications";
@@ -28,13 +27,10 @@ function normalizeSettingsTab(value: string | null): SettingsTab {
 
 function SettingsPageInner() {
   const { isConnected, address } = useAccount();
-  const summaryAddress =
-    typeof address === "string" && address.startsWith("0x") ? (address as `0x${string}`) : undefined;
   const router = useRouter();
   const pathname = usePathname() ?? "/settings";
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [summaryRefreshNonce, setSummaryRefreshNonce] = useState(0);
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab") ?? null;
@@ -68,14 +64,6 @@ function SettingsPageInner() {
 
   return (
     <AppPageShell contentClassName="space-y-6">
-      {summaryAddress ? (
-        <SettingsAccountSummary
-          address={summaryAddress}
-          refreshNonce={summaryRefreshNonce}
-          onSelectTab={tab => selectTab(tab)}
-        />
-      ) : null}
-
       <div className="flex flex-wrap gap-2">
         {settingsTabs.map(tab => (
           <button
@@ -93,12 +81,7 @@ function SettingsPageInner() {
       {activeTab === "profile" && <ProfileForm />}
       {activeTab === "delegation" && <DelegationSection />}
       {activeTab === "referrals" && <ReferralSection />}
-      {activeTab === "notifications" && (
-        <NotificationSettingsPanel
-          address={address}
-          onStatusChange={() => setSummaryRefreshNonce(value => value + 1)}
-        />
-      )}
+      {activeTab === "notifications" && <NotificationSettingsPanel address={address} />}
     </AppPageShell>
   );
 }

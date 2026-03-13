@@ -16,6 +16,7 @@ import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
+import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
@@ -99,6 +100,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     autoRead: false,
   });
   const { stats, categories } = useVoterAccuracy(normalizedAddress);
+  const { hasVoterId, tokenId, isLoading: voterIdLoading } = useVoterIdNFT(normalizedAddress);
   const { data: balance } = useScaffoldReadContract({
     contractName: "CuryoReputation",
     functionName: "balanceOf",
@@ -237,6 +239,13 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
                   </div>
                   <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base text-base-content/60">
                     {totalContent} submissions
+                  </div>
+                  <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base text-base-content/60">
+                    {voterIdLoading
+                      ? "Loading Voter ID..."
+                      : hasVoterId
+                        ? `Voter ID #${tokenId.toString()}`
+                        : "No Voter ID"}
                   </div>
                 </div>
               </div>
