@@ -1421,7 +1421,7 @@ const SecurityAudit: NextPage = () => {
               <td>Settlement callback chain</td>
               <td>
                 settleRound() makes external calls: safeTransfer to treasury, frontendRegistry; registry.updateRating();
-                registry.returnSubmitterStake()/slashSubmitterStake()
+                registry.returnSubmitterStakeWithRewardRate()/slashSubmitterStake()
               </td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span> &mdash; nonReentrant blocks

@@ -439,16 +439,11 @@ contract ContentRegistry is
         emit RatingUpdated(contentId, oldRating, clampedRating);
     }
 
-    /// @notice Called by VotingEngine to return submitter stake after milestone 0 resolves favorably.
-    function returnSubmitterStake(uint256 contentId) external {
-        _returnSubmitterStake(contentId, 0, false);
-    }
-
     /// @notice Called by VotingEngine to return submitter stake with a snapshotted submission reward rate.
     /// @dev This avoids coupling the submitter reward to whatever the live participation rate is when the
     ///      stake finally gets returned.
     function returnSubmitterStakeWithRewardRate(uint256 contentId, uint256 rewardRateBps) external {
-        _returnSubmitterStake(contentId, rewardRateBps, true);
+        _returnSubmitterStake(contentId, rewardRateBps);
     }
 
     /// @notice Called by VotingEngine once the dormancy window elapses without any settled round.
@@ -459,7 +454,7 @@ contract ContentRegistry is
         _resolvePendingSubmitterStake(contentId, c);
     }
 
-    function _returnSubmitterStake(uint256 contentId, uint256 rewardRateBps, bool useSnapshottedReward) internal {
+    function _returnSubmitterStake(uint256 contentId, uint256 rewardRateBps) internal {
         require(msg.sender == votingEngine, "Only VotingEngine");
         Content storage c = contents[contentId];
         require(!c.submitterStakeReturned, "Already returned");
@@ -467,7 +462,7 @@ contract ContentRegistry is
         c.submitterStakeReturned = true;
         crepToken.safeTransfer(c.submitter, c.submitterStake);
 
-        _accrueSubmitterParticipationReward(contentId, c, rewardRateBps, useSnapshottedReward);
+        _accrueSubmitterParticipationReward(contentId, c, rewardRateBps);
 
         emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
@@ -500,19 +495,11 @@ contract ContentRegistry is
     function _accrueSubmitterParticipationReward(
         uint256 contentId,
         Content storage c,
-        uint256 rewardRateBps,
-        bool useSnapshottedReward
+        uint256 rewardRateBps
     ) internal {
         if (address(participationPool) == address(0)) return;
 
-        uint256 rewardAmount;
-        if (useSnapshottedReward) {
-            rewardAmount = c.submitterStake * rewardRateBps / 10000;
-        } else {
-            try participationPool.getCurrentRateBps() returns (uint256 liveRateBps) {
-                rewardAmount = c.submitterStake * liveRateBps / 10000;
-            } catch { }
-        }
+        uint256 rewardAmount = c.submitterStake * rewardRateBps / 10000;
 
         if (rewardAmount == 0) return;
 

@@ -1092,25 +1092,25 @@ contract ContentRegistryCoverageTest is Test {
         registry.updateActivity(id);
     }
 
-    // --- returnSubmitterStake: only voting engine ---
+    // --- returnSubmitterStakeWithRewardRate: only voting engine ---
 
-    function test_ReturnSubmitterStakeOnlyVotingEngine() public {
+    function test_ReturnSubmitterStakeWithRewardRateOnlyVotingEngine() public {
         uint256 id = _submitContent(submitter, "https://example.com/return");
         vm.prank(other);
         vm.expectRevert("Only VotingEngine");
-        registry.returnSubmitterStake(id);
+        registry.returnSubmitterStakeWithRewardRate(id, 0);
     }
 
-    // --- returnSubmitterStake: already returned ---
+    // --- returnSubmitterStakeWithRewardRate: already returned ---
 
-    function test_ReturnSubmitterStakeAlreadyReturnedReverts() public {
+    function test_ReturnSubmitterStakeWithRewardRateAlreadyReturnedReverts() public {
         uint256 id = _submitContent(submitter, "https://example.com/double");
         vm.prank(admin);
         registry.setVotingEngine(address(this));
 
-        registry.returnSubmitterStake(id);
+        registry.returnSubmitterStakeWithRewardRate(id, 0);
         vm.expectRevert("Already returned");
-        registry.returnSubmitterStake(id);
+        registry.returnSubmitterStakeWithRewardRate(id, 0);
     }
 
     // --- slashSubmitterStake: success ---
@@ -1134,7 +1134,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.prank(admin);
         registry.setVotingEngine(address(this));
 
-        registry.returnSubmitterStake(id);
+        registry.returnSubmitterStakeWithRewardRate(id, 0);
         vm.expectRevert("Already returned");
         registry.slashSubmitterStake(id);
     }
