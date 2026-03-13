@@ -19,7 +19,7 @@ export function getDatabaseConfig() {
 }
 
 export function getTmdbApiKey(): string | undefined {
-  return readEnv("TMDB_API_KEY") ?? readEnv("NEXT_PUBLIC_TMDB_API_KEY");
+  return readEnv("TMDB_API_KEY");
 }
 
 export function getOptionalAppUrl(): string | undefined {

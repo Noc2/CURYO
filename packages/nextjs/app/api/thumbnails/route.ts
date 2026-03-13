@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveContentMetadataBatch } from "~~/lib/contentMetadata/server";
 import { checkRateLimit } from "~~/utils/rateLimit";
+import { isSafeUrl } from "~~/utils/urlSafety";
 
 const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 const MAX_URLS = 40;
@@ -24,6 +25,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "urls array required" }, { status: 400 });
   }
 
-  const items = await resolveContentMetadataBatch(urls);
+  // Filter out URLs that fail SSRF safety checks
+  const safeChecks = await Promise.all(urls.map(url => isSafeUrl(url)));
+  const safeUrls = urls.filter((_, i) => safeChecks[i]);
+
+  if (safeUrls.length === 0) {
+    return NextResponse.json({ error: "No valid URLs provided" }, { status: 400 });
+  }
+
+  const items = await resolveContentMetadataBatch(safeUrls);
   return NextResponse.json({ items });
 }
