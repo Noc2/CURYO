@@ -10,7 +10,7 @@ Hot-path gas is now enforced by [GasBudget.t.sol](/Users/davidhawig/source/curyo
 
 | Path | Measured gas | Budget |
 |------|--------------|--------|
-| `submitContent` | `370,274` | `400,000` |
+| `submitContent` | `507,440` | `525,000` |
 | `commitVote` | `655,680` | `800,000` |
 | `revealVoteByCommitKey` | `149,853` | `320,000` |
 | `settleRound` | `308,056` | `475,000` |

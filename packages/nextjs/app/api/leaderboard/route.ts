@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
-import {
-  listRegisteredProfileAddresses,
-  readCRepBalances,
-  readProfileRegistryProfiles,
-} from "~~/lib/profileRegistry/server";
+import { readCRepBalances, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
 import { isPonderAvailable, ponderApi } from "~~/services/ponder/client";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -28,23 +24,24 @@ export async function GET(request: NextRequest) {
       includeAddressParam && isAddress(includeAddressParam) ? includeAddressParam.toLowerCase() : null;
 
     // Try Ponder first for complete holder discovery.
-    let candidateAddresses: string[] = [];
-    let source: "ponder" | "rpc" = "rpc";
-
     const ponderAvailable = await isPonderAvailable();
-    if (ponderAvailable) {
-      try {
-        const holders = await ponderApi.getAllTokenHolders();
-        candidateAddresses = holders.map(holder => holder.address);
-        source = "ponder";
-      } catch (e) {
-        console.warn("Ponder token-holder discovery failed, falling back to profile registry:", e);
-      }
+    if (!ponderAvailable) {
+      return NextResponse.json(
+        { error: "Leaderboard is temporarily unavailable while the indexer is offline" },
+        { status: 503 },
+      );
     }
 
-    if (candidateAddresses.length === 0) {
-      const { addresses } = await listRegisteredProfileAddresses({ limit });
-      candidateAddresses = addresses;
+    let candidateAddresses: string[];
+    try {
+      const holders = await ponderApi.getAllTokenHolders();
+      candidateAddresses = holders.map(holder => holder.address);
+    } catch (e) {
+      console.warn("Ponder token-holder discovery failed:", e);
+      return NextResponse.json(
+        { error: "Leaderboard is temporarily unavailable while holder indexing catches up" },
+        { status: 503 },
+      );
     }
 
     if (includeAddress && !candidateAddresses.some(address => address.toLowerCase() === includeAddress)) {
@@ -82,7 +79,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       entries,
       totalCount: entries.length,
-      source,
+      source: "ponder",
       type: "voters",
     });
   } catch (error) {

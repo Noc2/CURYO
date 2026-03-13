@@ -76,6 +76,9 @@ interface EmailCandidate {
 
 let ensureNotificationEmailDeliveriesTablePromise: Promise<void> | null = null;
 const DELIVERY_LEASE_MS = 2 * 60 * 1000;
+const DELIVERY_STATUS_SENT = "sent";
+const DELIVERY_STATUS_SENDING = "sending";
+type DeliveryStatus = typeof DELIVERY_STATUS_SENT | typeof DELIVERY_STATUS_SENDING;
 
 export async function ensureNotificationEmailDeliveriesTable() {
   if (!ensureNotificationEmailDeliveriesTablePromise) {
@@ -89,10 +92,19 @@ export async function ensureNotificationEmailDeliveriesTable() {
             event_key TEXT NOT NULL UNIQUE,
             event_type TEXT NOT NULL,
             content_id TEXT,
+            status TEXT NOT NULL DEFAULT 'sent',
             delivered_at INTEGER NOT NULL
           )
         `),
       );
+      const tableInfo = await dbClient.execute("PRAGMA table_info(notification_email_deliveries)");
+      const hasStatusColumn = tableInfo.rows.some(row => row.name === "status");
+      if (!hasStatusColumn) {
+        await dbClient.execute(`
+          ALTER TABLE notification_email_deliveries
+          ADD COLUMN status TEXT NOT NULL DEFAULT 'sent'
+        `);
+      }
       await db.run(
         sql.raw(`
           CREATE TABLE IF NOT EXISTS notification_email_delivery_leases (
@@ -256,24 +268,68 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
   return [...candidates.values()];
 }
 
-async function deliveryExists(eventKey: string) {
+async function getDeliveryState(eventKey: string): Promise<DeliveryStatus | null> {
   const [row] = await db
-    .select({ id: notificationEmailDeliveries.id })
+    .select({ status: notificationEmailDeliveries.status })
     .from(notificationEmailDeliveries)
     .where(eq(notificationEmailDeliveries.eventKey, eventKey))
     .limit(1);
 
-  return Boolean(row);
+  if (!row) return null;
+  return row.status === DELIVERY_STATUS_SENDING ? DELIVERY_STATUS_SENDING : DELIVERY_STATUS_SENT;
 }
 
-async function recordDelivery(candidate: EmailCandidate) {
-  await db.insert(notificationEmailDeliveries).values({
-    walletAddress: candidate.walletAddress,
-    email: candidate.email,
-    eventKey: candidate.eventKey,
-    eventType: candidate.eventType,
-    contentId: candidate.contentId ?? null,
-    deliveredAt: new Date(),
+async function reservePendingDelivery(candidate: EmailCandidate) {
+  const result = await dbClient.execute({
+    sql: `
+      INSERT INTO notification_email_deliveries (
+        wallet_address,
+        email,
+        event_key,
+        event_type,
+        content_id,
+        status,
+        delivered_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(event_key) DO UPDATE SET
+        wallet_address = excluded.wallet_address,
+        email = excluded.email,
+        event_type = excluded.event_type,
+        content_id = excluded.content_id,
+        status = excluded.status
+      WHERE notification_email_deliveries.status != ?
+      RETURNING event_key
+    `,
+    args: [
+      candidate.walletAddress,
+      candidate.email,
+      candidate.eventKey,
+      candidate.eventType,
+      candidate.contentId ?? null,
+      DELIVERY_STATUS_SENDING,
+      0,
+      DELIVERY_STATUS_SENT,
+    ],
+  });
+
+  return result.rows.length > 0;
+}
+
+async function markDeliverySent(eventKey: string) {
+  await db
+    .update(notificationEmailDeliveries)
+    .set({
+      status: DELIVERY_STATUS_SENT,
+      deliveredAt: new Date(),
+    })
+    .where(eq(notificationEmailDeliveries.eventKey, eventKey));
+}
+
+async function clearPendingDelivery(eventKey: string) {
+  await dbClient.execute({
+    sql: "DELETE FROM notification_email_deliveries WHERE event_key = ? AND status = ?",
+    args: [eventKey, DELIVERY_STATUS_SENDING],
   });
 }
 
@@ -349,7 +405,8 @@ export async function deliverNotificationEmails() {
     for (const candidate of candidates) {
       result.attempted += 1;
 
-      if (await deliveryExists(candidate.eventKey)) {
+      const deliveryState = await getDeliveryState(candidate.eventKey);
+      if (deliveryState === DELIVERY_STATUS_SENT || deliveryState === DELIVERY_STATUS_SENDING) {
         result.skipped += 1;
         continue;
       }
@@ -361,14 +418,31 @@ export async function deliverNotificationEmails() {
       }
 
       try {
+        const reserved = await reservePendingDelivery(candidate);
+        if (!reserved) {
+          result.skipped += 1;
+          await releaseDeliveryLease(candidate.eventKey);
+          continue;
+        }
+
         await sendCandidate(candidate);
-        await recordDelivery(candidate);
-        result.sent += 1;
+        try {
+          await markDeliverySent(candidate.eventKey);
+          result.sent += 1;
+          await releaseDeliveryLease(candidate.eventKey);
+        } catch (error) {
+          console.error(
+            "Notification email may have been sent but could not be marked delivered:",
+            candidate.eventKey,
+            error,
+          );
+          result.failed += 1;
+        }
       } catch (error) {
         console.error("Failed to send notification email:", candidate.eventKey, error);
-        result.failed += 1;
-      } finally {
+        await clearPendingDelivery(candidate.eventKey);
         await releaseDeliveryLease(candidate.eventKey);
+        result.failed += 1;
       }
     }
   }

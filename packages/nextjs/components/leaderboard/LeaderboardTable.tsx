@@ -45,18 +45,22 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        setIsLoading(true);
         const params = new URLSearchParams();
         if (connectedAddress) {
           params.set("includeAddress", connectedAddress);
         }
         const res = await fetch(`/api/leaderboard${params.size > 0 ? `?${params.toString()}` : ""}`);
-        if (!res.ok) throw new Error(`Leaderboard API returned ${res.status}`);
-        const data = await res.json();
+        const body = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(body?.error || `Leaderboard API returned ${res.status}`);
+        }
+        const data = body;
         setEntries(data.entries || []);
         setError(null);
       } catch (err) {
         console.error("Failed to fetch leaderboard:", err);
-        setError("Failed to load leaderboard");
+        setError(err instanceof Error ? err.message : "Failed to load leaderboard");
       } finally {
         setIsLoading(false);
       }

@@ -99,6 +99,7 @@ export const notificationEmailDeliveries = sqliteTable(
     eventKey: text("event_key").notNull(),
     eventType: text("event_type").notNull(),
     contentId: text("content_id"),
+    status: text("status").notNull().default("sent"),
     deliveredAt: integer("delivered_at", { mode: "timestamp" }).notNull(),
   },
   table => ({
