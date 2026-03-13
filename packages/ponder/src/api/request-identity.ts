@@ -5,11 +5,23 @@ const FORWARDED_HEADER = "forwarded";
 const REAL_IP_HEADER = "x-real-ip";
 const FALLBACK_FINGERPRINT_HEADERS = ["user-agent", "accept-language", "accept", "origin", "referer"] as const;
 
+let warnedMissingHeaders = false;
+
 function getTrustedRateLimitHeaders(): string[] {
-  return (process.env.RATE_LIMIT_TRUSTED_IP_HEADERS ?? "")
+  const headers = (process.env.RATE_LIMIT_TRUSTED_IP_HEADERS ?? "")
     .split(",")
     .map(header => header.trim().toLowerCase())
     .filter(Boolean);
+
+  if (headers.length === 0 && !warnedMissingHeaders) {
+    warnedMissingHeaders = true;
+    console.warn(
+      "[ponder] RATE_LIMIT_TRUSTED_IP_HEADERS is not set — rate limiting will fall back to request fingerprinting. " +
+      "Set this to your reverse proxy's IP header (e.g. x-forwarded-for) in production.",
+    );
+  }
+
+  return headers;
 }
 
 function parseForwardedIp(value: string): string | null {

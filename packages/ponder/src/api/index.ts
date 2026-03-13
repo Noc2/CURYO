@@ -497,7 +497,9 @@ app.get("/categories", async (c) => {
     .select()
     .from(category)
     .where(where)
-    .orderBy(asc(category.name));
+    .orderBy(asc(category.name))
+    .limit(safeLimit(c.req.query("limit"), 100, 500))
+    .offset(safeOffset(c.req.query("offset")));
 
   return jsonBig(c, { items });
 });
@@ -532,7 +534,8 @@ app.get("/profiles", async (c) => {
   const addresses = addressesParam
     .split(",")
     .slice(0, 50)
-    .map((a) => a.trim().toLowerCase() as `0x${string}`);
+    .map((a) => a.trim().toLowerCase() as `0x${string}`)
+    .filter((a) => isValidAddress(a));
 
   const items = await db
     .select()
@@ -1290,6 +1293,8 @@ app.get("/accuracy-leaderboard", async (c) => {
           .leftJoin(profile, eq(vote.voter, profile.address))
           .where(and(...baseConditions, eq(content.categoryId, categoryId)))
           .groupBy(vote.voter, profile.name, profile.imageUrl)
+          .having(sql`count(*) >= ${minVotes}`)
+          .limit(1000)
       : await db
           .select(aggregateSelection)
           .from(vote)
@@ -1299,7 +1304,9 @@ app.get("/accuracy-leaderboard", async (c) => {
           )
           .leftJoin(profile, eq(vote.voter, profile.address))
           .where(and(...baseConditions))
-          .groupBy(vote.voter, profile.name, profile.imageUrl);
+          .groupBy(vote.voter, profile.name, profile.imageUrl)
+          .having(sql`count(*) >= ${minVotes}`)
+          .limit(1000);
 
     const normalized = rows
       .map((row) => ({
@@ -1682,7 +1689,12 @@ app.get("/frontends", async (c) => {
   }
   // "all" → no where clause
 
-  const items = await db.select().from(frontend).where(where);
+  const items = await db
+    .select()
+    .from(frontend)
+    .where(where)
+    .limit(safeLimit(c.req.query("limit"), 100, 500))
+    .offset(safeOffset(c.req.query("offset")));
 
   return jsonBig(c, { items });
 });

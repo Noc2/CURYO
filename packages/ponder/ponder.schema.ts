@@ -69,6 +69,7 @@ export const round = onchainTable(
     contentIdx: index().on(table.contentId),
     roundIdx: index().on(table.roundId),
     stateIdx: index().on(table.state),
+    settledAtIdx: index().on(table.settledAt),
   }),
 );
 
@@ -103,6 +104,7 @@ export const vote = onchainTable(
     contentIdx: index().on(table.contentId),
     roundIdx: index().on(table.roundId),
     contentRoundIdx: index().on(table.contentId, table.roundId),
+    revealedIdx: index().on(table.revealed),
   }),
 );
 
