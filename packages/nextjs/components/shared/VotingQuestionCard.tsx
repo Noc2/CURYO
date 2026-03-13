@@ -10,7 +10,7 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
-import { renderRankingQuestion } from "~~/lib/categories/rankingQuestionTemplate";
+import { buildRankingQuestionDisplay } from "~~/lib/categories/rankingQuestionTemplate";
 import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 
 interface VotingQuestionCardProps {
@@ -74,8 +74,8 @@ export function VotingQuestionCard({
   const contentLabel = useMemo(() => getContentLabel(categoryId, categories), [categoryId, categories]);
 
   // Build the question text from the category's ranking question
-  const questionText = useMemo(() => {
-    return renderRankingQuestion(category?.rankingQuestion, {
+  const questionDisplay = useMemo(() => {
+    return buildRankingQuestionDisplay(category?.rankingQuestion, {
       title,
       rating: currentRatingValue,
       fallbackLabel: contentLabel,
@@ -106,6 +106,33 @@ export function VotingQuestionCard({
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+  const renderQuestionSegment = (segment: string) => {
+    const ratingSlash = `${currentRatingValue} out of 100`;
+    const ratingPercent = `${currentRatingValue}%`;
+    const highlightTarget = segment.includes(ratingSlash)
+      ? ratingSlash
+      : segment.includes(ratingPercent)
+        ? ratingPercent
+        : null;
+
+    if (!highlightTarget) {
+      return segment;
+    }
+
+    const ratingStr = currentRatingValue.toString();
+    const suffix = highlightTarget.slice(ratingStr.length);
+    const [before, after = ""] = segment.split(highlightTarget);
+
+    return (
+      <>
+        {before}
+        <span className="text-primary text-[1.15em]">{ratingStr}</span>
+        {suffix}
+        {after}
+      </>
+    );
+  };
+
   return (
     <div
       className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
@@ -114,29 +141,20 @@ export function VotingQuestionCard({
       {/* Content */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* Question at the top */}
-        <p className="font-heading mb-3 line-clamp-3 shrink-0 text-center text-[1.3rem] font-bold leading-[1.18] tracking-tight text-white xl:text-[1.35rem] 2xl:text-[1.45rem]">
-          {(() => {
-            const ratingSlash = `${currentRatingValue} out of 100`;
-            const ratingPercent = `${currentRatingValue}%`;
-            const highlightTarget = questionText.includes(ratingSlash)
-              ? ratingSlash
-              : questionText.includes(ratingPercent)
-                ? ratingPercent
-                : null;
-            if (highlightTarget) {
-              const ratingStr = currentRatingValue.toString();
-              const suffix = highlightTarget.slice(ratingStr.length);
-              return (
-                <>
-                  {questionText.split(highlightTarget)[0]}
-                  <span className="text-primary text-[1.15em]">{ratingStr}</span>
-                  {suffix}
-                  {questionText.split(highlightTarget)[1]}
-                </>
-              );
-            }
-            return questionText;
-          })()}
+        <p className="font-heading mb-3 shrink-0 break-words text-center text-[1.12rem] font-bold leading-[1.2] tracking-tight text-white xl:text-[1.16rem] 2xl:text-[1.24rem]">
+          {questionDisplay.title ? (
+            <>
+              {questionDisplay.beforeTitle ? (
+                <span className="block">{renderQuestionSegment(questionDisplay.beforeTitle)}</span>
+              ) : null}
+              <span className="mt-1 block text-[1.18em] leading-[1.15]">{questionDisplay.title}</span>
+              {questionDisplay.afterTitle ? (
+                <span className="mt-1 block">{renderQuestionSegment(questionDisplay.afterTitle)}</span>
+              ) : null}
+            </>
+          ) : (
+            renderQuestionSegment(questionDisplay.fullText)
+          )}
           <span
             className="tooltip tooltip-bottom ml-1.5 inline-block cursor-help align-middle"
             data-tip="Illegal content, content that doesn't load, or content with the wrong description should be downvoted."

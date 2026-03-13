@@ -96,6 +96,17 @@ const DEFAULT_URL_CONFIG = {
   urlHint: "Select a platform first, then paste your URL",
 };
 
+const MAX_TITLE_LENGTH = 96;
+
+function getTitleValidationError(value: string): string | null {
+  if (value.length > MAX_TITLE_LENGTH) {
+    return `Title must be ${MAX_TITLE_LENGTH} characters or fewer`;
+  }
+
+  const check = containsBlockedText(value);
+  return check.blocked ? "Your title contains prohibited content" : null;
+}
+
 // Platform favicon using Google's favicon service
 function PlatformIcon({ domain, className }: { domain: string; className?: string }) {
   const iconClass = className || "w-4 h-4";
@@ -343,8 +354,7 @@ const SubmitPage: NextPage = () => {
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
-    const check = containsBlockedText(value);
-    setTitleError(check.blocked ? "Your title contains prohibited content" : null);
+    setTitleError(getTitleValidationError(value));
   };
 
   const handleDescriptionChange = (value: string) => {
@@ -359,6 +369,13 @@ const SubmitPage: NextPage = () => {
 
     if (urlCategoryMismatch) {
       notification.error("URL doesn't match the selected platform");
+      return;
+    }
+
+    const nextTitleError = getTitleValidationError(title);
+    if (nextTitleError) {
+      setTitleError(nextTitleError);
+      notification.warning(nextTitleError);
       return;
     }
 
@@ -651,11 +668,13 @@ const SubmitPage: NextPage = () => {
                   value={title}
                   onChange={e => handleTitleChange(e.target.value)}
                   required
-                  maxLength={160}
+                  maxLength={MAX_TITLE_LENGTH}
                 />
                 {titleError && <p className="text-error text-base mt-1">{titleError}</p>}
                 <div className="text-right mt-1">
-                  <span className="text-base text-base-content/30">{title.length}/160</span>
+                  <span className="text-base text-base-content/30">
+                    {title.length}/{MAX_TITLE_LENGTH}
+                  </span>
                 </div>
               </div>
 

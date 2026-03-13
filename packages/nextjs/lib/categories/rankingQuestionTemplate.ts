@@ -7,6 +7,13 @@ export interface RankingQuestionTemplateValidation {
   isValid: boolean;
 }
 
+export interface RankingQuestionDisplay {
+  fullText: string;
+  beforeTitle: string;
+  title: string | null;
+  afterTitle: string;
+}
+
 export function validateRankingQuestionTemplate(template: string): RankingQuestionTemplateValidation {
   const hasTitlePlaceholder = template.includes(TITLE_PLACEHOLDER);
   const hasRatingPlaceholder = template.includes(RATING_PLACEHOLDER);
@@ -48,4 +55,50 @@ export function renderRankingQuestion(
   }
 
   return `Should this ${fallbackLabel} be rated higher or lower than ${ratingText} out of 100?`;
+}
+
+export function buildRankingQuestionDisplay(
+  template: string | null | undefined,
+  {
+    title,
+    rating,
+    fallbackLabel = "content",
+  }: {
+    title?: string | null;
+    rating: number | string;
+    fallbackLabel?: string;
+  },
+): RankingQuestionDisplay {
+  const normalizedTitle = title?.trim() || null;
+  const fullText = renderRankingQuestion(template, {
+    title,
+    rating,
+    fallbackLabel,
+  });
+
+  if (!normalizedTitle) {
+    return {
+      fullText,
+      beforeTitle: fullText,
+      title: null,
+      afterTitle: "",
+    };
+  }
+
+  const titleIndex = fullText.indexOf(normalizedTitle);
+  if (titleIndex === -1) {
+    return {
+      fullText,
+      beforeTitle: fullText,
+      title: null,
+      afterTitle: "",
+    };
+  }
+
+  return {
+    fullText,
+    beforeTitle: fullText.slice(0, titleIndex),
+    title: normalizedTitle,
+    afterTitle: fullText.slice(titleIndex + normalizedTitle.length),
+  };
 }
