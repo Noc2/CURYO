@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
@@ -722,41 +714,6 @@ const HomeInner = () => {
   const canSwipeNavigate = supportsTouchNavigation && canNavigateCards;
   const canWheelNavigate = !supportsTouchNavigation && canNavigateCards;
 
-  const handleActiveRegionKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      const target = event.target as HTMLElement | null;
-      const isNestedInteractive =
-        target !== event.currentTarget &&
-        Boolean(target?.closest("a,button,input,select,textarea,label,summary,[role='button']"));
-
-      if (isNestedInteractive) return;
-
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        handleNavigateSelection("previous");
-        return;
-      }
-
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        handleNavigateSelection("next");
-        return;
-      }
-
-      if (event.key === "Home" || event.key === "PageUp") {
-        event.preventDefault();
-        handleSelectByIndex(0);
-        return;
-      }
-
-      if (event.key === "End" || event.key === "PageDown") {
-        event.preventDefault();
-        handleSelectByIndex(displayFeed.length - 1);
-      }
-    },
-    [displayFeed.length, handleNavigateSelection, handleSelectByIndex],
-  );
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (stakeModal.isOpen) return;
@@ -1032,14 +989,7 @@ const HomeInner = () => {
         ) : displayFeed.length === 0 ? (
           <div className="py-16 text-center text-base text-base-content/30 xl:py-10">{emptyStateMessage}</div>
         ) : (
-          <div
-            ref={activeCardRegionRef}
-            className="flex min-h-0 flex-col gap-5 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/45 focus-visible:ring-offset-2 focus-visible:ring-offset-base-100 xl:gap-4"
-            tabIndex={0}
-            role="region"
-            aria-label="Discover feed"
-            onKeyDown={handleActiveRegionKeyDown}
-          >
+          <div ref={activeCardRegionRef} className="flex min-h-0 flex-col gap-5 xl:gap-4">
             {isCommitting ? (
               <div className="flex shrink-0 items-center justify-center">
                 <span className="text-base text-base-content/50">

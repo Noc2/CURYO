@@ -1,13 +1,7 @@
 import { useId } from "react";
 
-type ArrowDirection = "up" | "down";
-type RingPalette = "brand" | "positive" | "negative";
-
 interface CuryoRingMarkProps {
   className?: string;
-  arrow?: ArrowDirection;
-  palette?: RingPalette;
-  animate?: boolean;
   animateMask?: boolean;
   animateColors?: boolean;
   title?: string;
@@ -27,26 +21,10 @@ const ARC_BOTTOM_RIGHT = "M110 64 A46 46 0 0 1 64 110";
 const ARC_BOTTOM_LEFT = "M64 110 A46 46 0 0 1 18 64";
 const ARC_TOP_LEFT = "M18 64 A46 46 0 0 1 64 18";
 
-function ArrowGlyph({ direction }: { direction: ArrowDirection }) {
-  return (
-    <path
-      d={direction === "up" ? "M64 44 L53 67 L75 67 Z" : "M64 84 L53 61 L75 61 Z"}
-      fill="none"
-      stroke="white"
-      strokeWidth="4.25"
-      strokeLinejoin="round"
-      strokeLinecap="round"
-    />
-  );
-}
-
 export function CuryoRingMark({
   className = "h-8 w-8",
-  arrow,
-  palette = "brand",
-  animate = false,
-  animateMask,
-  animateColors,
+  animateMask = false,
+  animateColors = false,
   title,
   maskDurationSeconds = 18,
   colorDurationSeconds = 24,
@@ -58,30 +36,12 @@ export function CuryoRingMark({
   const topLeftGradientId = `${id}-ring-top-left`;
   const maskId = `${id}-ring-mask`;
 
-  const shouldAnimateMask = animateMask ?? animate;
-  const shouldAnimateColors = palette === "brand" ? (animateColors ?? animate) : false;
-
-  const paletteStops =
-    palette === "positive"
-      ? {
-          topRight: ["#03CEA4", "#03CEA4"],
-          bottomRight: ["#03CEA4", "#03CEA4"],
-          bottomLeft: ["#03CEA4", "#03CEA4"],
-          topLeft: ["#03CEA4", "#03CEA4"],
-        }
-      : palette === "negative"
-        ? {
-            topRight: ["#EF476F", "#EF476F"],
-            bottomRight: ["#EF476F", "#EF476F"],
-            bottomLeft: ["#EF476F", "#EF476F"],
-            topLeft: ["#EF476F", "#EF476F"],
-          }
-        : {
-            topRight: ["#FFC43D", "#EF476F"],
-            bottomRight: ["#EF476F", "#359EEE"],
-            bottomLeft: ["#359EEE", "#03CEA4"],
-            topLeft: ["#03CEA4", "#FFC43D"],
-          };
+  const paletteStops = {
+    topRight: ["#FFC43D", "#EF476F"],
+    bottomRight: ["#EF476F", "#359EEE"],
+    bottomLeft: ["#359EEE", "#03CEA4"],
+    topLeft: ["#03CEA4", "#FFC43D"],
+  };
 
   const maskValues = `${ROTATION} ${CENTER} ${CENTER}; ${ROTATION + 360} ${CENTER} ${CENTER}`;
   const colorValues = `${ROTATION} ${CENTER} ${CENTER}; ${ROTATION - 360} ${CENTER} ${CENTER}`;
@@ -118,7 +78,7 @@ export function CuryoRingMark({
         <mask id={maskId}>
           <rect width="128" height="128" fill="black" />
           <g transform={`rotate(${ROTATION} ${CENTER} ${CENTER})`}>
-            {shouldAnimateMask ? (
+            {animateMask ? (
               <animateTransform
                 attributeName="transform"
                 type="rotate"
@@ -134,7 +94,7 @@ export function CuryoRingMark({
       </defs>
 
       <g mask={`url(#${maskId})`} transform={`rotate(${ROTATION} ${CENTER} ${CENTER})`}>
-        {shouldAnimateColors ? (
+        {animateColors ? (
           <animateTransform
             attributeName="transform"
             type="rotate"
@@ -158,8 +118,6 @@ export function CuryoRingMark({
         />
         <path d={ARC_TOP_LEFT} stroke={`url(#${topLeftGradientId})`} strokeWidth={ARC_STROKE} strokeLinecap="round" />
       </g>
-
-      {arrow ? <ArrowGlyph direction={arrow} /> : null}
     </svg>
   );
 }
