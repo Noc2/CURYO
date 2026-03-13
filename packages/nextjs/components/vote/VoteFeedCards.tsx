@@ -339,11 +339,6 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
             {queuePosition + 1}
           </span>
-          {selected ? (
-            <span className="rounded-full bg-primary/90 px-2.5 py-1 text-xs font-semibold text-primary-content">
-              Selected
-            </span>
-          ) : null}
         </div>
         {thumbnailSrc && !imageError ? (
           <img
@@ -363,10 +358,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         )}
       </div>
 
-      <div className="flex min-h-[4.5rem] flex-1 flex-col space-y-1.5 p-2.5">
-        <div className="flex items-center gap-2 text-xs text-base-content/55">
-          <span className="font-medium uppercase tracking-wide">{selected ? "Selected" : "Card"}</span>
-        </div>
+      <div className="flex min-h-[4.5rem] flex-1 flex-col p-2.5">
         <p className="line-clamp-2 text-sm font-medium leading-snug text-white/90">{item.title}</p>
       </div>
     </button>
