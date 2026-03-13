@@ -149,13 +149,9 @@ export function VotingQuestionCard({
         <p className="font-heading mb-3 shrink-0 break-words text-center text-[1.12rem] font-bold leading-[1.2] tracking-tight text-white xl:text-[1.16rem] 2xl:text-[1.24rem]">
           {questionDisplay.title ? (
             <>
-              {questionDisplay.beforeTitle ? (
-                <span className="block">{renderQuestionSegment(questionDisplay.beforeTitle)}</span>
-              ) : null}
-              <span className="mt-1 block">{questionDisplay.title}</span>
-              {questionDisplay.afterTitle ? (
-                <span className="mt-1 block">{renderQuestionSegment(questionDisplay.afterTitle)}</span>
-              ) : null}
+              {questionDisplay.beforeTitle ? renderQuestionSegment(questionDisplay.beforeTitle) : null}
+              <span>{questionDisplay.title}</span>
+              {questionDisplay.afterTitle ? renderQuestionSegment(questionDisplay.afterTitle) : null}
             </>
           ) : (
             renderQuestionSegment(questionDisplay.fullText)
