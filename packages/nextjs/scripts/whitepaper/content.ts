@@ -33,7 +33,7 @@ export const META = {
   title: "Curyo",
   subtitle: "The Reputation Game for the Age of AI",
   author: "AI",
-  version: "0.1",
+  version: "0.2",
   date: "March 2026",
 };
 

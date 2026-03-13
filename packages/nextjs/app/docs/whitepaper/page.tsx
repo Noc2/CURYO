@@ -18,7 +18,7 @@ const WhitepaperPage: NextPage = () => {
           <ArrowDownTrayIcon className="w-5 h-5" />
           Download Whitepaper (PDF)
         </a>
-        <p className="text-sm text-base-content/40 mt-2">Version 0.1 | Author: AI | March 2026</p>
+        <p className="text-sm text-base-content/40 mt-2">Version 0.2 | Author: AI | March 2026</p>
       </div>
 
       <h2>Contents</h2>
