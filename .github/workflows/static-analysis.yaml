@@ -15,11 +15,11 @@ jobs:
   slither:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
       - uses: ./.github/actions/setup-foundry
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             packages/foundry/cache
@@ -28,7 +28,7 @@ jobs:
       - name: Build contracts
         working-directory: packages/foundry
         run: forge build
-      - uses: crytic/slither-action@v0.4.2
+      - uses: crytic/slither-action@b52cc1cbfee9ca3e8722dd5224299d16c9a6b80f # v0.4.2
         id: slither
         continue-on-error: true
         with:
@@ -37,7 +37,7 @@ jobs:
           fail-on: high
           slither-config: packages/foundry/slither.config.json
           ignore-compile: true
-      - uses: github/codeql-action/upload-sarif@v4
+      - uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
         with:
           sarif_file: results.sarif
           category: slither
@@ -48,11 +48,11 @@ jobs:
   aderyn:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
       - uses: ./.github/actions/setup-foundry
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             packages/foundry/cache
@@ -89,7 +89,7 @@ jobs:
       - name: Generate Aderyn SARIF
         working-directory: packages/foundry
         run: aderyn . -o report.sarif
-      - uses: github/codeql-action/upload-sarif@v4
+      - uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
         with:
           sarif_file: packages/foundry/report.sarif
           category: aderyn
@@ -97,11 +97,11 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
       - uses: ./.github/actions/setup-foundry
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             packages/foundry/cache

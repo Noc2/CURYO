@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
       - name: Init nested submodules (skip unavailable mobile-sdk-native)
@@ -24,13 +24,13 @@ jobs:
           git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: lts/*
           cache: yarn
 
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1
         with:
           version: nightly
 
@@ -75,7 +75,7 @@ jobs:
           KEEPER_PRIVATE_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: playwright-report

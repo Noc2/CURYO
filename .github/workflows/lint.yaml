@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
@@ -29,7 +29,7 @@ jobs:
           git submodule update --init contracts/lib/openzeppelin-foundry-upgrades contracts/lib/forge-std
 
       - name: Setup node env
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node }}
           cache: yarn
@@ -38,7 +38,7 @@ jobs:
         run: yarn install --immutable
       
       - name: Install foundry-toolchain
-        uses: foundry-rs/foundry-toolchain@v1
+        uses: foundry-rs/foundry-toolchain@8789b3e21e6c11b2697f5eb56eddae542f746c10 # v1
         with:
           version: nightly
 
