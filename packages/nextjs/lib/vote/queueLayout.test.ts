@@ -4,10 +4,10 @@ import { chunkVoteQueueItems, computeVoteQueueLayout } from "~~/lib/vote/queueLa
 
 test("computeVoteQueueLayout keeps one row on standard desktop heights", () => {
   const layout = computeVoteQueueLayout({
-    viewportWidth: 1600,
+    viewportWidth: 1280,
     viewportHeight: 980,
-    containerWidth: 1400,
-    availableHeight: 360,
+    containerWidth: 760,
+    availableHeight: 520,
     rootFontSize: 16,
   });
 
@@ -19,8 +19,8 @@ test("computeVoteQueueLayout enables two rows only on extra-large viewports with
   const layout = computeVoteQueueLayout({
     viewportWidth: 1440,
     viewportHeight: 980,
-    containerWidth: 1180,
-    availableHeight: 460,
+    containerWidth: 1024,
+    availableHeight: 390,
     rootFontSize: 16,
   });
 

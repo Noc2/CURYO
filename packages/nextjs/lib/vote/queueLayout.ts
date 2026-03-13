@@ -15,9 +15,9 @@ export interface VoteQueueLayout {
 }
 
 const QUEUE_CARD_WIDTH_REM = {
-  base: 11.5,
-  sm: 12.25,
-  xl: 12.75,
+  base: 11.1,
+  sm: 11.35,
+  xl: 11.8,
 } as const;
 
 const QUEUE_GAP_PX = {
@@ -25,11 +25,10 @@ const QUEUE_GAP_PX = {
   xl: 10,
 } as const;
 
-const TWO_ROW_MIN_CONTAINER_WIDTH_PX = 1080;
 const TWO_ROW_MIN_COLUMNS = 4;
 const TWO_ROW_MAX_COLUMNS = 5;
-const TWO_ROW_CARD_HEIGHT_ESTIMATE_PX = 198;
-const TWO_ROW_EXTRA_CLEARANCE_PX = 24;
+const TWO_ROW_CARD_HEIGHT_ESTIMATE_PX = 172;
+const TWO_ROW_EXTRA_CLEARANCE_PX = 16;
 
 export function getVoteQueueCardWidthPx(viewportWidth: number, rootFontSize: number) {
   if (viewportWidth >= 1280) return QUEUE_CARD_WIDTH_REM.xl * rootFontSize;
@@ -52,10 +51,7 @@ export function computeVoteQueueLayout({
   const maxColumnsThatFit = Math.max(1, Math.floor((containerWidth + gapPx) / (cardWidthPx + gapPx)));
   const requiredTwoRowHeight = TWO_ROW_CARD_HEIGHT_ESTIMATE_PX * 2 + gapPx + TWO_ROW_EXTRA_CLEARANCE_PX;
 
-  const supportsTwoRows =
-    containerWidth >= TWO_ROW_MIN_CONTAINER_WIDTH_PX &&
-    maxColumnsThatFit >= TWO_ROW_MIN_COLUMNS &&
-    availableHeight >= requiredTwoRowHeight;
+  const supportsTwoRows = maxColumnsThatFit >= TWO_ROW_MIN_COLUMNS && availableHeight >= requiredTwoRowHeight;
 
   if (!supportsTwoRows) {
     return {
