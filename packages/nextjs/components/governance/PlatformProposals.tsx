@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { GlobeAltIcon } from "@heroicons/react/24/outline";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
@@ -89,7 +90,7 @@ export function PlatformProposals() {
   return (
     <div className="surface-card rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-lg font-semibold">Platform Proposals</h2>
+        <h2 className={surfaceSectionHeadingClassName}>Platform Proposals</h2>
       </div>
 
       {/* Filter Tabs */}

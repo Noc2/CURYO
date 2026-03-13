@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccount } from "wagmi";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
@@ -51,8 +52,8 @@ export function StakeBreakdown() {
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-1.5">
-      <div className="flex items-center justify-between">
-        <span className="text-base font-medium text-base-content/60">Your staked cREP</span>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className={surfaceSectionHeadingClassName}>Your staked cREP</h2>
         <span className="text-base tabular-nums text-base-content/60">{format(totalStaked)} cREP</span>
       </div>
       <div className="flex flex-wrap gap-2">

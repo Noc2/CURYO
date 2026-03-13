@@ -7,6 +7,7 @@ import { Address, encodeFunctionData, isAddress, parseUnits } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { governorAbi, useGovernanceContracts, useGovernanceStats, useGovernanceWrite } from "~~/hooks/useGovernance";
 import {
@@ -662,7 +663,7 @@ export function GovernanceActionComposer() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">Governance Action Composer</h2>
+            <h2 className={surfaceSectionHeadingClassName}>Governance Action Composer</h2>
           </div>
         </div>
 

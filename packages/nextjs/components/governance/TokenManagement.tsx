@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccount } from "wagmi";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
@@ -24,7 +25,7 @@ export const TokenManagement = () => {
   return (
     <div className="surface-card rounded-2xl p-6">
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">Voting Power</h2>
+        <h2 className={surfaceSectionHeadingClassName}>Voting Power</h2>
         <InfoTooltip
           text="Your voting power equals your cREP balance. Activated automatically."
           className="[&>svg]:opacity-60"

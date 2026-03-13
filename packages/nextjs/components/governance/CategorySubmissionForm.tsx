@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
@@ -185,7 +186,7 @@ export const CategorySubmissionForm = () => {
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-5">
-      <h1 className="text-2xl font-semibold">Propose New Platform</h1>
+      <h1 className={surfaceSectionHeadingClassName}>Propose New Platform</h1>
 
       {!isCategoryRegistryDeployed && (
         <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">

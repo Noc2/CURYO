@@ -7,6 +7,7 @@ import { blo } from "blo";
 import { useAccount } from "wagmi";
 import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { PonderAccuracyLeaderboardItem, PonderAccuracyLeaderboardWindow, ponderApi } from "~~/services/ponder/client";
@@ -140,7 +141,7 @@ export function AccuracyLeaderboard() {
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-3">
-      <span className="text-base font-medium text-base-content/60">Accuracy leaderboard</span>
+      <h2 className={surfaceSectionHeadingClassName}>Accuracy leaderboard</h2>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">

@@ -5,6 +5,7 @@ import { ProposalCard } from "./ProposalCard";
 import { Proposal, ProposalState } from "./types";
 import { useQueryClient } from "@tanstack/react-query";
 import { DocumentTextIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { governorAbi, useGovernanceContracts, useGovernanceWrite, useGovernorProposals } from "~~/hooks/useGovernance";
 
 // Re-export types for backwards compatibility
@@ -99,7 +100,7 @@ export const ProposalList = () => {
     <div className="surface-card rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4 gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Proposals</h2>
+          <h2 className={surfaceSectionHeadingClassName}>Proposals</h2>
           <p className="text-base text-base-content/50">
             {hasGovernorContract
               ? `${proposals.length} on-chain proposal${proposals.length === 1 ? "" : "s"}`

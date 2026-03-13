@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowTopRightOnSquareIcon, ClockIcon, ScaleIcon, UserGroupIcon } from "@heroicons/react/24/outline";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useGovernanceStats } from "~~/hooks/useGovernance";
 
@@ -43,7 +44,7 @@ export const GovernanceStats = () => {
   if (!hasGovernorContract) {
     return (
       <div className="surface-card rounded-2xl p-6 space-y-3">
-        <h2 className="text-lg font-semibold">Governance Parameters</h2>
+        <h2 className={surfaceSectionHeadingClassName}>Governance Parameters</h2>
         <p className="text-base text-base-content/70">
           Live governor reads are not available on this network. This usually means you&apos;re on local dev, where
           governance roles are wired directly to the deployer instead of a deployed <code>CuryoGovernor</code>.
@@ -59,7 +60,7 @@ export const GovernanceStats = () => {
 
   return (
     <div className="surface-card rounded-2xl p-6">
-      <h2 className="text-lg font-semibold mb-4">Governance Parameters</h2>
+      <h2 className={`${surfaceSectionHeadingClassName} mb-4`}>Governance Parameters</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="flex items-start gap-3 p-3 bg-base-200 rounded-xl">

@@ -3,6 +3,7 @@
 import { useAccount } from "wagmi";
 import { CategoryBars } from "~~/components/leaderboard/CategoryBars";
 import { WinRateRing } from "~~/components/leaderboard/WinRateRing";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 
 export function VoterAccuracyStats() {
@@ -30,8 +31,8 @@ export function VoterAccuracyStats() {
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-base font-medium text-base-content/60">Your voting accuracy</span>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className={surfaceSectionHeadingClassName}>Your voting accuracy</h2>
         <span className="text-base tabular-nums text-base-content/60">{stats.totalSettledVotes} resolved votes</span>
       </div>
 

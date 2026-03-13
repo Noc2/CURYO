@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { PonderTokenTransfer, ponderApi } from "~~/services/ponder/client";
 
 const CHART_W = 640;
@@ -111,8 +112,8 @@ export function BalanceHistory() {
 
   return (
     <div className="surface-card rounded-2xl p-6 w-full">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-base font-medium text-base-content/60">Your cREP balance</span>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <h2 className={surfaceSectionHeadingClassName}>Your cREP balance</h2>
         <span className="text-base tabular-nums text-base-content/60">{currentFormatted} cREP</span>
       </div>
       <BalanceChart data={dataPoints} />

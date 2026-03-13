@@ -12,6 +12,7 @@ import {
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { SelfVerifyButton } from "~~/components/governance/SelfVerifyButton";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -129,7 +130,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     return (
       <div className="surface-card rounded-2xl p-6 text-center space-y-4">
         <ShieldCheckIcon className="w-12 h-12 text-success mx-auto" />
-        <h2 className="text-xl font-bold">Verified Human</h2>
+        <h2 className={surfaceSectionHeadingClassName}>Verified Human</h2>
 
         {/* Voter ID Badge */}
         {hasVoterId && (
@@ -166,7 +167,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       {/* Header */}
       <div className="flex items-center gap-2">
         <GiftIcon className="w-6 h-6 text-primary" />
-        <h2 className="text-xl font-bold">cREP Faucet</h2>
+        <h2 className={surfaceSectionHeadingClassName}>cREP Faucet</h2>
         <InfoTooltip text="Claim free cREP tokens by verifying your identity with Self.xyz passport scan" />
       </div>
 

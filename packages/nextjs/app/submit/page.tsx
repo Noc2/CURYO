@@ -12,6 +12,7 @@ import { CategorySubmissionForm } from "~~/components/governance/CategorySubmiss
 import { FrontendRegistration } from "~~/components/governance/FrontendRegistration";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
@@ -458,7 +459,7 @@ const SubmitPage: NextPage = () => {
     return (
       <div className="flex flex-col items-center justify-center grow px-6 pt-20">
         <div className="surface-card rounded-2xl p-8 text-center max-w-sm">
-          <h1 className="text-2xl font-semibold mb-3">Submit</h1>
+          <h1 className={`${surfaceSectionHeadingClassName} mb-3`}>Submit</h1>
           <p className="text-base-content/50 mb-6 text-base">
             Connect your wallet to submit content or propose new categories.
           </p>
@@ -484,7 +485,7 @@ const SubmitPage: NextPage = () => {
       <div className="flex flex-col items-center justify-center grow px-6 pt-20">
         <div className="surface-card rounded-2xl p-8 text-center max-w-md space-y-4">
           <IdentificationIcon className="w-12 h-12 text-warning mx-auto" />
-          <h1 className="text-2xl font-semibold">Voter ID Required</h1>
+          <h1 className={surfaceSectionHeadingClassName}>Voter ID Required</h1>
           <p className="text-base-content/60">
             You need a Voter ID to submit content, propose platforms, or register as a frontend operator. Verify your
             identity with Self.xyz to receive your Voter ID.
@@ -529,7 +530,7 @@ const SubmitPage: NextPage = () => {
 
       {submissionType === "content" ? (
         <div className="surface-card rounded-2xl p-6 space-y-5">
-          <h1 className="text-2xl font-semibold">Submit Content</h1>
+          <h1 className={surfaceSectionHeadingClassName}>Submit Content</h1>
 
           <form
             onSubmit={handleSubmit}

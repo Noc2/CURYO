@@ -1,6 +1,7 @@
 "use client";
 
 import { BoltIcon, BuildingLibraryIcon, GiftIcon, ShieldCheckIcon, UserGroupIcon } from "@heroicons/react/24/outline";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
@@ -83,7 +84,7 @@ export const TreasuryBalance = () => {
   return (
     <div className="surface-card rounded-2xl p-6">
       <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold">Protocol Pools</h2>
+        <h2 className={surfaceSectionHeadingClassName}>Protocol Pools</h2>
         <InfoTooltip
           text="Live cREP balances across the treasury and protocol-controlled reward pools."
           className="[&>svg]:opacity-60"

@@ -20,6 +20,7 @@ import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
 import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGovernanceContracts } from "~~/hooks/useGovernance";
 
@@ -203,7 +204,7 @@ function GovernancePageInner() {
               <CategorySubmissionForm />
             ) : (
               <div className="surface-card rounded-2xl p-6">
-                <h2 className="text-lg font-semibold mb-2">Category Submission</h2>
+                <h2 className={`${surfaceSectionHeadingClassName} mb-2`}>Category Submission</h2>
                 <p className="text-base text-base-content/60">
                   Category submissions are disabled on this network because they create a live governance proposal under
                   the hood, and no deployed <code>CuryoGovernor</code> was detected.

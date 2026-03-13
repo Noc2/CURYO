@@ -7,6 +7,7 @@ import { blo } from "blo";
 import { useAccount } from "wagmi";
 import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
+import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
@@ -162,7 +163,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   return (
     <div className="surface-card rounded-2xl p-6 overflow-x-auto">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-base font-medium text-base-content/60">cREP leaderboard</span>
+        <h2 className={surfaceSectionHeadingClassName}>cREP leaderboard</h2>
         <FollowScopeToggle value={scope} onChange={value => void handleScopeChange(value)} />
       </div>
 
