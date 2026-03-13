@@ -69,23 +69,13 @@
   </text>
   <text
     x="600"
-    y="468"
+    y="482"
     font-family="'Inter', 'Segoe UI', sans-serif"
-    font-size="22"
+    font-size="28"
     fill="#8A8F9C"
     text-anchor="middle"
-    letter-spacing="4"
+    letter-spacing="1.5"
   >
-    DECENTRALIZED REPUTATION GAME
-  </text>
-  <text
-    x="600"
-    y="524"
-    font-family="'Inter', 'Segoe UI', sans-serif"
-    font-size="20"
-    fill="#5F6675"
-    text-anchor="middle"
-  >
-    Stake on your judgment. Surface the best content.
+    The Reputation Game for the Age of AI
   </text>
 </svg>
