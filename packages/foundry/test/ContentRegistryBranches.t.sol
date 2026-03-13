@@ -326,24 +326,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(registry.getSubmitterIdentity(id), submitter, "current delegate mapping should refine legacy identity");
     }
 
-    function test_BackfillSubmitterIdentity_OverridesLegacyRawIdentity() public {
-        vm.startPrank(delegate);
-        crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/backfill-submit", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        assertEq(registry.getSubmitterIdentity(id), delegate, "legacy content should start with raw identity");
-
-        vm.prank(owner);
-        registry.backfillSubmitterIdentity(id, submitter);
-
-        assertEq(registry.getSubmitterIdentity(id), submitter, "governance backfill should pin canonical identity");
-
-        vm.prank(owner);
-        vm.expectRevert("Submitter identity already set");
-        registry.backfillSubmitterIdentity(id, delegate);
-    }
-
     function test_SubmitContent_VoterIdNotConfigured_Succeeds() public {
         // No voterIdNFT set — should skip check
         vm.startPrank(submitter);

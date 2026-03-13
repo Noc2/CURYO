@@ -25,7 +25,7 @@ const DEFAULT_PONDER_TIMEOUT_MS = 10_000;
 const DEFAULT_HTTP_HOST = "127.0.0.1";
 const DEFAULT_HTTP_PORT = 3334;
 const DEFAULT_HTTP_PATH = "/mcp";
-const DEFAULT_HTTP_CORS_ORIGIN = "*";
+const DEFAULT_HTTP_CORS_ORIGIN = "http://localhost:3000";
 const DEFAULT_HTTP_AUTH_REALM = "curyo-mcp";
 const DEFAULT_HTTP_AUTH_SCOPES = ["mcp:read"] as const;
 

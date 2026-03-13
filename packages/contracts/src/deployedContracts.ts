@@ -1927,24 +1927,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "backfillSubmitterIdentity",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "submitterIdentity",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "bonusPool",
           inputs: [],
           outputs: [
@@ -3109,25 +3091,6 @@ const deployedContracts = {
             },
             {
               name: "sender",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "SubmitterIdentityBackfilled",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitterIdentity",
               type: "address",
               indexed: true,
               internalType: "address",
@@ -19577,24 +19540,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "backfillSubmitterIdentity",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "submitterIdentity",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "bonusPool",
           inputs: [],
           outputs: [
@@ -20759,25 +20704,6 @@ const deployedContracts = {
             },
             {
               name: "sender",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "SubmitterIdentityBackfilled",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "submitterIdentity",
               type: "address",
               indexed: true,
               internalType: "address",

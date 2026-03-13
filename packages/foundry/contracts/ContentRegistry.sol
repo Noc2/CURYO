@@ -132,7 +132,6 @@ contract ContentRegistry is
         uint256 indexed contentId, address indexed submitter, address indexed rewardPool, uint256 amount
     );
     event SubmitterParticipationRewardClaimed(uint256 indexed contentId, address indexed submitter, uint256 amount);
-    event SubmitterIdentityBackfilled(uint256 indexed contentId, address indexed submitterIdentity);
     event RatingUpdated(uint256 indexed contentId, uint256 oldRating, uint256 newRating);
     event VoterIdNFTUpdated(address voterIdNFT);
 
@@ -566,19 +565,6 @@ contract ContentRegistry is
         crepToken.safeTransfer(treasury, slashAmount);
 
         emit SubmitterStakeSlashed(contentId, slashAmount);
-    }
-
-    /// @notice Backfill canonical submitter identity for legacy content created before identity snapshots existed.
-    function backfillSubmitterIdentity(uint256 contentId, address submitterIdentity) external onlyRole(CONFIG_ROLE) {
-        require(submitterIdentity != address(0), "Invalid address");
-        Content storage c = contents[contentId];
-        require(c.id != 0, "Content does not exist");
-
-        address currentIdentity = contentSubmitterIdentity[contentId];
-        require(currentIdentity == address(0) || currentIdentity == c.submitter, "Submitter identity already set");
-
-        contentSubmitterIdentity[contentId] = submitterIdentity;
-        emit SubmitterIdentityBackfilled(contentId, submitterIdentity);
     }
 
     // --- View functions ---

@@ -161,17 +161,11 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithApprovedFrontend;
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public roundPerFrontendStake;
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendPool;
-    // Deprecated claim-tracking slots preserved for upgrade safety. RoundRewardDistributor now owns claim state.
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal frontendFeeClaimed;
     mapping(uint256 => mapping(uint256 => uint256)) public roundApprovedFrontendCount;
-    mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendClaimedCount;
-    mapping(uint256 => mapping(uint256 => uint256)) internal roundFrontendClaimedAmount;
 
     // Participation reward snapshots (claim state now lives in RoundRewardDistributor)
     mapping(uint256 => mapping(uint256 => address)) public roundParticipationPool;
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRateBps;
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal participationRewardClaimed;
-    mapping(uint256 => mapping(uint256 => mapping(address => uint256))) internal participationRewardPaid;
 
     // --- Events ---
     event VoteCommitted(
@@ -1116,5 +1110,5 @@ contract RoundVotingEngine is
     mapping(uint256 => bool) internal contentHasSettledRound;
 
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[15] private __gap;
+    uint256[20] private __gap;
 }
