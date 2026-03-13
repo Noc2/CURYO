@@ -52,14 +52,13 @@ contract FrontendRegistry is
     IERC20 public crepToken;
     IRoundVotingEngine public votingEngine;
 
-    uint256 private __deprecated_minStake; // was: minStake (kept for storage layout)
     mapping(address => Frontend) public frontends;
     address[] public registeredFrontends;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
     mapping(address => uint256) public frontendExitAvailableAt;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 
     // --- Events ---
     event FrontendRegistered(address indexed frontend, address indexed operator, uint256 stakedAmount);
