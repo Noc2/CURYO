@@ -57,6 +57,7 @@ contract RoundVotingEngine is
     error CiphertextTooLarge();
     error InvalidCiphertext();
     error RoundNotOpen();
+    error ActiveRoundStillOpen();
     error RoundNotAccepting();
     error RoundNotExpired();
     error RoundNotSettledOrTied();
@@ -155,9 +156,6 @@ contract RoundVotingEngine is
 
     // Original public commit hash for a commit key.
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => bytes32))) internal commitHashByKey;
-
-    // Deprecated: was commitHashToVoter for hash-based reveals (removed). Slot preserved for UUPS layout.
-    mapping(uint256 => mapping(uint256 => mapping(bytes32 => address))) private __deprecated_commitHashToVoter;
 
     // Frontend fee aggregation (computed incrementally during revealVote for O(1) settlement)
     mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithApprovedFrontend;
@@ -838,6 +836,10 @@ contract RoundVotingEngine is
     /// @notice Resolve submitter stake once the slash or healthy-return window has elapsed.
     /// @dev Permissionless so idle content cannot bypass the submitter stake policy.
     function resolveSubmitterStake(uint256 contentId) external nonReentrant whenNotPaused {
+        uint256 roundId = currentRoundId[contentId];
+        if (roundId != 0 && rounds[contentId][roundId].state == RoundLib.RoundState.Open) {
+            revert ActiveRoundStillOpen();
+        }
         SubmitterStakeLib.resolve(registry, participationPool, contentHasSettledRound[contentId], contentId);
     }
 
@@ -1076,21 +1078,13 @@ contract RoundVotingEngine is
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
 
     // =========================================================================
-    // POST-UPGRADE STORAGE — UUPS LAYOUT COMPATIBILITY
+    // POST-UPGRADE STORAGE
     // =========================================================================
-    // AUDIT NOTE (I-6): These variables were appended after the initial deployment to support
-    // new features (sybil resistance, streak rewards). They MUST remain at the end of the
-    // contract storage and MUST NOT be reordered or moved above the __gap. The __gap size
-    // was reduced accordingly to preserve total slot count.
+    // These variables were appended after the initial contract shape was established. Keep them
+    // at the end of storage and only grow the contract further by consuming the gap below.
 
     // One vote per identity per round
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public hasTokenIdCommitted;
-
-    // --- Deprecated streak tracking ---
-    // Preserved as inert storage slots for upgrade safety. The product streak UI is indexed off VoteCommitted events.
-    mapping(address => uint256) internal __deprecated_voterLastActiveDay;
-    mapping(address => uint256) internal __deprecated_voterCurrentStreak;
-    mapping(address => uint256) internal __deprecated_voterLastMilestoneDay;
 
     // Per-identity cooldown: contentId => tokenId => timestamp (prevents cooldown bypass via delegation)
     mapping(uint256 => mapping(uint256 => uint256)) internal lastVoteTimestampByToken;
@@ -1122,5 +1116,5 @@ contract RoundVotingEngine is
     mapping(uint256 => bool) internal contentHasSettledRound;
 
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[12] private __gap;
+    uint256[15] private __gap;
 }

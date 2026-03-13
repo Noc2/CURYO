@@ -85,13 +85,12 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         vm.stopPrank();
     }
 
-    function test_ResolveSubmitterStake_AllowsResolutionWhileLaterRoundIsOpen() public {
-        uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
-
+    function test_ResolveSubmitterStake_RevertsWhileLaterRoundIsOpen() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
+        uint256 submitterBalanceAfterSubmit = crepToken.balanceOf(submitter);
 
         (bytes32 commitKey1, bytes32 salt1) = _commit(voter1, 1, true);
         (bytes32 commitKey2, bytes32 salt2) = _commit(voter2, 1, true);
@@ -109,37 +108,65 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         assertTrue(activeRoundId != 0 && activeRoundId != firstRoundId, "later round should remain open");
 
         vm.warp(T0 + 4 days + 1);
+        vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
+        votingEngine.resolveSubmitterStake(1);
+
+        assertFalse(registry.isSubmitterStakeReturned(1), "submitter stake must remain locked while a later round is open");
+        assertEq(crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged");
+    }
+
+    function test_ResolveSubmitterStake_AllowsResolutionAfterLaterRoundCancels() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+        uint256 submitterBalanceAfterSubmit = crepToken.balanceOf(submitter);
+
+        (bytes32 commitKey1, bytes32 salt1) = _commit(voter1, 1, true);
+        (bytes32 commitKey2, bytes32 salt2) = _commit(voter2, 1, true);
+        (bytes32 commitKey3, bytes32 salt3) = _commit(voter3, 1, false);
+        uint256 firstRoundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        vm.warp(T0 + 1 hours + 1);
+        votingEngine.revealVoteByCommitKey(1, firstRoundId, commitKey1, true, salt1);
+        votingEngine.revealVoteByCommitKey(1, firstRoundId, commitKey2, true, salt2);
+        votingEngine.revealVoteByCommitKey(1, firstRoundId, commitKey3, false, salt3);
+        votingEngine.settleRound(1, firstRoundId);
+
+        _commit(voter4, 1, true);
+        uint256 laterRoundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+        assertTrue(laterRoundId != 0 && laterRoundId != firstRoundId, "later round should exist");
+
+        vm.warp(T0 + 7 days + 1 hours + 2);
+        votingEngine.cancelExpiredRound(1, laterRoundId);
+
         votingEngine.resolveSubmitterStake(1);
 
         assertTrue(registry.isSubmitterStakeReturned(1), "submitter stake should resolve even if a later round is open");
         assertEq(
-            crepToken.balanceOf(submitter) - submitterBalanceBefore,
-            0,
+            crepToken.balanceOf(submitter) - submitterBalanceAfterSubmit,
+            10e6,
             "healthy resolution should only release the locked submitter stake"
         );
     }
 
-    function test_ResolveSubmitterStake_AllowsDormancyFallbackWhileLaterRoundIsOpenWithoutSettlement() public {
-        uint256 submitterBalanceBefore = crepToken.balanceOf(submitter);
-
+    function test_ResolveSubmitterStake_DormancyFallbackRevertsWhileLaterRoundIsOpenWithoutSettlement() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/no-settlement", "goal", "goal", "tags", 0);
         vm.stopPrank();
+        uint256 submitterBalanceAfterSubmit = crepToken.balanceOf(submitter);
 
         _commit(voter1, 1, true);
         uint256 activeRoundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
         assertTrue(activeRoundId != 0, "later round should remain open");
 
         vm.warp(T0 + 31 days);
+        vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
-        assertTrue(registry.isSubmitterStakeReturned(1), "dormancy fallback should resolve even with an open round");
-        assertEq(
-            crepToken.balanceOf(submitter) - submitterBalanceBefore,
-            0,
-            "dormancy fallback should only release the locked stake"
-        );
+        assertFalse(registry.isSubmitterStakeReturned(1), "dormancy fallback must keep stake locked while the round is open");
+        assertEq(crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged");
     }
 
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {
