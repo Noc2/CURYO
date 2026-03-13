@@ -45,9 +45,10 @@ async function main() {
   let metricsServer: ReturnType<typeof startMetricsServer> | undefined;
   if (config.metricsEnabled) {
     setHealthThreshold(config.intervalMs);
-    metricsServer = startMetricsServer(config.metricsPort);
+    metricsServer = startMetricsServer(config.metricsPort, config.metricsBindAddress);
     logger.info("Metrics server started", {
       port: config.metricsPort,
+      bindAddress: config.metricsBindAddress,
       endpoints: ["/metrics", "/health"],
     });
   }

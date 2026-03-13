@@ -129,9 +129,11 @@ function loadConfig() {
     // Tuning
     dormancyPeriod: BigInt(process.env.DORMANCY_PERIOD || String(30 * 24 * 60 * 60)),
     minGasBalanceWei: process.env.MIN_GAS_BALANCE_WEI || "10000000000000000", // 0.01 CELO
+    maxGasPerTx: readPositiveIntEnv("MAX_GAS_PER_TX", "2000000", errors),
 
     // Monitoring
     metricsPort: Number.parseInt(process.env.METRICS_PORT || "9090", 10),
+    metricsBindAddress: readEnv("METRICS_BIND_ADDRESS") || "127.0.0.1",
     metricsEnabled: process.env.METRICS_ENABLED !== "false",
 
     // Logging

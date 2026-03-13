@@ -78,6 +78,7 @@ interface CleanupCursor {
 }
 
 const MAX_CLEANUP_BATCHES_PER_TICK = 4;
+const MAX_CLEANUP_COMPLETED = 5000;
 const cleanupQueue = new Map<string, CleanupCursor>();
 const cleanupCompletedRounds = new Set<string>();
 const cleanupDiscoveryRoundByContent = new Map<bigint, bigint>();
@@ -126,6 +127,15 @@ function markCleanupCompleted(contentId: bigint, roundId: bigint): void {
   const key = cleanupRoundKey(contentId, roundId);
   cleanupQueue.delete(key);
   cleanupCompletedRounds.add(key);
+
+  // Evict oldest entries when the set grows too large
+  if (cleanupCompletedRounds.size > MAX_CLEANUP_COMPLETED) {
+    const entries = Array.from(cleanupCompletedRounds);
+    const toRemove = entries.slice(0, entries.length - MAX_CLEANUP_COMPLETED);
+    for (const entry of toRemove) {
+      cleanupCompletedRounds.delete(entry);
+    }
+  }
 }
 
 export async function assertContractDeployed(
@@ -362,6 +372,7 @@ export async function resolveRounds(
     const block = await publicClient.getBlock({ blockTag: "latest" });
     now = block.timestamp;
   } catch {
+    console.warn("[Keeper] RPC block fetch failed, using local clock fallback");
     now = BigInt(Math.floor(Date.now() / 1000)) - 30n;
   }
 
@@ -607,6 +618,11 @@ async function writeContractAndConfirm(
   walletClient: WalletClient,
   request: Parameters<WalletClient["writeContract"]>[0],
 ): Promise<`0x${string}`> {
+  // Enforce gas cap to prevent runaway transactions
+  if (!request.gas && config.maxGasPerTx > 0) {
+    request.gas = BigInt(config.maxGasPerTx);
+  }
+
   const hash = await walletClient.writeContract(request);
 
   const waitForReceipt = (publicClient as { waitForTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<unknown> })

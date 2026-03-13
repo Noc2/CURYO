@@ -162,8 +162,8 @@ function handler(req: IncomingMessage, res: ServerResponse) {
   }
 }
 
-export function startMetricsServer(port: number): Server {
+export function startMetricsServer(port: number, bindAddress = "127.0.0.1"): Server {
   const server = createServer(handler);
-  server.listen(port);
+  server.listen(port, bindAddress);
   return server;
 }
