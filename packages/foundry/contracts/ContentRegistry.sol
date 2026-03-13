@@ -211,8 +211,8 @@ contract ContentRegistry is
     /// @param title The content title (stored in event only).
     /// @param description The content description (stored in event only).
     /// @param tags Comma-separated subcategory tags (stored in event only).
-    /// @param categoryId The category ID hint. When CategoryRegistry is configured, the URL determines the
-    ///        effective category and this hint must either match or be 0.
+    /// @param categoryId The category ID hint. The URL determines the effective category and this hint must either
+    ///        match it or be 0.
     function submitContent(
         string calldata url,
         string calldata title,
@@ -240,16 +240,9 @@ contract ContentRegistry is
         require(bytes(tags).length > 0, "Tags required");
         require(bytes(tags).length <= MAX_TAGS_LENGTH, "Tags too long");
 
-        uint256 resolvedCategoryId = categoryId;
-        bytes32 submissionKey;
-        if (address(categoryRegistry) != address(0)) {
-            (resolvedCategoryId, submissionKey) =
-                SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
-        } else {
-            // Preserve legacy/test behavior until the category registry is wired.
-            require(categoryId == 0, "CategoryRegistry not set");
-            submissionKey = keccak256(abi.encodePacked(url));
-        }
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+        (uint256 resolvedCategoryId, bytes32 submissionKey) =
+            SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
 
         require(!submissionKeyUsed[submissionKey], "URL already submitted");
         submissionKeyUsed[submissionKey] = true;

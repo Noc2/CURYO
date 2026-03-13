@@ -18,6 +18,7 @@ import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
 import { IFrontendRegistry } from "../contracts/interfaces/IFrontendRegistry.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // =========================================================================
 // MOCKS
@@ -729,7 +730,11 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setRewardDistributor(address(distributor));
+        engine.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setTreasury(treasury);
         engine.setConfig(5 minutes, 7 days, 2, 200);
 

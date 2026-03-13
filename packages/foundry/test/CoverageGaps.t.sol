@@ -17,6 +17,7 @@ import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.s
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // =========================================================================
 // MOCKS
@@ -574,7 +575,11 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine));
+        MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setRewardDistributor(address(distributor));
+        engine.setCategoryRegistry(address(mockCategoryRegistry));
         engine.setTreasury(treasury);
         engine.setConfig(5 minutes, 7 days, 2, 200);
 
@@ -796,6 +801,9 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(engine2));
+        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
+        mockCategoryRegistry2.seedDefaultTestCategories();
+        engine2.setCategoryRegistry(address(mockCategoryRegistry2));
         engine2.setRewardDistributor(address(dist2));
         engine2.setTreasury(treasury);
         engine2.setConfig(5 minutes, 7 days, 2, 200);

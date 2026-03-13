@@ -19,6 +19,7 @@ import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.s
 import { IParticipationPool } from "../contracts/interfaces/IParticipationPool.sol";
 import { Pausable } from "@openzeppelin/contracts/utils/Pausable.sol";
 import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 // =========================================================================
 // SHARED MOCKS
@@ -646,6 +647,7 @@ contract ContentRegistryCoverageTest is Test {
     address public other = address(0xC);
     address public treasury = address(0xD);
     address public bonusPool = address(0xE);
+    MockCategoryRegistry public mockCategoryRegistry;
 
     function setUp() public {
         vm.startPrank(admin);
@@ -664,6 +666,9 @@ contract ContentRegistryCoverageTest is Test {
 
         registry.setTreasury(treasury);
         registry.setBonusPool(bonusPool);
+        mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry));
 
         crep.mint(submitter, 100_000e6);
         crep.mint(other, 100_000e6);
@@ -853,13 +858,13 @@ contract ContentRegistryCoverageTest is Test {
         assertEq(id, 1);
     }
 
-    // --- submitContent: non-zero categoryId without registry ---
+    // --- submitContent: mismatched category hint ---
 
-    function test_SubmitContentCategoryNoRegistryReverts() public {
+    function test_SubmitContentCategoryMismatchReverts() public {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        vm.expectRevert("CategoryRegistry not set");
-        registry.submitContent("https://example.com/cat", "goal", "goal", "tag1", 1);
+        vm.expectRevert("Category mismatch");
+        registry.submitContent("https://example.com/cat", "goal", "goal", "tag1", 2);
         vm.stopPrank();
     }
 
@@ -930,6 +935,9 @@ contract ContentRegistryCoverageTest is Test {
                 )
             )
         );
+        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
+        mockCategoryRegistry2.seedDefaultTestCategories();
+        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
         crep.mint(submitter, 100_000e6);
         vm.stopPrank();
 
@@ -1153,6 +1161,9 @@ contract ContentRegistryCoverageTest is Test {
             )
         );
         reg2.setBonusPool(bonusPool);
+        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
+        mockCategoryRegistry2.seedDefaultTestCategories();
+        reg2.setCategoryRegistry(address(mockCategoryRegistry2));
         reg2.setVotingEngine(address(this));
         crep.mint(submitter, 100_000e6);
         vm.stopPrank();
@@ -1187,7 +1198,7 @@ contract ContentRegistryCoverageTest is Test {
 
     function test_GetCategoryId() public {
         uint256 id = _submitContent(submitter, "https://example.com/catid");
-        assertEq(registry.getCategoryId(id), 0);
+        assertEq(registry.getCategoryId(id), 1);
     }
 
     // --- Pause/Unpause ---
@@ -1579,7 +1590,11 @@ contract RoundSettlementBranchTest is VotingTestBase {
         registry.setVotingEngine(address(engine));
         registry.setBonusPool(owner);
         registry.setTreasury(treasury);
+        MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
+        mockCategoryRegistry2.seedDefaultTestCategories();
+        registry.setCategoryRegistry(address(mockCategoryRegistry2));
         engine.setRewardDistributor(address(distributor));
+        engine.setCategoryRegistry(address(mockCategoryRegistry2));
         engine.setTreasury(treasury);
         engine.setConfig(5 minutes, 7 days, 2, 200);
 
