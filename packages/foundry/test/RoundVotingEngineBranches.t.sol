@@ -1224,6 +1224,25 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(newRoundId, roundId + 1, "new commits roll into a fresh round after reveal failure");
     }
 
+    function test_CommitAfterRevealFailedGrace_RevertsWhenDormancyElapsed() public {
+        uint256 contentId = _submitContent();
+
+        _commit(voter1, contentId, true, STAKE);
+        _commit(voter2, contentId, false, STAKE);
+        _commit(voter3, contentId, true, STAKE);
+
+        bytes32 salt = keccak256(abi.encodePacked(voter4, block.timestamp, contentId));
+        bytes memory ciphertext = _testCiphertext(true, salt, contentId);
+        bytes32 commitHash = _commitHash(true, salt, contentId, ciphertext);
+
+        vm.warp(T0 + 31 days);
+        vm.startPrank(voter4);
+        crepToken.approve(address(engine), STAKE);
+        vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
+        engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        vm.stopPrank();
+    }
+
     function test_RoundKeepsAcceptingVotesBeforeMaxDurationEvenIfEarlyRevealGracePassed() public {
         uint256 contentId = _submitContent();
 

@@ -432,6 +432,13 @@ contract RoundVotingEngine is
         uint256 currentOpenRoundId = currentRoundId[contentId];
         if (currentOpenRoundId == 0 || RoundLib.isTerminal(rounds[contentId][currentOpenRoundId])) {
             if (registry.isDormancyEligible(contentId)) revert DormancyWindowElapsed();
+        } else {
+            RoundLib.Round storage currentRound = rounds[contentId][currentOpenRoundId];
+            // If this commit would auto-finalize the stale open round and roll into a fresh round,
+            // re-run the dormancy gate before allowing voting to continue.
+            if (_canFinalizeRevealFailedRound(contentId, currentOpenRoundId, currentRound)) {
+                if (registry.isDormancyEligible(contentId)) revert DormancyWindowElapsed();
+            }
         }
 
         uint256 roundId = _getOrCreateRound(contentId);
