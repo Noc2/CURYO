@@ -605,29 +605,8 @@ contract ContentRegistry is
         return block.timestamp > _getDormancyAnchor(contentId, c) + DORMANCY_PERIOD;
     }
 
-    function isUrlSubmitted(string calldata url) external view returns (bool) {
-        if (bytes(url).length == 0 || !_isValidSubmissionUrl(url)) return false;
-
-        if (address(categoryRegistry) == address(0)) {
-            return submissionKeyUsed[keccak256(abi.encodePacked(url))];
-        }
-
-        try SUBMISSION_CANONICALIZER.resolveSubmissionKey(categoryRegistry, url) returns (bytes32 submissionKey) {
-            return submissionKeyUsed[submissionKey];
-        } catch {
-            return false;
-        }
-    }
-
     function getCategoryId(uint256 contentId) external view returns (uint256) {
         return contents[contentId].categoryId;
-    }
-
-    /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
-    /// @dev Exposed for frontend/tests and used internally via try/catch in isUrlSubmitted.
-    function resolveSubmissionKey(string calldata url) external view returns (bytes32) {
-        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return SUBMISSION_CANONICALIZER.resolveSubmissionKey(categoryRegistry, url);
     }
 
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {

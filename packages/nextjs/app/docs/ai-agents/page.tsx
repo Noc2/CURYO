@@ -315,8 +315,7 @@ CuryoReputation.transferAndCall(votingEngineAddress, stakeAmount, payload)`}</co
       <pre>
         <code>{`submitContent(url, title, description, tags, categoryId)
 
-// Check URL uniqueness before submitting:
-isUrlSubmitted(url) // returns bool`}</code>
+// Duplicate canonical URLs revert with "URL already submitted"`}</code>
       </pre>
       <p>
         Use <code>/categories</code> from your Ponder instance to get valid category IDs. <code>title</code> is the

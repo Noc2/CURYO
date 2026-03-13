@@ -819,15 +819,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.submitContent("https://example.com/dormant-url", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
-        // URL should be marked as submitted
-        assertTrue(registry.isUrlSubmitted("https://example.com/dormant-url"));
-
         // Mark dormant after 31 days
         vm.warp(T0 + 31 days);
         registry.markDormant(1);
-
-        // URL should now be released
-        assertFalse(registry.isUrlSubmitted("https://example.com/dormant-url"));
 
         // Should be able to resubmit the same URL
         vm.startPrank(submitter);

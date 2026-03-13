@@ -2389,25 +2389,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isUrlSubmitted",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "markDormant",
           inputs: [
             {
@@ -2521,25 +2502,6 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "resolveSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -19989,25 +19951,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isUrlSubmitted",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "markDormant",
           inputs: [
             {
@@ -20121,25 +20064,6 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "resolveSubmissionKey",
-          inputs: [
-            {
-              name: "url",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",

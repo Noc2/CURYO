@@ -1179,12 +1179,6 @@ contract ContentRegistryCoverageTest is Test {
         assertEq(registry.getSubmitter(id), submitter);
     }
 
-    function test_IsUrlSubmitted() public {
-        _submitContent(submitter, "https://example.com/urlcheck");
-        assertTrue(registry.isUrlSubmitted("https://example.com/urlcheck"));
-        assertFalse(registry.isUrlSubmitted("https://example.com/notsubmitted"));
-    }
-
     function test_GetCreatedAt() public {
         vm.warp(1000);
         uint256 id = _submitContent(submitter, "https://example.com/created");
