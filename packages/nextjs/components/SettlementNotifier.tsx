@@ -12,6 +12,8 @@ import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { notification } from "~~/utils/scaffold-eth";
 
+const GOVERNANCE_REWARDS_HREF = "/governance";
+
 /**
  * Headless component that fires browser notifications + in-app toasts for
  * tracked round resolutions, settling-soon reminders, and followed-curator activity.
@@ -254,18 +256,23 @@ export function SettlementNotifier() {
           });
         }
 
+        const href = votedRound ? GOVERNANCE_REWARDS_HREF : `/vote?content=${contentId}`;
         const title = votedRound ? "Round Resolved!" : "Watched Content Resolved!";
         const body = votedRound
-          ? `Content #${contentId} round resolved. Check your portfolio to claim rewards.`
+          ? `Content #${contentId} round resolved. Open Governance to claim rewards.`
           : `Content #${contentId} just resolved. Open Curyo to see the latest result.`;
+        const toastBody = votedRound ? (
+          <Link href={href} className="font-medium underline">
+            {`Round resolved! Content #${contentId} round #${args.roundId.toString()}. Open Governance to claim rewards.`}
+          </Link>
+        ) : (
+          <Link href={href} className="font-medium underline">
+            {`Watched content resolved! Content #${contentId} round #${args.roundId.toString()} is ready to review.`}
+          </Link>
+        );
 
         // In-app toast (always fires)
-        notification.success(
-          votedRound
-            ? `Round resolved! Content #${contentId} round #${args.roundId.toString()}. Check your portfolio to claim rewards.`
-            : `Watched content resolved! Content #${contentId} round #${args.roundId.toString()} is ready to review.`,
-          { duration: 8000 },
-        );
+        notification.success(toastBody, { duration: 8000 });
 
         // Browser notification (only if permitted)
         if (permissionRef.current === "granted") {
@@ -276,7 +283,7 @@ export function SettlementNotifier() {
             });
             browserNotification.onclick = () => {
               window.focus();
-              window.location.href = `/vote?content=${contentId}`;
+              window.location.href = href;
               browserNotification.close();
             };
           } catch {

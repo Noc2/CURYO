@@ -167,6 +167,16 @@ function getAbsoluteVoteUrl(contentId: string) {
   return url.toString();
 }
 
+function getAbsoluteGovernanceUrl() {
+  const appUrl = getOptionalAppUrl();
+  const base = appUrl ?? "http://localhost:3000";
+  return new URL("/governance", base).toString();
+}
+
+function getAbsoluteRoundResolvedUrl(contentId: string, source: NotificationEventResolutionItem["source"]) {
+  return source === "watched" ? getAbsoluteVoteUrl(contentId) : getAbsoluteGovernanceUrl();
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -190,6 +200,11 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
           : source === "watched_voted"
             ? "A round you watched and voted on resolved"
             : "A round you voted on resolved";
+      const href = getAbsoluteRoundResolvedUrl(item.contentId, source);
+      const body =
+        source === "watched"
+          ? `${bodyPrefix}: "${item.title}".`
+          : `${bodyPrefix}: "${item.title}". Open Governance to claim your cREP from this round.`;
 
       candidates.set(eventKey, {
         walletAddress: subscription.walletAddress,
@@ -198,8 +213,8 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
         eventType: "round_resolved",
         contentId: item.contentId,
         subject: "A tracked round just resolved on Curyo",
-        body: `${bodyPrefix}: "${item.title}".`,
-        href: getAbsoluteVoteUrl(item.contentId),
+        body,
+        href,
       });
     }
   }
