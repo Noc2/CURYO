@@ -350,7 +350,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
                     votingEngine.transferReward(frontend, fee);
                     return;
                 }
-                revert IFrontendRegistry.FrontendIsSlashed();
+                address treasury = votingEngine.treasury();
+                if (treasury == address(0)) {
+                    revert IFrontendRegistry.FrontendIsSlashed();
+                }
+                votingEngine.transferReward(treasury, fee);
+                return;
             }
 
             try snapshotRegistry.creditFees(frontend, fee) {
