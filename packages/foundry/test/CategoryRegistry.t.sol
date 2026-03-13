@@ -291,6 +291,18 @@ contract CategoryRegistryTest is Test {
         vm.stopPrank();
     }
 
+    function test_RevertAddApprovedCategoryAliasDomainCollidesWithCanonicalDomain() public {
+        string[] memory subcategories = new string[](1);
+        subcategories[0] = "General";
+
+        vm.startPrank(admin);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+
+        vm.expectRevert("Domain already registered");
+        registry.addApprovedCategory("YouTube Shortlinks", "youtu.be", subcategories, DEFAULT_TEMPLATE);
+        vm.stopPrank();
+    }
+
     function test_RevertAddApprovedCategoryEmptySubcategories() public {
         string[] memory subcategories = new string[](0);
 
@@ -681,6 +693,7 @@ contract CategoryRegistryTest is Test {
         assertTrue(registry.isDomainRegistered("youtube.com"));
         assertTrue(registry.isDomainRegistered("YOUTUBE.COM")); // Case insensitive
         assertTrue(registry.isDomainRegistered("www.youtube.com")); // www normalized
+        assertTrue(registry.isDomainRegistered("youtu.be")); // alias normalized to canonical domain
     }
 
     // --- Pagination Tests ---

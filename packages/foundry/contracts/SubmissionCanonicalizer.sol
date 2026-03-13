@@ -36,20 +36,14 @@ contract SubmissionCanonicalizer {
         view
         returns (ICategoryRegistry.Category memory category)
     {
-        try categoryRegistry.getCategoryByDomain(url) returns (ICategoryRegistry.Category memory directCategory) {
-            if (directCategory.id != 0) {
-                return directCategory;
-            }
-        } catch { }
-
         string memory normalizedHost = _extractNormalizedHost(url);
-        string memory aliasDomain = _applyDomainAlias(normalizedHost);
-        if (bytes(aliasDomain).length != 0) {
-            try categoryRegistry.getCategoryByDomain(aliasDomain) returns (
-                ICategoryRegistry.Category memory aliasedCategory
+        string memory canonicalHost = _canonicalizeHost(normalizedHost);
+        if (bytes(canonicalHost).length != 0) {
+            try categoryRegistry.getCategoryByDomain(canonicalHost) returns (
+                ICategoryRegistry.Category memory canonicalCategory
             ) {
-                if (aliasedCategory.id != 0) {
-                    return aliasedCategory;
+                if (canonicalCategory.id != 0) {
+                    return canonicalCategory;
                 }
             } catch { }
         }
@@ -123,11 +117,11 @@ contract SubmissionCanonicalizer {
         return keccak256(abi.encodePacked("url:", _normalizeGenericUrl(url, resolvedDomain)));
     }
 
-    function _applyDomainAlias(string memory host) internal pure returns (string memory) {
+    function _canonicalizeHost(string memory host) internal pure returns (string memory) {
         if (_equals(host, "youtu.be") || _equals(host, "m.youtube.com")) return "youtube.com";
         if (_equals(host, "clips.twitch.tv") || _equals(host, "m.twitch.tv")) return "twitch.tv";
         if (_equals(host, "twitter.com") || _equals(host, "mobile.twitter.com")) return "x.com";
-        return "";
+        return host;
     }
 
     function _extractYouTubeId(string memory url) internal pure returns (string memory) {

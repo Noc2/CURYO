@@ -499,6 +499,17 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         for (uint256 i = 0; i < resultIndex; i++) {
             trimmed[i] = result[i];
         }
-        return string(trimmed);
+        return _canonicalizeDomainAlias(string(trimmed));
+    }
+
+    function _canonicalizeDomainAlias(string memory domain) internal pure returns (string memory) {
+        if (_equals(domain, "youtu.be") || _equals(domain, "m.youtube.com")) return "youtube.com";
+        if (_equals(domain, "clips.twitch.tv") || _equals(domain, "m.twitch.tv")) return "twitch.tv";
+        if (_equals(domain, "twitter.com") || _equals(domain, "mobile.twitter.com")) return "x.com";
+        return domain;
+    }
+
+    function _equals(string memory a, string memory b) internal pure returns (bool) {
+        return keccak256(bytes(a)) == keccak256(bytes(b));
     }
 }
