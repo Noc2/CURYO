@@ -11,7 +11,6 @@ config({ path: join(__dirname, "..", ".env") });
 
 // Get all arguments after the script name
 const args = process.argv.slice(2);
-let fileName = "Deploy.s.sol";
 let network = "localhost";
 let keystoreArg = null;
 
@@ -20,14 +19,11 @@ if (args.includes("--help") || args.includes("-h")) {
   console.log(`
 Usage: yarn deploy [options]
 Options:
-  --file <filename>     Specify the deployment script file (default: Deploy.s.sol)
   --network <network>   Specify the network (default: localhost)
   --keystore <name>     Specify the keystore account to use (bypasses selection prompt)
   --help, -h           Show this help message
 Examples:
-  yarn deploy --file DeployYourContract.s.sol --network sepolia
   yarn deploy --network sepolia --keystore my-account
-  yarn deploy --file DeployYourContract.s.sol
   yarn deploy
   `);
   process.exit(0);
@@ -37,9 +33,6 @@ Examples:
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--network" && args[i + 1]) {
     network = args[i + 1];
-    i++; // Skip next arg since we used it
-  } else if (args[i] === "--file" && args[i + 1]) {
-    fileName = args[i + 1];
     i++; // Skip next arg since we used it
   } else if (args[i] === "--keystore" && args[i + 1]) {
     keystoreArg = args[i + 1];
@@ -149,7 +142,7 @@ The default account (scaffold-eth-default) can only be used for localhost deploy
 }
 
 // Set environment variables for the make command
-process.env.DEPLOY_SCRIPT = `script/${fileName}`;
+process.env.DEPLOY_SCRIPT = "script/Deploy.s.sol";
 process.env.RPC_URL = network;
 process.env.ETH_KEYSTORE_ACCOUNT = selectedKeystore;
 
