@@ -195,6 +195,37 @@ contract ParticipationPoolBranchesTest is Test {
         pool.withdrawRemaining(user1, 1e6);
     }
 
+    function test_RecoverSurplus_DirectTransferOnlyRecoversExtraBalance() public {
+        vm.prank(admin);
+        crepToken.mint(user1, 5e6);
+
+        vm.startPrank(user1);
+        crepToken.transfer(address(pool), 5e6);
+        vm.stopPrank();
+
+        uint256 trackedBalanceBefore = pool.poolBalance();
+        uint256 actualBalanceBefore = crepToken.balanceOf(address(pool));
+        uint256 userBalanceBefore = crepToken.balanceOf(user1);
+
+        vm.prank(admin);
+        uint256 recovered = pool.recoverSurplus(user1, type(uint256).max);
+
+        assertEq(recovered, 5e6, "only the accidental surplus should be recoverable");
+        assertEq(pool.poolBalance(), trackedBalanceBefore, "tracked pool balance must remain untouched");
+        assertEq(
+            crepToken.balanceOf(address(pool)),
+            actualBalanceBefore - 5e6,
+            "contract balance should decrease only by the recovered surplus"
+        );
+        assertEq(crepToken.balanceOf(user1) - userBalanceBefore, 5e6, "surplus should be returned to the recipient");
+    }
+
+    function test_RecoverSurplus_NoSurplusReverts() public {
+        vm.prank(admin);
+        vm.expectRevert("Nothing to recover");
+        pool.recoverSurplus(user1, type(uint256).max);
+    }
+
     function test_RewardVote_NotAuthorized_Reverts() public {
         vm.prank(user1);
         vm.expectRevert("Not authorized");

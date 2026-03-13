@@ -58,6 +58,9 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Emitted when tokens are withdrawn from the pool
     event PoolWithdrawal(address indexed to, uint256 amount);
 
+    /// @notice Emitted when accidentally transferred surplus tokens are recovered
+    event SurplusRecovered(address indexed to, uint256 amount);
+
     /// @notice Emitted when a reward is capped due to pool depletion (M-5 fix)
     event RewardCapped(address indexed recipient, uint256 requested, uint256 actual);
 
@@ -120,6 +123,21 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         poolBalance -= withdrawAmount;
         crepToken.safeTransfer(to, withdrawAmount);
         emit PoolWithdrawal(to, withdrawAmount);
+    }
+
+    /// @notice Recover tokens that were transferred directly to the contract without increasing poolBalance.
+    /// @param to Address to receive the recovered surplus
+    /// @param amount Amount to recover (use type(uint256).max for the full surplus)
+    function recoverSurplus(address to, uint256 amount) external onlyOwner nonReentrant returns (uint256 recoveredAmount) {
+        require(to != address(0), "Invalid address");
+
+        uint256 actualBalance = crepToken.balanceOf(address(this));
+        uint256 surplus = actualBalance > poolBalance ? actualBalance - poolBalance : 0;
+        recoveredAmount = amount > surplus ? surplus : amount;
+        require(recoveredAmount > 0, "Nothing to recover");
+
+        crepToken.safeTransfer(to, recoveredAmount);
+        emit SurplusRecovered(to, recoveredAmount);
     }
 
     // --- View Functions ---
