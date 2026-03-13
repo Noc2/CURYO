@@ -45,12 +45,3 @@ export const PLATFORM_REWARD_SPLIT_BPS = {
   frontend: REWARD_SPLIT_BPS.platform / 2,
   category: REWARD_SPLIT_BPS.platform / 2,
 } as const;
-
-export function isTerminalRoundState(state: number): state is Exclude<RoundState, typeof ROUND_STATE.Open> {
-  return (
-    state === ROUND_STATE.Settled
-    || state === ROUND_STATE.Cancelled
-    || state === ROUND_STATE.Tied
-    || state === ROUND_STATE.RevealFailed
-  );
-}
