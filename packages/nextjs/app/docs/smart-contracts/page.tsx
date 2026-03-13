@@ -370,9 +370,9 @@ const SmartContracts: NextPage = () => {
           participation rewards (rate snapshotted at settlement time for fairness). Pull-based.
         </li>
         <li>
-          <code>ContentRegistry.claimSubmitterParticipationReward(contentId)</code> &mdash; Claim any remaining
-          submitter participation reward after a healthy stake return if the initial best-effort payout was only
-          partial.
+          <code>ContentRegistry.claimSubmitterParticipationReward(contentId)</code> &mdash; Claim the snapshotted
+          submitter participation reward after a healthy stake return. Any amount the pool could already fund is
+          reserved up front for that claim instead of depending entirely on future pool authorization state.
         </li>
         <li>
           <code>cancelExpiredRound(contentId, roundId)</code> &mdash; Cancel a round that exceeded maxDuration (

@@ -878,7 +878,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period and a settled round establishes that low rating. Stakes are returned after roughly 4 days once a settled round confirms a healthy rating and no later round remains open. If no round ever settles, the stake instead resolves when the content reaches dormancy. Healthy submitter participation rewards are snapshotted at that return point and can be claimed later if the pool was only able to pay a partial amount immediately.",
+            text: "Submitter stakes are slashed (100% to treasury) if content rating drops below 25 after a 24-hour grace period and a settled round establishes that low rating. Stakes are returned after roughly 4 days once a settled round confirms a healthy rating and no later round remains open. If no round ever settles, the stake instead resolves when the content reaches dormancy. Healthy submitter participation rewards are snapshotted at that return point and claimed later; whatever the pool can already fund is reserved immediately so later claims do not depend entirely on future authorization state.",
           },
         ],
       },
