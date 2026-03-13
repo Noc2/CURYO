@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in the Curyo protocol (smart contracts, API routes, or infrastructure), please report it responsibly.
 
-**Email:** info@hawig.xyz
+**Email:** hawigxyz@proton.me
 
 Please include:
 
