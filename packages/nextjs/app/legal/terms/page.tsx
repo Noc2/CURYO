@@ -359,7 +359,7 @@ const TermsPage: NextPage = () => {
         <h2>20. Contact</h2>
         <p>
           For questions about these Terms, please contact: Hawig Ventures UG (haftungsbeschr&auml;nkt),
-          Herzogin-Juliana-Stra&szlig;e 7, 55469 Simmern, Germany. Email: info@hawig.xyz. See also our{" "}
+          Herzogin-Juliana-Stra&szlig;e 7, 55469 Simmern, Germany. Email: hawigxyz@proton.me. See also our{" "}
           <Link href="/legal/imprint" className="link link-primary">
             Imprint
           </Link>

@@ -26,7 +26,7 @@ const ImprintPage: NextPage = () => {
         <p>Gesch&auml;ftsf&uuml;hrer: David Hawig</p>
 
         <h2>Contact</h2>
-        <p>Email: info@hawig.xyz</p>
+        <p>Email: hawigxyz@proton.me</p>
 
         <h2>Responsible for Content</h2>
         <p>

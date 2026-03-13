@@ -228,7 +228,7 @@ const PrivacyPage: NextPage = () => {
           For users in the European Union and Germany: Given that we do not collect or store personal data beyond what
           is described above, most rights under the GDPR and the German Federal Data Protection Act (BDSG) are either
           automatically satisfied or not applicable. If you have specific privacy concerns, please contact us at
-          info@hawig.xyz or lodge a complaint with the competent supervisory authority. For our registered office in
+          hawigxyz@proton.me or lodge a complaint with the competent supervisory authority. For our registered office in
           Rhineland-Palatinate, the responsible authority is:
         </p>
         <p>
@@ -285,7 +285,7 @@ const PrivacyPage: NextPage = () => {
         <h2>11. Contact</h2>
         <p>
           For privacy-related questions or concerns, please contact: Hawig Ventures UG (haftungsbeschr&auml;nkt),
-          Herzogin-Juliana-Stra&szlig;e 7, 55469 Simmern, Germany. Email: info@hawig.xyz. See also our{" "}
+          Herzogin-Juliana-Stra&szlig;e 7, 55469 Simmern, Germany. Email: hawigxyz@proton.me. See also our{" "}
           <Link href="/legal/imprint" className="link link-primary">
             Imprint
           </Link>
