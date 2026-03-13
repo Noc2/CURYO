@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="packages/nextjs/public/og-image.png" alt="CURYO — Decentralized Reputation Game" width="100%" />
+  <img src="packages/nextjs/public/banner.png" alt="CURYO — Decentralized Reputation Game" width="100%" />
 </p>
 
 <p align="center">
