@@ -10,7 +10,7 @@ const TermsPage: NextPage = () => {
 
       <article className="prose prose-sm max-w-none">
         <h1>Terms of Service</h1>
-        <p className="text-base-content/60">Last updated: February 2026</p>
+        <p className="text-base-content/60">Last updated: March 2026</p>
 
         <h2>1. Acceptance of Terms</h2>
         <p>
@@ -26,22 +26,28 @@ const TermsPage: NextPage = () => {
 
         <h2>2. Protocol vs Interface Distinction</h2>
         <p>
-          <strong>Curyo Protocol</strong> refers to a set of autonomous, decentralized smart contracts deployed on
-          blockchain networks. The Protocol:
+          <strong>Curyo Protocol</strong> refers to a set of smart contracts deployed on blockchain networks. Depending
+          on the specific contract and deployment, the Protocol may include governance, administrative, pause, or
+          upgrade mechanisms defined on-chain. The Protocol generally:
         </p>
         <ul>
-          <li>Operates independently without central control</li>
-          <li>Cannot be modified, paused, or shut down by the Interface operator</li>
-          <li>Will continue to function regardless of this Interface&apos;s availability</li>
+          <li>Can be accessed without this Interface</li>
+          <li>Records transactions independently of this Interface once they are submitted on-chain</li>
+          <li>
+            May continue to function even if this Interface is unavailable, subject to blockchain, governance, and
+            protocol-level dependencies
+          </li>
         </ul>
         <p>
           <strong>This Interface</strong> (the website at this domain) is merely one way to access and interact with the
           Curyo Protocol. The Interface operator:
         </p>
         <ul>
-          <li>Does not control or operate the Protocol</li>
           <li>Does not have custody of your tokens at any time</li>
-          <li>Cannot reverse, modify, or intervene in Protocol transactions</li>
+          <li>Cannot reverse, modify, or intervene in your transactions once they are finalized on-chain</li>
+          <li>
+            Is not necessarily the only party with protocol-related governance, admin, pause, or upgrade permissions
+          </li>
           <li>Is not responsible for the Protocol&apos;s operation or outcomes</li>
         </ul>
         <p>

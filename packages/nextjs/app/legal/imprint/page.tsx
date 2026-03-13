@@ -10,7 +10,7 @@ const ImprintPage: NextPage = () => {
 
       <article className="prose prose-sm max-w-none">
         <h1>Imprint (Impressum)</h1>
-        <p className="text-base-content/60">Information pursuant to &sect; 5 TMG (German Telemedia Act)</p>
+        <p className="text-base-content/60">Information pursuant to &sect; 5 DDG (German Digital Services Act)</p>
 
         <h2>Interface Operator</h2>
         <p>
@@ -49,9 +49,10 @@ const ImprintPage: NextPage = () => {
 
         <h2>Dispute Resolution</h2>
         <p>
-          The European Commission provides a platform for online dispute resolution (ODR):{" "}
-          <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener noreferrer">
-            https://ec.europa.eu/consumers/odr/
+          The former European Commission Online Dispute Resolution (ODR) platform was discontinued on July 20, 2025.
+          Further information is available from the European Commission:{" "}
+          <a href="https://consumer-redress.ec.europa.eu/site-relocation_en" target="_blank" rel="noopener noreferrer">
+            consumer-redress.ec.europa.eu/site-relocation_en
           </a>
         </p>
         <p>

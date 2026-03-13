@@ -10,13 +10,13 @@ const PrivacyPage: NextPage = () => {
 
       <article className="prose prose-sm max-w-none">
         <h1>Privacy Notice</h1>
-        <p className="text-base-content/60">Last updated: February 2026</p>
+        <p className="text-base-content/60">Last updated: March 2026</p>
 
         <h2>1. Introduction</h2>
         <p>
           This Privacy Notice explains how this interface (&quot;the Interface&quot;), operated by Hawig Ventures UG
           (haftungsbeschr&auml;nkt), Herzogin-Juliana-Stra&szlig;e 7, 55469 Simmern, Germany (&quot;we&quot;,
-          &quot;us&quot;, &quot;the data controller&quot;), handles information when you use it to access the cREP
+          &quot;us&quot;, &quot;the data controller&quot;), handles information when you use it to access the Curyo
           Protocol. We are committed to transparency about our data practices.
         </p>
         <p>
@@ -50,36 +50,81 @@ const PrivacyPage: NextPage = () => {
         <p>This Interface may collect or process the following information:</p>
         <ul>
           <li>
-            <strong>Local Storage Data:</strong> Terms acceptance status, user interface preferences (theme, settings),
-            and similar functional data stored in your browser.
+            <strong>Browser Storage Data:</strong> Terms acceptance status, onboarding state, interface preferences,
+            temporary wallet-display and notification state, referral information, locally tracked content-click data,
+            and similar functional data stored in your browser via local storage or session storage.
+          </li>
+          <li>
+            <strong>Wallet-Linked Application Data:</strong> Watchlist entries, followed wallet addresses, notification
+            preferences, and related timestamps needed to provide those features.
+          </li>
+          <li>
+            <strong>Signed Authorization Data:</strong> Short-lived signature challenges and read/write session records
+            used to authorize wallet-bound features. These records may include wallet address, feature scope, nonce or
+            token material, payload hashes, and creation/expiry timestamps.
+          </li>
+          <li>
+            <strong>Email Notification Data (Optional):</strong> If you enable email notifications, we process your
+            email address, notification preferences, verification status, verification token, and related timestamps.
+          </li>
+          <li>
+            <strong>Security and Abuse-Prevention Data:</strong> Temporary rate-limit and replay-protection records,
+            which may be derived from trusted IP headers or fallback request fingerprints plus route metadata.
           </li>
         </ul>
 
         <h3>2.3 What We Do NOT Collect</h3>
         <p>
-          <strong>This Interface does not use cookies of any kind.</strong> No cookies are set, read, or transmitted —
-          neither for tracking, analytics, advertising, nor functional purposes. Accordingly, no cookie consent banner
-          is required.
+          <strong>This Interface does not use analytics or advertising cookies.</strong> We do use limited,
+          strictly-necessary cookies or similar session tokens for wallet-bound features such as watchlists, follows,
+          and notification settings. These cookies are used for security and feature operation, not for cross-site
+          tracking or advertising.
         </p>
         <p>This Interface also does not collect:</p>
         <ul>
-          <li>Personal identification information (name, email, phone number)</li>
-          <li>Precise location data</li>
-          <li>IP addresses (beyond standard server logs which are automatically deleted)</li>
-          <li>Analytics or behavioral tracking data</li>
+          <li>Name, phone number, postal address, or similar offline contact details</li>
+          <li>Passport or government ID document data from Self.xyz</li>
+          <li>Analytics, advertising, or cross-site behavioral tracking profiles</li>
           <li>Biometric data</li>
-          <li>Account information (we do not have access to your wallet)</li>
+          <li>Your wallet private keys, seed phrases, or custody of your assets</li>
         </ul>
 
         <h2>3. How We Use Information</h2>
 
-        <h3>3.1 Local Storage Data</h3>
-        <p>Data stored in your browser is used for:</p>
+        <h3>3.1 Browser Storage and Necessary Session Cookies</h3>
+        <p>Browser-side data and necessary session cookies are used for:</p>
         <ul>
           <li>Remembering your acceptance of Terms of Service and Privacy Notice</li>
-          <li>Preserving your interface preferences (theme, display settings)</li>
+          <li>Preserving interface preferences and onboarding context</li>
+          <li>Supporting wallet-bound signed sessions for watchlists, follows, and notification settings</li>
+          <li>Reducing duplicate notices or preserving short-lived UI state between refreshes</li>
         </ul>
-        <p>This data never leaves your device and can be cleared through your browser settings at any time.</p>
+        <p>Local and session storage can be cleared through your browser settings at any time.</p>
+
+        <h3>3.2 Server-Side Feature Data</h3>
+        <p>Wallet-linked application data is used to operate optional interface features, including:</p>
+        <ul>
+          <li>Saving and retrieving watched content</li>
+          <li>Saving and retrieving followed curator wallets</li>
+          <li>Saving and retrieving in-app notification preferences</li>
+          <li>Verifying wallet-scoped read and write sessions for protected interface actions</li>
+        </ul>
+
+        <h3>3.3 Email Notification Data</h3>
+        <p>If you opt into email notifications, we use your email-related data to:</p>
+        <ul>
+          <li>Store your chosen delivery address and notification preferences</li>
+          <li>Send verification emails and verify control of the address</li>
+          <li>Deliver product emails that you explicitly enabled</li>
+        </ul>
+
+        <h3>3.4 Security and Abuse Prevention</h3>
+        <p>Security-related data is used to:</p>
+        <ul>
+          <li>Rate-limit API endpoints</li>
+          <li>Prevent replay or reuse of signed authorization challenges</li>
+          <li>Investigate operational issues and protect the Interface from abuse</li>
+        </ul>
 
         <h2>4. Third-Party Services</h2>
         <p>The Interface may interact with the following third-party services:</p>
@@ -102,6 +147,11 @@ const PrivacyPage: NextPage = () => {
             requests according to their own policies.
           </li>
           <li>
+            <strong>Email Delivery Provider (Resend):</strong> If you enable email notifications, verification and
+            notification emails may be delivered through Resend, which processes your email address and the email
+            content needed to deliver that message.
+          </li>
+          <li>
             <strong>Identity Verification (Self.xyz):</strong> To claim tokens from the faucet, you may verify your
             identity through{" "}
             <a href="https://self.xyz" target="_blank" rel="noopener noreferrer" className="link link-primary">
@@ -121,7 +171,26 @@ const PrivacyPage: NextPage = () => {
             <strong>Blockchain data:</strong> Permanent and immutable (not controlled by us)
           </li>
           <li>
-            <strong>Local storage:</strong> Until you clear your browser data
+            <strong>Local and session storage:</strong> Until you clear your browser data or the browser session ends,
+            depending on the storage mechanism
+          </li>
+          <li>
+            <strong>Watchlists, follows, and notification preferences:</strong> Until you change or remove them, or we
+            delete them in the ordinary course of operating the feature
+          </li>
+          <li>
+            <strong>Signed read/write sessions:</strong> Up to 7 days
+          </li>
+          <li>
+            <strong>Signed action challenges:</strong> Typically 5 minutes; used challenge records may be retained for
+            up to 24 hours for replay protection
+          </li>
+          <li>
+            <strong>Email notification subscriptions:</strong> Until you remove or replace the address; verification
+            tokens expire after 24 hours
+          </li>
+          <li>
+            <strong>Rate-limit records:</strong> Until the applicable rate-limit window expires
           </li>
           <li>
             <strong>Server logs:</strong> Retained according to hosting provider policies (typically 30-90 days)
@@ -133,11 +202,18 @@ const PrivacyPage: NextPage = () => {
         <ul>
           <li>
             <strong>Right to Access:</strong> All blockchain data is publicly accessible through any blockchain
-            explorer. Local storage data can be viewed in your browser&apos;s developer tools.
+            explorer. Browser storage data can be viewed in your browser&apos;s developer tools. Server-side feature
+            data tied to optional interface features may be requested from us where applicable.
           </li>
           <li>
-            <strong>Right to Deletion:</strong> Blockchain data cannot be deleted by anyone. Local storage can be
-            cleared by you at any time through your browser settings.
+            <strong>Right to Rectification and Update:</strong> You can change watchlists, follows, notification
+            preferences, and email notification settings through the Interface.
+          </li>
+          <li>
+            <strong>Right to Deletion:</strong> Blockchain data cannot be deleted by anyone. Browser storage can be
+            cleared by you at any time through your browser settings. Optional server-side interface data such as
+            follows, watchlists, and notification settings can be removed through the Interface or by contacting us
+            where applicable.
           </li>
           <li>
             <strong>Right to Portability:</strong> You maintain full control of your wallet and can use it with any
@@ -192,7 +268,7 @@ const PrivacyPage: NextPage = () => {
         <p>
           This Interface is operated from Germany. If you access the Interface from other regions, please be aware that
           information may be transferred to, stored, and processed in Germany or other jurisdictions where our service
-          providers operate.
+          providers operate, including hosting, RPC, CDN, and email delivery providers.
         </p>
         <p>
           By using the Interface, you consent to such transfers. We note that blockchain data is stored on a globally
