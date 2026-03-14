@@ -11,7 +11,6 @@ interface OrbitalAvatarOrb extends Point {
   colorB: string;
   colorC: string;
   glowColor: string;
-  shadowColor: string;
   opacity: number;
 }
 
@@ -258,7 +257,6 @@ function getAddressVariant(address: string) {
     orbColorB: hslToHex(hue - 10, Math.min(saturation + 8, 94), 46),
     orbColorC: hslToHex(hue + 118, Math.min(saturation + 6, 90), 34),
     orbGlowColor: hslToHex(hue + 24, Math.min(saturation + 12, 98), 60),
-    orbShadowColor: hslToHex(hue - 24, Math.max(saturation - 10, 44), 12),
     orbitRotation: progress * 180,
     orbitDashOffset: hashed("orbit-dash-offset"),
     highlightAngle: hashed("highlight-angle") * 360,
@@ -280,7 +278,6 @@ function buildCoreOrb(
     colorB: variant.orbColorB,
     colorC: variant.orbColorC,
     glowColor: variant.orbGlowColor,
-    shadowColor: variant.orbShadowColor,
     opacity: 1,
   };
 }
@@ -456,15 +453,9 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
         </radialGradient>`,
       );
       defs.push(
-        `<radialGradient id="orbital-avatar-highlight-${hashHex}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.34 0.28) scale(0.54 0.44)">
-          <stop stop-color="#FFFFFF" stop-opacity="0.62"/>
+        `<radialGradient id="orbital-avatar-highlight-${hashHex}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.38 0.3) scale(0.42 0.34)">
+          <stop stop-color="#FFFFFF" stop-opacity="0.52"/>
           <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-        </radialGradient>`,
-      );
-      defs.push(
-        `<radialGradient id="orbital-avatar-shadow-${hashHex}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.78 0.78) scale(0.72 0.72)">
-          <stop stop-color="${body.shadowColor}" stop-opacity="0.8"/>
-          <stop offset="1" stop-color="${body.shadowColor}" stop-opacity="0"/>
         </radialGradient>`,
       );
     } else {
@@ -503,8 +494,7 @@ function renderCoreOrb(coreOrb: OrbitalAvatarOrb, hashHex: string) {
   return `
     <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${(coreOrb.radius * 1.82).toFixed(2)}" fill="url(#orbital-avatar-body-glow-${hashHex}-0)" fill-opacity="0.7"/>
     <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${coreOrb.radius.toFixed(2)}" fill="url(#orbital-avatar-body-${hashHex}-0)"/>
-    <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${(coreOrb.radius * 0.96).toFixed(2)}" fill="url(#orbital-avatar-highlight-${hashHex})"/>
-    <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${(coreOrb.radius * 1.02).toFixed(2)}" fill="url(#orbital-avatar-shadow-${hashHex})"/>`;
+    <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${(coreOrb.radius * 0.78).toFixed(2)}" fill="url(#orbital-avatar-highlight-${hashHex})"/>`;
 }
 
 export function renderOrbitalAvatarSvg(
