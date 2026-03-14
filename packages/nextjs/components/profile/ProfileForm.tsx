@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { IdentificationIcon } from "@heroicons/react/24/outline";
+import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useIsNameTaken, useProfileRegistry, useSetProfile } from "~~/hooks/useProfileRegistry";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
@@ -90,12 +91,6 @@ export function ProfileForm() {
     }
   };
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    if (address) {
-      e.currentTarget.src = getReputationAvatarUrl(address, 80) || "";
-    }
-  };
-
   // Show name availability status
   const showNameStatus = nameInput.length >= 3 && !nameCheckLoading;
   const nameIsAvailable = showNameStatus && (!isNameTaken || isOwnName);
@@ -151,13 +146,17 @@ export function ProfileForm() {
       {/* Avatar Preview */}
       <div className="flex items-center gap-4">
         <div className="relative">
-          <img
+          <ProfileImageLightbox
             src={previewImageUrl || fallbackImageUrl}
-            onError={handleImageError}
+            fallbackSrc={fallbackImageUrl}
+            alt="Profile preview"
             width={80}
             height={80}
-            className="w-20 h-20 rounded-full object-cover border-2 border-base-300"
-            alt="Profile preview"
+            triggerLabel="Open profile preview image"
+            modalLabel="Profile image preview"
+            buttonClassName="rounded-full"
+            imageClassName="h-20 w-20 rounded-full border-2 border-base-300 object-cover"
+            modalImageClassName="rounded-[2rem]"
           />
         </div>
         <div className="flex-1">

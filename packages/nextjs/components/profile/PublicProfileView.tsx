@@ -9,6 +9,7 @@ import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { CategoryBars } from "~~/components/leaderboard/CategoryBars";
 import { WinRateRing } from "~~/components/leaderboard/WinRateRing";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
+import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
@@ -220,15 +221,17 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
         <div className="surface-card rounded-3xl p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-center gap-4 min-w-0">
-              <img
+              <ProfileImageLightbox
                 src={profileImageUrl}
-                onError={event => {
-                  event.currentTarget.src = fallbackImageUrl;
-                }}
+                fallbackSrc={fallbackImageUrl}
+                alt={`${displayName} avatar`}
                 width={96}
                 height={96}
-                className="h-24 w-24 rounded-3xl object-cover shrink-0"
-                alt={`${displayName} avatar`}
+                triggerLabel="Open profile image"
+                modalLabel={`${displayName} profile image`}
+                buttonClassName="shrink-0 rounded-3xl"
+                imageClassName="h-24 w-24 rounded-3xl object-cover shrink-0"
+                modalImageClassName="rounded-[2rem]"
               />
               <div className="min-w-0">
                 <h1 className="truncate text-3xl font-semibold">{displayName}</h1>
