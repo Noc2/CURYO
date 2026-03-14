@@ -228,6 +228,8 @@ test("claimed wallets with the same scores still render distinct deterministic a
     `${modelA.backgroundStart}/${modelA.backgroundMid}/${modelA.backgroundEnd}`,
     `${modelB.backgroundStart}/${modelB.backgroundMid}/${modelB.backgroundEnd}`,
   );
+  assert.match(svgA, /linearGradient id="avatar-bg-/);
+  assert.match(svgB, /linearGradient id="avatar-bg-/);
 });
 
 test("address backgrounds span visibly different dark color families", () => {

@@ -92,20 +92,6 @@ const CATEGORY_COLORS = [
   "#94F36B",
 ] as const;
 const CORE_ANGLES = [210, 330, 90] as const;
-const BACKGROUND_GRADIENT_FAMILIES = [
-  { start: "#5D8FFF", mid: "#234CB0", end: "#081632" },
-  { start: "#3AA8FF", mid: "#155F9C", end: "#07182A" },
-  { start: "#34C7D9", mid: "#14788E", end: "#071D22" },
-  { start: "#24C58D", mid: "#106E52", end: "#071A13" },
-  { start: "#4CCF67", mid: "#1F7F34", end: "#08180B" },
-  { start: "#8EC94B", mid: "#52781C", end: "#161E08" },
-  { start: "#E2A84A", mid: "#8B5E1A", end: "#241707" },
-  { start: "#D86A52", mid: "#8B3723", end: "#25100A" },
-  { start: "#D65874", mid: "#8A2747", end: "#240A14" },
-  { start: "#D55BC9", mid: "#822B7A", end: "#260A22" },
-  { start: "#9A6BFF", mid: "#5631B4", end: "#180C32" },
-  { start: "#6B7BFF", mid: "#3645B7", end: "#101538" },
-] as const;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -141,11 +127,87 @@ function unitHash(input: string) {
   return hashString(input) / 0xffffffff;
 }
 
-function getAddressBytes(address: string) {
-  const normalized = address.toLowerCase().replace(/^0x/, "");
-  return Array.from({ length: Math.floor(normalized.length / 2) }, (_, index) =>
-    Number.parseInt(normalized.slice(index * 2, index * 2 + 2), 16),
-  );
+function hslToHex(hue: number, saturation: number, lightness: number) {
+  const s = clamp(saturation, 0, 100) / 100;
+  const l = clamp(lightness, 0, 100) / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const h = (((hue % 360) + 360) % 360) / 60;
+  const x = c * (1 - Math.abs((h % 2) - 1));
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (h >= 0 && h < 1) {
+    r = c;
+    g = x;
+  } else if (h < 2) {
+    r = x;
+    g = c;
+  } else if (h < 3) {
+    g = c;
+    b = x;
+  } else if (h < 4) {
+    g = x;
+    b = c;
+  } else if (h < 5) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+
+  const m = l - c / 2;
+  const toHex = (value: number) =>
+    Math.round((value + m) * 255)
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function hexToRgb(hex: string) {
+  const normalized = hex.replace("#", "");
+  return {
+    r: Number.parseInt(normalized.slice(0, 2), 16),
+    g: Number.parseInt(normalized.slice(2, 4), 16),
+    b: Number.parseInt(normalized.slice(4, 6), 16),
+  };
+}
+
+function rgbToHsl(r: number, g: number, b: number) {
+  const rUnit = r / 255;
+  const gUnit = g / 255;
+  const bUnit = b / 255;
+  const max = Math.max(rUnit, gUnit, bUnit);
+  const min = Math.min(rUnit, gUnit, bUnit);
+  const delta = max - min;
+  const lightness = (max + min) / 2;
+  let hue = 0;
+  let saturation = 0;
+
+  if (delta !== 0) {
+    saturation = delta / (1 - Math.abs(2 * lightness - 1));
+    if (max === rUnit) {
+      hue = ((gUnit - bUnit) / delta) % 6;
+    } else if (max === gUnit) {
+      hue = (bUnit - rUnit) / delta + 2;
+    } else {
+      hue = (rUnit - gUnit) / delta + 4;
+    }
+    hue *= 60;
+    if (hue < 0) hue += 360;
+  }
+
+  return {
+    hue,
+    saturation,
+    lightness,
+  };
+}
+
+function getAddressColorSeed(address: string) {
+  return address.toLowerCase().replace(/^0x/, "").slice(-6).padStart(6, "0");
 }
 
 function getCategoryColor(categoryId: string) {
@@ -155,12 +217,13 @@ function getCategoryColor(categoryId: string) {
 
 function getAddressVariant(address: string) {
   const hashed = (salt: string) => unitHash(`${address}:${salt}`);
-  const bytes = getAddressBytes(address);
-  const familyIndex = bytes.length
-    ? bytes[bytes.length - 1] % BACKGROUND_GRADIENT_FAMILIES.length
-    : Math.floor(hashed("bg-family") * BACKGROUND_GRADIENT_FAMILIES.length) % BACKGROUND_GRADIENT_FAMILIES.length;
-  const family = BACKGROUND_GRADIENT_FAMILIES[familyIndex];
-  const angleSeed = bytes.length > 1 ? bytes[bytes.length - 2] / 255 : hashed("bg-angle");
+  const seedHex = getAddressColorSeed(address);
+  const seedValue = Number.parseInt(seedHex, 16);
+  const { r, g, b } = hexToRgb(seedHex);
+  const seedHsl = rgbToHsl(r, g, b);
+  const hue = seedHsl.saturation < 0.18 ? seedValue % 360 : seedHsl.hue;
+  const saturation = Math.max(seedHsl.saturation * 100, 68);
+  const angleSeed = ((seedValue >> 8) & 0xff) / 255;
 
   return {
     coreAngleOffset: (hashed("core-angle") - 0.5) * 28,
@@ -168,9 +231,9 @@ function getAddressVariant(address: string) {
     coreRadiusScale: 0.94 + hashed("core-radius") * 0.14,
     coreMicroOffsets: CORE_ANGLES.map((_, index) => (hashed(`core-micro-${index}`) - 0.5) * 10),
     backgroundAngle: 18 + angleSeed * 144,
-    backgroundStart: family.start,
-    backgroundMid: family.mid,
-    backgroundEnd: family.end,
+    backgroundStart: hslToHex(hue, saturation, 30),
+    backgroundMid: hslToHex(hue + 18, Math.max(saturation - 8, 58), 18),
+    backgroundEnd: hslToHex(hue - 12, Math.max(saturation - 18, 44), 8),
   };
 }
 
@@ -391,6 +454,7 @@ export function renderReputationConstellationSvg(
 ) {
   const size = clamp(Number(options?.size ?? 96), 16, 512);
   const model = buildReputationConstellationModel(payload, { nowSeconds: options?.nowSeconds });
+  const bgId = `avatar-bg-${hashString(payload.address).toString(16)}`;
   const glowId = `avatar-glow-${hashString(payload.address).toString(16)}`;
 
   const edgeMarkup = model.edges
@@ -432,7 +496,7 @@ export function renderReputationConstellationSvg(
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox" gradientTransform="rotate(${model.backgroundAngle.toFixed(2)} 0.5 0.5)">
+    <linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox" gradientTransform="rotate(${model.backgroundAngle.toFixed(2)} 0.5 0.5)">
       <stop stop-color="${model.backgroundStart}"/>
       <stop offset="0.58" stop-color="${model.backgroundMid}"/>
       <stop offset="1" stop-color="${model.backgroundEnd}"/>
@@ -441,7 +505,7 @@ export function renderReputationConstellationSvg(
       <feGaussianBlur stdDeviation="8"/>
     </filter>
   </defs>
-  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#bg)"/>
+  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${bgId})"/>
   ${edgeMarkup}
   ${categoryGlowMarkup}
   ${coreGlowMarkup}
