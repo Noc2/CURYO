@@ -34,6 +34,7 @@ const app = new Hono();
 const DISCOVER_MODULE_LIMIT = 6;
 const SETTLING_SOON_WINDOW_SECONDS = 24 * 60 * 60;
 const NOTIFICATION_EMAIL_LOOKBACK_SECONDS = 48 * 60 * 60;
+const AVATAR_CATEGORY_WINDOW_SECONDS = 90 * 24 * 60 * 60;
 
 // ============================================================
 // GLOBAL ERROR HANDLER — catch unhandled DB/runtime errors
@@ -1475,6 +1476,116 @@ app.get("/voter-accuracy/:address", async (c) => {
   }));
 
   return jsonBig(c, { stats: statsWithRate, categories });
+});
+
+// ============================================================
+// REPUTATION AVATAR PAYLOAD (chain-derived input for deterministic avatar rendering)
+// ============================================================
+
+app.get("/avatar/:address", async (c) => {
+  const address = c.req.param("address").toLowerCase() as `0x${string}`;
+  if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
+
+  const [stats, streak, voterIdRecord] = await Promise.all([
+    db
+      .select()
+      .from(voterStats)
+      .where(eq(voterStats.voter, address))
+      .limit(1)
+      .then(rows => rows[0] ?? null),
+    db
+      .select()
+      .from(voterStreak)
+      .where(eq(voterStreak.voter, address))
+      .limit(1)
+      .then(rows => rows[0] ?? null),
+    db
+      .select({
+        tokenId: voterId.tokenId,
+        mintedAt: voterId.mintedAt,
+      })
+      .from(voterId)
+      .where(and(eq(voterId.holder, address), eq(voterId.revoked, false)))
+      .limit(1)
+      .then(rows => rows[0] ?? null),
+  ]);
+
+  const categoryCutoff = BigInt(Math.max(0, Math.floor(Date.now() / 1000) - AVATAR_CATEGORY_WINDOW_SECONDS));
+  const categoryRows = await db
+    .select({
+      categoryId: content.categoryId,
+      categoryName: category.name,
+      settledVotes90d: sql<number>`count(*)`,
+      wins90d: sql<number>`sum(case when ${vote.isUp} = ${round.upWins} then 1 else 0 end)`,
+      losses90d: sql<number>`sum(case when ${vote.isUp} = ${round.upWins} then 0 else 1 end)`,
+      stakeWon90d: sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then ${vote.stake} else 0 end), 0)`,
+      stakeLost90d: sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then 0 else ${vote.stake} end), 0)`,
+      lastSettledAt: sql<bigint>`max(${round.settledAt})`,
+    })
+    .from(vote)
+    .innerJoin(
+      round,
+      and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)),
+    )
+    .innerJoin(content, eq(vote.contentId, content.id))
+    .leftJoin(category, eq(content.categoryId, category.id))
+    .where(
+      and(
+        eq(vote.voter, address),
+        eq(vote.revealed, true),
+        eq(round.state, ROUND_STATE.Settled),
+        gte(round.settledAt, categoryCutoff),
+      ),
+    )
+    .groupBy(content.categoryId, category.name);
+
+  const statsWithRate = stats
+    ? {
+        ...stats,
+        winRate: stats.totalSettledVotes > 0 ? stats.totalWins / stats.totalSettledVotes : 0,
+      }
+    : null;
+
+  const categories90d = categoryRows
+    .map((row) => {
+      const stakeWon = typeof row.stakeWon90d === "bigint" ? row.stakeWon90d : BigInt(row.stakeWon90d ?? 0);
+      const stakeLost = typeof row.stakeLost90d === "bigint" ? row.stakeLost90d : BigInt(row.stakeLost90d ?? 0);
+      const settledVotes = Number(row.settledVotes90d);
+      const wins = Number(row.wins90d);
+      const losses = Number(row.losses90d);
+      return {
+        categoryId: row.categoryId,
+        categoryName: row.categoryName,
+        settledVotes90d: settledVotes,
+        wins90d: wins,
+        losses90d: losses,
+        stakeWon90d: stakeWon,
+        stakeLost90d: stakeLost,
+        totalStake90d: stakeWon + stakeLost,
+        winRate90d: settledVotes > 0 ? wins / settledVotes : 0,
+        lastSettledAt: row.lastSettledAt,
+      };
+    })
+    .sort((a, b) => {
+      if (b.settledVotes90d !== a.settledVotes90d) return b.settledVotes90d - a.settledVotes90d;
+      if (a.categoryId < b.categoryId) return -1;
+      if (a.categoryId > b.categoryId) return 1;
+      return 0;
+    });
+
+  return jsonBig(c, {
+    address,
+    voterId: voterIdRecord,
+    stats: statsWithRate,
+    streak: streak ?? {
+      currentDailyStreak: 0,
+      bestDailyStreak: 0,
+      totalActiveDays: 0,
+      lastActiveDate: null,
+      lastMilestoneDay: 0,
+    },
+    categories90d,
+  });
 });
 
 // ============================================================

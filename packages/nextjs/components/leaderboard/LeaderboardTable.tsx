@@ -3,13 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { blo } from "blo";
 import { useAccount } from "wagmi";
 import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
-import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
+import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface LeaderboardEntry {
@@ -183,7 +182,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
           <tbody>
             {visibleEntries.map(entry => {
               const isCurrentUser = connectedAddress?.toLowerCase() === entry.address.toLowerCase();
-              const fallbackImageUrl = blo(entry.address as `0x${string}`);
+              const fallbackImageUrl = getReputationAvatarUrl(entry.address, 32) || "";
               const avatarSrc = getProxiedProfileImageUrl(entry.profileImageUrl) || fallbackImageUrl;
               return (
                 <tr

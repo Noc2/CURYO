@@ -4,7 +4,6 @@ import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { blo } from "blo";
 import { useAccount } from "wagmi";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { CategoryBars } from "~~/components/leaderboard/CategoryBars";
@@ -18,7 +17,7 @@ import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
-import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
+import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface PublicProfileViewProps {
@@ -137,7 +136,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const following = followedWallets.has(normalizedAddress);
   const pending = isFollowPending(normalizedAddress);
   const backHref = ownProfile ? "/settings" : "/governance";
-  const fallbackImageUrl = blo(normalizedAddress);
+  const fallbackImageUrl = getReputationAvatarUrl(normalizedAddress, 96) || "";
 
   const displayName = summary?.name || truncateAddress(normalizedAddress);
   const profileImageUrl = getProxiedProfileImageUrl(summary?.imageUrl) || fallbackImageUrl;

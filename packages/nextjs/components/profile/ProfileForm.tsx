@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { blo } from "blo";
 import { useAccount } from "wagmi";
 import { IdentificationIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useIsNameTaken, useProfileRegistry, useSetProfile } from "~~/hooks/useProfileRegistry";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
-import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
+import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 // Validation regex: 3-20 alphanumeric + underscore
@@ -84,7 +83,7 @@ export function ProfileForm() {
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     if (address) {
-      e.currentTarget.src = blo(address as `0x${string}`);
+      e.currentTarget.src = getReputationAvatarUrl(address, 80) || "";
     }
   };
 
@@ -94,6 +93,7 @@ export function ProfileForm() {
   const nameIsTaken = showNameStatus && isNameTaken && !isOwnName;
   const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/settings";
   const previewImageUrl = getProxiedProfileImageUrl(imageInput);
+  const fallbackImageUrl = getReputationAvatarUrl(address, 80) || "";
 
   if (profileLoading || voterIdLoading) {
     return (
@@ -143,7 +143,7 @@ export function ProfileForm() {
       <div className="flex items-center gap-4">
         <div className="relative">
           <img
-            src={previewImageUrl || (address ? blo(address as `0x${string}`) : "")}
+            src={previewImageUrl || fallbackImageUrl}
             onError={handleImageError}
             width={80}
             height={80}
@@ -191,7 +191,7 @@ export function ProfileForm() {
       <div>
         <label className="flex items-center gap-1.5 text-base font-medium mb-2">
           Profile Image URL
-          <InfoTooltip text="Leave empty to use your wallet avatar" />
+          <InfoTooltip text="Leave empty to use your Curio reputation avatar" />
         </label>
         <input
           type="url"

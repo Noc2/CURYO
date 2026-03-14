@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { blo } from "blo";
-import { getProxiedProfileImageUrl } from "~~/utils/profileImage";
+import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
 
 interface SubmitterBadgeProps {
   address: string;
@@ -17,7 +16,7 @@ interface SubmitterBadgeProps {
 
 /**
  * Displays a submitter's avatar and name/address.
- * Falls back to blockie avatar if no custom image or if image fails to load.
+ * Falls back to the Curio reputation avatar if no custom image or if image fails to load.
  */
 export function SubmitterBadge({
   address,
@@ -35,7 +34,7 @@ export function SubmitterBadge({
   const truncatedAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
   const displayName = username || truncatedAddress;
   const profileHref = `/profiles/${address.toLowerCase()}`;
-  const fallbackImageUrl = blo(address as `0x${string}`);
+  const fallbackImageUrl = getReputationAvatarUrl(address, avatarSize) || "";
   const avatarSrc = getProxiedProfileImageUrl(profileImageUrl) || fallbackImageUrl;
 
   const showAccuracy = winRate !== undefined && totalSettledVotes !== undefined && totalSettledVotes >= 3;
@@ -51,7 +50,6 @@ export function SubmitterBadge({
     : "";
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    // Fallback to blockie on error
     e.currentTarget.src = fallbackImageUrl;
   };
 
