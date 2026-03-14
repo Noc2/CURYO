@@ -261,6 +261,6 @@ test("renderer returns svg markup for a deterministic payload", () => {
 
   assert.match(svg, /^<svg[\s\S]*<\/svg>$/);
   assert.match(svg, /circle/);
-  assert.match(svg, /line/);
-  assert.doesNotMatch(svg, /radialGradient/);
+  assert.doesNotMatch(svg, /<line /);
+  assert.match(svg, /radialGradient/);
 });

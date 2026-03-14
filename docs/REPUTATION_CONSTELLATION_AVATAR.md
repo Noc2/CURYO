@@ -14,7 +14,7 @@ Anyone should be able to compute the same avatar from the same public chain data
 - Addresses without a claimed Voter ID render with no center triad.
 - Category stars are capped, decay over time, and eventually disappear.
 - No followers, watchlists, or other app-local social data are used.
-- Sparse wallets still get deterministic address-derived variation in the full background gradient.
+- Sparse wallets still get deterministic address-derived variation in the full nebula background gradient.
 
 ## Inputs
 
@@ -93,19 +93,20 @@ starRadius = 6 + 10 * categoryScore
 
 ## Connectivity
 
-The full constellation must always be connected.
+The layout still uses deterministic anchors so category stars stay tied to the same core star over time.
 
 Rules:
 
-- The 3 core stars are always connected to each other.
-- Every category star must connect to one core star.
+- The 3 core stars remain the central reference points.
+- Every category star is anchored to one core star.
 - The anchor core star is deterministic:
 
 ```ts
 anchorIndex = categoryId % 3
 ```
 
-This ensures the triad is part of the same graph instead of appearing as a separate ornament.
+This keeps the constellation structurally consistent even though the renderer no longer draws connector lines between
+stars.
 
 ## Refinement
 
@@ -130,7 +131,6 @@ Decay affects:
 
 - node opacity
 - glow opacity
-- line opacity
 - minor size shrink
 
 ## Colors
@@ -145,7 +145,7 @@ To avoid low-history wallets collapsing into identical-looking avatars, the rend
 deterministic input for:
 
 - minor triad angle/orbit variation
-- background gradient angle and dark palette derived from the last 6 hex chars of the address
+- layered nebula background angle and dark palette derived from the last 6 hex chars of the address
 
 These address-seeded variations do not change the underlying reputation mapping; they only prevent sparse wallets from
 looking cloned.

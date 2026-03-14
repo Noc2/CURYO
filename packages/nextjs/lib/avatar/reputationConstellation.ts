@@ -72,6 +72,8 @@ export interface ReputationConstellationModel {
   coreNodes: Node[];
   categoryNodes: CategoryNode[];
   edges: Edge[];
+  backgroundBase: string;
+  backgroundShadow: string;
   backgroundAngle: number;
   backgroundStart: string;
   backgroundMid: string;
@@ -231,9 +233,11 @@ function getAddressVariant(address: string) {
     coreRadiusScale: 0.94 + hashed("core-radius") * 0.14,
     coreMicroOffsets: CORE_ANGLES.map((_, index) => (hashed(`core-micro-${index}`) - 0.5) * 10),
     backgroundAngle: 18 + angleSeed * 144,
-    backgroundStart: hslToHex(hue, saturation, 26),
-    backgroundMid: hslToHex(hue + 18, Math.max(saturation - 8, 58), 15),
-    backgroundEnd: hslToHex(hue - 12, Math.max(saturation - 18, 44), 6),
+    backgroundBase: hslToHex(hue, Math.max(saturation - 14, 52), 8),
+    backgroundShadow: hslToHex(hue + 6, Math.max(saturation - 18, 44), 3),
+    backgroundStart: hslToHex(hue + 24, saturation, 24),
+    backgroundMid: hslToHex(hue - 18, Math.max(saturation - 8, 58), 20),
+    backgroundEnd: hslToHex(hue + 62, Math.max(saturation - 4, 60), 22),
   };
 }
 
@@ -437,15 +441,13 @@ export function buildReputationConstellationModel(
     coreNodes,
     categoryNodes,
     edges,
+    backgroundBase: variant.backgroundBase,
+    backgroundShadow: variant.backgroundShadow,
     backgroundAngle: variant.backgroundAngle,
     backgroundStart: variant.backgroundStart,
     backgroundMid: variant.backgroundMid,
     backgroundEnd: variant.backgroundEnd,
   };
-}
-
-function resolveNode(model: ReputationConstellationModel, id: string) {
-  return [...model.coreNodes, ...model.categoryNodes].find(node => node.id === id);
 }
 
 export function renderReputationConstellationSvg(
@@ -454,17 +456,13 @@ export function renderReputationConstellationSvg(
 ) {
   const size = clamp(Number(options?.size ?? 96), 16, 512);
   const model = buildReputationConstellationModel(payload, { nowSeconds: options?.nowSeconds });
-  const bgId = `avatar-bg-${hashString(payload.address).toString(16)}`;
-  const glowId = `avatar-glow-${hashString(payload.address).toString(16)}`;
-
-  const edgeMarkup = model.edges
-    .map(edge => {
-      const from = resolveNode(model, edge.from);
-      const to = resolveNode(model, edge.to);
-      if (!from || !to) return "";
-      return `<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" stroke="${edge.stroke}" stroke-opacity="${edge.opacity.toFixed(3)}" stroke-width="${edge.width.toFixed(2)}" stroke-linecap="round" />`;
-    })
-    .join("");
+  const hashHex = hashString(payload.address).toString(16);
+  const bgId = `avatar-bg-${hashHex}`;
+  const shadowId = `avatar-shadow-${hashHex}`;
+  const nebulaAId = `avatar-nebula-a-${hashHex}`;
+  const nebulaBId = `avatar-nebula-b-${hashHex}`;
+  const nebulaCId = `avatar-nebula-c-${hashHex}`;
+  const glowId = `avatar-glow-${hashHex}`;
 
   const categoryGlowMarkup = model.categoryNodes
     .map(
@@ -497,16 +495,35 @@ export function renderReputationConstellationSvg(
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
   <defs>
     <linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox" gradientTransform="rotate(${model.backgroundAngle.toFixed(2)} 0.5 0.5)">
-      <stop stop-color="${model.backgroundStart}"/>
-      <stop offset="0.58" stop-color="${model.backgroundMid}"/>
-      <stop offset="1" stop-color="${model.backgroundEnd}"/>
+      <stop stop-color="${model.backgroundBase}"/>
+      <stop offset="1" stop-color="${model.backgroundBase}"/>
     </linearGradient>
+    <radialGradient id="${shadowId}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0 0) scale(1.1 1.1)">
+      <stop stop-color="${model.backgroundShadow}" stop-opacity="0.9"/>
+      <stop offset="0.95" stop-color="${model.backgroundShadow}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="${nebulaAId}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(1.08 -0.08) scale(1.55 0.95)">
+      <stop stop-color="${model.backgroundStart}" stop-opacity="0.82"/>
+      <stop offset="0.5" stop-color="${model.backgroundMid}" stop-opacity="0.46"/>
+      <stop offset="0.95" stop-color="${model.backgroundEnd}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="${nebulaBId}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.48 0.52) scale(1.75 0.98)">
+      <stop stop-color="${model.backgroundEnd}" stop-opacity="0.72"/>
+      <stop offset="0.95" stop-color="${model.backgroundEnd}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="${nebulaCId}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0 0) scale(1.25 1.25)">
+      <stop stop-color="${model.backgroundShadow}" stop-opacity="0.88"/>
+      <stop offset="0.95" stop-color="${model.backgroundShadow}" stop-opacity="0"/>
+    </radialGradient>
     <filter id="${glowId}" x="-120%" y="-120%" width="340%" height="340%">
       <feGaussianBlur stdDeviation="8"/>
     </filter>
   </defs>
   <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${bgId})"/>
-  ${edgeMarkup}
+  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${shadowId})"/>
+  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${nebulaAId})"/>
+  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${nebulaBId})"/>
+  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${nebulaCId})"/>
   ${categoryGlowMarkup}
   ${coreGlowMarkup}
   ${categoryNodeMarkup}
