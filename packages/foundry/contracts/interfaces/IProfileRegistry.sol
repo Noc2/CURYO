@@ -8,6 +8,7 @@ interface IProfileRegistry {
     struct Profile {
         string name;
         string imageUrl;
+        string strategy;
         uint256 createdAt;
         uint256 updatedAt;
     }
@@ -15,7 +16,8 @@ interface IProfileRegistry {
     /// @notice Set or update a user's profile
     /// @param name The unique profile name (3-20 alphanumeric + underscore)
     /// @param imageUrl The profile image URL (optional, can be empty)
-    function setProfile(string calldata name, string calldata imageUrl) external;
+    /// @param strategy Short public note describing how the user rates on Curyo
+    function setProfile(string calldata name, string calldata imageUrl, string calldata strategy) external;
 
     /// @notice Get a user's profile
     /// @param user The address to query

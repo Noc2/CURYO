@@ -270,7 +270,7 @@ contract UpgradeTest is Test {
     function test_ProfileRegistry_StatePreservedAfterUpgrade() public {
         // Create a profile before upgrade
         vm.prank(address(10));
-        profileRegistry.setProfile("testuser", "https://example.com/img.png");
+        profileRegistry.setProfile("testuser", "https://example.com/img.png", "");
 
         assertTrue(profileRegistry.hasRole(UPGRADER_ROLE, governance));
         assertTrue(profileRegistry.hasProfile(address(10)));
