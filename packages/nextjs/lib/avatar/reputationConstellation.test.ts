@@ -222,6 +222,12 @@ test("claimed wallets with the same scores still render distinct deterministic a
   const svgB = renderReputationConstellationSvg(payloadB, { nowSeconds: NOW_SECONDS, size: 64 });
 
   assert.notEqual(svgA, svgB);
+  const modelA = buildReputationConstellationModel(payloadA, { nowSeconds: NOW_SECONDS });
+  const modelB = buildReputationConstellationModel(payloadB, { nowSeconds: NOW_SECONDS });
+  assert.notEqual(
+    `${modelA.backgroundStart}/${modelA.backgroundMid}/${modelA.backgroundEnd}`,
+    `${modelB.backgroundStart}/${modelB.backgroundMid}/${modelB.backgroundEnd}`,
+  );
 });
 
 test("renderer returns svg markup for a deterministic payload", () => {
@@ -233,4 +239,5 @@ test("renderer returns svg markup for a deterministic payload", () => {
   assert.match(svg, /^<svg[\s\S]*<\/svg>$/);
   assert.match(svg, /circle/);
   assert.match(svg, /line/);
+  assert.doesNotMatch(svg, /radialGradient/);
 });

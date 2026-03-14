@@ -68,32 +68,14 @@ interface CategoryNode extends Node {
   anchorId: string;
 }
 
-interface AmbientStar extends Point {
-  radius: number;
-  fill: string;
-  opacity: number;
-}
-
-interface Nebula {
-  x: number;
-  y: number;
-  radius: number;
-  opacity: number;
-  color: string;
-}
-
 export interface ReputationConstellationModel {
   coreNodes: Node[];
   categoryNodes: CategoryNode[];
   edges: Edge[];
-  backgroundGlowOpacity: number;
-  ambientStars: AmbientStar[];
   backgroundAngle: number;
   backgroundStart: string;
   backgroundMid: string;
   backgroundEnd: string;
-  nebulaA: Nebula;
-  nebulaB: Nebula;
 }
 
 const VIEWBOX_SIZE = 512;
@@ -110,10 +92,6 @@ const CATEGORY_COLORS = [
   "#94F36B",
 ] as const;
 const CORE_ANGLES = [210, 330, 90] as const;
-const BACKGROUND_START_COLORS = ["#14243A", "#122033", "#15253E", "#162840"] as const;
-const BACKGROUND_MID_COLORS = ["#0D1825", "#0C1521", "#0E1724", "#0D1623"] as const;
-const BACKGROUND_END_COLORS = ["#040608", "#05070A", "#030509", "#04070B"] as const;
-const AMBIENT_STAR_COLORS = ["#E7F2FF", "#A8D8FF", "#9BF7E0", "#D9C4FF"] as const;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -149,6 +127,45 @@ function unitHash(input: string) {
   return hashString(input) / 0xffffffff;
 }
 
+function hslToHex(hue: number, saturation: number, lightness: number) {
+  const s = clamp(saturation, 0, 100) / 100;
+  const l = clamp(lightness, 0, 100) / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const h = (((hue % 360) + 360) % 360) / 60;
+  const x = c * (1 - Math.abs((h % 2) - 1));
+  let r = 0;
+  let g = 0;
+  let b = 0;
+
+  if (h >= 0 && h < 1) {
+    r = c;
+    g = x;
+  } else if (h < 2) {
+    r = x;
+    g = c;
+  } else if (h < 3) {
+    g = c;
+    b = x;
+  } else if (h < 4) {
+    g = x;
+    b = c;
+  } else if (h < 5) {
+    r = x;
+    b = c;
+  } else {
+    r = c;
+    b = x;
+  }
+
+  const m = l - c / 2;
+  const toHex = (value: number) =>
+    Math.round((value + m) * 255)
+      .toString(16)
+      .padStart(2, "0");
+
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
 function getCategoryColor(categoryId: string) {
   const index = Number(BigInt(categoryId) % BigInt(CATEGORY_COLORS.length));
   return CATEGORY_COLORS[index];
@@ -156,20 +173,10 @@ function getCategoryColor(categoryId: string) {
 
 function getAddressVariant(address: string) {
   const hashed = (salt: string) => unitHash(`${address}:${salt}`);
-
-  const ambientStars: AmbientStar[] = Array.from({ length: 10 }, (_, index) => {
-    const angle = hashed(`ambient-angle-${index}`) * 360;
-    const radius = 170 + hashed(`ambient-radius-${index}`) * 130;
-    const point = polarToCartesian(angle, radius);
-
-    return {
-      x: point.x,
-      y: point.y,
-      radius: 1 + hashed(`ambient-size-${index}`) * 1.6,
-      opacity: 0.16 + hashed(`ambient-opacity-${index}`) * 0.22,
-      fill: AMBIENT_STAR_COLORS[index % AMBIENT_STAR_COLORS.length],
-    };
-  });
+  const baseHue = hashed("bg-hue") * 360;
+  const spread = 35 + hashed("bg-spread") * 95;
+  const midHue = baseHue + spread;
+  const endHue = baseHue - (18 + hashed("bg-end-shift") * 55);
 
   return {
     coreAngleOffset: (hashed("core-angle") - 0.5) * 28,
@@ -177,29 +184,9 @@ function getAddressVariant(address: string) {
     coreRadiusScale: 0.94 + hashed("core-radius") * 0.14,
     coreMicroOffsets: CORE_ANGLES.map((_, index) => (hashed(`core-micro-${index}`) - 0.5) * 10),
     backgroundAngle: 26 + hashed("bg-angle") * 108,
-    backgroundStart:
-      BACKGROUND_START_COLORS[
-        Math.floor(hashed("bg-start") * BACKGROUND_START_COLORS.length) % BACKGROUND_START_COLORS.length
-      ],
-    backgroundMid:
-      BACKGROUND_MID_COLORS[Math.floor(hashed("bg-mid") * BACKGROUND_MID_COLORS.length) % BACKGROUND_MID_COLORS.length],
-    backgroundEnd:
-      BACKGROUND_END_COLORS[Math.floor(hashed("bg-end") * BACKGROUND_END_COLORS.length) % BACKGROUND_END_COLORS.length],
-    nebulaA: {
-      x: 202 + (hashed("nebula-a-x") - 0.5) * 60,
-      y: 210 + (hashed("nebula-a-y") - 0.5) * 66,
-      radius: 118 + hashed("nebula-a-radius") * 42,
-      opacity: 0.04 + hashed("nebula-a-opacity") * 0.07,
-      color: hashed("nebula-a-color") > 0.5 ? "#1FE4BF" : "#55A8FF",
-    },
-    nebulaB: {
-      x: 304 + (hashed("nebula-b-x") - 0.5) * 74,
-      y: 286 + (hashed("nebula-b-y") - 0.5) * 70,
-      radius: 96 + hashed("nebula-b-radius") * 40,
-      opacity: 0.03 + hashed("nebula-b-opacity") * 0.06,
-      color: hashed("nebula-b-color") > 0.5 ? "#5BA8FF" : "#C59CFF",
-    },
-    ambientStars,
+    backgroundStart: hslToHex(baseHue, 64 + hashed("bg-start-sat") * 14, 26 + hashed("bg-start-lit") * 8),
+    backgroundMid: hslToHex(midHue, 56 + hashed("bg-mid-sat") * 16, 16 + hashed("bg-mid-lit") * 8),
+    backgroundEnd: hslToHex(endHue, 46 + hashed("bg-end-sat") * 18, 7 + hashed("bg-end-lit") * 5),
   };
 }
 
@@ -399,21 +386,14 @@ export function buildReputationConstellationModel(
     }
   }
 
-  const [balanceScore, accuracyScore, participationScore] = getTriadScores(payload);
-  const backgroundGlowOpacity = 0.08 + ((balanceScore + accuracyScore + participationScore) / 3) * 0.12;
-
   return {
     coreNodes,
     categoryNodes,
     edges,
-    backgroundGlowOpacity,
-    ambientStars: variant.ambientStars,
     backgroundAngle: variant.backgroundAngle,
     backgroundStart: variant.backgroundStart,
     backgroundMid: variant.backgroundMid,
     backgroundEnd: variant.backgroundEnd,
-    nebulaA: variant.nebulaA,
-    nebulaB: variant.nebulaB,
   };
 }
 
@@ -473,29 +453,11 @@ export function renderReputationConstellationSvg(
       <stop offset="0.58" stop-color="${model.backgroundMid}"/>
       <stop offset="1" stop-color="${model.backgroundEnd}"/>
     </linearGradient>
-    <radialGradient id="nebulaA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${model.nebulaA.x.toFixed(2)} ${model.nebulaA.y.toFixed(2)}) rotate(90) scale(${model.nebulaA.radius.toFixed(2)})">
-      <stop stop-color="${model.nebulaA.color}" stop-opacity="${(model.backgroundGlowOpacity * 0.45 + model.nebulaA.opacity).toFixed(3)}"/>
-      <stop offset="1" stop-color="${model.nebulaA.color}" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="nebulaB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${model.nebulaB.x.toFixed(2)} ${model.nebulaB.y.toFixed(2)}) rotate(90) scale(${model.nebulaB.radius.toFixed(2)})">
-      <stop stop-color="${model.nebulaB.color}" stop-opacity="${(model.backgroundGlowOpacity * 0.38 + model.nebulaB.opacity).toFixed(3)}"/>
-      <stop offset="1" stop-color="${model.nebulaB.color}" stop-opacity="0"/>
-    </radialGradient>
     <filter id="${glowId}" x="-120%" y="-120%" width="340%" height="340%">
       <feGaussianBlur stdDeviation="8"/>
     </filter>
   </defs>
   <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#bg)"/>
-  <circle cx="${CENTER}" cy="${CENTER}" r="148" fill="url(#nebulaA)"/>
-  <circle cx="${CENTER}" cy="${CENTER}" r="122" fill="url(#nebulaB)"/>
-  <g opacity="0.34">
-    ${model.ambientStars
-      .map(
-        star =>
-          `<circle cx="${star.x.toFixed(2)}" cy="${star.y.toFixed(2)}" r="${star.radius.toFixed(2)}" fill="${star.fill}" fill-opacity="${star.opacity.toFixed(3)}" />`,
-      )
-      .join("")}
-  </g>
   ${edgeMarkup}
   ${categoryGlowMarkup}
   ${coreGlowMarkup}

@@ -14,7 +14,7 @@ Anyone should be able to compute the same avatar from the same public chain data
 - Addresses without a claimed Voter ID render with no center triad.
 - Category stars are capped, decay over time, and eventually disappear.
 - No followers, watchlists, or other app-local social data are used.
-- Sparse wallets still get deterministic address-derived variation in the background gradient and ambient star field.
+- Sparse wallets still get deterministic address-derived variation in the full background gradient.
 
 ## Inputs
 
@@ -146,8 +146,6 @@ deterministic input for:
 
 - minor triad angle/orbit variation
 - background gradient angle and palette
-- nebula placement and intensity
-- ambient star positions
 
 These address-seeded variations do not change the underlying reputation mapping; they only prevent sparse wallets from
 looking cloned.
