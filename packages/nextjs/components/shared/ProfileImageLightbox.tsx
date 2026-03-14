@@ -95,7 +95,7 @@ export function ProfileImageLightbox({
           </button>
 
           <div
-            className="flex max-h-full w-full max-w-3xl items-center justify-center"
+            className="flex max-h-full w-full max-w-5xl items-center justify-center"
             onClick={event => event.stopPropagation()}
           >
             <img
@@ -103,7 +103,7 @@ export function ProfileImageLightbox({
               onError={handleImageError}
               width={width}
               height={height}
-              className={`h-auto max-h-[min(80vh,48rem)] w-auto max-w-full object-contain ${modalImageClassName}`.trim()}
+              className={`h-auto max-h-[85vh] w-[80vw] max-w-[28rem] object-contain sm:max-w-[36rem] lg:max-w-[42rem] ${modalImageClassName}`.trim()}
               alt={alt}
             />
           </div>
