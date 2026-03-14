@@ -82,7 +82,7 @@ export interface ReputationConstellationModel {
 
 const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
-const CORE_COLORS = ["#FF8A3D", "#FFD24A", "#FF5B4A"] as const;
+const CORE_COLORS = ["#FFD24A", "#FF8A3D", "#FF5B4A"] as const;
 const CATEGORY_COLORS = [
   "#55A8FF",
   "#20DFC1",
