@@ -14,9 +14,10 @@ function parseRequestedSize(value: string | null): number | undefined {
 }
 
 function parseRequestedStyle(value: string | null) {
+  if (value === "constellation") return "constellation";
   if (value === "planet") return "planet";
   if (value === "orbital") return "orbital";
-  return "constellation";
+  return "orbital";
 }
 
 export async function GET(request: NextRequest) {
