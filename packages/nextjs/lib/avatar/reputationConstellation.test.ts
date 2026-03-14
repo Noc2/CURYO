@@ -129,7 +129,7 @@ test("constellation model keeps the triad connected to category stars and caps c
   }
 });
 
-test("wallets without a claimed voter id render an empty shell without the center triad", () => {
+test("wallets without a claimed voter id render without the center triad", () => {
   const model = buildReputationConstellationModel(
     buildPayload({
       voterId: null,

@@ -98,7 +98,6 @@ export interface ReputationConstellationModel {
 
 const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
-const INNER_RING_RADIUS = 164;
 const CORE_COLORS = ["#55A8FF", "#20DFC1", "#C59CFF"] as const;
 const CATEGORY_COLORS = [
   "#55A8FF",
@@ -487,7 +486,6 @@ export function renderReputationConstellationSvg(
     </filter>
   </defs>
   <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#bg)"/>
-  <circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RING_RADIUS}" stroke="#162230" stroke-width="20"/>
   <circle cx="${CENTER}" cy="${CENTER}" r="148" fill="url(#nebulaA)"/>
   <circle cx="${CENTER}" cy="${CENTER}" r="122" fill="url(#nebulaB)"/>
   <g opacity="0.34">

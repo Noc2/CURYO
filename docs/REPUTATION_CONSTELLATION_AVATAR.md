@@ -11,7 +11,7 @@ Anyone should be able to compute the same avatar from the same public chain data
 - The avatar uses only chain-derived signals.
 - The graph is always a single connected component.
 - The center triad appears only after the address has claimed a Voter ID.
-- Addresses without a claimed Voter ID render as an empty shell with no center triad.
+- Addresses without a claimed Voter ID render with no center triad.
 - Category stars are capped, decay over time, and eventually disappear.
 - No followers, watchlists, or other app-local social data are used.
 - Sparse wallets still get deterministic address-derived variation in the background gradient and ambient star field.
