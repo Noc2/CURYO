@@ -47,7 +47,6 @@ export interface PlanetAvatarModel {
   backgroundEnd: string;
   compositionRotation: number;
   mainPlanet: PlanetAvatarBody | null;
-  subPlanet: PlanetAvatarBody | null;
   accuracyRing: PlanetAvatarRing | null;
   shellRing: PlanetAvatarRing | null;
   categoryBodies: PlanetAvatarCategoryBody[];
@@ -176,14 +175,14 @@ function getAddressColorSeed(address: string) {
 function getPlanetPalette(baseHex: string, hueOffset: number) {
   const { r, g, b } = hexToRgb(baseHex);
   const { hue, saturation } = rgbToHsl(r, g, b);
-  const sat = Math.max(saturation * 100, 66);
+  const sat = Math.max(saturation * 100, 68);
   const baseHue = hue + hueOffset;
 
   return {
-    lightColor: hslToHex(baseHue + 8, Math.min(96, sat + 8), 72),
-    midColor: hslToHex(baseHue - 4, Math.min(90, sat + 2), 52),
-    darkColor: hslToHex(baseHue - 18, Math.max(54, sat - 8), 24),
-    glowColor: hslToHex(baseHue + 12, Math.min(92, sat + 4), 58),
+    lightColor: hslToHex(baseHue + 32, Math.min(98, sat + 10), 74),
+    midColor: hslToHex(baseHue - 6, Math.min(94, sat + 6), 54),
+    darkColor: hslToHex(baseHue - 40, Math.max(56, sat - 4), 24),
+    glowColor: hslToHex(baseHue + 18, Math.min(96, sat + 8), 60),
   };
 }
 
@@ -205,23 +204,19 @@ function getAddressVariant(address: string) {
   const seedHsl = rgbToHsl(r, g, b);
   const hue = seedHsl.saturation < 0.18 ? seedValue % 360 : seedHsl.hue;
   const saturation = Math.max(seedHsl.saturation * 100, 66);
-  const backgroundBase = hslToHex(hue, Math.max(saturation - 16, 44), 8);
+  const backgroundBase = hslToHex(hue, Math.max(saturation - 34, 10), 4);
 
   return {
     compositionRotation: hashed("composition-rotation") * 360,
     planetRotation: hashed("planet-rotation") * 360,
     ringTilt: -28 + hashed("ring-tilt") * 56,
-    subPlanetAngle: hashed("sub-planet-angle") * 360,
-    subPlanetRotation: hashed("sub-planet-rotation") * 360,
-    subPlanetOrbitRadius: 126 + hashed("sub-planet-orbit") * 30,
     backgroundAngle: 18 + hashed("background-angle") * 144,
     backgroundBase,
-    backgroundShadow: hslToHex(hue + 6, Math.max(saturation - 22, 40), 3),
-    backgroundStart: hslToHex(hue + 26, saturation, 26),
-    backgroundMid: hslToHex(hue - 22, Math.max(saturation - 6, 56), 18),
-    backgroundEnd: hslToHex(hue + 62, Math.max(saturation - 4, 58), 20),
-    planetPalette: getPlanetPalette(backgroundBase, 10),
-    subPlanetPalette: getPlanetPalette(backgroundBase, -22),
+    backgroundShadow: hslToHex(hue + 6, Math.max(saturation - 40, 8), 1),
+    backgroundStart: hslToHex(hue + 18, Math.max(saturation - 20, 24), 12),
+    backgroundMid: hslToHex(hue - 18, Math.max(saturation - 28, 18), 8),
+    backgroundEnd: hslToHex(hue + 54, Math.max(saturation - 14, 22), 10),
+    planetPalette: getPlanetPalette(getAddressColorSeed(address), 0),
     ringColor: hslToHex(hue + 46, 86, 72),
     ringGlowColor: hslToHex(hue + 54, 90, 62),
   };
@@ -339,26 +334,6 @@ function buildShellRing(variant: ReturnType<typeof getAddressVariant>): PlanetAv
   };
 }
 
-function buildSubPlanet(
-  payload: ReputationAvatarPayload,
-  mainPlanet: PlanetAvatarBody | null,
-  variant: ReturnType<typeof getAddressVariant>,
-): PlanetAvatarBody | null {
-  if (!mainPlanet || !payload.stats) return null;
-
-  const [, , participationScore] = getTriadScores(payload);
-  const position = polarToCartesian(variant.subPlanetAngle, variant.subPlanetOrbitRadius);
-
-  return {
-    x: position.x,
-    y: position.y,
-    radius: 12 + 22 * participationScore,
-    opacity: 0.98,
-    rotation: variant.subPlanetRotation,
-    ...variant.subPlanetPalette,
-  };
-}
-
 function buildCategoryBodies(
   payload: ReputationAvatarPayload,
   mainPlanet: PlanetAvatarBody | null,
@@ -392,7 +367,6 @@ export function buildPlanetAvatarModel(
   const variant = getAddressVariant(payload.address);
   const mainPlanet = buildMainPlanet(payload, variant);
   const accuracyRing = buildAccuracyRing(payload, mainPlanet, variant);
-  const subPlanet = buildSubPlanet(payload, mainPlanet, variant);
   const categoryBodies = buildCategoryBodies(payload, mainPlanet, nowSeconds);
 
   return {
@@ -404,7 +378,6 @@ export function buildPlanetAvatarModel(
     backgroundEnd: variant.backgroundEnd,
     compositionRotation: variant.compositionRotation,
     mainPlanet,
-    subPlanet,
     accuracyRing,
     shellRing: mainPlanet ? null : buildShellRing(variant),
     categoryBodies,
@@ -441,7 +414,7 @@ function renderPlanetDefs(hashHex: string, model: PlanetAvatarModel) {
     </radialGradient>`,
   ];
 
-  const bodies = [model.mainPlanet, model.subPlanet, ...model.categoryBodies].filter(
+  const bodies = [model.mainPlanet, ...model.categoryBodies].filter(
     (body): body is PlanetAvatarBody | PlanetAvatarCategoryBody => body !== null,
   );
   for (const [index, body] of bodies.entries()) {
@@ -499,9 +472,8 @@ export function renderPlanetAvatarSvg(
   const hashHex = hashString(payload.address).toString(16);
   const { bgId, shadowId, nebulaAId, nebulaBId, markup } = renderPlanetDefs(hashHex, model);
   const categoryMarkup = model.categoryBodies
-    .map((body, index) => renderBody(body, hashHex, (model.mainPlanet ? 1 : 0) + (model.subPlanet ? 1 : 0) + index))
+    .map((body, index) => renderBody(body, hashHex, (model.mainPlanet ? 1 : 0) + index))
     .join("");
-  const subPlanetMarkup = model.subPlanet ? renderBody(model.subPlanet, hashHex, model.mainPlanet ? 1 : 0) : "";
   const mainPlanetMarkup = model.mainPlanet ? renderBody(model.mainPlanet, hashHex, 0) : "";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
@@ -514,7 +486,6 @@ export function renderPlanetAvatarSvg(
     ${model.accuracyRing ? renderRing(model.accuracyRing, hashHex, `planet-avatar-ring-back-${hashHex}`) : ""}
     ${model.shellRing ? renderRing(model.shellRing, hashHex, `planet-avatar-ring-back-${hashHex}`) : ""}
     ${categoryMarkup}
-    ${subPlanetMarkup}
     ${mainPlanetMarkup}
     ${model.accuracyRing ? renderRing(model.accuracyRing, hashHex, `planet-avatar-ring-front-${hashHex}`) : ""}
     ${model.shellRing ? renderRing(model.shellRing, hashHex, `planet-avatar-ring-front-${hashHex}`) : ""}

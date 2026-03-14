@@ -111,15 +111,19 @@ function buildPayload(overrides?: Partial<ReputationAvatarPayload>): ReputationA
 }
 
 test("planet avatars are deterministic but vary by address color and rotation", () => {
-  const modelA = buildPlanetAvatarModel(buildPayload({ address: "0x1111111111111111111111111111111111111111" }), {
+  const modelA = buildPlanetAvatarModel(buildPayload({ address: "0x0000000000000000000000000000000000ff3300" }), {
     nowSeconds: NOW_SECONDS,
   });
-  const modelB = buildPlanetAvatarModel(buildPayload({ address: "0x2222222222222222222222222222222222222222" }), {
+  const modelB = buildPlanetAvatarModel(buildPayload({ address: "0x00000000000000000000000000000000003366ff" }), {
     nowSeconds: NOW_SECONDS,
   });
 
   assert.notEqual(modelA.backgroundStart, modelB.backgroundStart);
   assert.notEqual(modelA.compositionRotation, modelB.compositionRotation);
+  assert.notEqual(
+    `${modelA.mainPlanet?.lightColor}/${modelA.mainPlanet?.midColor}/${modelA.mainPlanet?.darkColor}`,
+    `${modelB.mainPlanet?.lightColor}/${modelB.mainPlanet?.midColor}/${modelB.mainPlanet?.darkColor}`,
+  );
 });
 
 test("main planet size saturates at extreme cREP balances", () => {
@@ -160,6 +164,13 @@ test("unclaimed wallets render an empty shell instead of a filled main planet", 
   assert.equal(model.mainPlanet, null);
   assert.ok(model.shellRing);
   assert.equal(model.categoryBodies.length, 0);
+});
+
+test("planet avatar model does not create a sub-planet", () => {
+  const model = buildPlanetAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
+
+  assert.ok(model.mainPlanet);
+  assert.equal("subPlanet" in model, false);
 });
 
 test("renderer returns svg markup for the planet avatar", () => {
