@@ -92,6 +92,7 @@ const CATEGORY_COLORS = [
   "#94F36B",
 ] as const;
 const CORE_ANGLES = [210, 330, 90] as const;
+const BACKGROUND_FAMILY_HUES = [210, 185, 145, 105, 255, 290, 330, 18, 42] as const;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -173,10 +174,11 @@ function getCategoryColor(categoryId: string) {
 
 function getAddressVariant(address: string) {
   const hashed = (salt: string) => unitHash(`${address}:${salt}`);
-  const baseHue = hashed("bg-hue") * 360;
-  const spread = 35 + hashed("bg-spread") * 95;
-  const midHue = baseHue + spread;
-  const endHue = baseHue - (18 + hashed("bg-end-shift") * 55);
+  const familyIndex = Math.floor(hashed("bg-family") * BACKGROUND_FAMILY_HUES.length) % BACKGROUND_FAMILY_HUES.length;
+  const baseHue = BACKGROUND_FAMILY_HUES[familyIndex] + (hashed("bg-hue-jitter") - 0.5) * 22;
+  const hueDirection = hashed("bg-direction") > 0.5 ? 1 : -1;
+  const midHue = baseHue + hueDirection * (24 + hashed("bg-mid-shift") * 30);
+  const endHue = baseHue - hueDirection * (8 + hashed("bg-end-shift") * 18);
 
   return {
     coreAngleOffset: (hashed("core-angle") - 0.5) * 28,
@@ -184,9 +186,9 @@ function getAddressVariant(address: string) {
     coreRadiusScale: 0.94 + hashed("core-radius") * 0.14,
     coreMicroOffsets: CORE_ANGLES.map((_, index) => (hashed(`core-micro-${index}`) - 0.5) * 10),
     backgroundAngle: 26 + hashed("bg-angle") * 108,
-    backgroundStart: hslToHex(baseHue, 64 + hashed("bg-start-sat") * 14, 26 + hashed("bg-start-lit") * 8),
-    backgroundMid: hslToHex(midHue, 56 + hashed("bg-mid-sat") * 16, 16 + hashed("bg-mid-lit") * 8),
-    backgroundEnd: hslToHex(endHue, 46 + hashed("bg-end-sat") * 18, 7 + hashed("bg-end-lit") * 5),
+    backgroundStart: hslToHex(baseHue, 70 + hashed("bg-start-sat") * 14, 28 + hashed("bg-start-lit") * 8),
+    backgroundMid: hslToHex(midHue, 62 + hashed("bg-mid-sat") * 14, 18 + hashed("bg-mid-lit") * 7),
+    backgroundEnd: hslToHex(endHue, 54 + hashed("bg-end-sat") * 12, 9 + hashed("bg-end-lit") * 4),
   };
 }
 
