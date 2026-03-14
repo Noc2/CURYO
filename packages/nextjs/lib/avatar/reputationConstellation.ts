@@ -68,6 +68,12 @@ interface CategoryNode extends Node {
   anchorId: string;
 }
 
+interface AmbientStar extends Point {
+  radius: number;
+  fill: string;
+  opacity: number;
+}
+
 interface Nebula {
   x: number;
   y: number;
@@ -81,6 +87,7 @@ export interface ReputationConstellationModel {
   categoryNodes: CategoryNode[];
   edges: Edge[];
   backgroundGlowOpacity: number;
+  ambientStars: AmbientStar[];
   backgroundAngle: number;
   backgroundStart: string;
   backgroundMid: string;
@@ -108,6 +115,7 @@ const CORE_ANGLES = [210, 330, 90] as const;
 const BACKGROUND_START_COLORS = ["#14243A", "#122033", "#15253E", "#162840"] as const;
 const BACKGROUND_MID_COLORS = ["#0D1825", "#0C1521", "#0E1724", "#0D1623"] as const;
 const BACKGROUND_END_COLORS = ["#040608", "#05070A", "#030509", "#04070B"] as const;
+const AMBIENT_STAR_COLORS = ["#E7F2FF", "#A8D8FF", "#9BF7E0", "#D9C4FF"] as const;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -151,6 +159,20 @@ function getCategoryColor(categoryId: string) {
 function getAddressVariant(address: string) {
   const hashed = (salt: string) => unitHash(`${address}:${salt}`);
 
+  const ambientStars: AmbientStar[] = Array.from({ length: 10 }, (_, index) => {
+    const angle = hashed(`ambient-angle-${index}`) * 360;
+    const radius = 170 + hashed(`ambient-radius-${index}`) * 130;
+    const point = polarToCartesian(angle, radius);
+
+    return {
+      x: point.x,
+      y: point.y,
+      radius: 1 + hashed(`ambient-size-${index}`) * 1.6,
+      opacity: 0.16 + hashed(`ambient-opacity-${index}`) * 0.22,
+      fill: AMBIENT_STAR_COLORS[index % AMBIENT_STAR_COLORS.length],
+    };
+  });
+
   return {
     coreAngleOffset: (hashed("core-angle") - 0.5) * 28,
     coreOrbitScale: 0.92 + hashed("core-orbit") * 0.18,
@@ -179,6 +201,7 @@ function getAddressVariant(address: string) {
       opacity: 0.03 + hashed("nebula-b-opacity") * 0.06,
       color: hashed("nebula-b-color") > 0.5 ? "#5BA8FF" : "#C59CFF",
     },
+    ambientStars,
   };
 }
 
@@ -386,6 +409,7 @@ export function buildReputationConstellationModel(
     categoryNodes,
     edges,
     backgroundGlowOpacity,
+    ambientStars: variant.ambientStars,
     backgroundAngle: variant.backgroundAngle,
     backgroundStart: variant.backgroundStart,
     backgroundMid: variant.backgroundMid,
@@ -464,10 +488,17 @@ export function renderReputationConstellationSvg(
     </filter>
   </defs>
   <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#bg)"/>
-  <circle cx="${CENTER}" cy="${CENTER}" r="${OUTER_RING_RADIUS}" stroke="#223244" stroke-width="2"/>
   <circle cx="${CENTER}" cy="${CENTER}" r="${INNER_RING_RADIUS}" stroke="#162230" stroke-width="20"/>
   <circle cx="${CENTER}" cy="${CENTER}" r="148" fill="url(#nebulaA)"/>
   <circle cx="${CENTER}" cy="${CENTER}" r="122" fill="url(#nebulaB)"/>
+  <g opacity="0.34">
+    ${model.ambientStars
+      .map(
+        star =>
+          `<circle cx="${star.x.toFixed(2)}" cy="${star.y.toFixed(2)}" r="${star.radius.toFixed(2)}" fill="${star.fill}" fill-opacity="${star.opacity.toFixed(3)}" />`,
+      )
+      .join("")}
+  </g>
   ${edgeMarkup}
   ${categoryGlowMarkup}
   ${coreGlowMarkup}
