@@ -188,6 +188,7 @@ export interface PonderProfile {
   address: string;
   name: string;
   imageUrl: string;
+  strategy: string;
   createdAt: string;
   updatedAt: string;
   totalVotes: number;

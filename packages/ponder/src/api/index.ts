@@ -1196,6 +1196,7 @@ app.get("/leaderboard", async (c) => {
       address: h.address,
       name: "",
       imageUrl: "",
+      strategy: "",
       createdAt: h.firstSeenAt,
       updatedAt: h.firstSeenAt,
       totalVotes: 0,
