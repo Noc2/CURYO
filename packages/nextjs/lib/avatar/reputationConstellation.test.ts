@@ -208,6 +208,68 @@ test("core radii grow with stronger balance, accuracy, and participation", () =>
   assert.ok(highSignalModel.coreNodes[2].radius > lowSignalModel.coreNodes[2].radius);
 });
 
+test("extreme cREP balances saturate instead of taking over the whole avatar", () => {
+  const cappedModel = buildReputationConstellationModel(
+    buildPayload({
+      balance: "100000000000", // 100k cREP
+      categories90d: [],
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  const extremeModel = buildReputationConstellationModel(
+    buildPayload({
+      balance: "1000000000000", // 1M cREP
+      categories90d: [],
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.equal(extremeModel.coreNodes[0].radius, cappedModel.coreNodes[0].radius);
+});
+
+test("core stars stay within a readable min and max size range", () => {
+  const tinyModel = buildReputationConstellationModel(
+    buildPayload({
+      balance: "0",
+      stats: {
+        totalSettledVotes: 0,
+        totalWins: 0,
+        totalLosses: 0,
+        currentStreak: 0,
+        bestWinStreak: 0,
+        winRate: 0,
+      },
+      categories90d: [],
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  const hugeModel = buildReputationConstellationModel(
+    buildPayload({
+      balance: "1000000000000",
+      stats: {
+        totalSettledVotes: 5000,
+        totalWins: 4000,
+        totalLosses: 1000,
+        currentStreak: 40,
+        bestWinStreak: 65,
+        winRate: 0.8,
+      },
+      categories90d: [],
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  for (const node of tinyModel.coreNodes) {
+    assert.ok(node.radius >= 28);
+  }
+
+  for (const node of hugeModel.coreNodes) {
+    assert.ok(node.radius <= 50);
+  }
+});
+
 test("core stars stay larger than category stars", () => {
   const model = buildReputationConstellationModel(
     buildPayload({
