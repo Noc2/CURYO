@@ -1,0 +1,171 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { buildPlanetAvatarModel, renderPlanetAvatarSvg } from "~~/lib/avatar/planetAvatar";
+import type { ReputationAvatarPayload } from "~~/lib/avatar/reputationConstellation";
+
+const NOW_SECONDS = 1_900_000_000;
+
+function secondsAgo(days: number) {
+  return String(NOW_SECONDS - days * 24 * 60 * 60);
+}
+
+function buildPayload(overrides?: Partial<ReputationAvatarPayload>): ReputationAvatarPayload {
+  return {
+    address: "0x1111111111111111111111111111111111111111",
+    balance: "250000000",
+    voterId: {
+      tokenId: "1",
+      mintedAt: "1700000000",
+    },
+    stats: {
+      totalSettledVotes: 24,
+      totalWins: 16,
+      totalLosses: 8,
+      currentStreak: 3,
+      bestWinStreak: 6,
+      winRate: 16 / 24,
+    },
+    streak: {
+      currentDailyStreak: 5,
+      bestDailyStreak: 8,
+      totalActiveDays: 12,
+      lastActiveDate: "2026-03-14",
+      lastMilestoneDay: 7,
+    },
+    categories90d: [
+      {
+        categoryId: "1",
+        categoryName: "Alpha",
+        settledVotes90d: 12,
+        wins90d: 9,
+        losses90d: 3,
+        stakeWon90d: "120000000",
+        stakeLost90d: "30000000",
+        totalStake90d: "150000000",
+        winRate90d: 0.75,
+        lastSettledAt: secondsAgo(4),
+      },
+      {
+        categoryId: "2",
+        categoryName: "Beta",
+        settledVotes90d: 10,
+        wins90d: 7,
+        losses90d: 3,
+        stakeWon90d: "90000000",
+        stakeLost90d: "30000000",
+        totalStake90d: "120000000",
+        winRate90d: 0.7,
+        lastSettledAt: secondsAgo(7),
+      },
+      {
+        categoryId: "3",
+        categoryName: "Gamma",
+        settledVotes90d: 8,
+        wins90d: 5,
+        losses90d: 3,
+        stakeWon90d: "60000000",
+        stakeLost90d: "25000000",
+        totalStake90d: "85000000",
+        winRate90d: 0.625,
+        lastSettledAt: secondsAgo(10),
+      },
+      {
+        categoryId: "4",
+        categoryName: "Delta",
+        settledVotes90d: 7,
+        wins90d: 4,
+        losses90d: 3,
+        stakeWon90d: "55000000",
+        stakeLost90d: "25000000",
+        totalStake90d: "80000000",
+        winRate90d: 4 / 7,
+        lastSettledAt: secondsAgo(14),
+      },
+      {
+        categoryId: "5",
+        categoryName: "Epsilon",
+        settledVotes90d: 6,
+        wins90d: 4,
+        losses90d: 2,
+        stakeWon90d: "50000000",
+        stakeLost90d: "12000000",
+        totalStake90d: "62000000",
+        winRate90d: 4 / 6,
+        lastSettledAt: secondsAgo(20),
+      },
+      {
+        categoryId: "6",
+        categoryName: "Zeta",
+        settledVotes90d: 5,
+        wins90d: 3,
+        losses90d: 2,
+        stakeWon90d: "45000000",
+        stakeLost90d: "15000000",
+        totalStake90d: "60000000",
+        winRate90d: 0.6,
+        lastSettledAt: secondsAgo(25),
+      },
+    ],
+    ...overrides,
+  };
+}
+
+test("planet avatars are deterministic but vary by address color and rotation", () => {
+  const modelA = buildPlanetAvatarModel(buildPayload({ address: "0x1111111111111111111111111111111111111111" }), {
+    nowSeconds: NOW_SECONDS,
+  });
+  const modelB = buildPlanetAvatarModel(buildPayload({ address: "0x2222222222222222222222222222222222222222" }), {
+    nowSeconds: NOW_SECONDS,
+  });
+
+  assert.notEqual(modelA.backgroundStart, modelB.backgroundStart);
+  assert.notEqual(modelA.compositionRotation, modelB.compositionRotation);
+});
+
+test("main planet size saturates at extreme cREP balances", () => {
+  const capped = buildPlanetAvatarModel(
+    buildPayload({
+      balance: "100000000000",
+      categories90d: [],
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+  const extreme = buildPlanetAvatarModel(
+    buildPayload({
+      balance: "1000000000000",
+      categories90d: [],
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.equal(extreme.mainPlanet?.radius, capped.mainPlanet?.radius);
+});
+
+test("planet avatars cap category bodies at five", () => {
+  const model = buildPlanetAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
+  assert.equal(model.categoryBodies.length, 5);
+});
+
+test("unclaimed wallets render an empty shell instead of a filled main planet", () => {
+  const model = buildPlanetAvatarModel(
+    buildPayload({
+      voterId: null,
+      stats: null,
+      categories90d: [],
+      balance: "0",
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.equal(model.mainPlanet, null);
+  assert.ok(model.shellRing);
+  assert.equal(model.categoryBodies.length, 0);
+});
+
+test("renderer returns svg markup for the planet avatar", () => {
+  const svg = renderPlanetAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
+
+  assert.match(svg, /planet-avatar-bg-/);
+  assert.match(svg, /ellipse/);
+  assert.match(svg, /circle/);
+});

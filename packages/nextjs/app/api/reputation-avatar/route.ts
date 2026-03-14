@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
+import { renderPlanetAvatarSvg } from "~~/lib/avatar/planetAvatar";
 import { renderReputationConstellationSvg } from "~~/lib/avatar/reputationConstellation";
 import { getReputationAvatarPayload } from "~~/lib/avatar/server";
 
@@ -11,6 +12,10 @@ function parseRequestedSize(value: string | null): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function parseRequestedStyle(value: string | null) {
+  return value === "planet" ? "planet" : "constellation";
+}
+
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
   if (!address || !isAddress(address)) {
@@ -19,7 +24,9 @@ export async function GET(request: NextRequest) {
 
   const payload = await getReputationAvatarPayload(address);
   const size = parseRequestedSize(request.nextUrl.searchParams.get("size"));
-  const svg = renderReputationConstellationSvg(payload, { size });
+  const style = parseRequestedStyle(request.nextUrl.searchParams.get("style"));
+  const svg =
+    style === "planet" ? renderPlanetAvatarSvg(payload, { size }) : renderReputationConstellationSvg(payload, { size });
 
   return new NextResponse(svg, {
     headers: {
