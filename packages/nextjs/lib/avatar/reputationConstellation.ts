@@ -241,6 +241,21 @@ function getAddressVariant(address: string) {
   };
 }
 
+function getNodeGradientColors(hex: string) {
+  const { r, g, b } = hexToRgb(hex);
+  const { hue, saturation, lightness } = rgbToHsl(r, g, b);
+  const saturationPct = saturation * 100;
+  const lightnessPct = lightness * 100;
+
+  return {
+    coreCenter: hslToHex(hue + 2, Math.max(42, saturationPct - 18), Math.min(92, lightnessPct + 34)),
+    coreMid: hslToHex(hue, Math.min(100, saturationPct + 8), Math.min(76, lightnessPct + 14)),
+    coreEdge: hslToHex(hue - 4, Math.max(46, saturationPct - 6), Math.max(18, lightnessPct - 6)),
+    glowCenter: hslToHex(hue + 4, Math.min(100, saturationPct + 10), Math.min(72, lightnessPct + 10)),
+    glowEdge: hslToHex(hue + 10, Math.max(36, saturationPct - 12), Math.max(18, lightnessPct - 2)),
+  };
+}
+
 function getVisibleCategories(payload: ReputationAvatarPayload, nowSeconds: number) {
   return payload.categories90d
     .map(category => {
@@ -462,34 +477,53 @@ export function renderReputationConstellationSvg(
   const nebulaAId = `avatar-nebula-a-${hashHex}`;
   const nebulaBId = `avatar-nebula-b-${hashHex}`;
   const nebulaCId = `avatar-nebula-c-${hashHex}`;
-  const glowId = `avatar-glow-${hashHex}`;
+  const allNodes = [...model.categoryNodes, ...model.coreNodes];
+  const nodeGradientDefs = allNodes
+    .map(node => {
+      const colors = getNodeGradientColors(node.fill);
+      const glowGradientId = `avatar-node-glow-${hashHex}-${node.id}`;
+      const coreGradientId = `avatar-node-core-${hashHex}-${node.id}`;
+
+      return `
+    <radialGradient id="${glowGradientId}" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="${colors.glowCenter}" stop-opacity="${Math.min(0.92, 0.48 + node.glowOpacity * 0.55).toFixed(3)}"/>
+      <stop offset="52%" stop-color="${colors.glowEdge}" stop-opacity="${Math.min(0.5, 0.18 + node.glowOpacity * 0.28).toFixed(3)}"/>
+      <stop offset="100%" stop-color="${colors.glowEdge}" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="${coreGradientId}" cx="50%" cy="50%" r="58%">
+      <stop offset="0%" stop-color="${colors.coreCenter}" stop-opacity="1"/>
+      <stop offset="38%" stop-color="${colors.coreMid}" stop-opacity="0.98"/>
+      <stop offset="100%" stop-color="${colors.coreEdge}" stop-opacity="1"/>
+    </radialGradient>`;
+    })
+    .join("");
 
   const categoryGlowMarkup = model.categoryNodes
-    .map(
-      node =>
-        `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${(node.radius * 2.1).toFixed(2)}" fill="${node.fill}" fill-opacity="${node.glowOpacity.toFixed(3)}" filter="url(#${glowId})" />`,
-    )
+    .map(node => {
+      const glowGradientId = `avatar-node-glow-${hashHex}-${node.id}`;
+      return `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${(node.radius * 2.55).toFixed(2)}" fill="url(#${glowGradientId})" fill-opacity="${Math.min(1, node.glowOpacity * 1.08).toFixed(3)}" />`;
+    })
     .join("");
 
   const categoryNodeMarkup = model.categoryNodes
-    .map(
-      node =>
-        `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${node.radius.toFixed(2)}" fill="${node.fill}" fill-opacity="${node.opacity.toFixed(3)}" />`,
-    )
+    .map(node => {
+      const coreGradientId = `avatar-node-core-${hashHex}-${node.id}`;
+      return `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${node.radius.toFixed(2)}" fill="url(#${coreGradientId})" fill-opacity="${node.opacity.toFixed(3)}" />`;
+    })
     .join("");
 
   const coreGlowMarkup = model.coreNodes
-    .map(
-      node =>
-        `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${(node.radius * 2.2).toFixed(2)}" fill="${node.fill}" fill-opacity="${node.glowOpacity.toFixed(3)}" filter="url(#${glowId})" />`,
-    )
+    .map(node => {
+      const glowGradientId = `avatar-node-glow-${hashHex}-${node.id}`;
+      return `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${(node.radius * 2.85).toFixed(2)}" fill="url(#${glowGradientId})" fill-opacity="${Math.min(1, node.glowOpacity * 1.12).toFixed(3)}" />`;
+    })
     .join("");
 
   const coreNodeMarkup = model.coreNodes
-    .map(
-      node =>
-        `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${node.radius.toFixed(2)}" fill="${node.fill}" fill-opacity="${node.opacity.toFixed(3)}" />`,
-    )
+    .map(node => {
+      const coreGradientId = `avatar-node-core-${hashHex}-${node.id}`;
+      return `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${node.radius.toFixed(2)}" fill="url(#${coreGradientId})" fill-opacity="${node.opacity.toFixed(3)}" />`;
+    })
     .join("");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
@@ -515,9 +549,7 @@ export function renderReputationConstellationSvg(
       <stop stop-color="${model.backgroundShadow}" stop-opacity="0.88"/>
       <stop offset="0.95" stop-color="${model.backgroundShadow}" stop-opacity="0"/>
     </radialGradient>
-    <filter id="${glowId}" x="-120%" y="-120%" width="340%" height="340%">
-      <feGaussianBlur stdDeviation="8"/>
-    </filter>
+    ${nodeGradientDefs}
   </defs>
   <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${bgId})"/>
   <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${shadowId})"/>

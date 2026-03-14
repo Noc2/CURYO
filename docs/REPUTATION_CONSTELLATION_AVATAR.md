@@ -138,6 +138,7 @@ Decay affects:
 - The core triad uses fixed brand colors.
 - Category color is derived deterministically from `categoryId`.
 - The same category always resolves to the same hue.
+- Stars render as radial orbs with a bright inner core and a softer outer glow.
 
 ## Address-Derived Variation
 
