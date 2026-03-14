@@ -208,6 +208,42 @@ test("core radii grow with stronger balance, accuracy, and participation", () =>
   assert.ok(highSignalModel.coreNodes[2].radius > lowSignalModel.coreNodes[2].radius);
 });
 
+test("core stars stay larger than category stars", () => {
+  const model = buildReputationConstellationModel(
+    buildPayload({
+      balance: "0",
+      stats: {
+        totalSettledVotes: 0,
+        totalWins: 0,
+        totalLosses: 0,
+        currentStreak: 0,
+        bestWinStreak: 0,
+        winRate: 0,
+      },
+      categories90d: [
+        {
+          categoryId: "1",
+          categoryName: "Alpha",
+          settledVotes90d: 24,
+          wins90d: 18,
+          losses90d: 6,
+          stakeWon90d: "2500000000",
+          stakeLost90d: "350000000",
+          totalStake90d: "2850000000",
+          winRate90d: 0.75,
+          lastSettledAt: secondsAgo(2),
+        },
+      ],
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  const smallestCore = Math.min(...model.coreNodes.map(node => node.radius));
+  const largestCategory = Math.max(...model.categoryNodes.map(node => node.radius));
+
+  assert.ok(smallestCore > largestCategory);
+});
+
 test("claimed wallets with the same scores still render distinct deterministic avatars", () => {
   const payloadA = buildPayload({
     address: "0x1111111111111111111111111111111111111111",

@@ -82,7 +82,7 @@ export interface ReputationConstellationModel {
 
 const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
-const CORE_COLORS = ["#55A8FF", "#20DFC1", "#C59CFF"] as const;
+const CORE_COLORS = ["#FF8A3D", "#FFD24A", "#FF5B4A"] as const;
 const CATEGORY_COLORS = [
   "#55A8FF",
   "#20DFC1",
@@ -346,10 +346,10 @@ function getCoreNodes(payload: ReputationAvatarPayload, variant: ReturnType<type
       id: `core-${index}`,
       x: point.x,
       y: point.y,
-      radius: (17 + 12 * score) * variant.coreRadiusScale,
+      radius: (30 + 16 * score) * variant.coreRadiusScale,
       fill: CORE_COLORS[index],
       opacity: 0.96,
-      glowOpacity: 0.22 + 0.48 * score,
+      glowOpacity: 0.3 + 0.5 * score,
     };
   });
 }
