@@ -10,9 +10,11 @@ Anyone should be able to compute the same avatar from the same public chain data
 
 - The avatar uses only chain-derived signals.
 - The graph is always a single connected component.
-- The center triad is permanent.
+- The center triad appears only after the address has claimed a Voter ID.
+- Addresses without a claimed Voter ID render as an empty shell with no center triad.
 - Category stars are capped, decay over time, and eventually disappear.
 - No followers, watchlists, or other app-local social data are used.
+- Sparse wallets still get deterministic address-derived variation in the background and ambient star field.
 
 ## Inputs
 
@@ -34,7 +36,8 @@ These values are considered valid inputs for v1:
 
 ## Core Triad
 
-The center triad is always visible and always connected as a triangle.
+The center triad is visible only when the address has a claimed Voter ID. When it is shown, it is always connected as a
+triangle.
 
 - Left star: `cREP controlled`
 - Right star: `accuracy`
@@ -135,6 +138,18 @@ Decay affects:
 - The core triad uses fixed brand colors.
 - Category color is derived deterministically from `categoryId`.
 - The same category always resolves to the same hue.
+
+## Address-Derived Variation
+
+To avoid low-history wallets collapsing into identical-looking avatars, the renderer also uses the address as a
+deterministic input for:
+
+- minor triad angle/orbit variation
+- nebula placement and intensity
+- ambient background star positions
+
+These address-seeded variations do not change the underlying reputation mapping; they only prevent sparse wallets from
+looking cloned.
 
 ## Versioning
 

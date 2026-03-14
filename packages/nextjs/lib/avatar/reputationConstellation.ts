@@ -68,11 +68,28 @@ interface CategoryNode extends Node {
   anchorId: string;
 }
 
+interface AmbientStar extends Point {
+  radius: number;
+  fill: string;
+  opacity: number;
+}
+
+interface Nebula {
+  x: number;
+  y: number;
+  radius: number;
+  opacity: number;
+  color: string;
+}
+
 export interface ReputationConstellationModel {
   coreNodes: Node[];
   categoryNodes: CategoryNode[];
   edges: Edge[];
   backgroundGlowOpacity: number;
+  ambientStars: AmbientStar[];
+  nebulaA: Nebula;
+  nebulaB: Nebula;
 }
 
 const VIEWBOX_SIZE = 512;
@@ -91,6 +108,7 @@ const CATEGORY_COLORS = [
   "#94F36B",
 ] as const;
 const CORE_ANGLES = [210, 330, 90] as const;
+const AMBIENT_STAR_COLORS = ["#E7F2FF", "#9CD9FF", "#8DFFEA", "#D9C4FF"] as const;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -129,6 +147,46 @@ function unitHash(input: string) {
 function getCategoryColor(categoryId: string) {
   const index = Number(BigInt(categoryId) % BigInt(CATEGORY_COLORS.length));
   return CATEGORY_COLORS[index];
+}
+
+function getAddressVariant(address: string) {
+  const hashed = (salt: string) => unitHash(`${address}:${salt}`);
+
+  const ambientStars: AmbientStar[] = Array.from({ length: 12 }, (_, index) => {
+    const angle = hashed(`star-angle-${index}`) * 360;
+    const radius = 176 + hashed(`star-radius-${index}`) * 122;
+    const point = polarToCartesian(angle, radius);
+
+    return {
+      x: point.x,
+      y: point.y,
+      radius: 1.1 + hashed(`star-size-${index}`) * 1.5,
+      opacity: 0.18 + hashed(`star-opacity-${index}`) * 0.3,
+      fill: AMBIENT_STAR_COLORS[index % AMBIENT_STAR_COLORS.length],
+    };
+  });
+
+  return {
+    coreAngleOffset: (hashed("core-angle") - 0.5) * 28,
+    coreOrbitScale: 0.92 + hashed("core-orbit") * 0.18,
+    coreRadiusScale: 0.94 + hashed("core-radius") * 0.14,
+    coreMicroOffsets: CORE_ANGLES.map((_, index) => (hashed(`core-micro-${index}`) - 0.5) * 10),
+    nebulaA: {
+      x: 202 + (hashed("nebula-a-x") - 0.5) * 60,
+      y: 210 + (hashed("nebula-a-y") - 0.5) * 66,
+      radius: 130 + hashed("nebula-a-radius") * 60,
+      opacity: 0.07 + hashed("nebula-a-opacity") * 0.12,
+      color: hashed("nebula-a-color") > 0.5 ? "#1FE4BF" : "#55A8FF",
+    },
+    nebulaB: {
+      x: 304 + (hashed("nebula-b-x") - 0.5) * 74,
+      y: 286 + (hashed("nebula-b-y") - 0.5) * 70,
+      radius: 110 + hashed("nebula-b-radius") * 58,
+      opacity: 0.05 + hashed("nebula-b-opacity") * 0.1,
+      color: hashed("nebula-b-color") > 0.5 ? "#5BA8FF" : "#C59CFF",
+    },
+    ambientStars,
+  };
 }
 
 function getVisibleCategories(payload: ReputationAvatarPayload, nowSeconds: number) {
@@ -206,19 +264,22 @@ function getRefinement(payload: ReputationAvatarPayload) {
   return clamp((stats.winRate - 0.5) / 0.25, 0, 1) * clamp(stats.totalSettledVotes / 40, 0, 1);
 }
 
-function getCoreNodes(payload: ReputationAvatarPayload) {
+function getCoreNodes(payload: ReputationAvatarPayload, variant: ReturnType<typeof getAddressVariant>) {
   const [balanceScore, accuracyScore, participationScore] = getTriadScores(payload);
   const average = (balanceScore + accuracyScore + participationScore) / 3;
-  const orbit = 26 + 8 * average;
+  const orbit = (26 + 8 * average) * variant.coreOrbitScale;
   const scores = [balanceScore, accuracyScore, participationScore];
 
   return scores.map((score, index) => {
-    const point = polarToCartesian(CORE_ANGLES[index], orbit);
+    const point = polarToCartesian(
+      CORE_ANGLES[index] + variant.coreAngleOffset + variant.coreMicroOffsets[index],
+      orbit,
+    );
     return {
       id: `core-${index}`,
       x: point.x,
       y: point.y,
-      radius: 10 + 8 * score,
+      radius: (10 + 8 * score) * variant.coreRadiusScale,
       fill: CORE_COLORS[index],
       opacity: 0.96,
       glowOpacity: 0.22 + 0.48 * score,
@@ -248,74 +309,80 @@ export function buildReputationConstellationModel(
   options?: { nowSeconds?: number },
 ): ReputationConstellationModel {
   const nowSeconds = options?.nowSeconds ?? Math.floor(Date.now() / 1000);
+  const variant = getAddressVariant(payload.address);
+  const hasClaimedVoterId = payload.voterId !== null;
   const refinement = getRefinement(payload);
-  const coreNodes = getCoreNodes(payload);
+  const coreNodes = hasClaimedVoterId ? getCoreNodes(payload, variant) : [];
   const visibleCategories = getVisibleCategories(payload, nowSeconds);
   const categoryNodes: CategoryNode[] = [];
   const edges: Edge[] = [];
 
-  edges.push(
-    {
-      from: coreNodes[0].id,
-      to: coreNodes[1].id,
-      stroke: "#6AB8FF",
-      opacity: 0.55,
-      width: 3.2,
-    },
-    {
-      from: coreNodes[1].id,
-      to: coreNodes[2].id,
-      stroke: "#5BE0C7",
-      opacity: 0.55,
-      width: 3.2,
-    },
-    {
-      from: coreNodes[2].id,
-      to: coreNodes[0].id,
-      stroke: "#C9A7FF",
-      opacity: 0.55,
-      width: 3.2,
-    },
-  );
-
-  const grouped = new Map<number, typeof visibleCategories>();
-  for (const category of visibleCategories) {
-    const anchorIndex = Number(BigInt(category.categoryId) % 3n);
-    const group = grouped.get(anchorIndex) ?? [];
-    group.push(category);
-    grouped.set(anchorIndex, group);
+  if (coreNodes.length === 3) {
+    edges.push(
+      {
+        from: coreNodes[0].id,
+        to: coreNodes[1].id,
+        stroke: "#6AB8FF",
+        opacity: 0.55,
+        width: 3.2,
+      },
+      {
+        from: coreNodes[1].id,
+        to: coreNodes[2].id,
+        stroke: "#5BE0C7",
+        opacity: 0.55,
+        width: 3.2,
+      },
+      {
+        from: coreNodes[2].id,
+        to: coreNodes[0].id,
+        stroke: "#C9A7FF",
+        opacity: 0.55,
+        width: 3.2,
+      },
+    );
   }
 
-  for (const [anchorIndex, categories] of grouped) {
-    const offsets = getAnchorOffsets(categories.length);
-    categories.forEach((category, index) => {
-      const snappedAngle = CORE_ANGLES[anchorIndex] + offsets[index];
-      const noise = (unitHash(`${payload.address}:${category.categoryId}`) - 0.5) * 34;
-      const looseAngle = snappedAngle + noise;
-      const displayAngle = looseAngle + (snappedAngle - looseAngle) * refinement;
-      const orbitRadius = 132 - 18 * category.categoryScore + (1 - refinement) * 10;
-      const position = polarToCartesian(displayAngle, orbitRadius);
-      const color = getCategoryColor(category.categoryId);
-      const node: CategoryNode = {
-        id: `category-${category.categoryId}`,
-        categoryId: category.categoryId,
-        anchorId: coreNodes[anchorIndex].id,
-        x: position.x,
-        y: position.y,
-        radius: (6 + 10 * category.categoryScore) * category.scale,
-        fill: color,
-        opacity: category.opacity,
-        glowOpacity: (0.15 + 0.55 * category.categoryScore) * category.glowOpacity,
-      };
-      categoryNodes.push(node);
-      edges.push({
-        from: node.id,
-        to: node.anchorId,
-        stroke: color,
-        opacity: (0.25 + 0.5 * category.categoryScore) * category.opacity,
-        width: (1.5 + 2.5 * category.categoryScore) * category.scale,
+  if (coreNodes.length === 3) {
+    const grouped = new Map<number, typeof visibleCategories>();
+    for (const category of visibleCategories) {
+      const anchorIndex = Number(BigInt(category.categoryId) % 3n);
+      const group = grouped.get(anchorIndex) ?? [];
+      group.push(category);
+      grouped.set(anchorIndex, group);
+    }
+
+    for (const [anchorIndex, categories] of grouped) {
+      const offsets = getAnchorOffsets(categories.length);
+      categories.forEach((category, index) => {
+        const snappedAngle = CORE_ANGLES[anchorIndex] + variant.coreAngleOffset + offsets[index];
+        const noise = (unitHash(`${payload.address}:${category.categoryId}`) - 0.5) * 34;
+        const looseAngle = snappedAngle + noise;
+        const displayAngle = looseAngle + (snappedAngle - looseAngle) * refinement;
+        const orbitRadius = 132 - 18 * category.categoryScore + (1 - refinement) * 10;
+        const position = polarToCartesian(displayAngle, orbitRadius);
+        const color = getCategoryColor(category.categoryId);
+        const node: CategoryNode = {
+          id: `category-${category.categoryId}`,
+          categoryId: category.categoryId,
+          anchorId: coreNodes[anchorIndex].id,
+          x: position.x,
+          y: position.y,
+          radius: (6 + 10 * category.categoryScore) * category.scale,
+          fill: color,
+          opacity: category.opacity,
+          glowOpacity: (0.15 + 0.55 * category.categoryScore) * category.glowOpacity,
+        };
+        categoryNodes.push(node);
+        edges.push({
+          from: node.id,
+          to: node.anchorId,
+          stroke: color,
+          opacity: (0.25 + 0.5 * category.categoryScore) * category.opacity,
+          width: (1.5 + 2.5 * category.categoryScore) * category.scale,
+        });
       });
-    });
+    }
   }
 
   const [balanceScore, accuracyScore, participationScore] = getTriadScores(payload);
@@ -326,6 +393,9 @@ export function buildReputationConstellationModel(
     categoryNodes,
     edges,
     backgroundGlowOpacity,
+    ambientStars: variant.ambientStars,
+    nebulaA: variant.nebulaA,
+    nebulaB: variant.nebulaB,
   };
 }
 
@@ -385,13 +455,13 @@ export function renderReputationConstellationSvg(
       <stop offset="0.45" stop-color="#0B131D"/>
       <stop offset="1" stop-color="#040608"/>
     </radialGradient>
-    <radialGradient id="nebulaA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(214 214) rotate(90) scale(180)">
-      <stop stop-color="#1FE4BF" stop-opacity="${(model.backgroundGlowOpacity + 0.08).toFixed(3)}"/>
-      <stop offset="1" stop-color="#1FE4BF" stop-opacity="0"/>
+    <radialGradient id="nebulaA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${model.nebulaA.x.toFixed(2)} ${model.nebulaA.y.toFixed(2)}) rotate(90) scale(${model.nebulaA.radius.toFixed(2)})">
+      <stop stop-color="${model.nebulaA.color}" stop-opacity="${(model.backgroundGlowOpacity + model.nebulaA.opacity).toFixed(3)}"/>
+      <stop offset="1" stop-color="${model.nebulaA.color}" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="nebulaB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(304 290) rotate(90) scale(160)">
-      <stop stop-color="#5BA8FF" stop-opacity="${model.backgroundGlowOpacity.toFixed(3)}"/>
-      <stop offset="1" stop-color="#5BA8FF" stop-opacity="0"/>
+    <radialGradient id="nebulaB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${model.nebulaB.x.toFixed(2)} ${model.nebulaB.y.toFixed(2)}) rotate(90) scale(${model.nebulaB.radius.toFixed(2)})">
+      <stop stop-color="${model.nebulaB.color}" stop-opacity="${(model.backgroundGlowOpacity + model.nebulaB.opacity).toFixed(3)}"/>
+      <stop offset="1" stop-color="${model.nebulaB.color}" stop-opacity="0"/>
     </radialGradient>
     <filter id="${glowId}" x="-120%" y="-120%" width="340%" height="340%">
       <feGaussianBlur stdDeviation="8"/>
@@ -403,18 +473,12 @@ export function renderReputationConstellationSvg(
   <circle cx="${CENTER}" cy="${CENTER}" r="148" fill="url(#nebulaA)"/>
   <circle cx="${CENTER}" cy="${CENTER}" r="122" fill="url(#nebulaB)"/>
   <g opacity="0.38">
-    <circle cx="88" cy="96" r="2" fill="#E7F2FF"/>
-    <circle cx="142" cy="78" r="1.5" fill="#E7F2FF"/>
-    <circle cx="198" cy="64" r="1.5" fill="#E7F2FF"/>
-    <circle cx="318" cy="72" r="1.5" fill="#E7F2FF"/>
-    <circle cx="406" cy="94" r="2" fill="#E7F2FF"/>
-    <circle cx="442" cy="156" r="1.5" fill="#E7F2FF"/>
-    <circle cx="454" cy="258" r="2" fill="#E7F2FF"/>
-    <circle cx="432" cy="366" r="1.5" fill="#E7F2FF"/>
-    <circle cx="370" cy="428" r="2" fill="#E7F2FF"/>
-    <circle cx="210" cy="442" r="1.5" fill="#E7F2FF"/>
-    <circle cx="104" cy="404" r="2" fill="#E7F2FF"/>
-    <circle cx="70" cy="250" r="1.5" fill="#E7F2FF"/>
+    ${model.ambientStars
+      .map(
+        star =>
+          `<circle cx="${star.x.toFixed(2)}" cy="${star.y.toFixed(2)}" r="${star.radius.toFixed(2)}" fill="${star.fill}" fill-opacity="${star.opacity.toFixed(3)}" />`,
+      )
+      .join("")}
   </g>
   ${edgeMarkup}
   ${categoryGlowMarkup}

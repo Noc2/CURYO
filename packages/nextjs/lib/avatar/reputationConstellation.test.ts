@@ -129,6 +129,22 @@ test("constellation model keeps the triad connected to category stars and caps c
   }
 });
 
+test("wallets without a claimed voter id render an empty shell without the center triad", () => {
+  const model = buildReputationConstellationModel(
+    buildPayload({
+      voterId: null,
+      categories90d: [],
+      stats: null,
+      balance: "0",
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.equal(model.coreNodes.length, 0);
+  assert.equal(model.categoryNodes.length, 0);
+  assert.equal(model.edges.length, 0);
+});
+
 test("constellation model fades out stale categories after ninety days", () => {
   const model = buildReputationConstellationModel(
     buildPayload({
@@ -190,6 +206,22 @@ test("core radii grow with stronger balance, accuracy, and participation", () =>
   assert.ok(highSignalModel.coreNodes[0].radius > lowSignalModel.coreNodes[0].radius);
   assert.ok(highSignalModel.coreNodes[1].radius > lowSignalModel.coreNodes[1].radius);
   assert.ok(highSignalModel.coreNodes[2].radius > lowSignalModel.coreNodes[2].radius);
+});
+
+test("claimed wallets with the same scores still render distinct deterministic avatars", () => {
+  const payloadA = buildPayload({
+    address: "0x1111111111111111111111111111111111111111",
+    categories90d: [],
+  });
+  const payloadB = buildPayload({
+    address: "0x2222222222222222222222222222222222222222",
+    categories90d: [],
+  });
+
+  const svgA = renderReputationConstellationSvg(payloadA, { nowSeconds: NOW_SECONDS, size: 64 });
+  const svgB = renderReputationConstellationSvg(payloadB, { nowSeconds: NOW_SECONDS, size: 64 });
+
+  assert.notEqual(svgA, svgB);
 });
 
 test("renderer returns svg markup for a deterministic payload", () => {
