@@ -175,7 +175,7 @@ function getAddressColorSeed(address: string) {
 
 function getPlanetPalette(baseHex: string, hueOffset: number) {
   const { r, g, b } = hexToRgb(baseHex);
-  const { hue, saturation, lightness } = rgbToHsl(r, g, b);
+  const { hue, saturation } = rgbToHsl(r, g, b);
   const sat = Math.max(saturation * 100, 66);
   const baseHue = hue + hueOffset;
 
