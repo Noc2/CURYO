@@ -13,6 +13,7 @@ import { notification } from "~~/utils/scaffold-eth";
 
 // Validation regex: 3-20 alphanumeric + underscore
 const NAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
+const MAX_STRATEGY_LENGTH = 560;
 
 export function ProfileForm() {
   const { address } = useAccount();
@@ -23,6 +24,7 @@ export function ProfileForm() {
   // Form state
   const [nameInput, setNameInput] = useState("");
   const [imageInput, setImageInput] = useState("");
+  const [strategyInput, setStrategyInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   // Check name availability (debounced via query)
@@ -37,6 +39,7 @@ export function ProfileForm() {
     if (profile && hasProfile && !initialized) {
       setNameInput(profile.name);
       setImageInput(profile.imageUrl);
+      setStrategyInput(profile.strategy);
       setInitialized(true);
     }
   }, [profile, hasProfile, initialized]);
@@ -44,6 +47,7 @@ export function ProfileForm() {
   const handleSave = async () => {
     if (!address) return;
     const trimmedImageInput = imageInput.trim();
+    const trimmedStrategy = strategyInput.trim();
     const sanitizedImageUrl = trimmedImageInput ? sanitizeExternalUrl(trimmedImageInput) : null;
 
     // Validate name
@@ -69,10 +73,15 @@ export function ProfileForm() {
       return;
     }
 
+    if (trimmedStrategy.length > MAX_STRATEGY_LENGTH) {
+      setError(`How you rate must be ${MAX_STRATEGY_LENGTH} characters or fewer`);
+      return;
+    }
+
     setError(null);
 
     try {
-      await setProfile(nameInput.trim(), sanitizedImageUrl ?? "");
+      await setProfile(nameInput.trim(), sanitizedImageUrl ?? "", trimmedStrategy);
       notification.success(hasProfile ? "Profile updated!" : "Profile created!");
       refetch();
     } catch (e: any) {
@@ -157,6 +166,9 @@ export function ProfileForm() {
           <p className="text-base text-base-content/50 font-mono">
             {address?.slice(0, 6)}...{address?.slice(-4)}
           </p>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-base-content/65">
+            {strategyInput.trim() || "Add a short note explaining how you rate on Curyo."}
+          </p>
         </div>
       </div>
 
@@ -203,6 +215,30 @@ export function ProfileForm() {
         />
       </div>
 
+      <div>
+        <label className="flex items-center gap-1.5 text-base font-medium mb-2">
+          How I rate on Curyo
+          <InfoTooltip text="Share the signals you trust, where you have expertise, and what makes you vote up or down." />
+        </label>
+        <textarea
+          placeholder="I rate highly when content is original, accurate, and useful beyond niche hype. I downvote misleading descriptions, broken links, and low-effort reposts."
+          className="textarea textarea-bordered min-h-36 w-full bg-base-100"
+          value={strategyInput}
+          onChange={e => setStrategyInput(e.target.value)}
+          maxLength={MAX_STRATEGY_LENGTH}
+          disabled={isPending}
+          rows={6}
+        />
+        <div className="mt-2 flex items-start justify-between gap-4">
+          <p className="max-w-2xl text-sm leading-6 text-base-content/55">
+            This shows up publicly on your profile and helps other curators understand how you judge quality.
+          </p>
+          <span className="text-sm text-base-content/40">
+            {strategyInput.trim().length}/{MAX_STRATEGY_LENGTH}
+          </span>
+        </div>
+      </div>
+
       {/* Error message */}
       {error && (
         <div className="bg-error/10 rounded-lg p-4">
@@ -227,7 +263,7 @@ export function ProfileForm() {
       <button
         onClick={handleSave}
         className="btn btn-curyo w-full"
-        disabled={isPending || !nameInput.trim() || nameIsTaken}
+        disabled={isPending || !nameInput.trim() || nameIsTaken || strategyInput.trim().length > MAX_STRATEGY_LENGTH}
       >
         {isPending ? (
           <span className="flex items-center gap-2">

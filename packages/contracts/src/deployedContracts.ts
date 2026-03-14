@@ -7934,6 +7934,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "MAX_STRATEGY_LENGTH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "MIN_NAME_LENGTH",
           inputs: [],
           outputs: [
@@ -8013,6 +8026,11 @@ const deployedContracts = {
                 },
                 {
                   name: "imageUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "strategy",
                   type: "string",
                   internalType: "string",
                 },
@@ -8240,6 +8258,11 @@ const deployedContracts = {
               type: "string",
               internalType: "string",
             },
+            {
+              name: "strategy",
+              type: "string",
+              internalType: "string",
+            },
           ],
           outputs: [],
           stateMutability: "nonpayable",
@@ -8336,6 +8359,18 @@ const deployedContracts = {
               indexed: false,
               internalType: "string",
             },
+            {
+              name: "imageUrl",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "strategy",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
           ],
           anonymous: false,
         },
@@ -8357,6 +8392,12 @@ const deployedContracts = {
             },
             {
               name: "imageUrl",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "strategy",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -19020,6 +19061,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "MAX_STRATEGY_LENGTH",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "MIN_NAME_LENGTH",
           inputs: [],
           outputs: [
@@ -19099,6 +19153,11 @@ const deployedContracts = {
                 },
                 {
                   name: "imageUrl",
+                  type: "string",
+                  internalType: "string",
+                },
+                {
+                  name: "strategy",
                   type: "string",
                   internalType: "string",
                 },
@@ -19326,6 +19385,11 @@ const deployedContracts = {
               type: "string",
               internalType: "string",
             },
+            {
+              name: "strategy",
+              type: "string",
+              internalType: "string",
+            },
           ],
           outputs: [],
           stateMutability: "nonpayable",
@@ -19422,6 +19486,18 @@ const deployedContracts = {
               indexed: false,
               internalType: "string",
             },
+            {
+              name: "imageUrl",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "strategy",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
           ],
           anonymous: false,
         },
@@ -19443,6 +19519,12 @@ const deployedContracts = {
             },
             {
               name: "imageUrl",
+              type: "string",
+              indexed: false,
+              internalType: "string",
+            },
+            {
+              name: "strategy",
               type: "string",
               indexed: false,
               internalType: "string",

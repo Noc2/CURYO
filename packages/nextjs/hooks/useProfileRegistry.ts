@@ -5,6 +5,7 @@ import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaf
 export interface Profile {
   name: string;
   imageUrl: string;
+  strategy: string;
   createdAt: bigint;
   updatedAt: bigint;
 }
@@ -32,6 +33,7 @@ export function useProfileRegistry(address?: string) {
         return {
           name: typeof d.name === "string" ? d.name : "",
           imageUrl: typeof d.imageUrl === "string" ? d.imageUrl : "",
+          strategy: typeof d.strategy === "string" ? d.strategy : "",
           createdAt: typeof d.createdAt === "bigint" ? d.createdAt : 0n,
           updatedAt: typeof d.updatedAt === "bigint" ? d.updatedAt : 0n,
         };
@@ -75,10 +77,10 @@ export function useSetProfile() {
     contractName: "ProfileRegistry" as any,
   });
 
-  const setProfile = async (name: string, imageUrl: string) => {
+  const setProfile = async (name: string, imageUrl: string, strategy: string) => {
     await (writeContractAsync as any)({
       functionName: "setProfile",
-      args: [name, imageUrl],
+      args: [name, imageUrl, strategy],
     });
   };
 
