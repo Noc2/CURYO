@@ -147,6 +147,15 @@ test("orbital avatars cap category satellites at five", () => {
   assert.equal(model.categorySatellites.length, 5);
 });
 
+test("orbital rings stay circular", () => {
+  const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
+
+  assert.ok(model.accuracyOrbit);
+  assert.ok(model.motionOrbit);
+  assert.equal(typeof model.accuracyOrbit.radius, "number");
+  assert.equal(typeof model.motionOrbit.radius, "number");
+});
+
 test("unclaimed wallets render an empty shell instead of a filled orb", () => {
   const model = buildOrbitalAvatarModel(
     buildPayload({
@@ -167,6 +176,5 @@ test("renderer returns svg markup for the orbital avatar", () => {
   const svg = renderOrbitalAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
 
   assert.match(svg, /orbital-avatar-bg-/);
-  assert.match(svg, /ellipse/);
   assert.match(svg, /circle/);
 });

@@ -15,8 +15,7 @@ interface OrbitalAvatarOrb extends Point {
 }
 
 interface OrbitalAvatarOrbit {
-  rx: number;
-  ry: number;
+  radius: number;
   rotation: number;
   opacity: number;
   strokeWidth: number;
@@ -291,8 +290,7 @@ function buildAccuracyOrbit(
 
   const [, accuracyScore] = getTriadScores(payload);
   return {
-    rx: coreOrb.radius + 34,
-    ry: (coreOrb.radius + 34) * (0.92 + accuracyScore * 0.14),
+    radius: coreOrb.radius + 34,
     rotation: -18 + variant.orbitRotation * 0.22,
     opacity: 0.2 + accuracyScore * 0.55,
     strokeWidth: 2.5 + accuracyScore * 5,
@@ -310,8 +308,7 @@ function buildMotionOrbit(
 
   const [, , participationScore] = getTriadScores(payload);
   return {
-    rx: coreOrb.radius + 88,
-    ry: coreOrb.radius + 88,
+    radius: coreOrb.radius + 88,
     rotation: 18 + variant.orbitRotation * 0.36,
     opacity: 0.14 + participationScore * 0.28,
     strokeWidth: 2,
@@ -321,8 +318,7 @@ function buildMotionOrbit(
 
 function buildShellOrbit(variant: ReturnType<typeof getAddressVariant>): OrbitalAvatarOrbit {
   return {
-    rx: 134,
-    ry: 134,
+    radius: 134,
     rotation: variant.orbitRotation * 0.28,
     opacity: 0.18,
     strokeWidth: 2.4,
@@ -479,7 +475,7 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
 }
 
 function renderOrbit(orbit: OrbitalAvatarOrbit, strokeLineCap: "round" | "butt" = "round") {
-  return `<ellipse cx="${CENTER}" cy="${CENTER}" rx="${orbit.rx.toFixed(2)}" ry="${orbit.ry.toFixed(2)}" transform="rotate(${orbit.rotation.toFixed(2)} ${CENTER} ${CENTER})" fill="none" stroke="${orbit.color}" stroke-width="${orbit.strokeWidth.toFixed(2)}" stroke-opacity="${orbit.opacity.toFixed(3)}"${orbit.dashArray ? ` stroke-dasharray="${orbit.dashArray}"` : ""} stroke-linecap="${strokeLineCap}"/>`;
+  return `<circle cx="${CENTER}" cy="${CENTER}" r="${orbit.radius.toFixed(2)}" transform="rotate(${orbit.rotation.toFixed(2)} ${CENTER} ${CENTER})" fill="none" stroke="${orbit.color}" stroke-width="${orbit.strokeWidth.toFixed(2)}" stroke-opacity="${orbit.opacity.toFixed(3)}"${orbit.dashArray ? ` stroke-dasharray="${orbit.dashArray}"` : ""} stroke-linecap="${strokeLineCap}"/>`;
 }
 
 function renderSatellite(body: OrbitalAvatarSatellite, hashHex: string, index: number) {
