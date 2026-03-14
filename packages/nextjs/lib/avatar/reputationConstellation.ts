@@ -248,11 +248,11 @@ function getNodeGradientColors(hex: string) {
   const lightnessPct = lightness * 100;
 
   return {
-    coreCenter: hslToHex(hue + 2, Math.max(42, saturationPct - 18), Math.min(82, lightnessPct + 24)),
-    coreMid: hslToHex(hue, Math.min(96, saturationPct + 6), Math.min(68, lightnessPct + 10)),
-    coreEdge: hslToHex(hue - 4, Math.max(48, saturationPct - 4), Math.max(20, lightnessPct - 4)),
-    glowCenter: hslToHex(hue + 4, Math.min(96, saturationPct + 8), Math.min(62, lightnessPct + 6)),
-    glowEdge: hslToHex(hue + 10, Math.max(36, saturationPct - 12), Math.max(18, lightnessPct - 2)),
+    coreCenter: hslToHex(hue + 1, Math.max(40, saturationPct - 22), Math.min(74, lightnessPct + 16)),
+    coreMid: hslToHex(hue, Math.min(92, saturationPct + 4), Math.min(62, lightnessPct + 8)),
+    coreEdge: hslToHex(hue - 3, Math.max(50, saturationPct - 2), Math.max(24, lightnessPct - 2)),
+    glowCenter: hslToHex(hue + 3, Math.min(92, saturationPct + 5), Math.min(52, lightnessPct + 2)),
+    glowEdge: hslToHex(hue + 8, Math.max(40, saturationPct - 10), Math.max(20, lightnessPct - 4)),
   };
 }
 
@@ -486,14 +486,14 @@ export function renderReputationConstellationSvg(
 
       return `
     <radialGradient id="${glowGradientId}" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="${colors.glowCenter}" stop-opacity="${Math.min(0.92, 0.48 + node.glowOpacity * 0.55).toFixed(3)}"/>
-      <stop offset="52%" stop-color="${colors.glowEdge}" stop-opacity="${Math.min(0.5, 0.18 + node.glowOpacity * 0.28).toFixed(3)}"/>
+      <stop offset="0%" stop-color="${colors.glowCenter}" stop-opacity="${Math.min(0.72, 0.34 + node.glowOpacity * 0.38).toFixed(3)}"/>
+      <stop offset="58%" stop-color="${colors.glowEdge}" stop-opacity="${Math.min(0.34, 0.1 + node.glowOpacity * 0.18).toFixed(3)}"/>
       <stop offset="100%" stop-color="${colors.glowEdge}" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="${coreGradientId}" cx="50%" cy="50%" r="58%">
-      <stop offset="0%" stop-color="${colors.coreCenter}" stop-opacity="1"/>
-      <stop offset="22%" stop-color="${colors.coreCenter}" stop-opacity="0.96"/>
-      <stop offset="52%" stop-color="${colors.coreMid}" stop-opacity="0.98"/>
+      <stop offset="0%" stop-color="${colors.coreCenter}" stop-opacity="0.98"/>
+      <stop offset="18%" stop-color="${colors.coreCenter}" stop-opacity="0.94"/>
+      <stop offset="56%" stop-color="${colors.coreMid}" stop-opacity="0.98"/>
       <stop offset="100%" stop-color="${colors.coreEdge}" stop-opacity="1"/>
     </radialGradient>`;
     })
