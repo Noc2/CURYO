@@ -486,8 +486,8 @@ export function renderReputationConstellationSvg(
 
       return `
     <radialGradient id="${glowGradientId}" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="${colors.glowCenter}" stop-opacity="${Math.min(0.72, 0.34 + node.glowOpacity * 0.38).toFixed(3)}"/>
-      <stop offset="58%" stop-color="${colors.glowEdge}" stop-opacity="${Math.min(0.34, 0.1 + node.glowOpacity * 0.18).toFixed(3)}"/>
+      <stop offset="0%" stop-color="${colors.glowCenter}" stop-opacity="${Math.min(0.48, 0.2 + node.glowOpacity * 0.22).toFixed(3)}"/>
+      <stop offset="58%" stop-color="${colors.glowEdge}" stop-opacity="${Math.min(0.18, 0.04 + node.glowOpacity * 0.1).toFixed(3)}"/>
       <stop offset="100%" stop-color="${colors.glowEdge}" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="${coreGradientId}" cx="50%" cy="50%" r="58%">
@@ -502,7 +502,7 @@ export function renderReputationConstellationSvg(
   const categoryGlowMarkup = model.categoryNodes
     .map(node => {
       const glowGradientId = `avatar-node-glow-${hashHex}-${node.id}`;
-      return `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${(node.radius * 2.55).toFixed(2)}" fill="url(#${glowGradientId})" fill-opacity="${Math.min(1, node.glowOpacity * 1.08).toFixed(3)}" />`;
+      return `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${(node.radius * 1.95).toFixed(2)}" fill="url(#${glowGradientId})" fill-opacity="${Math.min(0.66, node.glowOpacity * 0.7).toFixed(3)}" />`;
     })
     .join("");
 
@@ -516,7 +516,7 @@ export function renderReputationConstellationSvg(
   const coreGlowMarkup = model.coreNodes
     .map(node => {
       const glowGradientId = `avatar-node-glow-${hashHex}-${node.id}`;
-      return `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${(node.radius * 2.85).toFixed(2)}" fill="url(#${glowGradientId})" fill-opacity="${Math.min(1, node.glowOpacity * 1.12).toFixed(3)}" />`;
+      return `<circle cx="${node.x.toFixed(2)}" cy="${node.y.toFixed(2)}" r="${(node.radius * 2.15).toFixed(2)}" fill="url(#${glowGradientId})" fill-opacity="${Math.min(0.72, node.glowOpacity * 0.76).toFixed(3)}" />`;
     })
     .join("");
 
