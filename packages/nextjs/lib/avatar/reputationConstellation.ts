@@ -334,7 +334,7 @@ function getRefinement(payload: ReputationAvatarPayload) {
 function getCoreNodes(payload: ReputationAvatarPayload, variant: ReturnType<typeof getAddressVariant>) {
   const [balanceScore, accuracyScore, participationScore] = getTriadScores(payload);
   const average = (balanceScore + accuracyScore + participationScore) / 3;
-  const orbit = (52 + 14 * average) * variant.coreOrbitScale;
+  const orbit = (94 + 20 * average) * variant.coreOrbitScale;
   const scores = [balanceScore, accuracyScore, participationScore];
 
   return scores.map((score, index) => {
@@ -346,7 +346,7 @@ function getCoreNodes(payload: ReputationAvatarPayload, variant: ReturnType<type
       id: `core-${index}`,
       x: point.x,
       y: point.y,
-      radius: (13 + 10 * score) * variant.coreRadiusScale,
+      radius: (17 + 12 * score) * variant.coreRadiusScale,
       fill: CORE_COLORS[index],
       opacity: 0.96,
       glowOpacity: 0.22 + 0.48 * score,
@@ -361,13 +361,13 @@ function getAnchorOffsets(count: number) {
     case 1:
       return [0];
     case 2:
-      return [-28, 28];
+      return [-40, 40];
     case 3:
-      return [-40, 0, 40];
+      return [-56, 0, 56];
     case 4:
-      return [-54, -18, 18, 54];
+      return [-72, -24, 24, 72];
     default:
-      return [-64, -32, 0, 32, 64];
+      return [-84, -42, 0, 42, 84];
   }
 }
 
@@ -426,7 +426,7 @@ export function buildReputationConstellationModel(
         const noise = (unitHash(`${payload.address}:${category.categoryId}`) - 0.5) * 34;
         const looseAngle = snappedAngle + noise;
         const displayAngle = looseAngle + (snappedAngle - looseAngle) * refinement;
-        const orbitRadius = 182 - 24 * category.categoryScore + (1 - refinement) * 18;
+        const orbitRadius = 228 - 30 * category.categoryScore + (1 - refinement) * 24;
         const position = polarToCartesian(displayAngle, orbitRadius);
         const color = getCategoryColor(category.categoryId);
         const node: CategoryNode = {
@@ -435,7 +435,7 @@ export function buildReputationConstellationModel(
           anchorId: coreNodes[anchorIndex].id,
           x: position.x,
           y: position.y,
-          radius: (8.6 + 12.5 * category.categoryScore) * category.scale,
+          radius: (11 + 15 * category.categoryScore) * category.scale,
           fill: color,
           opacity: category.opacity,
           glowOpacity: (0.15 + 0.55 * category.categoryScore) * category.glowOpacity,
