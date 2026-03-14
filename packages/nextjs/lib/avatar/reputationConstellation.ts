@@ -231,9 +231,9 @@ function getAddressVariant(address: string) {
     coreRadiusScale: 0.94 + hashed("core-radius") * 0.14,
     coreMicroOffsets: CORE_ANGLES.map((_, index) => (hashed(`core-micro-${index}`) - 0.5) * 10),
     backgroundAngle: 18 + angleSeed * 144,
-    backgroundStart: hslToHex(hue, saturation, 30),
-    backgroundMid: hslToHex(hue + 18, Math.max(saturation - 8, 58), 18),
-    backgroundEnd: hslToHex(hue - 12, Math.max(saturation - 18, 44), 8),
+    backgroundStart: hslToHex(hue, saturation, 26),
+    backgroundMid: hslToHex(hue + 18, Math.max(saturation - 8, 58), 15),
+    backgroundEnd: hslToHex(hue - 12, Math.max(saturation - 18, 44), 6),
   };
 }
 
