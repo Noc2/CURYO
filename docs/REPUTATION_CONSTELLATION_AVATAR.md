@@ -145,7 +145,7 @@ To avoid low-history wallets collapsing into identical-looking avatars, the rend
 deterministic input for:
 
 - minor triad angle/orbit variation
-- background gradient angle and dark palette family
+- background gradient angle and dark palette family selected from the address
 
 These address-seeded variations do not change the underlying reputation mapping; they only prevent sparse wallets from
 looking cloned.

@@ -93,15 +93,18 @@ const CATEGORY_COLORS = [
 ] as const;
 const CORE_ANGLES = [210, 330, 90] as const;
 const BACKGROUND_GRADIENT_FAMILIES = [
-  { start: "#2A5FA8", mid: "#15305E", end: "#060D1D" },
-  { start: "#18847A", mid: "#0D4D4A", end: "#061817" },
-  { start: "#2F7A32", mid: "#19421F", end: "#09140B" },
-  { start: "#6A44B5", mid: "#392268", end: "#14091F" },
-  { start: "#9B3D8E", mid: "#5A2153", end: "#1D0918" },
-  { start: "#A53C52", mid: "#5F1F32", end: "#1D0910" },
-  { start: "#A46A24", mid: "#624015", end: "#201407" },
-  { start: "#2A8AA3", mid: "#165264", end: "#09161D" },
-  { start: "#4E7F9F", mid: "#294564", end: "#0B121B" },
+  { start: "#5D8FFF", mid: "#234CB0", end: "#081632" },
+  { start: "#3AA8FF", mid: "#155F9C", end: "#07182A" },
+  { start: "#34C7D9", mid: "#14788E", end: "#071D22" },
+  { start: "#24C58D", mid: "#106E52", end: "#071A13" },
+  { start: "#4CCF67", mid: "#1F7F34", end: "#08180B" },
+  { start: "#8EC94B", mid: "#52781C", end: "#161E08" },
+  { start: "#E2A84A", mid: "#8B5E1A", end: "#241707" },
+  { start: "#D86A52", mid: "#8B3723", end: "#25100A" },
+  { start: "#D65874", mid: "#8A2747", end: "#240A14" },
+  { start: "#D55BC9", mid: "#822B7A", end: "#260A22" },
+  { start: "#9A6BFF", mid: "#5631B4", end: "#180C32" },
+  { start: "#6B7BFF", mid: "#3645B7", end: "#101538" },
 ] as const;
 
 function clamp(value: number, min: number, max: number) {
@@ -138,28 +141,11 @@ function unitHash(input: string) {
   return hashString(input) / 0xffffffff;
 }
 
-function hexToRgb(hex: string) {
-  const normalized = hex.replace("#", "");
-  return {
-    r: Number.parseInt(normalized.slice(0, 2), 16),
-    g: Number.parseInt(normalized.slice(2, 4), 16),
-    b: Number.parseInt(normalized.slice(4, 6), 16),
-  };
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  const toHex = (value: number) =>
-    Math.round(clamp(value, 0, 255))
-      .toString(16)
-      .padStart(2, "0");
-
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-function tintHex(hex: string, factor: number) {
-  const { r, g, b } = hexToRgb(hex);
-  const scale = 1 + factor;
-  return rgbToHex(r * scale, g * scale, b * scale);
+function getAddressBytes(address: string) {
+  const normalized = address.toLowerCase().replace(/^0x/, "");
+  return Array.from({ length: Math.floor(normalized.length / 2) }, (_, index) =>
+    Number.parseInt(normalized.slice(index * 2, index * 2 + 2), 16),
+  );
 }
 
 function getCategoryColor(categoryId: string) {
@@ -169,20 +155,22 @@ function getCategoryColor(categoryId: string) {
 
 function getAddressVariant(address: string) {
   const hashed = (salt: string) => unitHash(`${address}:${salt}`);
-  const familyIndex =
-    Math.floor(hashed("bg-family") * BACKGROUND_GRADIENT_FAMILIES.length) % BACKGROUND_GRADIENT_FAMILIES.length;
+  const bytes = getAddressBytes(address);
+  const familyIndex = bytes.length
+    ? bytes[bytes.length - 1] % BACKGROUND_GRADIENT_FAMILIES.length
+    : Math.floor(hashed("bg-family") * BACKGROUND_GRADIENT_FAMILIES.length) % BACKGROUND_GRADIENT_FAMILIES.length;
   const family = BACKGROUND_GRADIENT_FAMILIES[familyIndex];
-  const tint = (hashed("bg-tint") - 0.5) * 0.18;
+  const angleSeed = bytes.length > 1 ? bytes[bytes.length - 2] / 255 : hashed("bg-angle");
 
   return {
     coreAngleOffset: (hashed("core-angle") - 0.5) * 28,
     coreOrbitScale: 0.92 + hashed("core-orbit") * 0.18,
     coreRadiusScale: 0.94 + hashed("core-radius") * 0.14,
     coreMicroOffsets: CORE_ANGLES.map((_, index) => (hashed(`core-micro-${index}`) - 0.5) * 10),
-    backgroundAngle: 26 + hashed("bg-angle") * 108,
-    backgroundStart: tintHex(family.start, tint + hashed("bg-start-tint") * 0.06),
-    backgroundMid: tintHex(family.mid, tint * 0.5 + (hashed("bg-mid-tint") - 0.5) * 0.08),
-    backgroundEnd: tintHex(family.end, tint * 0.25 + (hashed("bg-end-tint") - 0.5) * 0.05),
+    backgroundAngle: 18 + angleSeed * 144,
+    backgroundStart: family.start,
+    backgroundMid: family.mid,
+    backgroundEnd: family.end,
   };
 }
 

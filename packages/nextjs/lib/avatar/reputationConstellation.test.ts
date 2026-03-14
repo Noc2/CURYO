@@ -248,7 +248,7 @@ test("address backgrounds span visibly different dark color families", () => {
     ),
   );
 
-  assert.ok(starts.size >= 4);
+  assert.ok(starts.size >= 5);
 });
 
 test("renderer returns svg markup for a deterministic payload", () => {
