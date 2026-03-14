@@ -230,6 +230,27 @@ test("claimed wallets with the same scores still render distinct deterministic a
   );
 });
 
+test("address backgrounds span visibly different dark color families", () => {
+  const addresses = [
+    "0x1111111111111111111111111111111111111111",
+    "0x2222222222222222222222222222222222222222",
+    "0x3333333333333333333333333333333333333333",
+    "0x4444444444444444444444444444444444444444",
+    "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+    "0x1234567890abcdef1234567890abcdef12345678",
+  ];
+
+  const starts = new Set(
+    addresses.map(
+      address =>
+        buildReputationConstellationModel(buildPayload({ address, categories90d: [] }), { nowSeconds: NOW_SECONDS })
+          .backgroundStart,
+    ),
+  );
+
+  assert.ok(starts.size >= 4);
+});
+
 test("renderer returns svg markup for a deterministic payload", () => {
   const svg = renderReputationConstellationSvg(buildPayload(), {
     nowSeconds: NOW_SECONDS,

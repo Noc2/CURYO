@@ -92,7 +92,17 @@ const CATEGORY_COLORS = [
   "#94F36B",
 ] as const;
 const CORE_ANGLES = [210, 330, 90] as const;
-const BACKGROUND_FAMILY_HUES = [210, 185, 145, 105, 255, 290, 330, 18, 42] as const;
+const BACKGROUND_GRADIENT_FAMILIES = [
+  { start: "#2A5FA8", mid: "#15305E", end: "#060D1D" },
+  { start: "#18847A", mid: "#0D4D4A", end: "#061817" },
+  { start: "#2F7A32", mid: "#19421F", end: "#09140B" },
+  { start: "#6A44B5", mid: "#392268", end: "#14091F" },
+  { start: "#9B3D8E", mid: "#5A2153", end: "#1D0918" },
+  { start: "#A53C52", mid: "#5F1F32", end: "#1D0910" },
+  { start: "#A46A24", mid: "#624015", end: "#201407" },
+  { start: "#2A8AA3", mid: "#165264", end: "#09161D" },
+  { start: "#4E7F9F", mid: "#294564", end: "#0B121B" },
+] as const;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -128,43 +138,28 @@ function unitHash(input: string) {
   return hashString(input) / 0xffffffff;
 }
 
-function hslToHex(hue: number, saturation: number, lightness: number) {
-  const s = clamp(saturation, 0, 100) / 100;
-  const l = clamp(lightness, 0, 100) / 100;
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const h = (((hue % 360) + 360) % 360) / 60;
-  const x = c * (1 - Math.abs((h % 2) - 1));
-  let r = 0;
-  let g = 0;
-  let b = 0;
+function hexToRgb(hex: string) {
+  const normalized = hex.replace("#", "");
+  return {
+    r: Number.parseInt(normalized.slice(0, 2), 16),
+    g: Number.parseInt(normalized.slice(2, 4), 16),
+    b: Number.parseInt(normalized.slice(4, 6), 16),
+  };
+}
 
-  if (h >= 0 && h < 1) {
-    r = c;
-    g = x;
-  } else if (h < 2) {
-    r = x;
-    g = c;
-  } else if (h < 3) {
-    g = c;
-    b = x;
-  } else if (h < 4) {
-    g = x;
-    b = c;
-  } else if (h < 5) {
-    r = x;
-    b = c;
-  } else {
-    r = c;
-    b = x;
-  }
-
-  const m = l - c / 2;
+function rgbToHex(r: number, g: number, b: number) {
   const toHex = (value: number) =>
-    Math.round((value + m) * 255)
+    Math.round(clamp(value, 0, 255))
       .toString(16)
       .padStart(2, "0");
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function tintHex(hex: string, factor: number) {
+  const { r, g, b } = hexToRgb(hex);
+  const scale = 1 + factor;
+  return rgbToHex(r * scale, g * scale, b * scale);
 }
 
 function getCategoryColor(categoryId: string) {
@@ -174,11 +169,10 @@ function getCategoryColor(categoryId: string) {
 
 function getAddressVariant(address: string) {
   const hashed = (salt: string) => unitHash(`${address}:${salt}`);
-  const familyIndex = Math.floor(hashed("bg-family") * BACKGROUND_FAMILY_HUES.length) % BACKGROUND_FAMILY_HUES.length;
-  const baseHue = BACKGROUND_FAMILY_HUES[familyIndex] + (hashed("bg-hue-jitter") - 0.5) * 22;
-  const hueDirection = hashed("bg-direction") > 0.5 ? 1 : -1;
-  const midHue = baseHue + hueDirection * (24 + hashed("bg-mid-shift") * 30);
-  const endHue = baseHue - hueDirection * (8 + hashed("bg-end-shift") * 18);
+  const familyIndex =
+    Math.floor(hashed("bg-family") * BACKGROUND_GRADIENT_FAMILIES.length) % BACKGROUND_GRADIENT_FAMILIES.length;
+  const family = BACKGROUND_GRADIENT_FAMILIES[familyIndex];
+  const tint = (hashed("bg-tint") - 0.5) * 0.18;
 
   return {
     coreAngleOffset: (hashed("core-angle") - 0.5) * 28,
@@ -186,9 +180,9 @@ function getAddressVariant(address: string) {
     coreRadiusScale: 0.94 + hashed("core-radius") * 0.14,
     coreMicroOffsets: CORE_ANGLES.map((_, index) => (hashed(`core-micro-${index}`) - 0.5) * 10),
     backgroundAngle: 26 + hashed("bg-angle") * 108,
-    backgroundStart: hslToHex(baseHue, 70 + hashed("bg-start-sat") * 14, 28 + hashed("bg-start-lit") * 8),
-    backgroundMid: hslToHex(midHue, 62 + hashed("bg-mid-sat") * 14, 18 + hashed("bg-mid-lit") * 7),
-    backgroundEnd: hslToHex(endHue, 54 + hashed("bg-end-sat") * 12, 9 + hashed("bg-end-lit") * 4),
+    backgroundStart: tintHex(family.start, tint + hashed("bg-start-tint") * 0.06),
+    backgroundMid: tintHex(family.mid, tint * 0.5 + (hashed("bg-mid-tint") - 0.5) * 0.08),
+    backgroundEnd: tintHex(family.end, tint * 0.25 + (hashed("bg-end-tint") - 0.5) * 0.05),
   };
 }
 
