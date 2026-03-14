@@ -334,7 +334,7 @@ function getRefinement(payload: ReputationAvatarPayload) {
 function getCoreNodes(payload: ReputationAvatarPayload, variant: ReturnType<typeof getAddressVariant>) {
   const [balanceScore, accuracyScore, participationScore] = getTriadScores(payload);
   const average = (balanceScore + accuracyScore + participationScore) / 3;
-  const orbit = (94 + 20 * average) * variant.coreOrbitScale;
+  const orbit = (78 + 18 * average) * variant.coreOrbitScale;
   const scores = [balanceScore, accuracyScore, participationScore];
 
   return scores.map((score, index) => {
