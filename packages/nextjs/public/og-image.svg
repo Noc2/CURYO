@@ -1,81 +1,138 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" fill="none">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#060812" />
-      <stop offset="1" stop-color="#0B0E16" />
+    <linearGradient id="og-bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#020305" />
+      <stop offset="50%" stop-color="#060914" />
+      <stop offset="100%" stop-color="#0B1020" />
     </linearGradient>
-    <radialGradient id="halo" cx="600" cy="188" r="240" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0F1D33" stop-opacity="0.5" />
-      <stop offset="0.65" stop-color="#08101D" stop-opacity="0.18" />
-      <stop offset="1" stop-color="#060812" stop-opacity="0" />
+    <radialGradient id="og-left-glow" cx="260" cy="320" r="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#12203A" stop-opacity=".6" />
+      <stop offset="52%" stop-color="#091223" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
     </radialGradient>
-
-    <linearGradient id="curyo-top-right" x1="600" y1="64" x2="724" y2="188" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFC43D" />
-      <stop offset="1" stop-color="#EF476F" />
+    <radialGradient id="og-right-glow" cx="960" cy="270" r="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F182D" stop-opacity=".2" />
+      <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="og-orbit" x1="110" y1="150" x2="394" y2="366" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#03CEA4" stop-opacity=".18" />
+      <stop offset="32%" stop-color="#FFC43D" stop-opacity=".16" />
+      <stop offset="64%" stop-color="#EF476F" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#359EEE" stop-opacity=".18" />
     </linearGradient>
-    <linearGradient id="curyo-bottom-right" x1="724" y1="188" x2="600" y2="312" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#EF476F" />
-      <stop offset="1" stop-color="#359EEE" />
+    <filter id="og-orbit-blur" x="70" y="70" width="372" height="372" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="4.5" />
+    </filter>
+    <linearGradient id="og-main-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(28 .5 .5)">
+      <stop offset="0%" stop-color="#FFC43D" />
+      <stop offset="34%" stop-color="#EF476F" />
+      <stop offset="68%" stop-color="#359EEE" />
+      <stop offset="100%" stop-color="#03CEA4" />
     </linearGradient>
-    <linearGradient id="curyo-bottom-left" x1="600" y1="312" x2="476" y2="188" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#359EEE" />
-      <stop offset="1" stop-color="#03CEA4" />
+    <radialGradient id="og-main-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE08E" stop-opacity=".54" />
+      <stop offset="58%" stop-color="#5BD7B8" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#5BD7B8" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="og-top-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#A8FFF2" />
+      <stop offset="58%" stop-color="#20DFC1" />
+      <stop offset="100%" stop-color="#14A79B" />
     </linearGradient>
-    <linearGradient id="curyo-top-left" x1="476" y1="188" x2="600" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#03CEA4" />
-      <stop offset="1" stop-color="#FFC43D" />
+    <radialGradient id="og-top-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#A8FFF2" stop-opacity=".46" />
+      <stop offset="58%" stop-color="#20DFC1" stop-opacity=".16" />
+      <stop offset="100%" stop-color="#20DFC1" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="og-left-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#FFD2E3" />
+      <stop offset="58%" stop-color="#FF8AB0" />
+      <stop offset="100%" stop-color="#E45787" />
     </linearGradient>
-    <mask id="curyo-ring-mask">
-      <rect width="1200" height="630" fill="black" />
-      <g transform="rotate(-22.5 600 188)">
-        <circle cx="600" cy="188" r="124" fill="white" />
-        <circle cx="600" cy="178.5" r="111" fill="black" />
-      </g>
-    </mask>
+    <radialGradient id="og-left-planet-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD2E3" stop-opacity=".42" />
+      <stop offset="58%" stop-color="#FF8AB0" stop-opacity=".14" />
+      <stop offset="100%" stop-color="#FF8AB0" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="og-right-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#C7FFAF" />
+      <stop offset="58%" stop-color="#7BE96D" />
+      <stop offset="100%" stop-color="#4BCF62" />
+    </linearGradient>
+    <radialGradient id="og-right-planet-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C7FFAF" stop-opacity=".42" />
+      <stop offset="58%" stop-color="#7BE96D" stop-opacity=".14" />
+      <stop offset="100%" stop-color="#7BE96D" stop-opacity="0" />
+    </radialGradient>
+    <symbol id="og-brand-mark" viewBox="0 0 512 512">
+      <circle
+        cx="256"
+        cy="258"
+        r="123"
+        fill="none"
+        stroke="url(#og-orbit)"
+        stroke-width="10"
+        stroke-opacity=".1"
+        filter="url(#og-orbit-blur)"
+      />
+      <circle cx="256" cy="258" r="123" fill="none" stroke="url(#og-orbit)" stroke-width="4" stroke-opacity=".24" />
+      <circle cx="256" cy="258" r="205" fill="url(#og-main-glow)" fill-opacity=".46" />
+      <circle cx="256" cy="258" r="82" fill="url(#og-main-fill)" />
+      <circle cx="241.24" cy="238.32" r="27.88" fill="#FFFFFF" fill-opacity=".18" />
+      <circle cx="344" cy="94" r="44" fill="url(#og-top-glow)" fill-opacity=".4" />
+      <circle cx="344" cy="94" r="24" fill="url(#og-top-fill)" />
+      <circle cx="339.68" cy="88.24" r="8.16" fill="#FFFFFF" fill-opacity=".18" />
+      <circle cx="118" cy="420" r="38" fill="url(#og-left-planet-glow)" fill-opacity=".36" />
+      <circle cx="118" cy="420" r="21" fill="url(#og-left-fill)" />
+      <circle cx="114.22" cy="414.96" r="7.14" fill="#FFFFFF" fill-opacity=".18" />
+      <circle cx="404" cy="412" r="44" fill="url(#og-right-planet-glow)" fill-opacity=".36" />
+      <circle cx="404" cy="412" r="24" fill="url(#og-right-fill)" />
+      <circle cx="399.68" cy="406.24" r="8.16" fill="#FFFFFF" fill-opacity=".18" />
+    </symbol>
   </defs>
 
-  <rect width="1200" height="630" fill="url(#bg)" />
-  <circle cx="600" cy="188" r="240" fill="url(#halo)" />
+  <rect width="1200" height="630" fill="url(#og-bg)" />
+  <circle cx="260" cy="320" r="340" fill="url(#og-left-glow)" />
+  <circle cx="960" cy="270" r="420" fill="url(#og-right-glow)" />
 
-  <g mask="url(#curyo-ring-mask)" transform="rotate(-22.5 600 188)">
-    <path d="M600 64 A124 124 0 0 1 724 188" stroke="url(#curyo-top-right)" stroke-width="48" stroke-linecap="round" />
-    <path
-      d="M724 188 A124 124 0 0 1 600 312"
-      stroke="url(#curyo-bottom-right)"
-      stroke-width="48"
-      stroke-linecap="round"
-    />
-    <path
-      d="M600 312 A124 124 0 0 1 476 188"
-      stroke="url(#curyo-bottom-left)"
-      stroke-width="48"
-      stroke-linecap="round"
-    />
-    <path d="M476 188 A124 124 0 0 1 600 64" stroke="url(#curyo-top-left)" stroke-width="48" stroke-linecap="round" />
+  <g opacity=".8">
+    <path d="M836 144C926 98 1042 96 1138 150" stroke="#152039" stroke-width="2" stroke-linecap="round" />
+    <path d="M760 470C870 426 1006 430 1142 490" stroke="#131D34" stroke-width="2" stroke-linecap="round" />
+    <path d="M738 128C804 188 884 216 960 212C1040 208 1110 164 1160 114" stroke="#17233E" stroke-width="1.5" stroke-linecap="round" opacity=".74" />
   </g>
 
+  <g opacity=".9">
+    <circle cx="850" cy="112" r="4" fill="#A8FFF2" />
+    <circle cx="972" cy="86" r="5" fill="#FFFFFF" fill-opacity=".72" />
+    <circle cx="1088" cy="138" r="4" fill="#FFD2E3" />
+    <circle cx="1126" cy="458" r="4" fill="#C7FFAF" />
+    <circle cx="924" cy="498" r="3" fill="#FFC43D" />
+    <circle cx="786" cy="420" r="4" fill="#7AAEFF" />
+  </g>
+
+  <use href="#og-brand-mark" transform="translate(82 106) scale(.82)" />
+
   <text
-    x="600"
-    y="410"
-    font-family="'Space Grotesk', 'Inter', 'Segoe UI', sans-serif"
-    font-size="116"
+    x="596"
+    y="292"
+    font-family="'Helvetica Neue', Arial, sans-serif"
+    font-size="128"
     font-weight="700"
-    fill="white"
-    text-anchor="middle"
+    fill="#FFFFFF"
     letter-spacing="8"
   >
     CURYO
   </text>
   <text
-    x="600"
-    y="482"
-    font-family="'Inter', 'Segoe UI', sans-serif"
-    font-size="28"
-    fill="#8A8F9C"
-    text-anchor="middle"
-    letter-spacing="1.5"
+    x="602"
+    y="372"
+    font-family="'Helvetica Neue', Arial, sans-serif"
+    font-size="36"
+    font-weight="400"
+    fill="#A7B0C7"
+    letter-spacing="1"
   >
     The Reputation Game for the Age of AI
   </text>
+  <rect x="602" y="405" width="454" height="2" rx="1" fill="#1C2740" />
 </svg>

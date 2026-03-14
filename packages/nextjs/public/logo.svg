@@ -1,39 +1,82 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
   <defs>
-    <linearGradient id="curyo-top-right" x1="64" y1="18" x2="110" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFC43D" />
-      <stop offset="1" stop-color="#EF476F" />
+    <linearGradient id="curyo-logo-main-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(28 .5 .5)">
+      <stop offset="0%" stop-color="#FFC43D" />
+      <stop offset="34%" stop-color="#EF476F" />
+      <stop offset="68%" stop-color="#359EEE" />
+      <stop offset="100%" stop-color="#03CEA4" />
     </linearGradient>
-    <linearGradient id="curyo-bottom-right" x1="110" y1="64" x2="64" y2="110" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#EF476F" />
-      <stop offset="1" stop-color="#359EEE" />
+    <radialGradient id="curyo-logo-main-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE08E" stop-opacity=".54" />
+      <stop offset="58%" stop-color="#5BD7B8" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#5BD7B8" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="curyo-logo-orbit" x1="110" y1="150" x2="394" y2="366" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#03CEA4" stop-opacity=".18" />
+      <stop offset="32%" stop-color="#FFC43D" stop-opacity=".16" />
+      <stop offset="64%" stop-color="#EF476F" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#359EEE" stop-opacity=".18" />
     </linearGradient>
-    <linearGradient id="curyo-bottom-left" x1="64" y1="110" x2="18" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#359EEE" />
-      <stop offset="1" stop-color="#03CEA4" />
+    <filter id="curyo-logo-orbit-blur" x="70" y="70" width="372" height="372" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="4.5" />
+    </filter>
+    <linearGradient id="curyo-logo-top-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#A8FFF2" />
+      <stop offset="58%" stop-color="#20DFC1" />
+      <stop offset="100%" stop-color="#14A79B" />
     </linearGradient>
-    <linearGradient id="curyo-top-left" x1="18" y1="64" x2="64" y2="18" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#03CEA4" />
-      <stop offset="1" stop-color="#FFC43D" />
+    <radialGradient id="curyo-logo-top-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#A8FFF2" stop-opacity=".46" />
+      <stop offset="58%" stop-color="#20DFC1" stop-opacity=".16" />
+      <stop offset="100%" stop-color="#20DFC1" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="curyo-logo-left-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#FFD2E3" />
+      <stop offset="58%" stop-color="#FF8AB0" />
+      <stop offset="100%" stop-color="#E45787" />
     </linearGradient>
-    <mask id="curyo-ring-mask">
-      <rect width="128" height="128" fill="black" />
-      <g transform="rotate(-22.5 64 64)">
-        <circle cx="64" cy="64" r="46" fill="white" />
-        <circle cx="64" cy="60.5" r="41.5" fill="black" />
-      </g>
-    </mask>
+    <radialGradient id="curyo-logo-left-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD2E3" stop-opacity=".42" />
+      <stop offset="58%" stop-color="#FF8AB0" stop-opacity=".14" />
+      <stop offset="100%" stop-color="#FF8AB0" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="curyo-logo-right-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#C7FFAF" />
+      <stop offset="58%" stop-color="#7BE96D" />
+      <stop offset="100%" stop-color="#4BCF62" />
+    </linearGradient>
+    <radialGradient id="curyo-logo-right-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C7FFAF" stop-opacity=".42" />
+      <stop offset="58%" stop-color="#7BE96D" stop-opacity=".14" />
+      <stop offset="100%" stop-color="#7BE96D" stop-opacity="0" />
+    </radialGradient>
   </defs>
 
-  <g mask="url(#curyo-ring-mask)" transform="rotate(-22.5 64 64)">
-    <path d="M64 18 A46 46 0 0 1 110 64" stroke="url(#curyo-top-right)" stroke-width="18" stroke-linecap="round" />
-    <path
-      d="M110 64 A46 46 0 0 1 64 110"
-      stroke="url(#curyo-bottom-right)"
-      stroke-width="18"
-      stroke-linecap="round"
-    />
-    <path d="M64 110 A46 46 0 0 1 18 64" stroke="url(#curyo-bottom-left)" stroke-width="18" stroke-linecap="round" />
-    <path d="M18 64 A46 46 0 0 1 64 18" stroke="url(#curyo-top-left)" stroke-width="18" stroke-linecap="round" />
-  </g>
+  <circle
+    cx="256"
+    cy="258"
+    r="123"
+    fill="none"
+    stroke="url(#curyo-logo-orbit)"
+    stroke-width="10"
+    stroke-opacity=".1"
+    filter="url(#curyo-logo-orbit-blur)"
+  />
+  <circle cx="256" cy="258" r="123" fill="none" stroke="url(#curyo-logo-orbit)" stroke-width="4" stroke-opacity=".24" />
+
+  <circle cx="256" cy="258" r="205" fill="url(#curyo-logo-main-glow)" fill-opacity=".46" />
+  <circle cx="256" cy="258" r="82" fill="url(#curyo-logo-main-fill)" />
+  <circle cx="241.24" cy="238.32" r="27.88" fill="#FFFFFF" fill-opacity=".18" />
+
+  <circle cx="344" cy="94" r="44" fill="url(#curyo-logo-top-glow)" fill-opacity=".4" />
+  <circle cx="344" cy="94" r="24" fill="url(#curyo-logo-top-fill)" />
+  <circle cx="339.68" cy="88.24" r="8.16" fill="#FFFFFF" fill-opacity=".18" />
+
+  <circle cx="118" cy="420" r="38" fill="url(#curyo-logo-left-glow)" fill-opacity=".36" />
+  <circle cx="118" cy="420" r="21" fill="url(#curyo-logo-left-fill)" />
+  <circle cx="114.22" cy="414.96" r="7.14" fill="#FFFFFF" fill-opacity=".18" />
+
+  <circle cx="404" cy="412" r="44" fill="url(#curyo-logo-right-glow)" fill-opacity=".36" />
+  <circle cx="404" cy="412" r="24" fill="url(#curyo-logo-right-fill)" />
+  <circle cx="399.68" cy="406.24" r="8.16" fill="#FFFFFF" fill-opacity=".18" />
 </svg>

@@ -89,7 +89,7 @@ export function SettlementNotifier() {
       try {
         const browserNotification = new Notification(title, {
           body,
-          icon: "/logo.svg",
+          icon: "/logo.png",
         });
 
         browserNotification.onclick = () => {
@@ -279,7 +279,7 @@ export function SettlementNotifier() {
           try {
             const browserNotification = new Notification(title, {
               body,
-              icon: "/logo.svg",
+              icon: "/logo.png",
             });
             browserNotification.onclick = () => {
               window.focus();

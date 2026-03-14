@@ -1,78 +1,138 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 520" width="1600" height="520" fill="none">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#060812" />
-      <stop offset="0.55" stop-color="#050814" />
-      <stop offset="1" stop-color="#0A0E18" />
+    <linearGradient id="banner-bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#020305" />
+      <stop offset="52%" stop-color="#060914" />
+      <stop offset="100%" stop-color="#0B1020" />
     </linearGradient>
-    <radialGradient id="glow-left" cx="430" cy="230" r="300" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0F1D33" stop-opacity="0.62" />
-      <stop offset="0.58" stop-color="#08101D" stop-opacity="0.22" />
-      <stop offset="1" stop-color="#060812" stop-opacity="0" />
+    <radialGradient id="banner-left-glow" cx="310" cy="248" r="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#12203A" stop-opacity=".58" />
+      <stop offset="48%" stop-color="#0A1325" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="glow-right" cx="1120" cy="250" r="420" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#10182B" stop-opacity="0.2" />
-      <stop offset="1" stop-color="#060812" stop-opacity="0" />
+    <radialGradient id="banner-right-glow" cx="1220" cy="260" r="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#10182D" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
     </radialGradient>
-
-    <linearGradient id="curyo-top-right" x1="430" y1="122" x2="538" y2="230" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFC43D" />
-      <stop offset="1" stop-color="#EF476F" />
+    <linearGradient id="banner-orbit" x1="110" y1="150" x2="394" y2="366" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#03CEA4" stop-opacity=".18" />
+      <stop offset="32%" stop-color="#FFC43D" stop-opacity=".16" />
+      <stop offset="64%" stop-color="#EF476F" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#359EEE" stop-opacity=".18" />
     </linearGradient>
-    <linearGradient id="curyo-bottom-right" x1="538" y1="230" x2="430" y2="338" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#EF476F" />
-      <stop offset="1" stop-color="#359EEE" />
+    <filter id="banner-orbit-blur" x="70" y="70" width="372" height="372" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="4.5" />
+    </filter>
+    <linearGradient id="banner-main-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(28 .5 .5)">
+      <stop offset="0%" stop-color="#FFC43D" />
+      <stop offset="34%" stop-color="#EF476F" />
+      <stop offset="68%" stop-color="#359EEE" />
+      <stop offset="100%" stop-color="#03CEA4" />
     </linearGradient>
-    <linearGradient id="curyo-bottom-left" x1="430" y1="338" x2="322" y2="230" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#359EEE" />
-      <stop offset="1" stop-color="#03CEA4" />
+    <radialGradient id="banner-main-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE08E" stop-opacity=".54" />
+      <stop offset="58%" stop-color="#5BD7B8" stop-opacity=".18" />
+      <stop offset="100%" stop-color="#5BD7B8" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="banner-top-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#A8FFF2" />
+      <stop offset="58%" stop-color="#20DFC1" />
+      <stop offset="100%" stop-color="#14A79B" />
     </linearGradient>
-    <linearGradient id="curyo-top-left" x1="322" y1="230" x2="430" y2="122" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#03CEA4" />
-      <stop offset="1" stop-color="#FFC43D" />
+    <radialGradient id="banner-top-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#A8FFF2" stop-opacity=".46" />
+      <stop offset="58%" stop-color="#20DFC1" stop-opacity=".16" />
+      <stop offset="100%" stop-color="#20DFC1" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="banner-left-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#FFD2E3" />
+      <stop offset="58%" stop-color="#FF8AB0" />
+      <stop offset="100%" stop-color="#E45787" />
     </linearGradient>
-
-    <mask id="curyo-ring-mask">
-      <rect width="1600" height="520" fill="black" />
-      <g transform="rotate(-22.5 430 230)">
-        <circle cx="430" cy="230" r="108" fill="white" />
-        <circle cx="430" cy="221.5" r="96" fill="black" />
-      </g>
-    </mask>
+    <radialGradient id="banner-left-planet-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD2E3" stop-opacity=".42" />
+      <stop offset="58%" stop-color="#FF8AB0" stop-opacity=".14" />
+      <stop offset="100%" stop-color="#FF8AB0" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="banner-right-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
+      <stop offset="0%" stop-color="#C7FFAF" />
+      <stop offset="58%" stop-color="#7BE96D" />
+      <stop offset="100%" stop-color="#4BCF62" />
+    </linearGradient>
+    <radialGradient id="banner-right-planet-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C7FFAF" stop-opacity=".42" />
+      <stop offset="58%" stop-color="#7BE96D" stop-opacity=".14" />
+      <stop offset="100%" stop-color="#7BE96D" stop-opacity="0" />
+    </radialGradient>
+    <symbol id="banner-brand-mark" viewBox="0 0 512 512">
+      <circle
+        cx="256"
+        cy="258"
+        r="123"
+        fill="none"
+        stroke="url(#banner-orbit)"
+        stroke-width="10"
+        stroke-opacity=".1"
+        filter="url(#banner-orbit-blur)"
+      />
+      <circle cx="256" cy="258" r="123" fill="none" stroke="url(#banner-orbit)" stroke-width="4" stroke-opacity=".24" />
+      <circle cx="256" cy="258" r="205" fill="url(#banner-main-glow)" fill-opacity=".46" />
+      <circle cx="256" cy="258" r="82" fill="url(#banner-main-fill)" />
+      <circle cx="241.24" cy="238.32" r="27.88" fill="#FFFFFF" fill-opacity=".18" />
+      <circle cx="344" cy="94" r="44" fill="url(#banner-top-glow)" fill-opacity=".4" />
+      <circle cx="344" cy="94" r="24" fill="url(#banner-top-fill)" />
+      <circle cx="339.68" cy="88.24" r="8.16" fill="#FFFFFF" fill-opacity=".18" />
+      <circle cx="118" cy="420" r="38" fill="url(#banner-left-planet-glow)" fill-opacity=".36" />
+      <circle cx="118" cy="420" r="21" fill="url(#banner-left-fill)" />
+      <circle cx="114.22" cy="414.96" r="7.14" fill="#FFFFFF" fill-opacity=".18" />
+      <circle cx="404" cy="412" r="44" fill="url(#banner-right-planet-glow)" fill-opacity=".36" />
+      <circle cx="404" cy="412" r="24" fill="url(#banner-right-fill)" />
+      <circle cx="399.68" cy="406.24" r="8.16" fill="#FFFFFF" fill-opacity=".18" />
+    </symbol>
   </defs>
 
-  <rect width="1600" height="520" fill="url(#bg)" />
-  <circle cx="430" cy="230" r="300" fill="url(#glow-left)" />
-  <circle cx="1120" cy="250" r="420" fill="url(#glow-right)" />
+  <rect width="1600" height="520" fill="url(#banner-bg)" />
+  <circle cx="310" cy="248" r="320" fill="url(#banner-left-glow)" />
+  <circle cx="1220" cy="260" r="520" fill="url(#banner-right-glow)" />
 
-  <g mask="url(#curyo-ring-mask)" transform="rotate(-22.5 430 230)">
-    <path d="M430 122 A108 108 0 0 1 538 230" stroke="url(#curyo-top-right)" stroke-width="42" stroke-linecap="round" />
-    <path d="M538 230 A108 108 0 0 1 430 338" stroke="url(#curyo-bottom-right)" stroke-width="42" stroke-linecap="round" />
-    <path d="M430 338 A108 108 0 0 1 322 230" stroke="url(#curyo-bottom-left)" stroke-width="42" stroke-linecap="round" />
-    <path d="M322 230 A108 108 0 0 1 430 122" stroke="url(#curyo-top-left)" stroke-width="42" stroke-linecap="round" />
+  <g opacity=".75">
+    <path d="M1120 122C1240 78 1382 90 1498 170" stroke="#152039" stroke-width="2" stroke-linecap="round" />
+    <path d="M1060 384C1184 332 1360 332 1498 390" stroke="#121C33" stroke-width="2" stroke-linecap="round" />
+    <path d="M920 92C1048 146 1184 152 1322 110" stroke="#17233E" stroke-width="1.5" stroke-linecap="round" opacity=".72" />
   </g>
 
-  <rect x="700" y="340" width="420" height="2" rx="1" fill="#1D2840" />
+  <g opacity=".85">
+    <circle cx="1168" cy="96" r="4" fill="#A8FFF2" />
+    <circle cx="1328" cy="134" r="3" fill="#FFD2E3" />
+    <circle cx="1450" cy="176" r="5" fill="#C7FFAF" />
+    <circle cx="1012" cy="358" r="4" fill="#7AAEFF" />
+    <circle cx="1230" cy="410" r="3" fill="#FFC43D" />
+    <circle cx="1408" cy="366" r="4" fill="#FFFFFF" fill-opacity=".68" />
+  </g>
+
+  <use href="#banner-brand-mark" transform="translate(58 42) scale(.84)" />
 
   <text
-    x="700"
-    y="250"
-    font-family="'Space Grotesk', 'Inter', 'Segoe UI', sans-serif"
-    font-size="132"
+    x="640"
+    y="230"
+    font-family="'Helvetica Neue', Arial, sans-serif"
+    font-size="136"
     font-weight="700"
-    fill="white"
-    letter-spacing="6"
+    fill="#FFFFFF"
+    letter-spacing="8"
   >
     CURYO
   </text>
   <text
-    x="700"
-    y="318"
-    font-family="'Inter', 'Segoe UI', sans-serif"
+    x="644"
+    y="305"
+    font-family="'Helvetica Neue', Arial, sans-serif"
     font-size="34"
-    fill="#8A8F9C"
-    letter-spacing="1.3"
+    font-weight="400"
+    fill="#A7B0C7"
+    letter-spacing=".8"
   >
     The Reputation Game for the Age of AI
   </text>
+  <rect x="644" y="336" width="452" height="2" rx="1" fill="#1C2740" />
 </svg>

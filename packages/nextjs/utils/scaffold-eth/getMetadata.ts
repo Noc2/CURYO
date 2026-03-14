@@ -53,6 +53,18 @@ export const getMetadata = ({
           url: "/favicon.svg",
           type: "image/svg+xml",
         },
+        {
+          url: "/favicon.png",
+          type: "image/png",
+          sizes: "64x64",
+        },
+      ],
+      apple: [
+        {
+          url: "/favicon.png",
+          type: "image/png",
+          sizes: "64x64",
+        },
       ],
     },
   };
