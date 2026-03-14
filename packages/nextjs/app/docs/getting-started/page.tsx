@@ -241,7 +241,7 @@ const GettingStarted: NextPage = () => {
           <strong>Submit content</strong> to the platform
         </li>
         <li>
-          <strong>Create your profile</strong>
+          <strong>Create your profile</strong> with a name, optional image, and a short note about how you rate
         </li>
         <li>
           <strong>Propose new platforms</strong>
