@@ -19,8 +19,7 @@ interface OrbitalAvatarRing {
   rotation: number;
   opacity: number;
   strokeWidth: number;
-  frontColor: string;
-  backColor: string;
+  color: string;
 }
 
 interface OrbitalAvatarShell {
@@ -209,8 +208,7 @@ function buildAccuracyRing(
     rotation: variant.ringRotation,
     opacity: 0.62 + accuracyScore * 0.24,
     strokeWidth: 18 + accuracyScore * 10,
-    frontColor: "rgba(255,255,255,0.96)",
-    backColor: "rgba(255,255,255,0.30)",
+    color: "rgba(255,255,255,0.94)",
   };
 }
 
@@ -267,19 +265,6 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
 
   if (model.accuracyRing) {
     defs.push(
-      `<linearGradient id="orbital-avatar-ring-front-${hashHex}" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
-        <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.98"/>
-        <stop offset="55%" stop-color="#F4F4F6" stop-opacity="0.9"/>
-        <stop offset="100%" stop-color="#D9E1F5" stop-opacity="0.88"/>
-      </linearGradient>`,
-    );
-    defs.push(
-      `<linearGradient id="orbital-avatar-ring-back-${hashHex}" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
-        <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.3"/>
-        <stop offset="100%" stop-color="#D9E1F5" stop-opacity="0.18"/>
-      </linearGradient>`,
-    );
-    defs.push(
       `<clipPath id="orbital-avatar-ring-back-clip-${hashHex}">
         <rect x="0" y="0" width="${VIEWBOX_SIZE}" height="${CENTER}"/>
       </clipPath>`,
@@ -303,7 +288,7 @@ function renderAccuracyRing(ring: OrbitalAvatarRing, hashHex: string) {
 
   return `
     <g transform="${rotate}">
-      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-back-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${(ring.opacity * 0.72).toFixed(3)}" clip-path="url(#orbital-avatar-ring-back-clip-${hashHex})" stroke-linecap="round"/>
+      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="${ring.color}" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-back-clip-${hashHex})" stroke-linecap="round"/>
     </g>`;
 }
 
@@ -312,7 +297,7 @@ function renderAccuracyRingFront(ring: OrbitalAvatarRing, hashHex: string) {
 
   return `
     <g transform="${rotate}">
-      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-front-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-front-clip-${hashHex})" stroke-linecap="round"/>
+      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="${ring.color}" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-front-clip-${hashHex})" stroke-linecap="round"/>
     </g>`;
 }
 
