@@ -6,20 +6,21 @@ import { LandingPageActions } from "~~/components/home/LandingPageActions";
 const STEPS = [
   {
     icon: IdentificationIcon,
-    title: "Reputation",
-    description: "A privacy-preserving proof of personhood lets you claim cREP tokens and build reputation.",
+    title: "Verify Humanity",
+    description: "Claim a privacy-preserving Voter ID, mint cREP, and establish your signal as a real person.",
     color: "#FFC43D",
   },
   {
     icon: GlobeAltIcon,
-    title: "The Future of Rating",
-    description: "Use your reputation to vote on content, stake on your judgment, and grow your influence.",
+    title: "Curate the Frontier",
+    description: "Use cREP to rate frontier content, stake on your judgment, and separate durable signal from noise.",
     color: "#359EEE",
   },
   {
     icon: PlusCircleIcon,
-    title: "Decentralized Community",
-    description: "Join a community that lets anyone contribute and is fully decentralized from day one.",
+    title: "Shape the Orbit",
+    description:
+      "Submit what matters, grow your public track record, and help govern a reputation layer built in the open.",
     color: "#03CEA4",
   },
 ];
@@ -44,9 +45,9 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
           <div className="flex flex-col items-center lg:items-start lg:flex-1">
             <h1 className="text-7xl sm:text-9xl font-bold tracking-tight -mt-8 lg:mt-0 uppercase">Curyo</h1>
             <p className="text-2xl sm:text-3xl text-base-content/60 mt-3 text-center lg:text-left">
-              The Reputation Game for the
+              Human Signal for the
               <br />
-              Age of AI (Beta)
+              AI Frontier
             </p>
             <LandingPageActions />
           </div>

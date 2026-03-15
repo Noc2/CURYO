@@ -21,9 +21,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = getMetadata({
-  title: "Curyo — The Reputation Game for the Age of AI",
+  title: "Curyo — Human Signal for the AI Frontier",
   description:
-    "The reputation game for the age of AI. Stake on your judgment, rate quality, and surface the best content — no algorithms, no ads, no manipulation.",
+    "Human signal for the AI frontier. Stake on your judgment, rate quality, and surface the best content without ads, opaque ranking algorithms, or manipulation.",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
