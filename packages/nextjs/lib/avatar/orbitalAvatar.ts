@@ -175,9 +175,9 @@ function getAddressVariant(address: string) {
     orbColorB: hslToHex(hue - 8, Math.min(saturation + 8, 94), 48),
     orbColorC: hslToHex(hue + 116, Math.min(saturation + 6, 90), 34),
     orbGlowColor: hslToHex(hue + 26, Math.min(saturation + 12, 98), 62),
-    ringColorA: hslToHex(hue + 34, Math.min(saturation + 18, 90), 86),
-    ringColorB: hslToHex(hue - 18, Math.min(saturation + 14, 84), 96),
-    ringColorC: hslToHex(hue + 154, Math.min(saturation + 18, 92), 84),
+    ringColorA: "#F7F7FB",
+    ringColorB: "#FFFFFF",
+    ringColorC: "#E7EBF5",
   };
 }
 
@@ -302,7 +302,7 @@ function renderAccuracyRing(ring: OrbitalAvatarRing, hashHex: string) {
 
   return `
     <g transform="${rotate}">
-      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-front-clip-${hashHex})" stroke-linecap="round"/>
+      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-back-clip-${hashHex})" stroke-linecap="round"/>
     </g>`;
 }
 
@@ -311,7 +311,7 @@ function renderAccuracyRingFront(ring: OrbitalAvatarRing, hashHex: string) {
 
   return `
     <g transform="${rotate}">
-      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-back-clip-${hashHex})" stroke-linecap="round"/>
+      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-front-clip-${hashHex})" stroke-linecap="round"/>
     </g>`;
 }
 
