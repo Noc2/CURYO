@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { ReputationAvatarPayload } from "~~/lib/avatar/avatarPayload";
 import { buildOrbitalAvatarModel, renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
-import type { ReputationAvatarPayload } from "~~/lib/avatar/reputationConstellation";
 
 const NOW_SECONDS = 1_900_000_000;
 

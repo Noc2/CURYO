@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
 import { renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
-import { renderPlanetAvatarSvg } from "~~/lib/avatar/planetAvatar";
-import { renderReputationConstellationSvg } from "~~/lib/avatar/reputationConstellation";
 import { getReputationAvatarPayload } from "~~/lib/avatar/server";
 
 const CACHE_SECONDS = 300;
@@ -13,13 +11,6 @@ function parseRequestedSize(value: string | null): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function parseRequestedStyle(value: string | null) {
-  if (value === "constellation") return "constellation";
-  if (value === "planet") return "planet";
-  if (value === "orbital") return "orbital";
-  return "orbital";
-}
-
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
   if (!address || !isAddress(address)) {
@@ -28,13 +19,7 @@ export async function GET(request: NextRequest) {
 
   const payload = await getReputationAvatarPayload(address);
   const size = parseRequestedSize(request.nextUrl.searchParams.get("size"));
-  const style = parseRequestedStyle(request.nextUrl.searchParams.get("style"));
-  const svg =
-    style === "planet"
-      ? renderPlanetAvatarSvg(payload, { size })
-      : style === "orbital"
-        ? renderOrbitalAvatarSvg(payload, { size })
-        : renderReputationConstellationSvg(payload, { size });
+  const svg = renderOrbitalAvatarSvg(payload, { size });
 
   return new NextResponse(svg, {
     headers: {

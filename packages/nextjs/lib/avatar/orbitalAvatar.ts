@@ -1,4 +1,4 @@
-import type { ReputationAvatarPayload } from "~~/lib/avatar/reputationConstellation";
+import type { ReputationAvatarPayload } from "~~/lib/avatar/avatarPayload";
 
 interface Point {
   x: number;

@@ -1,6 +1,6 @@
 import "server-only";
 import { isAddress } from "viem";
-import type { ReputationAvatarPayload } from "~~/lib/avatar/reputationConstellation";
+import type { ReputationAvatarPayload } from "~~/lib/avatar/avatarPayload";
 import { readCRepBalances } from "~~/lib/profileRegistry/server";
 
 type ReputationAvatarApiResponse = Omit<ReputationAvatarPayload, "balance">;
