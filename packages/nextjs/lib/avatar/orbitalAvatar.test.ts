@@ -181,12 +181,27 @@ test("orbital accuracy ring grows thicker rather than larger for high-accuracy p
     }),
     { nowSeconds: NOW_SECONDS },
   );
+  const perfectAccuracy = buildOrbitalAvatarModel(
+    buildPayload({
+      stats: {
+        totalSettledVotes: 48,
+        totalWins: 48,
+        totalLosses: 0,
+        currentStreak: 9,
+        bestWinStreak: 14,
+        winRate: 1,
+      },
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
 
   assert.ok(lowAccuracy.accuracyRing);
   assert.ok(highAccuracy.accuracyRing);
+  assert.ok(perfectAccuracy.accuracyRing);
   assert.equal(highAccuracy.accuracyRing.radiusX, lowAccuracy.accuracyRing.radiusX);
   assert.equal(highAccuracy.accuracyRing.radiusY, lowAccuracy.accuracyRing.radiusY);
   assert.ok(highAccuracy.accuracyRing.strokeWidth - lowAccuracy.accuracyRing.strokeWidth >= 8);
+  assert.ok(perfectAccuracy.accuracyRing.strokeWidth > highAccuracy.accuracyRing.strokeWidth);
 });
 
 test("unclaimed wallets render an empty shell instead of a filled orb", () => {

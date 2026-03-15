@@ -154,7 +154,7 @@ function getSignalScores(payload: ReputationAvatarPayload) {
   const totalSettledVotes = stats?.totalSettledVotes ?? 0;
   const accuracyConfidence = clamp(totalSettledVotes / 25, 0, 1);
   const accuracyWinRate = stats?.winRate ?? 0;
-  const accuracyScore = clamp((accuracyWinRate - 0.45) / 0.3, 0, 1) * accuracyConfidence;
+  const accuracyScore = clamp((accuracyWinRate - 0.45) / 0.55, 0, 1) * accuracyConfidence;
 
   return { balanceScore, accuracyScore };
 }
@@ -175,9 +175,9 @@ function getAddressVariant(address: string) {
     orbColorB: hslToHex(hue - 8, Math.min(saturation + 8, 94), 48),
     orbColorC: hslToHex(hue + 116, Math.min(saturation + 6, 90), 34),
     orbGlowColor: hslToHex(hue + 26, Math.min(saturation + 12, 98), 62),
-    ringColorA: "#F7F7FB",
+    ringColorA: hslToHex(hue + 18, 34, 92),
     ringColorB: "#FFFFFF",
-    ringColorC: "#E7EBF5",
+    ringColorC: hslToHex(hue - 24, 28, 88),
   };
 }
 
@@ -212,7 +212,7 @@ function buildAccuracyRing(
     radiusY: 62,
     rotation: variant.ringRotation,
     opacity: 0.82 + accuracyScore * 0.12,
-    strokeWidth: 10 + accuracyScore * 14,
+    strokeWidth: 9 + accuracyScore * 17,
     colorA: variant.ringColorA,
     colorB: variant.ringColorB,
     colorC: variant.ringColorC,
