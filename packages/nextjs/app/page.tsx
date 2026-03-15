@@ -50,7 +50,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 Quality signals backed by human reputation
               </p>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-base-content/62 text-center lg:text-left">
-                Verified humans stake on content to create public ratings anyone can use.
+                Verified humans stake on content to create public ratings.
               </p>
               <LandingPageActions />
             </div>

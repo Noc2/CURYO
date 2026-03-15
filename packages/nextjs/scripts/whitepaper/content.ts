@@ -68,7 +68,7 @@ export const SECTIONS: Section[] = [
   // ── 1. Introduction ──
   {
     title: "Introduction",
-    lead: "Verified humans stake on content to create public ratings anyone can use.",
+    lead: "Verified humans stake on content to create public ratings.",
     subsections: [
       {
         heading: "Mission",
