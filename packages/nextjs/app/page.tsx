@@ -1,23 +1,23 @@
 import { redirect } from "next/navigation";
-import { GlobeAltIcon, IdentificationIcon, PlusCircleIcon } from "@heroicons/react/24/outline";
+import { EyeSlashIcon, ScaleIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
 
 const STEPS = [
   {
-    icon: IdentificationIcon,
+    icon: ShieldCheckIcon,
     title: "Verify Humanity",
     description: "Claim one privacy-preserving Voter ID and cREP so each rating comes from a real human.",
     color: "#FFC43D",
   },
   {
-    icon: GlobeAltIcon,
+    icon: EyeSlashIcon,
     title: "Blind Vote with Stake",
     description: "Vote UP or DOWN on content with cREP. Your direction stays hidden during the blind phase.",
     color: "#359EEE",
   },
   {
-    icon: PlusCircleIcon,
+    icon: ScaleIcon,
     title: "Reveal and Settle",
     description:
       "After the blind phase, votes are revealed. Winning voters earn rewards, and the content's rating updates.",
