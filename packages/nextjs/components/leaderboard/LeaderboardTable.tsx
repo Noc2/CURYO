@@ -162,7 +162,10 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   return (
     <div className="surface-card rounded-2xl p-6 overflow-x-auto">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className={surfaceSectionHeadingClassName}>cREP leaderboard</h2>
+        <div>
+          <h2 className={surfaceSectionHeadingClassName}>cREP leaderboard</h2>
+          <p className="mt-1 text-sm text-base-content/50">Track the strongest public signal across the frontier.</p>
+        </div>
         <FollowScopeToggle value={scope} onChange={value => void handleScopeChange(value)} />
       </div>
 
@@ -187,7 +190,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
               return (
                 <tr
                   key={entry.address}
-                  className={`${isCurrentUser ? "bg-primary/10 font-semibold" : ""} hover:bg-base-200/50`}
+                  className={`${isCurrentUser ? "bg-primary/10 font-semibold" : ""} border-b border-white/6 hover:bg-white/[0.03]`}
                 >
                   <td className="text-center">
                     {entry.rank <= 3 ? (
@@ -216,7 +219,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
                           }}
                           width={32}
                           height={32}
-                          className="w-8 h-8 rounded-full object-cover shrink-0"
+                          className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-white/12 bg-white/[0.04]"
                           alt={`${entry.username || truncateAddress(entry.address)} avatar`}
                           loading="lazy"
                         />

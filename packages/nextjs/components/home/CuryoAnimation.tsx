@@ -13,9 +13,11 @@ export function CuryoAnimation() {
   return (
     <div className="mx-auto flex h-[420px] w-full max-w-5xl items-center justify-center sm:h-[560px] lg:h-[620px]">
       <div className="relative flex h-[22rem] w-[22rem] items-center justify-center sm:h-[30rem] sm:w-[30rem] lg:h-[35rem] lg:w-[35rem]">
-        <div className="absolute inset-[6%] rounded-full bg-[radial-gradient(circle,_rgba(255,104,122,0.12),_rgba(255,196,61,0.08)_38%,_rgba(53,158,238,0.05)_58%,_transparent_76%)] blur-3xl" />
+        <div className="absolute inset-[6%] rounded-full bg-[radial-gradient(circle,_rgba(255,124,181,0.13),_rgba(255,199,106,0.09)_34%,_rgba(142,182,255,0.09)_58%,_transparent_76%)] blur-3xl" />
+        <div className="absolute inset-[14%] rounded-full border border-white/6 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.02),transparent_72%)]" />
         <div className="curyo-animation__orbit-trace absolute inset-[11%] rounded-full border border-white/8" />
         <div className="curyo-animation__orbit-trace curyo-animation__orbit-trace--secondary absolute inset-[16%] rounded-full border border-white/6" />
+        <div className="curyo-animation__orbit-trace curyo-animation__orbit-trace--tertiary absolute inset-[22%] rounded-full border border-white/5" />
 
         {ambientStars.map(star => (
           <span
@@ -50,6 +52,11 @@ export function CuryoAnimation() {
         .curyo-animation__orbit-trace--secondary {
           opacity: 0.5;
           transform: rotate(16deg);
+        }
+
+        .curyo-animation__orbit-trace--tertiary {
+          opacity: 0.34;
+          transform: rotate(44deg);
         }
 
         .curyo-animation__star {

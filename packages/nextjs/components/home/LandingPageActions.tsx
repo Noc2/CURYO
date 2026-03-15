@@ -30,10 +30,10 @@ export function LandingPageActions() {
   }, [crepBalance, isConnected, router]);
 
   return (
-    <div className="flex gap-3 mt-6">
+    <div className="mt-7 flex flex-wrap justify-center gap-3 lg:justify-start">
       {!isConnected && (
         <button
-          className="btn bg-white text-black hover:bg-gray-200 border-none"
+          className="btn btn-primary rounded-full px-5 text-black"
           onClick={openConnectModal}
           type="button"
           style={{ fontSize: "16px" }}
@@ -43,10 +43,10 @@ export function LandingPageActions() {
       )}
       <Link
         href="/docs"
-        className="btn bg-gray-800 text-white hover:bg-gray-700 border-none"
+        className="btn rounded-full border border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
         style={{ fontSize: "16px" }}
       >
-        Learn More
+        Read the Docs
       </Link>
     </div>
   );
