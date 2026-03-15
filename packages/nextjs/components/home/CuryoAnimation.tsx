@@ -1,23 +1,21 @@
 "use client";
 
-import { CuryoOrbitalMark } from "~~/components/brand/CuryoOrbitalMark";
+import { CuryoLighthouseMark } from "~~/components/brand/CuryoLighthouseMark";
 
 export function CuryoAnimation() {
   const ambientStars = [
-    { x: 10, y: 22, size: 8, color: "rgba(255, 220, 231, 0.9)" },
-    { x: 18, y: 74, size: 6, color: "rgba(255, 196, 61, 0.88)" },
-    { x: 84, y: 18, size: 7, color: "rgba(122, 174, 255, 0.88)" },
-    { x: 88, y: 64, size: 5, color: "rgba(3, 206, 164, 0.86)" },
+    { x: 12, y: 20, size: 8, color: "rgba(255, 220, 231, 0.9)" },
+    { x: 18, y: 74, size: 6, color: "rgba(255, 196, 61, 0.84)" },
+    { x: 80, y: 16, size: 7, color: "rgba(122, 174, 255, 0.86)" },
+    { x: 87, y: 72, size: 5, color: "rgba(3, 206, 164, 0.82)" },
+    { x: 27, y: 11, size: 4, color: "rgba(255, 255, 255, 0.78)" },
+    { x: 74, y: 86, size: 4, color: "rgba(255, 255, 255, 0.7)" },
   ];
 
   return (
     <div className="mx-auto flex h-[420px] w-full max-w-5xl items-center justify-center sm:h-[560px] lg:h-[620px]">
-      <div className="relative flex h-[22rem] w-[22rem] items-center justify-center sm:h-[30rem] sm:w-[30rem] lg:h-[35rem] lg:w-[35rem]">
-        <div className="absolute inset-[6%] rounded-full bg-[radial-gradient(circle,_rgba(255,124,181,0.13),_rgba(255,199,106,0.09)_34%,_rgba(142,182,255,0.09)_58%,_transparent_76%)] blur-3xl" />
-        <div className="absolute inset-[14%] rounded-full border border-white/6 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.02),transparent_72%)]" />
-        <div className="curyo-animation__orbit-trace absolute inset-[11%] rounded-full border border-white/8" />
-        <div className="curyo-animation__orbit-trace curyo-animation__orbit-trace--secondary absolute inset-[16%] rounded-full border border-white/6" />
-        <div className="curyo-animation__orbit-trace curyo-animation__orbit-trace--tertiary absolute inset-[22%] rounded-full border border-white/5" />
+      <div className="relative flex h-[24rem] w-[22rem] items-center justify-center sm:h-[31rem] sm:w-[26rem] lg:h-[36rem] lg:w-[30rem]">
+        <div className="absolute inset-[10%] rounded-full bg-[radial-gradient(circle,_rgba(94,97,130,0.16),_rgba(8,13,29,0)_68%)] blur-3xl" />
 
         {ambientStars.map(star => (
           <span
@@ -34,29 +32,14 @@ export function CuryoAnimation() {
           />
         ))}
 
-        <div className="curyo-animation__logo relative h-[17rem] w-[17rem] sm:h-[23rem] sm:w-[23rem] lg:h-[26rem] lg:w-[26rem]">
-          <CuryoOrbitalMark className="h-full w-full" title="Curyo logo" />
+        <div className="curyo-animation__logo relative h-[14rem] w-[14rem] sm:h-[18rem] sm:w-[18rem] lg:h-[20rem] lg:w-[20rem]">
+          <CuryoLighthouseMark className="h-full w-full" title="Curyo logo" />
         </div>
       </div>
 
       <style jsx>{`
         .curyo-animation__logo {
           filter: drop-shadow(0 0 42px rgba(239, 71, 111, 0.12)) drop-shadow(0 0 58px rgba(53, 158, 238, 0.1));
-        }
-
-        .curyo-animation__orbit-trace {
-          opacity: 0.72;
-          transform: rotate(-18deg) scale(0.98);
-        }
-
-        .curyo-animation__orbit-trace--secondary {
-          opacity: 0.5;
-          transform: rotate(16deg);
-        }
-
-        .curyo-animation__orbit-trace--tertiary {
-          opacity: 0.34;
-          transform: rotate(44deg);
         }
 
         .curyo-animation__star {

@@ -12,12 +12,10 @@ interface CuryoLighthouseMarkProps {
  */
 export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = false }: CuryoLighthouseMarkProps) {
   const id = useId().replace(/:/g, "");
-  const haloId = `${id}-halo`;
-  const glowId = `${id}-glow`;
-  const coreId = `${id}-core`;
+  const ambientId = `${id}-ambient`;
+  const orbGlowId = `${id}-orb-glow`;
+  const orbId = `${id}-orb`;
   const glossId = `${id}-gloss`;
-  const shadowId = `${id}-shadow`;
-  const rimId = `${id}-rim`;
   const innerRingId = `${id}-inner-ring`;
   const middleRingId = `${id}-middle-ring`;
   const outerRingId = `${id}-outer-ring`;
@@ -35,25 +33,24 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
         {title ? <title>{title}</title> : null}
 
         <defs>
-          <radialGradient id={haloId} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#FF6B7C" stopOpacity="0.18" />
-            <stop offset="38%" stopColor="#FFB35A" stopOpacity="0.12" />
-            <stop offset="72%" stopColor="#359EEE" stopOpacity="0.08" />
+          <radialGradient id={ambientId} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#7E6D89" stopOpacity="0.18" />
+            <stop offset="56%" stopColor="#7E6D89" stopOpacity="0.06" />
+            <stop offset="100%" stopColor="#7E6D89" stopOpacity="0" />
+          </radialGradient>
+
+          <radialGradient id={orbGlowId} cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#EF476F" stopOpacity="0.22" />
+            <stop offset="44%" stopColor="#359EEE" stopOpacity="0.12" />
+            <stop offset="76%" stopColor="#03CEA4" stopOpacity="0.08" />
             <stop offset="100%" stopColor="#03CEA4" stopOpacity="0" />
           </radialGradient>
 
-          <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.24" />
-            <stop offset="58%" stopColor="#FFFFFF" stopOpacity="0.07" />
-            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-          </radialGradient>
-
-          <linearGradient id={coreId} x1="0.18" y1="0.12" x2="0.86" y2="0.92" gradientUnits="objectBoundingBox">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="16%" stopColor="#FFFFFF" />
-            <stop offset="44%" stopColor="#EEF1F5" />
-            <stop offset="72%" stopColor="#A6AFBA" />
-            <stop offset="100%" stopColor="#323A45" />
+          <linearGradient id={orbId} x1="0.22" y1="0.14" x2="0.78" y2="0.88" gradientUnits="objectBoundingBox">
+            <stop offset="0%" stopColor="#359EEE" />
+            <stop offset="34%" stopColor="#EF476F" />
+            <stop offset="66%" stopColor="#FFC43D" />
+            <stop offset="100%" stopColor="#03CEA4" />
           </linearGradient>
 
           <radialGradient
@@ -62,117 +59,93 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
             cy="0"
             r="1"
             gradientUnits="objectBoundingBox"
-            gradientTransform="translate(0.28 0.22) scale(0.38 0.28)"
+            gradientTransform="translate(0.34 0.28) scale(0.42 0.32)"
           >
-            <stop stopColor="#FFFFFF" stopOpacity="0.66" />
-            <stop offset="0.52" stopColor="#FFFFFF" stopOpacity="0.26" />
+            <stop stopColor="#FFFFFF" stopOpacity="0.6" />
+            <stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.22" />
             <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
           </radialGradient>
 
-          <radialGradient
-            id={shadowId}
-            cx="0"
-            cy="0"
-            r="1"
-            gradientUnits="objectBoundingBox"
-            gradientTransform="translate(0.7 0.82) scale(0.6 0.48)"
-          >
-            <stop stopColor="#11161E" stopOpacity="0.3" />
-            <stop offset="1" stopColor="#11161E" stopOpacity="0" />
-          </radialGradient>
-
-          <radialGradient
-            id={rimId}
-            cx="0"
-            cy="0"
-            r="1"
-            gradientUnits="objectBoundingBox"
-            gradientTransform="translate(0.34 0.32) scale(0.86 0.78)"
-          >
-            <stop offset="72%" stopColor="#FFFFFF" stopOpacity="0" />
-            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.28" />
-          </radialGradient>
-
-          <linearGradient id={innerRingId} x1="94" y1="120" x2="418" y2="392" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#359EEE" />
-            <stop offset="30%" stopColor="#EF476F" />
-            <stop offset="66%" stopColor="#FFC43D" />
-            <stop offset="100%" stopColor="#03CEA4" />
+          <linearGradient id={innerRingId} x1="146" y1="108" x2="366" y2="404" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#FFEAF4" />
+            <stop offset="100%" stopColor="#EFF4FF" />
           </linearGradient>
 
-          <linearGradient id={middleRingId} x1="82" y1="104" x2="430" y2="404" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#FFDCE7" />
-            <stop offset="34%" stopColor="#FFF8FB" />
-            <stop offset="68%" stopColor="#EAF5FF" />
-            <stop offset="100%" stopColor="#8AE7D2" />
+          <linearGradient id={middleRingId} x1="126" y1="90" x2="386" y2="422" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#D8D5E2" />
+            <stop offset="100%" stopColor="#E7EAF3" />
           </linearGradient>
 
-          <linearGradient id={outerRingId} x1="68" y1="86" x2="444" y2="426" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#359EEE" />
-            <stop offset="34%" stopColor="#EF476F" />
-            <stop offset="68%" stopColor="#FFC43D" />
-            <stop offset="100%" stopColor="#03CEA4" />
+          <linearGradient id={outerRingId} x1="106" y1="72" x2="406" y2="440" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#737182" />
+            <stop offset="100%" stopColor="#8B8A99" />
           </linearGradient>
         </defs>
 
-        <g className={animated ? "curyo-lighthouse-mark__halo" : undefined}>
-          <circle cx="256" cy="256" r="182" fill={`url(#${haloId})`} />
+        <g className={animated ? "curyo-lighthouse-mark__ambient" : undefined}>
+          <circle cx="256" cy="256" r="176" fill={`url(#${ambientId})`} />
         </g>
 
         <g className={animated ? "curyo-lighthouse-mark__rings" : undefined}>
           <circle
             cx="256"
             cy="256"
-            r="132"
+            r="114"
             fill="none"
             stroke={`url(#${innerRingId})`}
-            strokeWidth="12"
-            strokeOpacity="0.94"
+            strokeWidth="11"
+            strokeOpacity="0.98"
           />
           <circle
             cx="256"
             cy="256"
-            r="164"
+            r="144"
             fill="none"
             stroke={`url(#${middleRingId})`}
-            strokeWidth="10"
-            strokeOpacity="0.68"
+            strokeWidth="9"
+            strokeOpacity="0.9"
           />
           <circle
             cx="256"
             cy="256"
-            r="196"
+            r="174"
             fill="none"
             stroke={`url(#${outerRingId})`}
             strokeWidth="8"
-            strokeOpacity="0.42"
+            strokeOpacity="0.8"
+          />
+          <circle
+            className={animated ? "curyo-lighthouse-mark__dot" : undefined}
+            cx="371"
+            cy="334"
+            r="4.2"
+            fill="#F8FAFF"
+            fillOpacity="0.94"
           />
         </g>
 
         <g className={animated ? "curyo-lighthouse-mark__core" : undefined}>
-          <circle cx="256" cy="256" r="148" fill={`url(#${glowId})`} />
+          <circle cx="256" cy="256" r="118" fill={`url(#${orbGlowId})`} />
           <circle
             className={animated ? "curyo-lighthouse-mark__body" : undefined}
             cx="256"
             cy="256"
-            r="82"
-            fill={`url(#${coreId})`}
+            r="64"
+            fill={`url(#${orbId})`}
           />
           <circle
             className={animated ? "curyo-lighthouse-mark__gloss" : undefined}
             cx="256"
             cy="256"
-            r="76"
+            r="52"
             fill={`url(#${glossId})`}
           />
-          <circle cx="256" cy="256" r="80" fill={`url(#${shadowId})`} />
-          <circle cx="256" cy="256" r="81" fill={`url(#${rimId})`} />
         </g>
       </svg>
 
       <style jsx>{`
-        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__halo {
-          animation: lighthouse-halo-breathe 8s ease-in-out infinite;
+        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__ambient {
+          animation: lighthouse-ambient-breathe 8s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
@@ -196,15 +169,20 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
           transform-origin: 256px 256px;
         }
 
-        @keyframes lighthouse-halo-breathe {
+        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__dot {
+          animation: lighthouse-dot-pulse 4.8s ease-in-out infinite;
+          transform-origin: 371px 334px;
+        }
+
+        @keyframes lighthouse-ambient-breathe {
           0%,
           100% {
-            opacity: 0.9;
-            transform: scale(0.985);
+            opacity: 0.88;
+            transform: scale(0.99);
           }
           50% {
             opacity: 1;
-            transform: scale(1.02);
+            transform: scale(1.018);
           }
         }
 
@@ -244,20 +222,33 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
           0%,
           100% {
             opacity: 0.86;
-            transform: translate(-2px, 0px);
+            transform: translate(-1px, 0px);
           }
           50% {
             opacity: 1;
-            transform: translate(4px, -3px);
+            transform: translate(3px, -2px);
+          }
+        }
+
+        @keyframes lighthouse-dot-pulse {
+          0%,
+          100% {
+            opacity: 0.74;
+            transform: scale(0.92);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.16);
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__halo,
+          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__ambient,
           .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__rings,
           .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__core,
           .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__body,
-          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__gloss {
+          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__gloss,
+          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__dot {
             animation: none;
           }
         }
