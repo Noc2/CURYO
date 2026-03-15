@@ -7,20 +7,22 @@ const STEPS = [
   {
     icon: ShieldCheckIcon,
     title: "Verify Humanity",
-    description: "Claim one privacy-preserving Voter ID and cREP so each rating comes from a real human.",
+    description:
+      "Claim one privacy-preserving Voter ID and cREP so each rating comes from a real human with a fair stake limit.",
     color: "#FFC43D",
   },
   {
     icon: EyeSlashIcon,
     title: "Blind Vote with Stake",
-    description: "Vote UP or DOWN on content with cREP. Your direction stays hidden during the blind phase.",
+    description:
+      "Vote UP or DOWN on content with cREP. Your direction stays hidden during the blind phase, which makes copycat voting harder and rewards independent judgment.",
     color: "#359EEE",
   },
   {
     icon: ScaleIcon,
     title: "Reveal and Settle",
     description:
-      "After the blind phase, votes are revealed. Winning voters earn rewards, and the content's rating updates.",
+      "After the blind phase, votes are revealed and the round settles. Winning voters earn rewards, and the content's public rating updates from the final stake imbalance.",
     color: "#03CEA4",
   },
 ];
