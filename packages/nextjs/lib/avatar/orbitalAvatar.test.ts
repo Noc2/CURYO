@@ -118,7 +118,6 @@ test("orbital avatars vary by address color and frozen progress", () => {
     nowSeconds: NOW_SECONDS,
   });
 
-  assert.notEqual(modelA.backgroundGlowA, modelB.backgroundGlowA);
   assert.notEqual(modelA.compositionRotation, modelB.compositionRotation);
   assert.notEqual(modelA.coreOrb?.colorA, modelB.coreOrb?.colorA);
 });
@@ -151,9 +150,8 @@ test("orbital rings stay circular", () => {
   const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
 
   assert.ok(model.accuracyOrbit);
-  assert.ok(model.motionOrbit);
   assert.equal(typeof model.accuracyOrbit.radius, "number");
-  assert.equal(typeof model.motionOrbit.radius, "number");
+  assert.equal(typeof model.accuracyOrbit.strokeWidth, "number");
 });
 
 test("unclaimed wallets render an empty shell instead of a filled orb", () => {
@@ -175,6 +173,6 @@ test("unclaimed wallets render an empty shell instead of a filled orb", () => {
 test("renderer returns svg markup for the orbital avatar", () => {
   const svg = renderOrbitalAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
 
-  assert.match(svg, /orbital-avatar-bg-/);
+  assert.match(svg, /orbital-avatar-body-/);
   assert.match(svg, /circle/);
 });

@@ -16,10 +16,8 @@ interface OrbitalAvatarOrb extends Point {
 
 interface OrbitalAvatarOrbit {
   radius: number;
-  rotation: number;
   opacity: number;
   strokeWidth: number;
-  dashArray?: string;
   color: string;
 }
 
@@ -31,18 +29,11 @@ interface OrbitalAvatarSatellite extends Point {
 }
 
 export interface OrbitalAvatarModel {
-  backgroundBase: string;
-  backgroundGlowA: string;
-  backgroundGlowB: string;
-  backgroundGlowC: string;
-  backgroundAngle: number;
   progress: number;
   compositionRotation: number;
   coreOrb: OrbitalAvatarOrb | null;
   shellOrbit: OrbitalAvatarOrbit | null;
   accuracyOrbit: OrbitalAvatarOrbit | null;
-  motionOrbit: OrbitalAvatarOrbit | null;
-  orbitDot: OrbitalAvatarSatellite | null;
   categorySatellites: OrbitalAvatarSatellite[];
 }
 
@@ -247,18 +238,10 @@ function getAddressVariant(address: string) {
     saturation,
     progress,
     compositionRotation: progress * 360,
-    backgroundAngle: 12 + hashed("background-angle") * 156,
-    backgroundBase: "#040406",
-    backgroundGlowA: hslToHex(hue + 12, Math.max(saturation - 10, 52), 16),
-    backgroundGlowB: hslToHex(hue + 218, Math.max(saturation - 4, 58), 18),
-    backgroundGlowC: hslToHex(hue - 38, Math.max(saturation - 12, 48), 14),
     orbColorA: hslToHex(hue + 32, Math.min(saturation + 10, 96), 66),
     orbColorB: hslToHex(hue - 10, Math.min(saturation + 8, 94), 46),
     orbColorC: hslToHex(hue + 118, Math.min(saturation + 6, 90), 34),
     orbGlowColor: hslToHex(hue + 24, Math.min(saturation + 12, 98), 60),
-    orbitRotation: progress * 180,
-    orbitDashOffset: hashed("orbit-dash-offset"),
-    highlightAngle: hashed("highlight-angle") * 360,
   };
 }
 
@@ -284,66 +267,24 @@ function buildCoreOrb(
 function buildAccuracyOrbit(
   payload: ReputationAvatarPayload,
   coreOrb: OrbitalAvatarOrb | null,
-  variant: ReturnType<typeof getAddressVariant>,
 ): OrbitalAvatarOrbit | null {
   if (!coreOrb || !payload.stats) return null;
 
   const [, accuracyScore] = getTriadScores(payload);
   return {
     radius: coreOrb.radius + 34,
-    rotation: -18 + variant.orbitRotation * 0.22,
     opacity: 0.2 + accuracyScore * 0.55,
     strokeWidth: 2.5 + accuracyScore * 5,
-    dashArray: `${18 + accuracyScore * 34} ${14 + (1 - accuracyScore) * 26}`,
     color: "#FFFFFF",
   };
 }
 
-function buildMotionOrbit(
-  payload: ReputationAvatarPayload,
-  coreOrb: OrbitalAvatarOrb | null,
-  variant: ReturnType<typeof getAddressVariant>,
-): OrbitalAvatarOrbit | null {
-  if (!coreOrb || !payload.stats) return null;
-
-  const [, , participationScore] = getTriadScores(payload);
-  return {
-    radius: coreOrb.radius + 88,
-    rotation: 18 + variant.orbitRotation * 0.36,
-    opacity: 0.14 + participationScore * 0.28,
-    strokeWidth: 2,
-    color: "rgba(255,255,255,0.7)",
-  };
-}
-
-function buildShellOrbit(variant: ReturnType<typeof getAddressVariant>): OrbitalAvatarOrbit {
+function buildShellOrbit(): OrbitalAvatarOrbit {
   return {
     radius: 134,
-    rotation: variant.orbitRotation * 0.28,
     opacity: 0.18,
     strokeWidth: 2.4,
-    dashArray: "18 16",
     color: "rgba(255,255,255,0.72)",
-  };
-}
-
-function buildOrbitDot(
-  payload: ReputationAvatarPayload,
-  coreOrb: OrbitalAvatarOrb | null,
-  variant: ReturnType<typeof getAddressVariant>,
-): OrbitalAvatarSatellite | null {
-  if (!coreOrb || !payload.stats) return null;
-
-  const [, , participationScore] = getTriadScores(payload);
-  const position = polarToCartesian(variant.progress * 360, coreOrb.radius + 88);
-
-  return {
-    x: position.x,
-    y: position.y,
-    radius: 8 + participationScore * 12,
-    color: "#FFFFFF",
-    glowColor: variant.orbGlowColor,
-    opacity: 0.72,
   };
 }
 
@@ -380,53 +321,22 @@ export function buildOrbitalAvatarModel(
   const nowSeconds = options?.nowSeconds ?? Math.floor(Date.now() / 1000);
   const variant = getAddressVariant(payload.address);
   const coreOrb = buildCoreOrb(payload, variant);
-  const accuracyOrbit = buildAccuracyOrbit(payload, coreOrb, variant);
-  const motionOrbit = buildMotionOrbit(payload, coreOrb, variant);
-  const orbitDot = buildOrbitDot(payload, coreOrb, variant);
+  const accuracyOrbit = buildAccuracyOrbit(payload, coreOrb);
   const categorySatellites = buildCategorySatellites(payload, coreOrb, nowSeconds, variant.progress);
 
   return {
-    backgroundBase: variant.backgroundBase,
-    backgroundGlowA: variant.backgroundGlowA,
-    backgroundGlowB: variant.backgroundGlowB,
-    backgroundGlowC: variant.backgroundGlowC,
-    backgroundAngle: variant.backgroundAngle,
     progress: variant.progress,
     compositionRotation: variant.compositionRotation,
     coreOrb,
-    shellOrbit: coreOrb ? null : buildShellOrbit(variant),
+    shellOrbit: coreOrb ? null : buildShellOrbit(),
     accuracyOrbit,
-    motionOrbit,
-    orbitDot,
     categorySatellites,
   };
 }
 
 function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
-  const bgId = `orbital-avatar-bg-${hashHex}`;
-  const glowAId = `orbital-avatar-glow-a-${hashHex}`;
-  const glowBId = `orbital-avatar-glow-b-${hashHex}`;
-  const glowCId = `orbital-avatar-glow-c-${hashHex}`;
-  const defs: string[] = [
-    `<linearGradient id="${bgId}" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox" gradientTransform="rotate(${model.backgroundAngle.toFixed(2)} 0.5 0.5)">
-      <stop stop-color="${model.backgroundBase}"/>
-      <stop offset="1" stop-color="#000000"/>
-    </linearGradient>`,
-    `<radialGradient id="${glowAId}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.78 0.18) scale(1.18 0.84)">
-      <stop stop-color="${model.backgroundGlowA}" stop-opacity="0.7"/>
-      <stop offset="1" stop-color="${model.backgroundGlowA}" stop-opacity="0"/>
-    </radialGradient>`,
-    `<radialGradient id="${glowBId}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.18 0.72) scale(1.08 0.92)">
-      <stop stop-color="${model.backgroundGlowB}" stop-opacity="0.48"/>
-      <stop offset="1" stop-color="${model.backgroundGlowB}" stop-opacity="0"/>
-    </radialGradient>`,
-    `<radialGradient id="${glowCId}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.5 0.5) scale(0.88 0.88)">
-      <stop stop-color="${model.backgroundGlowC}" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="${model.backgroundGlowC}" stop-opacity="0"/>
-    </radialGradient>`,
-  ];
-
-  const bodies = [model.coreOrb, model.orbitDot, ...model.categorySatellites].filter(
+  const defs: string[] = [];
+  const bodies = [model.coreOrb, ...model.categorySatellites].filter(
     (body): body is OrbitalAvatarOrb | OrbitalAvatarSatellite => body !== null,
   );
 
@@ -471,11 +381,11 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
     }
   }
 
-  return { bgId, glowAId, glowBId, glowCId, markup: defs.join("") };
+  return { markup: defs.join("") };
 }
 
-function renderOrbit(orbit: OrbitalAvatarOrbit, strokeLineCap: "round" | "butt" = "round") {
-  return `<circle cx="${CENTER}" cy="${CENTER}" r="${orbit.radius.toFixed(2)}" transform="rotate(${orbit.rotation.toFixed(2)} ${CENTER} ${CENTER})" fill="none" stroke="${orbit.color}" stroke-width="${orbit.strokeWidth.toFixed(2)}" stroke-opacity="${orbit.opacity.toFixed(3)}"${orbit.dashArray ? ` stroke-dasharray="${orbit.dashArray}"` : ""} stroke-linecap="${strokeLineCap}"/>`;
+function renderOrbit(orbit: OrbitalAvatarOrbit) {
+  return `<circle cx="${CENTER}" cy="${CENTER}" r="${orbit.radius.toFixed(2)}" fill="none" stroke="${orbit.color}" stroke-width="${orbit.strokeWidth.toFixed(2)}" stroke-opacity="${orbit.opacity.toFixed(3)}"/>`;
 }
 
 function renderSatellite(body: OrbitalAvatarSatellite, hashHex: string, index: number) {
@@ -500,27 +410,19 @@ export function renderOrbitalAvatarSvg(
   const size = clamp(Number(options?.size ?? 96), 16, 512);
   const model = buildOrbitalAvatarModel(payload, { nowSeconds: options?.nowSeconds });
   const hashHex = hashString(payload.address).toString(16);
-  const { bgId, glowAId, glowBId, glowCId, markup } = renderOrbitalDefs(hashHex, model);
+  const { markup } = renderOrbitalDefs(hashHex, model);
 
-  const shellMarkup = model.shellOrbit ? renderOrbit(model.shellOrbit, "round") : "";
-  const accuracyMarkup = model.accuracyOrbit ? renderOrbit(model.accuracyOrbit, "round") : "";
-  const motionMarkup = model.motionOrbit ? renderOrbit(model.motionOrbit, "butt") : "";
-  const orbitDotMarkup = model.orbitDot ? renderSatellite(model.orbitDot, hashHex, model.coreOrb ? 1 : 0) : "";
+  const shellMarkup = model.shellOrbit ? renderOrbit(model.shellOrbit) : "";
+  const accuracyMarkup = model.accuracyOrbit ? renderOrbit(model.accuracyOrbit) : "";
   const categoryMarkup = model.categorySatellites
-    .map((body, index) => renderSatellite(body, hashHex, (model.coreOrb ? 2 : 0) + index))
+    .map((body, index) => renderSatellite(body, hashHex, (model.coreOrb ? 1 : 0) + index))
     .join("");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
   <defs>${markup}</defs>
-  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${bgId})"/>
-  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${glowAId})"/>
-  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${glowBId})"/>
-  <rect width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" rx="108" fill="url(#${glowCId})"/>
   <g transform="rotate(${model.compositionRotation.toFixed(2)} ${CENTER} ${CENTER})">
-    ${motionMarkup}
     ${accuracyMarkup}
     ${shellMarkup}
-    ${orbitDotMarkup}
     ${categoryMarkup}
     ${model.coreOrb ? renderCoreOrb(model.coreOrb, hashHex) : ""}
   </g>
