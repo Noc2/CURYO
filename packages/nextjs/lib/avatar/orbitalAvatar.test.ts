@@ -151,9 +151,10 @@ test("orbital accuracy ring stays bounded and elliptical", () => {
   assert.equal(typeof model.accuracyRing.radiusX, "number");
   assert.equal(typeof model.accuracyRing.radiusY, "number");
   assert.ok(model.accuracyRing.radiusX > model.accuracyRing.radiusY);
+  assert.ok(model.accuracyRing.radiusX + model.accuracyRing.strokeWidth / 2 < 240);
 });
 
-test("orbital accuracy ring grows noticeably for high-accuracy profiles", () => {
+test("orbital accuracy ring grows thicker rather than larger for high-accuracy profiles", () => {
   const lowAccuracy = buildOrbitalAvatarModel(
     buildPayload({
       stats: {
@@ -183,8 +184,9 @@ test("orbital accuracy ring grows noticeably for high-accuracy profiles", () => 
 
   assert.ok(lowAccuracy.accuracyRing);
   assert.ok(highAccuracy.accuracyRing);
-  assert.ok(highAccuracy.accuracyRing.radiusX - lowAccuracy.accuracyRing.radiusX >= 20);
-  assert.ok(highAccuracy.accuracyRing.radiusY - lowAccuracy.accuracyRing.radiusY >= 12);
+  assert.equal(highAccuracy.accuracyRing.radiusX, lowAccuracy.accuracyRing.radiusX);
+  assert.equal(highAccuracy.accuracyRing.radiusY, lowAccuracy.accuracyRing.radiusY);
+  assert.ok(highAccuracy.accuracyRing.strokeWidth - lowAccuracy.accuracyRing.strokeWidth >= 8);
 });
 
 test("unclaimed wallets render an empty shell instead of a filled orb", () => {
