@@ -2,92 +2,83 @@
   <defs>
     <linearGradient id="banner-bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#020305" />
-      <stop offset="52%" stop-color="#060914" />
-      <stop offset="100%" stop-color="#0B1020" />
+      <stop offset="52%" stop-color="#070A15" />
+      <stop offset="100%" stop-color="#101726" />
     </linearGradient>
     <radialGradient id="banner-left-glow" cx="310" cy="248" r="320" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#12203A" stop-opacity=".58" />
-      <stop offset="48%" stop-color="#0A1325" stop-opacity=".18" />
+      <stop offset="0%" stop-color="#18243C" stop-opacity="0.56" />
+      <stop offset="46%" stop-color="#0D1527" stop-opacity="0.18" />
       <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
     </radialGradient>
     <radialGradient id="banner-right-glow" cx="1220" cy="260" r="520" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#10182D" stop-opacity=".18" />
+      <stop offset="0%" stop-color="#10182D" stop-opacity="0.16" />
       <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="banner-orbit" x1="110" y1="150" x2="394" y2="366" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#03CEA4" stop-opacity=".18" />
-      <stop offset="32%" stop-color="#FFC43D" stop-opacity=".16" />
-      <stop offset="64%" stop-color="#EF476F" stop-opacity=".18" />
-      <stop offset="100%" stop-color="#359EEE" stop-opacity=".18" />
-    </linearGradient>
-    <filter id="banner-orbit-blur" x="70" y="70" width="372" height="372" filterUnits="userSpaceOnUse">
-      <feGaussianBlur stdDeviation="4.5" />
-    </filter>
-    <linearGradient id="banner-main-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(28 .5 .5)">
-      <stop offset="0%" stop-color="#FFC43D" />
+
+    <radialGradient id="banner-mark-halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF687A" stop-opacity="0.26" />
+      <stop offset="62%" stop-color="#FF687A" stop-opacity="0.091" />
+      <stop offset="100%" stop-color="#FF687A" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="banner-mark-planet" x1="0.15" y1="0.1" x2="0.85" y2="0.9" gradientUnits="objectBoundingBox" gradientTransform="rotate(42 0.5 0.5)">
+      <stop offset="0%" stop-color="#359EEE" />
       <stop offset="34%" stop-color="#EF476F" />
-      <stop offset="68%" stop-color="#359EEE" />
+      <stop offset="68%" stop-color="#FFC43D" />
       <stop offset="100%" stop-color="#03CEA4" />
     </linearGradient>
-    <radialGradient id="banner-main-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#FFE08E" stop-opacity=".54" />
-      <stop offset="58%" stop-color="#5BD7B8" stop-opacity=".18" />
-      <stop offset="100%" stop-color="#5BD7B8" stop-opacity="0" />
+    <radialGradient id="banner-mark-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.22" />
+      <stop offset="56%" stop-color="#FFC43D" stop-opacity="0.16" />
+      <stop offset="100%" stop-color="#03CEA4" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="banner-top-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
-      <stop offset="0%" stop-color="#A8FFF2" />
-      <stop offset="58%" stop-color="#20DFC1" />
-      <stop offset="100%" stop-color="#14A79B" />
+    <radialGradient id="banner-mark-highlight" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.34 0.3) scale(0.44 0.34)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.56" />
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="banner-mark-ring" x1="0" y1="0.3" x2="1" y2="0.7" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#FFDCE7" />
+      <stop offset="48%" stop-color="#FFF8FB" />
+      <stop offset="100%" stop-color="#FFEFF5" />
     </linearGradient>
-    <radialGradient id="banner-top-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#A8FFF2" stop-opacity=".46" />
-      <stop offset="58%" stop-color="#20DFC1" stop-opacity=".16" />
-      <stop offset="100%" stop-color="#20DFC1" stop-opacity="0" />
-    </radialGradient>
-    <linearGradient id="banner-left-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
-      <stop offset="0%" stop-color="#FFD2E3" />
-      <stop offset="58%" stop-color="#FF8AB0" />
-      <stop offset="100%" stop-color="#E45787" />
-    </linearGradient>
-    <radialGradient id="banner-left-planet-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#FFD2E3" stop-opacity=".42" />
-      <stop offset="58%" stop-color="#FF8AB0" stop-opacity=".14" />
-      <stop offset="100%" stop-color="#FF8AB0" stop-opacity="0" />
-    </radialGradient>
-    <linearGradient id="banner-right-fill" x1="0" y1="0" x2="1" y2="1" gradientTransform="rotate(22 .5 .5)">
-      <stop offset="0%" stop-color="#C7FFAF" />
-      <stop offset="58%" stop-color="#7BE96D" />
-      <stop offset="100%" stop-color="#4BCF62" />
-    </linearGradient>
-    <radialGradient id="banner-right-planet-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#C7FFAF" stop-opacity=".42" />
-      <stop offset="58%" stop-color="#7BE96D" stop-opacity=".14" />
-      <stop offset="100%" stop-color="#7BE96D" stop-opacity="0" />
-    </radialGradient>
+    <clipPath id="banner-mark-ring-back">
+      <rect x="0" y="0" width="512" height="256" />
+    </clipPath>
+    <clipPath id="banner-mark-ring-front">
+      <rect x="0" y="256" width="512" height="256" />
+    </clipPath>
     <symbol id="banner-brand-mark" viewBox="0 0 512 512">
-      <circle
-        cx="256"
-        cy="258"
-        r="123"
-        fill="none"
-        stroke="url(#banner-orbit)"
-        stroke-width="10"
-        stroke-opacity=".1"
-        filter="url(#banner-orbit-blur)"
-      />
-      <circle cx="256" cy="258" r="123" fill="none" stroke="url(#banner-orbit)" stroke-width="4" stroke-opacity=".24" />
-      <circle cx="256" cy="258" r="205" fill="url(#banner-main-glow)" fill-opacity=".46" />
-      <circle cx="256" cy="258" r="82" fill="url(#banner-main-fill)" />
-      <circle cx="241.24" cy="238.32" r="27.88" fill="#FFFFFF" fill-opacity=".18" />
-      <circle cx="344" cy="94" r="44" fill="url(#banner-top-glow)" fill-opacity=".4" />
-      <circle cx="344" cy="94" r="24" fill="url(#banner-top-fill)" />
-      <circle cx="339.68" cy="88.24" r="8.16" fill="#FFFFFF" fill-opacity=".18" />
-      <circle cx="118" cy="420" r="38" fill="url(#banner-left-planet-glow)" fill-opacity=".36" />
-      <circle cx="118" cy="420" r="21" fill="url(#banner-left-fill)" />
-      <circle cx="114.22" cy="414.96" r="7.14" fill="#FFFFFF" fill-opacity=".18" />
-      <circle cx="404" cy="412" r="44" fill="url(#banner-right-planet-glow)" fill-opacity=".36" />
-      <circle cx="404" cy="412" r="24" fill="url(#banner-right-fill)" />
-      <circle cx="399.68" cy="406.24" r="8.16" fill="#FFFFFF" fill-opacity=".18" />
+      <circle cx="256" cy="256" r="178" fill="url(#banner-mark-halo)" />
+      <g transform="rotate(-18 256 256)">
+        <ellipse
+          cx="256"
+          cy="256"
+          rx="198"
+          ry="54"
+          fill="none"
+          stroke="url(#banner-mark-ring)"
+          stroke-width="18"
+          stroke-opacity="0.96"
+          clip-path="url(#banner-mark-ring-back)"
+          stroke-linecap="round"
+        />
+      </g>
+      <circle cx="256" cy="256" r="194" fill="url(#banner-mark-glow)" fill-opacity="0.82" />
+      <circle cx="256" cy="256" r="108" fill="url(#banner-mark-planet)" />
+      <circle cx="256" cy="256" r="86.4" fill="url(#banner-mark-highlight)" />
+      <g transform="rotate(-18 256 256)">
+        <ellipse
+          cx="256"
+          cy="256"
+          rx="198"
+          ry="54"
+          fill="none"
+          stroke="url(#banner-mark-ring)"
+          stroke-width="18"
+          stroke-opacity="0.96"
+          clip-path="url(#banner-mark-ring-front)"
+          stroke-linecap="round"
+        />
+      </g>
     </symbol>
   </defs>
 
@@ -95,26 +86,19 @@
   <circle cx="310" cy="248" r="320" fill="url(#banner-left-glow)" />
   <circle cx="1220" cy="260" r="520" fill="url(#banner-right-glow)" />
 
-  <g opacity=".75">
-    <path d="M1120 122C1240 78 1382 90 1498 170" stroke="#152039" stroke-width="2" stroke-linecap="round" />
-    <path d="M1060 384C1184 332 1360 332 1498 390" stroke="#121C33" stroke-width="2" stroke-linecap="round" />
-    <path d="M920 92C1048 146 1184 152 1322 110" stroke="#17233E" stroke-width="1.5" stroke-linecap="round" opacity=".72" />
+  <g opacity="0.82">
+    <circle cx="1168" cy="96" r="4" fill="#FFDCE7" />
+    <circle cx="1328" cy="134" r="3" fill="#359EEE" />
+    <circle cx="1450" cy="176" r="5" fill="#03CEA4" />
+    <circle cx="1012" cy="358" r="4" fill="#FFC43D" />
+    <circle cx="1230" cy="410" r="3" fill="#FFFFFF" fill-opacity="0.7" />
   </g>
 
-  <g opacity=".85">
-    <circle cx="1168" cy="96" r="4" fill="#A8FFF2" />
-    <circle cx="1328" cy="134" r="3" fill="#FFD2E3" />
-    <circle cx="1450" cy="176" r="5" fill="#C7FFAF" />
-    <circle cx="1012" cy="358" r="4" fill="#7AAEFF" />
-    <circle cx="1230" cy="410" r="3" fill="#FFC43D" />
-    <circle cx="1408" cy="366" r="4" fill="#FFFFFF" fill-opacity=".68" />
-  </g>
-
-  <use href="#banner-brand-mark" transform="translate(58 42) scale(.84)" />
+  <use href="#banner-brand-mark" transform="translate(0 124) scale(0.48)" />
 
   <text
-    x="640"
-    y="230"
+    x="472"
+    y="232"
     font-family="'Helvetica Neue', Arial, sans-serif"
     font-size="136"
     font-weight="700"
@@ -124,8 +108,8 @@
     CURYO
   </text>
   <text
-    x="644"
-    y="305"
+    x="476"
+    y="304"
     font-family="'Helvetica Neue', Arial, sans-serif"
     font-size="34"
     font-weight="400"
@@ -134,5 +118,5 @@
   >
     The Reputation Game for the Age of AI
   </text>
-  <rect x="644" y="336" width="452" height="2" rx="1" fill="#1C2740" />
+  <rect x="476" y="336" width="452" height="2" rx="1" fill="#1C2740" />
 </svg>

@@ -1,46 +1,21 @@
 "use client";
 
-import { CuryoPlanetMark } from "~~/components/brand/CuryoPlanetMark";
+import { CuryoOrbitalMark } from "~~/components/brand/CuryoOrbitalMark";
 
 export function CuryoAnimation() {
   const ambientStars = [
-    { x: 8, y: 20, size: 8, delay: "0s", color: "rgba(168, 255, 242, 0.9)" },
-    { x: 14, y: 74, size: 6, delay: "-2.1s", color: "rgba(255, 210, 227, 0.88)" },
-    { x: 82, y: 16, size: 7, delay: "-1.4s", color: "rgba(199, 255, 175, 0.88)" },
-    { x: 88, y: 68, size: 5, delay: "-3.2s", color: "rgba(255, 196, 61, 0.84)" },
-    { x: 54, y: 10, size: 4, delay: "-0.8s", color: "rgba(122, 174, 255, 0.9)" },
-    { x: 78, y: 46, size: 5, delay: "-2.6s", color: "rgba(255, 255, 255, 0.82)" },
-  ];
-  const connections = [
-    { from: 0, to: 4, delay: "-0.6s" },
-    { from: 4, to: 2, delay: "-1.7s" },
-    { from: 1, to: 5, delay: "-2.3s" },
-    { from: 5, to: 3, delay: "-3.1s" },
+    { x: 10, y: 22, size: 8, delay: "0s", color: "rgba(255, 220, 231, 0.9)" },
+    { x: 18, y: 74, size: 6, delay: "-1.7s", color: "rgba(255, 196, 61, 0.88)" },
+    { x: 84, y: 18, size: 7, delay: "-2.4s", color: "rgba(122, 174, 255, 0.88)" },
+    { x: 88, y: 64, size: 5, delay: "-3.6s", color: "rgba(3, 206, 164, 0.86)" },
   ];
 
   return (
     <div className="mx-auto flex h-[420px] w-full max-w-5xl items-center justify-center sm:h-[560px] lg:h-[620px]">
       <div className="relative flex h-[22rem] w-[22rem] items-center justify-center sm:h-[30rem] sm:w-[30rem] lg:h-[35rem] lg:w-[35rem]">
-        <div className="absolute inset-[4%] rounded-full bg-[radial-gradient(circle,_rgba(255,196,61,0.08),_rgba(3,206,164,0.07)_34%,_rgba(53,158,238,0.04)_58%,_transparent_76%)] blur-3xl" />
-
-        <svg className="curyo-animation__links absolute inset-0 h-full w-full" viewBox="0 0 100 100" aria-hidden>
-          {connections.map((connection, index) => {
-            const from = ambientStars[connection.from];
-            const to = ambientStars[connection.to];
-
-            return (
-              <line
-                key={`${connection.from}-${connection.to}`}
-                className="curyo-animation__link"
-                x1={from.x}
-                y1={from.y}
-                x2={to.x}
-                y2={to.y}
-                style={{ animationDelay: connection.delay, opacity: index % 2 === 0 ? 0.34 : 0.22 }}
-              />
-            );
-          })}
-        </svg>
+        <div className="absolute inset-[6%] rounded-full bg-[radial-gradient(circle,_rgba(255,104,122,0.12),_rgba(255,196,61,0.08)_38%,_rgba(53,158,238,0.05)_58%,_transparent_76%)] blur-3xl" />
+        <div className="curyo-animation__orbit-trace absolute inset-[11%] rounded-full border border-white/8" />
+        <div className="curyo-animation__orbit-trace curyo-animation__orbit-trace--secondary absolute inset-[16%] rounded-full border border-white/6" />
 
         {ambientStars.map(star => (
           <span
@@ -58,28 +33,32 @@ export function CuryoAnimation() {
           />
         ))}
 
-        <div className="curyo-animation__logo relative h-[18rem] w-[18rem] sm:h-[24rem] sm:w-[24rem] lg:h-[28rem] lg:w-[28rem]">
-          <CuryoPlanetMark className="h-full w-full" animated title="Animated Curyo logo" />
+        <div className="curyo-animation__logo relative h-[17rem] w-[17rem] sm:h-[23rem] sm:w-[23rem] lg:h-[26rem] lg:w-[26rem]">
+          <CuryoOrbitalMark className="h-full w-full" animated title="Animated Curyo logo" />
         </div>
       </div>
 
       <style jsx>{`
         .curyo-animation__logo {
           animation: hero-float 9s ease-in-out infinite;
-          filter: drop-shadow(0 0 36px rgba(3, 206, 164, 0.12)) drop-shadow(0 0 52px rgba(53, 158, 238, 0.1));
+          filter: drop-shadow(0 0 42px rgba(239, 71, 111, 0.12)) drop-shadow(0 0 58px rgba(53, 158, 238, 0.1));
+        }
+
+        .curyo-animation__orbit-trace {
+          animation: orbit-spin 24s linear infinite;
+          opacity: 0.72;
+          transform: rotate(-18deg);
+        }
+
+        .curyo-animation__orbit-trace--secondary {
+          animation-duration: 30s;
+          opacity: 0.5;
+          transform: rotate(16deg);
         }
 
         .curyo-animation__star {
-          animation: star-pulse 4.8s ease-in-out infinite;
+          animation: star-pulse 5.2s ease-in-out infinite;
           box-shadow: 0 0 18px currentColor;
-        }
-
-        .curyo-animation__link {
-          animation: link-breathe 6.4s ease-in-out infinite;
-          stroke: rgba(106, 146, 210, 0.38);
-          stroke-dasharray: 2.4 4;
-          stroke-linecap: round;
-          stroke-width: 0.22;
         }
 
         @keyframes hero-float {
@@ -92,34 +71,32 @@ export function CuryoAnimation() {
           }
         }
 
-        @keyframes star-pulse {
+        @keyframes orbit-spin {
           0%,
           100% {
-            opacity: 0.35;
-            transform: scale(0.9);
+            transform: rotate(-18deg) scale(0.98);
           }
           50% {
-            opacity: 0.95;
-            transform: scale(1.18);
+            transform: rotate(-10deg) scale(1.02);
           }
         }
 
-        @keyframes link-breathe {
+        @keyframes star-pulse {
           0%,
           100% {
-            opacity: 0.12;
-            stroke-dashoffset: 0;
+            opacity: 0.28;
+            transform: scale(0.88);
           }
           50% {
-            opacity: 0.68;
-            stroke-dashoffset: -8;
+            opacity: 0.98;
+            transform: scale(1.18);
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .curyo-animation__logo,
           .curyo-animation__star,
-          .curyo-animation__link {
+          .curyo-animation__orbit-trace {
             animation: none;
           }
         }

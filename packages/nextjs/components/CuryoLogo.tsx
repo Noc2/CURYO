@@ -1,8 +1,8 @@
-import { CuryoPlanetMark } from "~~/components/brand/CuryoPlanetMark";
+import { CuryoOrbitalMark } from "~~/components/brand/CuryoOrbitalMark";
 
 /**
  * Shared Curyo logo wrapper.
  */
 export function CuryoLogo({ className = "h-8 w-8" }: { className?: string }) {
-  return <CuryoPlanetMark className={className} title="Curyo logo" />;
+  return <CuryoOrbitalMark className={className} title="Curyo logo" />;
 }
