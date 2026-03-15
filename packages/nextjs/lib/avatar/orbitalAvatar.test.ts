@@ -139,10 +139,9 @@ test("orbital core size saturates at extreme cREP balances", () => {
   assert.equal(extreme.coreOrb?.radius, capped.coreOrb?.radius);
 });
 
-test("orbital avatars render tiny background stars from categories", () => {
+test("orbital avatars do not render background stars", () => {
   const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
-  assert.equal(model.backgroundStars.length, 4);
-  assert.ok(model.backgroundStars.every(star => star.radius < 10));
+  assert.equal("backgroundStars" in model, false);
 });
 
 test("orbital accuracy ring stays bounded and elliptical", () => {
@@ -167,7 +166,6 @@ test("unclaimed wallets render an empty shell instead of a filled orb", () => {
 
   assert.equal(model.coreOrb, null);
   assert.ok(model.shellOrbit);
-  assert.equal(model.backgroundStars.length, 0);
 });
 
 test("renderer returns svg markup for the orbital avatar", () => {

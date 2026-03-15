@@ -31,19 +31,11 @@ interface OrbitalAvatarShell {
   color: string;
 }
 
-interface OrbitalAvatarBackgroundStar extends Point {
-  radius: number;
-  color: string;
-  opacity: number;
-  hollow: boolean;
-}
-
 export interface OrbitalAvatarModel {
   compositionRotation: number;
   coreOrb: OrbitalAvatarOrb | null;
   shellOrbit: OrbitalAvatarShell | null;
   accuracyRing: OrbitalAvatarRing | null;
-  backgroundStars: OrbitalAvatarBackgroundStar[];
 }
 
 const VIEWBOX_SIZE = 512;
@@ -154,14 +146,6 @@ function getAddressColorSeed(address: string) {
   return address.toLowerCase().replace(/^0x/, "").slice(-6).padStart(6, "0");
 }
 
-function polarToCartesian(angleDegrees: number, radius: number): Point {
-  const radians = (angleDegrees * Math.PI) / 180;
-  return {
-    x: CENTER + Math.cos(radians) * radius,
-    y: CENTER + Math.sin(radians) * radius,
-  };
-}
-
 function getSignalScores(payload: ReputationAvatarPayload) {
   const balanceCrep = Number(BigInt(payload.balance || "0")) / 1e6;
   const stats = payload.stats;
@@ -186,14 +170,14 @@ function getAddressVariant(address: string) {
 
   return {
     compositionRotation: hashed("orb-rotation") * 360,
-    ringRotation: -18 + hashed("ring-rotation") * 36,
+    ringRotation: 14 + hashed("ring-rotation") * 12,
     orbColorA: hslToHex(hue + 32, Math.min(saturation + 10, 96), 68),
     orbColorB: hslToHex(hue - 8, Math.min(saturation + 8, 94), 48),
     orbColorC: hslToHex(hue + 116, Math.min(saturation + 6, 90), 34),
     orbGlowColor: hslToHex(hue + 26, Math.min(saturation + 12, 98), 62),
-    ringColorA: hslToHex(hue + 18, 28, 98),
-    ringColorB: hslToHex(hue - 10, 24, 92),
-    ringColorC: hslToHex(hue + 42, 26, 96),
+    ringColorA: hslToHex(hue + 38, Math.min(saturation + 12, 82), 88),
+    ringColorB: hslToHex(hue - 14, Math.min(saturation + 8, 76), 96),
+    ringColorC: hslToHex(hue + 150, Math.min(saturation + 14, 84), 86),
   };
 }
 
@@ -244,31 +228,6 @@ function buildShellOrbit(): OrbitalAvatarShell {
   };
 }
 
-function buildBackgroundStars(
-  payload: ReputationAvatarPayload,
-  variant: ReturnType<typeof getAddressVariant>,
-): OrbitalAvatarBackgroundStar[] {
-  return payload.categories90d
-    .filter(category => category.settledVotes90d >= 3)
-    .slice(0, 4)
-    .map((category, index) => {
-      const seed = unitHash(`${payload.address}:${category.categoryId}:bg-star`);
-      const angle = variant.compositionRotation + index * 84 + seed * 42;
-      const radius = 176 + index * 12 + seed * 36;
-      const point = polarToCartesian(angle, radius);
-      const hue = Number(BigInt(category.categoryId) % 360n);
-
-      return {
-        x: point.x,
-        y: point.y,
-        radius: 5 + seed * 4,
-        color: hslToHex(hue, 92, 58),
-        opacity: 0.72,
-        hollow: seed > 0.55,
-      };
-    });
-}
-
 export function buildOrbitalAvatarModel(
   payload: ReputationAvatarPayload,
   _options?: { nowSeconds?: number },
@@ -283,7 +242,6 @@ export function buildOrbitalAvatarModel(
     coreOrb,
     shellOrbit: coreOrb ? null : buildShellOrbit(),
     accuracyRing,
-    backgroundStars: coreOrb ? buildBackgroundStars(payload, variant) : [],
   };
 }
 
@@ -364,14 +322,6 @@ function renderCoreOrb(coreOrb: OrbitalAvatarOrb, hashHex: string) {
     <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${(coreOrb.radius * 0.78).toFixed(2)}" fill="url(#orbital-avatar-highlight-${hashHex})"/>`;
 }
 
-function renderBackgroundStar(star: OrbitalAvatarBackgroundStar) {
-  if (star.hollow) {
-    return `<circle cx="${star.x.toFixed(2)}" cy="${star.y.toFixed(2)}" r="${star.radius.toFixed(2)}" fill="none" stroke="${star.color}" stroke-width="${Math.max(2, star.radius * 0.48).toFixed(2)}" stroke-opacity="${star.opacity.toFixed(3)}"/>`;
-  }
-
-  return `<circle cx="${star.x.toFixed(2)}" cy="${star.y.toFixed(2)}" r="${star.radius.toFixed(2)}" fill="${star.color}" fill-opacity="${star.opacity.toFixed(3)}"/>`;
-}
-
 export function renderOrbitalAvatarSvg(
   payload: ReputationAvatarPayload,
   options?: { size?: number; nowSeconds?: number },
@@ -383,7 +333,6 @@ export function renderOrbitalAvatarSvg(
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
   <defs>${defs}</defs>
-  ${model.backgroundStars.map(renderBackgroundStar).join("")}
   ${model.accuracyRing ? renderAccuracyRing(model.accuracyRing, hashHex) : ""}
   ${model.shellOrbit ? renderShellOrbit(model.shellOrbit) : ""}
   ${model.coreOrb ? renderCoreOrb(model.coreOrb, hashHex) : ""}
