@@ -170,7 +170,7 @@ function getAddressVariant(address: string) {
 
   return {
     compositionRotation: hashed("orb-rotation") * 360,
-    ringRotation: 14 + hashed("ring-rotation") * 12,
+    ringRotation: -(14 + hashed("ring-rotation") * 12),
     orbColorA: hslToHex(hue + 32, Math.min(saturation + 10, 96), 68),
     orbColorB: hslToHex(hue - 8, Math.min(saturation + 8, 94), 48),
     orbColorC: hslToHex(hue + 116, Math.min(saturation + 6, 90), 34),
