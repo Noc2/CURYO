@@ -188,7 +188,7 @@ function buildCoreOrb(
   return {
     x: CENTER,
     y: CENTER,
-    radius: 106 + 22 * balanceScore,
+    radius: 100 + 28 * balanceScore,
     colorA: variant.orbColorA,
     colorB: variant.orbColorB,
     colorC: variant.orbColorC,
@@ -204,6 +204,9 @@ function buildAccuracyRings(
   if (!coreOrb || !payload.stats) return [];
 
   const { accuracyConfidence, accuracyScore } = getSignalScores(payload);
+  const ringCount = Math.ceil(accuracyScore * 3);
+  if (ringCount === 0) return [];
+
   const signalStrength = 0.22 + accuracyScore * 0.78;
   const radii = [coreOrb.radius + 34, coreOrb.radius + 64, coreOrb.radius + 94];
   const strokeWidths = [
@@ -213,7 +216,7 @@ function buildAccuracyRings(
   ];
   const opacities = [0.24 + signalStrength * 0.62, 0.12 + signalStrength * 0.42, 0.06 + signalStrength * 0.28];
 
-  return radii.map((radius, index) => ({
+  return radii.slice(0, ringCount).map((radius, index) => ({
     radius,
     opacity: clamp(opacities[index], 0, 0.96),
     strokeWidth: strokeWidths[index],

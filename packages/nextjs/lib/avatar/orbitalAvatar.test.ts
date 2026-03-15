@@ -139,6 +139,25 @@ test("lighthouse core size saturates at extreme cREP balances", () => {
   assert.equal(extreme.coreOrb?.radius, capped.coreOrb?.radius);
 });
 
+test("lighthouse low cREP balances stay visibly smaller", () => {
+  const lowBalance = buildOrbitalAvatarModel(
+    buildPayload({
+      balance: "10000000",
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+  const mediumBalance = buildOrbitalAvatarModel(
+    buildPayload({
+      balance: "250000000",
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.ok(lowBalance.coreOrb);
+  assert.ok(mediumBalance.coreOrb);
+  assert.ok(mediumBalance.coreOrb.radius - lowBalance.coreOrb.radius >= 7);
+});
+
 test("lighthouse avatars do not render background stars", () => {
   const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
   assert.equal("backgroundStars" in model, false);
@@ -147,11 +166,10 @@ test("lighthouse avatars do not render background stars", () => {
 test("lighthouse accuracy rings stay bounded and concentric", () => {
   const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
 
-  assert.equal(model.accuracyRings.length, 3);
+  assert.equal(model.accuracyRings.length, 2);
   assert.ok(model.accuracyRings.every(ring => typeof ring.radius === "number"));
   assert.ok(model.accuracyRings.every(ring => ring.radius + ring.strokeWidth / 2 < 240));
   assert.ok(model.accuracyRings[0].radius < model.accuracyRings[1].radius);
-  assert.ok(model.accuracyRings[1].radius < model.accuracyRings[2].radius);
 });
 
 test("lighthouse accuracy rings grow thicker rather than larger for high-accuracy profiles", () => {
@@ -164,6 +182,19 @@ test("lighthouse accuracy rings grow thicker rather than larger for high-accurac
         currentStreak: 1,
         bestWinStreak: 3,
         winRate: 22 / 48,
+      },
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+  const zeroAccuracy = buildOrbitalAvatarModel(
+    buildPayload({
+      stats: {
+        totalSettledVotes: 48,
+        totalWins: 0,
+        totalLosses: 48,
+        currentStreak: 0,
+        bestWinStreak: 1,
+        winRate: 0,
       },
     }),
     { nowSeconds: NOW_SECONDS },
@@ -195,7 +226,8 @@ test("lighthouse accuracy rings grow thicker rather than larger for high-accurac
     { nowSeconds: NOW_SECONDS },
   );
 
-  assert.equal(lowAccuracy.accuracyRings.length, 3);
+  assert.equal(zeroAccuracy.accuracyRings.length, 0);
+  assert.equal(lowAccuracy.accuracyRings.length, 1);
   assert.equal(highAccuracy.accuracyRings.length, 3);
   assert.equal(perfectAccuracy.accuracyRings.length, 3);
 
