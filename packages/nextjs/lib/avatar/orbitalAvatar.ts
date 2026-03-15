@@ -14,9 +14,7 @@ interface OrbitalAvatarOrb extends Point {
 }
 
 interface OrbitalAvatarRing {
-  radiusX: number;
-  radiusY: number;
-  rotation: number;
+  radius: number;
   opacity: number;
   strokeWidth: number;
   colorA: string;
@@ -25,7 +23,7 @@ interface OrbitalAvatarRing {
 }
 
 interface OrbitalAvatarShell {
-  radius: number;
+  radii: number[];
   opacity: number;
   strokeWidth: number;
   color: string;
@@ -35,7 +33,7 @@ export interface OrbitalAvatarModel {
   compositionRotation: number;
   coreOrb: OrbitalAvatarOrb | null;
   shellOrbit: OrbitalAvatarShell | null;
-  accuracyRing: OrbitalAvatarRing | null;
+  accuracyRings: OrbitalAvatarRing[];
 }
 
 const VIEWBOX_SIZE = 512;
@@ -156,7 +154,7 @@ function getSignalScores(payload: ReputationAvatarPayload) {
   const accuracyWinRate = stats?.winRate ?? 0;
   const accuracyScore = clamp((accuracyWinRate - 0.45) / 0.55, 0, 1) * accuracyConfidence;
 
-  return { balanceScore, accuracyScore };
+  return { balanceScore, accuracyConfidence, accuracyScore };
 }
 
 function getAddressVariant(address: string) {
@@ -170,14 +168,13 @@ function getAddressVariant(address: string) {
 
   return {
     compositionRotation: hashed("orb-rotation") * 360,
-    ringRotation: -(14 + hashed("ring-rotation") * 12),
     orbColorA: hslToHex(hue + 32, Math.min(saturation + 10, 96), 68),
     orbColorB: hslToHex(hue - 8, Math.min(saturation + 8, 94), 48),
     orbColorC: hslToHex(hue + 116, Math.min(saturation + 6, 90), 34),
     orbGlowColor: hslToHex(hue + 26, Math.min(saturation + 12, 98), 62),
-    ringColorA: hslToHex(hue + 18, 34, 92),
-    ringColorB: "#FFFFFF",
-    ringColorC: hslToHex(hue - 24, 28, 88),
+    ringColorA: hslToHex(hue + 22, 54, 84),
+    ringColorB: hslToHex(hue - 4, 72, 94),
+    ringColorC: hslToHex(hue + 118, 48, 82),
   };
 }
 
@@ -199,29 +196,36 @@ function buildCoreOrb(
   };
 }
 
-function buildAccuracyRing(
+function buildAccuracyRings(
   payload: ReputationAvatarPayload,
   coreOrb: OrbitalAvatarOrb | null,
   variant: ReturnType<typeof getAddressVariant>,
-): OrbitalAvatarRing | null {
-  if (!coreOrb || !payload.stats) return null;
+): OrbitalAvatarRing[] {
+  if (!coreOrb || !payload.stats) return [];
 
-  const { accuracyScore } = getSignalScores(payload);
-  return {
-    radiusX: 214,
-    radiusY: 62,
-    rotation: variant.ringRotation,
-    opacity: 0.82 + accuracyScore * 0.12,
-    strokeWidth: 9 + accuracyScore * 17,
+  const { accuracyConfidence, accuracyScore } = getSignalScores(payload);
+  const signalStrength = 0.22 + accuracyScore * 0.78;
+  const radii = [coreOrb.radius + 34, coreOrb.radius + 64, coreOrb.radius + 94];
+  const strokeWidths = [
+    5.5 + accuracyScore * 5 + accuracyConfidence * 1.5,
+    4 + accuracyScore * 4 + accuracyConfidence * 1.2,
+    3 + accuracyScore * 3 + accuracyConfidence * 0.8,
+  ];
+  const opacities = [0.24 + signalStrength * 0.62, 0.12 + signalStrength * 0.42, 0.06 + signalStrength * 0.28];
+
+  return radii.map((radius, index) => ({
+    radius,
+    opacity: clamp(opacities[index], 0, 0.96),
+    strokeWidth: strokeWidths[index],
     colorA: variant.ringColorA,
     colorB: variant.ringColorB,
     colorC: variant.ringColorC,
-  };
+  }));
 }
 
 function buildShellOrbit(): OrbitalAvatarShell {
   return {
-    radius: 214,
+    radii: [118, 148, 178],
     opacity: 0.18,
     strokeWidth: 12,
     color: "rgba(255,255,255,0.14)",
@@ -235,13 +239,13 @@ export function buildOrbitalAvatarModel(
   void _options;
   const variant = getAddressVariant(payload.address);
   const coreOrb = buildCoreOrb(payload, variant);
-  const accuracyRing = buildAccuracyRing(payload, coreOrb, variant);
+  const accuracyRings = buildAccuracyRings(payload, coreOrb, variant);
 
   return {
     compositionRotation: variant.compositionRotation,
     coreOrb,
     shellOrbit: coreOrb ? null : buildShellOrbit(),
-    accuracyRing,
+    accuracyRings,
   };
 }
 
@@ -270,23 +274,13 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
     );
   }
 
-  if (model.accuracyRing) {
+  if (model.accuracyRings.length > 0) {
     defs.push(
       `<linearGradient id="orbital-avatar-ring-${hashHex}" x1="0" y1="0.3" x2="1" y2="0.7" gradientUnits="objectBoundingBox">
-        <stop offset="0%" stop-color="${model.accuracyRing.colorA}"/>
-        <stop offset="52%" stop-color="${model.accuracyRing.colorB}"/>
-        <stop offset="100%" stop-color="${model.accuracyRing.colorC}"/>
+        <stop offset="0%" stop-color="${model.accuracyRings[0].colorA}"/>
+        <stop offset="52%" stop-color="${model.accuracyRings[0].colorB}"/>
+        <stop offset="100%" stop-color="${model.accuracyRings[0].colorC}"/>
       </linearGradient>`,
-    );
-    defs.push(
-      `<clipPath id="orbital-avatar-ring-back-clip-${hashHex}">
-        <rect x="0" y="0" width="${VIEWBOX_SIZE}" height="${CENTER}"/>
-      </clipPath>`,
-    );
-    defs.push(
-      `<clipPath id="orbital-avatar-ring-front-clip-${hashHex}">
-        <rect x="0" y="${CENTER}" width="${VIEWBOX_SIZE}" height="${CENTER}"/>
-      </clipPath>`,
     );
   }
 
@@ -294,25 +288,22 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
 }
 
 function renderShellOrbit(shellOrbit: OrbitalAvatarShell) {
-  return `<circle cx="${CENTER}" cy="${CENTER}" r="${shellOrbit.radius.toFixed(2)}" fill="none" stroke="${shellOrbit.color}" stroke-width="${shellOrbit.strokeWidth.toFixed(2)}" stroke-opacity="${shellOrbit.opacity.toFixed(3)}"/>`;
+  return shellOrbit.radii
+    .map((radius, index) => {
+      const strokeWidth = Math.max(4, shellOrbit.strokeWidth - index * 2);
+      const opacity = Math.max(0.06, shellOrbit.opacity - index * 0.04);
+      return `<circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="none" stroke="${shellOrbit.color}" stroke-width="${strokeWidth.toFixed(2)}" stroke-opacity="${opacity.toFixed(3)}"/>`;
+    })
+    .join("");
 }
 
-function renderAccuracyRing(ring: OrbitalAvatarRing, hashHex: string) {
-  const rotate = `rotate(${ring.rotation.toFixed(2)} ${CENTER} ${CENTER})`;
-
-  return `
-    <g transform="${rotate}">
-      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-back-clip-${hashHex})" stroke-linecap="round"/>
-    </g>`;
-}
-
-function renderAccuracyRingFront(ring: OrbitalAvatarRing, hashHex: string) {
-  const rotate = `rotate(${ring.rotation.toFixed(2)} ${CENTER} ${CENTER})`;
-
-  return `
-    <g transform="${rotate}">
-      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}" clip-path="url(#orbital-avatar-ring-front-clip-${hashHex})" stroke-linecap="round"/>
-    </g>`;
+function renderAccuracyRings(rings: OrbitalAvatarRing[], hashHex: string) {
+  return rings
+    .map(
+      ring =>
+        `<circle cx="${CENTER}" cy="${CENTER}" r="${ring.radius.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}"/>`,
+    )
+    .join("");
 }
 
 function renderCoreOrb(coreOrb: OrbitalAvatarOrb, hashHex: string) {
@@ -333,9 +324,8 @@ export function renderOrbitalAvatarSvg(
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
   <defs>${defs}</defs>
-  ${model.accuracyRing ? renderAccuracyRing(model.accuracyRing, hashHex) : ""}
+  ${model.accuracyRings.length > 0 ? renderAccuracyRings(model.accuracyRings, hashHex) : ""}
   ${model.shellOrbit ? renderShellOrbit(model.shellOrbit) : ""}
   ${model.coreOrb ? renderCoreOrb(model.coreOrb, hashHex) : ""}
-  ${model.accuracyRing ? renderAccuracyRingFront(model.accuracyRing, hashHex) : ""}
 </svg>`;
 }

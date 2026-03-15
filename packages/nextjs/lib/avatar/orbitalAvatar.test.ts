@@ -110,7 +110,7 @@ function buildPayload(overrides?: Partial<ReputationAvatarPayload>): ReputationA
   };
 }
 
-test("orbital avatars vary by address color and frozen progress", () => {
+test("lighthouse avatars vary by address color and composition", () => {
   const modelA = buildOrbitalAvatarModel(buildPayload({ address: "0x0000000000000000000000000000000000ff3300" }), {
     nowSeconds: NOW_SECONDS,
   });
@@ -122,7 +122,7 @@ test("orbital avatars vary by address color and frozen progress", () => {
   assert.notEqual(modelA.coreOrb?.colorA, modelB.coreOrb?.colorA);
 });
 
-test("orbital core size saturates at extreme cREP balances", () => {
+test("lighthouse core size saturates at extreme cREP balances", () => {
   const capped = buildOrbitalAvatarModel(
     buildPayload({
       balance: "100000000000",
@@ -139,22 +139,22 @@ test("orbital core size saturates at extreme cREP balances", () => {
   assert.equal(extreme.coreOrb?.radius, capped.coreOrb?.radius);
 });
 
-test("orbital avatars do not render background stars", () => {
+test("lighthouse avatars do not render background stars", () => {
   const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
   assert.equal("backgroundStars" in model, false);
 });
 
-test("orbital accuracy ring stays bounded and elliptical", () => {
+test("lighthouse accuracy rings stay bounded and concentric", () => {
   const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
 
-  assert.ok(model.accuracyRing);
-  assert.equal(typeof model.accuracyRing.radiusX, "number");
-  assert.equal(typeof model.accuracyRing.radiusY, "number");
-  assert.ok(model.accuracyRing.radiusX > model.accuracyRing.radiusY);
-  assert.ok(model.accuracyRing.radiusX + model.accuracyRing.strokeWidth / 2 < 240);
+  assert.equal(model.accuracyRings.length, 3);
+  assert.ok(model.accuracyRings.every(ring => typeof ring.radius === "number"));
+  assert.ok(model.accuracyRings.every(ring => ring.radius + ring.strokeWidth / 2 < 240));
+  assert.ok(model.accuracyRings[0].radius < model.accuracyRings[1].radius);
+  assert.ok(model.accuracyRings[1].radius < model.accuracyRings[2].radius);
 });
 
-test("orbital accuracy ring grows thicker rather than larger for high-accuracy profiles", () => {
+test("lighthouse accuracy rings grow thicker rather than larger for high-accuracy profiles", () => {
   const lowAccuracy = buildOrbitalAvatarModel(
     buildPayload({
       stats: {
@@ -195,13 +195,15 @@ test("orbital accuracy ring grows thicker rather than larger for high-accuracy p
     { nowSeconds: NOW_SECONDS },
   );
 
-  assert.ok(lowAccuracy.accuracyRing);
-  assert.ok(highAccuracy.accuracyRing);
-  assert.ok(perfectAccuracy.accuracyRing);
-  assert.equal(highAccuracy.accuracyRing.radiusX, lowAccuracy.accuracyRing.radiusX);
-  assert.equal(highAccuracy.accuracyRing.radiusY, lowAccuracy.accuracyRing.radiusY);
-  assert.ok(highAccuracy.accuracyRing.strokeWidth - lowAccuracy.accuracyRing.strokeWidth >= 8);
-  assert.ok(perfectAccuracy.accuracyRing.strokeWidth > highAccuracy.accuracyRing.strokeWidth);
+  assert.equal(lowAccuracy.accuracyRings.length, 3);
+  assert.equal(highAccuracy.accuracyRings.length, 3);
+  assert.equal(perfectAccuracy.accuracyRings.length, 3);
+
+  for (let index = 0; index < lowAccuracy.accuracyRings.length; index++) {
+    assert.equal(highAccuracy.accuracyRings[index].radius, lowAccuracy.accuracyRings[index].radius);
+    assert.ok(highAccuracy.accuracyRings[index].strokeWidth > lowAccuracy.accuracyRings[index].strokeWidth);
+    assert.ok(perfectAccuracy.accuracyRings[index].strokeWidth > highAccuracy.accuracyRings[index].strokeWidth);
+  }
 });
 
 test("unclaimed wallets render an empty shell instead of a filled orb", () => {
@@ -217,13 +219,15 @@ test("unclaimed wallets render an empty shell instead of a filled orb", () => {
 
   assert.equal(model.coreOrb, null);
   assert.ok(model.shellOrbit);
+  assert.equal(model.accuracyRings.length, 0);
 });
 
-test("renderer returns svg markup for the orbital avatar", () => {
+test("renderer returns svg markup for the lighthouse avatar", () => {
   const svg = renderOrbitalAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
 
   assert.match(svg, /orbital-avatar-body-/);
   assert.match(svg, /orbital-avatar-ring-/);
-  assert.match(svg, /ellipse/);
-  assert.match(svg, /clipPath/);
+  assert.match(svg, /circle/);
+  assert.doesNotMatch(svg, /ellipse/);
+  assert.doesNotMatch(svg, /clipPath/);
 });
