@@ -1,4 +1,4 @@
-![CURYO — The Reputation Game for the Age of AI](packages/nextjs/public/banner.png)
+![CURYO — Quality signals backed by human reputation](packages/nextjs/public/banner.png)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>

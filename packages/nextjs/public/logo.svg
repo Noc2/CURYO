@@ -1,71 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
   <defs>
-    <radialGradient id="curyo-logo-halo" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#FF687A" stop-opacity="0.26" />
-      <stop offset="62%" stop-color="#FF687A" stop-opacity="0.091" />
-      <stop offset="100%" stop-color="#FF687A" stop-opacity="0" />
-    </radialGradient>
-    <linearGradient id="curyo-logo-planet" x1="0.15" y1="0.1" x2="0.85" y2="0.9" gradientUnits="objectBoundingBox" gradientTransform="rotate(42 0.5 0.5)">
-      <stop offset="0%" stop-color="#359EEE" />
-      <stop offset="34%" stop-color="#EF476F" />
-      <stop offset="68%" stop-color="#FFC43D" />
-      <stop offset="100%" stop-color="#03CEA4" />
-    </linearGradient>
-    <radialGradient id="curyo-logo-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.22" />
-      <stop offset="56%" stop-color="#FFC43D" stop-opacity="0.16" />
+
+    <radialGradient id="logo-orb-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.18" />
+      <stop offset="44%" stop-color="#359EEE" stop-opacity="0.11" />
+      <stop offset="76%" stop-color="#03CEA4" stop-opacity="0.08" />
       <stop offset="100%" stop-color="#03CEA4" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="curyo-logo-highlight" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.34 0.3) scale(0.44 0.34)">
-      <stop stop-color="#FFFFFF" stop-opacity="0.56" />
+    <linearGradient id="logo-orb" x1="0.22" y1="0.14" x2="0.78" y2="0.88" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#359EEE" />
+      <stop offset="34%" stop-color="#EF476F" />
+      <stop offset="66%" stop-color="#FFC43D" />
+      <stop offset="100%" stop-color="#03CEA4" />
+    </linearGradient>
+    <radialGradient id="logo-gloss" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.34 0.28) scale(0.42 0.32)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.62" />
+      <stop offset="0.48" stop-color="#FFFFFF" stop-opacity="0.24" />
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="curyo-logo-ring" x1="0" y1="0.3" x2="1" y2="0.7" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#FFDCE7" />
-      <stop offset="48%" stop-color="#FFF8FB" />
-      <stop offset="100%" stop-color="#FFEFF5" />
+    <linearGradient id="logo-inner-ring" x1="146" y1="108" x2="366" y2="404" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFEAF4" />
+      <stop offset="100%" stop-color="#EFF4FF" />
     </linearGradient>
-    <clipPath id="curyo-logo-ring-back">
-      <rect x="0" y="0" width="512" height="256" />
-    </clipPath>
-    <clipPath id="curyo-logo-ring-front">
-      <rect x="0" y="256" width="512" height="256" />
-    </clipPath>
+    <linearGradient id="logo-middle-ring" x1="126" y1="90" x2="386" y2="422" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D8D5E2" />
+      <stop offset="100%" stop-color="#E7EAF3" />
+    </linearGradient>
+    <linearGradient id="logo-outer-ring" x1="106" y1="72" x2="406" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#737182" />
+      <stop offset="100%" stop-color="#8B8A99" />
+    </linearGradient>
+
   </defs>
 
-  <circle cx="256" cy="256" r="178" fill="url(#curyo-logo-halo)" />
+  <circle cx="256" cy="256" r="174" fill="none" stroke="url(#logo-outer-ring)" stroke-width="8" stroke-opacity="0.82" />
+  <circle cx="256" cy="256" r="144" fill="none" stroke="url(#logo-middle-ring)" stroke-width="9" stroke-opacity="0.9" />
+  <circle cx="256" cy="256" r="114" fill="none" stroke="url(#logo-inner-ring)" stroke-width="11" stroke-opacity="0.98" />
+  <circle cx="371" cy="334" r="4.2" fill="#F8FAFF" fill-opacity="0.94" />
+  <circle cx="256" cy="256" r="118" fill="url(#logo-orb-glow)" />
+  <circle cx="256" cy="256" r="64" fill="url(#logo-orb)" />
+  <circle cx="256" cy="256" r="52" fill="url(#logo-gloss)" />
 
-  <g transform="rotate(-18 256 256)">
-    <ellipse
-      cx="256"
-      cy="256"
-      rx="198"
-      ry="54"
-      fill="none"
-      stroke="url(#curyo-logo-ring)"
-      stroke-width="18"
-      stroke-opacity="0.96"
-      clip-path="url(#curyo-logo-ring-back)"
-      stroke-linecap="round"
-    />
-  </g>
-
-  <circle cx="256" cy="256" r="194" fill="url(#curyo-logo-glow)" fill-opacity="0.82" />
-  <circle cx="256" cy="256" r="108" fill="url(#curyo-logo-planet)" />
-  <circle cx="256" cy="256" r="86.4" fill="url(#curyo-logo-highlight)" />
-
-  <g transform="rotate(-18 256 256)">
-    <ellipse
-      cx="256"
-      cy="256"
-      rx="198"
-      ry="54"
-      fill="none"
-      stroke="url(#curyo-logo-ring)"
-      stroke-width="18"
-      stroke-opacity="0.96"
-      clip-path="url(#curyo-logo-ring-front)"
-      stroke-linecap="round"
-    />
-  </g>
 </svg>

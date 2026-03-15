@@ -1,100 +1,78 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" fill="none">
   <defs>
     <linearGradient id="og-bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#020305" />
-      <stop offset="50%" stop-color="#070A15" />
+      <stop offset="0%" stop-color="#020307" />
+      <stop offset="50%" stop-color="#070B16" />
       <stop offset="100%" stop-color="#101726" />
     </linearGradient>
-    <radialGradient id="og-left-glow" cx="260" cy="320" r="340" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#18243C" stop-opacity="0.58" />
-      <stop offset="48%" stop-color="#0D1527" stop-opacity="0.18" />
+    <radialGradient id="og-left-glow" cx="248" cy="324" r="314" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#162036" stop-opacity="0.56" />
+      <stop offset="50%" stop-color="#0B1324" stop-opacity="0.18" />
       <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="og-right-glow" cx="960" cy="270" r="420" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#10182D" stop-opacity="0.16" />
-      <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
-    </radialGradient>
-
-    <radialGradient id="og-mark-halo" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#FF687A" stop-opacity="0.26" />
-      <stop offset="62%" stop-color="#FF687A" stop-opacity="0.091" />
-      <stop offset="100%" stop-color="#FF687A" stop-opacity="0" />
-    </radialGradient>
-    <linearGradient id="og-mark-planet" x1="0.15" y1="0.1" x2="0.85" y2="0.9" gradientUnits="objectBoundingBox" gradientTransform="rotate(42 0.5 0.5)">
-      <stop offset="0%" stop-color="#359EEE" />
-      <stop offset="34%" stop-color="#EF476F" />
-      <stop offset="68%" stop-color="#FFC43D" />
-      <stop offset="100%" stop-color="#03CEA4" />
-    </linearGradient>
-    <radialGradient id="og-mark-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.22" />
-      <stop offset="56%" stop-color="#FFC43D" stop-opacity="0.16" />
+    <radialGradient id="og-core-glow" cx="306" cy="308" r="160" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.18" />
+      <stop offset="48%" stop-color="#359EEE" stop-opacity="0.1" />
       <stop offset="100%" stop-color="#03CEA4" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="og-mark-highlight" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.34 0.3) scale(0.44 0.34)">
-      <stop stop-color="#FFFFFF" stop-opacity="0.56" />
+
+    <radialGradient id="og-orb-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.18" />
+      <stop offset="44%" stop-color="#359EEE" stop-opacity="0.11" />
+      <stop offset="76%" stop-color="#03CEA4" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#03CEA4" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="og-orb" x1="0.22" y1="0.14" x2="0.78" y2="0.88" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#359EEE" />
+      <stop offset="34%" stop-color="#EF476F" />
+      <stop offset="66%" stop-color="#FFC43D" />
+      <stop offset="100%" stop-color="#03CEA4" />
+    </linearGradient>
+    <radialGradient id="og-gloss" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.34 0.28) scale(0.42 0.32)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.62" />
+      <stop offset="0.48" stop-color="#FFFFFF" stop-opacity="0.24" />
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="og-mark-ring" x1="0" y1="0.3" x2="1" y2="0.7" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#FFDCE7" />
-      <stop offset="48%" stop-color="#FFF8FB" />
-      <stop offset="100%" stop-color="#FFEFF5" />
+    <linearGradient id="og-inner-ring" x1="146" y1="108" x2="366" y2="404" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFEAF4" />
+      <stop offset="100%" stop-color="#EFF4FF" />
     </linearGradient>
-    <clipPath id="og-mark-ring-back">
-      <rect x="0" y="0" width="512" height="256" />
-    </clipPath>
-    <clipPath id="og-mark-ring-front">
-      <rect x="0" y="256" width="512" height="256" />
-    </clipPath>
-    <symbol id="og-brand-mark" viewBox="0 0 512 512">
-      <circle cx="256" cy="256" r="178" fill="url(#og-mark-halo)" />
-      <g transform="rotate(-18 256 256)">
-        <ellipse
-          cx="256"
-          cy="256"
-          rx="198"
-          ry="54"
-          fill="none"
-          stroke="url(#og-mark-ring)"
-          stroke-width="18"
-          stroke-opacity="0.96"
-          clip-path="url(#og-mark-ring-back)"
-          stroke-linecap="round"
-        />
-      </g>
-      <circle cx="256" cy="256" r="194" fill="url(#og-mark-glow)" fill-opacity="0.82" />
-      <circle cx="256" cy="256" r="108" fill="url(#og-mark-planet)" />
-      <circle cx="256" cy="256" r="86.4" fill="url(#og-mark-highlight)" />
-      <g transform="rotate(-18 256 256)">
-        <ellipse
-          cx="256"
-          cy="256"
-          rx="198"
-          ry="54"
-          fill="none"
-          stroke="url(#og-mark-ring)"
-          stroke-width="18"
-          stroke-opacity="0.96"
-          clip-path="url(#og-mark-ring-front)"
-          stroke-linecap="round"
-        />
-      </g>
+    <linearGradient id="og-middle-ring" x1="126" y1="90" x2="386" y2="422" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D8D5E2" />
+      <stop offset="100%" stop-color="#E7EAF3" />
+    </linearGradient>
+    <linearGradient id="og-outer-ring" x1="106" y1="72" x2="406" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#737182" />
+      <stop offset="100%" stop-color="#8B8A99" />
+    </linearGradient>
+
+    <symbol id="og-mark" viewBox="0 0 512 512">
+
+  <circle cx="256" cy="256" r="174" fill="none" stroke="url(#og-outer-ring)" stroke-width="8" stroke-opacity="0.82" />
+  <circle cx="256" cy="256" r="144" fill="none" stroke="url(#og-middle-ring)" stroke-width="9" stroke-opacity="0.9" />
+  <circle cx="256" cy="256" r="114" fill="none" stroke="url(#og-inner-ring)" stroke-width="11" stroke-opacity="0.98" />
+  <circle cx="371" cy="334" r="4.2" fill="#F8FAFF" fill-opacity="0.94" />
+  <circle cx="256" cy="256" r="118" fill="url(#og-orb-glow)" />
+  <circle cx="256" cy="256" r="64" fill="url(#og-orb)" />
+  <circle cx="256" cy="256" r="52" fill="url(#og-gloss)" />
+
     </symbol>
   </defs>
 
   <rect width="1200" height="630" fill="url(#og-bg)" />
-  <circle cx="260" cy="320" r="340" fill="url(#og-left-glow)" />
-  <circle cx="960" cy="270" r="420" fill="url(#og-right-glow)" />
+  <circle cx="248" cy="324" r="314" fill="url(#og-left-glow)" />
+  <circle cx="306" cy="308" r="160" fill="url(#og-core-glow)" />
 
-  <g opacity="0.88">
+  <g opacity="0.86">
     <circle cx="850" cy="112" r="4" fill="#FFDCE7" />
     <circle cx="972" cy="86" r="5" fill="#FFFFFF" fill-opacity="0.72" />
     <circle cx="1088" cy="138" r="4" fill="#359EEE" />
     <circle cx="1126" cy="458" r="4" fill="#03CEA4" />
     <circle cx="924" cy="498" r="3" fill="#FFC43D" />
+    <circle cx="202" cy="138" r="3" fill="#FFFFFF" fill-opacity="0.72" />
   </g>
 
-  <use href="#og-brand-mark" transform="translate(-4 174) scale(0.5)" />
+  <use href="#og-mark" transform="translate(22 168) scale(0.56)" />
 
   <text
     x="430"
@@ -111,12 +89,13 @@
     x="436"
     y="366"
     font-family="'Helvetica Neue', Arial, sans-serif"
-    font-size="34"
+    font-size="30"
     font-weight="400"
     fill="#A7B0C7"
-    letter-spacing="1"
+    letter-spacing=".2"
   >
-    The Reputation Game for the Age of AI
+    <tspan x="436" dy="0">Quality signals backed by</tspan>
+    <tspan x="436" dy="36">human reputation</tspan>
   </text>
-  <rect x="436" y="398" width="430" height="2" rx="1" fill="#1C2740" />
+  <rect x="436" y="434" width="430" height="2" rx="1" fill="#1C2740" />
 </svg>

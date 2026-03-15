@@ -31,7 +31,7 @@ export interface Section {
 
 export const META = {
   title: "Curyo",
-  subtitle: "The Reputation Game for the Age of AI",
+  subtitle: "Quality signals backed by human reputation",
   author: "AI",
   version: "0.2",
   date: "March 2026",
@@ -68,7 +68,7 @@ export const SECTIONS: Section[] = [
   // ── 1. Introduction ──
   {
     title: "Introduction",
-    lead: "The Reputation Game for the Age of AI.",
+    lead: "Verified humans stake on content to create public ratings anyone can use.",
     subsections: [
       {
         heading: "Mission",

@@ -1,104 +1,84 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 520" width="1600" height="520" fill="none">
   <defs>
     <linearGradient id="banner-bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#020305" />
-      <stop offset="52%" stop-color="#070A15" />
-      <stop offset="100%" stop-color="#101726" />
+      <stop offset="0%" stop-color="#020307" />
+      <stop offset="54%" stop-color="#070B16" />
+      <stop offset="100%" stop-color="#0E1627" />
     </linearGradient>
-    <radialGradient id="banner-left-glow" cx="310" cy="248" r="320" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#18243C" stop-opacity="0.56" />
-      <stop offset="46%" stop-color="#0D1527" stop-opacity="0.18" />
+    <radialGradient id="banner-left-glow" cx="286" cy="256" r="290" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#141D32" stop-opacity="0.55" />
+      <stop offset="56%" stop-color="#0B1222" stop-opacity="0.16" />
       <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="banner-right-glow" cx="1220" cy="260" r="520" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#10182D" stop-opacity="0.16" />
-      <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
-    </radialGradient>
-
-    <radialGradient id="banner-mark-halo" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#FF687A" stop-opacity="0.26" />
-      <stop offset="62%" stop-color="#FF687A" stop-opacity="0.091" />
-      <stop offset="100%" stop-color="#FF687A" stop-opacity="0" />
-    </radialGradient>
-    <linearGradient id="banner-mark-planet" x1="0.15" y1="0.1" x2="0.85" y2="0.9" gradientUnits="objectBoundingBox" gradientTransform="rotate(42 0.5 0.5)">
-      <stop offset="0%" stop-color="#359EEE" />
-      <stop offset="34%" stop-color="#EF476F" />
-      <stop offset="68%" stop-color="#FFC43D" />
-      <stop offset="100%" stop-color="#03CEA4" />
-    </linearGradient>
-    <radialGradient id="banner-mark-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.22" />
-      <stop offset="56%" stop-color="#FFC43D" stop-opacity="0.16" />
+    <radialGradient id="banner-core-glow" cx="334" cy="246" r="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.18" />
+      <stop offset="48%" stop-color="#359EEE" stop-opacity="0.1" />
       <stop offset="100%" stop-color="#03CEA4" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="banner-mark-highlight" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.34 0.3) scale(0.44 0.34)">
-      <stop stop-color="#FFFFFF" stop-opacity="0.56" />
+
+    <radialGradient id="banner-orb-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#EF476F" stop-opacity="0.18" />
+      <stop offset="44%" stop-color="#359EEE" stop-opacity="0.11" />
+      <stop offset="76%" stop-color="#03CEA4" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#03CEA4" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="banner-orb" x1="0.22" y1="0.14" x2="0.78" y2="0.88" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#359EEE" />
+      <stop offset="34%" stop-color="#EF476F" />
+      <stop offset="66%" stop-color="#FFC43D" />
+      <stop offset="100%" stop-color="#03CEA4" />
+    </linearGradient>
+    <radialGradient id="banner-gloss" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.34 0.28) scale(0.42 0.32)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.62" />
+      <stop offset="0.48" stop-color="#FFFFFF" stop-opacity="0.24" />
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="banner-mark-ring" x1="0" y1="0.3" x2="1" y2="0.7" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#FFDCE7" />
-      <stop offset="48%" stop-color="#FFF8FB" />
-      <stop offset="100%" stop-color="#FFEFF5" />
+    <linearGradient id="banner-inner-ring" x1="146" y1="108" x2="366" y2="404" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFEAF4" />
+      <stop offset="100%" stop-color="#EFF4FF" />
     </linearGradient>
-    <clipPath id="banner-mark-ring-back">
-      <rect x="0" y="0" width="512" height="256" />
-    </clipPath>
-    <clipPath id="banner-mark-ring-front">
-      <rect x="0" y="256" width="512" height="256" />
-    </clipPath>
-    <symbol id="banner-brand-mark" viewBox="0 0 512 512">
-      <circle cx="256" cy="256" r="178" fill="url(#banner-mark-halo)" />
-      <g transform="rotate(-18 256 256)">
-        <ellipse
-          cx="256"
-          cy="256"
-          rx="198"
-          ry="54"
-          fill="none"
-          stroke="url(#banner-mark-ring)"
-          stroke-width="18"
-          stroke-opacity="0.96"
-          clip-path="url(#banner-mark-ring-back)"
-          stroke-linecap="round"
-        />
-      </g>
-      <circle cx="256" cy="256" r="194" fill="url(#banner-mark-glow)" fill-opacity="0.82" />
-      <circle cx="256" cy="256" r="108" fill="url(#banner-mark-planet)" />
-      <circle cx="256" cy="256" r="86.4" fill="url(#banner-mark-highlight)" />
-      <g transform="rotate(-18 256 256)">
-        <ellipse
-          cx="256"
-          cy="256"
-          rx="198"
-          ry="54"
-          fill="none"
-          stroke="url(#banner-mark-ring)"
-          stroke-width="18"
-          stroke-opacity="0.96"
-          clip-path="url(#banner-mark-ring-front)"
-          stroke-linecap="round"
-        />
-      </g>
+    <linearGradient id="banner-middle-ring" x1="126" y1="90" x2="386" y2="422" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#D8D5E2" />
+      <stop offset="100%" stop-color="#E7EAF3" />
+    </linearGradient>
+    <linearGradient id="banner-outer-ring" x1="106" y1="72" x2="406" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#737182" />
+      <stop offset="100%" stop-color="#8B8A99" />
+    </linearGradient>
+
+    <symbol id="banner-mark" viewBox="0 0 512 512">
+
+  <circle cx="256" cy="256" r="174" fill="none" stroke="url(#banner-outer-ring)" stroke-width="8" stroke-opacity="0.82" />
+  <circle cx="256" cy="256" r="144" fill="none" stroke="url(#banner-middle-ring)" stroke-width="9" stroke-opacity="0.9" />
+  <circle cx="256" cy="256" r="114" fill="none" stroke="url(#banner-inner-ring)" stroke-width="11" stroke-opacity="0.98" />
+  <circle cx="371" cy="334" r="4.2" fill="#F8FAFF" fill-opacity="0.94" />
+  <circle cx="256" cy="256" r="118" fill="url(#banner-orb-glow)" />
+  <circle cx="256" cy="256" r="64" fill="url(#banner-orb)" />
+  <circle cx="256" cy="256" r="52" fill="url(#banner-gloss)" />
+
     </symbol>
   </defs>
 
   <rect width="1600" height="520" fill="url(#banner-bg)" />
-  <circle cx="310" cy="248" r="320" fill="url(#banner-left-glow)" />
-  <circle cx="1220" cy="260" r="520" fill="url(#banner-right-glow)" />
+  <circle cx="286" cy="256" r="290" fill="url(#banner-left-glow)" />
+  <circle cx="334" cy="246" r="150" fill="url(#banner-core-glow)" />
 
-  <g opacity="0.82">
-    <circle cx="1168" cy="96" r="4" fill="#FFDCE7" />
-    <circle cx="1328" cy="134" r="3" fill="#359EEE" />
-    <circle cx="1450" cy="176" r="5" fill="#03CEA4" />
-    <circle cx="1012" cy="358" r="4" fill="#FFC43D" />
-    <circle cx="1230" cy="410" r="3" fill="#FFFFFF" fill-opacity="0.7" />
+  <g opacity="0.84">
+    <circle cx="1180" cy="98" r="4" fill="#FFDCE7" />
+    <circle cx="1308" cy="130" r="3" fill="#359EEE" />
+    <circle cx="1452" cy="176" r="5" fill="#03CEA4" />
+    <circle cx="1104" cy="390" r="4" fill="#FFC43D" />
+    <circle cx="1268" cy="422" r="3" fill="#FFFFFF" fill-opacity="0.72" />
+    <circle cx="238" cy="122" r="3" fill="#FFFFFF" fill-opacity="0.72" />
+    <circle cx="400" cy="88" r="4" fill="#FFDCE7" />
+    <circle cx="174" cy="378" r="4" fill="#359EEE" />
   </g>
 
-  <use href="#banner-brand-mark" transform="translate(0 124) scale(0.48)" />
+  <use href="#banner-mark" transform="translate(68 78) scale(0.62)" />
 
   <text
-    x="472"
-    y="232"
+    x="520"
+    y="228"
     font-family="'Helvetica Neue', Arial, sans-serif"
     font-size="136"
     font-weight="700"
@@ -108,15 +88,16 @@
     CURYO
   </text>
   <text
-    x="476"
-    y="304"
+    x="526"
+    y="298"
     font-family="'Helvetica Neue', Arial, sans-serif"
-    font-size="34"
+    font-size="28"
     font-weight="400"
     fill="#A7B0C7"
-    letter-spacing=".8"
+    letter-spacing=".2"
   >
-    The Reputation Game for the Age of AI
+    <tspan x="526" dy="0">Quality signals backed by</tspan>
+    <tspan x="526" dy="34">human reputation</tspan>
   </text>
-  <rect x="476" y="336" width="452" height="2" rx="1" fill="#1C2740" />
+  <rect x="526" y="362" width="452" height="2" rx="1" fill="#1C2740" />
 </svg>

@@ -21,9 +21,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = getMetadata({
-  title: "Curyo — Human Signal for the Age of AI",
-  description:
-    "Human signal for the age of AI. Stake on your judgment, rate quality, and surface the best content without ads, opaque ranking algorithms, or manipulation.",
+  title: "Curyo — Quality signals backed by human reputation",
+  description: "Verified humans stake on content to create public ratings anyone can use.",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
