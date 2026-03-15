@@ -21,8 +21,8 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = getMetadata({
-  title: "Curyo — Quality Signals Backed by Human Reputation",
-  description: "Verified Humans Stake on Content to Create Public Ratings.",
+  title: "Curyo — Human Reputation Behind Public Ratings",
+  description: "Human Reputation Behind Public Ratings.",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {

@@ -96,8 +96,8 @@
     fill="#A7B0C7"
     letter-spacing=".2"
   >
-    <tspan x="526" dy="0">Quality Signals Backed by</tspan>
-    <tspan x="526" dy="34">Human Reputation</tspan>
+    <tspan x="526" dy="0">Human Reputation</tspan>
+    <tspan x="526" dy="34">Behind Public Ratings</tspan>
   </text>
   <rect x="526" y="362" width="452" height="2" rx="1" fill="#1C2740" />
 </svg>
