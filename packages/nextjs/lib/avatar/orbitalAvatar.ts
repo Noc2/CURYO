@@ -21,7 +21,6 @@ interface OrbitalAvatarRing {
   strokeWidth: number;
   frontColor: string;
   backColor: string;
-  glowColor: string;
 }
 
 interface OrbitalAvatarShell {
@@ -175,7 +174,6 @@ function getAddressVariant(address: string) {
     orbColorB: hslToHex(hue - 8, Math.min(saturation + 8, 94), 48),
     orbColorC: hslToHex(hue + 116, Math.min(saturation + 6, 90), 34),
     orbGlowColor: hslToHex(hue + 26, Math.min(saturation + 12, 98), 62),
-    ringGlowColor: hslToHex(hue + 18, Math.min(saturation + 8, 88), 78),
   };
 }
 
@@ -213,7 +211,6 @@ function buildAccuracyRing(
     strokeWidth: 18 + accuracyScore * 10,
     frontColor: "rgba(255,255,255,0.96)",
     backColor: "rgba(255,255,255,0.30)",
-    glowColor: variant.ringGlowColor,
   };
 }
 
@@ -270,12 +267,6 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
 
   if (model.accuracyRing) {
     defs.push(
-      `<radialGradient id="orbital-avatar-ring-glow-${hashHex}" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="${model.accuracyRing.glowColor}" stop-opacity="0.14"/>
-        <stop offset="100%" stop-color="${model.accuracyRing.glowColor}" stop-opacity="0"/>
-      </radialGradient>`,
-    );
-    defs.push(
       `<linearGradient id="orbital-avatar-ring-front-${hashHex}" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
         <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.98"/>
         <stop offset="55%" stop-color="#F4F4F6" stop-opacity="0.9"/>
@@ -312,7 +303,6 @@ function renderAccuracyRing(ring: OrbitalAvatarRing, hashHex: string) {
 
   return `
     <g transform="${rotate}">
-      <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-glow-${hashHex})" stroke-width="${(ring.strokeWidth * 1.42).toFixed(2)}" stroke-opacity="${Math.min(0.2, ring.opacity * 0.22).toFixed(3)}"/>
       <ellipse cx="${CENTER}" cy="${CENTER}" rx="${ring.radiusX.toFixed(2)}" ry="${ring.radiusY.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-back-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${(ring.opacity * 0.72).toFixed(3)}" clip-path="url(#orbital-avatar-ring-back-clip-${hashHex})" stroke-linecap="round"/>
     </g>`;
 }
