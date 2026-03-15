@@ -208,11 +208,11 @@ function buildAccuracyRing(
 
   const { accuracyScore } = getSignalScores(payload);
   return {
-    radiusX: 228 + accuracyScore * 8,
-    radiusY: 68 + accuracyScore * 6,
+    radiusX: 220 + accuracyScore * 42,
+    radiusY: 60 + accuracyScore * 26,
     rotation: variant.ringRotation,
     opacity: 0.82 + accuracyScore * 0.12,
-    strokeWidth: 12 + accuracyScore * 4,
+    strokeWidth: 12 + accuracyScore * 5,
     colorA: variant.ringColorA,
     colorB: variant.ringColorB,
     colorC: variant.ringColorC,
