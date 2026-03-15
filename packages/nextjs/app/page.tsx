@@ -47,7 +47,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               </span>
               <h1 className="mt-6 text-7xl sm:text-9xl font-bold tracking-tight lg:mt-0 uppercase">Curyo</h1>
               <p className="text-2xl sm:text-3xl text-base-content/68 mt-4 text-center lg:text-left">
-                Human Reputation Behind Public Ratings
+                Quality Signals Backed by Human Reputation
               </p>
               <LandingPageActions />
             </div>

@@ -1,4 +1,4 @@
-![CURYO — Human Reputation Behind Public Ratings](packages/nextjs/public/banner.png)
+![CURYO — Quality Signals Backed by Human Reputation](packages/nextjs/public/banner.png)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>
