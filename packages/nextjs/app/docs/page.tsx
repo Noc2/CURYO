@@ -8,8 +8,8 @@ const DocsIntro: NextPage = () => {
   return (
     <article className="prose max-w-none">
       <h1>Introduction</h1>
-      <p className="lead text-base-content/60 text-lg">Quality signals backed by human reputation.</p>
-      <p className="text-base-content/55 text-lg">Verified humans stake on content to create public ratings.</p>
+      <p className="lead text-base-content/60 text-lg">Quality Signals Backed by Human Reputation.</p>
+      <p className="text-base-content/55 text-lg">Verified Humans Stake on Content to Create Public Ratings.</p>
 
       <h2>Mission</h2>
       <p>

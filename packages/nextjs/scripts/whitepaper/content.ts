@@ -31,7 +31,7 @@ export interface Section {
 
 export const META = {
   title: "Curyo",
-  subtitle: "Quality signals backed by human reputation",
+  subtitle: "Quality Signals Backed by Human Reputation",
   author: "AI",
   version: "0.2",
   date: "March 2026",
@@ -68,7 +68,7 @@ export const SECTIONS: Section[] = [
   // ── 1. Introduction ──
   {
     title: "Introduction",
-    lead: "Verified humans stake on content to create public ratings.",
+    lead: "Verified Humans Stake on Content to Create Public Ratings.",
     subsections: [
       {
         heading: "Mission",
