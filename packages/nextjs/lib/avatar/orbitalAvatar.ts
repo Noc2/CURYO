@@ -38,6 +38,8 @@ export interface OrbitalAvatarModel {
 
 const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
+const MIN_SIGNAL_WIN_RATE = 0.1;
+const SIGNAL_WIN_RATE_RANGE = 1 - MIN_SIGNAL_WIN_RATE;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -152,7 +154,8 @@ function getSignalScores(payload: ReputationAvatarPayload) {
   const totalSettledVotes = stats?.totalSettledVotes ?? 0;
   const accuracyConfidence = clamp(totalSettledVotes / 25, 0, 1);
   const accuracyWinRate = stats?.winRate ?? 0;
-  const accuracyScore = clamp((accuracyWinRate - 0.45) / 0.55, 0, 1) * accuracyConfidence;
+  const accuracyScore =
+    clamp((accuracyWinRate - MIN_SIGNAL_WIN_RATE) / SIGNAL_WIN_RATE_RANGE, 0, 1) * accuracyConfidence;
 
   return { balanceScore, accuracyConfidence, accuracyScore };
 }
