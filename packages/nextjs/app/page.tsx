@@ -68,7 +68,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             </span>
           </h2>
           <p className="mx-auto mb-12 max-w-2xl text-center text-lg leading-8 text-base-content/58">
-            Curyo turns frontier curation into a public, stake-backed signal layer.
+            Verified Humans Stake on Content to Create Public Ratings.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {STEPS.map(({ icon: Icon, title, description, color }) => (
