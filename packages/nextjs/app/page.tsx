@@ -49,7 +49,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               <p className="text-2xl sm:text-3xl text-base-content/68 mt-4 text-center lg:text-left">
                 Human Signal for the
                 <br />
-                AI Frontier
+                Age of AI
               </p>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-base-content/62 text-center lg:text-left">
                 Verify humanity, stake on your judgment, and build a public orbit of trust around frontier content.
