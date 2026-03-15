@@ -230,6 +230,7 @@ export function buildOrbitalAvatarModel(
   payload: ReputationAvatarPayload,
   _options?: { nowSeconds?: number },
 ): OrbitalAvatarModel {
+  void _options;
   const variant = getAddressVariant(payload.address);
   const coreOrb = buildCoreOrb(payload, variant);
   const accuracyRing = buildAccuracyRing(payload, coreOrb, variant);
