@@ -126,14 +126,12 @@ test("orbital core size saturates at extreme cREP balances", () => {
   const capped = buildOrbitalAvatarModel(
     buildPayload({
       balance: "100000000000",
-      categories90d: [],
     }),
     { nowSeconds: NOW_SECONDS },
   );
   const extreme = buildOrbitalAvatarModel(
     buildPayload({
       balance: "1000000000000",
-      categories90d: [],
     }),
     { nowSeconds: NOW_SECONDS },
   );
@@ -141,17 +139,18 @@ test("orbital core size saturates at extreme cREP balances", () => {
   assert.equal(extreme.coreOrb?.radius, capped.coreOrb?.radius);
 });
 
-test("orbital avatars cap category satellites at five", () => {
+test("orbital avatars ignore category satellites in the simplified renderer", () => {
   const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
-  assert.equal(model.categorySatellites.length, 5);
+  assert.equal("categorySatellites" in model, false);
 });
 
-test("orbital rings stay circular", () => {
+test("orbital accuracy ring stays bounded and elliptical", () => {
   const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
 
-  assert.ok(model.accuracyOrbit);
-  assert.equal(typeof model.accuracyOrbit.radius, "number");
-  assert.equal(typeof model.accuracyOrbit.strokeWidth, "number");
+  assert.ok(model.accuracyRing);
+  assert.equal(typeof model.accuracyRing.radiusX, "number");
+  assert.equal(typeof model.accuracyRing.radiusY, "number");
+  assert.ok(model.accuracyRing.radiusX > model.accuracyRing.radiusY);
 });
 
 test("unclaimed wallets render an empty shell instead of a filled orb", () => {
@@ -167,12 +166,12 @@ test("unclaimed wallets render an empty shell instead of a filled orb", () => {
 
   assert.equal(model.coreOrb, null);
   assert.ok(model.shellOrbit);
-  assert.equal(model.categorySatellites.length, 0);
 });
 
 test("renderer returns svg markup for the orbital avatar", () => {
   const svg = renderOrbitalAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
 
   assert.match(svg, /orbital-avatar-body-/);
-  assert.match(svg, /circle/);
+  assert.match(svg, /ellipse/);
+  assert.match(svg, /clipPath/);
 });
