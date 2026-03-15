@@ -65,6 +65,7 @@ export function useContentFeedQuery(voterAddress?: string, options: UseContentFe
           contentHash: args.contentHash || "",
           isOwnContent: !!voterAddress && eventSubmitter.toLowerCase() === voterAddress.toLowerCase(),
           categoryId: args.categoryId ?? 0n,
+          rating: 50,
           isValidUrl: null,
           thumbnailUrl: null,
         };

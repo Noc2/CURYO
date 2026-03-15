@@ -13,6 +13,7 @@ export interface ContentItem {
   contentHash: string;
   isOwnContent: boolean;
   categoryId: bigint;
+  rating: number;
   isValidUrl: boolean | null;
   thumbnailUrl: string | null;
   contentMetadata?: ContentMetadataResult;
@@ -40,6 +41,7 @@ export function mapContentItem(
     submitter: string;
     contentHash: string;
     categoryId: string;
+    rating: number;
   },
   voterAddress?: string,
 ): ContentItem {
@@ -53,6 +55,7 @@ export function mapContentItem(
     contentHash: item.contentHash,
     isOwnContent: !!voterAddress && item.submitter.toLowerCase() === voterAddress.toLowerCase(),
     categoryId: BigInt(item.categoryId),
+    rating: item.rating,
     isValidUrl: null,
     thumbnailUrl: null,
   };

@@ -297,6 +297,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   const platform = detectPlatform(item.url);
   const [imageError, setImageError] = useState(false);
   const thumbnailSrc = getVoteFeedThumbnailSrc(item);
+  const ratingLabel = `${item.rating}/100`;
 
   return (
     <button
@@ -338,9 +339,12 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       }`}
     >
       <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200">
-        <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
+        <div className="absolute inset-x-2 top-2 z-10 flex items-center justify-between gap-1.5">
           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
             {queuePosition + 1}
+          </span>
+          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+            {ratingLabel}
           </span>
         </div>
         {thumbnailSrc && !imageError ? (
