@@ -47,12 +47,10 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               </span>
               <h1 className="mt-6 text-7xl sm:text-9xl font-bold tracking-tight lg:mt-0 uppercase">Curyo</h1>
               <p className="text-2xl sm:text-3xl text-base-content/68 mt-4 text-center lg:text-left">
-                Human Signal for the
-                <br />
-                Age of AI
+                Quality signals backed by human reputation
               </p>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-base-content/62 text-center lg:text-left">
-                Verify humanity, stake on your judgment, and build a public orbit of trust around frontier content.
+                Verified humans stake on content to create public ratings anyone can use.
               </p>
               <LandingPageActions />
             </div>
