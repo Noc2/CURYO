@@ -196,7 +196,7 @@ function getAddressVariant(address: string) {
 
   return {
     compositionRotation: unitHash(`${address}:planet-rotation`) * 360,
-    flareRotation: -90 + unitHash(`${address}:flare-rotation`) * 360,
+    flareRotation: -90,
     planetColorA: hslToHex(baseHue + 24, Math.min(saturation + 10, 98), 82),
     planetColorB: hslToHex(baseHue - 8, Math.min(saturation + 6, 94), 62),
     planetColorC: hslToHex(baseHue + 118, Math.min(saturation - 4, 88), 22),

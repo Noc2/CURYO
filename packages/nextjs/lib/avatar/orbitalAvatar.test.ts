@@ -50,7 +50,7 @@ function buildPayload(overrides?: Partial<ReputationAvatarPayload>): ReputationA
   };
 }
 
-test("planet-flare avatars vary by address color and orbit rotation", () => {
+test("planet-flare avatars vary by address color and planet rotation", () => {
   const modelA = buildOrbitalAvatarModel(buildPayload({ address: "0x0000000000000000000000000000000000ff3300" }), {
     nowSeconds: NOW_SECONDS,
   });
@@ -60,7 +60,8 @@ test("planet-flare avatars vary by address color and orbit rotation", () => {
 
   assert.notEqual(modelA.compositionRotation, modelB.compositionRotation);
   assert.notEqual(modelA.planet?.colorA, modelB.planet?.colorA);
-  assert.notEqual(modelA.flare?.rotationDegrees, modelB.flare?.rotationDegrees);
+  assert.equal(modelA.flare?.rotationDegrees, -90);
+  assert.equal(modelB.flare?.rotationDegrees, -90);
 });
 
 test("planet size saturates at extreme cREP balances", () => {
@@ -130,7 +131,10 @@ test("accuracy directly controls flare orbit coverage", () => {
   assert.ok(half.flare);
   assert.ok(full.flare);
   assert.equal(half.flare.sweepDegrees, 180);
+  assert.equal(half.flare.rotationDegrees, -90);
+  assert.equal(half.flare.headAngleDegrees, 90);
   assert.equal(full.flare.sweepDegrees, 360);
+  assert.equal(full.flare.rotationDegrees, -90);
 });
 
 test("confidence changes flare strength without changing its arc length", () => {
