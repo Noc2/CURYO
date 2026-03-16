@@ -195,17 +195,17 @@ export function CuryoLighthouseMark({
         }
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ambient {
-          animation: lighthouse-sequence-ambient 5.2s ease-in-out infinite;
+          animation: lighthouse-sequence-ambient 4.8s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__core {
-          animation: lighthouse-sequence-core 5.2s ease-in-out infinite;
+          animation: lighthouse-sequence-core 4.8s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__gloss {
-          animation: lighthouse-sequence-gloss 5.2s ease-in-out infinite;
+          animation: lighthouse-sequence-gloss 4.8s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
@@ -215,19 +215,19 @@ export function CuryoLighthouseMark({
         }
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring--inner {
-          animation: lighthouse-sequence-inner 5.2s ease-in-out infinite;
+          animation: lighthouse-sequence-inner 4.8s ease-in-out infinite;
         }
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring--middle {
-          animation: lighthouse-sequence-middle 5.2s ease-in-out infinite;
+          animation: lighthouse-sequence-middle 4.8s ease-in-out infinite;
         }
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring--outer {
-          animation: lighthouse-sequence-outer 5.2s ease-in-out infinite;
+          animation: lighthouse-sequence-outer 4.8s ease-in-out infinite;
         }
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__dot {
-          animation: lighthouse-sequence-dot 5.2s ease-in-out infinite;
+          animation: lighthouse-sequence-dot 4.8s ease-in-out infinite;
           transform-origin: 371px 334px;
         }
 
@@ -335,30 +335,30 @@ export function CuryoLighthouseMark({
 
         @keyframes lighthouse-sequence-inner {
           0%,
-          10%,
-          92%,
+          7%,
+          93%,
           100% {
             opacity: 0;
             transform: scale(0.94);
           }
-          14% {
+          10% {
             opacity: 0.04;
             transform: scale(0.952);
           }
-          18% {
+          14% {
             opacity: 0.14;
             transform: scale(0.966);
           }
-          23% {
+          19% {
             opacity: 0.38;
             transform: scale(0.982);
           }
-          29%,
-          54% {
+          25%,
+          52% {
             opacity: 0.94;
             transform: scale(1);
           }
-          66% {
+          63% {
             opacity: 0.08;
             transform: scale(1.024);
           }
@@ -366,29 +366,29 @@ export function CuryoLighthouseMark({
 
         @keyframes lighthouse-sequence-middle {
           0%,
-          20%,
+          15%,
           100% {
             opacity: 0;
             transform: scale(0.945);
           }
-          25% {
+          19% {
             opacity: 0.04;
             transform: scale(0.956);
           }
-          30% {
+          24% {
             opacity: 0.14;
             transform: scale(0.97);
           }
-          36% {
+          30% {
             opacity: 0.36;
             transform: scale(0.984);
           }
-          42%,
-          64% {
+          36%,
+          62% {
             opacity: 0.89;
             transform: scale(1);
           }
-          76% {
+          73% {
             opacity: 0.08;
             transform: scale(1.02);
           }
@@ -396,29 +396,29 @@ export function CuryoLighthouseMark({
 
         @keyframes lighthouse-sequence-outer {
           0%,
-          30%,
+          23%,
           100% {
             opacity: 0;
             transform: scale(0.95);
           }
-          36% {
+          28% {
             opacity: 0.035;
             transform: scale(0.96);
           }
-          42% {
+          34% {
             opacity: 0.13;
             transform: scale(0.972);
           }
-          48% {
+          40% {
             opacity: 0.34;
             transform: scale(0.986);
           }
-          54%,
-          76% {
+          46%,
+          74% {
             opacity: 0.8;
             transform: scale(1);
           }
-          88% {
+          85% {
             opacity: 0.06;
             transform: scale(1.016);
           }
