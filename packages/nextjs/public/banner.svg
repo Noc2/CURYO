@@ -74,30 +74,30 @@
     <circle cx="174" cy="378" r="4" fill="#359EEE" />
   </g>
 
-  <use href="#banner-mark" transform="translate(68 78) scale(0.62)" />
+  <use href="#banner-mark" transform="translate(72 82) scale(0.6)" />
 
   <text
-    x="520"
-    y="228"
+    x="682"
+    y="210"
     font-family="'Helvetica Neue', Arial, sans-serif"
-    font-size="136"
+    font-size="110"
     font-weight="700"
     fill="#FFFFFF"
-    letter-spacing="8"
+    letter-spacing="6"
   >
     CURYO
   </text>
   <text
-    x="526"
-    y="298"
+    x="690"
+    y="278"
     font-family="'Helvetica Neue', Arial, sans-serif"
-    font-size="28"
+    font-size="27"
     font-weight="400"
     fill="#A7B0C7"
     letter-spacing=".2"
   >
-    <tspan x="526" dy="0">Quality Signals</tspan>
-    <tspan x="526" dy="34">Backed by Human Reputation</tspan>
+    <tspan x="690" dy="0">Quality Signals</tspan>
+    <tspan x="690" dy="34">Backed by Human Reputation</tspan>
   </text>
-  <rect x="526" y="362" width="452" height="2" rx="1" fill="#1C2740" />
+  <rect x="690" y="342" width="356" height="2" rx="1" fill="#1C2740" />
 </svg>

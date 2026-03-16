@@ -6,6 +6,7 @@ interface CuryoLighthouseMarkProps {
   animated?: boolean;
   animationPreset?: "breathe" | "sequence";
   showBeaconDot?: boolean;
+  coreTone?: "gradient" | "white";
 }
 
 /**
@@ -18,6 +19,7 @@ export function CuryoLighthouseMark({
   animated = false,
   animationPreset,
   showBeaconDot = true,
+  coreTone = "gradient",
 }: CuryoLighthouseMarkProps) {
   const id = useId().replace(/:/g, "");
   const ambientId = `${id}-ambient`;
@@ -29,6 +31,7 @@ export function CuryoLighthouseMark({
   const outerRingId = `${id}-outer-ring`;
   const resolvedPreset = animationPreset ?? (animated ? "breathe" : undefined);
   const animationClass = resolvedPreset ? `curyo-lighthouse-mark--${resolvedPreset}` : "";
+  const usesWhiteCore = coreTone === "white";
 
   return (
     <>
@@ -146,15 +149,17 @@ export function CuryoLighthouseMark({
             cx="256"
             cy="256"
             r="64"
-            fill={`url(#${orbId})`}
+            fill={usesWhiteCore ? "#F8FAFF" : `url(#${orbId})`}
           />
-          <circle
-            className={resolvedPreset ? "curyo-lighthouse-mark__gloss" : undefined}
-            cx="256"
-            cy="256"
-            r="52"
-            fill={`url(#${glossId})`}
-          />
+          {usesWhiteCore ? null : (
+            <circle
+              className={resolvedPreset ? "curyo-lighthouse-mark__gloss" : undefined}
+              cx="256"
+              cy="256"
+              r="52"
+              fill={`url(#${glossId})`}
+            />
+          )}
         </g>
       </svg>
 
