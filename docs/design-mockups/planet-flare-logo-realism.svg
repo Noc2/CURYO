@@ -10,21 +10,21 @@
       <stop offset="0.46" stop-color="#391A1A" stop-opacity="0.16"/>
       <stop offset="1" stop-color="#0B0D13" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="planet-shell" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(638 332) rotate(136) scale(470 440)">
-      <stop stop-color="#FFBF73"/>
-      <stop offset="0.18" stop-color="#F7953E"/>
-      <stop offset="0.43" stop-color="#D65D22"/>
-      <stop offset="0.72" stop-color="#7A281A"/>
-      <stop offset="1" stop-color="#1D0D10"/>
+    <radialGradient id="planet-shell" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(640 330) rotate(136) scale(470 440)">
+      <stop stop-color="#E9BC8F"/>
+      <stop offset="0.2" stop-color="#C97B48"/>
+      <stop offset="0.45" stop-color="#A24D28"/>
+      <stop offset="0.73" stop-color="#5C251A"/>
+      <stop offset="1" stop-color="#16090C"/>
     </radialGradient>
     <radialGradient id="atmosphere-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(734 316) rotate(150) scale(228 84)">
-      <stop stop-color="#C9E7FF" stop-opacity="0.62"/>
-      <stop offset="0.38" stop-color="#DDF1FF" stop-opacity="0.22"/>
+      <stop stop-color="#D9EBFF" stop-opacity="0.38"/>
+      <stop offset="0.38" stop-color="#E7F3FF" stop-opacity="0.14"/>
       <stop offset="1" stop-color="#DDF1FF" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(658 354) rotate(135) scale(190 132)">
-      <stop stop-color="#FFF0CE" stop-opacity="0.54"/>
-      <stop offset="0.46" stop-color="#FFD49B" stop-opacity="0.18"/>
+    <radialGradient id="planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(648 344) rotate(135) scale(172 120)">
+      <stop stop-color="#FFF0D3" stop-opacity="0.4"/>
+      <stop offset="0.46" stop-color="#FFD7A3" stop-opacity="0.12"/>
       <stop offset="1" stop-color="#FFD49B" stop-opacity="0"/>
     </radialGradient>
     <radialGradient id="planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(336 722) rotate(-34) scale(332 260)">
@@ -32,25 +32,25 @@
       <stop offset="0.48" stop-color="#0D060A" stop-opacity="0.72"/>
       <stop offset="1" stop-color="#0D060A" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="flare-head" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(878.5 736.9) scale(34 34)">
-      <stop stop-color="#FFF7EB"/>
-      <stop offset="0.28" stop-color="#FFD7A0"/>
-      <stop offset="0.64" stop-color="#FF8E4F"/>
+    <radialGradient id="flare-head" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(878.5 736.9) scale(26 26)">
+      <stop stop-color="#FFF8EE"/>
+      <stop offset="0.3" stop-color="#FFE0B4"/>
+      <stop offset="0.66" stop-color="#FF9960"/>
       <stop offset="1" stop-color="#FF5A34" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="flare-stream" x1="236" y1="238" x2="852" y2="598" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#35120F" stop-opacity="0"/>
-      <stop offset="0.12" stop-color="#8F2B1A" stop-opacity="0.28"/>
-      <stop offset="0.32" stop-color="#D64924" stop-opacity="0.84"/>
-      <stop offset="0.62" stop-color="#FF9F54"/>
-      <stop offset="0.86" stop-color="#FFD7A0"/>
-      <stop offset="1" stop-color="#FFF6E8"/>
+    <linearGradient id="flare-stream" x1="250" y1="242" x2="852" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2E100E" stop-opacity="0"/>
+      <stop offset="0.18" stop-color="#81281A" stop-opacity="0.2"/>
+      <stop offset="0.42" stop-color="#D65428" stop-opacity="0.78"/>
+      <stop offset="0.72" stop-color="#FFB269"/>
+      <stop offset="0.9" stop-color="#FFE4BC"/>
+      <stop offset="1" stop-color="#FFF7EC"/>
     </linearGradient>
-    <linearGradient id="flare-core" x1="292" y1="252" x2="826" y2="582" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FF8F47" stop-opacity="0"/>
-      <stop offset="0.34" stop-color="#FFD8A8" stop-opacity="0.82"/>
-      <stop offset="0.72" stop-color="#FFF9EF"/>
-      <stop offset="1" stop-color="#FFF9EF"/>
+    <linearGradient id="flare-core" x1="300" y1="258" x2="826" y2="586" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9253" stop-opacity="0"/>
+      <stop offset="0.42" stop-color="#FFDDB1" stop-opacity="0.58"/>
+      <stop offset="0.78" stop-color="#FFF8EF"/>
+      <stop offset="1" stop-color="#FFF4E2" stop-opacity="0.92"/>
     </linearGradient>
 
     <filter id="planet-texture" x="110" y="110" width="804" height="804" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
@@ -69,15 +69,15 @@
     </filter>
     <filter id="planet-relief" x="110" y="110" width="804" height="804" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.006 0.018" numOctaves="2" seed="7" result="reliefNoise"/>
-      <feDisplacementMap in="SourceGraphic" in2="reliefNoise" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+      <feDisplacementMap in="SourceGraphic" in2="reliefNoise" scale="8" xChannelSelector="R" yChannelSelector="G"/>
     </filter>
     <filter id="texture-grade" x="110" y="110" width="804" height="804" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feColorMatrix
         type="matrix"
-        values="0.40 0.26 0.08 0 0.08
-                0.18 0.12 0.04 0 0.02
-                0.08 0.05 0.02 0 0
-                0 0 0 0.42 0"
+        values="0.55 0.22 0.06 0 0.12
+                0.24 0.11 0.03 0 0.03
+                0.08 0.04 0.015 0 0
+                0 0 0 0.58 0"
       />
     </filter>
     <filter id="soft-blur-16" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
@@ -100,17 +100,19 @@
   <circle cx="512" cy="512" r="430" stroke="#FFF0E2" stroke-opacity="0.22" stroke-width="2.2"/>
   <circle cx="512" cy="512" r="430" stroke="#6E3023" stroke-opacity="0.14" stroke-width="10" stroke-dasharray="520 2182" transform="rotate(-132 512 512)"/>
   <g filter="url(#soft-blur-40)">
-    <circle cx="512" cy="512" r="430" stroke="#FF5630" stroke-opacity="0.22" stroke-width="34" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
+    <circle cx="512" cy="512" r="430" stroke="#FF5530" stroke-opacity="0.18" stroke-width="30" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
   </g>
   <g filter="url(#soft-blur-24)">
-    <circle cx="512" cy="512" r="430" stroke="#FFB176" stroke-opacity="0.18" stroke-width="18" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
+    <circle cx="512" cy="512" r="430" stroke="#FFB77D" stroke-opacity="0.16" stroke-width="16" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
   </g>
-  <circle cx="512" cy="512" r="430" stroke="#48211A" stroke-opacity="0.42" stroke-width="12" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
-  <circle cx="512" cy="512" r="430" stroke="url(#flare-stream)" stroke-width="8.5" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
-  <circle cx="512" cy="512" r="430" stroke="url(#flare-core)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
-  <circle cx="878.5" cy="736.9" r="22" fill="#FF8E58" fill-opacity="0.14"/>
-  <circle cx="878.5" cy="736.9" r="28" fill="url(#flare-head)"/>
-  <circle cx="878.5" cy="736.9" r="11" fill="#FFF8EF"/>
+  <circle cx="512" cy="512" r="430" stroke="#48211A" stroke-opacity="0.32" stroke-width="10" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
+  <circle cx="512" cy="512" r="430" stroke="url(#flare-stream)" stroke-width="7.2" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
+  <circle cx="512" cy="512" r="430" stroke="url(#flare-core)" stroke-width="2.1" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
+  <g filter="url(#soft-blur-16)">
+    <circle cx="878.5" cy="736.9" r="26" fill="#FF6F43" fill-opacity="0.24"/>
+  </g>
+  <circle cx="878.5" cy="736.9" r="19" fill="url(#flare-head)"/>
+  <circle cx="878.5" cy="736.9" r="7.5" fill="#FFF8EF"/>
 
   <g filter="url(#soft-blur-16)">
     <ellipse cx="504" cy="522" rx="354" ry="366" fill="#000000" fill-opacity="0.26"/>
@@ -118,16 +120,15 @@
 
   <circle cx="512" cy="512" r="338" fill="url(#planet-shell)"/>
   <g clip-path="url(#planet-clip)">
-    <g filter="url(#planet-relief)">
-      <path d="M210 292C292 234 382 210 470 226C552 242 604 264 676 246C744 230 788 236 836 272C780 346 700 392 592 392C486 392 406 354 332 328C286 310 248 302 210 292Z" fill="#B84522" fill-opacity="0.44"/>
-      <path d="M560 182C656 184 746 234 804 320C748 350 682 352 626 332C566 310 534 260 560 182Z" fill="#E17B2C" fill-opacity="0.42"/>
-      <path d="M290 396C404 374 538 398 646 460C726 506 780 584 796 676C680 700 560 688 454 634C344 578 286 500 290 396Z" fill="#8A2E1D" fill-opacity="0.36"/>
-      <path d="M206 566C302 544 420 566 520 632C610 692 668 772 682 850C562 862 438 834 334 768C238 706 190 636 206 566Z" fill="#391317" fill-opacity="0.6"/>
-      <path d="M632 404C714 418 784 474 820 562C770 580 712 576 664 546C612 514 600 450 632 404Z" fill="#F39A39" fill-opacity="0.24"/>
+    <g filter="url(#planet-relief)" opacity="0.3">
+      <path d="M218 296C302 236 394 212 478 228C560 244 612 262 676 248C744 232 790 240 834 276C772 344 698 386 594 390C490 392 404 352 334 330C288 316 248 306 218 296Z" fill="#BC5A2D" fill-opacity="0.24"/>
+      <path d="M552 186C650 186 742 236 802 320C746 350 680 352 624 334C566 314 532 262 552 186Z" fill="#E2A164" fill-opacity="0.14"/>
+      <path d="M292 410C404 386 534 404 640 460C720 502 780 580 798 668C686 692 568 682 462 632C350 578 292 500 292 410Z" fill="#6E2B1D" fill-opacity="0.22"/>
+      <path d="M210 572C304 552 418 574 514 638C602 698 662 778 676 850C564 856 446 824 344 764C244 704 196 636 210 572Z" fill="#271015" fill-opacity="0.34"/>
     </g>
 
-    <g filter="url(#planet-texture)" opacity="0.56">
-      <rect x="154" y="154" width="716" height="716" fill="#B45E32"/>
+    <g filter="url(#planet-texture)" opacity="0.2">
+      <rect x="154" y="154" width="716" height="716" fill="#9A5430"/>
     </g>
     <image
       href="planet-flare-logo-realism-texture.png"
@@ -136,34 +137,31 @@
       width="716"
       height="716"
       preserveAspectRatio="xMidYMid slice"
-      opacity="0.34"
+      opacity="0.62"
       filter="url(#texture-grade)"
     />
 
-    <path d="M230 328C296 286 374 266 452 270C536 274 604 292 664 320" stroke="#FFD09D" stroke-opacity="0.1" stroke-width="22" stroke-linecap="round"/>
-    <path d="M214 432C308 390 408 390 514 426C604 456 682 458 754 438" stroke="#FFDAB1" stroke-opacity="0.08" stroke-width="16" stroke-linecap="round"/>
-    <path d="M232 560C334 526 434 540 526 584C598 618 662 634 718 628" stroke="#F6B27A" stroke-opacity="0.08" stroke-width="14" stroke-linecap="round"/>
-    <path d="M262 724C350 706 440 726 518 766C576 794 626 812 666 816" stroke="#1C0C10" stroke-opacity="0.42" stroke-width="18" stroke-linecap="round"/>
-
-    <ellipse cx="620" cy="320" rx="116" ry="78" fill="#FFD79C" fill-opacity="0.12"/>
-    <ellipse cx="676" cy="372" rx="74" ry="46" fill="#FFE0AF" fill-opacity="0.06"/>
-    <ellipse cx="438" cy="318" rx="90" ry="54" fill="#5C211A" fill-opacity="0.14"/>
-    <ellipse cx="634" cy="502" rx="168" ry="104" fill="#FFDBAD" fill-opacity="0.04"/>
+    <g filter="url(#soft-blur-24)" opacity="0.12">
+      <ellipse cx="642" cy="322" rx="126" ry="82" fill="#FFE1B7"/>
+      <ellipse cx="680" cy="388" rx="104" ry="70" fill="#FFD49E"/>
+      <ellipse cx="434" cy="330" rx="108" ry="62" fill="#42181A"/>
+      <ellipse cx="614" cy="518" rx="168" ry="116" fill="#F6C08A"/>
+    </g>
 
     <g fill="#180A0D">
-      <ellipse cx="454" cy="324" rx="24" ry="15" fill-opacity="0.3"/>
-      <ellipse cx="612" cy="410" rx="17" ry="11" fill-opacity="0.22"/>
-      <ellipse cx="392" cy="576" rx="28" ry="18" fill-opacity="0.22"/>
-      <ellipse cx="594" cy="676" rx="18" ry="12" fill-opacity="0.2"/>
-      <ellipse cx="684" cy="562" rx="15" ry="10" fill-opacity="0.14"/>
-      <ellipse cx="342" cy="708" rx="18" ry="11" fill-opacity="0.2"/>
-      <ellipse cx="728" cy="452" rx="13" ry="8" fill-opacity="0.12"/>
+      <ellipse cx="452" cy="324" rx="22" ry="14" fill-opacity="0.2"/>
+      <ellipse cx="610" cy="410" rx="15" ry="10" fill-opacity="0.14"/>
+      <ellipse cx="392" cy="574" rx="24" ry="16" fill-opacity="0.16"/>
+      <ellipse cx="592" cy="676" rx="16" ry="11" fill-opacity="0.14"/>
+      <ellipse cx="684" cy="560" rx="13" ry="9" fill-opacity="0.1"/>
+      <ellipse cx="342" cy="708" rx="16" ry="10" fill-opacity="0.14"/>
+      <ellipse cx="728" cy="452" rx="11" ry="7" fill-opacity="0.1"/>
     </g>
-    <g fill="#F4B77B">
-      <ellipse cx="466" cy="326" rx="9" ry="5" fill-opacity="0.08"/>
-      <ellipse cx="608" cy="406" rx="7" ry="4" fill-opacity="0.08"/>
-      <ellipse cx="392" cy="570" rx="10" ry="6" fill-opacity="0.05"/>
-      <ellipse cx="592" cy="672" rx="8" ry="4.5" fill-opacity="0.05"/>
+    <g fill="#F4C08D">
+      <ellipse cx="466" cy="326" rx="8" ry="4.5" fill-opacity="0.035"/>
+      <ellipse cx="608" cy="406" rx="6" ry="3.5" fill-opacity="0.03"/>
+      <ellipse cx="392" cy="570" rx="8" ry="5" fill-opacity="0.025"/>
+      <ellipse cx="592" cy="672" rx="7" ry="4" fill-opacity="0.025"/>
     </g>
   </g>
 
