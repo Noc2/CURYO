@@ -39,11 +39,11 @@ export function CuryoPlanetMark({
   const flareRadius = usesCompactVariant ? 438 : 406;
   const flareRotation = usesCompactVariant ? -92 : -66;
   const flareDashArray = usesCompactVariant ? "1044 1708" : "666 1885";
-  const flareGlowStrokeWidth = usesCompactVariant ? 26 : 28;
-  const flareGlowOpacity = usesCompactVariant ? 0.46 : 0.54;
-  const flareBodyStrokeWidth = usesCompactVariant ? 15 : 10;
-  const flareMainStrokeWidth = usesCompactVariant ? 13 : 8;
-  const flareCoreStrokeWidth = usesCompactVariant ? 4 : 2.4;
+  const flareGlowStrokeWidth = usesCompactVariant ? 30 : 28;
+  const flareGlowOpacity = usesCompactVariant ? 0.52 : 0.54;
+  const flareBodyStrokeWidth = usesCompactVariant ? 17 : 10;
+  const flareMainStrokeWidth = usesCompactVariant ? 15 : 8;
+  const flareCoreStrokeWidth = usesCompactVariant ? 4.8 : 2.4;
   const flareGlowFilterId = usesCompactVariant ? softBlur20Id : softBlur28Id;
 
   return (
