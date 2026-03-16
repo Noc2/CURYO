@@ -52,7 +52,7 @@ export function ShareContentModal({ contentId, title, description, onClose }: Sh
       aria-modal="true"
       aria-label="Share content"
     >
-      <div className="modal-box max-w-sm bg-base-200 border border-base-content/10 shadow-2xl">
+      <div className="modal-box max-w-sm bg-base-200 shadow-2xl">
         {/* Close button */}
         <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Close">
           <XMarkIcon className="w-5 h-5" />

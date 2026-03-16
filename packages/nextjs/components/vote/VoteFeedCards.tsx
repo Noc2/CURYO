@@ -164,7 +164,7 @@ interface FeedContentHeaderProps {
 
 function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: FeedContentHeaderProps) {
   return (
-    <div className="rounded-2xl bg-[#090A0C] p-4 xl:p-3">
+    <div className="rounded-2xl bg-[#141316] p-4 xl:p-3">
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -210,7 +210,7 @@ function FeedContentMetaCard({
 
   return (
     <>
-      <div className="rounded-2xl bg-[#090A0C] p-4 xl:p-3">
+      <div className="rounded-2xl bg-[#141316] p-4 xl:p-3">
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}

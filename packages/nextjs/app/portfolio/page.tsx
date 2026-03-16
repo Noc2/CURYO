@@ -62,7 +62,7 @@ export default function PortfolioPage() {
         <h1 className="text-2xl font-bold mb-6">Portfolio</h1>
 
         {/* Stats */}
-        <div className="bg-base-200 rounded-2xl p-6 mb-6">
+        <div className="surface-card mb-6 rounded-2xl p-6">
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-3xl font-bold tabular-nums">{formattedBalance}</p>
@@ -85,7 +85,7 @@ export default function PortfolioPage() {
 
         {/* Streak Stats */}
         {streak && streak.currentDailyStreak > 0 && (
-          <div className="bg-base-200 rounded-2xl p-6 mb-6">
+          <div className="surface-card mb-6 rounded-2xl p-6">
             <h2 className="text-lg font-semibold mb-3">Daily Streak</h2>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>

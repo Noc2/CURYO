@@ -330,7 +330,7 @@ export function FrontendRegistration() {
         </Link>
       </p>
 
-      <div className="rounded-2xl border border-base-300 bg-base-200/50 p-4 space-y-2">
+      <div className="rounded-2xl bg-[#090A0C] p-4 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <p className="font-medium">This deployment&apos;s frontend code</p>
           {deploymentIsConfigured ? (

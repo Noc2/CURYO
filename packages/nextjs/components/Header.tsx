@@ -189,7 +189,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
         aria-label="Search content"
         value={inputValue}
         onChange={e => updateSearch(e.target.value)}
-        className={`input input-sm input-bordered pl-8 pr-7 border-[#F5F0EB]/8 bg-[#090A0C]/35 focus:border-primary/30 focus:bg-[#090A0C]/50 text-base ${
+        className={`input input-sm input-bordered pl-8 pr-7 border-[#F5F0EB]/8 bg-[#090A0C]/80 focus:border-primary/30 focus:bg-[#090A0C] text-base ${
           isSidebar ? "w-full max-w-full" : "w-40 lg:w-56"
         }`}
       />
@@ -257,7 +257,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           value={draftValue}
           onChange={event => setDraftValue(event.target.value)}
           autoFocus
-          className="input input-sm w-full border-[#F5F0EB]/8 bg-[#090A0C]/45 pl-9 pr-9 text-base"
+          className="input input-sm w-full border-[#F5F0EB]/8 bg-[#090A0C]/85 pl-9 pr-9 text-base"
         />
         {draftValue ? (
           <button
@@ -297,7 +297,7 @@ export const Header = () => {
     <>
       {/* Mobile: top bar */}
       <div className="xl:hidden sticky top-0 z-20">
-        <div className="navbar min-h-0 shrink-0 justify-between px-4 sm:px-6 py-3 border-b border-[#F5F0EB]/8 bg-[#090A0C] backdrop-blur-xl shadow-[0_18px_44px_rgba(9,10,12,0.32)]">
+        <div className="navbar min-h-0 shrink-0 justify-between bg-[#141316] px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6">
           {mobileSearchOpen ? (
             <Suspense>
               <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
@@ -310,7 +310,7 @@ export const Header = () => {
                     <Bars3Icon className="h-5 w-5" />
                   </summary>
                   <ul
-                    className="menu menu-compact dropdown-content mt-3 p-2 bg-[#090A0C] rounded-xl w-64 shadow-lg border border-base-content/5"
+                    className="menu menu-compact dropdown-content mt-3 w-64 rounded-xl bg-[#141316] p-2 shadow-lg"
                     onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
                   >
                     <Suspense>
@@ -350,7 +350,7 @@ export const Header = () => {
       </div>
 
       {/* Desktop: left sidebar */}
-      <aside className="hidden xl:flex fixed left-0 top-0 z-20 h-screen w-56 flex-col items-stretch py-4 border-r border-[#F5F0EB]/8 bg-[#090A0C] shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl shrink-0">
+      <aside className="fixed left-0 top-0 z-20 hidden h-screen w-56 shrink-0 flex-col items-stretch bg-[#141316] py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
         <Link href="/" className="flex flex-row items-center gap-2 px-4 mb-4 shrink-0">
           <CuryoLogo className="w-8 h-8 shrink-0" />
           <div className="flex flex-col gap-0.5 items-start">

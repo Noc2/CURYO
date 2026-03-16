@@ -83,7 +83,7 @@
   --curyo-steel: #7e8996;
   --curyo-steel-soft: #7e8996;
   --curyo-surface: #090a0c;
-  --curyo-surface-elevated: #090a0c;
+  --curyo-surface-elevated: #141316;
   --curyo-shell-border: rgb(245 240 235 / 0.08);
   --curyo-shell-border-strong: rgb(245 240 235 / 0.14);
   --curyo-panel-shadow: 0 24px 56px rgb(9 10 12 / 0.34);
@@ -141,8 +141,8 @@ body {
 /* Override DaisyUI dropdown content */
 .dropdown-content {
   font-size: 1rem !important; /* Enforce minimum 16px */
-  background: rgb(9 10 12 / 0.98);
-  border: 1px solid var(--curyo-shell-border);
+  background: rgb(20 19 22 / 0.98);
+  border: none;
   box-shadow: var(--curyo-panel-shadow);
   backdrop-filter: blur(18px);
 }
@@ -331,30 +331,30 @@ body {
 .surface-card {
   position: relative;
   overflow: hidden;
-  background: rgb(9 10 12 / 0.96);
-  border: 1px solid var(--curyo-shell-border);
-  box-shadow:
-    var(--curyo-panel-shadow),
-    inset 0 1px 0 rgb(245 240 235 / 0.03);
+  background: rgb(20 19 22 / 0.96);
+  border: none;
+  box-shadow: var(--curyo-panel-shadow);
 }
 
 .surface-card::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(245 240 235 / 0.22), transparent);
-  opacity: 0.72;
-  pointer-events: none;
+  display: none;
 }
 
 .obsidian-ember-info-card {
   background: rgb(9 10 12 / 0.98);
-  border: 1px solid var(--curyo-shell-border-strong);
-  box-shadow:
-    var(--curyo-panel-shadow),
-    inset 0 1px 0 rgb(245 240 235 / 0.03),
-    inset 0 0 0 1px rgb(242 100 38 / 0.05);
+  border: none;
+  box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);
+}
+
+.surface-card .surface-card {
+  background: rgb(9 10 12 / 0.98);
+  box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);
+}
+
+.card.bg-base-200,
+.modal-box.bg-base-200 {
+  background: rgb(20 19 22 / 0.98) !important;
+  border: none !important;
 }
 
 /* Filled vote buttons */

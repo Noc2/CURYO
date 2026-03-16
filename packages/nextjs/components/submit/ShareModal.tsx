@@ -38,7 +38,7 @@ export function ShareModal({ contentId, title, description, onClose }: ShareModa
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-md bg-base-200 border border-base-content/10 shadow-2xl">
+      <div className="modal-box max-w-md bg-base-200 shadow-2xl">
         {/* Close button */}
         <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Close">
           <XMarkIcon className="w-5 h-5" />

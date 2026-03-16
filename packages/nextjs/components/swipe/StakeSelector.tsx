@@ -141,7 +141,7 @@ export function StakeSelector({
           <div className="absolute inset-0 bg-[#090A0C]/40 backdrop-blur-sm" onClick={onCancel} />
 
           <motion.div
-            className="relative w-full max-w-md rounded-t-2xl border-t border-base-content/10 bg-base-200 p-6 shadow-2xl sm:rounded-2xl sm:border"
+            className="relative w-full max-w-md rounded-t-2xl bg-[#141316] p-6 shadow-2xl sm:rounded-2xl"
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
