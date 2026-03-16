@@ -38,16 +38,13 @@
     <filter id="shell-shadow" x="28" y="18" width="1544" height="948" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="26" stdDeviation="26" flood-color="#000000" flood-opacity="0.34"/>
     </filter>
-    <filter id="note-shadow" x="114" y="490" width="458" height="188" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.32"/>
-    </filter>
-    <filter id="metric-shadow" x="94" y="704" width="824" height="250" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="metric-shadow" x="94" y="556" width="832" height="260" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#000000" flood-opacity="0.28"/>
     </filter>
-    <filter id="orbit-glow" x="782" y="48" width="752" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="orbit-glow" x="718" y="26" width="812" height="812" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="26"/>
     </filter>
-    <filter id="orbit-soft" x="830" y="84" width="672" height="652" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="orbit-soft" x="754" y="62" width="740" height="740" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="10"/>
     </filter>
     <filter id="planet-highlight-blur" x="874" y="102" width="592" height="432" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
@@ -81,7 +78,7 @@
       <stop offset="0.44" stop-color="#FFFFFF" stop-opacity="0.14"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="metric-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(262 826) rotate(90) scale(136)">
+    <radialGradient id="metric-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(248 684) rotate(90) scale(126)">
       <stop stop-color="#FFFFFF" stop-opacity="0.08"/>
       <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
     </radialGradient>
@@ -121,18 +118,18 @@
   <circle cx="1122" cy="430" r="342" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.8"/>
   <circle cx="1122" cy="430" r="324" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="1.4"/>
 
-  <path d="M954 138A344 344 0 0 1 1118 84" stroke="#F7A36F" stroke-opacity="0.12" stroke-width="4" stroke-linecap="round"/>
-  <path d="M972 146A336 336 0 0 1 1128 98" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="1122" cy="430" r="352" stroke="#6D3428" stroke-opacity="0.16" stroke-width="6"/>
+  <circle cx="1122" cy="430" r="352" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
   <g filter="url(#orbit-glow)">
-    <path d="M1242 108A344 344 0 0 1 1458 548" stroke="#F4614F" stroke-opacity="0.56" stroke-width="28" stroke-linecap="round"/>
+    <path d="M1109.7 78.2A352 352 0 1 1 818.4 251.9" stroke="#F4614F" stroke-opacity="0.44" stroke-width="22"/>
   </g>
   <g filter="url(#orbit-soft)">
-    <path d="M1242 108A344 344 0 0 1 1458 548" stroke="url(#orbit-flare)" stroke-width="9" stroke-linecap="round"/>
+    <path d="M1109.7 78.2A352 352 0 1 1 818.4 251.9" stroke="url(#orbit-flare)" stroke-width="8"/>
   </g>
-  <path d="M1242 108A344 344 0 0 1 1458 548" stroke="url(#orbit-flare)" stroke-width="4.8" stroke-linecap="round"/>
-  <path d="M1252 116A336 336 0 0 1 1448 538" stroke="url(#orbit-core)" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="1456" cy="548" r="12" fill="#FFF1D8"/>
-  <circle cx="1456" cy="548" r="26" fill="#FF8D65" fill-opacity="0.2"/>
+  <path d="M1109.7 78.2A352 352 0 1 1 818.4 251.9" stroke="url(#orbit-flare)" stroke-width="4.6"/>
+  <path d="M1109.7 78.2A352 352 0 1 1 818.4 251.9" stroke="url(#orbit-core)" stroke-width="1.8"/>
+  <circle cx="1110" cy="78" r="10" fill="#FFF1D8"/>
+  <circle cx="1110" cy="78" r="20" fill="#FF8D65" fill-opacity="0.18"/>
 
   <circle cx="1122" cy="430" r="318" fill="url(#planet-base)"/>
   <g clip-path="url(#planet-clip)">
@@ -172,35 +169,17 @@
   <rect x="316" y="466" width="164" height="58" rx="18" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
   <text x="356" y="504" fill="#FFFFFF" font-size="24" font-weight="600" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Learn More</text>
 
-  <g filter="url(#note-shadow)">
-    <rect x="132" y="522" width="422" height="124" rx="28" fill="#07090D" fill-opacity="0.9"/>
-    <rect x="132" y="522" width="422" height="124" rx="28" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
-  </g>
-  <circle cx="196" cy="584" r="23" fill="#1C1F28"/>
-  <circle cx="196" cy="584" r="15" fill="#FF9D6E"/>
-  <path d="M188 590C193 584 200 580 208 581" stroke="#FFF2E2" stroke-width="3" stroke-linecap="round"/>
-  <text x="236" y="564" fill="#FFFFFF" fill-opacity="0.44" font-size="20" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Top of the Round</text>
-  <text x="236" y="600" fill="#FFFFFF" font-size="24" font-weight="600" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Verified humans are pushing</text>
-  <text x="236" y="630" fill="#FFFFFF" font-size="24" font-weight="600" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">this signal to 84/100.</text>
-  <path d="M492 558L510 540" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-  <path d="M493 540H510V557" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-
   <g filter="url(#metric-shadow)">
-    <rect x="118" y="736" width="760" height="176" rx="30" fill="#090B10" fill-opacity="0.7"/>
-    <rect x="118" y="736" width="760" height="176" rx="30" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+    <rect x="118" y="590" width="772" height="180" rx="30" fill="#090B10" fill-opacity="0.7"/>
+    <rect x="118" y="590" width="772" height="180" rx="30" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
   </g>
 
-  <circle cx="262" cy="824" r="116" fill="url(#metric-glow)"/>
-  <circle cx="262" cy="824" r="78" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/>
-  <path d="M230.9 747A83 83 0 0 1 323.7 768.5L316.2 775.2A73 73 0 0 0 234.7 756.3Z" fill="#FFB870"/>
-  <path d="M339 792.9A83 83 0 0 1 335.3 863L326.5 858.3A73 73 0 0 0 329.7 796.7Z" fill="#F46D79"/>
-  <path d="M317.5 885.7A83 83 0 0 1 241.9 904.5L244.3 894.8A73 73 0 0 0 310.8 878.2Z" fill="#7C79EA"/>
-  <path d="M215.6 892.8A83 83 0 0 1 179.2 818.2L189.2 818.9A73 73 0 0 0 221.2 884.5Z" fill="#2E99E7"/>
-  <path d="M187.4 787.6A83 83 0 0 1 236.4 745.1L239.4 754.6A73 73 0 0 0 196.4 792Z" fill="#14C8A1"/>
-  <circle cx="262" cy="824" r="118" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
-  <text x="220" y="838" fill="#FFFFFF" font-size="54" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">84%</text>
+  <circle cx="248" cy="680" r="108" fill="url(#metric-glow)"/>
+  <circle cx="248" cy="680" r="86" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+  <text x="176" y="706" fill="#FFFFFF" font-size="96" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">84%</text>
 
-  <text x="406" y="790" fill="#FFFFFF" fill-opacity="0.42" font-size="24" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Current rating</text>
-  <text x="406" y="850" fill="#FFFFFF" font-size="56" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Quality Signal</text>
-  <text x="406" y="892" fill="#FFFFFF" fill-opacity="0.58" font-size="24" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">42 verified humans backing this round</text>
+  <text x="414" y="652" fill="#FFFFFF" fill-opacity="0.42" font-size="24" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Current rating</text>
+  <text x="414" y="714" fill="#FFFFFF" font-size="60" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Quality Signal</text>
+  <text x="414" y="754" fill="#FFFFFF" fill-opacity="0.58" font-size="24" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">42 verified humans backing this round</text>
+  <text x="414" y="792" fill="#FFFFFF" fill-opacity="0.42" font-size="20" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">The orbit flare fills to match the live score.</text>
 </svg>
