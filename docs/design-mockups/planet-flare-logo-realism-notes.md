@@ -1,6 +1,6 @@
 # Planet Flare Photoreal Direction
 
-This direction keeps the Curyo planet-and-flare silhouette, but pushes it much closer to a photoreal planetary disk and removes the idea that the flare is traveling on a perfect orbit.
+This direction keeps the Curyo planet-and-flare silhouette, but pushes it much closer to a photoreal planetary disk while restoring the flare to a clean orbital circle.
 
 ## Research Notes
 
@@ -17,17 +17,22 @@ This direction keeps the Curyo planet-and-flare silhouette, but pushes it much c
 - The planet becomes rust, ochre, ember, and deep maroon instead of rainbow gradients.
 - The surface uses textured terrain masses, crater shadows, and relief-like variation instead of graphic bands.
 - The lighting becomes more cinematic and planetary, with a strong terminator, specular bloom, and a thin atmospheric rim.
-- The flare becomes a detached plasma stream with a hot leading head and dissipating tail, not a ring segment.
+- The flare stays on a true circular orbit with one constant radius, but keeps a hotter head, softer trailing glow, and less mechanical color treatment.
 
 ## Motion Direction
 
-- Do not rotate the flare around the planet on a circular orbit.
-- Keep the flare on a free curved path that skims past the planet and bends away from it.
-- Animate the flare like plasma: slow drift, brightness surges, and a slight tail reshaping over time.
-- Let the brightest point lead the motion while the tail lags and diffuses.
-- Preserve a static composition when motion is disabled; the flare should still read as a nearby event, not an orbit track.
+- Keep the flare locked to one perfect circular orbit around the planet.
+- Animate the flare segment along that circle without changing the orbit radius.
+- Let the flare brightness surge and taper so it feels energetic without becoming a random stroke.
+- Preserve a clean static composition when motion is disabled; the flare should still read as part of a deliberate orbital system.
 
 ## Logo Constraint
 
 - The hero/logo exploration can lean photoreal, but the production badge still needs a simplified sibling for tiny sizes.
 - Tiny variants should borrow the same light direction and color language, but drop the fine terrain texture and detached tail complexity.
+
+## Pushing Photorealism Further
+
+- Pure SVG can get much closer than the older brand mark, but there is a ceiling.
+- If we want a truly photoreal hero logo, the next step should be a rendered texture map or 3D render exported into a controlled asset, with the SVG version kept as the simplified product mark.
+- The planet surface should stay in warm mineral tones only; avoid blue-green contamination inside the disk except for a very subtle atmospheric rim at the edge.

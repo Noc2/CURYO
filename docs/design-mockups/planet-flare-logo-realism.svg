@@ -55,13 +55,14 @@
 
     <filter id="planet-texture" x="110" y="110" width="804" height="804" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feTurbulence type="fractalNoise" baseFrequency="0.010 0.024" numOctaves="3" seed="11" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0" result="noiseMono"/>
       <feColorMatrix
-        in="noise"
+        in="noiseMono"
         type="matrix"
-        values="0.9 0 0 0 0
-                0 0.56 0 0 0
-                0 0 0.32 0 0
-                0 0 0 0.72 0"
+        values="0.76 0 0 0 0.14
+                0.34 0 0 0 0.05
+                0.12 0 0 0 0.02
+                0 0 0 0.64 0"
         result="noiseTint"
       />
       <feGaussianBlur in="noiseTint" stdDeviation="1.2" result="noiseSoft"/>
@@ -87,19 +88,21 @@
   <rect width="1024" height="1024" rx="44" fill="url(#bg-core)"/>
   <rect width="1024" height="1024" rx="44" fill="url(#bg-glow)"/>
 
+  <circle cx="512" cy="512" r="430" stroke="#FFF0E2" stroke-opacity="0.22" stroke-width="2.2"/>
+  <circle cx="512" cy="512" r="430" stroke="#6E3023" stroke-opacity="0.14" stroke-width="10" stroke-dasharray="520 2182" transform="rotate(-132 512 512)"/>
   <g filter="url(#soft-blur-40)">
-    <path d="M234 254C350 146 552 110 686 150C774 176 842 238 860 322C874 392 850 474 820 536C802 576 786 598 770 618" stroke="#FF4F2B" stroke-opacity="0.22" stroke-width="38" stroke-linecap="round"/>
+    <circle cx="512" cy="512" r="430" stroke="#FF5630" stroke-opacity="0.22" stroke-width="34" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
   </g>
   <g filter="url(#soft-blur-24)">
-    <path d="M246 258C360 160 548 128 674 164C756 188 816 246 832 320C844 382 822 454 794 510C780 540 766 562 752 580" stroke="#FFB176" stroke-opacity="0.18" stroke-width="20" stroke-linecap="round"/>
+    <circle cx="512" cy="512" r="430" stroke="#FFB176" stroke-opacity="0.18" stroke-width="18" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
   </g>
-  <path d="M236 254C350 146 552 110 686 150C774 176 842 238 860 322C874 392 850 474 820 536C802 576 786 598 770 618" stroke="#48211A" stroke-opacity="0.42" stroke-width="14" stroke-linecap="round"/>
-  <path d="M236 254C350 146 552 110 686 150C774 176 842 238 860 322C874 392 850 474 820 536C802 576 786 598 770 618" stroke="url(#flare-stream)" stroke-width="9" stroke-linecap="round"/>
-  <path d="M274 268C378 178 544 148 656 180C730 202 782 252 796 318C806 370 788 432 764 478C752 500 742 516 730 532" stroke="url(#flare-core)" stroke-width="2.8" stroke-linecap="round"/>
-  <path d="M720 540C760 518 794 524 820 562" stroke="#FFB987" stroke-opacity="0.36" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M742 570C784 562 810 574 826 602" stroke="#FF8D58" stroke-opacity="0.22" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="816" cy="604" r="13" fill="#FFF8EF"/>
-  <ellipse cx="816" cy="604" rx="42" ry="30" fill="url(#flare-head)"/>
+  <circle cx="512" cy="512" r="430" stroke="#48211A" stroke-opacity="0.42" stroke-width="12" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
+  <circle cx="512" cy="512" r="430" stroke="url(#flare-stream)" stroke-width="8.5" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
+  <circle cx="512" cy="512" r="430" stroke="url(#flare-core)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
+  <path d="M846 702C878 688 900 696 914 722" stroke="#FFB987" stroke-opacity="0.34" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M828 680C860 662 890 668 910 694" stroke="#FF8D58" stroke-opacity="0.2" stroke-width="3.6" stroke-linecap="round"/>
+  <circle cx="894" cy="724" r="11" fill="#FFF8EF"/>
+  <ellipse cx="894" cy="724" rx="38" ry="28" fill="url(#flare-head)"/>
 
   <g filter="url(#soft-blur-16)">
     <ellipse cx="504" cy="522" rx="354" ry="366" fill="#000000" fill-opacity="0.26"/>
@@ -127,6 +130,7 @@
     <ellipse cx="620" cy="320" rx="116" ry="78" fill="#FFD79C" fill-opacity="0.12"/>
     <ellipse cx="676" cy="372" rx="74" ry="46" fill="#FFE0AF" fill-opacity="0.06"/>
     <ellipse cx="438" cy="318" rx="90" ry="54" fill="#5C211A" fill-opacity="0.14"/>
+    <ellipse cx="634" cy="502" rx="168" ry="104" fill="#FFDBAD" fill-opacity="0.04"/>
 
     <g fill="#180A0D">
       <ellipse cx="454" cy="324" rx="24" ry="15" fill-opacity="0.3"/>
