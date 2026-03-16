@@ -329,13 +329,21 @@ export function CuryoLighthouseMark({
 
         @keyframes lighthouse-sequence-inner {
           0%,
-          12%,
+          8%,
           92%,
           100% {
             opacity: 0;
-            transform: scale(0.92);
+            transform: scale(0.88);
           }
-          18%,
+          13% {
+            opacity: 0.16;
+            transform: scale(0.93);
+          }
+          18% {
+            opacity: 0.5;
+            transform: scale(0.965);
+          }
+          23%,
           54% {
             opacity: 0.98;
             transform: scale(1);
@@ -348,12 +356,20 @@ export function CuryoLighthouseMark({
 
         @keyframes lighthouse-sequence-middle {
           0%,
-          22%,
+          18%,
           100% {
             opacity: 0;
-            transform: scale(0.92);
+            transform: scale(0.89);
           }
-          30%,
+          24% {
+            opacity: 0.14;
+            transform: scale(0.935);
+          }
+          30% {
+            opacity: 0.46;
+            transform: scale(0.97);
+          }
+          36%,
           64% {
             opacity: 0.92;
             transform: scale(1);
@@ -366,12 +382,20 @@ export function CuryoLighthouseMark({
 
         @keyframes lighthouse-sequence-outer {
           0%,
-          34%,
+          28%,
           100% {
             opacity: 0;
-            transform: scale(0.92);
+            transform: scale(0.9);
           }
-          42%,
+          35% {
+            opacity: 0.12;
+            transform: scale(0.94);
+          }
+          42% {
+            opacity: 0.42;
+            transform: scale(0.975);
+          }
+          48%,
           76% {
             opacity: 0.84;
             transform: scale(1);
