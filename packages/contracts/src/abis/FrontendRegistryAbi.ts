@@ -618,6 +618,19 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "topUpStake",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "unslashFrontend",
     "inputs": [
       {
@@ -676,6 +689,25 @@ export const FrontendRegistryAbi = [
   {
     "type": "event",
     "name": "FeesClaimed",
+    "inputs": [
+      {
+        "name": "frontend",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "crepAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FeesConfiscated",
     "inputs": [
       {
         "name": "frontend",
@@ -802,6 +834,31 @@ export const FrontendRegistryAbi = [
         "type": "string",
         "indexed": false,
         "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FrontendStakeToppedUp",
+    "inputs": [
+      {
+        "name": "frontend",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newStakedAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false

@@ -97,19 +97,6 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_QUESTION_LENGTH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "MAX_SUBCATEGORIES",
     "inputs": [],
     "outputs": [
