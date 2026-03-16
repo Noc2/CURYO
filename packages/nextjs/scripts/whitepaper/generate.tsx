@@ -1,5 +1,3 @@
-/* eslint-disable jsx-a11y/alt-text */
-
 /**
  * Whitepaper PDF generator.
  * Run: yarn whitepaper  (or:  npx tsx scripts/whitepaper/generate.tsx)
@@ -8,7 +6,21 @@
 import React from "react";
 import { ContentBlock, EXECUTIVE_SUMMARY, META, SECTIONS, TableData } from "./content";
 import { renderLatex } from "./latex";
-import { Document, Image, Page, StyleSheet, Text, View, renderToFile, renderToStream } from "@react-pdf/renderer";
+import {
+  Circle,
+  Defs,
+  Document,
+  LinearGradient,
+  Page,
+  RadialGradient,
+  Stop,
+  StyleSheet,
+  Svg,
+  Text,
+  View,
+  renderToFile,
+  renderToStream,
+} from "@react-pdf/renderer";
 
 // ── Brand colors ──
 const BLUE = "#359EEE";
@@ -90,10 +102,86 @@ const s = StyleSheet.create({
   },
 });
 
-const coverLogoPath = new URL("../../public/logo.png", import.meta.url).pathname;
-
 function CoverCircle() {
-  return <Image src={coverLogoPath} style={{ width: 280, height: 280 }} />;
+  return (
+    <Svg viewBox="0 0 512 512" width={280} height={280}>
+      <Defs>
+        <RadialGradient id="cover-ambient" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="#0F172A" stopOpacity={0.08} />
+          <Stop offset="58%" stopColor="#334155" stopOpacity={0.03} />
+          <Stop offset="100%" stopColor="#334155" stopOpacity={0} />
+        </RadialGradient>
+
+        <RadialGradient id="cover-orb-glow" cx="50%" cy="50%" r="50%">
+          <Stop offset="0%" stopColor="#EF476F" stopOpacity={0.18} />
+          <Stop offset="44%" stopColor="#359EEE" stopOpacity={0.1} />
+          <Stop offset="76%" stopColor="#03CEA4" stopOpacity={0.06} />
+          <Stop offset="100%" stopColor="#03CEA4" stopOpacity={0} />
+        </RadialGradient>
+
+        <LinearGradient id="cover-orb" x1="0.22" y1="0.14" x2="0.78" y2="0.88">
+          <Stop offset="0%" stopColor="#359EEE" />
+          <Stop offset="34%" stopColor="#EF476F" />
+          <Stop offset="66%" stopColor="#FFC43D" />
+          <Stop offset="100%" stopColor="#03CEA4" />
+        </LinearGradient>
+
+        <RadialGradient id="cover-gloss" cx="0" cy="0" r="1" gradientTransform="translate(0.34 0.28) scale(0.42 0.32)">
+          <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.62} />
+          <Stop offset="50%" stopColor="#FFFFFF" stopOpacity={0.22} />
+          <Stop offset="100%" stopColor="#FFFFFF" stopOpacity={0} />
+        </RadialGradient>
+
+        <LinearGradient id="cover-inner-ring" x1="146" y1="108" x2="366" y2="404" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor="#6B7280" />
+          <Stop offset="100%" stopColor="#A1A1AA" />
+        </LinearGradient>
+
+        <LinearGradient id="cover-middle-ring" x1="126" y1="90" x2="386" y2="422" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor="#374151" />
+          <Stop offset="100%" stopColor="#6B7280" />
+        </LinearGradient>
+
+        <LinearGradient id="cover-outer-ring" x1="106" y1="72" x2="406" y2="440" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor="#111827" />
+          <Stop offset="100%" stopColor="#4B5563" />
+        </LinearGradient>
+      </Defs>
+
+      <Circle cx="256" cy="256" r="176" fill="url(#cover-ambient)" />
+      <Circle
+        cx="256"
+        cy="256"
+        r="174"
+        fill="none"
+        stroke="url(#cover-outer-ring)"
+        strokeWidth="8"
+        strokeOpacity={0.9}
+      />
+      <Circle
+        cx="256"
+        cy="256"
+        r="144"
+        fill="none"
+        stroke="url(#cover-middle-ring)"
+        strokeWidth="9"
+        strokeOpacity={0.94}
+      />
+      <Circle
+        cx="256"
+        cy="256"
+        r="114"
+        fill="none"
+        stroke="url(#cover-inner-ring)"
+        strokeWidth="11"
+        strokeOpacity={0.96}
+      />
+      <Circle cx="371" cy="334" r="4.2" fill="#111827" fillOpacity={0.78} />
+      <Circle cx="256" cy="256" r="118" fill="url(#cover-orb-glow)" />
+      <Circle cx="256" cy="256" r="64" fill="url(#cover-orb)" />
+      <Circle cx="256" cy="256" r="52" fill="url(#cover-gloss)" />
+    </Svg>
+  );
 }
 
 // ── PDF Table component ──
