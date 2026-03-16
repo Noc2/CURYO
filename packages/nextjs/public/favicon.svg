@@ -18,7 +18,7 @@
       <stop offset="0.52" stop-color="#FFF8F3" stop-opacity="0.2" />
       <stop offset="1" stop-color="#FFF8F3" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="favicon-coral-bloom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(910 754) rotate(158) scale(294 236)">
+    <radialGradient id="favicon-coral-bloom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(930 612) rotate(166) scale(270 220)">
       <stop stop-color="#FFD77E" stop-opacity="0.82" />
       <stop offset="1" stop-color="#FFD77E" stop-opacity="0" />
     </radialGradient>
@@ -58,18 +58,18 @@
     </clipPath>
   </defs>
 
-  <circle cx="700" cy="700" r="442" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2.2" />
+  <circle cx="700" cy="700" r="448" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2.2" />
 
   <g filter="url(#favicon-blur-40)">
-    <circle cx="700" cy="700" r="442" stroke="#F45C4D" stroke-opacity="0.64" stroke-width="38" stroke-linecap="round" stroke-dasharray="725.1 2052" transform="rotate(-66 700 700)" />
+    <circle cx="700" cy="700" r="448" stroke="#F45C4D" stroke-opacity="0.68" stroke-width="42" stroke-linecap="round" stroke-dasharray="735.0 2079.9" transform="rotate(-66 700 700)" />
   </g>
-  <circle cx="700" cy="700" r="442" stroke="#6D352A" stroke-opacity="0.42" stroke-width="18" stroke-linecap="round" stroke-dasharray="725.1 2052" transform="rotate(-66 700 700)" />
-  <circle cx="700" cy="700" r="442" stroke="url(#favicon-flare-gradient)" stroke-width="13.5" stroke-linecap="round" stroke-dasharray="725.1 2052" transform="rotate(-66 700 700)" />
-  <circle cx="700" cy="700" r="442" stroke="url(#favicon-flare-core)" stroke-width="4.2" stroke-linecap="round" stroke-dasharray="725.1 2052" transform="rotate(-66 700 700)" />
-  <circle cx="1090.3" cy="907.5" r="30" fill="#FF8D65" fill-opacity="0.22" />
-  <circle cx="1090.3" cy="907.5" r="12" fill="#FFF3DF" />
+  <circle cx="700" cy="700" r="448" stroke="#6D352A" stroke-opacity="0.42" stroke-width="20" stroke-linecap="round" stroke-dasharray="735.0 2079.9" transform="rotate(-66 700 700)" />
+  <circle cx="700" cy="700" r="448" stroke="url(#favicon-flare-gradient)" stroke-width="15" stroke-linecap="round" stroke-dasharray="735.0 2079.9" transform="rotate(-66 700 700)" />
+  <circle cx="700" cy="700" r="448" stroke="url(#favicon-flare-core)" stroke-width="4.8" stroke-linecap="round" stroke-dasharray="735.0 2079.9" transform="rotate(-66 700 700)" />
+  <circle cx="1095.6" cy="910.3" r="32" fill="#FF8D65" fill-opacity="0.22" />
+  <circle cx="1095.6" cy="910.3" r="13" fill="#FFF3DF" />
 
-  <g transform="translate(700 700) scale(0.9) translate(-700 -700)">
+  <g transform="translate(700 700) scale(0.88) translate(-700 -700)">
     <circle cx="700" cy="700" r="360" fill="url(#favicon-orb-base)" />
     <circle cx="700" cy="700" r="360" fill="url(#favicon-orb-rim)" />
     <g clip-path="url(#favicon-orb-clip)">

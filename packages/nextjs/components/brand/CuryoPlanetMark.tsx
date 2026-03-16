@@ -10,7 +10,7 @@ interface CuryoPlanetMarkProps {
 
 const CENTER = 700;
 const DEFAULT_FLARE_RADIUS = 420;
-const COMPACT_FLARE_RADIUS = 442;
+const COMPACT_FLARE_RADIUS = 448;
 const HERO_FLARE_RADIUS = 426;
 const DEFAULT_ARC_DEGREES = 94;
 
@@ -37,8 +37,8 @@ function scaleAroundCenter(scale: number) {
 
 /**
  * Canonical Curyo AI-sphere brand mark.
- * Based on the deeper-blue fold-with-flare direction, with a stronger compact
- * variant for header-sized logos and favicons.
+ * Uses the warm fold-with-flare art direction, with a stronger compact
+ * treatment for header-sized logos and favicons.
  */
 export function CuryoPlanetMark({
   className = "h-8 w-8",
@@ -75,14 +75,14 @@ export function CuryoPlanetMark({
   const flareRotation = -66;
   const flareDashArray = circleDashArray(flareRadius, DEFAULT_ARC_DEGREES);
   const nodePoint = polarPoint(flareRadius, flareRotation + DEFAULT_ARC_DEGREES);
-  const planetScale = usesCompactVariant ? 0.9 : usesHeroVariant ? 1.02 : 1;
-  const flareGlowStrokeWidth = usesCompactVariant ? 38 : usesHeroVariant ? 34 : 28;
-  const flareGlowOpacity = usesCompactVariant ? 0.64 : usesHeroVariant ? 0.58 : 0.54;
-  const flareBodyStrokeWidth = usesCompactVariant ? 18 : usesHeroVariant ? 12 : 10;
-  const flareMainStrokeWidth = usesCompactVariant ? 13.5 : usesHeroVariant ? 9 : 8;
-  const flareCoreStrokeWidth = usesCompactVariant ? 4.2 : usesHeroVariant ? 2.8 : 2.4;
-  const nodeHaloRadius = usesCompactVariant ? 30 : 23;
-  const nodeRadius = usesCompactVariant ? 12 : 9;
+  const planetScale = usesCompactVariant ? 0.88 : usesHeroVariant ? 1.02 : 1;
+  const flareGlowStrokeWidth = usesCompactVariant ? 42 : usesHeroVariant ? 34 : 28;
+  const flareGlowOpacity = usesCompactVariant ? 0.68 : usesHeroVariant ? 0.58 : 0.54;
+  const flareBodyStrokeWidth = usesCompactVariant ? 20 : usesHeroVariant ? 12 : 10;
+  const flareMainStrokeWidth = usesCompactVariant ? 15 : usesHeroVariant ? 9 : 8;
+  const flareCoreStrokeWidth = usesCompactVariant ? 4.8 : usesHeroVariant ? 2.8 : 2.4;
+  const nodeHaloRadius = usesCompactVariant ? 32 : 23;
+  const nodeRadius = usesCompactVariant ? 13 : 9;
   const flareGlowFilterId = usesHeroVariant ? blur52Id : blur40Id;
   const planetTransform = scaleAroundCenter(planetScale);
 
@@ -105,14 +105,14 @@ export function CuryoPlanetMark({
             cy="0"
             r="1"
             gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(874 472) rotate(136) scale(728 704)"
+            gradientTransform="translate(856 450) rotate(136) scale(720 702)"
           >
-            <stop stopColor="#FFE1B5" />
-            <stop offset="0.16" stopColor="#FFBA84" />
-            <stop offset="0.34" stopColor="#F57E8A" />
-            <stop offset="0.56" stopColor="#6D73E0" />
-            <stop offset="0.76" stopColor="#2F86D9" />
-            <stop offset="1" stopColor="#0B2134" />
+            <stop stopColor="#FFF8F2" />
+            <stop offset="0.18" stopColor="#F8E1D0" />
+            <stop offset="0.34" stopColor="#F7B070" />
+            <stop offset="0.56" stopColor="#F26426" />
+            <stop offset="0.78" stopColor="#B23C3B" />
+            <stop offset="1" stopColor="#6A345F" />
           </radialGradient>
           <radialGradient
             id={orbRimId}
@@ -120,11 +120,11 @@ export function CuryoPlanetMark({
             cy="0"
             r="1"
             gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(500 522) rotate(28) scale(256 552)"
+            gradientTransform="translate(438 516) rotate(30) scale(240 540)"
           >
-            <stop stopColor="#B7D7FB" stopOpacity="0.7" />
-            <stop offset="0.2" stopColor="#76A6D6" stopOpacity="0.28" />
-            <stop offset="1" stopColor="#76A6D6" stopOpacity="0" />
+            <stop stopColor="#AFC5D7" stopOpacity="0.82" />
+            <stop offset="0.22" stopColor="#7E8996" stopOpacity="0.34" />
+            <stop offset="1" stopColor="#7E8996" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={softWhiteId}
@@ -132,11 +132,11 @@ export function CuryoPlanetMark({
             cy="0"
             r="1"
             gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(742 504) rotate(136) scale(340 272)"
+            gradientTransform="translate(710 520) rotate(128) scale(330 260)"
           >
-            <stop stopColor="#FFF4E2" stopOpacity="0.8" />
-            <stop offset="0.52" stopColor="#FFF4E2" stopOpacity="0.24" />
-            <stop offset="1" stopColor="#FFF4E2" stopOpacity="0" />
+            <stop stopColor="#FFF8F3" stopOpacity="0.74" />
+            <stop offset="0.52" stopColor="#FFF8F3" stopOpacity="0.2" />
+            <stop offset="1" stopColor="#FFF8F3" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={coralBloomId}
@@ -144,10 +144,10 @@ export function CuryoPlanetMark({
             cy="0"
             r="1"
             gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(910 754) rotate(158) scale(294 236)"
+            gradientTransform="translate(930 612) rotate(166) scale(270 220)"
           >
-            <stop stopColor="#FF7E64" stopOpacity="0.42" />
-            <stop offset="1" stopColor="#FF7E64" stopOpacity="0" />
+            <stop stopColor="#FFD77E" stopOpacity="0.82" />
+            <stop offset="1" stopColor="#FFD77E" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={violetPocketId}
@@ -155,10 +155,10 @@ export function CuryoPlanetMark({
             cy="0"
             r="1"
             gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(520 926) rotate(-18) scale(356 258)"
+            gradientTransform="translate(500 866) rotate(-26) scale(334 244)"
           >
-            <stop stopColor="#7E52BA" stopOpacity="0.32" />
-            <stop offset="1" stopColor="#7E52BA" stopOpacity="0" />
+            <stop stopColor="#6B37A5" stopOpacity="0.54" />
+            <stop offset="1" stopColor="#6B37A5" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={bluePocketId}
@@ -166,17 +166,17 @@ export function CuryoPlanetMark({
             cy="0"
             r="1"
             gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(560 840) rotate(8) scale(358 194)"
+            gradientTransform="translate(620 760) rotate(8) scale(320 180)"
           >
-            <stop stopColor="#2F8EDF" stopOpacity="0.32" />
-            <stop offset="0.56" stopColor="#4D88D7" stopOpacity="0.2" />
-            <stop offset="1" stopColor="#4D88D7" stopOpacity="0" />
+            <stop stopColor="#8C4A53" stopOpacity="0.36" />
+            <stop offset="0.58" stopColor="#C46A4A" stopOpacity="0.22" />
+            <stop offset="1" stopColor="#C46A4A" stopOpacity="0" />
           </radialGradient>
           <linearGradient id={foldSheenId} x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
             <stop stopColor="#FFF7F0" stopOpacity="0" />
             <stop offset="0.3" stopColor="#FFF7F0" stopOpacity="0.08" />
-            <stop offset="0.56" stopColor="#FFF7F0" stopOpacity="0.32" />
-            <stop offset="0.82" stopColor="#FFD7B2" stopOpacity="0.16" />
+            <stop offset="0.56" stopColor="#FFF7F0" stopOpacity="0.34" />
+            <stop offset="0.82" stopColor="#FFD7B2" stopOpacity="0.18" />
             <stop offset="1" stopColor="#FFD7B2" stopOpacity="0" />
           </linearGradient>
           <linearGradient id={flareGradientId} x1="860" y1="260" x2="1050" y2="736" gradientUnits="userSpaceOnUse">
@@ -308,10 +308,10 @@ export function CuryoPlanetMark({
           <circle cx="700" cy="700" r="360" fill={`url(#${orbRimId})`} />
           <g clipPath={`url(#${orbClipId})`}>
             <g filter={`url(#${blur40Id})`}>
-              <ellipse cx="700" cy="528" rx="292" ry="192" fill={`url(#${softWhiteId})`} />
-              <ellipse cx="910" cy="700" rx="270" ry="232" fill={`url(#${coralBloomId})`} />
-              <ellipse cx="504" cy="926" rx="300" ry="224" fill={`url(#${violetPocketId})`} />
-              <ellipse cx="612" cy="818" rx="344" ry="194" fill={`url(#${bluePocketId})`} />
+              <ellipse cx="672" cy="538" rx="280" ry="184" fill={`url(#${softWhiteId})`} />
+              <ellipse cx="930" cy="640" rx="246" ry="214" fill={`url(#${coralBloomId})`} />
+              <ellipse cx="508" cy="904" rx="286" ry="218" fill={`url(#${violetPocketId})`} />
+              <ellipse cx="662" cy="774" rx="316" ry="176" fill={`url(#${bluePocketId})`} />
             </g>
 
             <path
@@ -320,7 +320,7 @@ export function CuryoPlanetMark({
             />
             <path
               d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z"
-              fill="#FFF4E2"
+              fill="#F5E3D2"
               fillOpacity="0.11"
             />
             <path
@@ -332,8 +332,8 @@ export function CuryoPlanetMark({
             />
             <path
               d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110"
-              stroke="#C8ADD6"
-              strokeOpacity="0.085"
+              stroke="#E2B2A0"
+              strokeOpacity="0.1"
               strokeWidth="24"
               strokeLinecap="round"
             />
