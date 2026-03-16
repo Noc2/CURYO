@@ -9,21 +9,18 @@ const STEPS = [
     title: "Verify Humanity",
     description:
       "Claim one privacy-preserving Voter ID and cREP so each rating comes from a real human with a fair stake limit.",
-    color: "#F4F0EB",
   },
   {
     icon: EyeSlashIcon,
     title: "Blind Vote with Stake",
     description:
       "Vote UP or DOWN on content with cREP. Your direction stays hidden during the blind phase, which makes copycat voting harder and rewards independent judgment.",
-    color: "#F26426",
   },
   {
     icon: ScaleIcon,
     title: "Reveal and Settle",
     description:
       "After the blind phase, votes are revealed and the round settles. Winning voters earn rewards, and the content's public rating updates from the final stake imbalance.",
-    color: "#B3341B",
   },
 ];
 
@@ -58,22 +55,25 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
         {/* How it works */}
         <div className="w-full mt-12">
           <h2 className="mb-6 text-center text-4xl font-bold sm:mb-7 sm:text-5xl">
-            How it <span className="text-white">Works</span>
+            How it <span className="text-[#F5F0EB]">Works</span>
           </h2>
           <p className="mx-auto mb-10 max-w-3xl text-center text-xl leading-8 text-base-content/60 sm:text-2xl sm:leading-9">
             Verified Humans Stake on Content to Create Public Ratings.
           </p>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {STEPS.map(({ icon: Icon, title, description, color }) => (
+            {STEPS.map(({ icon: Icon, title, description }) => (
               <div
                 key={title}
-                className="flex h-full flex-col items-center rounded-[1.75rem] bg-[rgb(16,17,19,0.96)] px-6 py-7 text-center shadow-[0_24px_56px_rgba(0,0,0,0.34)]"
+                className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
               >
                 <div
                   className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl"
-                  style={{ backgroundColor: `${color}14`, boxShadow: `inset 0 0 0 1px ${color}24` }}
+                  style={{
+                    backgroundColor: "#090A0C",
+                    boxShadow: "inset 0 0 0 1px rgba(245,240,235,0.06), 0 14px 28px rgba(9,10,12,0.24)",
+                  }}
                 >
-                  <Icon className="w-10 h-10" style={{ color }} />
+                  <Icon className="h-10 w-10 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{title}</h3>
                 <p className="text-lg text-base-content/60">{description}</p>
