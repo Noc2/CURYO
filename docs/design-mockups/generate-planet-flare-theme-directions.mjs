@@ -33,7 +33,7 @@ const themeDirections = [
     id: "ember-orbit",
     name: "Ember Orbit",
     tag: "Warm confidence",
-    body: "Keeps the coral flare emotional while the planet leans sunset-gold to deep navy. Strongest match if the site should feel human and editorial.",
+    body: "Warm editorial palette with sunset gold, coral, and deep navy.",
     bgFrom: "#0A1220",
     bgTo: "#111B2E",
     panelGlow: "#F37A57",
@@ -88,7 +88,7 @@ const themeDirections = [
     id: "tidal-signal",
     name: "Tidal Signal",
     tag: "Cool precision",
-    body: "Shifts the planet toward seafoam, aqua, and cobalt while leaving the flare warm. Best if the product theme should feel analytical and trustworthy.",
+    body: "Seafoam, aqua, and cobalt make the brand calmer and more analytical.",
     bgFrom: "#07161B",
     bgTo: "#0D2530",
     panelGlow: "#31B8C7",
@@ -143,7 +143,7 @@ const themeDirections = [
     id: "solar-brass",
     name: "Solar Brass",
     tag: "Premium signal",
-    body: "Pulls the palette toward brass, amber, and volcanic rust. Best if the site wants a more premium editorial direction without losing the warm flare.",
+    body: "Brass, amber, and rust shift the brand toward premium editorial.",
     bgFrom: "#17120D",
     bgTo: "#241A13",
     panelGlow: "#E3A151",
@@ -198,7 +198,7 @@ const themeDirections = [
     id: "horizon-nova",
     name: "Horizon Nova",
     tag: "Social energy",
-    body: "Leans brighter and more optimistic with sky blue, apricot, and sunrise coral. Best if the site wants momentum and accessibility without going flat.",
+    body: "Sky blue and apricot make the mark brighter, more optimistic, and social.",
     bgFrom: "#091522",
     bgTo: "#11243C",
     panelGlow: "#5A9CFF",
@@ -247,6 +247,305 @@ const themeDirections = [
       darkBandOpacity: 0.28,
       warmBand: "#FFAA83",
       warmBandOpacity: 0.14,
+    },
+  },
+];
+
+const experimentalThemeDirections = [
+  {
+    id: "aurora-relay",
+    name: "Aurora Relay",
+    tag: "Neon future",
+    body: "Mint, periwinkle, and ultraviolet push the mark into sci-fi territory.",
+    bgFrom: "#050914",
+    bgTo: "#111735",
+    panelGlow: "#65F3C7",
+    panelGlowSoft: "#6A67FF",
+    surface: "#0D1530",
+    surfaceAlt: "#14204A",
+    surfaceStroke: "#FFFFFF14",
+    text: "#F5FBFF",
+    muted: "#A7B5D7",
+    accent: "#7AF4D3",
+    accentSoft: "#D4FFF4",
+    accentText: "#04111A",
+    chip: "#241D56",
+    chipText: "#D9D4FF",
+    swatches: ["#EFFFFA", "#7AF4D3", "#718BFF", "#B675FF", "#091121"],
+    flare: {
+      outer: "#41E6C0",
+      dark: "#133E35",
+      glowOpacity: 0.52,
+      endpointGlow: "#78FFD8",
+      endpointCore: "#F3FFFA",
+      stops: [
+        { color: "#41E6C0" },
+        { offset: "0.26", color: "#74F4D5" },
+        { offset: "0.58", color: "#B4FFD8" },
+        { offset: "0.84", color: "#E9FFF1" },
+        { offset: "1", color: "#FFFFFF" },
+      ],
+      coreStops: [
+        { color: "#96FFE7" },
+        { offset: "0.52", color: "#F1FFF9" },
+        { offset: "1", color: "#FFFFFF" },
+      ],
+    },
+    logo: {
+      baseStops: [
+        { color: "#F2FFFB" },
+        { offset: "0.16", color: "#8FECD9" },
+        { offset: "0.34", color: "#5BBDE9" },
+        { offset: "0.57", color: "#6C7CF9" },
+        { offset: "0.8", color: "#6A32A4" },
+        { offset: "1", color: "#081020" },
+      ],
+      shadowColor: "#050A13",
+      shadowOpacity: 0.8,
+      highlightColor: "#F8FFFF",
+      highlightOpacity: 0.76,
+      atmosphereColor: "#BEFFF0",
+      atmosphereOpacity: 0.24,
+      edgeStroke: "#FFFFFF",
+      edgeOpacity: 0.2,
+      warmDash: "#7AEFD6",
+      warmDashOpacity: 0.12,
+      outerRing: "#131A30",
+      ringShadow: "#28224E",
+      ringShadowOpacity: 0.7,
+      glows: [
+        { cx: 318, cy: 382, rx: 206, ry: 154, color: "#6AF1D0", opacity: 0.34 },
+        { cx: 610, cy: 314, rx: 248, ry: 170, color: "#8AB4FF", opacity: 0.28 },
+        { cx: 718, cy: 438, rx: 236, ry: 156, color: "#C88BFF", opacity: 0.3 },
+        { cx: 606, cy: 660, rx: 274, ry: 154, color: "#2B4E8A", opacity: 0.26 },
+        { cx: 334, cy: 706, rx: 290, ry: 180, color: "#09111F", opacity: 0.68 },
+      ],
+      darkBand: "#274D86",
+      darkBandOpacity: 0.3,
+      warmBand: "#9DEFE1",
+      warmBandOpacity: 0.12,
+    },
+  },
+  {
+    id: "rose-eclipse",
+    name: "Rose Eclipse",
+    tag: "Luxe surreal",
+    body: "Plum, rose, and magenta make the identity bolder and less tech-blue.",
+    bgFrom: "#14070F",
+    bgTo: "#26121D",
+    panelGlow: "#FF64B8",
+    panelGlowSoft: "#9566FF",
+    surface: "#241121",
+    surfaceAlt: "#321831",
+    surfaceStroke: "#FFFFFF12",
+    text: "#FFF5FB",
+    muted: "#D1AEC8",
+    accent: "#FF7FCA",
+    accentSoft: "#FFD9F0",
+    accentText: "#210916",
+    chip: "#431B37",
+    chipText: "#FFD3EA",
+    swatches: ["#FFF1F8", "#FF9DCE", "#FF5B9D", "#8E63E7", "#1C0B17"],
+    flare: {
+      outer: "#FF4FA6",
+      dark: "#5D1D43",
+      glowOpacity: 0.54,
+      endpointGlow: "#FF84C7",
+      endpointCore: "#FFF1FA",
+      stops: [
+        { color: "#FF4FA6" },
+        { offset: "0.22", color: "#FF68B9" },
+        { offset: "0.5", color: "#FF95CA" },
+        { offset: "0.82", color: "#FFD5D8" },
+        { offset: "1", color: "#FFF2E8" },
+      ],
+      coreStops: [
+        { color: "#FF9ED3" },
+        { offset: "0.52", color: "#FFE8F5" },
+        { offset: "1", color: "#FFF9F0" },
+      ],
+    },
+    logo: {
+      baseStops: [
+        { color: "#FFF3FB" },
+        { offset: "0.16", color: "#FFB4D7" },
+        { offset: "0.34", color: "#FF718F" },
+        { offset: "0.58", color: "#A85BE7" },
+        { offset: "0.8", color: "#5A1F53" },
+        { offset: "1", color: "#140913" },
+      ],
+      shadowColor: "#130611",
+      shadowOpacity: 0.84,
+      highlightColor: "#FFF6FB",
+      highlightOpacity: 0.72,
+      atmosphereColor: "#FFC8E3",
+      atmosphereOpacity: 0.2,
+      edgeStroke: "#FFF5FB",
+      edgeOpacity: 0.16,
+      warmDash: "#FF9BCA",
+      warmDashOpacity: 0.1,
+      outerRing: "#24121D",
+      ringShadow: "#4A2140",
+      ringShadowOpacity: 0.7,
+      glows: [
+        { cx: 330, cy: 386, rx: 206, ry: 156, color: "#FF7EB8", opacity: 0.26 },
+        { cx: 606, cy: 316, rx: 238, ry: 168, color: "#FFC8D8", opacity: 0.24 },
+        { cx: 706, cy: 442, rx: 238, ry: 156, color: "#B777FF", opacity: 0.24 },
+        { cx: 604, cy: 658, rx: 272, ry: 152, color: "#6B284D", opacity: 0.28 },
+        { cx: 340, cy: 704, rx: 286, ry: 176, color: "#180A16", opacity: 0.7 },
+      ],
+      darkBand: "#6D2D61",
+      darkBandOpacity: 0.28,
+      warmBand: "#FFAAC8",
+      warmBandOpacity: 0.12,
+    },
+  },
+  {
+    id: "verdant-current",
+    name: "Verdant Current",
+    tag: "Organic trust",
+    body: "Jade and pine calm the system while a citrus flare keeps it lively.",
+    bgFrom: "#08130F",
+    bgTo: "#11211A",
+    panelGlow: "#59D8B0",
+    panelGlowSoft: "#B7FF54",
+    surface: "#0F1F18",
+    surfaceAlt: "#163127",
+    surfaceStroke: "#FFFFFF12",
+    text: "#F4FBF6",
+    muted: "#A7C2B3",
+    accent: "#84DBB4",
+    accentSoft: "#E8FFD8",
+    accentText: "#08140F",
+    chip: "#24402E",
+    chipText: "#D9FFB8",
+    swatches: ["#F5FFF2", "#A1F0CC", "#48B08B", "#C9FF53", "#07120E"],
+    flare: {
+      outer: "#BBFF39",
+      dark: "#495C12",
+      glowOpacity: 0.52,
+      endpointGlow: "#E6FF8C",
+      endpointCore: "#FFFFF0",
+      stops: [
+        { color: "#BBFF39" },
+        { offset: "0.22", color: "#D8FF5C" },
+        { offset: "0.52", color: "#F5FF96" },
+        { offset: "0.82", color: "#FFF3BF" },
+        { offset: "1", color: "#FFFBEA" },
+      ],
+      coreStops: [
+        { color: "#E2FF8A" },
+        { offset: "0.52", color: "#FFF9D9" },
+        { offset: "1", color: "#FFFFF3" },
+      ],
+    },
+    logo: {
+      baseStops: [
+        { color: "#F7FFF4" },
+        { offset: "0.16", color: "#AEEFD2" },
+        { offset: "0.36", color: "#53B892" },
+        { offset: "0.58", color: "#2E7564" },
+        { offset: "0.8", color: "#123329" },
+        { offset: "1", color: "#07120E" },
+      ],
+      shadowColor: "#06110D",
+      shadowOpacity: 0.84,
+      highlightColor: "#F8FFF7",
+      highlightOpacity: 0.7,
+      atmosphereColor: "#C9FFD4",
+      atmosphereOpacity: 0.18,
+      edgeStroke: "#F4FFF8",
+      edgeOpacity: 0.15,
+      warmDash: "#C7FF63",
+      warmDashOpacity: 0.12,
+      outerRing: "#122019",
+      ringShadow: "#324326",
+      ringShadowOpacity: 0.68,
+      glows: [
+        { cx: 318, cy: 380, rx: 206, ry: 156, color: "#6EE1BC", opacity: 0.24 },
+        { cx: 604, cy: 318, rx: 248, ry: 170, color: "#CFF7C7", opacity: 0.2 },
+        { cx: 708, cy: 446, rx: 236, ry: 156, color: "#97DB71", opacity: 0.18 },
+        { cx: 602, cy: 658, rx: 272, ry: 154, color: "#214B37", opacity: 0.3 },
+        { cx: 338, cy: 706, rx: 290, ry: 180, color: "#07120E", opacity: 0.72 },
+      ],
+      darkBand: "#214F44",
+      darkBandOpacity: 0.3,
+      warmBand: "#C9F58A",
+      warmBandOpacity: 0.1,
+    },
+  },
+  {
+    id: "graphite-echo",
+    name: "Graphite Echo",
+    tag: "Editorial mono",
+    body: "Graphite and ice create a stark editorial system with a cyan flare.",
+    bgFrom: "#080A0E",
+    bgTo: "#141A23",
+    panelGlow: "#7DBDFF",
+    panelGlowSoft: "#E9EEF7",
+    surface: "#121821",
+    surfaceAlt: "#1B2431",
+    surfaceStroke: "#FFFFFF14",
+    text: "#F6F8FC",
+    muted: "#AEB8C8",
+    accent: "#DCE8F7",
+    accentSoft: "#BEE9FF",
+    accentText: "#0A111A",
+    chip: "#2A3443",
+    chipText: "#E3EEF9",
+    swatches: ["#F6FAFF", "#DCE8F7", "#9BAEC6", "#72D9FF", "#0A0F17"],
+    flare: {
+      outer: "#6BD7FF",
+      dark: "#21455F",
+      glowOpacity: 0.5,
+      endpointGlow: "#B6EEFF",
+      endpointCore: "#FFFFFF",
+      stops: [
+        { color: "#56CFFF" },
+        { offset: "0.24", color: "#8FE3FF" },
+        { offset: "0.54", color: "#D0F5FF" },
+        { offset: "0.84", color: "#F2FBFF" },
+        { offset: "1", color: "#FFFFFF" },
+      ],
+      coreStops: [
+        { color: "#B7EEFF" },
+        { offset: "0.52", color: "#F8FEFF" },
+        { offset: "1", color: "#FFFFFF" },
+      ],
+    },
+    logo: {
+      baseStops: [
+        { color: "#F8FBFF" },
+        { offset: "0.18", color: "#D7E1EC" },
+        { offset: "0.38", color: "#A4B1C4" },
+        { offset: "0.6", color: "#54657F" },
+        { offset: "0.82", color: "#1B2533" },
+        { offset: "1", color: "#090E16" },
+      ],
+      shadowColor: "#060A10",
+      shadowOpacity: 0.86,
+      highlightColor: "#FFFFFF",
+      highlightOpacity: 0.7,
+      atmosphereColor: "#D8F2FF",
+      atmosphereOpacity: 0.14,
+      edgeStroke: "#FFFFFF",
+      edgeOpacity: 0.18,
+      warmDash: "#CBE9FF",
+      warmDashOpacity: 0.08,
+      outerRing: "#151B25",
+      ringShadow: "#2D3947",
+      ringShadowOpacity: 0.68,
+      glows: [
+        { cx: 326, cy: 382, rx: 204, ry: 154, color: "#C6D6E8", opacity: 0.18 },
+        { cx: 602, cy: 314, rx: 244, ry: 168, color: "#FFFFFF", opacity: 0.2 },
+        { cx: 710, cy: 442, rx: 236, ry: 156, color: "#7CD9FF", opacity: 0.2 },
+        { cx: 602, cy: 658, rx: 272, ry: 152, color: "#304253", opacity: 0.3 },
+        { cx: 336, cy: 706, rx: 288, ry: 180, color: "#09101A", opacity: 0.74 },
+      ],
+      darkBand: "#3C5067",
+      darkBandOpacity: 0.3,
+      warmBand: "#EAF5FF",
+      warmBandOpacity: 0.08,
     },
   },
 ];
@@ -366,8 +665,41 @@ function escapeXml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function wrapText(text, maxChars) {
+  const words = text.split(/\s+/);
+  const lines = [];
+  let current = "";
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxChars || !current) {
+      current = next;
+      continue;
+    }
+
+    lines.push(current);
+    current = word;
+  }
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines;
+}
+
+function renderTextLines(lines, x, y, lineHeight, attributes) {
+  return lines
+    .map(
+      (line, index) =>
+        `<text x="${x}" y="${y + index * lineHeight}" ${attributes}>${escapeXml(line)}</text>`,
+    )
+    .join("");
+}
+
 function renderLogoDefs(theme, prefix) {
   const { logo } = theme;
+  const flare = theme.flare ?? sharedFlare;
   const blur20 = `${prefix}-soft-blur-20`;
   const blur28 = `${prefix}-soft-blur-28`;
   return `
@@ -388,10 +720,10 @@ function renderLogoDefs(theme, prefix) {
       <stop offset="1" stop-color="${logo.atmosphereColor}" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="${prefix}-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
-      ${stopMarkup(sharedFlare.stops)}
+      ${stopMarkup(flare.stops)}
     </linearGradient>
     <linearGradient id="${prefix}-flare-core" x1="684" y1="160" x2="892" y2="690" gradientUnits="userSpaceOnUse">
-      ${stopMarkup(sharedFlare.coreStops)}
+      ${stopMarkup(flare.coreStops)}
     </linearGradient>
     <filter id="${blur20}" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="20"/>
@@ -408,6 +740,7 @@ function renderLogoDefs(theme, prefix) {
 function renderLogo(theme, prefix, x, y, size) {
   const scale = size / 1024;
   const { logo } = theme;
+  const flare = theme.flare ?? sharedFlare;
   return `
     <g transform="translate(${x} ${y}) scale(${scale})">
       <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
@@ -419,13 +752,13 @@ function renderLogo(theme, prefix, x, y, size) {
       <circle cx="512" cy="512" r="420" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="520 2119" transform="rotate(-136 512 512)"/>
 
       <g filter="url(#${prefix}-soft-blur-28)">
-        <circle cx="512" cy="512" r="406" stroke="${sharedFlare.outer}" stroke-opacity="${sharedFlare.glowOpacity}" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+        <circle cx="512" cy="512" r="406" stroke="${flare.outer}" stroke-opacity="${flare.glowOpacity}" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       </g>
-      <circle cx="512" cy="512" r="406" stroke="${sharedFlare.dark}" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="${flare.dark}" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#${prefix}-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#${prefix}-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
-      <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
+      <circle cx="871" cy="703" r="23" fill="${flare.endpointGlow ?? flare.outer}" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="9" fill="${flare.endpointCore ?? "#FFF3DF"}"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#${prefix}-planet-base)"/>
       <g clip-path="url(#${prefix}-planet-clip)">
@@ -474,6 +807,7 @@ function renderThemePanel(theme, index) {
   const x = 80 + col * 830;
   const y = 120 + row * 520;
   const prefix = `${theme.id}-panel`;
+  const bodyLines = wrapText(theme.body, 44);
   return {
     defs: `
       <linearGradient id="${prefix}-panel-bg" x1="${x}" y1="${y}" x2="${x + 760}" y2="${y + 480}" gradientUnits="userSpaceOnUse">
@@ -499,9 +833,9 @@ function renderThemePanel(theme, index) {
 
         <text x="${x + 36}" y="${y + 54}" fill="${theme.accentSoft}" font-size="15" letter-spacing="2.2" font-family="${mono}">${escapeXml(theme.tag.toUpperCase())}</text>
         <text x="${x + 36}" y="${y + 98}" fill="${theme.text}" font-size="36" font-weight="700" font-family="${sans}">${escapeXml(theme.name)}</text>
-        <text x="${x + 36}" y="${y + 132}" fill="${theme.muted}" font-size="18" font-family="${sans}">${escapeXml(theme.body)}</text>
+        ${renderTextLines(bodyLines, x + 36, y + 132, 22, `fill="${theme.muted}" font-size="18" font-family="${sans}"`)}
 
-        ${renderLogo(theme, prefix, x + 28, y + 132, 302)}
+        ${renderLogo(theme, prefix, x + 30, y + 166, 276)}
 
         <rect x="${x + 380}" y="${y + 122}" width="332" height="204" rx="26" fill="${theme.surface}"/>
         <rect x="${x + 380}" y="${y + 122}" width="332" height="204" rx="26" stroke="${theme.surfaceStroke}" stroke-width="1.5"/>
@@ -596,6 +930,39 @@ function buildThemeBoard() {
 `.trim();
 }
 
+function buildExperimentalThemeBoard() {
+  const panels = experimentalThemeDirections.map(renderThemePanel);
+  return `
+<svg width="1740" height="1160" viewBox="0 0 1740 1160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="experimental-board-bg" x1="70" y1="40" x2="1670" y2="1120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#05070D"/>
+      <stop offset="0.48" stop-color="#0A111B"/>
+      <stop offset="1" stop-color="#070B12"/>
+    </linearGradient>
+    <radialGradient id="experimental-board-left" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(250 180) rotate(42) scale(360 260)">
+      <stop stop-color="#7A67FF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#7A67FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="experimental-board-right" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1490 180) rotate(144) scale(380 250)">
+      <stop stop-color="#8EFFC8" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#8EFFC8" stop-opacity="0"/>
+    </radialGradient>
+    ${panels.map(panel => panel.defs).join("")}
+  </defs>
+
+  <rect width="1740" height="1160" fill="url(#experimental-board-bg)"/>
+  <rect width="1740" height="1160" fill="url(#experimental-board-left)"/>
+  <rect width="1740" height="1160" fill="url(#experimental-board-right)"/>
+
+  <text x="80" y="62" fill="#FFFFFF" font-size="44" font-weight="700" font-family="${sans}">Alternative Planet + Flare Directions</text>
+  <text x="80" y="100" fill="#D8E0EA" fill-opacity="0.72" font-size="18" font-family="${sans}">Four deliberately different brand systems, including new flare colors, to test how far the logo and UI can move before they become a different identity.</text>
+
+  ${panels.map(panel => panel.content).join("")}
+</svg>
+`.trim();
+}
+
 function buildGradientBoard() {
   const panels = gradientTreatments.map(renderGradientPanel);
   return `
@@ -627,6 +994,7 @@ function buildGradientBoard() {
 async function main() {
   const outputs = [
     ["planet-flare-theme-directions.svg", buildThemeBoard()],
+    ["planet-flare-alt-theme-directions.svg", buildExperimentalThemeBoard()],
     ["planet-flare-3d-gradient-tests.svg", buildGradientBoard()],
   ];
 

@@ -216,10 +216,10 @@
 
         <text x="116" y="174" fill="#FFD2A5" font-size="15" letter-spacing="2.2" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">WARM CONFIDENCE</text>
         <text x="116" y="218" fill="#F8F2E9" font-size="36" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Ember Orbit</text>
-        <text x="116" y="252" fill="#AAB7C7" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Keeps the coral flare emotional while the planet leans sunset-gold to deep navy. Strongest match if the site should feel human and editorial.</text>
+        <text x="116" y="252" fill="#AAB7C7" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Warm editorial palette with sunset gold,</text><text x="116" y="274" fill="#AAB7C7" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">coral, and deep navy.</text>
 
         
-    <g transform="translate(108 252) scale(0.294921875)">
+    <g transform="translate(110 286) scale(0.26953125)">
       <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
       <circle cx="512" cy="512" r="434" stroke="#3A242B" stroke-opacity="0.64" stroke-width="12"/>
       <circle cx="512" cy="512" r="420" stroke="#1A1F2B" stroke-opacity="0.96" stroke-width="20"/>
@@ -234,7 +234,7 @@
       <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#ember-orbit-panel-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#ember-orbit-panel-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="23" fill="#F45D4F" fill-opacity="0.18"/>
       <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#ember-orbit-panel-planet-base)"/>
@@ -295,10 +295,10 @@
 
         <text x="946" y="174" fill="#A7FFF0" font-size="15" letter-spacing="2.2" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">COOL PRECISION</text>
         <text x="946" y="218" fill="#EAF7F7" font-size="36" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Tidal Signal</text>
-        <text x="946" y="252" fill="#9FB8BF" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Shifts the planet toward seafoam, aqua, and cobalt while leaving the flare warm. Best if the product theme should feel analytical and trustworthy.</text>
+        <text x="946" y="252" fill="#9FB8BF" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Seafoam, aqua, and cobalt make the brand</text><text x="946" y="274" fill="#9FB8BF" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">calmer and more analytical.</text>
 
         
-    <g transform="translate(938 252) scale(0.294921875)">
+    <g transform="translate(940 286) scale(0.26953125)">
       <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
       <circle cx="512" cy="512" r="434" stroke="#1D2B31" stroke-opacity="0.62" stroke-width="12"/>
       <circle cx="512" cy="512" r="420" stroke="#102127" stroke-opacity="0.96" stroke-width="20"/>
@@ -313,7 +313,7 @@
       <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#tidal-signal-panel-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#tidal-signal-panel-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="23" fill="#F45D4F" fill-opacity="0.18"/>
       <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#tidal-signal-panel-planet-base)"/>
@@ -374,10 +374,10 @@
 
         <text x="116" y="694" fill="#F7D5A5" font-size="15" letter-spacing="2.2" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">PREMIUM SIGNAL</text>
         <text x="116" y="738" fill="#F8F0E5" font-size="36" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Solar Brass</text>
-        <text x="116" y="772" fill="#C4B09D" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Pulls the palette toward brass, amber, and volcanic rust. Best if the site wants a more premium editorial direction without losing the warm flare.</text>
+        <text x="116" y="772" fill="#C4B09D" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Brass, amber, and rust shift the brand</text><text x="116" y="794" fill="#C4B09D" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">toward premium editorial.</text>
 
         
-    <g transform="translate(108 772) scale(0.294921875)">
+    <g transform="translate(110 806) scale(0.26953125)">
       <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
       <circle cx="512" cy="512" r="434" stroke="#422D24" stroke-opacity="0.64" stroke-width="12"/>
       <circle cx="512" cy="512" r="420" stroke="#231A15" stroke-opacity="0.96" stroke-width="20"/>
@@ -392,7 +392,7 @@
       <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#solar-brass-panel-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#solar-brass-panel-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="23" fill="#F45D4F" fill-opacity="0.18"/>
       <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#solar-brass-panel-planet-base)"/>
@@ -453,10 +453,10 @@
 
         <text x="946" y="694" fill="#FFE0B6" font-size="15" letter-spacing="2.2" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">SOCIAL ENERGY</text>
         <text x="946" y="738" fill="#F6FBFF" font-size="36" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Horizon Nova</text>
-        <text x="946" y="772" fill="#A4B8CC" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Leans brighter and more optimistic with sky blue, apricot, and sunrise coral. Best if the site wants momentum and accessibility without going flat.</text>
+        <text x="946" y="772" fill="#A4B8CC" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Sky blue and apricot make the mark brighter,</text><text x="946" y="794" fill="#A4B8CC" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">more optimistic, and social.</text>
 
         
-    <g transform="translate(938 772) scale(0.294921875)">
+    <g transform="translate(940 806) scale(0.26953125)">
       <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
       <circle cx="512" cy="512" r="434" stroke="#35252A" stroke-opacity="0.62" stroke-width="12"/>
       <circle cx="512" cy="512" r="420" stroke="#152434" stroke-opacity="0.96" stroke-width="20"/>
@@ -471,7 +471,7 @@
       <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#horizon-nova-panel-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#horizon-nova-panel-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="23" fill="#F45D4F" fill-opacity="0.18"/>
       <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#horizon-nova-panel-planet-base)"/>

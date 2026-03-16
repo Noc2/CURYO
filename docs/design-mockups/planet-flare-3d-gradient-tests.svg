@@ -212,7 +212,7 @@
       <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#atmospheric-bloom-gradient-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#atmospheric-bloom-gradient-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="23" fill="#F45D4F" fill-opacity="0.18"/>
       <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#atmospheric-bloom-gradient-planet-base)"/>
@@ -272,7 +272,7 @@
       <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#terminator-cut-gradient-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#terminator-cut-gradient-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="23" fill="#F45D4F" fill-opacity="0.18"/>
       <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#terminator-cut-gradient-planet-base)"/>
@@ -332,7 +332,7 @@
       <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#mineral-depth-gradient-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#mineral-depth-gradient-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="23" fill="#F45D4F" fill-opacity="0.18"/>
       <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#mineral-depth-gradient-planet-base)"/>
@@ -392,7 +392,7 @@
       <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#polar-sheen-gradient-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
       <circle cx="512" cy="512" r="406" stroke="url(#polar-sheen-gradient-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
-      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="23" fill="#F45D4F" fill-opacity="0.18"/>
       <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
       <circle cx="512" cy="512" r="344" fill="url(#polar-sheen-gradient-planet-base)"/>
