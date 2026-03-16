@@ -5,7 +5,7 @@ interface CuryoPlanetMarkProps {
   title?: string;
   animated?: boolean;
   animationPreset?: "orbit";
-  variant?: "default" | "hero";
+  variant?: "default" | "compact" | "hero";
 }
 
 /**
@@ -34,6 +34,17 @@ export function CuryoPlanetMark({
   const animationClass = resolvedPreset ? `curyo-planet-mark--${resolvedPreset}` : "";
   const variantClass = `curyo-planet-mark--${variant}`;
   const usesHeroVariant = variant === "hero";
+  const usesCompactVariant = variant === "compact";
+  const planetRadius = usesCompactVariant ? 360 : 344;
+  const flareRadius = usesCompactVariant ? 394 : 406;
+  const flareRotation = usesCompactVariant ? -70 : -66;
+  const flareDashArray = usesCompactVariant ? "734 1741" : "666 1885";
+  const flareGlowStrokeWidth = usesCompactVariant ? 20 : 28;
+  const flareGlowOpacity = usesCompactVariant ? 0.4 : 0.54;
+  const flareBodyStrokeWidth = usesCompactVariant ? 12 : 10;
+  const flareMainStrokeWidth = usesCompactVariant ? 10.5 : 8;
+  const flareCoreStrokeWidth = usesCompactVariant ? 3 : 2.4;
+  const flareGlowFilterId = usesCompactVariant ? softBlur20Id : softBlur28Id;
 
   return (
     <>
@@ -108,37 +119,41 @@ export function CuryoPlanetMark({
             <feGaussianBlur stdDeviation="42" />
           </filter>
           <clipPath id={planetClipId}>
-            <circle cx="512" cy="512" r="344" />
+            <circle cx="512" cy="512" r={planetRadius} />
           </clipPath>
         </defs>
 
-        <circle cx="512" cy="512" r="458" stroke="#FFFFFF" strokeOpacity="0.03" strokeWidth="2" />
-        <circle cx="512" cy="512" r="434" stroke="#342129" strokeOpacity="0.66" strokeWidth="12" />
-        <circle cx="512" cy="512" r="420" stroke="#1A1E28" strokeOpacity="0.96" strokeWidth="20" />
-        <circle cx="512" cy="512" r="406" stroke="#FFFFFF" strokeOpacity="0.055" strokeWidth="2" />
-        <circle cx="512" cy="512" r="394" stroke="#FFFFFF" strokeOpacity="0.038" strokeWidth="1.4" />
-        <circle
-          cx="512"
-          cy="512"
-          r="434"
-          stroke="#F3A16E"
-          strokeOpacity="0.08"
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray="580 2147"
-          transform="rotate(-136 512 512)"
-        />
-        <circle
-          cx="512"
-          cy="512"
-          r="420"
-          stroke="#FFFFFF"
-          strokeOpacity="0.04"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeDasharray="520 2119"
-          transform="rotate(-136 512 512)"
-        />
+        {usesCompactVariant ? null : (
+          <>
+            <circle cx="512" cy="512" r="458" stroke="#FFFFFF" strokeOpacity="0.03" strokeWidth="2" />
+            <circle cx="512" cy="512" r="434" stroke="#342129" strokeOpacity="0.66" strokeWidth="12" />
+            <circle cx="512" cy="512" r="420" stroke="#1A1E28" strokeOpacity="0.96" strokeWidth="20" />
+            <circle cx="512" cy="512" r="406" stroke="#FFFFFF" strokeOpacity="0.055" strokeWidth="2" />
+            <circle cx="512" cy="512" r="394" stroke="#FFFFFF" strokeOpacity="0.038" strokeWidth="1.4" />
+            <circle
+              cx="512"
+              cy="512"
+              r="434"
+              stroke="#F3A16E"
+              strokeOpacity="0.08"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray="580 2147"
+              transform="rotate(-136 512 512)"
+            />
+            <circle
+              cx="512"
+              cy="512"
+              r="420"
+              stroke="#FFFFFF"
+              strokeOpacity="0.04"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeDasharray="520 2119"
+              transform="rotate(-136 512 512)"
+            />
+          </>
+        )}
 
         <g>
           {usesHeroVariant ? (
@@ -178,121 +193,127 @@ export function CuryoPlanetMark({
             </>
           ) : null}
 
-          <g filter={`url(#${softBlur28Id})`}>
+          <g filter={`url(#${flareGlowFilterId})`}>
             <circle
               className={resolvedPreset ? "curyo-planet-mark__flare-glow" : undefined}
               cx="512"
               cy="512"
-              r="406"
+              r={flareRadius}
               stroke="#F45C4D"
-              strokeOpacity="0.54"
-              strokeWidth="28"
+              strokeOpacity={flareGlowOpacity}
+              strokeWidth={flareGlowStrokeWidth}
               strokeLinecap="round"
-              strokeDasharray="666 1885"
-              transform="rotate(-66 512 512)"
+              strokeDasharray={flareDashArray}
+              transform={`rotate(${flareRotation} 512 512)`}
             />
           </g>
           <circle
             className={resolvedPreset ? "curyo-planet-mark__flare-body" : undefined}
             cx="512"
             cy="512"
-            r="406"
+            r={flareRadius}
             stroke="#6D352A"
             strokeOpacity="0.42"
-            strokeWidth="10"
+            strokeWidth={flareBodyStrokeWidth}
             strokeLinecap="round"
-            strokeDasharray="666 1885"
-            transform="rotate(-66 512 512)"
+            strokeDasharray={flareDashArray}
+            transform={`rotate(${flareRotation} 512 512)`}
           />
           <circle
             className={resolvedPreset ? "curyo-planet-mark__flare-main" : undefined}
             cx="512"
             cy="512"
-            r="406"
+            r={flareRadius}
             stroke={`url(#${flareGradientId})`}
-            strokeWidth="8"
+            strokeWidth={flareMainStrokeWidth}
             strokeLinecap="round"
-            strokeDasharray="666 1885"
-            transform="rotate(-66 512 512)"
+            strokeDasharray={flareDashArray}
+            transform={`rotate(${flareRotation} 512 512)`}
           />
           <circle
             className={resolvedPreset ? "curyo-planet-mark__flare-core" : undefined}
             cx="512"
             cy="512"
-            r="406"
+            r={flareRadius}
             stroke={`url(#${flareCoreId})`}
-            strokeWidth="2.4"
+            strokeWidth={flareCoreStrokeWidth}
             strokeLinecap="round"
-            strokeDasharray="666 1885"
-            transform="rotate(-66 512 512)"
+            strokeDasharray={flareDashArray}
+            transform={`rotate(${flareRotation} 512 512)`}
           />
         </g>
 
-        <g className={resolvedPreset ? "curyo-planet-mark__node-orbit" : undefined}>
-          {usesHeroVariant ? (
-            <>
-              <ellipse
-                className={
-                  resolvedPreset ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--primary" : undefined
-                }
-                cx="842"
-                cy="686"
-                rx="36"
-                ry="20"
-                fill="#FF835A"
-                fillOpacity="0.12"
-              />
-              <ellipse
-                className={
-                  resolvedPreset ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--secondary" : undefined
-                }
-                cx="824"
-                cy="662"
-                rx="28"
-                ry="15"
-                fill="#FFB88B"
-                fillOpacity="0.1"
-              />
-            </>
-          ) : null}
-          <circle
-            className={resolvedPreset ? "curyo-planet-mark__node-halo" : undefined}
-            cx="871"
-            cy="703"
-            r="23"
-            fill="#FF8D65"
-            fillOpacity="0.18"
-          />
-          {usesHeroVariant ? (
-            <>
-              <circle
-                className={resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--primary" : undefined}
-                cx="858"
-                cy="686"
-                r="4.6"
-                fill="#FFE4BC"
-                fillOpacity="0.9"
-              />
-              <circle
-                className={resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--secondary" : undefined}
-                cx="884"
-                cy="691"
-                r="3.6"
-                fill="#FFD39D"
-                fillOpacity="0.76"
-              />
-            </>
-          ) : null}
-          <circle
-            className={resolvedPreset ? "curyo-planet-mark__node" : undefined}
-            cx="871"
-            cy="703"
-            r="9"
-            fill="#FFF3DF"
-          />
-        </g>
+        {usesCompactVariant ? null : (
+          <g className={resolvedPreset ? "curyo-planet-mark__node-orbit" : undefined}>
+            {usesHeroVariant ? (
+              <>
+                <ellipse
+                  className={
+                    resolvedPreset ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--primary" : undefined
+                  }
+                  cx="842"
+                  cy="686"
+                  rx="36"
+                  ry="20"
+                  fill="#FF835A"
+                  fillOpacity="0.12"
+                />
+                <ellipse
+                  className={
+                    resolvedPreset
+                      ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--secondary"
+                      : undefined
+                  }
+                  cx="824"
+                  cy="662"
+                  rx="28"
+                  ry="15"
+                  fill="#FFB88B"
+                  fillOpacity="0.1"
+                />
+              </>
+            ) : null}
+            <circle
+              className={resolvedPreset ? "curyo-planet-mark__node-halo" : undefined}
+              cx="871"
+              cy="703"
+              r="23"
+              fill="#FF8D65"
+              fillOpacity="0.18"
+            />
+            {usesHeroVariant ? (
+              <>
+                <circle
+                  className={resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--primary" : undefined}
+                  cx="858"
+                  cy="686"
+                  r="4.6"
+                  fill="#FFE4BC"
+                  fillOpacity="0.9"
+                />
+                <circle
+                  className={
+                    resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--secondary" : undefined
+                  }
+                  cx="884"
+                  cy="691"
+                  r="3.6"
+                  fill="#FFD39D"
+                  fillOpacity="0.76"
+                />
+              </>
+            ) : null}
+            <circle
+              className={resolvedPreset ? "curyo-planet-mark__node" : undefined}
+              cx="871"
+              cy="703"
+              r="9"
+              fill="#FFF3DF"
+            />
+          </g>
+        )}
 
-        <circle cx="512" cy="512" r="344" fill={`url(#${planetBaseId})`} />
+        <circle cx="512" cy="512" r={planetRadius} fill={`url(#${planetBaseId})`} />
         <g clipPath={`url(#${planetClipId})`}>
           <g filter={`url(#${softBlur20Id})`}>
             <ellipse cx="338" cy="386" rx="214" ry="164" fill="#3E9FF0" fillOpacity="0.42" />
@@ -352,15 +373,23 @@ export function CuryoPlanetMark({
           <circle cx="370" cy="804" r="16" fill="#FFF2E2" fillOpacity="0.05" />
         </g>
 
-        <circle cx="512" cy="512" r="344" fill={`url(#${planetShadowId})`} />
+        <circle cx="512" cy="512" r={planetRadius} fill={`url(#${planetShadowId})`} />
         <g
           className={resolvedPreset ? "curyo-planet-mark__planet-highlight" : undefined}
           filter={`url(#${softBlur28Id})`}
         >
           <ellipse cx="644" cy="340" rx="154" ry="106" fill="#FFF4E2" fillOpacity="0.22" />
         </g>
-        <circle cx="512" cy="512" r="344" fill={`url(#${planetHighlightId})`} />
-        <circle cx="512" cy="512" r="344" fill="none" stroke="#FFFFFF" strokeOpacity="0.15" strokeWidth="1.4" />
+        <circle cx="512" cy="512" r={planetRadius} fill={`url(#${planetHighlightId})`} />
+        <circle
+          cx="512"
+          cy="512"
+          r={planetRadius}
+          fill="none"
+          stroke="#FFFFFF"
+          strokeOpacity="0.15"
+          strokeWidth="1.4"
+        />
       </svg>
 
       <style jsx>{`
