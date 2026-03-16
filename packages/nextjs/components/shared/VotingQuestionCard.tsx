@@ -10,9 +10,11 @@ import { SignalDivider, SignalPill, type SignalTone } from "~~/components/shared
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
+import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { buildRankingQuestionDisplay } from "~~/lib/categories/rankingQuestionTemplate";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
+import { getBlindParticipationLabel } from "~~/lib/vote/voteIncentives";
 import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 
 interface VotingQuestionCardProps {
@@ -27,25 +29,6 @@ interface VotingQuestionCardProps {
   isOwnContent?: boolean;
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
-}
-
-type CountdownUrgency = "normal" | "warning" | "critical";
-
-function formatRoundCountdown(seconds: number): string {
-  if (seconds <= 0) return "Expired";
-  const d = Math.floor(seconds / 86400);
-  const h = Math.floor((seconds % 86400) / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m ${s}s`;
-}
-
-function getCountdownUrgency(seconds: number): CountdownUrgency {
-  if (seconds <= 3600) return "critical";
-  if (seconds <= 21600) return "warning";
-  return "normal";
 }
 
 function getPhaseSignal(phase: string, isEpoch1: boolean): { label: string; tone: SignalTone } {
@@ -105,17 +88,41 @@ export function VotingQuestionCard({
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId);
-  const { roundId, isEpoch1, isRoundFull, phase, voteCount, revealedCount, minVoters, roundTimeRemaining } =
-    roundSnapshot;
-  const countdownTimeLeft = phase === "voting" && roundTimeRemaining > 0 ? roundTimeRemaining : 0;
-  const urgency = getCountdownUrgency(countdownTimeLeft);
-  const countdownLabel = formatRoundCountdown(countdownTimeLeft);
-  const countdownActive = countdownTimeLeft > 0;
+  const { ratePercent } = useParticipationRate();
+  const {
+    roundId,
+    isEpoch1,
+    isRoundFull,
+    phase,
+    voteCount,
+    revealedCount,
+    minVoters,
+    readyToSettle,
+    thresholdReachedAt,
+  } = roundSnapshot;
   const pendingRevealCount = Math.max(0, voteCount - revealedCount);
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const phaseSignal = getPhaseSignal(phase, isEpoch1);
+  const blindParticipationLabel = phase === "voting" && isEpoch1 ? getBlindParticipationLabel(ratePercent) : null;
+  const votersNeeded = Math.max(0, minVoters - voteCount);
+  const revealsNeeded = Math.max(0, minVoters - revealedCount);
+  const incentivePrompt =
+    phase !== "voting"
+      ? null
+      : isEpoch1
+        ? blindParticipationLabel
+          ? `${blindParticipationLabel} if you vote during the blind phase.`
+          : "Vote early to lock in the 4x blind-phase reward weight."
+        : readyToSettle || thresholdReachedAt > 0
+          ? "Live pools are visible and this round is close to settlement."
+          : votersNeeded > 0
+            ? `Live pools are visible. ${votersNeeded} more voter${votersNeeded === 1 ? "" : "s"} can unlock settlement.`
+            : revealsNeeded > 0
+              ? `${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"} and this round can settle.`
+              : "Live pools are visible. Add your vote and help settle this round.";
+  const incentivePromptClassName = isEpoch1 ? "text-primary/80" : "text-warning";
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
 
@@ -264,6 +271,20 @@ export function VotingQuestionCard({
           </div>
         )}
 
+        <div className="mb-1.5 flex shrink-0 justify-start">
+          <RoundProgress snapshot={roundSnapshot} />
+        </div>
+
+        {incentivePrompt ? (
+          <div className="mb-1.5 flex shrink-0 justify-start">
+            <p className={`text-sm ${incentivePromptClassName}`}>{incentivePrompt}</p>
+          </div>
+        ) : null}
+
+        <div className="mb-3 flex shrink-0 justify-start">
+          <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+        </div>
+
         {/* Vote error message */}
         {displayError && <p className="mb-2 text-center text-base text-red-400">{displayError}</p>}
 
@@ -310,27 +331,6 @@ export function VotingQuestionCard({
           ) : (
             <RainbowKitCustomConnectButton />
           )}
-        </div>
-
-        {/* Round progress - left aligned */}
-        <div className="mb-1.5 flex shrink-0 justify-start">
-          <RoundProgress snapshot={roundSnapshot} />
-        </div>
-
-        {/* Urgent countdown (warning/critical only) */}
-        {countdownActive && (urgency === "warning" || urgency === "critical") && (
-          <div className="mb-1.5 flex shrink-0 justify-start">
-            <span
-              className={`text-xs tabular-nums ${urgency === "critical" ? "text-error animate-pulse" : "text-warning"}`}
-            >
-              {countdownLabel}
-            </span>
-          </div>
-        )}
-
-        {/* Round stats - below progress, left aligned */}
-        <div className="mb-3 flex shrink-0 justify-start">
-          <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
         </div>
 
         {/* Rating history chart */}

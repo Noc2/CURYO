@@ -1,27 +1,12 @@
 "use client";
 
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import type { RoundSnapshot } from "~~/hooks/useRoundSnapshot";
+import { getRoundProgressMessaging } from "~~/lib/vote/voteIncentives";
 
 interface RoundProgressProps {
   snapshot: RoundSnapshot;
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds <= 0) return "0s";
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
-}
-
-function formatDays(seconds: number): string {
-  const days = Math.floor(seconds / 86400);
-  const hours = Math.floor((seconds % 86400) / 3600);
-  if (days > 0) return `${days}d ${hours}h`;
-  return formatDuration(seconds);
 }
 
 /**
@@ -34,19 +19,9 @@ function formatDays(seconds: number): string {
  * Terminal states: Resolved / Cancelled / Tied / Reveal failed
  */
 export function RoundProgress({ snapshot }: RoundProgressProps) {
-  const {
-    phase,
-    roundTimeRemaining,
-    isEpoch1,
-    epoch1Remaining,
-    isReady,
-    readyToSettle,
-    thresholdReachedAt,
-    currentEpochRemaining,
-    revealedCount,
-    voteCount,
-    minVoters,
-  } = snapshot;
+  const { ratePercent } = useParticipationRate();
+  const { phase, isReady, readyToSettle, thresholdReachedAt, voteCount, minVoters } = snapshot;
+  const progressMessaging = getRoundProgressMessaging(snapshot, ratePercent);
 
   if (!isReady) {
     return (
@@ -125,53 +100,54 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
     );
   }
 
-  // Active round (phase === "voting")
-  const formattedExpiry = roundTimeRemaining > 0 ? formatDays(roundTimeRemaining) : null;
-
   return (
     <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap text-base text-base-content/60">
-      {/* Phase badge */}
-      {isEpoch1 ? (
+      {progressMessaging ? (
         <div className="flex items-center gap-1.5">
-          <span className="badge badge-primary badge-sm gap-1 text-base">
+          <span
+            className={`badge badge-sm gap-1 text-base ${
+              progressMessaging.badgeTone === "primary" ? "badge-primary" : "badge-warning"
+            }`}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                clipRule="evenodd"
-              />
+              {progressMessaging.badgeTone === "primary" ? (
+                <path
+                  fillRule="evenodd"
+                  d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                  clipRule="evenodd"
+                />
+              ) : (
+                <>
+                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                  <path
+                    fillRule="evenodd"
+                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                    clipRule="evenodd"
+                  />
+                </>
+              )}
             </svg>
-            Blind Phase
+            {progressMessaging.badgeLabel}
           </span>
-          <InfoTooltip
-            text="Blind phase: votes are encrypted and hidden. You earn 100% reward weight. Weight drops to 25% when the blind phase ends."
-            position="bottom"
-          />
-          {epoch1Remaining > 0 && (
-            <span className="text-primary/80 tabular-nums text-base">{formatDuration(epoch1Remaining)} left</span>
-          )}
+          <InfoTooltip text={progressMessaging.tooltip} position="bottom" />
+          {progressMessaging.detailLabel ? (
+            <span
+              className={`tabular-nums text-base ${
+                progressMessaging.detailTone === "success"
+                  ? "text-success/80"
+                  : progressMessaging.detailTone === "warning"
+                    ? "text-warning"
+                    : progressMessaging.detailTone === "primary"
+                      ? "text-primary/80"
+                      : "text-base-content/60"
+              }`}
+            >
+              {progressMessaging.detailLabel}
+            </span>
+          ) : null}
         </div>
-      ) : (
-        <div className="flex items-center gap-1.5">
-          <span className="badge badge-warning badge-sm gap-1 text-base">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-              <path
-                fillRule="evenodd"
-                d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Open phase — 25% weight
-          </span>
-          <InfoTooltip
-            text="Open phase: earlier votes are now visible. Late voters earn 25% reward weight (4× less than blind phase voters)."
-            position="bottom"
-          />
-        </div>
-      )}
+      ) : null}
 
-      {/* Round expiry or resolution countdown */}
       {readyToSettle || thresholdReachedAt > 0 ? (
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
@@ -185,28 +161,14 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
       ) : voteCount >= minVoters ? (
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            {isEpoch1 ? "Blind phase ends in" : "Awaiting reveal"}
+            Momentum building
             <InfoTooltip
-              text={`Enough votes are committed, but settlement still needs ${Math.max(0, minVoters - revealedCount)} more revealed vote${Math.max(0, minVoters - revealedCount) === 1 ? "" : "s"} and past-epoch reveal checks to clear.`}
+              text="Enough votes are committed for this round to matter. Settlement follows once the reveal threshold and past-epoch checks clear."
               position="bottom"
             />
           </span>
-          {isEpoch1 && <span className="font-semibold tabular-nums">{formatDuration(currentEpochRemaining)}</span>}
         </div>
-      ) : (
-        formattedExpiry && (
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1">
-              Expires in
-              <InfoTooltip
-                text="Maximum time until the round expires. Resolution happens sooner once enough votes are revealed."
-                position="bottom"
-              />
-            </span>
-            <span className="font-semibold tabular-nums">{formattedExpiry}</span>
-          </div>
-        )
-      )}
+      ) : null}
     </div>
   );
 }

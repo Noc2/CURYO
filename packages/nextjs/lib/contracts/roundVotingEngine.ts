@@ -49,6 +49,8 @@ export interface RoundSnapshot {
   totalStake: bigint;
   upPool: bigint;
   downPool: bigint;
+  weightedUpPool: bigint;
+  weightedDownPool: bigint;
   upCount: number;
   downCount: number;
   upWins: boolean;
@@ -75,6 +77,8 @@ export interface RoundSnapshot {
     totalStake: bigint;
     upPool: bigint;
     downPool: bigint;
+    weightedUpPool: bigint;
+    weightedDownPool: bigint;
     upCount: bigint;
     downCount: bigint;
     upWins: boolean;
@@ -325,6 +329,8 @@ export function deriveRoundSnapshot(params: {
     totalStake,
     upPool: round?.upPool ?? 0n,
     downPool: round?.downPool ?? 0n,
+    weightedUpPool: round?.weightedUpPool ?? 0n,
+    weightedDownPool: round?.weightedDownPool ?? 0n,
     upCount: Number(round?.upCount ?? 0n),
     downCount: Number(round?.downCount ?? 0n),
     upWins: round?.upWins ?? false,
@@ -351,6 +357,8 @@ export function deriveRoundSnapshot(params: {
       totalStake,
       upPool: round?.upPool ?? 0n,
       downPool: round?.downPool ?? 0n,
+      weightedUpPool: round?.weightedUpPool ?? 0n,
+      weightedDownPool: round?.weightedDownPool ?? 0n,
       upCount: round?.upCount ?? 0n,
       downCount: round?.downCount ?? 0n,
       upWins: round?.upWins ?? false,

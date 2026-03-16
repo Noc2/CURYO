@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { EPOCH_WEIGHT_BPS } from "@curyo/contracts/protocol";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -10,6 +11,12 @@ import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
+import {
+  estimateVoteReturn,
+  formatCompactDuration,
+  formatCrepAmount,
+  getBlindParticipationLabel,
+} from "~~/lib/vote/voteIncentives";
 
 interface StakeSelectorProps {
   isOpen: boolean;
@@ -42,12 +49,31 @@ export function StakeSelector({
   const hasVoterId = voterIdData.hasVoterId;
   const tokenId = voterIdData.tokenId as bigint;
 
-  const { roundId: currentRoundId } = useRoundSnapshot(contentId);
+  const roundSnapshot = useRoundSnapshot(contentId);
+  const {
+    roundId: currentRoundId,
+    phase,
+    isEpoch1,
+    epoch1Remaining,
+    voteCount,
+    minVoters,
+    upPool,
+    downPool,
+    readyToSettle,
+    thresholdReachedAt,
+  } = roundSnapshot;
+  const effectiveIsBlind = phase !== "voting" || isEpoch1;
 
-  // Get remaining stake capacity for this Voter ID on this content in this round
+  const estimateSnapshot = useMemo(
+    () => ({
+      ...roundSnapshot,
+      isEpoch1: effectiveIsBlind,
+    }),
+    [effectiveIsBlind, roundSnapshot],
+  );
+
   const { remainingCapacity } = useVoterIdStake(contentId, currentRoundId, tokenId);
 
-  // Read cREP balance
   const { data: crepBalance } = useScaffoldReadContract({
     contractName: "CuryoReputation",
     functionName: "balanceOf",
@@ -59,7 +85,6 @@ export function StakeSelector({
     functionName: "symbol",
   });
 
-  // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -72,8 +97,8 @@ export function StakeSelector({
   const symbol = tokenSymbol ?? "cREP";
   const { ratePercent, calculateBonus } = useParticipationRate();
   const voteBonus = calculateBonus(amount);
+  const voteEstimate = estimateVoteReturn(estimateSnapshot, isUp, amount);
 
-  // Format for 6 decimals; max stake = min(balance, remainingCapacity)
   const balanceFormatted = crepBalance ? Number(crepBalance) / 1e6 : 0;
   const capacityFormatted = remainingCapacity != null ? Number(remainingCapacity) / 1e6 : 100;
   const maxByBalance = Math.floor(balanceFormatted);
@@ -83,6 +108,23 @@ export function StakeSelector({
   const isCapacityLimited = maxByCapacity < maxByBalance;
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
+  const blindParticipationLabel = getBlindParticipationLabel(ratePercent);
+  const votersNeeded = Math.max(0, minVoters - voteCount);
+  const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
+  const phaseDetail = effectiveIsBlind
+    ? phase === "voting"
+      ? `${blindParticipationLabel ?? "Participation bonus available"} · ${formatCompactDuration(epoch1Remaining)} left`
+      : `${blindParticipationLabel ?? "Participation bonus available"} · first vote opens the blind round`
+    : readyToSettle || thresholdReachedAt > 0
+      ? "Live pools are visible and this round is close to settlement."
+      : votersNeeded > 0
+        ? `${votersNeeded} more voter${votersNeeded === 1 ? "" : "s"} can unlock settlement.`
+        : "Live pools are visible. Vote with signal and help settle this round.";
+  const phaseToneClassName = effectiveIsBlind ? "border-primary/20 bg-primary/10" : "border-warning/20 bg-warning/10";
+  const phaseHeadlineClassName = effectiveIsBlind ? "text-primary" : "text-warning";
+  const weightPercent = Math.round(
+    (effectiveIsBlind ? EPOCH_WEIGHT_BPS.blind : EPOCH_WEIGHT_BPS.informed) / 100,
+  ).toLocaleString();
 
   return (
     <AnimatePresence>
@@ -91,26 +133,23 @@ export function StakeSelector({
           role="dialog"
           aria-modal="true"
           aria-label="Select stake amount"
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          {/* Backdrop */}
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
 
-          {/* Modal */}
           <motion.div
-            className="relative bg-base-200 rounded-t-2xl sm:rounded-2xl w-full max-w-md p-6 border-t sm:border border-base-content/10 shadow-2xl"
+            className="relative w-full max-w-md rounded-t-2xl border-t border-base-content/10 bg-base-200 p-6 shadow-2xl sm:rounded-2xl sm:border"
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
           >
-            {/* Vote direction — same green/red as Voted Up / Voted Down */}
-            <div className="text-center mb-5">
+            <div className="mb-5 text-center">
               <div
-                className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-base font-semibold ${
+                className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-base font-semibold ${
                   isUp ? "bg-success/10 text-success" : "bg-error/10 text-error"
                 }`}
               >
@@ -130,10 +169,10 @@ export function StakeSelector({
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold text-center mb-3">
+            <h3 className="mb-3 text-center text-lg font-semibold">
               How much to stake?
               <span
-                className="inline-block ml-1.5 align-middle tooltip tooltip-bottom cursor-help"
+                className="tooltip tooltip-bottom ml-1.5 inline-block cursor-help align-middle"
                 data-tip="You can only vote once per content per round. Choose your stake carefully!"
                 role="img"
                 aria-label="You can only vote once per content per round. Choose your stake carefully!"
@@ -157,19 +196,18 @@ export function StakeSelector({
               </span>
             </h3>
 
-            <div className="text-base text-center text-base-content/40 mb-5 space-y-1">
+            <div className="mb-5 space-y-1 text-center text-base text-base-content/40">
               <p>
                 Balance: {balanceFormatted.toLocaleString(undefined, { maximumFractionDigits: 0 })} {symbol}
               </p>
             </div>
 
-            {/* Preset amounts */}
-            <div className="flex flex-wrap gap-2 justify-center mb-5">
+            <div className="mb-5 flex flex-wrap justify-center gap-2">
               {PRESET_AMOUNTS.filter(a => a <= maxStake).map(preset => (
                 <button
                   key={preset}
                   onClick={() => setAmount(preset)}
-                  className={`px-4 py-2 rounded-lg text-base font-medium transition-colors ${
+                  className={`rounded-lg px-4 py-2 text-base font-medium transition-colors ${
                     amount === preset
                       ? "bg-primary text-primary-content"
                       : "bg-base-200 text-base-content/60 hover:bg-base-300"
@@ -180,8 +218,7 @@ export function StakeSelector({
               ))}
             </div>
 
-            {/* Slider */}
-            <div className="px-1 mb-3">
+            <div className="mb-3 px-1">
               <input
                 type="range"
                 min={1}
@@ -192,19 +229,18 @@ export function StakeSelector({
                 disabled={maxStake < 1}
                 aria-label="Stake amount"
               />
-              <div className="flex justify-between text-base text-base-content/30 mt-1">
+              <div className="mt-1 flex justify-between text-base text-base-content/30">
                 <span>1</span>
                 <span>{sliderMax}</span>
               </div>
             </div>
 
-            {/* Amount display */}
-            <div className="text-center my-5">
+            <div className="my-5 text-center">
               <span className="text-4xl font-bold tabular-nums">{amount}</span>
-              <span className="text-base text-base-content/40 ml-2">{symbol}</span>
+              <span className="ml-2 text-base text-base-content/40">{symbol}</span>
               {isCapacityLimited && (
                 <span
-                  className="inline-block ml-2 align-middle tooltip tooltip-top cursor-help"
+                  className="tooltip tooltip-top ml-2 inline-block cursor-help align-middle"
                   data-tip={`Max per ${contentLabel}: ${maxByCapacity} ${symbol} remaining (100 limit per round)`}
                   role="img"
                   aria-label={`Max per ${contentLabel}: ${maxByCapacity} ${symbol} remaining (100 limit per round)`}
@@ -229,18 +265,62 @@ export function StakeSelector({
               )}
             </div>
 
-            {voteBonus !== undefined && voteBonus > 0 && (
-              <p className="text-center text-sm text-emerald-400 -mt-3 mb-4">
-                +{voteBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} {symbol} participation bonus (
-                {ratePercent}%)
-              </p>
-            )}
+            <div className={`mb-4 rounded-2xl border px-4 py-3 ${phaseToneClassName}`}>
+              <p className={`text-sm font-semibold ${phaseHeadlineClassName}`}>{phaseHeadline}</p>
+              <p className="mt-1 text-sm text-base-content/75">{phaseDetail}</p>
+              <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-base-content/80">
+                {effectiveIsBlind ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Participation bonus</span>
+                      <span className="font-semibold tabular-nums">
+                        {voteBonus !== undefined
+                          ? `+${voteBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${symbol}`
+                          : "Loading"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Reward weight</span>
+                      <span className="font-semibold tabular-nums">{weightPercent}% (4x vs open)</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Est. return if right</span>
+                      <span className="font-semibold tabular-nums">
+                        {formatCrepAmount(voteEstimate.estimatedGrossReturnMicro)} {symbol}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Participation bonus</span>
+                      <span className="font-semibold tabular-nums">
+                        {voteBonus !== undefined
+                          ? `+${voteBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${symbol}`
+                          : "Loading"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>If wrong but revealed</span>
+                      <span className="font-semibold tabular-nums">
+                        {formatCrepAmount(voteEstimate.revealedLoserRefundMicro)} {symbol}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span>Live pools</span>
+                      <span className="font-semibold tabular-nums">
+                        UP {formatCrepAmount(upPool, 0)} · DOWN {formatCrepAmount(downPool, 0)}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
 
-            {/* Actions */}
             <div className="flex gap-3">
               <button
                 onClick={onCancel}
-                className="btn bg-base-300 flex-1 text-base-content hover:bg-base-300/80 border border-base-content/10"
+                className="btn flex-1 border border-base-content/10 bg-base-300 text-base-content hover:bg-base-300/80"
               >
                 Cancel
               </button>
@@ -254,12 +334,12 @@ export function StakeSelector({
             </div>
 
             {cooldownActive && (
-              <p className="text-center text-base text-warning mt-3">
+              <p className="mt-3 text-center text-base text-warning">
                 You already voted on this content recently. Try again in {cooldownLabel}.
               </p>
             )}
             {!hasVoterId && (
-              <p className="text-center text-base text-warning mt-3">
+              <p className="mt-3 text-center text-base text-warning">
                 Voter ID required.{" "}
                 <Link href="/governance" className="link link-primary">
                   Verify your identity to vote.
@@ -267,7 +347,7 @@ export function StakeSelector({
               </p>
             )}
             {hasVoterId && maxStake < 1 && maxByBalance < 1 && (
-              <p className="text-center text-base text-error mt-3">
+              <p className="mt-3 text-center text-base text-error">
                 Insufficient {symbol} balance.{" "}
                 <Link href="/governance" className="link link-primary">
                   Get some from the faucet!
@@ -275,7 +355,7 @@ export function StakeSelector({
               </p>
             )}
             {hasVoterId && maxStake < 1 && maxByBalance >= 1 && maxByCapacity < 1 && (
-              <p className="text-center text-base text-warning mt-3">
+              <p className="mt-3 text-center text-base text-warning">
                 You have reached the 100 {symbol} stake limit for this {contentLabel} this round.
               </p>
             )}
