@@ -36,8 +36,7 @@ export const publicClient = createPublicClient({
   transport: http(config.rpcUrl),
 });
 
-export function getWalletClient(identity: BotIdentityConfig) {
-  const account = getAccount(identity);
+export function getWalletClient(identity: BotIdentityConfig, account = getAccount(identity)) {
   return createWalletClient({
     account,
     chain,

@@ -52,7 +52,7 @@ describe("bot config", () => {
     await loadBotConfig({}, ["TMDB_API_KEY", "YOUTUBE_API_KEY", "TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET", "RAWG_API_KEY"]);
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "[Bot] WARN: No content-source API keys configured — submissions will be skipped",
+      "[Bot] WARN: No keyed content-source API keys configured — public sources still work, but some sources and rating strategies will be unavailable",
     );
   });
 

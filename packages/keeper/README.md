@@ -39,15 +39,19 @@ Copy `.env.example` to `.env.local` and configure:
 | `KEEPER_STARTUP_JITTER_MS` | `0` | Random startup delay for multi-instance staggering |
 | `KEEPER_CLEANUP_BATCH_SIZE` | `25` | Max commit window processed per `processUnrevealedVotes()` batch |
 | `METRICS_ENABLED` | `true` | Enable Prometheus metrics server |
+| `METRICS_BIND_ADDRESS` | `127.0.0.1` | Metrics server bind address |
 | `METRICS_PORT` | `9090` | Metrics server port |
 | `LOG_FORMAT` | `json` | Log format: `json` (production) or `text` (development) |
+| `DORMANCY_PERIOD` | `2592000` | Dormancy threshold in seconds used for dormant content sweeps |
+| `MIN_GAS_BALANCE_WEI` | `10000000000000000` | Warning threshold for keeper wallet gas balance |
+| `MAX_GAS_PER_TX` | `2000000` | Per-transaction gas cap for keeper writes |
 
 ## Docker
 
 ```bash
-cd packages/keeper
-docker build -t curyo-keeper .
-docker run --env-file .env curyo-keeper
+# From the monorepo root (the image needs the shared @curyo/contracts workspace)
+docker build -f packages/keeper/Dockerfile -t curyo-keeper .
+docker run --env-file packages/keeper/.env.local -p 9090:9090 curyo-keeper
 ```
 
 ## Monitoring
@@ -68,10 +72,10 @@ src/
 ├── keystore.ts   # Foundry keystore decryption
 ├── logger.ts     # Structured logging
 ├── metrics.ts    # Prometheus metrics server
-└── abis/         # Contract ABIs
-
-Dockerfile        # Production container image
+└── revert-utils.ts # Shared revert decoding helpers
 ```
+
+Contract ABIs and deployment metadata are imported from the shared `@curyo/contracts` workspace package.
 
 ## Redundancy
 

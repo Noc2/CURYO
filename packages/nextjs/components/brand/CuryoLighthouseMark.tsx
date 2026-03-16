@@ -206,6 +206,7 @@ export function CuryoLighthouseMark({
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring {
           transform-origin: 256px 256px;
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
         }
 
         .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring--inner {
@@ -329,80 +330,92 @@ export function CuryoLighthouseMark({
 
         @keyframes lighthouse-sequence-inner {
           0%,
-          8%,
+          10%,
           92%,
           100% {
             opacity: 0;
-            transform: scale(0.88);
+            transform: scale(0.94);
           }
-          13% {
-            opacity: 0.16;
-            transform: scale(0.93);
+          14% {
+            opacity: 0.04;
+            transform: scale(0.952);
           }
           18% {
-            opacity: 0.5;
-            transform: scale(0.965);
+            opacity: 0.14;
+            transform: scale(0.966);
           }
-          23%,
+          23% {
+            opacity: 0.38;
+            transform: scale(0.982);
+          }
+          29%,
           54% {
-            opacity: 0.98;
+            opacity: 0.94;
             transform: scale(1);
           }
           66% {
             opacity: 0.08;
-            transform: scale(1.04);
+            transform: scale(1.024);
           }
         }
 
         @keyframes lighthouse-sequence-middle {
           0%,
-          18%,
+          20%,
           100% {
             opacity: 0;
-            transform: scale(0.89);
+            transform: scale(0.945);
           }
-          24% {
-            opacity: 0.14;
-            transform: scale(0.935);
+          25% {
+            opacity: 0.04;
+            transform: scale(0.956);
           }
           30% {
-            opacity: 0.46;
+            opacity: 0.14;
             transform: scale(0.97);
           }
-          36%,
+          36% {
+            opacity: 0.36;
+            transform: scale(0.984);
+          }
+          42%,
           64% {
-            opacity: 0.92;
+            opacity: 0.89;
             transform: scale(1);
           }
           76% {
             opacity: 0.08;
-            transform: scale(1.03);
+            transform: scale(1.02);
           }
         }
 
         @keyframes lighthouse-sequence-outer {
           0%,
-          28%,
+          30%,
           100% {
             opacity: 0;
-            transform: scale(0.9);
+            transform: scale(0.95);
           }
-          35% {
-            opacity: 0.12;
-            transform: scale(0.94);
+          36% {
+            opacity: 0.035;
+            transform: scale(0.96);
           }
           42% {
-            opacity: 0.42;
-            transform: scale(0.975);
+            opacity: 0.13;
+            transform: scale(0.972);
           }
-          48%,
+          48% {
+            opacity: 0.34;
+            transform: scale(0.986);
+          }
+          54%,
           76% {
-            opacity: 0.84;
+            opacity: 0.8;
             transform: scale(1);
           }
           88% {
             opacity: 0.06;
-            transform: scale(1.02);
+            transform: scale(1.016);
           }
         }
 

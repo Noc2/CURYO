@@ -10,7 +10,7 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string
 
 export async function runVote() {
   const account = getAccount(config.rateBot);
-  const wallet = getWalletClient(config.rateBot);
+  const wallet = getWalletClient(config.rateBot, account);
   log.info(`Rating bot address: ${account.address}`);
 
   // 1. Check Voter ID NFT

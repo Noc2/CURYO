@@ -29,7 +29,7 @@ describe("loadConfig", () => {
       httpHost: "127.0.0.1",
       httpPort: 3334,
       httpPath: "/mcp",
-      httpCorsOrigin: "*",
+      httpCorsOrigin: "http://localhost:3000",
       httpAuth: {
         mode: "none",
         realm: "curyo-mcp",

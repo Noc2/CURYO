@@ -12,6 +12,7 @@ yarn bot:status   # Check bot account balances and Voter ID status
 ```
 
 Requires a running Ponder indexer (`yarn ponder:dev`) and configured environment variables.
+Public submission sources still work without third-party API keys, but source coverage and automated rating breadth are reduced.
 
 ## Scripts
 
@@ -23,7 +24,11 @@ Requires a running Ponder indexer (`yarn ponder:dev`) and configured environment
 
 ## Configuration
 
-Copy `.env.example` to `.env` in the package directory and fill in the deployed network details:
+Copy `.env.example` to `.env` in the package directory and fill in the deployed network details. The required minimum is:
+
+- one wallet for the role you want to run
+- `RPC_URL`, `CHAIN_ID`, and the deployed contract addresses
+- `PONDER_URL`
 
 **Wallet (one of):**
 
@@ -47,7 +52,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `CATEGORY_REGISTRY_ADDRESS` | — | Deployed CategoryRegistry address |
 | `PONDER_URL` | — | Ponder indexer URL |
 
-**External API Keys:**
+**Optional External API Keys:**
 
 | Variable | Description |
 |---|---|
@@ -57,6 +62,8 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `TWITCH_CLIENT_SECRET` | Twitch API client secret |
 | `RAWG_API_KEY` | RAWG API key (games) |
 
+Without these keys the bot can still submit from public sources such as CoinGecko, Open Library, Hugging Face, Scryfall, and Wikipedia, but keyed sources and some rating strategies will be unavailable.
+
 **Tuning (optional):**
 
 | Variable | Default | Description |
@@ -65,6 +72,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `VOTE_THRESHOLD` | — | Minimum confidence to cast a vote |
 | `MAX_VOTES_PER_RUN` | — | Limit votes per execution |
 | `MAX_SUBMISSIONS_PER_RUN` | — | Limit submissions per execution |
+| `MAX_SUBMISSIONS_PER_CATEGORY` | — | Per-source cap during submission runs |
 
 ## Project Structure
 
@@ -79,6 +87,6 @@ src/
 │   ├── submit.ts    # Discover trending content, submit to ContentRegistry
 │   ├── vote.ts      # Rate content, place votes on-chain
 │   └── status.ts    # Check balances and Voter ID
-├── sources/         # Content platform adapters (TMDB, YouTube, Twitch, RAWG)
-└── strategies/      # Rating strategies for different content types
+├── sources/         # Content platform adapters (public + API-backed)
+└── strategies/      # Platform-specific rating strategies
 ```

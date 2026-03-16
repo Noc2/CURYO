@@ -7,7 +7,7 @@ const MIN_SUBMITTER_STAKE = 10_000_000n; // 10 cREP (6 decimals)
 
 export async function runSubmit() {
   const account = getAccount(config.submitBot);
-  const wallet = getWalletClient(config.submitBot);
+  const wallet = getWalletClient(config.submitBot, account);
   log.info(`Submission bot address: ${account.address}`);
 
   // 1. Check Voter ID NFT

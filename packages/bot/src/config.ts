@@ -127,7 +127,9 @@ function loadConfig() {
   const hasApiKey =
     loadedConfig.tmdbApiKey || loadedConfig.youtubeApiKey || loadedConfig.twitchClientId || loadedConfig.rawgApiKey;
   if (!hasApiKey) {
-    console.warn("[Bot] WARN: No content-source API keys configured — submissions will be skipped");
+    console.warn(
+      "[Bot] WARN: No keyed content-source API keys configured — public sources still work, but some sources and rating strategies will be unavailable",
+    );
   }
 
   return loadedConfig;

@@ -13,17 +13,19 @@ Requires the local chain (`yarn chain`), deployed contracts (`yarn deploy`), and
 
 ## Scripts
 
+Run these from the monorepo root unless noted otherwise:
+
 | Command                 | Description                                                       |
 | ----------------------- | ----------------------------------------------------------------- |
 | `yarn start`            | Start development server (localhost:3000)                         |
 | `yarn next:build`       | Production build                                                  |
 | `yarn next:lint`        | Run ESLint                                                        |
 | `yarn next:check-types` | TypeScript type checking                                          |
-| `yarn format`           | Format code with Prettier                                         |
-| `yarn db:generate`      | Generate Drizzle migrations                                       |
-| `yarn db:push`          | Apply migrations to database                                      |
-| `yarn db:studio`        | Interactive database browser                                      |
-| `yarn whitepaper`       | Generate the whitepaper PDF                                       |
+| `yarn workspace @curyo/nextjs format` | Format frontend code with Prettier                    |
+| `yarn workspace @curyo/nextjs db:generate` | Generate Drizzle migrations                     |
+| `yarn workspace @curyo/nextjs db:push` | Apply migrations to the configured database          |
+| `yarn workspace @curyo/nextjs db:studio` | Open the Drizzle studio UI                        |
+| `yarn workspace @curyo/nextjs whitepaper` | Generate the whitepaper PDF                     |
 | `yarn e2e`              | Run Playwright E2E tests (requires local chain + deploy + ponder) |
 | `yarn e2e:ui`           | Run E2E tests with interactive Playwright UI                      |
 
@@ -55,33 +57,34 @@ Notes:
 
 ## Project Structure
 
-```
+```text
 app/                          # Next.js App Router
-├── (main)/                   # Layout with navbar + sidebar
-│   ├── page.tsx              # Home dashboard
-│   ├── submit/               # Content submission
-│   ├── vote/                 # Voting interface
-│   ├── portfolio/            # User content & vote history
-│   ├── explore/              # Browse all content
-│   └── docs/                 # In-app documentation
 ├── api/                      # Server-side API routes
 ├── blockexplorer/            # Scaffold-ETH block explorer
-└── debug/                    # Contract debugger
+├── debug/                    # Contract debugger
+├── docs/                     # In-app documentation
+├── explore/, portfolio/      # Core browsing and portfolio surfaces
+├── radar/, submit/, vote/    # Discovery and voting flows
+└── profiles/, settings/      # User profile and preference routes
 
 components/                   # React components
 ├── content/embeds/           # Platform-specific embeds (YouTube, Twitter, etc.)
-├── Navbar/
-├── Sidebar/
-└── scaffold-eth/             # Wallet & contract interaction components
+├── home/, leaderboard/       # Home and leaderboard UIs
+├── profile/, submit/, vote/  # Feature-specific flows
+├── shared/, ui/              # Shared presentation primitives
+└── scaffold-eth/             # Wallet and contract interaction components
 
 hooks/                        # Custom React hooks
 ├── scaffold-eth/             # useScaffoldReadContract, useScaffoldWriteContract, etc.
+├── usePonderQuery.ts         # Shared indexed-data fetch helper
 ├── useRoundSnapshot.ts       # Shared active-round contract read + derived state
 └── useVotingConfig.ts        # Shared voting config contract read
 
 services/ponder/client.ts     # REST client for the Ponder indexer API
-utils/platforms/handlers/     # Platform detection & URL parsing
+services/web3/                # wagmi config and wallet connector setup
 lib/db/schema.ts              # Drizzle ORM database schema
+lib/notifications/            # Email preference and delivery logic
+utils/platforms/handlers/     # Platform detection and URL parsing
 scaffold.config.ts            # Target networks, Alchemy/WalletConnect config
 ```
 

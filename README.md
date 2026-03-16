@@ -153,9 +153,8 @@ yarn keeper:start
 **Docker:**
 
 ```bash
-cd packages/keeper
-docker build -t curyo-keeper .
-docker run --env-file .env curyo-keeper
+docker build -f packages/keeper/Dockerfile -t curyo-keeper .
+docker run --env-file packages/keeper/.env.local -p 9090:9090 curyo-keeper
 ```
 
 **Monitoring:**
