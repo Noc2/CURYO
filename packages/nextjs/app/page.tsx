@@ -67,7 +67,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             {STEPS.map(({ icon: Icon, title, description, color }) => (
               <div
                 key={title}
-                className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
+                className="flex h-full flex-col items-center rounded-[1.75rem] bg-[rgb(16,17,19,0.96)] px-6 py-7 text-center shadow-[0_24px_56px_rgba(0,0,0,0.34)]"
               >
                 <div
                   className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl"
