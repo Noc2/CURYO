@@ -619,12 +619,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         youtubeSubcats[9] = "Lifestyle";
         youtubeSubcats[10] = "Finance";
         youtubeSubcats[11] = "Health";
-        registry.addApprovedCategory(
-            "YouTube",
-            "youtube.com",
-            youtubeSubcats,
-            "Is {title} informative or entertaining enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("YouTube", "youtube.com", youtubeSubcats);
 
         // Twitch (categoryId: 2)
         string[] memory twitchSubcats = new string[](5);
@@ -633,9 +628,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         twitchSubcats[2] = "Talk Shows";
         twitchSubcats[3] = "Sports";
         twitchSubcats[4] = "Creative";
-        registry.addApprovedCategory(
-            "Twitch", "twitch.tv", twitchSubcats, "Is {title} engaging enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("Twitch", "twitch.tv", twitchSubcats);
 
         // Magic: The Gathering - Scryfall (categoryId: 3)
         string[] memory mtgSubcats = new string[](8);
@@ -647,12 +640,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         mtgSubcats[5] = "Lands";
         mtgSubcats[6] = "Planeswalkers";
         mtgSubcats[7] = "Commanders";
-        registry.addApprovedCategory(
-            "Magic: The Gathering",
-            "scryfall.com",
-            mtgSubcats,
-            "Is {title} powerful or iconic enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("Magic: The Gathering", "scryfall.com", mtgSubcats);
 
         // Movies - TMDB (categoryId: 4)
         string[] memory movieSubcats = new string[](10);
@@ -666,9 +654,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         movieSubcats[7] = "Thriller";
         movieSubcats[8] = "Romance";
         movieSubcats[9] = "Fantasy";
-        registry.addApprovedCategory(
-            "Movies", "themoviedb.org", movieSubcats, "Is {title} good enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("Movies", "themoviedb.org", movieSubcats);
 
         // People - Wikipedia (categoryId: 5)
         string[] memory peopleSubcats = new string[](8);
@@ -680,12 +666,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         peopleSubcats[5] = "Business";
         peopleSubcats[6] = "Artists";
         peopleSubcats[7] = "Authors";
-        registry.addApprovedCategory(
-            "People",
-            "en.wikipedia.org",
-            peopleSubcats,
-            "Is the influence and impact of {title} above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("People", "en.wikipedia.org", peopleSubcats);
 
         // Games - RAWG (categoryId: 6)
         string[] memory gameSubcats = new string[](8);
@@ -697,9 +678,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         gameSubcats[5] = "Indie";
         gameSubcats[6] = "Sports";
         gameSubcats[7] = "Puzzle";
-        registry.addApprovedCategory(
-            "Games", "rawg.io", gameSubcats, "Is {title} fun and polished enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("Games", "rawg.io", gameSubcats);
 
         // Books - Open Library (categoryId: 7)
         string[] memory bookSubcats = new string[](8);
@@ -711,12 +690,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         bookSubcats[5] = "History";
         bookSubcats[6] = "Science";
         bookSubcats[7] = "Philosophy";
-        registry.addApprovedCategory(
-            "Books",
-            "openlibrary.org",
-            bookSubcats,
-            "Is {title} worth reading enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("Books", "openlibrary.org", bookSubcats);
 
         // AI - Hugging Face (categoryId: 8)
         string[] memory aiSubcats = new string[](9);
@@ -729,12 +703,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         aiSubcats[6] = "Video";
         aiSubcats[7] = "Productivity";
         aiSubcats[8] = "Agents";
-        registry.addApprovedCategory(
-            "AI",
-            "huggingface.co",
-            aiSubcats,
-            "Is {title} useful and capable enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("AI", "huggingface.co", aiSubcats);
 
         // Crypto Tokens - CoinGecko (categoryId: 9)
         string[] memory cryptoSubcats = new string[](8);
@@ -746,12 +715,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         cryptoSubcats[5] = "Gaming/NFT";
         cryptoSubcats[6] = "Infrastructure";
         cryptoSubcats[7] = "Privacy";
-        registry.addApprovedCategory(
-            "Crypto Tokens",
-            "coingecko.com",
-            cryptoSubcats,
-            "Are the fundamentals of {title} strong enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("Crypto Tokens", "coingecko.com", cryptoSubcats);
 
         // Tweets - X/Twitter (categoryId: 10)
         string[] memory tweetSubcats = new string[](10);
@@ -765,12 +729,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         tweetSubcats[7] = "Culture";
         tweetSubcats[8] = "Threads";
         tweetSubcats[9] = "Announcements";
-        registry.addApprovedCategory(
-            "Tweets",
-            "x.com",
-            tweetSubcats,
-            "Is {title} insightful or impactful enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("Tweets", "x.com", tweetSubcats);
 
         // GitHub Repos (categoryId: 11)
         string[] memory githubSubcats = new string[](8);
@@ -782,12 +741,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         githubSubcats[5] = "Infrastructure";
         githubSubcats[6] = "Security";
         githubSubcats[7] = "Education";
-        registry.addApprovedCategory(
-            "GitHub Repos",
-            "github.com",
-            githubSubcats,
-            "Is {title} worth adopting or recommending enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("GitHub Repos", "github.com", githubSubcats);
 
         // Spotify Podcasts (categoryId: 12)
         string[] memory spotifySubcats = new string[](8);
@@ -799,11 +753,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         spotifySubcats[5] = "Health";
         spotifySubcats[6] = "Sports";
         spotifySubcats[7] = "Culture";
-        registry.addApprovedCategory(
-            "Spotify Podcasts",
-            "open.spotify.com",
-            spotifySubcats,
-            "Is {title} worth listening to enough to score above {rating} out of 100?"
-        );
+        registry.addApprovedCategory("Spotify Podcasts", "open.spotify.com", spotifySubcats);
     }
 }
