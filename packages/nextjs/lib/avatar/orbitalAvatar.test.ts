@@ -254,3 +254,11 @@ test("renderer returns svg markup for the orb-flare avatar", () => {
   assert.match(svg, /orbital-avatar-flare-/);
   assert.match(svg, /<svg[^>]+width="64"/);
 });
+
+test("renderer emits valid fold-sheen gradient markup", () => {
+  const svg = renderOrbitalAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
+
+  assert.match(svg, /<linearGradient id="orbital-avatar-fold-sheen-[^"]+"/);
+  assert.match(svg, /<\/linearGradient>/);
+  assert.doesNotMatch(svg, /<linearGradient id="orbital-avatar-fold-sheen-[^"]+"[\s\S]*<\/radialGradient>/);
+});

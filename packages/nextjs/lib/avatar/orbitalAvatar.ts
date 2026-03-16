@@ -479,7 +479,7 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
         <stop offset="0.56" stop-color="${model.planet.foldStrokeColor}" stop-opacity="0.34"/>
         <stop offset="0.82" stop-color="${model.planet.foldColor}" stop-opacity="0.18"/>
         <stop offset="1" stop-color="${model.planet.foldColor}" stop-opacity="0"/>
-      </radialGradient>`,
+      </linearGradient>`,
     );
     defs.push(
       `<clipPath id="orbital-avatar-clip-${hashHex}">
