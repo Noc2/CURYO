@@ -8,7 +8,6 @@ import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
@@ -38,7 +37,6 @@ const RATING_GUIDANCE_TEXT =
 export function VotingQuestionCard({
   contentId,
   categoryId,
-  title,
   onVote,
   isCommitting,
   address,
@@ -54,7 +52,6 @@ export function VotingQuestionCard({
   });
 
   const currentRatingValue = currentRating ? Number(currentRating) : 50;
-  const contentLabel = useContentLabel(categoryId);
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId);
@@ -126,19 +123,6 @@ export function VotingQuestionCard({
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
           <RatingOrb rating={currentRatingValue} size={190} />
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <span className="rounded-full border border-base-content/10 bg-base-content/5 px-3 py-1 text-sm font-medium capitalize text-base-content/65">
-              {contentLabel}
-            </span>
-            {title && !embedded ? (
-              <span className="max-w-full truncate rounded-full border border-base-content/10 bg-base-content/5 px-3 py-1 text-sm text-base-content/55">
-                {title}
-              </span>
-            ) : null}
-          </div>
-          <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-base-content/62">
-            Downvote illegal, broken, or misdescribed content.
-          </p>
         </div>
 
         {/* Committed voter icons */}
