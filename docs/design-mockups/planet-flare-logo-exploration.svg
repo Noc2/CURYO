@@ -1,165 +1,277 @@
 <svg width="1600" height="1000" viewBox="0 0 1600 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="board-bg" x1="96" y1="54" x2="1510" y2="948" gradientUnits="userSpaceOnUse">
+    <linearGradient id="board-bg" x1="80" y1="60" x2="1520" y2="944" gradientUnits="userSpaceOnUse">
       <stop stop-color="#0A0C12"/>
-      <stop offset="0.56" stop-color="#10141F"/>
-      <stop offset="1" stop-color="#0A0E16"/>
+      <stop offset="0.58" stop-color="#10141D"/>
+      <stop offset="1" stop-color="#0A0E15"/>
     </linearGradient>
-    <radialGradient id="board-left-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(286 186) rotate(54.462) scale(382 468)">
-      <stop stop-color="#1A2B4B" stop-opacity="0.26"/>
-      <stop offset="1" stop-color="#1A2B4B" stop-opacity="0"/>
+    <linearGradient id="card-fill" x1="96" y1="238" x2="1506" y2="858" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0C0F15"/>
+      <stop offset="1" stop-color="#090C13"/>
+    </linearGradient>
+    <radialGradient id="board-left-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(268 214) rotate(51) scale(384 454)">
+      <stop stop-color="#294577" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#294577" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="board-right-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1288 224) rotate(143.129) scale(432 324)">
-      <stop stop-color="#F17173" stop-opacity="0.14"/>
-      <stop offset="1" stop-color="#F17173" stop-opacity="0"/>
+    <radialGradient id="board-right-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1290 214) rotate(144) scale(412 308)">
+      <stop stop-color="#F06D72" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#F06D72" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="board-bottom-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1118 930) rotate(162.166) scale(544 246)">
+    <radialGradient id="board-bottom-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1136 930) rotate(162) scale(520 238)">
       <stop stop-color="#FF7A47" stop-opacity="0.12"/>
       <stop offset="1" stop-color="#FF7A47" stop-opacity="0"/>
     </radialGradient>
 
-    <linearGradient id="card-fill" x1="98" y1="148" x2="1502" y2="862" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0E1118"/>
-      <stop offset="1" stop-color="#0B0D14"/>
-    </linearGradient>
-    <filter id="card-shadow" x="56" y="102" width="1488" height="772" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="board-shadow" x="38" y="24" width="1524" height="944" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000000" flood-opacity="0.34"/>
     </filter>
-    <filter id="planet-glow" x="136" y="156" width="1248" height="590" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="24"/>
+    <filter id="global-soft-blur" x="0" y="0" width="1600" height="1000" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12"/>
     </filter>
-    <filter id="flare-glow" x="126" y="106" width="1336" height="634" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="global-flare-glow" x="0" y="0" width="1600" height="1000" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="18"/>
     </filter>
 
-    <radialGradient id="planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(0.68 0.22) scale(0.92 0.96)">
-      <stop stop-color="#FFD49B"/>
-      <stop offset="0.18" stop-color="#FFB278"/>
-      <stop offset="0.36" stop-color="#F16A73"/>
-      <stop offset="0.58" stop-color="#7B78EA"/>
-      <stop offset="0.77" stop-color="#3395E8"/>
-      <stop offset="1" stop-color="#0A2D3F"/>
+    <clipPath id="planet-1-clip">
+      <circle cx="310" cy="496" r="122"/>
+    </clipPath>
+    <clipPath id="planet-2-clip">
+      <circle cx="800" cy="496" r="122"/>
+    </clipPath>
+    <clipPath id="planet-3-clip">
+      <circle cx="1210" cy="374" r="94"/>
+    </clipPath>
+
+    <radialGradient id="planet-1-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(346 446) rotate(132) scale(196 188)">
+      <stop stop-color="#FFD39D"/>
+      <stop offset="0.18" stop-color="#FFB27E"/>
+      <stop offset="0.36" stop-color="#F17882"/>
+      <stop offset="0.58" stop-color="#7C78EA"/>
+      <stop offset="0.77" stop-color="#3A97EB"/>
+      <stop offset="1" stop-color="#0B2C3E"/>
     </radialGradient>
-    <radialGradient id="planet-rim" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.72 0.24) scale(0.5 0.4)">
-      <stop stop-color="#FFFFFF" stop-opacity="0.54"/>
-      <stop offset="0.44" stop-color="#FFFFFF" stop-opacity="0.14"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    <radialGradient id="planet-1-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(234 570) rotate(-29) scale(126 86)">
+      <stop stop-color="#0B1220" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#0B1220" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="flare-main" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#F45D4F"/>
-      <stop offset="30%" stop-color="#FF8C5F"/>
-      <stop offset="62%" stop-color="#FFC37A"/>
-      <stop offset="100%" stop-color="#FFF0D8"/>
+
+    <radialGradient id="planet-2-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(838 446) rotate(132) scale(196 188)">
+      <stop stop-color="#FFD39D"/>
+      <stop offset="0.18" stop-color="#FFB27E"/>
+      <stop offset="0.36" stop-color="#F17882"/>
+      <stop offset="0.58" stop-color="#7C78EA"/>
+      <stop offset="0.77" stop-color="#3A97EB"/>
+      <stop offset="1" stop-color="#0B2C3E"/>
+    </radialGradient>
+    <radialGradient id="planet-2-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(724 570) rotate(-29) scale(126 86)">
+      <stop stop-color="#0B1220" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#0B1220" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="planet-3-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1238 336) rotate(132) scale(152 144)">
+      <stop stop-color="#FFD39D"/>
+      <stop offset="0.18" stop-color="#FFB27E"/>
+      <stop offset="0.36" stop-color="#F17882"/>
+      <stop offset="0.58" stop-color="#7C78EA"/>
+      <stop offset="0.77" stop-color="#3A97EB"/>
+      <stop offset="1" stop-color="#0B2C3E"/>
+    </radialGradient>
+    <radialGradient id="planet-3-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1142 432) rotate(-29) scale(98 68)">
+      <stop stop-color="#0B1220" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#0B1220" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="flare-1" x1="354" y1="378" x2="455" y2="580" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45D4F"/>
+      <stop offset="0.28" stop-color="#FF8C5F"/>
+      <stop offset="0.56" stop-color="#FFC37A"/>
+      <stop offset="0.82" stop-color="#FFE0A1"/>
+      <stop offset="1" stop-color="#FFF3D9"/>
     </linearGradient>
-    <linearGradient id="flare-core" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#FF9B75"/>
-      <stop offset="52%" stop-color="#FFF0CF"/>
-      <stop offset="100%" stop-color="#FFF7EA"/>
+    <linearGradient id="flare-2" x1="844" y1="378" x2="947" y2="580" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45D4F"/>
+      <stop offset="0.28" stop-color="#FF8C5F"/>
+      <stop offset="0.56" stop-color="#FFC37A"/>
+      <stop offset="0.82" stop-color="#FFE0A1"/>
+      <stop offset="1" stop-color="#FFF3D9"/>
+    </linearGradient>
+    <linearGradient id="flare-3" x1="1258" y1="304" x2="1334" y2="460" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45D4F"/>
+      <stop offset="0.28" stop-color="#FF8C5F"/>
+      <stop offset="0.56" stop-color="#FFC37A"/>
+      <stop offset="0.82" stop-color="#FFE0A1"/>
+      <stop offset="1" stop-color="#FFF3D9"/>
+    </linearGradient>
+
+    <linearGradient id="flare-core-1" x1="360" y1="386" x2="450" y2="572" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B75"/>
+      <stop offset="0.52" stop-color="#FFF0CF"/>
+      <stop offset="1" stop-color="#FFF7EA"/>
+    </linearGradient>
+    <linearGradient id="flare-core-2" x1="850" y1="386" x2="942" y2="572" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B75"/>
+      <stop offset="0.52" stop-color="#FFF0CF"/>
+      <stop offset="1" stop-color="#FFF7EA"/>
+    </linearGradient>
+    <linearGradient id="flare-core-3" x1="1262" y1="310" x2="1328" y2="452" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B75"/>
+      <stop offset="0.52" stop-color="#FFF0CF"/>
+      <stop offset="1" stop-color="#FFF7EA"/>
     </linearGradient>
   </defs>
 
-  <rect width="1600" height="1000" fill="#06070B"/>
+  <rect width="1600" height="1000" fill="#05060A"/>
   <rect width="1600" height="1000" fill="url(#board-left-glow)"/>
   <rect width="1600" height="1000" fill="url(#board-right-glow)"/>
   <rect width="1600" height="1000" fill="url(#board-bottom-glow)"/>
 
-  <g filter="url(#card-shadow)">
+  <g filter="url(#board-shadow)">
     <rect x="70" y="58" width="1460" height="884" rx="36" fill="url(#board-bg)"/>
     <rect x="70" y="58" width="1460" height="884" rx="36" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
   </g>
 
   <text x="116" y="150" fill="#FFFFFF" font-size="46" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Planet + Flare Logo Exploration</text>
-  <text x="116" y="194" fill="#FFFFFF" fill-opacity="0.56" font-size="22" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Three directions for replacing the lighthouse mark with the new planet-and-flare system.</text>
+  <text x="116" y="194" fill="#FFFFFF" fill-opacity="0.56" font-size="22" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Three directions rebuilt directly from the smoother landing-hero planet instead of the flatter export.</text>
 
   <g>
     <rect x="100" y="246" width="420" height="596" rx="30" fill="url(#card-fill)"/>
     <rect x="100" y="246" width="420" height="596" rx="30" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
     <text x="132" y="302" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Orbital Badge</text>
-    <text x="132" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Standalone app/header mark</text>
+    <text x="132" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Direct extraction from the landing-page mark</text>
 
-    <g filter="url(#planet-glow)">
-      <circle cx="308" cy="510" r="126" fill="#3D95E7" fill-opacity="0.08"/>
+    <circle cx="310" cy="496" r="154" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+    <circle cx="310" cy="496" r="142" stroke="#1C1E29" stroke-opacity="0.94" stroke-width="14"/>
+    <circle cx="310" cy="496" r="132" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.8"/>
+    <circle cx="310" cy="496" r="124" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="1.4"/>
+    <circle cx="310" cy="496" r="138" stroke="#6D3428" stroke-opacity="0.14" stroke-width="4"/>
+    <path d="M216 387A142 142 0 0 1 335 359" stroke="#F7A36F" stroke-opacity="0.1" stroke-width="3" stroke-linecap="round"/>
+    <path d="M228 394A136 136 0 0 1 344 370" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.6" stroke-linecap="round"/>
+
+    <g filter="url(#global-flare-glow)">
+      <path d="M356 370A142 142 0 0 1 445 562" stroke="#F4614F" stroke-opacity="0.54" stroke-width="16" stroke-linecap="round"/>
     </g>
-    <circle cx="308" cy="510" r="174" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
-    <circle cx="308" cy="510" r="158" stroke="#1C1E29" stroke-opacity="0.9" stroke-width="16"/>
+    <path d="M356 370A142 142 0 0 1 445 562" stroke="url(#flare-1)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M362 376A136 136 0 0 1 439 556" stroke="url(#flare-core-1)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="445" cy="562" r="8" fill="#FFF1D8"/>
+    <circle cx="445" cy="562" r="16" fill="#FF8D65" fill-opacity="0.18"/>
 
-    <g filter="url(#flare-glow)">
-      <path d="M390 332A178 178 0 0 1 470 566" stroke="#F4614F" stroke-opacity="0.5" stroke-width="18" stroke-linecap="round"/>
+    <circle cx="310" cy="496" r="122" fill="url(#planet-1-base)"/>
+    <g clip-path="url(#planet-1-clip)">
+      <g filter="url(#global-soft-blur)">
+        <ellipse cx="250" cy="438" rx="78" ry="60" fill="#399DF0" fill-opacity="0.56"/>
+        <ellipse cx="330" cy="412" rx="90" ry="62" fill="#F57680" fill-opacity="0.38"/>
+        <ellipse cx="358" cy="460" rx="88" ry="60" fill="#FFD388" fill-opacity="0.34"/>
+        <ellipse cx="320" cy="540" rx="118" ry="64" fill="#0CC7A2" fill-opacity="0.26"/>
+        <ellipse cx="244" cy="556" rx="106" ry="76" fill="#13263D" fill-opacity="0.58"/>
+      </g>
+      <path d="M190 422C228 406 268 408 308 422C346 436 380 444 426 440" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="10" stroke-linecap="round"/>
+      <path d="M184 468C226 450 268 454 310 470C346 484 380 492 424 488" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="8" stroke-linecap="round"/>
+      <path d="M180 518C224 500 268 504 312 520C350 534 384 540 424 538" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="8" stroke-linecap="round"/>
+      <path d="M192 578C228 562 270 564 314 578C350 590 384 596 422 592" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="9" stroke-linecap="round"/>
+      <path d="M166 500C212 478 260 478 310 490C350 500 388 510 430 506" stroke="#F68767" stroke-opacity="0.18" stroke-width="18" stroke-linecap="round"/>
+      <circle cx="366" cy="478" r="7" fill="#FFFFFF" fill-opacity="0.08"/>
+      <circle cx="258" cy="456" r="6" fill="#FFFFFF" fill-opacity="0.06"/>
+      <circle cx="338" cy="538" r="9" fill="#FFFFFF" fill-opacity="0.06"/>
+      <circle cx="270" cy="598" r="7" fill="#FFFFFF" fill-opacity="0.04"/>
     </g>
-    <path d="M390 332A178 178 0 0 1 470 566" stroke="url(#flare-main)" stroke-width="7" stroke-linecap="round"/>
-    <path d="M398 340A170 170 0 0 1 462 558" stroke="url(#flare-core)" stroke-width="2" stroke-linecap="round"/>
-    <circle cx="470" cy="566" r="9" fill="#FFF0D8"/>
-    <circle cx="470" cy="566" r="18" fill="#FF8D65" fill-opacity="0.18"/>
+    <circle cx="310" cy="496" r="122" fill="url(#planet-1-shadow)"/>
+    <circle cx="310" cy="496" r="122" fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="1.2"/>
 
-    <circle cx="308" cy="510" r="138" fill="url(#planet-base)"/>
-    <ellipse cx="252" cy="446" rx="88" ry="70" fill="#399DF0" fill-opacity="0.52"/>
-    <ellipse cx="340" cy="420" rx="108" ry="74" fill="#F57680" fill-opacity="0.36"/>
-    <ellipse cx="376" cy="474" rx="104" ry="68" fill="#FFD388" fill-opacity="0.34"/>
-    <ellipse cx="320" cy="574" rx="130" ry="76" fill="#08C7A2" fill-opacity="0.26"/>
-    <ellipse cx="248" cy="586" rx="116" ry="84" fill="#13263D" fill-opacity="0.54"/>
-    <path d="M192 442C236 420 282 424 330 442C374 458 412 468 454 462" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="8" stroke-linecap="round"/>
-    <path d="M184 520C230 500 282 502 332 522C374 538 416 548 452 544" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="7" stroke-linecap="round"/>
-    <circle cx="308" cy="510" r="138" fill="url(#planet-rim)"/>
-
-    <text x="132" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: top-left nav, social avatar, app icon base.</text>
+    <text x="132" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: app icon, favicon, top-left navigation.</text>
   </g>
 
   <g>
     <rect x="590" y="246" width="420" height="596" rx="30" fill="url(#card-fill)"/>
     <rect x="590" y="246" width="420" height="596" rx="30" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
     <text x="622" y="302" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Signal Crest</text>
-    <text x="622" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Badge with faint containment rings</text>
+    <text x="622" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Same planet language with calmer containment rings</text>
 
-    <circle cx="798" cy="510" r="182" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
-    <circle cx="798" cy="510" r="160" stroke="#1C1E29" stroke-opacity="0.92" stroke-width="16"/>
-    <circle cx="798" cy="510" r="146" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.6"/>
+    <circle cx="800" cy="496" r="166" stroke="#FFFFFF" stroke-opacity="0.025" stroke-width="2"/>
+    <circle cx="800" cy="496" r="154" stroke="#6D3428" stroke-opacity="0.1" stroke-width="4"/>
+    <circle cx="800" cy="496" r="142" stroke="#1C1E29" stroke-opacity="0.94" stroke-width="14"/>
+    <circle cx="800" cy="496" r="132" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.8"/>
+    <circle cx="800" cy="496" r="124" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="1.4"/>
+    <path d="M706 387A142 142 0 0 1 825 359" stroke="#F7A36F" stroke-opacity="0.08" stroke-width="3" stroke-linecap="round"/>
+    <path d="M718 394A136 136 0 0 1 834 370" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M666 378A176 176 0 0 1 770 334" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2" stroke-linecap="round"/>
+    <path d="M676 612A172 172 0 0 1 784 656" stroke="#FFFFFF" stroke-opacity="0.02" stroke-width="2" stroke-linecap="round"/>
 
-    <g filter="url(#flare-glow)">
-      <path d="M864 332A182 182 0 0 1 958 566" stroke="#F4614F" stroke-opacity="0.48" stroke-width="20" stroke-linecap="round"/>
+    <g filter="url(#global-flare-glow)">
+      <path d="M846 370A142 142 0 0 1 935 562" stroke="#F4614F" stroke-opacity="0.54" stroke-width="16" stroke-linecap="round"/>
     </g>
-    <path d="M864 332A182 182 0 0 1 958 566" stroke="url(#flare-main)" stroke-width="7.5" stroke-linecap="round"/>
-    <path d="M872 340A174 174 0 0 1 950 558" stroke="url(#flare-core)" stroke-width="2.1" stroke-linecap="round"/>
-    <circle cx="958" cy="566" r="9" fill="#FFF0D8"/>
+    <path d="M846 370A142 142 0 0 1 935 562" stroke="url(#flare-2)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M852 376A136 136 0 0 1 929 556" stroke="url(#flare-core-2)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="935" cy="562" r="8" fill="#FFF1D8"/>
+    <circle cx="935" cy="562" r="16" fill="#FF8D65" fill-opacity="0.18"/>
 
-    <circle cx="798" cy="510" r="134" fill="url(#planet-base)"/>
-    <ellipse cx="744" cy="448" rx="82" ry="66" fill="#399DF0" fill-opacity="0.54"/>
-    <ellipse cx="830" cy="420" rx="102" ry="72" fill="#F57680" fill-opacity="0.38"/>
-    <ellipse cx="864" cy="478" rx="96" ry="66" fill="#FFD388" fill-opacity="0.34"/>
-    <ellipse cx="812" cy="572" rx="126" ry="72" fill="#08C7A2" fill-opacity="0.25"/>
-    <ellipse cx="742" cy="584" rx="112" ry="82" fill="#13263D" fill-opacity="0.54"/>
-    <path d="M684 448C728 426 774 430 818 446C860 462 896 472 936 466" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="8" stroke-linecap="round"/>
-    <path d="M676 526C720 506 772 508 818 526C860 542 900 552 934 548" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="7" stroke-linecap="round"/>
-    <circle cx="798" cy="510" r="134" fill="url(#planet-rim)"/>
+    <circle cx="800" cy="496" r="122" fill="url(#planet-2-base)"/>
+    <g clip-path="url(#planet-2-clip)">
+      <g filter="url(#global-soft-blur)">
+        <ellipse cx="742" cy="436" rx="78" ry="60" fill="#399DF0" fill-opacity="0.56"/>
+        <ellipse cx="822" cy="412" rx="92" ry="62" fill="#F57680" fill-opacity="0.38"/>
+        <ellipse cx="850" cy="460" rx="90" ry="60" fill="#FFD388" fill-opacity="0.34"/>
+        <ellipse cx="808" cy="540" rx="118" ry="64" fill="#0CC7A2" fill-opacity="0.26"/>
+        <ellipse cx="734" cy="556" rx="108" ry="76" fill="#13263D" fill-opacity="0.58"/>
+      </g>
+      <path d="M680 422C718 406 758 408 798 422C836 436 870 444 916 440" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="10" stroke-linecap="round"/>
+      <path d="M674 468C716 450 758 454 800 470C836 484 870 492 914 488" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="8" stroke-linecap="round"/>
+      <path d="M670 518C714 500 758 504 802 520C840 534 874 540 914 538" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="8" stroke-linecap="round"/>
+      <path d="M682 578C718 562 760 564 804 578C840 590 874 596 912 592" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="9" stroke-linecap="round"/>
+      <path d="M656 500C702 478 750 478 800 490C840 500 878 510 920 506" stroke="#F68767" stroke-opacity="0.16" stroke-width="18" stroke-linecap="round"/>
+      <circle cx="856" cy="478" r="7" fill="#FFFFFF" fill-opacity="0.08"/>
+      <circle cx="748" cy="456" r="6" fill="#FFFFFF" fill-opacity="0.06"/>
+      <circle cx="828" cy="538" r="9" fill="#FFFFFF" fill-opacity="0.06"/>
+      <circle cx="760" cy="598" r="7" fill="#FFFFFF" fill-opacity="0.04"/>
+    </g>
+    <circle cx="800" cy="496" r="122" fill="url(#planet-2-shadow)"/>
+    <circle cx="800" cy="496" r="122" fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="1.2"/>
 
-    <text x="622" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: canonical product mark and exported brand asset.</text>
+    <text x="622" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: canonical brand mark and exported asset.</text>
   </g>
 
   <g>
     <rect x="1080" y="246" width="420" height="596" rx="30" fill="url(#card-fill)"/>
     <rect x="1080" y="246" width="420" height="596" rx="30" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
     <text x="1112" y="302" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Wordmark Lockup</text>
-    <text x="1112" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Planet mark paired with CURYO</text>
+    <text x="1112" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Smaller badge paired with a calmer wordmark</text>
 
-    <circle cx="1200" cy="450" r="104" stroke="#1C1E29" stroke-opacity="0.92" stroke-width="14"/>
-    <g filter="url(#flare-glow)">
-      <path d="M1246 330A118 118 0 0 1 1312 490" stroke="#F4614F" stroke-opacity="0.46" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="1210" cy="374" r="120" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+    <circle cx="1210" cy="374" r="108" stroke="#1C1E29" stroke-opacity="0.94" stroke-width="12"/>
+    <circle cx="1210" cy="374" r="100" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.6"/>
+    <circle cx="1210" cy="374" r="94" stroke="#6D3428" stroke-opacity="0.12" stroke-width="3"/>
+    <path d="M1142 290A108 108 0 0 1 1234 268" stroke="#F7A36F" stroke-opacity="0.08" stroke-width="2.4" stroke-linecap="round"/>
+
+    <g filter="url(#global-flare-glow)">
+      <path d="M1258 272A108 108 0 0 1 1326 418" stroke="#F4614F" stroke-opacity="0.54" stroke-width="13" stroke-linecap="round"/>
     </g>
-    <path d="M1246 330A118 118 0 0 1 1312 490" stroke="url(#flare-main)" stroke-width="6" stroke-linecap="round"/>
-    <circle cx="1312" cy="490" r="8" fill="#FFF0D8"/>
+    <path d="M1258 272A108 108 0 0 1 1326 418" stroke="url(#flare-3)" stroke-width="5.2" stroke-linecap="round"/>
+    <path d="M1262 278A104 104 0 0 1 1320 412" stroke="url(#flare-core-3)" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="1326" cy="418" r="7" fill="#FFF1D8"/>
+    <circle cx="1326" cy="418" r="14" fill="#FF8D65" fill-opacity="0.18"/>
 
-    <circle cx="1200" cy="450" r="86" fill="url(#planet-base)"/>
-    <ellipse cx="1166" cy="410" rx="52" ry="44" fill="#399DF0" fill-opacity="0.54"/>
-    <ellipse cx="1220" cy="394" rx="66" ry="46" fill="#F57680" fill-opacity="0.38"/>
-    <ellipse cx="1244" cy="432" rx="62" ry="42" fill="#FFD388" fill-opacity="0.34"/>
-    <ellipse cx="1212" cy="492" rx="80" ry="50" fill="#08C7A2" fill-opacity="0.24"/>
-    <ellipse cx="1162" cy="498" rx="76" ry="56" fill="#13263D" fill-opacity="0.52"/>
-    <circle cx="1200" cy="450" r="86" fill="url(#planet-rim)"/>
+    <circle cx="1210" cy="374" r="94" fill="url(#planet-3-base)"/>
+    <g clip-path="url(#planet-3-clip)">
+      <g filter="url(#global-soft-blur)">
+        <ellipse cx="1164" cy="330" rx="60" ry="46" fill="#399DF0" fill-opacity="0.56"/>
+        <ellipse cx="1228" cy="312" rx="70" ry="48" fill="#F57680" fill-opacity="0.38"/>
+        <ellipse cx="1250" cy="348" rx="68" ry="46" fill="#FFD388" fill-opacity="0.34"/>
+        <ellipse cx="1218" cy="410" rx="88" ry="48" fill="#0CC7A2" fill-opacity="0.26"/>
+        <ellipse cx="1158" cy="424" rx="80" ry="58" fill="#13263D" fill-opacity="0.58"/>
+      </g>
+      <path d="M1118 318C1148 306 1178 308 1210 318C1240 328 1268 334 1302 332" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="8" stroke-linecap="round"/>
+      <path d="M1112 354C1146 340 1180 342 1212 356C1242 366 1270 372 1302 370" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round"/>
+      <path d="M1110 394C1144 380 1180 382 1214 394C1244 404 1270 410 1302 408" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="6" stroke-linecap="round"/>
+      <path d="M1106 380C1140 364 1178 364 1214 374C1248 382 1276 390 1306 388" stroke="#F68767" stroke-opacity="0.16" stroke-width="14" stroke-linecap="round"/>
+      <circle cx="1252" cy="360" r="6" fill="#FFFFFF" fill-opacity="0.08"/>
+      <circle cx="1170" cy="344" r="5" fill="#FFFFFF" fill-opacity="0.06"/>
+      <circle cx="1232" cy="408" r="7" fill="#FFFFFF" fill-opacity="0.06"/>
+    </g>
+    <circle cx="1210" cy="374" r="94" fill="url(#planet-3-shadow)"/>
+    <circle cx="1210" cy="374" r="94" fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="1.1"/>
 
-    <text x="1114" y="610" fill="#FFFFFF" font-size="84" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1">CURYO</text>
-    <text x="1114" y="650" fill="#FFFFFF" fill-opacity="0.58" font-size="19" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Header/banner direction with a calmer</text>
-    <text x="1114" y="676" fill="#FFFFFF" fill-opacity="0.58" font-size="19" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">badge-to-wordmark transition.</text>
-
-    <text x="1112" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: banner, README, exportable lockups,</text>
-    <text x="1112" y="770" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">and wider marketing surfaces.</text>
+    <text x="1112" y="612" fill="#FFFFFF" font-size="86" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1">CURYO</text>
+    <text x="1112" y="652" fill="#FFFFFF" fill-opacity="0.58" font-size="19" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Carries the same planet surface and flare,</text>
+    <text x="1112" y="678" fill="#FFFFFF" fill-opacity="0.58" font-size="19" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">but settles into a cleaner marketing lockup.</text>
+    <text x="1112" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: README, banner, social cover, exports.</text>
   </g>
 </svg>
