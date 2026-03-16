@@ -550,6 +550,81 @@ const experimentalThemeDirections = [
   },
 ];
 
+const obsidianEmberTheme = {
+  id: "obsidian-ember",
+  name: "Obsidian Ember",
+  tag: "Contrast study",
+  body: "Graphite, ember orange, steel grey, and warm white.",
+  bgFrom: "#040506",
+  bgTo: "#090A0C",
+  panelGlow: "#F26426",
+  panelGlowSoft: "#C53B1E",
+  surface: "#121316",
+  surfaceAlt: "#181A1F",
+  surfaceStroke: "#FFFFFF12",
+  text: "#F4F0EB",
+  muted: "#AAA39D",
+  accent: "#F26426",
+  accentSoft: "#F4D7C7",
+  accentText: "#120A06",
+  chip: "#232730",
+  chipText: "#D7DCE3",
+  swatches: ["#F5F0EB", "#F26426", "#B3341B", "#7E8996", "#090A0C"],
+  flare: {
+    outer: "#F26426",
+    dark: "#631D11",
+    glowOpacity: 0.58,
+    endpointGlow: "#FF9355",
+    endpointCore: "#FFF4EA",
+    stops: [
+      { color: "#B3341B" },
+      { offset: "0.22", color: "#E24D21" },
+      { offset: "0.54", color: "#F36A29" },
+      { offset: "0.82", color: "#FDBE9B" },
+      { offset: "1", color: "#FFF5EA" },
+    ],
+    coreStops: [
+      { color: "#FF8E59" },
+      { offset: "0.48", color: "#FFE6D5" },
+      { offset: "1", color: "#FFF9F2" },
+    ],
+  },
+  logo: {
+    baseStops: [
+      { color: "#FFF0E1" },
+      { offset: "0.15", color: "#F7A15E" },
+      { offset: "0.34", color: "#E45A27" },
+      { offset: "0.58", color: "#A9321D" },
+      { offset: "0.8", color: "#43201A" },
+      { offset: "1", color: "#0F0F12" },
+    ],
+    shadowColor: "#09090B",
+    shadowOpacity: 0.88,
+    highlightColor: "#FFF7F0",
+    highlightOpacity: 0.72,
+    atmosphereColor: "#FFC592",
+    atmosphereOpacity: 0.22,
+    edgeStroke: "#FFF3E7",
+    edgeOpacity: 0.14,
+    warmDash: "#F6A268",
+    warmDashOpacity: 0.08,
+    outerRing: "#17181C",
+    ringShadow: "#3A241E",
+    ringShadowOpacity: 0.72,
+    glows: [
+      { cx: 322, cy: 390, rx: 204, ry: 156, color: "#B92C1B", opacity: 0.34 },
+      { cx: 610, cy: 322, rx: 244, ry: 170, color: "#F16C28", opacity: 0.28 },
+      { cx: 716, cy: 446, rx: 236, ry: 156, color: "#FFD0AD", opacity: 0.22 },
+      { cx: 608, cy: 664, rx: 270, ry: 154, color: "#4D261D", opacity: 0.28 },
+      { cx: 340, cy: 710, rx: 294, ry: 182, color: "#0C0C0F", opacity: 0.74 },
+    ],
+    darkBand: "#4C261C",
+    darkBandOpacity: 0.3,
+    warmBand: "#E59C67",
+    warmBandOpacity: 0.14,
+  },
+};
+
 const gradientTreatments = [
   {
     id: "atmospheric-bloom",
@@ -963,6 +1038,210 @@ function buildExperimentalThemeBoard() {
 `.trim();
 }
 
+function buildObsidianEmberBoard() {
+  const theme = obsidianEmberTheme;
+  const prefix = `${theme.id}-board`;
+  const headlineLines = wrapText("Signal-first curation with sharper contrast.", 22);
+  const bodyLines = wrapText(
+    "This direction leans into graphite panels, hot orange accents, warm white type, and a darker Mars-like planet to make the brand feel bolder and more premium.",
+    44,
+  );
+  const headlineY = 228;
+  const headlineLineHeight = 52;
+  const headlineBottom = headlineY + (headlineLines.length - 1) * headlineLineHeight;
+  const bodyY = headlineBottom + 42;
+  const bodyLineHeight = 26;
+  const bodyBottom = bodyY + (bodyLines.length - 1) * bodyLineHeight;
+  const buttonY = bodyBottom + 40;
+  const chipY = buttonY + 70;
+
+  return `
+<svg width="1760" height="1140" viewBox="0 0 1760 1140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="${prefix}-bg" x1="80" y1="60" x2="1680" y2="1100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#030405"/>
+      <stop offset="0.55" stop-color="#07080A"/>
+      <stop offset="1" stop-color="#050608"/>
+    </linearGradient>
+    <radialGradient id="${prefix}-bg-orange" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1260 180) rotate(146) scale(420 280)">
+      <stop stop-color="#F26426" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#F26426" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="${prefix}-bg-grey" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 860) rotate(34) scale(460 260)">
+      <stop stop-color="#747D87" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#747D87" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="${prefix}-hero-bg" x1="72" y1="120" x2="980" y2="550" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#131417"/>
+      <stop offset="1" stop-color="#17191D"/>
+    </linearGradient>
+    <linearGradient id="${prefix}-card-bg" x1="1040" y1="120" x2="1688" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#121316"/>
+      <stop offset="1" stop-color="#17191D"/>
+    </linearGradient>
+    <linearGradient id="${prefix}-bottom-bg" x1="72" y1="598" x2="992" y2="1028" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#121316"/>
+      <stop offset="1" stop-color="#181A20"/>
+    </linearGradient>
+    <linearGradient id="${prefix}-accent-line" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#C73C1E"/>
+      <stop offset="0.5" stop-color="#F26426"/>
+      <stop offset="1" stop-color="#FFD0AD"/>
+    </linearGradient>
+    <radialGradient id="${prefix}-hero-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(810 252) rotate(142) scale(260 160)">
+      <stop stop-color="#F26426" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#F26426" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="${prefix}-hero-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(770 380) rotate(140) scale(260 180)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    ${renderLogoDefs(theme, prefix)}
+  </defs>
+
+  <rect width="1760" height="1140" fill="url(#${prefix}-bg)"/>
+  <rect width="1760" height="1140" fill="url(#${prefix}-bg-orange)"/>
+  <rect width="1760" height="1140" fill="url(#${prefix}-bg-grey)"/>
+
+  <text x="72" y="64" fill="#FFFFFF" font-size="46" font-weight="700" font-family="${sans}">Obsidian Ember Contrast Study</text>
+  <text x="72" y="100" fill="#D8DDD9" fill-opacity="0.72" font-size="18" font-family="${sans}">Orange, graphite, warm white, and steel grey applied to the current planet-plus-flare mark in a more contrast-heavy UI system.</text>
+
+  <g>
+    <rect x="72" y="120" width="930" height="430" rx="38" fill="url(#${prefix}-hero-bg)"/>
+    <rect x="72" y="120" width="930" height="430" rx="38" fill="url(#${prefix}-hero-glow)"/>
+    <rect x="72" y="120" width="930" height="430" rx="38" fill="url(#${prefix}-hero-shadow)"/>
+    <rect x="72" y="120" width="930" height="430" rx="38" stroke="#FFFFFF12" stroke-width="2"/>
+
+    <rect x="110" y="156" width="134" height="32" rx="16" fill="#1C1E23"/>
+    <circle cx="132" cy="172" r="5" fill="#F26426"/>
+    <text x="148" y="178" fill="#F4D7C7" font-size="13" letter-spacing="1.8" font-family="${mono}">EMBER / GRAPHITE</text>
+
+    ${renderTextLines(headlineLines, 110, headlineY, headlineLineHeight, `fill="#F4F0EB" font-size="52" font-weight="700" font-family="${sans}"`)}
+    ${renderTextLines(bodyLines, 110, bodyY, bodyLineHeight, `fill="#AAA39D" font-size="18" font-family="${sans}"`)}
+
+    <rect x="110" y="${buttonY}" width="178" height="48" rx="24" fill="#F4F0EB"/>
+    <text x="199" y="${buttonY + 30}" text-anchor="middle" fill="#120A06" font-size="15" font-weight="700" font-family="${sans}">Launch Signal Feed</text>
+    <rect x="302" y="${buttonY}" width="156" height="48" rx="24" fill="#1E222A" stroke="#F2642642" stroke-width="1.5"/>
+    <text x="380" y="${buttonY + 30}" text-anchor="middle" fill="#D7DCE3" font-size="15" font-weight="600" font-family="${sans}">Review Theme Tokens</text>
+
+    <rect x="110" y="${chipY}" width="168" height="26" rx="13" fill="#1B1F25"/>
+    <rect x="292" y="${chipY}" width="154" height="26" rx="13" fill="#1B1F25"/>
+    <rect x="460" y="${chipY}" width="138" height="26" rx="13" fill="#1B1F25"/>
+    <text x="124" y="${chipY + 17}" fill="#AAA39D" font-size="12" font-family="${sans}">Planet read: darker / warmer</text>
+    <text x="306" y="${chipY + 17}" fill="#AAA39D" font-size="12" font-family="${sans}">Flare read: brighter / sharper</text>
+    <text x="474" y="${chipY + 17}" fill="#AAA39D" font-size="12" font-family="${sans}">UI read: premium contrast</text>
+
+    ${renderLogo(theme, prefix, 636, 154, 312)}
+  </g>
+
+  <g>
+    <rect x="1040" y="120" width="650" height="280" rx="34" fill="url(#${prefix}-card-bg)"/>
+    <rect x="1040" y="120" width="650" height="280" rx="34" stroke="#FFFFFF10" stroke-width="2"/>
+    <text x="1076" y="170" fill="#F4F0EB" font-size="28" font-weight="700" font-family="${sans}">Round Snapshot</text>
+    <text x="1076" y="198" fill="#AAA39D" font-size="15" font-family="${sans}">A stronger orange accent makes ranking, heat, and urgency read faster.</text>
+
+    <circle cx="1168" cy="282" r="68" stroke="#23262D" stroke-width="14"/>
+    <circle cx="1168" cy="282" r="68" stroke="#F4F0EB" stroke-opacity="0.14" stroke-width="4"/>
+    <circle cx="1168" cy="282" r="68" stroke="url(#${prefix}-accent-line)" stroke-width="10" stroke-linecap="round" stroke-dasharray="270 190" transform="rotate(-122 1168 282)"/>
+    <text x="1168" y="276" text-anchor="middle" fill="#F4F0EB" font-size="30" font-weight="700" font-family="${sans}">73%</text>
+    <text x="1168" y="302" text-anchor="middle" fill="#AAA39D" font-size="12" font-family="${sans}">Trust lift</text>
+
+    <text x="1282" y="250" fill="#F4F0EB" font-size="15" font-weight="600" font-family="${sans}">Novelty</text>
+    <rect x="1282" y="262" width="278" height="10" rx="5" fill="#20242B"/>
+    <rect x="1282" y="262" width="224" height="10" rx="5" fill="#F26426"/>
+    <text x="1576" y="272" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="${mono}">82</text>
+
+    <text x="1282" y="302" fill="#F4F0EB" font-size="15" font-weight="600" font-family="${sans}">Signal confidence</text>
+    <rect x="1282" y="314" width="278" height="10" rx="5" fill="#20242B"/>
+    <rect x="1282" y="314" width="202" height="10" rx="5" fill="#E65022"/>
+    <text x="1576" y="324" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="${mono}">74</text>
+
+    <text x="1282" y="354" fill="#F4F0EB" font-size="15" font-weight="600" font-family="${sans}">Consensus heat</text>
+    <rect x="1282" y="366" width="278" height="10" rx="5" fill="#20242B"/>
+    <rect x="1282" y="366" width="182" height="10" rx="5" fill="#D1401D"/>
+    <text x="1576" y="376" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="${mono}">68</text>
+  </g>
+
+  <g>
+    <rect x="1040" y="432" width="650" height="392" rx="34" fill="url(#${prefix}-card-bg)"/>
+    <rect x="1040" y="432" width="650" height="392" rx="34" stroke="#FFFFFF10" stroke-width="2"/>
+    <text x="1076" y="480" fill="#F4F0EB" font-size="28" font-weight="700" font-family="${sans}">Submission Stack</text>
+    <text x="1076" y="508" fill="#AAA39D" font-size="15" font-family="${sans}">Dark cards and hotter accents make the flare feel native to the rest of the interface.</text>
+
+    <rect x="1076" y="540" width="578" height="66" rx="20" fill="#1A1D23"/>
+    <circle cx="1106" cy="573" r="8" fill="#F26426"/>
+    <text x="1126" y="568" fill="#F4F0EB" font-size="16" font-weight="600" font-family="${sans}">Freshly surfacing</text>
+    <text x="1126" y="590" fill="#AAA39D" font-size="13" font-family="${sans}">Orange tags call attention without relying on large filled blocks.</text>
+    <text x="1620" y="576" text-anchor="end" fill="#F4D7C7" font-size="14" font-family="${mono}">+28%</text>
+
+    <rect x="1076" y="620" width="578" height="66" rx="20" fill="#1A1D23"/>
+    <circle cx="1106" cy="653" r="8" fill="#F4F0EB"/>
+    <text x="1126" y="648" fill="#F4F0EB" font-size="16" font-weight="600" font-family="${sans}">Trusted by curators</text>
+    <text x="1126" y="670" fill="#AAA39D" font-size="13" font-family="${sans}">Warm white becomes the premium neutral across headlines and controls.</text>
+    <text x="1620" y="656" text-anchor="end" fill="#D7DCE3" font-size="14" font-family="${mono}">91</text>
+
+    <rect x="1076" y="706" width="578" height="92" rx="22" fill="#181B20"/>
+    <text x="1104" y="736" fill="#AAA39D" font-size="13" font-family="${sans}">Signal velocity</text>
+    <path d="M1106 774C1152 772 1178 744 1212 744C1242 744 1258 760 1290 760C1328 760 1344 728 1384 728C1420 728 1438 754 1472 754C1504 754 1522 734 1554 734C1586 734 1604 748 1630 742" stroke="url(#${prefix}-accent-line)" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="1630" cy="742" r="6" fill="#FFF4EA"/>
+    <path d="M1106 786H1630" stroke="#FFFFFF12" stroke-width="1"/>
+  </g>
+
+  <g>
+    <rect x="72" y="590" width="930" height="436" rx="38" fill="url(#${prefix}-bottom-bg)"/>
+    <rect x="72" y="590" width="930" height="436" rx="38" stroke="#FFFFFF10" stroke-width="2"/>
+    <text x="110" y="640" fill="#F4F0EB" font-size="30" font-weight="700" font-family="${sans}">Filter / Review Controls</text>
+    <text x="110" y="670" fill="#AAA39D" font-size="16" font-family="${sans}">A sharper contrast system gives chips, rings, and toggles more hierarchy without losing the soft orbital shapes.</text>
+
+    <rect x="110" y="720" width="70" height="196" rx="24" fill="#171A1F"/>
+    <circle cx="145" cy="760" r="4" fill="#F26426"/>
+    <path d="M145 782V836" stroke="#2A2E36" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="145" cy="864" r="4" fill="#7E8996"/>
+    <circle cx="145" cy="900" r="4" fill="#7E8996"/>
+
+    <circle cx="388" cy="816" r="108" stroke="#20242A" stroke-width="22"/>
+    <circle cx="388" cy="816" r="108" stroke="#F4F0EB" stroke-opacity="0.12" stroke-width="3"/>
+    <circle cx="388" cy="816" r="108" stroke="url(#${prefix}-accent-line)" stroke-width="8" stroke-linecap="round" stroke-dasharray="420 260" transform="rotate(-118 388 816)"/>
+    <text x="388" y="806" text-anchor="middle" fill="#F4F0EB" font-size="32" font-weight="700" font-family="${sans}">25K</text>
+    <text x="388" y="834" text-anchor="middle" fill="#AAA39D" font-size="12" font-family="${sans}">active votes</text>
+    <text x="388" y="852" text-anchor="middle" fill="#7E8996" font-size="11" font-family="${mono}">MAX 72K</text>
+
+    <rect x="606" y="724" width="320" height="50" rx="18" fill="#171A1F"/>
+    <text x="632" y="756" fill="#F4F0EB" font-size="15" font-weight="600" font-family="${sans}">Dust storm activity</text>
+    <rect x="880" y="736" width="28" height="28" rx="10" fill="#F4F0EB"/>
+    <path d="M888 750L892 754L900 744" stroke="#161312" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="606" y="786" width="320" height="50" rx="18" fill="#171A1F"/>
+    <text x="632" y="818" fill="#F4F0EB" font-size="15" font-weight="600" font-family="${sans}">Charging platform</text>
+    <rect x="880" y="798" width="28" height="28" rx="10" fill="#F4F0EB"/>
+    <path d="M888 812L892 816L900 806" stroke="#161312" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <text x="606" y="870" fill="#AAA39D" font-size="12" font-family="${sans}">Source confidence</text>
+    <rect x="606" y="886" width="230" height="38" rx="19" fill="#111316"/>
+    <rect x="608" y="888" width="72" height="34" rx="17" fill="#F4F0EB"/>
+    <text x="644" y="911" text-anchor="middle" fill="#120A06" font-size="13" font-weight="700" font-family="${sans}">Low</text>
+    <text x="722" y="911" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="${sans}">Med</text>
+    <text x="790" y="911" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="${sans}">High</text>
+
+    <text x="606" y="960" fill="#AAA39D" font-size="12" font-family="${sans}">Community energy</text>
+    <rect x="606" y="976" width="230" height="38" rx="19" fill="#111316"/>
+    <rect x="719" y="978" width="115" height="34" rx="17" fill="#F26426"/>
+    <text x="663" y="1001" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="${sans}">Calm</text>
+    <text x="776" y="1001" text-anchor="middle" fill="#120A06" font-size="13" font-weight="700" font-family="${sans}">Active</text>
+  </g>
+
+  <g>
+    <rect x="1040" y="848" width="650" height="178" rx="34" fill="url(#${prefix}-card-bg)"/>
+    <rect x="1040" y="848" width="650" height="178" rx="34" stroke="#FFFFFF10" stroke-width="2"/>
+    <text x="1076" y="896" fill="#F4F0EB" font-size="26" font-weight="700" font-family="${sans}">Theme Tokens</text>
+    <text x="1076" y="924" fill="#AAA39D" font-size="15" font-family="${sans}">Orange drives action, warm white carries hierarchy, and graphite keeps the system grounded.</text>
+    ${renderSwatches(theme.swatches, 1090, 974, 58, 16)}
+    <text x="1076" y="1012" fill="#AAA39D" font-size="12" font-family="${mono}">#F5F0EB / #F26426 / #B3341B / #7E8996 / #090A0C</text>
+  </g>
+</svg>
+`.trim();
+}
+
 function buildGradientBoard() {
   const panels = gradientTreatments.map(renderGradientPanel);
   return `
@@ -996,6 +1275,7 @@ async function main() {
     ["planet-flare-theme-directions.svg", buildThemeBoard()],
     ["planet-flare-alt-theme-directions.svg", buildExperimentalThemeBoard()],
     ["planet-flare-3d-gradient-tests.svg", buildGradientBoard()],
+    ["planet-flare-obsidian-ember.svg", buildObsidianEmberBoard()],
   ];
 
   await Promise.all(

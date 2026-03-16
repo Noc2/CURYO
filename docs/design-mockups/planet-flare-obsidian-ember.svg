@@ -1,0 +1,261 @@
+<svg width="1760" height="1140" viewBox="0 0 1760 1140" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="obsidian-ember-board-bg" x1="80" y1="60" x2="1680" y2="1100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#030405"/>
+      <stop offset="0.55" stop-color="#07080A"/>
+      <stop offset="1" stop-color="#050608"/>
+    </linearGradient>
+    <radialGradient id="obsidian-ember-board-bg-orange" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1260 180) rotate(146) scale(420 280)">
+      <stop stop-color="#F26426" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#F26426" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="obsidian-ember-board-bg-grey" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 860) rotate(34) scale(460 260)">
+      <stop stop-color="#747D87" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#747D87" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="obsidian-ember-board-hero-bg" x1="72" y1="120" x2="980" y2="550" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#131417"/>
+      <stop offset="1" stop-color="#17191D"/>
+    </linearGradient>
+    <linearGradient id="obsidian-ember-board-card-bg" x1="1040" y1="120" x2="1688" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#121316"/>
+      <stop offset="1" stop-color="#17191D"/>
+    </linearGradient>
+    <linearGradient id="obsidian-ember-board-bottom-bg" x1="72" y1="598" x2="992" y2="1028" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#121316"/>
+      <stop offset="1" stop-color="#181A20"/>
+    </linearGradient>
+    <linearGradient id="obsidian-ember-board-accent-line" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#C73C1E"/>
+      <stop offset="0.5" stop-color="#F26426"/>
+      <stop offset="1" stop-color="#FFD0AD"/>
+    </linearGradient>
+    <radialGradient id="obsidian-ember-board-hero-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(810 252) rotate(142) scale(260 160)">
+      <stop stop-color="#F26426" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#F26426" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="obsidian-ember-board-hero-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(770 380) rotate(140) scale(260 180)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    
+    <radialGradient id="obsidian-ember-board-planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(636 360) rotate(130) scale(514 494)">
+      <stop stop-color="#FFF0E1"/><stop offset="0.15" stop-color="#F7A15E"/><stop offset="0.34" stop-color="#E45A27"/><stop offset="0.58" stop-color="#A9321D"/><stop offset="0.8" stop-color="#43201A"/><stop offset="1" stop-color="#0F0F12"/>
+    </radialGradient>
+    <radialGradient id="obsidian-ember-board-planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(382 664) rotate(-28) scale(248 162)">
+      <stop stop-color="#09090B" stop-opacity="0.88"/>
+      <stop offset="1" stop-color="#09090B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="obsidian-ember-board-planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(668 336) rotate(138) scale(198 132)">
+      <stop stop-color="#FFF7F0" stop-opacity="0.72"/>
+      <stop offset="0.5" stop-color="#FFF7F0" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#FFF7F0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="obsidian-ember-board-planet-atmosphere" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(740 292) rotate(150) scale(228 92)">
+      <stop stop-color="#FFC592" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FFC592" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="obsidian-ember-board-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B3341B"/><stop offset="0.22" stop-color="#E24D21"/><stop offset="0.54" stop-color="#F36A29"/><stop offset="0.82" stop-color="#FDBE9B"/><stop offset="1" stop-color="#FFF5EA"/>
+    </linearGradient>
+    <linearGradient id="obsidian-ember-board-flare-core" x1="684" y1="160" x2="892" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8E59"/><stop offset="0.48" stop-color="#FFE6D5"/><stop offset="1" stop-color="#FFF9F2"/>
+    </linearGradient>
+    <filter id="obsidian-ember-board-soft-blur-20" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="obsidian-ember-board-soft-blur-28" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+    <clipPath id="obsidian-ember-board-planet-clip">
+      <circle cx="512" cy="512" r="344"/>
+    </clipPath>
+  
+  </defs>
+
+  <rect width="1760" height="1140" fill="url(#obsidian-ember-board-bg)"/>
+  <rect width="1760" height="1140" fill="url(#obsidian-ember-board-bg-orange)"/>
+  <rect width="1760" height="1140" fill="url(#obsidian-ember-board-bg-grey)"/>
+
+  <text x="72" y="64" fill="#FFFFFF" font-size="46" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Obsidian Ember Contrast Study</text>
+  <text x="72" y="100" fill="#D8DDD9" fill-opacity="0.72" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Orange, graphite, warm white, and steel grey applied to the current planet-plus-flare mark in a more contrast-heavy UI system.</text>
+
+  <g>
+    <rect x="72" y="120" width="930" height="430" rx="38" fill="url(#obsidian-ember-board-hero-bg)"/>
+    <rect x="72" y="120" width="930" height="430" rx="38" fill="url(#obsidian-ember-board-hero-glow)"/>
+    <rect x="72" y="120" width="930" height="430" rx="38" fill="url(#obsidian-ember-board-hero-shadow)"/>
+    <rect x="72" y="120" width="930" height="430" rx="38" stroke="#FFFFFF12" stroke-width="2"/>
+
+    <rect x="110" y="156" width="134" height="32" rx="16" fill="#1C1E23"/>
+    <circle cx="132" cy="172" r="5" fill="#F26426"/>
+    <text x="148" y="178" fill="#F4D7C7" font-size="13" letter-spacing="1.8" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">EMBER / GRAPHITE</text>
+
+    <text x="110" y="228" fill="#F4F0EB" font-size="52" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Signal-first curation</text><text x="110" y="280" fill="#F4F0EB" font-size="52" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">with sharper contrast.</text>
+    <text x="110" y="322" fill="#AAA39D" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">This direction leans into graphite panels,</text><text x="110" y="348" fill="#AAA39D" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">hot orange accents, warm white type, and a</text><text x="110" y="374" fill="#AAA39D" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">darker Mars-like planet to make the brand</text><text x="110" y="400" fill="#AAA39D" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">feel bolder and more premium.</text>
+
+    <rect x="110" y="440" width="178" height="48" rx="24" fill="#F4F0EB"/>
+    <text x="199" y="470" text-anchor="middle" fill="#120A06" font-size="15" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Launch Signal Feed</text>
+    <rect x="302" y="440" width="156" height="48" rx="24" fill="#1E222A" stroke="#F2642642" stroke-width="1.5"/>
+    <text x="380" y="470" text-anchor="middle" fill="#D7DCE3" font-size="15" font-weight="600" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Review Theme Tokens</text>
+
+    <rect x="110" y="510" width="168" height="26" rx="13" fill="#1B1F25"/>
+    <rect x="292" y="510" width="154" height="26" rx="13" fill="#1B1F25"/>
+    <rect x="460" y="510" width="138" height="26" rx="13" fill="#1B1F25"/>
+    <text x="124" y="527" fill="#AAA39D" font-size="12" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Planet read: darker / warmer</text>
+    <text x="306" y="527" fill="#AAA39D" font-size="12" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Flare read: brighter / sharper</text>
+    <text x="474" y="527" fill="#AAA39D" font-size="12" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">UI read: premium contrast</text>
+
+    
+    <g transform="translate(636 154) scale(0.3046875)">
+      <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+      <circle cx="512" cy="512" r="434" stroke="#3A241E" stroke-opacity="0.72" stroke-width="12"/>
+      <circle cx="512" cy="512" r="420" stroke="#17181C" stroke-opacity="0.96" stroke-width="20"/>
+      <circle cx="512" cy="512" r="406" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2"/>
+      <circle cx="512" cy="512" r="394" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4"/>
+      <circle cx="512" cy="512" r="434" stroke="#F6A268" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round" stroke-dasharray="580 2147" transform="rotate(-136 512 512)"/>
+      <circle cx="512" cy="512" r="420" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="520 2119" transform="rotate(-136 512 512)"/>
+
+      <g filter="url(#obsidian-ember-board-soft-blur-28)">
+        <circle cx="512" cy="512" r="406" stroke="#F26426" stroke-opacity="0.58" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      </g>
+      <circle cx="512" cy="512" r="406" stroke="#631D11" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#obsidian-ember-board-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#obsidian-ember-board-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="871" cy="703" r="23" fill="#FF9355" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="9" fill="#FFF4EA"/>
+
+      <circle cx="512" cy="512" r="344" fill="url(#obsidian-ember-board-planet-base)"/>
+      <g clip-path="url(#obsidian-ember-board-planet-clip)">
+        <g filter="url(#obsidian-ember-board-soft-blur-20)">
+          <ellipse cx="322" cy="390" rx="204" ry="156" fill="#B92C1B" fill-opacity="0.34"/><ellipse cx="610" cy="322" rx="244" ry="170" fill="#F16C28" fill-opacity="0.28"/><ellipse cx="716" cy="446" rx="236" ry="156" fill="#FFD0AD" fill-opacity="0.22"/><ellipse cx="608" cy="664" rx="270" ry="154" fill="#4D261D" fill-opacity="0.28"/><ellipse cx="340" cy="710" rx="294" ry="182" fill="#0C0C0F" fill-opacity="0.74"/>
+        </g>
+
+        <path d="M132 312C242 264 356 264 476 290C578 312 678 322 814 316" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="16" stroke-linecap="round"/>
+        <path d="M120 418C236 372 354 378 474 406C578 430 676 440 810 434" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="13" stroke-linecap="round"/>
+        <path d="M118 522C236 478 356 486 478 516C582 542 676 552 806 546" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="11" stroke-linecap="round"/>
+        <path d="M132 648C236 612 356 614 478 642C584 668 680 678 810 668" stroke="#FFFFFF" stroke-opacity="0.075" stroke-width="14" stroke-linecap="round"/>
+        <path d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770" stroke="#4C261C" stroke-opacity="0.3" stroke-width="24" stroke-linecap="round"/>
+        <path d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554" stroke="#E59C67" stroke-opacity="0.14" stroke-width="24" stroke-linecap="round"/>
+
+        <circle cx="640" cy="430" r="18" fill="#FFF2E2" fill-opacity="0.14"/>
+        <circle cx="332" cy="414" r="14" fill="#FFF2E2" fill-opacity="0.08"/>
+        <circle cx="596" cy="570" r="20" fill="#FFF2E2" fill-opacity="0.1"/>
+        <circle cx="370" cy="804" r="16" fill="#FFF2E2" fill-opacity="0.05"/>
+      </g>
+
+      <circle cx="512" cy="512" r="344" fill="url(#obsidian-ember-board-planet-shadow)"/>
+      <g filter="url(#obsidian-ember-board-soft-blur-28)">
+        <ellipse cx="644" cy="340" rx="154" ry="106" fill="#FFF7F0" fill-opacity="0.27"/>
+      </g>
+      <circle cx="512" cy="512" r="344" fill="url(#obsidian-ember-board-planet-atmosphere)"/>
+      <circle cx="512" cy="512" r="344" fill="url(#obsidian-ember-board-planet-highlight)"/>
+      <circle cx="512" cy="512" r="344" fill="none" stroke="#FFF3E7" stroke-opacity="0.14" stroke-width="1.4"/>
+    </g>
+  
+  </g>
+
+  <g>
+    <rect x="1040" y="120" width="650" height="280" rx="34" fill="url(#obsidian-ember-board-card-bg)"/>
+    <rect x="1040" y="120" width="650" height="280" rx="34" stroke="#FFFFFF10" stroke-width="2"/>
+    <text x="1076" y="170" fill="#F4F0EB" font-size="28" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Round Snapshot</text>
+    <text x="1076" y="198" fill="#AAA39D" font-size="15" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">A stronger orange accent makes ranking, heat, and urgency read faster.</text>
+
+    <circle cx="1168" cy="282" r="68" stroke="#23262D" stroke-width="14"/>
+    <circle cx="1168" cy="282" r="68" stroke="#F4F0EB" stroke-opacity="0.14" stroke-width="4"/>
+    <circle cx="1168" cy="282" r="68" stroke="url(#obsidian-ember-board-accent-line)" stroke-width="10" stroke-linecap="round" stroke-dasharray="270 190" transform="rotate(-122 1168 282)"/>
+    <text x="1168" y="276" text-anchor="middle" fill="#F4F0EB" font-size="30" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">73%</text>
+    <text x="1168" y="302" text-anchor="middle" fill="#AAA39D" font-size="12" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Trust lift</text>
+
+    <text x="1282" y="250" fill="#F4F0EB" font-size="15" font-weight="600" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Novelty</text>
+    <rect x="1282" y="262" width="278" height="10" rx="5" fill="#20242B"/>
+    <rect x="1282" y="262" width="224" height="10" rx="5" fill="#F26426"/>
+    <text x="1576" y="272" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">82</text>
+
+    <text x="1282" y="302" fill="#F4F0EB" font-size="15" font-weight="600" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Signal confidence</text>
+    <rect x="1282" y="314" width="278" height="10" rx="5" fill="#20242B"/>
+    <rect x="1282" y="314" width="202" height="10" rx="5" fill="#E65022"/>
+    <text x="1576" y="324" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">74</text>
+
+    <text x="1282" y="354" fill="#F4F0EB" font-size="15" font-weight="600" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Consensus heat</text>
+    <rect x="1282" y="366" width="278" height="10" rx="5" fill="#20242B"/>
+    <rect x="1282" y="366" width="182" height="10" rx="5" fill="#D1401D"/>
+    <text x="1576" y="376" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">68</text>
+  </g>
+
+  <g>
+    <rect x="1040" y="432" width="650" height="392" rx="34" fill="url(#obsidian-ember-board-card-bg)"/>
+    <rect x="1040" y="432" width="650" height="392" rx="34" stroke="#FFFFFF10" stroke-width="2"/>
+    <text x="1076" y="480" fill="#F4F0EB" font-size="28" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Submission Stack</text>
+    <text x="1076" y="508" fill="#AAA39D" font-size="15" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Dark cards and hotter accents make the flare feel native to the rest of the interface.</text>
+
+    <rect x="1076" y="540" width="578" height="66" rx="20" fill="#1A1D23"/>
+    <circle cx="1106" cy="573" r="8" fill="#F26426"/>
+    <text x="1126" y="568" fill="#F4F0EB" font-size="16" font-weight="600" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Freshly surfacing</text>
+    <text x="1126" y="590" fill="#AAA39D" font-size="13" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Orange tags call attention without relying on large filled blocks.</text>
+    <text x="1620" y="576" text-anchor="end" fill="#F4D7C7" font-size="14" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">+28%</text>
+
+    <rect x="1076" y="620" width="578" height="66" rx="20" fill="#1A1D23"/>
+    <circle cx="1106" cy="653" r="8" fill="#F4F0EB"/>
+    <text x="1126" y="648" fill="#F4F0EB" font-size="16" font-weight="600" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Trusted by curators</text>
+    <text x="1126" y="670" fill="#AAA39D" font-size="13" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Warm white becomes the premium neutral across headlines and controls.</text>
+    <text x="1620" y="656" text-anchor="end" fill="#D7DCE3" font-size="14" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">91</text>
+
+    <rect x="1076" y="706" width="578" height="92" rx="22" fill="#181B20"/>
+    <text x="1104" y="736" fill="#AAA39D" font-size="13" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Signal velocity</text>
+    <path d="M1106 774C1152 772 1178 744 1212 744C1242 744 1258 760 1290 760C1328 760 1344 728 1384 728C1420 728 1438 754 1472 754C1504 754 1522 734 1554 734C1586 734 1604 748 1630 742" stroke="url(#obsidian-ember-board-accent-line)" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="1630" cy="742" r="6" fill="#FFF4EA"/>
+    <path d="M1106 786H1630" stroke="#FFFFFF12" stroke-width="1"/>
+  </g>
+
+  <g>
+    <rect x="72" y="590" width="930" height="436" rx="38" fill="url(#obsidian-ember-board-bottom-bg)"/>
+    <rect x="72" y="590" width="930" height="436" rx="38" stroke="#FFFFFF10" stroke-width="2"/>
+    <text x="110" y="640" fill="#F4F0EB" font-size="30" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Filter / Review Controls</text>
+    <text x="110" y="670" fill="#AAA39D" font-size="16" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">A sharper contrast system gives chips, rings, and toggles more hierarchy without losing the soft orbital shapes.</text>
+
+    <rect x="110" y="720" width="70" height="196" rx="24" fill="#171A1F"/>
+    <circle cx="145" cy="760" r="4" fill="#F26426"/>
+    <path d="M145 782V836" stroke="#2A2E36" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="145" cy="864" r="4" fill="#7E8996"/>
+    <circle cx="145" cy="900" r="4" fill="#7E8996"/>
+
+    <circle cx="388" cy="816" r="108" stroke="#20242A" stroke-width="22"/>
+    <circle cx="388" cy="816" r="108" stroke="#F4F0EB" stroke-opacity="0.12" stroke-width="3"/>
+    <circle cx="388" cy="816" r="108" stroke="url(#obsidian-ember-board-accent-line)" stroke-width="8" stroke-linecap="round" stroke-dasharray="420 260" transform="rotate(-118 388 816)"/>
+    <text x="388" y="806" text-anchor="middle" fill="#F4F0EB" font-size="32" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">25K</text>
+    <text x="388" y="834" text-anchor="middle" fill="#AAA39D" font-size="12" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">active votes</text>
+    <text x="388" y="852" text-anchor="middle" fill="#7E8996" font-size="11" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">MAX 72K</text>
+
+    <rect x="606" y="724" width="320" height="50" rx="18" fill="#171A1F"/>
+    <text x="632" y="756" fill="#F4F0EB" font-size="15" font-weight="600" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Dust storm activity</text>
+    <rect x="880" y="736" width="28" height="28" rx="10" fill="#F4F0EB"/>
+    <path d="M888 750L892 754L900 744" stroke="#161312" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="606" y="786" width="320" height="50" rx="18" fill="#171A1F"/>
+    <text x="632" y="818" fill="#F4F0EB" font-size="15" font-weight="600" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Charging platform</text>
+    <rect x="880" y="798" width="28" height="28" rx="10" fill="#F4F0EB"/>
+    <path d="M888 812L892 816L900 806" stroke="#161312" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <text x="606" y="870" fill="#AAA39D" font-size="12" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Source confidence</text>
+    <rect x="606" y="886" width="230" height="38" rx="19" fill="#111316"/>
+    <rect x="608" y="888" width="72" height="34" rx="17" fill="#F4F0EB"/>
+    <text x="644" y="911" text-anchor="middle" fill="#120A06" font-size="13" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Low</text>
+    <text x="722" y="911" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Med</text>
+    <text x="790" y="911" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">High</text>
+
+    <text x="606" y="960" fill="#AAA39D" font-size="12" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Community energy</text>
+    <rect x="606" y="976" width="230" height="38" rx="19" fill="#111316"/>
+    <rect x="719" y="978" width="115" height="34" rx="17" fill="#F26426"/>
+    <text x="663" y="1001" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Calm</text>
+    <text x="776" y="1001" text-anchor="middle" fill="#120A06" font-size="13" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Active</text>
+  </g>
+
+  <g>
+    <rect x="1040" y="848" width="650" height="178" rx="34" fill="url(#obsidian-ember-board-card-bg)"/>
+    <rect x="1040" y="848" width="650" height="178" rx="34" stroke="#FFFFFF10" stroke-width="2"/>
+    <text x="1076" y="896" fill="#F4F0EB" font-size="26" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Theme Tokens</text>
+    <text x="1076" y="924" fill="#AAA39D" font-size="15" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Orange drives action, warm white carries hierarchy, and graphite keeps the system grounded.</text>
+    <circle cx="1090" cy="974" r="16" fill="#F5F0EB"/><circle cx="1148" cy="974" r="16" fill="#F26426"/><circle cx="1206" cy="974" r="16" fill="#B3341B"/><circle cx="1264" cy="974" r="16" fill="#7E8996"/><circle cx="1322" cy="974" r="16" fill="#090A0C"/>
+    <text x="1076" y="1012" fill="#AAA39D" font-size="12" font-family="'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace">#F5F0EB / #F26426 / #B3341B / #7E8996 / #090A0C</text>
+  </g>
+</svg>

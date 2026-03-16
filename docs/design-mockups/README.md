@@ -20,18 +20,22 @@ These are standalone review artifacts rather than production UI.
    Focused planet-lighting and gradient study showing how far the mark can move toward a more dimensional 3D read.
    Preview export: `planet-flare-3d-gradient-tests.png`
 
-5. `planet-flare-landing.svg`
+5. `planet-flare-obsidian-ember.svg`
+   Dedicated high-contrast concept inspired by the orange / graphite / white reference palette, with a darker Mars-like planet and brighter flare highlight.
+   Preview export: `planet-flare-obsidian-ember.png`
+
+6. `planet-flare-landing.svg`
    Landing page mock-up using the current Curyo hero and "How it Works" structure.
    Preview export: `planet-flare-landing.png`
 
-6. `planet-flare-logo-exploration.svg`
+7. `planet-flare-logo-exploration.svg`
    Earlier logo exploration board for the planet-plus-flare direction.
    Preview export: `planet-flare-logo-exploration.png`
 
-7. `generate-planet-flare-theme-directions.mjs`
-   Script that regenerates the theme-direction, alternative theme, and 3D-gradient SVG boards from code.
+8. `generate-planet-flare-theme-directions.mjs`
+   Script that regenerates the theme-direction, alternative theme, contrast-study, and 3D-gradient SVG boards from code.
 
-8. `logo-rollout-plan.md`
+9. `logo-rollout-plan.md`
    Rollout plan for replacing the shared brand assets.
 
 ## PNG Export
@@ -40,7 +44,7 @@ The PNG previews are generated from the SVG sources with:
 
 ```bash
 node docs/design-mockups/generate-planet-flare-theme-directions.mjs
-node docs/design-mockups/render-pngs.mjs docs/design-mockups/planet-flare-theme-directions.svg docs/design-mockups/planet-flare-alt-theme-directions.svg docs/design-mockups/planet-flare-3d-gradient-tests.svg
+node docs/design-mockups/render-pngs.mjs docs/design-mockups/planet-flare-theme-directions.svg docs/design-mockups/planet-flare-alt-theme-directions.svg docs/design-mockups/planet-flare-3d-gradient-tests.svg docs/design-mockups/planet-flare-obsidian-ember.svg
 ```
 
 This keeps the raster previews in sync with the editable SVG artwork.
