@@ -8,7 +8,7 @@ const DocsIntro: NextPage = () => {
   return (
     <article className="prose max-w-none">
       <h1>Introduction</h1>
-      <p className="lead text-base-content/60 text-lg">Quality Signals Backed by Human Reputation.</p>
+      <p className="lead text-base-content/60 text-lg">A Better Web, Guided by Human Reputation.</p>
 
       <h2>Mission</h2>
       <p>

@@ -51,8 +51,8 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             <h1 className="mt-4 text-6xl font-bold uppercase tracking-tight sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">
               Curyo
             </h1>
-            <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[28rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
-              Quality Signals Backed by Human Reputation
+            <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[32rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
+              A Better Web, Guided by Human Reputation
             </p>
             <LandingPageActions />
           </div>
