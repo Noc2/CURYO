@@ -12,6 +12,7 @@ import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
+import { FeedModeToggle } from "~~/components/vote/FeedModeToggle";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
@@ -33,6 +34,12 @@ import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
+import {
+  DISCOVER_FEED_MODE_OPTIONS,
+  type DiscoverFeedMode,
+  getDiscoverFeedModeDescription,
+  sortDiscoverFeed,
+} from "~~/lib/vote/feedModes";
 import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
@@ -111,6 +118,7 @@ const HomeInner = () => {
   const { isFirstVote, markVoteCompleted } = useOnboarding();
   const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
   const [scope, setScope] = useState<ScopeOption>("all");
+  const [feedMode, setFeedMode] = useState<DiscoverFeedMode>("for_you");
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
@@ -142,7 +150,10 @@ const HomeInner = () => {
 
   const feedRequestLimit = contentParam
     ? undefined
-    : Math.max(FEED_PAGE_SIZE * 2, visibleCount + FEED_PREFETCH_BUFFER + 1);
+    : Math.max(
+        !isSearchMode && scope === "all" && feedMode !== "for_you" ? FEED_PAGE_SIZE * 4 : FEED_PAGE_SIZE * 2,
+        visibleCount + FEED_PREFETCH_BUFFER + 1,
+      );
 
   const watchedContentOrder = useMemo(() => {
     const seen = new Set<string>();
@@ -314,6 +325,12 @@ const HomeInner = () => {
     }
   }, [address, scope]);
 
+  useEffect(() => {
+    if (scope !== "all" && feedMode !== "for_you") {
+      setFeedMode("for_you");
+    }
+  }, [feedMode, scope]);
+
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback((name: string) => {
     setActiveCategory(name);
@@ -421,6 +438,10 @@ const HomeInner = () => {
       return items;
     }
 
+    if (scope === "all" && feedMode !== "for_you") {
+      return sortDiscoverFeed(items, feedMode, nowSeconds);
+    }
+
     switch (scope) {
       case "watched":
         items.sort((a, b) => {
@@ -470,11 +491,13 @@ const HomeInner = () => {
     return items;
   }, [
     filteredFeed,
+    feedMode,
     isSearchMode,
     activeCategory,
     effectiveSearchSortBy,
     categoryScores,
     hasPreferences,
+    nowSeconds,
     scope,
     watchedOrderMap,
     voteOrderMap,
@@ -579,7 +602,7 @@ const HomeInner = () => {
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(FEED_PAGE_SIZE);
-  }, [searchQuery, activeCategory, scope, sortBy]);
+  }, [searchQuery, activeCategory, scope, sortBy, feedMode]);
 
   useEffect(() => {
     if (!voteError?.includes("You already voted on this content within the last")) return;
@@ -1057,6 +1080,22 @@ const HomeInner = () => {
         : "Connect your wallet to view activity from curators you follow.";
     }
 
+    if (scope === "all" && feedMode === "trending") {
+      return "No content is trending right now.";
+    }
+
+    if (scope === "all" && feedMode === "contested") {
+      return "No live rounds look meaningfully contested right now.";
+    }
+
+    if (scope === "all" && feedMode === "fresh") {
+      return "No fresh submissions are waiting for signal right now.";
+    }
+
+    if (scope === "all" && feedMode === "near_settlement") {
+      return "No open rounds look close to settlement right now.";
+    }
+
     if (activeCategory === BROKEN_FILTER) {
       return "No broken URLs detected.";
     }
@@ -1066,7 +1105,7 @@ const HomeInner = () => {
     }
 
     return `No content found in "${activeCategory}".`;
-  }, [activeCategory, address, scope, searchQuery]);
+  }, [activeCategory, address, feedMode, scope, searchQuery]);
 
   const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
     enabled: Boolean(primaryItem && canNavigateCards),
@@ -1111,6 +1150,15 @@ const HomeInner = () => {
           <StreakCounter />
         </div>
       </div>
+
+      {!isSearchMode && scope === "all" ? (
+        <div className="mb-4 flex shrink-0 flex-col gap-2 xl:mb-3" data-disable-queue-wheel="true">
+          <FeedModeToggle value={feedMode} options={DISCOVER_FEED_MODE_OPTIONS} onChange={setFeedMode} />
+          {feedMode !== "for_you" ? (
+            <p className="pl-1 text-sm text-base-content/55">{getDiscoverFeedModeDescription(feedMode)}</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {isSearchMode ? (
         <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">

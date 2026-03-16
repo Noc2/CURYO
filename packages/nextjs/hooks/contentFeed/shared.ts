@@ -3,6 +3,17 @@
 import { parseTags } from "~~/constants/categories";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 
+export interface ContentOpenRoundSummary {
+  roundId: bigint;
+  voteCount: number;
+  revealedCount: number;
+  totalStake: bigint;
+  upPool: bigint;
+  downPool: bigint;
+  startTime: bigint | null;
+  estimatedSettlementTime: bigint | null;
+}
+
 export interface ContentItem {
   id: bigint;
   url: string;
@@ -14,6 +25,11 @@ export interface ContentItem {
   isOwnContent: boolean;
   categoryId: bigint;
   rating: number;
+  createdAt: string | null;
+  lastActivityAt: string | null;
+  totalVotes: number;
+  totalRounds: number;
+  openRound: ContentOpenRoundSummary | null;
   isValidUrl: boolean | null;
   thumbnailUrl: string | null;
   contentMetadata?: ContentMetadataResult;
@@ -42,6 +58,20 @@ export function mapContentItem(
     contentHash: string;
     categoryId: string;
     rating: number;
+    createdAt?: string | null;
+    lastActivityAt?: string | null;
+    totalVotes?: number;
+    totalRounds?: number;
+    openRound?: {
+      roundId: string;
+      voteCount: number;
+      revealedCount: number;
+      totalStake: string;
+      upPool: string;
+      downPool: string;
+      startTime: string | null;
+      estimatedSettlementTime: string | null;
+    } | null;
   },
   voterAddress?: string,
 ): ContentItem {
@@ -56,6 +86,24 @@ export function mapContentItem(
     isOwnContent: !!voterAddress && item.submitter.toLowerCase() === voterAddress.toLowerCase(),
     categoryId: BigInt(item.categoryId),
     rating: item.rating,
+    createdAt: item.createdAt ?? null,
+    lastActivityAt: item.lastActivityAt ?? null,
+    totalVotes: item.totalVotes ?? 0,
+    totalRounds: item.totalRounds ?? 0,
+    openRound: item.openRound
+      ? {
+          roundId: BigInt(item.openRound.roundId),
+          voteCount: item.openRound.voteCount,
+          revealedCount: item.openRound.revealedCount,
+          totalStake: BigInt(item.openRound.totalStake),
+          upPool: BigInt(item.openRound.upPool),
+          downPool: BigInt(item.openRound.downPool),
+          startTime: item.openRound.startTime ? BigInt(item.openRound.startTime) : null,
+          estimatedSettlementTime: item.openRound.estimatedSettlementTime
+            ? BigInt(item.openRound.estimatedSettlementTime)
+            : null,
+        }
+      : null,
     isValidUrl: null,
     thumbnailUrl: null,
   };

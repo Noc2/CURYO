@@ -113,6 +113,7 @@ export interface PonderContentItem {
   reviver: string | null;
   totalVotes: number;
   totalRounds: number;
+  openRound: PonderContentOpenRoundSummary | null;
 }
 
 export interface PonderContentResponse {
@@ -132,6 +133,17 @@ export interface PonderContentQuery {
   sortBy?: string;
   status?: string;
   submitter?: string;
+}
+
+export interface PonderContentOpenRoundSummary {
+  roundId: string;
+  voteCount: number;
+  revealedCount: number;
+  totalStake: string;
+  upPool: string;
+  downPool: string;
+  startTime: string | null;
+  estimatedSettlementTime: string | null;
 }
 
 export interface PonderRoundItem {

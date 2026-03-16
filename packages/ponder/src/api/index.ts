@@ -177,6 +177,54 @@ function getDiscoverResolutionOutcome(state: number | null, isUp: boolean | null
   return "resolved" as const;
 }
 
+async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[]) {
+  if (items.length === 0) {
+    return items.map(item => ({ ...item, openRound: null }));
+  }
+
+  const openRounds = await db
+    .select({
+      contentId: round.contentId,
+      roundId: round.roundId,
+      voteCount: round.voteCount,
+      revealedCount: round.revealedCount,
+      totalStake: round.totalStake,
+      upPool: round.upPool,
+      downPool: round.downPool,
+      startTime: round.startTime,
+    })
+    .from(round)
+    .where(and(inArray(round.contentId, items.map(item => item.id)), eq(round.state, ROUND_STATE.Open)))
+    .orderBy(desc(round.roundId));
+
+  const latestOpenRoundByContentId = new Map<bigint, (typeof openRounds)[number]>();
+  for (const row of openRounds) {
+    if (!latestOpenRoundByContentId.has(row.contentId)) {
+      latestOpenRoundByContentId.set(row.contentId, row);
+    }
+  }
+
+  return items.map(item => {
+    const openRound = latestOpenRoundByContentId.get(item.id);
+
+    return {
+      ...item,
+      openRound: openRound
+        ? {
+            roundId: openRound.roundId,
+            voteCount: openRound.voteCount,
+            revealedCount: openRound.revealedCount,
+            totalStake: openRound.totalStake,
+            upPool: openRound.upPool,
+            downPool: openRound.downPool,
+            startTime: openRound.startTime,
+            estimatedSettlementTime: getEstimatedSettlementTime(openRound.startTime),
+          }
+        : null,
+    };
+  });
+}
+
 // Ponder provides /health and /status natively — no custom health check needed.
 
 // ============================================================
@@ -251,13 +299,15 @@ app.get("/content", async (c) => {
     .limit(limit)
     .offset(offset);
 
+  const itemsWithOpenRound = await attachOpenRoundSummary(items);
+
   const [countResult] = await db
     .select({ count: sql<number>`count(*)` })
     .from(content)
     .where(where);
 
   return jsonBig(c, {
-    items,
+    items: itemsWithOpenRound,
     total: countResult?.count ?? 0,
     limit,
     offset,
@@ -287,6 +337,8 @@ app.get("/content/by-url", async (c) => {
     return c.json({ error: "Content not found" }, 404);
   }
 
+  const [contentWithOpenRound] = await attachOpenRoundSummary([item]);
+
   const rounds = await db
     .select()
     .from(round)
@@ -302,7 +354,7 @@ app.get("/content/by-url", async (c) => {
     .limit(50);
 
   return jsonBig(c, {
-    content: item,
+    content: contentWithOpenRound,
     rounds,
     ratings,
     matchCount: matches.length,
@@ -323,6 +375,8 @@ app.get("/content/:id", async (c) => {
     return c.json({ error: "Content not found" }, 404);
   }
 
+  const [contentWithOpenRound] = await attachOpenRoundSummary([item]);
+
   // Get recent rounds for this content
   const rounds = await db
     .select()
@@ -339,7 +393,7 @@ app.get("/content/:id", async (c) => {
     .orderBy(desc(ratingChange.timestamp))
     .limit(50);
 
-  return jsonBig(c, { content: item, rounds, ratings });
+  return jsonBig(c, { content: contentWithOpenRound, rounds, ratings });
 });
 
 // ============================================================

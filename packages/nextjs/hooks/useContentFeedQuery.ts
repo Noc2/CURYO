@@ -66,6 +66,15 @@ export function useContentFeedQuery(voterAddress?: string, options: UseContentFe
           isOwnContent: !!voterAddress && eventSubmitter.toLowerCase() === voterAddress.toLowerCase(),
           categoryId: args.categoryId ?? 0n,
           rating: 50,
+          createdAt: event.blockData?.timestamp
+            ? new Date(Number(event.blockData.timestamp) * 1000).toISOString()
+            : null,
+          lastActivityAt: event.blockData?.timestamp
+            ? new Date(Number(event.blockData.timestamp) * 1000).toISOString()
+            : null,
+          totalVotes: 0,
+          totalRounds: 0,
+          openRound: null,
           isValidUrl: null,
           thumbnailUrl: null,
         };
