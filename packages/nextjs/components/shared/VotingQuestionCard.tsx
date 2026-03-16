@@ -109,7 +109,7 @@ export function VotingQuestionCard({
   return (
     <div
       className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
-      style={embedded ? {} : { background: "var(--color-base-200)" }}
+      style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
     >
       <div
         aria-hidden

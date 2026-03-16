@@ -105,13 +105,13 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       />
 
       <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:items-stretch">
-        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
+        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-[#141316]">
           <div className="h-[clamp(17rem,42vh,28rem)] w-full">
             <ContentEmbed url={item.url} prefetchedMetadata={item.contentMetadata} />
           </div>
         </div>
 
-        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
+        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-[#141316]">
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}
@@ -346,11 +346,11 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       }}
       className={`group flex w-[11.1rem] min-w-[11.1rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl text-left transition-colors snap-start sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem] ${
         selected
-          ? "bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_18px_36px_rgba(9,10,12,0.26)]"
-          : "bg-base-content/[0.03] hover:bg-base-content/[0.05]"
+          ? "bg-[#141316] ring-2 ring-primary/35 shadow-[0_18px_36px_rgba(9,10,12,0.26)]"
+          : "bg-[#141316] hover:bg-[#141316]"
       }`}
     >
-      <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200">
+      <div className="relative aspect-video cursor-pointer overflow-hidden bg-[#141316]">
         <div className="absolute inset-x-2 top-2 z-10 flex items-center justify-between gap-1.5">
           <span className="rounded-full bg-[#090A0C]/70 px-2.5 py-1 text-xs font-semibold text-[#F5F0EB] backdrop-blur">
             {queuePosition + 1}
@@ -368,7 +368,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="flex h-full w-full cursor-pointer items-end bg-[radial-gradient(circle_at_top,_rgba(242,100,38,0.18),_transparent_55%),linear-gradient(180deg,rgba(245,240,235,0.05),rgba(9,10,12,0.22))] p-3">
+          <div className="flex h-full w-full cursor-pointer items-end bg-[radial-gradient(circle_at_top,_rgba(242,100,38,0.18),_transparent_55%),linear-gradient(180deg,rgba(245,240,235,0.05),rgba(20,19,22,0.32))] p-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">{platform.type}</p>
               <p className="mt-1 line-clamp-2 text-sm font-medium text-[#F5F0EB]/90">{item.title}</p>
