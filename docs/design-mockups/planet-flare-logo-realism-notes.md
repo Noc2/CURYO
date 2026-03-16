@@ -35,4 +35,5 @@ This direction keeps the Curyo planet-and-flare silhouette, but pushes it much c
 
 - Pure SVG can get much closer than the older brand mark, but there is a ceiling.
 - If we want a truly photoreal hero logo, the next step should be a rendered texture map or 3D render exported into a controlled asset, with the SVG version kept as the simplified product mark.
+- A strong middle ground is to start from a predefined grayscale planet texture or height map and color-grade it into Curyo's warm palette, then mask it into the disk instead of relying only on procedural SVG noise.
 - The planet surface should stay in warm mineral tones only; avoid blue-green contamination inside the disk except for a very subtle atmospheric rim at the edge.

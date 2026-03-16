@@ -99,10 +99,9 @@
   <circle cx="512" cy="512" r="430" stroke="#48211A" stroke-opacity="0.42" stroke-width="12" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
   <circle cx="512" cy="512" r="430" stroke="url(#flare-stream)" stroke-width="8.5" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
   <circle cx="512" cy="512" r="430" stroke="url(#flare-core)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
-  <path d="M846 702C878 688 900 696 914 722" stroke="#FFB987" stroke-opacity="0.34" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M828 680C860 662 890 668 910 694" stroke="#FF8D58" stroke-opacity="0.2" stroke-width="3.6" stroke-linecap="round"/>
+  <circle cx="894" cy="724" r="22" fill="#FF8E58" fill-opacity="0.14"/>
   <circle cx="894" cy="724" r="11" fill="#FFF8EF"/>
-  <ellipse cx="894" cy="724" rx="38" ry="28" fill="url(#flare-head)"/>
+  <ellipse cx="894" cy="724" rx="34" ry="24" fill="url(#flare-head)"/>
 
   <g filter="url(#soft-blur-16)">
     <ellipse cx="504" cy="522" rx="354" ry="366" fill="#000000" fill-opacity="0.26"/>
