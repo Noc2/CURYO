@@ -28,20 +28,12 @@ export function LandingPageActions() {
   }, [crepBalance, isConnected, router]);
 
   return (
-    <div className="mt-7 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <Link
-        href="/vote"
-        className="btn btn-primary rounded-full px-5 text-black"
-        style={{ fontSize: "16px" }}
-      >
+    <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
+      <Link href="/vote" className="btn btn-primary rounded-full px-5" style={{ fontSize: "16px" }}>
         Discover
       </Link>
-      <Link
-        href="/docs"
-        className="btn rounded-full border border-white/10 bg-white/[0.04] text-white hover:bg-white/[0.08]"
-        style={{ fontSize: "16px" }}
-      >
-        Read the Docs
+      <Link href="/docs" className="btn btn-shell-secondary rounded-full px-5" style={{ fontSize: "16px" }}>
+        Learn More
       </Link>
     </div>
   );

@@ -91,7 +91,7 @@ export function FaucetTierChart() {
               width={barWidth}
               height={Math.max(yBottom - yTop, 1)}
               rx={1.5}
-              fill="#03CEA4"
+              fill="#D7DCE3"
               fillOpacity={hoveredTier === null ? 0.6 : isHovered ? 0.8 : 0.2}
               className="transition-[fill-opacity] duration-100"
               onMouseEnter={() => setHoveredTier(t.tier)}
@@ -145,7 +145,7 @@ export function FaucetTierChart() {
       {/* Legend */}
       <div className="flex items-center gap-4 mt-1.5 text-xs text-base-content/40">
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: "#03CEA4", opacity: 0.6 }} />
+          <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: "#D7DCE3", opacity: 0.6 }} />
           Claim amount (cREP)
         </span>
         <span className="ml-auto">X-axis: Tier | Y-axis: cREP (log scale)</span>

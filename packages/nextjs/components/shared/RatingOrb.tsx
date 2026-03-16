@@ -48,15 +48,15 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 overflow-visible">
         <defs>
           <linearGradient id={`${orbId}-flare`} x1="0%" y1="10%" x2="100%" y2="90%">
-            <stop offset="0%" stopColor="#F45D4F" />
-            <stop offset="28%" stopColor="#FF8C5F" />
-            <stop offset="58%" stopColor="#FFC37A" />
-            <stop offset="100%" stopColor="#FFF2D8" />
+            <stop offset="0%" stopColor="#B3341B" />
+            <stop offset="28%" stopColor="#E24D21" />
+            <stop offset="58%" stopColor="#F36A29" />
+            <stop offset="100%" stopColor="#FFF4EA" />
           </linearGradient>
           <linearGradient id={`${orbId}-core`} x1="10%" y1="8%" x2="94%" y2="92%">
-            <stop offset="0%" stopColor="#FF9B75" />
-            <stop offset="54%" stopColor="#FFF0CF" />
-            <stop offset="100%" stopColor="#FFF7EA" />
+            <stop offset="0%" stopColor="#FF9355" />
+            <stop offset="54%" stopColor="#FFE6D5" />
+            <stop offset="100%" stopColor="#FFF9F2" />
           </linearGradient>
           <radialGradient id={`${orbId}-fill`} cx="50%" cy="42%" r="66%">
             <stop offset="0%" stopColor="rgba(255,255,255,0.07)" />
@@ -90,7 +90,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           cy={center}
           r={trackRadius}
           fill="none"
-          stroke="rgba(109,52,40,0.16)"
+          stroke="rgba(179,52,27,0.2)"
           strokeWidth={Math.max(3, trackWidth * 0.42)}
         />
 
@@ -163,8 +163,8 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
               strokeDasharray={`${progressLength} ${circumference}`}
               transform={`rotate(-90 ${center} ${center})`}
             />
-            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill="#FFF1D8" />
-            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(255,141,101,0.18)" />
+            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill="#FFF4EA" />
+            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(242,100,38,0.22)" />
           </>
         ) : null}
 
@@ -172,7 +172,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           cx={center}
           cy={center}
           r={trackRadius - trackWidth * 0.92}
-          fill="rgba(8,10,15,0.94)"
+          fill="rgba(9,10,12,0.96)"
           stroke="rgba(255,255,255,0.05)"
           strokeWidth="1.8"
         />

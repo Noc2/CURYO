@@ -7,21 +7,28 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
-// Navbar brand colors: Discover=#359EEE, Submit=#03CEA4, cREP=#FFC43D, Docs=#EF476F
+// Obsidian Ember onboarding colors: steel, ember, warm white, and rust.
 const STEPS = [
-  { label: "Browse", desc: "explore submitted content in the feed", hex: "#359EEE" },
+  { label: "Browse", desc: "explore submitted content in the feed", hex: "#7E8996", tone: "rgba(126, 137, 150, 0.18)" },
   {
     label: "Vote",
     desc: "predict and place your vote — direction is hidden until the blind phase ends",
-    hex: "#03CEA4",
+    hex: "#F26426",
+    tone: "rgba(242, 100, 38, 0.18)",
   },
-  { label: "Stake", desc: "back your prediction with cREP tokens", hex: "#FFC43D" },
+  { label: "Stake", desc: "back your prediction with cREP tokens", hex: "#F4F0EB", tone: "rgba(244, 240, 235, 0.14)" },
   {
     label: "Reveal & Resolve",
     desc: "votes are revealed after each blind phase (~20 min); rounds resolve automatically",
-    hex: "#EF476F",
+    hex: "#B3341B",
+    tone: "rgba(179, 52, 27, 0.18)",
   },
-  { label: "Claim", desc: "collect your rewards if your prediction was correct", hex: "#359EEE" },
+  {
+    label: "Claim",
+    desc: "collect your rewards if your prediction was correct",
+    hex: "#D7DCE3",
+    tone: "rgba(215, 220, 227, 0.16)",
+  },
 ];
 
 /**
@@ -46,10 +53,16 @@ export function VotingGuide() {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 80 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed right-4 top-24 z-50 w-80 rounded-2xl border border-primary/30 bg-base-100 shadow-2xl shadow-primary/10"
+        className="fixed right-4 top-24 z-50 w-80 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(18,19,22,0.98),rgba(12,13,15,0.98))] shadow-[0_24px_54px_rgba(0,0,0,0.42)]"
       >
         {/* Header */}
-        <div className="relative rounded-t-2xl bg-gradient-to-r from-primary/15 via-secondary/10 to-accent/15 px-5 pt-5 pb-4">
+        <div
+          className="relative rounded-t-2xl px-5 pt-5 pb-4"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(242,100,38,0.18) 0%, rgba(244,240,235,0.05) 42%, rgba(179,52,27,0.16) 100%)",
+          }}
+        >
           <button
             onClick={dismissGuide}
             className="absolute top-3 right-3 btn btn-ghost btn-xs btn-circle"
@@ -66,7 +79,7 @@ export function VotingGuide() {
             <div key={step.label} className="flex items-start gap-3">
               <span
                 className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold"
-                style={{ color: step.hex, backgroundColor: `${step.hex}20` }}
+                style={{ color: step.hex, backgroundColor: step.tone }}
               >
                 {i + 1}
               </span>

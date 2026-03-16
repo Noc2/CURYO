@@ -110,7 +110,7 @@ export function FaucetHalvingChart() {
               width={barWidth}
               height={Math.max(yBottom - yTop, 1)}
               rx={1.5}
-              fill="#FFC43D"
+              fill="#F26426"
               fillOpacity={hoveredTier === null ? 0.6 : isHovered ? 0.8 : 0.2}
               className="transition-[fill-opacity] duration-100"
               onMouseEnter={() => setHoveredTier(t.tier)}
@@ -164,7 +164,7 @@ export function FaucetHalvingChart() {
       {/* Legend */}
       <div className="flex items-center gap-4 mt-1.5 text-xs text-base-content/40">
         <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: "#FFC43D", opacity: 0.6 }} />
+          <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: "#F26426", opacity: 0.6 }} />
           Reward rate (% of stake)
         </span>
         <span className="ml-auto">X-axis: Tier | Y-axis: Rate %</span>

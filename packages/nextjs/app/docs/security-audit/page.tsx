@@ -131,7 +131,7 @@ const SecurityAudit: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
@@ -140,112 +140,112 @@ const SecurityAudit: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
+              <td className="font-mono text-primary">RoundRewardDistributor</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>Pull-based reward claiming</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>Content lifecycle, submitter stakes, ratings</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
+              <td className="font-mono text-primary">FrontendRegistry</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>Frontend operator staking and fee distribution</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ProfileRegistry</td>
+              <td className="font-mono text-primary">ProfileRegistry</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
               </td>
               <td>User profiles and name uniqueness</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
+              <td className="font-mono text-primary">CategoryRegistry</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Category governance and domain uniqueness</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CuryoReputation</td>
+              <td className="font-mono text-primary">CuryoReputation</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>ERC-20 token with governance locking</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Soulbound sybil resistance, delegation, stake limits</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ParticipationPool</td>
+              <td className="font-mono text-primary">ParticipationPool</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Halving-tier participation rewards</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Self.xyz verified claims, referrals, Pausable</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SubmissionCanonicalizer</td>
+              <td className="font-mono text-primary">SubmissionCanonicalizer</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>Stateless URL/domain canonicalization helper used during content submission</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CuryoGovernor</td>
+              <td className="font-mono text-primary">CuryoGovernor</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Non-upgradeable</span>
               </td>
               <td>OpenZeppelin Governor with timelock</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RewardMath</td>
+              <td className="font-mono text-primary">RewardMath</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Library</span>
               </td>
               <td>Pool split arithmetic and reward calculations</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundLib</td>
+              <td className="font-mono text-primary">RoundLib</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Library</span>
               </td>
               <td>Round states, timing, settlement probability</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CategoryFeeLib</td>
+              <td className="font-mono text-primary">CategoryFeeLib</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Library</span>
               </td>
               <td>Category-fee settlement helpers</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SubmitterStakeLib</td>
+              <td className="font-mono text-primary">SubmitterStakeLib</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Library</span>
               </td>
               <td>Submitter stake return/slash helpers</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">TokenTransferLib</td>
+              <td className="font-mono text-primary">TokenTransferLib</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Library</span>
               </td>
@@ -308,7 +308,7 @@ const SecurityAudit: NextPage = () => {
                 tokens (distributed as rewards). Algebraically correct. Verified via stateful invariant fuzzing (
                 <code>invariant_C01_PoolSolvency</code> in InvariantSolvency.t.sol).
               </td>
-              <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
+              <td className="font-mono text-primary">RoundRewardDistributor</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
@@ -321,7 +321,7 @@ const SecurityAudit: NextPage = () => {
                 rewards) + dust. Verified via stateful invariant fuzzing (<code>invariant_C02_TokenConservation</code>{" "}
                 in InvariantSolvency.t.sol). Ghost variables track all token flows.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
@@ -335,7 +335,7 @@ const SecurityAudit: NextPage = () => {
                 invariant fuzzing (<code>invariant_C03_BalanceSolvency</code> in InvariantSolvency.t.sol). Checks engine
                 balance against computed obligations after random vote/settle/claim sequences.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Tested</span>
               </td>
@@ -363,7 +363,7 @@ const SecurityAudit: NextPage = () => {
                 after voters have voted, preventing settlement (isActive check fails). Voter stakes forfeit. Fix:
                 cancelContent now reverts if any votes have been cast.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -375,7 +375,7 @@ const SecurityAudit: NextPage = () => {
                 inactivity, even with an active open round, blocking settlement. Fix: markDormant reverts if an active
                 open round exists.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -387,7 +387,7 @@ const SecurityAudit: NextPage = () => {
                 every token transfer. After many votes, transfers can exceed gas limits. Replaced with a single
                 aggregate lock per address (O(1) reads/writes).
               </td>
-              <td className="font-mono text-[#EF476F]">CuryoReputation</td>
+              <td className="font-mono text-primary">CuryoReputation</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -399,7 +399,7 @@ const SecurityAudit: NextPage = () => {
                 ProfileRegistry lacked storage gap variables, risking storage collisions on future upgrades. All three
                 contracts now include <code>uint256[50] private __gap</code>.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry, FrontendRegistry, ProfileRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry, FrontendRegistry, ProfileRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -412,7 +412,7 @@ const SecurityAudit: NextPage = () => {
                 low-stake unanimous rounds only move rating slightly and large swings require materially larger revealed
                 stake imbalance.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine, RewardMath</td>
+              <td className="font-mono text-primary">RoundVotingEngine, RewardMath</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -424,7 +424,7 @@ const SecurityAudit: NextPage = () => {
                 emergency pause. The current <code>settleRound</code> path is protected by <code>whenNotPaused</code>,
                 so paused state now blocks settlement side effects as intended.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -435,7 +435,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>MAX_VOTERS cap enforced at vote time.</strong> Cap is enforced when the vote is cast, preventing
                 users from losing stakes through no fault of their own.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -449,7 +449,7 @@ const SecurityAudit: NextPage = () => {
                 <code>ReentrancyGuard</code> and <code>nonReentrant</code> to <code>submitCategory</code>,{" "}
                 <code>approveCategory</code>, <code>rejectCategory</code>.
               </td>
-              <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
+              <td className="font-mono text-primary">CategoryRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -463,7 +463,7 @@ const SecurityAudit: NextPage = () => {
                 VotingEngine cREP can be drained. In production, CONFIG_ROLE is held by governance timelock with 2-day
                 delay, providing community response window.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -477,7 +477,7 @@ const SecurityAudit: NextPage = () => {
                 <code>setVotingEngine()</code> which requires CONFIG_ROLE and non-zero address. Same governance
                 protection as H-09.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -489,7 +489,7 @@ const SecurityAudit: NextPage = () => {
                 be restricted to local development chains only. Production deployment must enforce real Self.xyz
                 verification.
               </td>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -501,7 +501,7 @@ const SecurityAudit: NextPage = () => {
                 second one. The <code>customVerificationHook</code> checks <code>addressClaimed[msg.sender]</code>{" "}
                 before minting, preventing identity chaining via delegation.
               </td>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -513,7 +513,7 @@ const SecurityAudit: NextPage = () => {
                 processing of cancelled round refunds, the entire batch reverts. Individual try-catch or skip logic
                 ensures one failed refund does not block processing of remaining claims.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -526,7 +526,7 @@ const SecurityAudit: NextPage = () => {
                 length is always small (&lt; 2^96), so high bytes of length field are zero. Fragile but correct in
                 practice. Consider replacing with <code>abi.decode</code> for clarity.
               </td>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>
                 <span className="badge badge-info whitespace-nowrap">Fragile</span>
               </td>
@@ -539,7 +539,7 @@ const SecurityAudit: NextPage = () => {
                 this uses ERC-7201 namespaced storage (fixed slot), which is safe for UUPS proxies. Uninitialized proxy
                 storage (0) does not conflict with the guard&apos;s check pattern (slot == 2 means entered).
               </td>
-              <td className="font-mono text-[#EF476F]">All UUPS contracts</td>
+              <td className="font-mono text-primary">All UUPS contracts</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -553,7 +553,7 @@ const SecurityAudit: NextPage = () => {
                 voting&quot; simultaneously. Intentional design: governance participation should not block content
                 voting.
               </td>
-              <td className="font-mono text-[#EF476F]">CuryoReputation</td>
+              <td className="font-mono text-primary">CuryoReputation</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
@@ -581,7 +581,7 @@ const SecurityAudit: NextPage = () => {
                 <code>count</code> parameters for batched processing. Keepers can call in multiple transactions for any
                 size array.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -593,7 +593,7 @@ const SecurityAudit: NextPage = () => {
                 <code>submitContent</code>, <code>cancelContent</code>, <code>markDormant</code>, and{" "}
                 <code>reviveContent</code>.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -604,7 +604,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>Content submission spam mitigated.</strong> Cancellation now charges a 1 cREP fee and clears the
                 URL flag so cancelled URLs can be resubmitted by legitimate users.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -616,7 +616,7 @@ const SecurityAudit: NextPage = () => {
                 permissionless once <code>minVoters</code> is reached and past-epoch reveal constraints are satisfied. A
                 single keeper cannot settle early or bypass the reveal gate.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-info whitespace-nowrap">Mitigated</span>
               </td>
@@ -628,7 +628,7 @@ const SecurityAudit: NextPage = () => {
                 authorization, reinitialization prevention, state preservation after upgrade, and implementation
                 direct-initialization protection.
               </td>
-              <td className="font-mono text-[#EF476F]">All UUPS contracts</td>
+              <td className="font-mono text-primary">All UUPS contracts</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -640,7 +640,7 @@ const SecurityAudit: NextPage = () => {
                 Dormant&rarr;Active(revive). Invalid transitions blocked by status checks. Double return/slash prevented
                 by <code>submitterStakeReturned</code> flag checked in all relevant paths.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -652,7 +652,7 @@ const SecurityAudit: NextPage = () => {
                 dormancy. Dormant URLs staying locked prevents legitimate resubmission. Fix:
                 <code>markDormant()</code> now releases the submission key so the content can be resubmitted.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -665,7 +665,7 @@ const SecurityAudit: NextPage = () => {
                 balance, <code>getTransferableBalance()</code> returns 0 (no underflow). Locks expire 7 days from last
                 update.
               </td>
-              <td className="font-mono text-[#EF476F]">CuryoReputation</td>
+              <td className="font-mono text-primary">CuryoReputation</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -677,7 +677,7 @@ const SecurityAudit: NextPage = () => {
                 remains marked as used. Prevents &quot;revoke-and-re-register&quot; abuse but also blocks legitimate
                 users who are wrongly revoked. Governance can mint a new VoterID directly if needed.
               </td>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
@@ -690,7 +690,7 @@ const SecurityAudit: NextPage = () => {
                 vote time. If <code>stakeRecorder</code> is changed to a buggy contract, the cap could be bypassed.{" "}
                 <code>stakeRecorder</code> is set by owner (governance).
               </td>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -704,7 +704,7 @@ const SecurityAudit: NextPage = () => {
                 validation now checks <code>hasVoterId(referrer)</code>; revoked referrers produce no bonus. Tested in{" "}
                 <code>test_Referral_RevokedVoterIdReferrer_NoBonus</code>.
               </td>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -716,7 +716,7 @@ const SecurityAudit: NextPage = () => {
                 callback, (2) ERC20 <code>transfer</code> has no recipient callback, (3){" "}
                 <code>customVerificationHook</code> is <code>internal override</code> (cannot be called externally).
               </td>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -729,7 +729,7 @@ const SecurityAudit: NextPage = () => {
                 ContentRegistry which both have <code>nonReentrant</code>. Halving loop: max ~14 iterations before rate
                 floors at 1%.
               </td>
-              <td className="font-mono text-[#EF476F]">ParticipationPool</td>
+              <td className="font-mono text-primary">ParticipationPool</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -742,7 +742,7 @@ const SecurityAudit: NextPage = () => {
                 approval proposal separately and links it afterward, so the registry no longer needs standing delegated
                 voting power.
               </td>
-              <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
+              <td className="font-mono text-primary">CategoryRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap text-white">Superseded</span>
               </td>
@@ -754,7 +754,7 @@ const SecurityAudit: NextPage = () => {
                 for 7 days from the last proposal (timer resets). Users should be aware that governance participation
                 has a liquidity cost that compounds.
               </td>
-              <td className="font-mono text-[#EF476F]">CuryoGovernor</td>
+              <td className="font-mono text-primary">CuryoGovernor</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -766,7 +766,7 @@ const SecurityAudit: NextPage = () => {
                 <code>registeredFrontends</code> but never removed, even after deregistration. Mitigated by pagination
                 support for practical use.
               </td>
-              <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
+              <td className="font-mono text-primary">FrontendRegistry</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
@@ -779,7 +779,7 @@ const SecurityAudit: NextPage = () => {
                 each can only execute once. Standard UUPS upgrade flow (upgrade + initialize in one transaction)
                 prevents front-running.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -791,7 +791,7 @@ const SecurityAudit: NextPage = () => {
                 has been met, the round cannot be cancelled. Submitter cannot use cancellation to avoid negative ratings
                 or stake loss.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -803,7 +803,7 @@ const SecurityAudit: NextPage = () => {
                 unanimous rounds) is drawn from a reserve. If the reserve is exhausted, unanimous rounds receive no
                 subsidy. This is a graceful degradation &mdash; voting still works, just without the bonus.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
@@ -815,7 +815,7 @@ const SecurityAudit: NextPage = () => {
                 supply. Supply is limited in practice by Self.xyz passport verification (one per person). If governance
                 adds a permissive minter, unlimited VoterIDs could be minted.
               </td>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
@@ -828,7 +828,7 @@ const SecurityAudit: NextPage = () => {
                 The user&apos;s transaction reverts but they can retry with standard <code>approve()</code>. UX issue,
                 not a fund risk. Standard ERC2612 limitation.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
@@ -855,7 +855,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>Cancellation fee sink must be configured.</strong> <code>cancelContent()</code> requires a
                 nonzero fee-sink address so the 1 cREP anti-spam fee cannot be stranded during withdrawals.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -867,7 +867,7 @@ const SecurityAudit: NextPage = () => {
                 silently ignoring unregistered frontends to reverting with{" "}
                 <code>&quot;Frontend not registered&quot;</code>, preventing silent token loss.
               </td>
-              <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
+              <td className="font-mono text-primary">FrontendRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -879,7 +879,7 @@ const SecurityAudit: NextPage = () => {
                 <code>_normalizeDomain()</code> to strip protocols, paths, query strings, fragments, and trailing DNS
                 dots. All URL variants now normalize to bare domain.
               </td>
-              <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
+              <td className="font-mono text-primary">CategoryRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -891,7 +891,7 @@ const SecurityAudit: NextPage = () => {
                 <code>withdrawRemaining(address, uint256)</code> with <code>onlyOwner</code> modifier to allow recovery
                 of remaining cREP after faucet decommissioning.
               </td>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -903,7 +903,7 @@ const SecurityAudit: NextPage = () => {
                 <code>require(address(votingEngine) != address(0))</code> at the start of <code>slashFrontend()</code>{" "}
                 to prevent tokens from being stuck.
               </td>
-              <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
+              <td className="font-mono text-primary">FrontendRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -914,7 +914,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>Bonus timestamp uses settlement time.</strong> Bonus calculation uses block.timestamp at
                 settlement, not the round&apos;s active time. Wrong bonus rate could apply near the 20-year boundary.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -925,7 +925,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>Pool split rounding dust.</strong> Individual claim calculations using integer division can
                 leave up to n-1 wei unclaimed. Standard and benign in Solidity parimutuel systems.
               </td>
-              <td className="font-mono text-[#EF476F]">RewardMath</td>
+              <td className="font-mono text-primary">RewardMath</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
@@ -937,7 +937,7 @@ const SecurityAudit: NextPage = () => {
                 both governance voting power and content voting stakes. Governance locks allow staking into the
                 VotingEngine, meaning governance influence and content stakes are not fully independent.
               </td>
-              <td className="font-mono text-[#EF476F]">CuryoReputation</td>
+              <td className="font-mono text-primary">CuryoReputation</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
@@ -949,7 +949,7 @@ const SecurityAudit: NextPage = () => {
                 can refer themselves for a 50% bonus. Limited by the cost and difficulty of obtaining multiple
                 passports.
               </td>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Accepted</span>
               </td>
@@ -961,7 +961,7 @@ const SecurityAudit: NextPage = () => {
                 direct <code>safeTransfer</code>. If the treasury address is a contract that reverts, settlement fails.
                 Consider wrapping in try-catch for robustness.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -973,7 +973,7 @@ const SecurityAudit: NextPage = () => {
                 cliff-like transitions where the last claim at a higher tier gets significantly more than the first
                 claim at a lower tier. This is inherent to the halving design.
               </td>
-              <td className="font-mono text-[#EF476F]">ParticipationPool</td>
+              <td className="font-mono text-primary">ParticipationPool</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
@@ -1000,7 +1000,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>No dedicated VoterIdNFT test suite.</strong> Soulbound enforcement, stake cap compliance, and
                 nullifier deduplication were tested only indirectly. Dedicated VoterIdNFT.t.sol with 63 tests now added.
               </td>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -1011,7 +1011,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>No fuzz tests for RewardMath.</strong> The core arithmetic library lacked fuzz tests.
                 Property-based testing now verifies conservation invariants under random inputs.
               </td>
-              <td className="font-mono text-[#EF476F]">RewardMath</td>
+              <td className="font-mono text-primary">RewardMath</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -1023,7 +1023,7 @@ const SecurityAudit: NextPage = () => {
                 (HumanFaucet claim &rarr; VoterIdNFT mint &rarr; vote with stake cap) was untested end-to-end. Now
                 covered by RoundIntegration.t.sol.
               </td>
-              <td className="font-mono text-[#EF476F]">Integration tests</td>
+              <td className="font-mono text-primary">Integration tests</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -1035,7 +1035,7 @@ const SecurityAudit: NextPage = () => {
                 <code>ProfileRegistry</code> and <code>CategoryRegistry</code> has been removed, and scalable callers
                 should use paginated enumeration.
               </td>
-              <td className="font-mono text-[#EF476F]">ProfileRegistry, CategoryRegistry</td>
+              <td className="font-mono text-primary">ProfileRegistry, CategoryRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -1047,7 +1047,7 @@ const SecurityAudit: NextPage = () => {
                 <code>encodePacked</code> with multiple dynamic args for content hashing. Now uses{" "}
                 <code>abi.encode</code> instead, eliminating collision risk.
               </td>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -1059,7 +1059,7 @@ const SecurityAudit: NextPage = () => {
                 CategoryRegistry.rejectCategory and FrontendRegistry.slashFrontend. Now uses SafeERC20{" "}
                 <code>forceApprove</code>.
               </td>
-              <td className="font-mono text-[#EF476F]">CategoryRegistry, FrontendRegistry</td>
+              <td className="font-mono text-primary">CategoryRegistry, FrontendRegistry</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -1070,7 +1070,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>Slither: missing zero-address checks.</strong> CuryoReputation.setGovernor and
                 setContentVotingContracts now validate against address(0).
               </td>
-              <td className="font-mono text-[#EF476F]">CuryoReputation</td>
+              <td className="font-mono text-primary">CuryoReputation</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -1081,7 +1081,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>VotingEngine should inherit interface.</strong> The interface exists but the contract did not
                 explicitly implement it. Now inherits <code>IRoundVotingEngine</code>.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -1094,7 +1094,7 @@ const SecurityAudit: NextPage = () => {
                 tlock encryption and epoch-weighted rewards to incentivize independent assessment. Commit hashes enable
                 double-vote prevention, self-vote prevention, cooldown periods, and sybil stake limits.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
@@ -1107,7 +1107,7 @@ const SecurityAudit: NextPage = () => {
                 constraints are satisfied. Any keeper or user can trigger settlement; no privileged operator controls
                 it.
               </td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Design</span>
               </td>
@@ -1134,7 +1134,7 @@ const SecurityAudit: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>0&ndash;10 (11 slots)</td>
               <td>__gap[49]</td>
               <td>
@@ -1142,7 +1142,7 @@ const SecurityAudit: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>0&ndash;43 (44 slots)</td>
               <td>__gap[25]</td>
               <td>
@@ -1150,7 +1150,7 @@ const SecurityAudit: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
+              <td className="font-mono text-primary">RoundRewardDistributor</td>
               <td>0&ndash;4 (5 slots)</td>
               <td>__gap[50]</td>
               <td>
@@ -1158,7 +1158,7 @@ const SecurityAudit: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
+              <td className="font-mono text-primary">FrontendRegistry</td>
               <td>0&ndash;5 (6 slots)</td>
               <td>__gap[50]</td>
               <td>
@@ -1166,7 +1166,7 @@ const SecurityAudit: NextPage = () => {
               </td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ProfileRegistry</td>
+              <td className="font-mono text-primary">ProfileRegistry</td>
               <td>0&ndash;3 (4 slots)</td>
               <td>__gap[50]</td>
               <td>
@@ -1472,38 +1472,38 @@ const SecurityAudit: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>Only valid calls to updateRating/returnStake/slashStake</td>
               <td>msg.sender check + CONFIG_ROLE governance</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
-              <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundRewardDistributor</td>
               <td>Only valid calls to transferReward</td>
               <td>Address check + CONFIG_ROLE governance</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>Correct stake recording</td>
               <td>stakeRecorder set by owner (governance)</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>Only verified humans get VoterIDs</td>
               <td>authorizedMinters set by owner (governance)</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CuryoReputation</td>
-              <td className="font-mono text-[#EF476F]">CuryoGovernor</td>
+              <td className="font-mono text-primary">CuryoReputation</td>
+              <td className="font-mono text-primary">CuryoGovernor</td>
               <td>Only governance can lock tokens</td>
               <td>governor address set by CONFIG_ROLE</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ParticipationPool</td>
-              <td className="font-mono text-[#EF476F]">VotingEngine + ContentRegistry</td>
+              <td className="font-mono text-primary">ParticipationPool</td>
+              <td className="font-mono text-primary">VotingEngine + ContentRegistry</td>
               <td>Only authorized contracts trigger rewards</td>
               <td>authorizedCallers mapping set by owner</td>
             </tr>
@@ -1581,207 +1581,207 @@ const SecurityAudit: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngineBranchesTest</td>
+              <td className="font-mono text-primary">RoundVotingEngineBranchesTest</td>
               <td>71</td>
               <td>Voting engine branch coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">VoterIdNFTTest</td>
+              <td className="font-mono text-primary">VoterIdNFTTest</td>
               <td>63</td>
               <td>Soulbound NFT, delegation, multi-minter, stake caps</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistryCoverageTest</td>
+              <td className="font-mono text-primary">FrontendRegistryCoverageTest</td>
               <td>49</td>
               <td>Frontend registry coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ContentRegistryCoverageTest</td>
+              <td className="font-mono text-primary">ContentRegistryCoverageTest</td>
               <td>47</td>
               <td>Content lifecycle, cancel, dormancy, rating</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ParticipationPoolTest</td>
+              <td className="font-mono text-primary">ParticipationPoolTest</td>
               <td>47</td>
               <td>Participation rewards, halving tiers, pool depletion</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">HumanFaucetTest</td>
+              <td className="font-mono text-primary">HumanFaucetTest</td>
               <td>47</td>
               <td>Claims, halving, referrals, Pausable</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundSettlementEdgeCaseTest</td>
+              <td className="font-mono text-primary">RoundSettlementEdgeCaseTest</td>
               <td>43</td>
               <td>Settlement edge cases, tied rounds, cancellations</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CategoryRegistryTest</td>
+              <td className="font-mono text-primary">CategoryRegistryTest</td>
               <td>40</td>
               <td>Category lifecycle, governance, pagination</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundIntegrationTest</td>
+              <td className="font-mono text-primary">RoundIntegrationTest</td>
               <td>36</td>
               <td>Full vote/settle/claim cycles</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">HumanFaucetCoverageTest</td>
+              <td className="font-mono text-primary">HumanFaucetCoverageTest</td>
               <td>35</td>
               <td>Faucet branch and edge case coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SettlementEdgeCasesTest</td>
+              <td className="font-mono text-primary">SettlementEdgeCasesTest</td>
               <td>31</td>
               <td>Settlement edge cases</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundSettlementEdgeCase3Test</td>
+              <td className="font-mono text-primary">RoundSettlementEdgeCase3Test</td>
               <td>30</td>
               <td>Additional settlement edge cases</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RewardMathTest</td>
+              <td className="font-mono text-primary">RewardMathTest</td>
               <td>30</td>
               <td>Pool splits, voter rewards, rating delta (fuzz)</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ContentRegistryBranchesTest</td>
+              <td className="font-mono text-primary">ContentRegistryBranchesTest</td>
               <td>28</td>
               <td>Content registry branch coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistryTest</td>
+              <td className="font-mono text-primary">FrontendRegistryTest</td>
               <td>28</td>
               <td>Frontend staking, fees, slashing</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">HumanFaucetBranchTest</td>
+              <td className="font-mono text-primary">HumanFaucetBranchTest</td>
               <td>27</td>
               <td>Branch coverage for faucet edge cases</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ProfileRegistryTest</td>
+              <td className="font-mono text-primary">ProfileRegistryTest</td>
               <td>27</td>
               <td>Profile names, uniqueness, pagination</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">HumanFaucetTierEdgeCaseTest</td>
+              <td className="font-mono text-primary">HumanFaucetTierEdgeCaseTest</td>
               <td>26</td>
               <td>Faucet tier edge cases</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SecurityAccessControlTest</td>
+              <td className="font-mono text-primary">SecurityAccessControlTest</td>
               <td>23</td>
               <td>Access control for all contracts</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">GovernanceTest</td>
+              <td className="font-mono text-primary">GovernanceTest</td>
               <td>23</td>
               <td>Governor, timelock, locking</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CuryoReputationBranchesTest</td>
+              <td className="font-mono text-primary">CuryoReputationBranchesTest</td>
               <td>23</td>
               <td>Token branch coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CuryoReputationCoverageTest</td>
+              <td className="font-mono text-primary">CuryoReputationCoverageTest</td>
               <td>22</td>
               <td>Token governance locks, delegation</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ParticipationPoolBranchesTest</td>
+              <td className="font-mono text-primary">ParticipationPoolBranchesTest</td>
               <td>22</td>
               <td>Participation pool branch coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">UpgradeTest</td>
+              <td className="font-mono text-primary">UpgradeTest</td>
               <td>21</td>
               <td>UUPS upgrade auth, reinitialization, state preservation</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">HumanFaucetCoverageTest (CoverageGaps)</td>
+              <td className="font-mono text-primary">HumanFaucetCoverageTest (CoverageGaps)</td>
               <td>21</td>
               <td>Additional faucet coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundSettlementBranchTest</td>
+              <td className="font-mono text-primary">RoundSettlementBranchTest</td>
               <td>20</td>
               <td>Settlement branch coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistryBranchTest</td>
+              <td className="font-mono text-primary">FrontendRegistryBranchTest</td>
               <td>20</td>
               <td>Frontend registry branch coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistryEdgeCaseTest</td>
+              <td className="font-mono text-primary">FrontendRegistryEdgeCaseTest</td>
               <td>20</td>
               <td>Frontend registry edge cases</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistryCoverageTest (CoverageGaps)</td>
+              <td className="font-mono text-primary">FrontendRegistryCoverageTest (CoverageGaps)</td>
               <td>16</td>
               <td>Additional frontend coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundRewardDistributorBranchesTest</td>
+              <td className="font-mono text-primary">RoundRewardDistributorBranchesTest</td>
               <td>14</td>
               <td>Reward distributor branch coverage</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">NormalizeDomainTest</td>
+              <td className="font-mono text-primary">NormalizeDomainTest</td>
               <td>14</td>
               <td>Category domain normalization</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SelfOppositionProfitabilityTest</td>
+              <td className="font-mono text-primary">SelfOppositionProfitabilityTest</td>
               <td>10</td>
               <td>Self-opposition profitability across all participation tiers</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FormalVerification_RoundLifecycle</td>
+              <td className="font-mono text-primary">FormalVerification_RoundLifecycle</td>
               <td>12</td>
               <td>Round state machine formal properties</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FormalVerification_ParticipationPool</td>
+              <td className="font-mono text-primary">FormalVerification_ParticipationPool</td>
               <td>10</td>
               <td>Participation pool invariants</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FormalVerification_Governance</td>
+              <td className="font-mono text-primary">FormalVerification_Governance</td>
               <td>10</td>
               <td>Governance quorum, locking properties</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">GameTheoryImprovementsTest</td>
+              <td className="font-mono text-primary">GameTheoryImprovementsTest</td>
               <td>5</td>
               <td>Game theory improvements</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SecurityPermitTest</td>
+              <td className="font-mono text-primary">SecurityPermitTest</td>
               <td>5</td>
               <td>ERC2612 permit security</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SecurityReentrancyTest</td>
+              <td className="font-mono text-primary">SecurityReentrancyTest</td>
               <td>4</td>
               <td>Reentrancy protection</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SecuritySettlementTimingTest</td>
+              <td className="font-mono text-primary">SecuritySettlementTimingTest</td>
               <td>4</td>
               <td>Settlement timing conditions</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">GovernanceOwnableTest</td>
+              <td className="font-mono text-primary">GovernanceOwnableTest</td>
               <td>2</td>
               <td>Ownership restrictions</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CategoryRegistryBranchesTest</td>
+              <td className="font-mono text-primary">CategoryRegistryBranchesTest</td>
               <td>2</td>
               <td>Category registry branch coverage</td>
             </tr>

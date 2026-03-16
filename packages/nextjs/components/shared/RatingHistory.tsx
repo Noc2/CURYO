@@ -173,13 +173,13 @@ function Sparkline({ data }: { data: number[] }) {
       />
 
       {/* Area fill */}
-      <path d={areaPath} fill="#FFC43D" fillOpacity={0.1} />
+      <path d={areaPath} fill="#F26426" fillOpacity={0.12} />
 
       {/* Line */}
       <path
         d={linePath}
         fill="none"
-        stroke="#FFC43D"
+        stroke="#F26426"
         strokeWidth={2}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -187,7 +187,7 @@ function Sparkline({ data }: { data: number[] }) {
       />
 
       {/* End dot */}
-      <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="#FFC43D" />
+      <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="#FFF4EA" />
     </svg>
   );
 }

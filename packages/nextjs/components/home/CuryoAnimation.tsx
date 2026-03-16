@@ -4,19 +4,19 @@ import { CuryoPlanetMark } from "~~/components/brand/CuryoPlanetMark";
 
 export function CuryoAnimation() {
   const ambientStars = [
-    { x: 12, y: 20, size: 8, color: "rgba(255, 220, 231, 0.9)" },
-    { x: 18, y: 74, size: 6, color: "rgba(255, 196, 61, 0.84)" },
-    { x: 80, y: 16, size: 7, color: "rgba(122, 174, 255, 0.86)" },
-    { x: 87, y: 72, size: 5, color: "rgba(3, 206, 164, 0.82)" },
-    { x: 27, y: 11, size: 4, color: "rgba(255, 255, 255, 0.78)" },
-    { x: 74, y: 86, size: 4, color: "rgba(255, 255, 255, 0.7)" },
+    { x: 12, y: 20, size: 8, color: "rgba(244, 240, 235, 0.88)" },
+    { x: 18, y: 74, size: 6, color: "rgba(242, 100, 38, 0.82)" },
+    { x: 80, y: 16, size: 7, color: "rgba(126, 137, 150, 0.84)" },
+    { x: 87, y: 72, size: 5, color: "rgba(179, 52, 27, 0.76)" },
+    { x: 27, y: 11, size: 4, color: "rgba(255, 255, 255, 0.74)" },
+    { x: 74, y: 86, size: 4, color: "rgba(215, 220, 227, 0.68)" },
   ];
 
   return (
     <div className="mx-auto flex h-[500px] w-full items-center justify-center sm:h-[680px] lg:h-[840px] xl:h-[900px]">
       <div className="relative flex h-[33rem] w-[26rem] items-center justify-center sm:h-[41rem] sm:w-[33rem] lg:h-[54rem] lg:w-[46rem] xl:h-[58rem] xl:w-[50rem]">
-        <div className="absolute inset-[4%] rounded-full bg-[radial-gradient(circle,_rgba(255,163,109,0.18),_rgba(255,112,89,0.12)_18%,_rgba(103,146,255,0.1)_42%,_rgba(8,13,29,0)_74%)] blur-3xl" />
-        <div className="absolute inset-[12%] rounded-full bg-[radial-gradient(circle,_rgba(255,122,71,0.1),_rgba(11,19,34,0)_68%)] blur-[120px]" />
+        <div className="absolute inset-[4%] rounded-full bg-[radial-gradient(circle,_rgba(242,100,38,0.18),_rgba(179,52,27,0.12)_22%,_rgba(126,137,150,0.08)_46%,_rgba(8,10,14,0)_74%)] blur-3xl" />
+        <div className="absolute inset-[12%] rounded-full bg-[radial-gradient(circle,_rgba(244,240,235,0.08),_rgba(11,12,16,0)_68%)] blur-[120px]" />
 
         {ambientStars.map(star => (
           <span
@@ -40,7 +40,7 @@ export function CuryoAnimation() {
 
       <style jsx>{`
         .curyo-animation__logo {
-          filter: drop-shadow(0 0 68px rgba(255, 140, 96, 0.2)) drop-shadow(0 0 84px rgba(64, 160, 241, 0.14));
+          filter: drop-shadow(0 0 68px rgba(242, 100, 38, 0.22)) drop-shadow(0 0 84px rgba(126, 137, 150, 0.12));
         }
 
         .curyo-animation__star {

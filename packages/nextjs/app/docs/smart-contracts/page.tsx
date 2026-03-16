@@ -29,87 +29,87 @@ const SmartContracts: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td className="font-mono text-[#EF476F]">CuryoReputation</td>
+              <td className="font-mono text-primary">CuryoReputation</td>
               <td>ERC-20 token (cREP) with governance voting power and flash-loan protection</td>
               <td>No</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">VoterIdNFT</td>
+              <td className="font-mono text-primary">VoterIdNFT</td>
               <td>Soulbound ERC-721 representing verified human identity (sybil resistance)</td>
               <td>No</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ContentRegistry</td>
+              <td className="font-mono text-primary">ContentRegistry</td>
               <td>Content lifecycle: submission, dormancy, rating updates, slashing</td>
               <td>UUPS</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundVotingEngine</td>
+              <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>Core voting: tlock commit-reveal voting, epoch-weighted rewards, deterministic settlement</td>
               <td>UUPS</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundRewardDistributor</td>
+              <td className="font-mono text-primary">RoundRewardDistributor</td>
               <td>Pull-based reward claiming for settled rounds</td>
               <td>UUPS</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">FrontendRegistry</td>
+              <td className="font-mono text-primary">FrontendRegistry</td>
               <td>Frontend operator registration and fee distribution</td>
               <td>UUPS</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CategoryRegistry</td>
+              <td className="font-mono text-primary">CategoryRegistry</td>
               <td>Category/platform management via governance proposals</td>
               <td>No</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ParticipationPool</td>
+              <td className="font-mono text-primary">ParticipationPool</td>
               <td>Halving-tier participation rewards used by submitter and voter reward claims</td>
               <td>No</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">ProfileRegistry</td>
+              <td className="font-mono text-primary">ProfileRegistry</td>
               <td>On-chain user profiles with unique names, images, and public rating strategy text</td>
               <td>UUPS</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">HumanFaucet</td>
+              <td className="font-mono text-primary">HumanFaucet</td>
               <td>Sybil-resistant token distribution via Self.xyz passport verification</td>
               <td>No</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SubmissionCanonicalizer</td>
+              <td className="font-mono text-primary">SubmissionCanonicalizer</td>
               <td>Stateless URL/domain canonicalization helper used by ContentRegistry submissions</td>
               <td>No</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CuryoGovernor</td>
+              <td className="font-mono text-primary">CuryoGovernor</td>
               <td>On-chain governance with timelock (proposals, voting, execution)</td>
               <td>No</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RoundLib</td>
+              <td className="font-mono text-primary">RoundLib</td>
               <td>Library: round state management and settlement logic</td>
               <td>&mdash;</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">RewardMath</td>
+              <td className="font-mono text-primary">RewardMath</td>
               <td>Library: pool split (82/5/10/2/1) and reward calculations</td>
               <td>&mdash;</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">CategoryFeeLib</td>
+              <td className="font-mono text-primary">CategoryFeeLib</td>
               <td>Library: category-fee routing for settled rounds</td>
               <td>&mdash;</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">SubmitterStakeLib</td>
+              <td className="font-mono text-primary">SubmitterStakeLib</td>
               <td>Library: submitter stake return/slash policy helpers</td>
               <td>&mdash;</td>
             </tr>
             <tr>
-              <td className="font-mono text-[#EF476F]">TokenTransferLib</td>
+              <td className="font-mono text-primary">TokenTransferLib</td>
               <td>Library: narrow token transfer helpers used by reward settlement paths</td>
               <td>&mdash;</td>
             </tr>

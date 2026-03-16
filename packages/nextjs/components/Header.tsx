@@ -5,9 +5,17 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
-import { ArrowLeftIcon, Bars3Icon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowLeftIcon,
+  Bars3Icon,
+  BookOpenIcon,
+  GlobeAltIcon,
+  IdentificationIcon,
+  MagnifyingGlassIcon,
+  PlusCircleIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { CuryoLogo } from "~~/components/CuryoLogo";
-import { CrepNavIcon, DiscoverNavIcon, DocsNavIcon, SubmitNavIcon } from "~~/components/brand/OrbitalNavIcons";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/RainbowKitCustomConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
@@ -22,10 +30,10 @@ type HeaderMenuLink = {
 };
 
 export const menuLinks: HeaderMenuLink[] = [
-  { label: "Discover", href: "/vote", icon: DiscoverNavIcon, color: "#8EB6FF" },
-  { label: "Submit", href: "/submit", icon: SubmitNavIcon, color: "#63E6D2" },
-  { label: "cREP", href: "/governance", icon: CrepNavIcon, color: "#FFC76A" },
-  { label: "Docs", href: "/docs", icon: DocsNavIcon, color: "#FF9FC2" },
+  { label: "Discover", href: "/vote", icon: GlobeAltIcon, color: "#F26426" },
+  { label: "Submit", href: "/submit", icon: PlusCircleIcon, color: "#F4F0EB" },
+  { label: "cREP", href: "/governance", icon: IdentificationIcon, color: "#D8875F" },
+  { label: "Docs", href: "/docs", icon: BookOpenIcon, color: "#D7DCE3" },
 ];
 
 export const HeaderMenuLinks = () => {
@@ -45,11 +53,9 @@ export const HeaderMenuLinks = () => {
               {/* Docs header */}
               <Link
                 href={href}
-                className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-2xl border border-white/6 bg-white/[0.02] transition-colors hover:bg-white/[0.05]"
+                className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl hover:bg-base-200 transition-colors"
               >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.03]">
-                  <Icon className="w-5 h-5 shrink-0" style={{ color }} />
-                </span>
+                <Icon className="w-6 h-6 shrink-0" style={{ color }} />
                 <span className="text-base font-medium" style={{ color }}>
                   Docs
                 </span>
@@ -70,7 +76,7 @@ export const HeaderMenuLinks = () => {
                             href={link.href}
                             className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                               isLinkActive
-                                ? "border border-white/10 bg-white/[0.07] text-white font-medium"
+                                ? "bg-primary/10 text-primary font-medium"
                                 : "text-base-content/60 hover:text-base-content hover:bg-white/[0.04]"
                             }`}
                           >
@@ -92,20 +98,14 @@ export const HeaderMenuLinks = () => {
             <Link
               href={href}
               passHref
-              className={`flex items-center gap-3 px-3 py-2.5 text-base font-medium rounded-2xl border transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 text-base font-medium rounded-xl transition-colors ${
                 isActive
-                  ? "border-white/10 bg-white/[0.07] text-white shadow-[0_18px_36px_rgba(0,0,0,0.22)]"
-                  : "border-transparent text-base-content/60 hover:border-white/6 hover:text-base-content hover:bg-white/[0.04]"
+                  ? "bg-white/[0.05] text-base-content ring-1 ring-white/8"
+                  : "text-base-content/60 hover:text-base-content hover:bg-white/[0.04]"
               }`}
             >
-              <span
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
-                  isActive ? "border-white/12 bg-white/[0.05]" : "border-white/6 bg-white/[0.02]"
-                }`}
-              >
-                <Icon className="w-5 h-5 shrink-0" style={{ color }} />
-              </span>
-              <span className={isActive ? "text-white" : ""}>{label}</span>
+              <Icon className="w-6 h-6 shrink-0" style={{ color }} />
+              <span className={isActive ? "text-base-content" : ""}>{label}</span>
             </Link>
           </li>
         );
@@ -191,7 +191,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
         aria-label="Search content"
         value={inputValue}
         onChange={e => updateSearch(e.target.value)}
-        className={`input input-sm input-bordered pl-8 pr-7 border-white/8 bg-white/[0.04] focus:bg-white/[0.08] focus:border-white/12 text-base ${
+        className={`input input-sm input-bordered pl-8 pr-7 border-white/8 bg-black/35 focus:border-primary/30 focus:bg-black/50 text-base ${
           isSidebar ? "w-full max-w-full" : "w-40 lg:w-56"
         }`}
       />
@@ -259,7 +259,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           value={draftValue}
           onChange={event => setDraftValue(event.target.value)}
           autoFocus
-          className="input input-sm w-full border border-white/8 bg-white/[0.04] pl-9 pr-9 text-base"
+          className="input input-sm w-full border-white/8 bg-black/45 pl-9 pr-9 text-base"
         />
         {draftValue ? (
           <button
@@ -272,7 +272,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           </button>
         ) : null}
       </div>
-      <button type="submit" className="btn btn-sm border-none btn-primary px-3 text-black" aria-label="Submit search">
+      <button type="submit" className="btn btn-sm btn-primary border-none px-3" aria-label="Submit search">
         <MagnifyingGlassIcon className="h-4 w-4" />
       </button>
     </form>
@@ -299,7 +299,7 @@ export const Header = () => {
     <>
       {/* Mobile: top bar */}
       <div className="xl:hidden sticky top-0 z-20">
-        <div className="navbar min-h-0 shrink-0 justify-between px-4 sm:px-6 py-3 border-b border-white/8 bg-[linear-gradient(180deg,rgba(18,22,34,0.96),rgba(12,15,24,0.94))] backdrop-blur-xl shadow-[0_16px_40px_rgba(0,0,0,0.25)]">
+        <div className="navbar min-h-0 shrink-0 justify-between px-4 sm:px-6 py-3 border-b border-white/8 bg-[linear-gradient(180deg,rgba(18,19,22,0.95),rgba(10,10,12,0.96))] backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.32)]">
           {mobileSearchOpen ? (
             <Suspense>
               <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
@@ -312,7 +312,7 @@ export const Header = () => {
                     <Bars3Icon className="h-5 w-5" />
                   </summary>
                   <ul
-                    className="menu menu-compact dropdown-content mt-3 p-2 rounded-2xl w-64 border border-white/8 bg-[linear-gradient(180deg,rgba(18,22,34,0.98),rgba(12,15,24,0.96))] shadow-[0_22px_48px_rgba(0,0,0,0.32)]"
+                    className="menu menu-compact dropdown-content mt-3 p-2 bg-base-200 rounded-xl w-64 shadow-lg border border-base-content/5"
                     onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
                   >
                     <Suspense>
@@ -352,7 +352,7 @@ export const Header = () => {
       </div>
 
       {/* Desktop: left sidebar */}
-      <aside className="hidden xl:flex fixed left-0 top-0 z-20 h-screen w-60 flex-col items-stretch py-4 border-r border-white/8 bg-[linear-gradient(180deg,rgba(18,22,34,0.98),rgba(10,12,20,0.96))] shadow-[18px_0_48px_rgba(0,0,0,0.22)] backdrop-blur-xl shrink-0">
+      <aside className="hidden xl:flex fixed left-0 top-0 z-20 h-screen w-56 flex-col items-stretch py-4 border-r border-white/8 bg-[linear-gradient(180deg,rgba(18,19,22,0.98),rgba(9,10,12,0.96))] shadow-[18px_0_48px_rgba(0,0,0,0.24)] backdrop-blur-xl shrink-0">
         <Link href="/" className="flex flex-row items-center gap-2 px-4 mb-4 shrink-0">
           <CuryoLogo className="w-8 h-8 shrink-0" />
           <div className="flex flex-col gap-0.5 items-start">
@@ -381,11 +381,9 @@ export const Header = () => {
                     {/* Docs header */}
                     <Link
                       href={href}
-                      className="flex items-center justify-start gap-3 px-4 py-3 mb-2 rounded-2xl border border-white/6 bg-white/[0.02] transition-colors hover:bg-white/[0.05]"
+                      className="flex items-center justify-start gap-3 px-4 py-3 mb-2 rounded-xl hover:bg-base-200 transition-colors"
                     >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.03]">
-                        <Icon className="w-5 h-5 shrink-0" style={{ color }} />
-                      </span>
+                      <Icon className="w-6 h-6 shrink-0" style={{ color }} />
                       <span className="text-base font-medium" style={{ color }}>
                         Docs
                       </span>
@@ -406,7 +404,7 @@ export const Header = () => {
                                   href={link.href}
                                   className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                                     isLinkActive
-                                      ? "border border-white/10 bg-white/[0.07] text-white font-medium"
+                                      ? "bg-primary/10 text-primary font-medium"
                                       : "text-base-content/60 hover:text-base-content hover:bg-white/[0.04]"
                                   }`}
                                 >
@@ -427,20 +425,14 @@ export const Header = () => {
                 <li key={href} className="w-full">
                   <Link
                     href={href}
-                    className={`flex items-center justify-start gap-3 px-4 py-3 rounded-2xl border transition-colors ${
+                    className={`flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors ${
                       isActive
-                        ? "border-white/10 bg-white/[0.07] text-white shadow-[0_18px_36px_rgba(0,0,0,0.22)]"
-                        : "border-transparent text-base-content/60 hover:border-white/6 hover:text-base-content hover:bg-white/[0.04]"
+                        ? "bg-white/[0.05] text-base-content ring-1 ring-white/8"
+                        : "text-base-content/60 hover:text-base-content hover:bg-white/[0.04]"
                     }`}
                   >
-                    <span
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
-                        isActive ? "border-white/12 bg-white/[0.05]" : "border-white/6 bg-white/[0.02]"
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 shrink-0" style={{ color }} />
-                    </span>
-                    <span className={isActive ? "text-white" : ""}>{label}</span>
+                    <Icon className="w-6 h-6 shrink-0" style={{ color }} />
+                    <span className={isActive ? "text-base-content" : ""}>{label}</span>
                   </Link>
                 </li>
               );
