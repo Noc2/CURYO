@@ -28,8 +28,8 @@
   --color-base-200: #121316;
   --color-base-300: #1b1d22;
   --color-base-content: #f4f0eb;
-  --color-info: #7e8996;
-  --color-success: #88c29b;
+  --color-info: #aaa39d;
+  --color-success: #f4d7c7;
   --color-warning: #f0a35d;
   --color-error: #d95a47;
 
@@ -255,6 +255,15 @@ body {
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.22), transparent);
   opacity: 0.72;
   pointer-events: none;
+}
+
+.obsidian-ember-info-card {
+  background: linear-gradient(180deg, rgb(18 19 22 / 0.98) 0%, rgb(23 25 29 / 0.98) 100%);
+  border: 1px solid var(--curyo-shell-border-strong);
+  box-shadow:
+    var(--curyo-panel-shadow),
+    inset 0 1px 0 rgb(255 255 255 / 0.03),
+    inset 0 0 0 1px rgb(242 100 38 / 0.05);
 }
 
 /* Filled vote buttons */

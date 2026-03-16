@@ -805,12 +805,7 @@ const SubmitPage: NextPage = () => {
               </div>
 
               {/* Stake info */}
-              <div
-                className="rounded-2xl p-4"
-                style={{
-                  background: "#112840",
-                }}
-              >
+              <div className="obsidian-ember-info-card rounded-2xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="flex items-center gap-1.5 text-base font-medium text-white">
@@ -830,7 +825,7 @@ const SubmitPage: NextPage = () => {
                       Participation Bonus
                       <InfoTooltip text="Projected cREP reward from the Participation Pool, paid only when the submitter stake resolves on the healthy path after a settled round. Rate decreases as more cREP is distributed." />
                     </p>
-                    <span className="text-sm font-semibold text-emerald-400">
+                    <span className="text-sm font-semibold text-success">
                       +{submissionBonus} cREP ({ratePercent}%)
                     </span>
                   </div>
