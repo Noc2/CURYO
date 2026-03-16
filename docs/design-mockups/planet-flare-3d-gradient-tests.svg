@@ -1,0 +1,430 @@
+<svg width="1740" height="1000" viewBox="0 0 1740 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient-board-bg" x1="90" y1="40" x2="1660" y2="980" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06090F"/>
+      <stop offset="0.52" stop-color="#0A121B"/>
+      <stop offset="1" stop-color="#070B11"/>
+    </linearGradient>
+    <radialGradient id="gradient-board-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1420 188) rotate(150) scale(360 220)">
+      <stop stop-color="#F4815C" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#F4815C" stop-opacity="0"/>
+    </radialGradient>
+    
+      <linearGradient id="atmospheric-bloom-gradient-panel-bg" x1="80" y1="120" x2="840" y2="540" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#08111B"/>
+        <stop offset="1" stop-color="#0D1826"/>
+      </linearGradient>
+      <radialGradient id="atmospheric-bloom-gradient-panel-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(260 248) rotate(32) scale(192 140)">
+        <stop stop-color="#FF8B62" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="#FF8B62" stop-opacity="0"/>
+      </radialGradient>
+      
+    <radialGradient id="atmospheric-bloom-gradient-planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(636 360) rotate(130) scale(514 494)">
+      <stop stop-color="#FFF1DA"/><stop offset="0.14" stop-color="#FFC08B"/><stop offset="0.31" stop-color="#F26F76"/><stop offset="0.54" stop-color="#A57FF0"/><stop offset="0.77" stop-color="#4E9EEB"/><stop offset="1" stop-color="#0A2133"/>
+    </radialGradient>
+    <radialGradient id="atmospheric-bloom-gradient-planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(382 664) rotate(-28) scale(248 162)">
+      <stop stop-color="#07111C" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#07111C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="atmospheric-bloom-gradient-planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(668 336) rotate(138) scale(198 132)">
+      <stop stop-color="#FFF7E9" stop-opacity="0.76"/>
+      <stop offset="0.5" stop-color="#FFF7E9" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#FFF7E9" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="atmospheric-bloom-gradient-planet-atmosphere" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(740 292) rotate(150) scale(228 92)">
+      <stop stop-color="#FFE5C4" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFE5C4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="atmospheric-bloom-gradient-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45D4F"/><stop offset="0.24" stop-color="#FF8C5F"/><stop offset="0.56" stop-color="#FFC37A"/><stop offset="0.82" stop-color="#FFE0A1"/><stop offset="1" stop-color="#FFF3D9"/>
+    </linearGradient>
+    <linearGradient id="atmospheric-bloom-gradient-flare-core" x1="684" y1="160" x2="892" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B75"/><stop offset="0.52" stop-color="#FFF0CF"/><stop offset="1" stop-color="#FFF8ED"/>
+    </linearGradient>
+    <filter id="atmospheric-bloom-gradient-soft-blur-20" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="atmospheric-bloom-gradient-soft-blur-28" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+    <clipPath id="atmospheric-bloom-gradient-planet-clip">
+      <circle cx="512" cy="512" r="344"/>
+    </clipPath>
+  
+    
+      <linearGradient id="terminator-cut-gradient-panel-bg" x1="910" y1="120" x2="1670" y2="540" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#0A1220"/>
+        <stop offset="1" stop-color="#101826"/>
+      </linearGradient>
+      <radialGradient id="terminator-cut-gradient-panel-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1090 248) rotate(32) scale(192 140)">
+        <stop stop-color="#78A9FF" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="#78A9FF" stop-opacity="0"/>
+      </radialGradient>
+      
+    <radialGradient id="terminator-cut-gradient-planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(636 360) rotate(130) scale(514 494)">
+      <stop stop-color="#FFF3E0"/><stop offset="0.18" stop-color="#FFB17F"/><stop offset="0.33" stop-color="#D27061"/><stop offset="0.5" stop-color="#6E5FA9"/><stop offset="0.66" stop-color="#366DB8"/><stop offset="1" stop-color="#081E31"/>
+    </radialGradient>
+    <radialGradient id="terminator-cut-gradient-planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(382 664) rotate(-28) scale(248 162)">
+      <stop stop-color="#07111C" stop-opacity="0.8"/>
+      <stop offset="1" stop-color="#07111C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="terminator-cut-gradient-planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(668 336) rotate(138) scale(198 132)">
+      <stop stop-color="#FFF9ED" stop-opacity="0.72"/>
+      <stop offset="0.5" stop-color="#FFF9ED" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#FFF9ED" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="terminator-cut-gradient-planet-atmosphere" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(740 292) rotate(150) scale(228 92)">
+      <stop stop-color="#B1CCFF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#B1CCFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="terminator-cut-gradient-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45D4F"/><stop offset="0.24" stop-color="#FF8C5F"/><stop offset="0.56" stop-color="#FFC37A"/><stop offset="0.82" stop-color="#FFE0A1"/><stop offset="1" stop-color="#FFF3D9"/>
+    </linearGradient>
+    <linearGradient id="terminator-cut-gradient-flare-core" x1="684" y1="160" x2="892" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B75"/><stop offset="0.52" stop-color="#FFF0CF"/><stop offset="1" stop-color="#FFF8ED"/>
+    </linearGradient>
+    <filter id="terminator-cut-gradient-soft-blur-20" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="terminator-cut-gradient-soft-blur-28" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+    <clipPath id="terminator-cut-gradient-planet-clip">
+      <circle cx="512" cy="512" r="344"/>
+    </clipPath>
+  
+    
+      <linearGradient id="mineral-depth-gradient-panel-bg" x1="80" y1="580" x2="840" y2="1000" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#130F0C"/>
+        <stop offset="1" stop-color="#1E1510"/>
+      </linearGradient>
+      <radialGradient id="mineral-depth-gradient-panel-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(260 708) rotate(32) scale(192 140)">
+        <stop stop-color="#E0A55C" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="#E0A55C" stop-opacity="0"/>
+      </radialGradient>
+      
+    <radialGradient id="mineral-depth-gradient-planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(636 360) rotate(130) scale(514 494)">
+      <stop stop-color="#FFF2D8"/><stop offset="0.16" stop-color="#F4C37C"/><stop offset="0.34" stop-color="#D8794D"/><stop offset="0.58" stop-color="#8D4A38"/><stop offset="0.8" stop-color="#3B2A27"/><stop offset="1" stop-color="#17120F"/>
+    </radialGradient>
+    <radialGradient id="mineral-depth-gradient-planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(382 664) rotate(-28) scale(248 162)">
+      <stop stop-color="#130E0B" stop-opacity="0.86"/>
+      <stop offset="1" stop-color="#130E0B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mineral-depth-gradient-planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(668 336) rotate(138) scale(198 132)">
+      <stop stop-color="#FFF7E6" stop-opacity="0.66"/>
+      <stop offset="0.5" stop-color="#FFF7E6" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FFF7E6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mineral-depth-gradient-planet-atmosphere" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(740 292) rotate(150) scale(228 92)">
+      <stop stop-color="#FFD6A8" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFD6A8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mineral-depth-gradient-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45D4F"/><stop offset="0.24" stop-color="#FF8C5F"/><stop offset="0.56" stop-color="#FFC37A"/><stop offset="0.82" stop-color="#FFE0A1"/><stop offset="1" stop-color="#FFF3D9"/>
+    </linearGradient>
+    <linearGradient id="mineral-depth-gradient-flare-core" x1="684" y1="160" x2="892" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B75"/><stop offset="0.52" stop-color="#FFF0CF"/><stop offset="1" stop-color="#FFF8ED"/>
+    </linearGradient>
+    <filter id="mineral-depth-gradient-soft-blur-20" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="mineral-depth-gradient-soft-blur-28" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+    <clipPath id="mineral-depth-gradient-planet-clip">
+      <circle cx="512" cy="512" r="344"/>
+    </clipPath>
+  
+    
+      <linearGradient id="polar-sheen-gradient-panel-bg" x1="910" y1="580" x2="1670" y2="1000" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#07141E"/>
+        <stop offset="1" stop-color="#0F2432"/>
+      </linearGradient>
+      <radialGradient id="polar-sheen-gradient-panel-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1090 708) rotate(32) scale(192 140)">
+        <stop stop-color="#2AD0D3" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="#2AD0D3" stop-opacity="0"/>
+      </radialGradient>
+      
+    <radialGradient id="polar-sheen-gradient-planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(636 360) rotate(130) scale(514 494)">
+      <stop stop-color="#F0FFFF"/><stop offset="0.16" stop-color="#A5F1E8"/><stop offset="0.34" stop-color="#62C2E4"/><stop offset="0.56" stop-color="#5A95ED"/><stop offset="0.78" stop-color="#18507F"/><stop offset="1" stop-color="#08202E"/>
+    </radialGradient>
+    <radialGradient id="polar-sheen-gradient-planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(382 664) rotate(-28) scale(248 162)">
+      <stop stop-color="#051318" stop-opacity="0.76"/>
+      <stop offset="1" stop-color="#051318" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="polar-sheen-gradient-planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(668 336) rotate(138) scale(198 132)">
+      <stop stop-color="#F4FFFF" stop-opacity="0.8"/>
+      <stop offset="0.5" stop-color="#F4FFFF" stop-opacity="0.27"/>
+      <stop offset="1" stop-color="#F4FFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="polar-sheen-gradient-planet-atmosphere" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(740 292) rotate(150) scale(228 92)">
+      <stop stop-color="#A4F0EC" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#A4F0EC" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="polar-sheen-gradient-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45D4F"/><stop offset="0.24" stop-color="#FF8C5F"/><stop offset="0.56" stop-color="#FFC37A"/><stop offset="0.82" stop-color="#FFE0A1"/><stop offset="1" stop-color="#FFF3D9"/>
+    </linearGradient>
+    <linearGradient id="polar-sheen-gradient-flare-core" x1="684" y1="160" x2="892" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B75"/><stop offset="0.52" stop-color="#FFF0CF"/><stop offset="1" stop-color="#FFF8ED"/>
+    </linearGradient>
+    <filter id="polar-sheen-gradient-soft-blur-20" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="20"/>
+    </filter>
+    <filter id="polar-sheen-gradient-soft-blur-28" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+    <clipPath id="polar-sheen-gradient-planet-clip">
+      <circle cx="512" cy="512" r="344"/>
+    </clipPath>
+  
+    
+  </defs>
+
+  <rect width="1740" height="1000" fill="url(#gradient-board-bg)"/>
+  <rect width="1740" height="1000" fill="url(#gradient-board-glow)"/>
+
+  <text x="80" y="62" fill="#FFFFFF" font-size="42" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">3D Planet Gradient Tests</text>
+  <text x="80" y="98" fill="#D8E0EA" fill-opacity="0.72" font-size="18" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Same mark, different planet-lighting strategies. These isolate how far the sphere can go toward depth before it stops feeling like the current brand.</text>
+
+  
+      <g>
+        <rect x="80" y="120" width="760" height="400" rx="34" fill="url(#atmospheric-bloom-gradient-panel-bg)"/>
+        <rect x="80" y="120" width="760" height="400" rx="34" fill="url(#atmospheric-bloom-gradient-panel-glow)"/>
+        <rect x="80" y="120" width="760" height="400" rx="34" stroke="#FFFFFF12" stroke-width="2"/>
+
+        <text x="114" y="176" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Atmospheric Bloom</text>
+        <text x="114" y="208" fill="#D8E0EA" fill-opacity="0.72" font-size="15" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Cinematic / soft</text>
+        <text x="114" y="472" fill="#D8E0EA" fill-opacity="0.8" font-size="17" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Soft upper-right bloom with a warmer atmosphere layer. Most cinematic of the four.</text>
+
+        
+    <g transform="translate(308 188) scale(0.296875)">
+      <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+      <circle cx="512" cy="512" r="434" stroke="#3A242B" stroke-opacity="0.64" stroke-width="12"/>
+      <circle cx="512" cy="512" r="420" stroke="#1A1F2B" stroke-opacity="0.96" stroke-width="20"/>
+      <circle cx="512" cy="512" r="406" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2"/>
+      <circle cx="512" cy="512" r="394" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4"/>
+      <circle cx="512" cy="512" r="434" stroke="#F5A470" stroke-opacity="0.11" stroke-width="6" stroke-linecap="round" stroke-dasharray="580 2147" transform="rotate(-136 512 512)"/>
+      <circle cx="512" cy="512" r="420" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="520 2119" transform="rotate(-136 512 512)"/>
+
+      <g filter="url(#atmospheric-bloom-gradient-soft-blur-28)">
+        <circle cx="512" cy="512" r="406" stroke="#F45D4F" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      </g>
+      <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#atmospheric-bloom-gradient-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#atmospheric-bloom-gradient-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
+
+      <circle cx="512" cy="512" r="344" fill="url(#atmospheric-bloom-gradient-planet-base)"/>
+      <g clip-path="url(#atmospheric-bloom-gradient-planet-clip)">
+        <g filter="url(#atmospheric-bloom-gradient-soft-blur-20)">
+          <ellipse cx="340" cy="394" rx="214" ry="164" fill="#3EA2F1" fill-opacity="0.42"/><ellipse cx="604" cy="320" rx="244" ry="170" fill="#F37F84" fill-opacity="0.34"/><ellipse cx="704" cy="446" rx="232" ry="152" fill="#FFD59B" fill-opacity="0.26"/><ellipse cx="612" cy="650" rx="260" ry="150" fill="#11C7A5" fill-opacity="0.2"/><ellipse cx="350" cy="698" rx="282" ry="176" fill="#11273B" fill-opacity="0.64"/>
+        </g>
+
+        <path d="M132 312C242 264 356 264 476 290C578 312 678 322 814 316" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="16" stroke-linecap="round"/>
+        <path d="M120 418C236 372 354 378 474 406C578 430 676 440 810 434" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="13" stroke-linecap="round"/>
+        <path d="M118 522C236 478 356 486 478 516C582 542 676 552 806 546" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="11" stroke-linecap="round"/>
+        <path d="M132 648C236 612 356 614 478 642C584 668 680 678 810 668" stroke="#FFFFFF" stroke-opacity="0.075" stroke-width="14" stroke-linecap="round"/>
+        <path d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770" stroke="#2E4D70" stroke-opacity="0.28" stroke-width="24" stroke-linecap="round"/>
+        <path d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554" stroke="#F5A07A" stroke-opacity="0.14" stroke-width="24" stroke-linecap="round"/>
+
+        <circle cx="640" cy="430" r="18" fill="#FFF2E2" fill-opacity="0.14"/>
+        <circle cx="332" cy="414" r="14" fill="#FFF2E2" fill-opacity="0.08"/>
+        <circle cx="596" cy="570" r="20" fill="#FFF2E2" fill-opacity="0.1"/>
+        <circle cx="370" cy="804" r="16" fill="#FFF2E2" fill-opacity="0.05"/>
+      </g>
+
+      <circle cx="512" cy="512" r="344" fill="url(#atmospheric-bloom-gradient-planet-shadow)"/>
+      <g filter="url(#atmospheric-bloom-gradient-soft-blur-28)">
+        <ellipse cx="644" cy="340" rx="154" ry="106" fill="#FFF7E9" fill-opacity="0.28"/>
+      </g>
+      <circle cx="512" cy="512" r="344" fill="url(#atmospheric-bloom-gradient-planet-atmosphere)"/>
+      <circle cx="512" cy="512" r="344" fill="url(#atmospheric-bloom-gradient-planet-highlight)"/>
+      <circle cx="512" cy="512" r="344" fill="none" stroke="#FFFFFF" stroke-opacity="0.17" stroke-width="1.4"/>
+    </g>
+  
+
+        <circle cx="126" cy="424" r="12" fill="#FFF1DA"/><circle cx="168" cy="424" r="12" fill="#FFBA88"/><circle cx="210" cy="424" r="12" fill="#F26F76"/><circle cx="252" cy="424" r="12" fill="#4E9EEB"/>
+      </g>
+    
+      <g>
+        <rect x="910" y="120" width="760" height="400" rx="34" fill="url(#terminator-cut-gradient-panel-bg)"/>
+        <rect x="910" y="120" width="760" height="400" rx="34" fill="url(#terminator-cut-gradient-panel-glow)"/>
+        <rect x="910" y="120" width="760" height="400" rx="34" stroke="#FFFFFF12" stroke-width="2"/>
+
+        <text x="944" y="176" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Terminator Cut</text>
+        <text x="944" y="208" fill="#D8E0EA" fill-opacity="0.72" font-size="15" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Sharper / graphic</text>
+        <text x="944" y="472" fill="#D8E0EA" fill-opacity="0.8" font-size="17" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Sharper warm-to-cool transition through the equator. Strongest sense of a lit sphere at small sizes.</text>
+
+        
+    <g transform="translate(1138 188) scale(0.296875)">
+      <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+      <circle cx="512" cy="512" r="434" stroke="#35252A" stroke-opacity="0.62" stroke-width="12"/>
+      <circle cx="512" cy="512" r="420" stroke="#152434" stroke-opacity="0.96" stroke-width="20"/>
+      <circle cx="512" cy="512" r="406" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2"/>
+      <circle cx="512" cy="512" r="394" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4"/>
+      <circle cx="512" cy="512" r="434" stroke="#FFBE84" stroke-opacity="0.12" stroke-width="6" stroke-linecap="round" stroke-dasharray="580 2147" transform="rotate(-136 512 512)"/>
+      <circle cx="512" cy="512" r="420" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="520 2119" transform="rotate(-136 512 512)"/>
+
+      <g filter="url(#terminator-cut-gradient-soft-blur-28)">
+        <circle cx="512" cy="512" r="406" stroke="#F45D4F" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      </g>
+      <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#terminator-cut-gradient-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#terminator-cut-gradient-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
+
+      <circle cx="512" cy="512" r="344" fill="url(#terminator-cut-gradient-planet-base)"/>
+      <g clip-path="url(#terminator-cut-gradient-planet-clip)">
+        <g filter="url(#terminator-cut-gradient-soft-blur-20)">
+          <ellipse cx="340" cy="388" rx="214" ry="164" fill="#58A8FF" fill-opacity="0.4"/><ellipse cx="604" cy="318" rx="242" ry="170" fill="#FF8C77" fill-opacity="0.26"/><ellipse cx="704" cy="440" rx="240" ry="154" fill="#FFDCA8" fill-opacity="0.24"/><ellipse cx="610" cy="650" rx="262" ry="150" fill="#3D6DA1" fill-opacity="0.22"/><ellipse cx="346" cy="704" rx="282" ry="176" fill="#0A2032" fill-opacity="0.62"/>
+        </g>
+
+        <path d="M132 312C242 264 356 264 476 290C578 312 678 322 814 316" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="16" stroke-linecap="round"/>
+        <path d="M120 418C236 372 354 378 474 406C578 430 676 440 810 434" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="13" stroke-linecap="round"/>
+        <path d="M118 522C236 478 356 486 478 516C582 542 676 552 806 546" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="11" stroke-linecap="round"/>
+        <path d="M132 648C236 612 356 614 478 642C584 668 680 678 810 668" stroke="#FFFFFF" stroke-opacity="0.075" stroke-width="14" stroke-linecap="round"/>
+        <path d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770" stroke="#335C85" stroke-opacity="0.34" stroke-width="24" stroke-linecap="round"/>
+        <path d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554" stroke="#FFAA83" stroke-opacity="0.2" stroke-width="24" stroke-linecap="round"/>
+
+        <circle cx="640" cy="430" r="18" fill="#FFF2E2" fill-opacity="0.14"/>
+        <circle cx="332" cy="414" r="14" fill="#FFF2E2" fill-opacity="0.08"/>
+        <circle cx="596" cy="570" r="20" fill="#FFF2E2" fill-opacity="0.1"/>
+        <circle cx="370" cy="804" r="16" fill="#FFF2E2" fill-opacity="0.05"/>
+      </g>
+
+      <circle cx="512" cy="512" r="344" fill="url(#terminator-cut-gradient-planet-shadow)"/>
+      <g filter="url(#terminator-cut-gradient-soft-blur-28)">
+        <ellipse cx="644" cy="340" rx="154" ry="106" fill="#FFF9ED" fill-opacity="0.27"/>
+      </g>
+      <circle cx="512" cy="512" r="344" fill="url(#terminator-cut-gradient-planet-atmosphere)"/>
+      <circle cx="512" cy="512" r="344" fill="url(#terminator-cut-gradient-planet-highlight)"/>
+      <circle cx="512" cy="512" r="344" fill="none" stroke="#FFFFFF" stroke-opacity="0.18" stroke-width="1.4"/>
+    </g>
+  
+
+        <circle cx="956" cy="424" r="12" fill="#FFF3E0"/><circle cx="998" cy="424" r="12" fill="#FF9E7C"/><circle cx="1040" cy="424" r="12" fill="#B86558"/><circle cx="1082" cy="424" r="12" fill="#204E88"/>
+      </g>
+    
+      <g>
+        <rect x="80" y="580" width="760" height="400" rx="34" fill="url(#mineral-depth-gradient-panel-bg)"/>
+        <rect x="80" y="580" width="760" height="400" rx="34" fill="url(#mineral-depth-gradient-panel-glow)"/>
+        <rect x="80" y="580" width="760" height="400" rx="34" stroke="#FFFFFF12" stroke-width="2"/>
+
+        <text x="114" y="636" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Mineral Depth</text>
+        <text x="114" y="668" fill="#D8E0EA" fill-opacity="0.72" font-size="15" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Deep / premium</text>
+        <text x="114" y="932" fill="#D8E0EA" fill-opacity="0.8" font-size="17" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Adds deeper shadow pockets and heavier internal color pools. Feels premium and slightly less playful.</text>
+
+        
+    <g transform="translate(308 648) scale(0.296875)">
+      <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+      <circle cx="512" cy="512" r="434" stroke="#422D24" stroke-opacity="0.64" stroke-width="12"/>
+      <circle cx="512" cy="512" r="420" stroke="#231A15" stroke-opacity="0.96" stroke-width="20"/>
+      <circle cx="512" cy="512" r="406" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2"/>
+      <circle cx="512" cy="512" r="394" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4"/>
+      <circle cx="512" cy="512" r="434" stroke="#F3B16F" stroke-opacity="0.12" stroke-width="6" stroke-linecap="round" stroke-dasharray="580 2147" transform="rotate(-136 512 512)"/>
+      <circle cx="512" cy="512" r="420" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="520 2119" transform="rotate(-136 512 512)"/>
+
+      <g filter="url(#mineral-depth-gradient-soft-blur-28)">
+        <circle cx="512" cy="512" r="406" stroke="#F45D4F" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      </g>
+      <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#mineral-depth-gradient-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#mineral-depth-gradient-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
+
+      <circle cx="512" cy="512" r="344" fill="url(#mineral-depth-gradient-planet-base)"/>
+      <g clip-path="url(#mineral-depth-gradient-planet-clip)">
+        <g filter="url(#mineral-depth-gradient-soft-blur-20)">
+          <ellipse cx="332" cy="380" rx="198" ry="152" fill="#E8B46B" fill-opacity="0.24"/><ellipse cx="610" cy="320" rx="248" ry="170" fill="#D66B4C" fill-opacity="0.24"/><ellipse cx="708" cy="456" rx="254" ry="164" fill="#FFD7A1" fill-opacity="0.18"/><ellipse cx="610" cy="656" rx="278" ry="154" fill="#704134" fill-opacity="0.3"/><ellipse cx="332" cy="710" rx="298" ry="182" fill="#120F0D" fill-opacity="0.72"/>
+        </g>
+
+        <path d="M132 312C242 264 356 264 476 290C578 312 678 322 814 316" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="16" stroke-linecap="round"/>
+        <path d="M120 418C236 372 354 378 474 406C578 430 676 440 810 434" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="13" stroke-linecap="round"/>
+        <path d="M118 522C236 478 356 486 478 516C582 542 676 552 806 546" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="11" stroke-linecap="round"/>
+        <path d="M132 648C236 612 356 614 478 642C584 668 680 678 810 668" stroke="#FFFFFF" stroke-opacity="0.075" stroke-width="14" stroke-linecap="round"/>
+        <path d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770" stroke="#5B3E30" stroke-opacity="0.26" stroke-width="24" stroke-linecap="round"/>
+        <path d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554" stroke="#F2BC77" stroke-opacity="0.1" stroke-width="24" stroke-linecap="round"/>
+
+        <circle cx="640" cy="430" r="18" fill="#FFF2E2" fill-opacity="0.14"/>
+        <circle cx="332" cy="414" r="14" fill="#FFF2E2" fill-opacity="0.08"/>
+        <circle cx="596" cy="570" r="20" fill="#FFF2E2" fill-opacity="0.1"/>
+        <circle cx="370" cy="804" r="16" fill="#FFF2E2" fill-opacity="0.05"/>
+      </g>
+
+      <circle cx="512" cy="512" r="344" fill="url(#mineral-depth-gradient-planet-shadow)"/>
+      <g filter="url(#mineral-depth-gradient-soft-blur-28)">
+        <ellipse cx="644" cy="340" rx="154" ry="106" fill="#FFF7E6" fill-opacity="0.25"/>
+      </g>
+      <circle cx="512" cy="512" r="344" fill="url(#mineral-depth-gradient-planet-atmosphere)"/>
+      <circle cx="512" cy="512" r="344" fill="url(#mineral-depth-gradient-planet-highlight)"/>
+      <circle cx="512" cy="512" r="344" fill="none" stroke="#FFF4E0" stroke-opacity="0.14" stroke-width="1.4"/>
+    </g>
+  
+
+        <circle cx="126" cy="884" r="12" fill="#FFF2D8"/><circle cx="168" cy="884" r="12" fill="#E6BB7C"/><circle cx="210" cy="884" r="12" fill="#B15E48"/><circle cx="252" cy="884" r="12" fill="#0E2E49"/>
+      </g>
+    
+      <g>
+        <rect x="910" y="580" width="760" height="400" rx="34" fill="url(#polar-sheen-gradient-panel-bg)"/>
+        <rect x="910" y="580" width="760" height="400" rx="34" fill="url(#polar-sheen-gradient-panel-glow)"/>
+        <rect x="910" y="580" width="760" height="400" rx="34" stroke="#FFFFFF12" stroke-width="2"/>
+
+        <text x="944" y="636" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Polar Sheen</text>
+        <text x="944" y="668" fill="#D8E0EA" fill-opacity="0.72" font-size="15" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Glossy / modern</text>
+        <text x="944" y="932" fill="#D8E0EA" fill-opacity="0.8" font-size="17" font-family="'Sora', 'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Pushes a cooler top light and a cleaner highlight cap. Best if you want the planet to feel glossy and modern.</text>
+
+        
+    <g transform="translate(1138 648) scale(0.296875)">
+      <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+      <circle cx="512" cy="512" r="434" stroke="#1D2B31" stroke-opacity="0.62" stroke-width="12"/>
+      <circle cx="512" cy="512" r="420" stroke="#102127" stroke-opacity="0.96" stroke-width="20"/>
+      <circle cx="512" cy="512" r="406" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2"/>
+      <circle cx="512" cy="512" r="394" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4"/>
+      <circle cx="512" cy="512" r="434" stroke="#87E8D7" stroke-opacity="0.1" stroke-width="6" stroke-linecap="round" stroke-dasharray="580 2147" transform="rotate(-136 512 512)"/>
+      <circle cx="512" cy="512" r="420" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="520 2119" transform="rotate(-136 512 512)"/>
+
+      <g filter="url(#polar-sheen-gradient-soft-blur-28)">
+        <circle cx="512" cy="512" r="406" stroke="#F45D4F" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      </g>
+      <circle cx="512" cy="512" r="406" stroke="#6D3428" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#polar-sheen-gradient-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="512" cy="512" r="406" stroke="url(#polar-sheen-gradient-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+      <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
+      <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
+
+      <circle cx="512" cy="512" r="344" fill="url(#polar-sheen-gradient-planet-base)"/>
+      <g clip-path="url(#polar-sheen-gradient-planet-clip)">
+        <g filter="url(#polar-sheen-gradient-soft-blur-20)">
+          <ellipse cx="332" cy="386" rx="208" ry="160" fill="#30D7D2" fill-opacity="0.32"/><ellipse cx="602" cy="314" rx="236" ry="168" fill="#95F5DE" fill-opacity="0.22"/><ellipse cx="710" cy="438" rx="246" ry="162" fill="#4AA0E8" fill-opacity="0.28"/><ellipse cx="604" cy="652" rx="264" ry="150" fill="#1E4E7D" fill-opacity="0.28"/><ellipse cx="338" cy="700" rx="278" ry="174" fill="#091B27" fill-opacity="0.6"/>
+        </g>
+
+        <path d="M132 312C242 264 356 264 476 290C578 312 678 322 814 316" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="16" stroke-linecap="round"/>
+        <path d="M120 418C236 372 354 378 474 406C578 430 676 440 810 434" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="13" stroke-linecap="round"/>
+        <path d="M118 522C236 478 356 486 478 516C582 542 676 552 806 546" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="11" stroke-linecap="round"/>
+        <path d="M132 648C236 612 356 614 478 642C584 668 680 678 810 668" stroke="#FFFFFF" stroke-opacity="0.075" stroke-width="14" stroke-linecap="round"/>
+        <path d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770" stroke="#1B4D6A" stroke-opacity="0.26" stroke-width="24" stroke-linecap="round"/>
+        <path d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554" stroke="#9CEBE1" stroke-opacity="0.1" stroke-width="24" stroke-linecap="round"/>
+
+        <circle cx="640" cy="430" r="18" fill="#FFF2E2" fill-opacity="0.14"/>
+        <circle cx="332" cy="414" r="14" fill="#FFF2E2" fill-opacity="0.08"/>
+        <circle cx="596" cy="570" r="20" fill="#FFF2E2" fill-opacity="0.1"/>
+        <circle cx="370" cy="804" r="16" fill="#FFF2E2" fill-opacity="0.05"/>
+      </g>
+
+      <circle cx="512" cy="512" r="344" fill="url(#polar-sheen-gradient-planet-shadow)"/>
+      <g filter="url(#polar-sheen-gradient-soft-blur-28)">
+        <ellipse cx="644" cy="340" rx="154" ry="106" fill="#F4FFFF" fill-opacity="0.28"/>
+      </g>
+      <circle cx="512" cy="512" r="344" fill="url(#polar-sheen-gradient-planet-atmosphere)"/>
+      <circle cx="512" cy="512" r="344" fill="url(#polar-sheen-gradient-planet-highlight)"/>
+      <circle cx="512" cy="512" r="344" fill="none" stroke="#E7FFFC" stroke-opacity="0.16" stroke-width="1.4"/>
+    </g>
+  
+
+        <circle cx="956" cy="884" r="12" fill="#F1FDFF"/><circle cx="998" cy="884" r="12" fill="#7FDBE6"/><circle cx="1040" cy="884" r="12" fill="#5BA2F7"/><circle cx="1082" cy="884" r="12" fill="#0A2234"/>
+      </g>
+    
+</svg>
