@@ -14,8 +14,17 @@ These are two standalone visual concepts for Curyo, created as review artifacts 
    Softer ambient gradients, a larger color-washed orb, and a calmer Discover surface with cleaner signal chips and rating modules.
    Preview export: `soft-orb-discover.png`
 
+3. `planet-flare-landing.svg`
+   Refined SpaceFox-inspired landing page mock-up using the current Curyo hero and "How it Works" structure.
+   Preview export: `planet-flare-landing.png`
+
+4. `planet-flare-discover.svg`
+   Refined SpaceFox-inspired Discover page mock-up using the current voting layout, filter bar, signal card, and queue.
+   Preview export: `planet-flare-discover.png`
+
 ## Notes
 
 - Both concepts keep the current "signal planet" idea, but push it further as the main visual anchor.
+- The refined `planet-flare-*` versions are closer to the current product layouts and add a more three-dimensional orb, fire-like orbit, and faint containment rings.
 - These are mock-ups only.
 - The live app was reverted separately and is not using these designs.

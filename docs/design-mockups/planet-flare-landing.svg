@@ -1,0 +1,161 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="landing-bg" x1="100" y1="74" x2="1476" y2="944" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B0D12"/>
+      <stop offset="0.58" stop-color="#10131C"/>
+      <stop offset="1" stop-color="#0A0E16"/>
+    </linearGradient>
+    <radialGradient id="landing-left-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(312 252) rotate(54.351) scale(332 410)">
+      <stop stop-color="#1D2943" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#1D2943" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="landing-bottom-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1118 844) rotate(159.47) scale(468 220)">
+      <stop stop-color="#FF7A47" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#FF7A47" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="landing-card-shadow" x="120" y="511" width="1052" height="336" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+    <filter id="landing-orbit-blur" x="758" y="394" width="620" height="426" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
+    <filter id="landing-orbit-soft" x="790" y="432" width="566" height="354" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <filter id="planet-highlight-blur" x="886" y="104" width="560" height="412" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+
+    <clipPath id="landing-planet-clip">
+      <circle cx="1104" cy="452" r="324"/>
+    </clipPath>
+
+    <radialGradient id="planet-body" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1180 344) rotate(130.679) scale(470 458)">
+      <stop stop-color="#FFD08F"/>
+      <stop offset="0.18" stop-color="#FFAE72"/>
+      <stop offset="0.36" stop-color="#EF6F71"/>
+      <stop offset="0.56" stop-color="#7E72E8"/>
+      <stop offset="0.75" stop-color="#2C86D8"/>
+      <stop offset="1" stop-color="#062A39"/>
+    </radialGradient>
+    <radialGradient id="planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(982 618) rotate(-33.988) scale(332 214)">
+      <stop stop-color="#0B1322" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#0B1322" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1238 258) rotate(132.044) scale(250 178)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.62"/>
+      <stop offset="0.44" stop-color="#FFFFFF" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="orbit-fire" x1="826" y1="590" x2="1328" y2="742" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7549"/>
+      <stop offset="0.34" stop-color="#FFB56B"/>
+      <stop offset="0.62" stop-color="#FFE09B"/>
+      <stop offset="1" stop-color="#FF6C51"/>
+    </linearGradient>
+    <linearGradient id="orbit-hot-core" x1="840" y1="598" x2="1316" y2="736" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD7A2"/>
+      <stop offset="0.5" stop-color="#FFF0D2"/>
+      <stop offset="1" stop-color="#FFC29A"/>
+    </linearGradient>
+    <radialGradient id="metric-ring-fill" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(300 706) rotate(90) scale(116)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#05060A"/>
+  <rect x="52" y="40" width="1496" height="900" rx="36" fill="url(#landing-bg)"/>
+  <rect x="52" y="40" width="1496" height="900" rx="36" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+  <rect width="1600" height="1000" fill="url(#landing-left-glow)"/>
+  <rect width="1600" height="1000" fill="url(#landing-bottom-glow)"/>
+
+  <circle cx="1104" cy="452" r="396" stroke="rgba(255,255,255,0.04)" stroke-width="2"/>
+  <circle cx="1104" cy="452" r="344" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  <circle cx="1104" cy="452" r="370" stroke="rgba(25,28,36,0.88)" stroke-width="26"/>
+
+  <circle cx="1104" cy="452" r="324" fill="url(#planet-body)"/>
+  <g clip-path="url(#landing-planet-clip)">
+    <ellipse cx="978" cy="304" rx="186" ry="144" fill="#3DA0EC" fill-opacity="0.56"/>
+    <ellipse cx="1164" cy="250" rx="214" ry="148" fill="#F06A6D" fill-opacity="0.42"/>
+    <ellipse cx="1214" cy="362" rx="202" ry="132" fill="#FFD27D" fill-opacity="0.4"/>
+    <ellipse cx="1142" cy="544" rx="286" ry="138" fill="#0CC49E" fill-opacity="0.34"/>
+    <ellipse cx="978" cy="560" rx="254" ry="174" fill="#0F243A" fill-opacity="0.56"/>
+    <path d="M788 420C872 378 946 382 1030 406C1092 424 1170 446 1274 432C1356 420 1408 392 1440 370V454C1384 476 1328 488 1262 494C1162 504 1074 478 998 462C904 442 826 446 760 482L788 420Z" fill="#F47B57" fill-opacity="0.2"/>
+    <path d="M792 540C870 496 950 492 1032 520C1108 546 1182 582 1282 584C1366 586 1414 560 1442 538V650C1370 680 1280 690 1180 676C1094 664 1024 622 936 608C862 596 798 610 744 648L792 540Z" fill="#13273E" fill-opacity="0.42"/>
+    <path d="M858 248C942 196 1024 204 1112 242C1190 276 1262 298 1368 294" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="18" stroke-linecap="round"/>
+    <path d="M848 334C932 294 1028 304 1118 336C1202 366 1278 386 1364 382" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="14" stroke-linecap="round"/>
+    <path d="M838 598C904 564 980 562 1068 586C1152 608 1228 626 1318 612" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="1180" cy="506" r="11" fill="rgba(255,255,255,0.08)"/>
+    <circle cx="1022" cy="386" r="7" fill="rgba(255,255,255,0.06)"/>
+    <circle cx="1244" cy="332" r="8" fill="rgba(255,255,255,0.08)"/>
+    <circle cx="1098" cy="622" r="9" fill="rgba(255,255,255,0.05)"/>
+  </g>
+  <circle cx="1104" cy="452" r="324" fill="url(#planet-shadow)"/>
+  <g filter="url(#planet-highlight-blur)">
+    <ellipse cx="1148" cy="274" rx="138" ry="94" fill="#FFF1D3" fill-opacity="0.42"/>
+  </g>
+  <circle cx="1104" cy="452" r="324" fill="url(#planet-rim)"/>
+
+  <g filter="url(#landing-orbit-blur)">
+    <path d="M840 598C944 516 1132 504 1322 706" stroke="#FF7149" stroke-opacity="0.44" stroke-width="34" stroke-linecap="round"/>
+  </g>
+  <g filter="url(#landing-orbit-soft)">
+    <path d="M836 600C944 516 1134 504 1324 706" stroke="url(#orbit-fire)" stroke-width="12" stroke-linecap="round"/>
+  </g>
+  <path d="M836 600C944 516 1134 504 1324 706" stroke="url(#orbit-fire)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M848 604C948 528 1130 520 1310 696" stroke="url(#orbit-hot-core)" stroke-width="2.5" stroke-linecap="round"/>
+  <g opacity="0.8">
+    <ellipse cx="866" cy="612" rx="22" ry="10" fill="#FF8D5F"/>
+    <ellipse cx="914" cy="578" rx="26" ry="12" fill="#FFA56F" fill-opacity="0.76"/>
+    <ellipse cx="1262" cy="656" rx="20" ry="9" fill="#FF8A5A" fill-opacity="0.78"/>
+    <ellipse cx="1306" cy="690" rx="14" ry="7" fill="#FFD09C" fill-opacity="0.58"/>
+  </g>
+
+  <text x="148" y="228" fill="rgba(255,255,255,0.46)" font-size="24" font-family="Arial, Helvetica, sans-serif">Quality Signals Backed by Human Reputation</text>
+  <text x="148" y="324" fill="white" font-size="112" font-weight="700" font-family="Arial, Helvetica, sans-serif" letter-spacing="2">CURYO</text>
+  <text x="148" y="382" fill="rgba(255,255,255,0.78)" font-size="34" font-family="Arial, Helvetica, sans-serif">Find the clearest signal for what</text>
+  <text x="148" y="426" fill="rgba(255,255,255,0.78)" font-size="34" font-family="Arial, Helvetica, sans-serif">deserves attention.</text>
+
+  <rect x="148" y="454" width="150" height="56" rx="18" fill="white"/>
+  <text x="193" y="491" fill="#0B0D12" font-size="24" font-weight="700" font-family="Arial, Helvetica, sans-serif">Discover</text>
+  <rect x="314" y="454" width="160" height="56" rx="18" fill="#21242C"/>
+  <rect x="314" y="454" width="160" height="56" rx="18" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <text x="355" y="491" fill="white" font-size="24" font-weight="600" font-family="Arial, Helvetica, sans-serif">Learn More</text>
+
+  <g filter="url(#landing-card-shadow)">
+    <rect x="132" y="540" width="1010" height="246" rx="28" fill="rgba(7,8,14,0.78)"/>
+    <rect x="132" y="540" width="1010" height="246" rx="28" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  </g>
+  <text x="168" y="594" fill="rgba(255,255,255,0.44)" font-size="22" font-family="Arial, Helvetica, sans-serif">How it Works</text>
+  <text x="168" y="634" fill="white" font-size="28" font-weight="700" font-family="Arial, Helvetica, sans-serif">Verified humans stake on content to create public ratings.</text>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="166" y="662" width="286" height="92" rx="22" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+    <circle cx="206" cy="708" r="16" fill="#FFC43D"/>
+    <text x="236" y="700" fill="white" font-size="22" font-weight="700">Verify Humanity</text>
+    <text x="236" y="729" fill="rgba(255,255,255,0.56)" font-size="16">One privacy-preserving voter ID</text>
+    <text x="236" y="749" fill="rgba(255,255,255,0.56)" font-size="16">per human.</text>
+
+    <rect x="478" y="662" width="286" height="92" rx="22" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+    <circle cx="518" cy="708" r="16" fill="#359EEE"/>
+    <text x="548" y="700" fill="white" font-size="22" font-weight="700">Blind Vote with Stake</text>
+    <text x="548" y="729" fill="rgba(255,255,255,0.56)" font-size="16">Independent judgment before</text>
+    <text x="548" y="749" fill="rgba(255,255,255,0.56)" font-size="16">the reveal phase.</text>
+
+    <rect x="790" y="662" width="320" height="92" rx="22" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+    <circle cx="830" cy="708" r="16" fill="#03CEA4"/>
+    <text x="860" y="700" fill="white" font-size="22" font-weight="700">Reveal and Settle</text>
+    <text x="860" y="729" fill="rgba(255,255,255,0.56)" font-size="16">The public rating updates from</text>
+    <text x="860" y="749" fill="rgba(255,255,255,0.56)" font-size="16">the final stake signal.</text>
+  </g>
+
+  <circle cx="298" cy="848" r="112" fill="url(#metric-ring-fill)"/>
+  <circle cx="298" cy="848" r="78" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>
+  <circle cx="298" cy="848" r="78" stroke="url(#orbit-fire)" stroke-width="5" stroke-dasharray="318 170" stroke-linecap="round" transform="rotate(-100 298 848)"/>
+  <circle cx="298" cy="848" r="124" stroke="rgba(255,255,255,0.05)" stroke-width="2"/>
+  <text x="256" y="862" fill="white" font-size="54" font-weight="700" font-family="Arial, Helvetica, sans-serif">84%</text>
+  <text x="438" y="810" fill="rgba(255,255,255,0.42)" font-size="24" font-family="Arial, Helvetica, sans-serif">Current rating</text>
+  <text x="438" y="870" fill="white" font-size="56" font-weight="700" font-family="Arial, Helvetica, sans-serif">Quality Signal</text>
+  <text x="438" y="914" fill="rgba(255,255,255,0.56)" font-size="24" font-family="Arial, Helvetica, sans-serif">42 verified humans backing this round</text>
+</svg>
