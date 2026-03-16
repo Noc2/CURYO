@@ -32,7 +32,7 @@
       <stop offset="0.48" stop-color="#0D060A" stop-opacity="0.72"/>
       <stop offset="1" stop-color="#0D060A" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="flare-head" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(878.5 736.9) rotate(142) scale(58 44)">
+    <radialGradient id="flare-head" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(878.5 736.9) scale(34 34)">
       <stop stop-color="#FFF7EB"/>
       <stop offset="0.28" stop-color="#FFD7A0"/>
       <stop offset="0.64" stop-color="#FF8E4F"/>
@@ -109,8 +109,8 @@
   <circle cx="512" cy="512" r="430" stroke="url(#flare-stream)" stroke-width="8.5" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
   <circle cx="512" cy="512" r="430" stroke="url(#flare-core)" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="732 1970" transform="rotate(-66 512 512)"/>
   <circle cx="878.5" cy="736.9" r="22" fill="#FF8E58" fill-opacity="0.14"/>
+  <circle cx="878.5" cy="736.9" r="28" fill="url(#flare-head)"/>
   <circle cx="878.5" cy="736.9" r="11" fill="#FFF8EF"/>
-  <ellipse cx="878.5" cy="736.9" rx="30" ry="22" fill="url(#flare-head)"/>
 
   <g filter="url(#soft-blur-16)">
     <ellipse cx="504" cy="522" rx="354" ry="366" fill="#000000" fill-opacity="0.26"/>
@@ -136,7 +136,7 @@
       width="716"
       height="716"
       preserveAspectRatio="xMidYMid slice"
-      opacity="0.28"
+      opacity="0.34"
       filter="url(#texture-grade)"
     />
 
