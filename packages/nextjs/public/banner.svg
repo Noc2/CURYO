@@ -51,7 +51,6 @@
   <circle cx="256" cy="256" r="174" fill="none" stroke="url(#banner-outer-ring)" stroke-width="8" stroke-opacity="0.82" />
   <circle cx="256" cy="256" r="144" fill="none" stroke="url(#banner-middle-ring)" stroke-width="9" stroke-opacity="0.9" />
   <circle cx="256" cy="256" r="114" fill="none" stroke="url(#banner-inner-ring)" stroke-width="11" stroke-opacity="0.98" />
-  <circle cx="371" cy="334" r="4.2" fill="#F8FAFF" fill-opacity="0.94" />
   <circle cx="256" cy="256" r="118" fill="url(#banner-orb-glow)" />
   <circle cx="256" cy="256" r="64" fill="url(#banner-orb)" />
   <circle cx="256" cy="256" r="52" fill="url(#banner-gloss)" />
