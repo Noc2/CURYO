@@ -34,12 +34,7 @@ import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
-import {
-  DISCOVER_FEED_MODE_OPTIONS,
-  type DiscoverFeedMode,
-  getDiscoverFeedModeDescription,
-  sortDiscoverFeed,
-} from "~~/lib/vote/feedModes";
+import { DISCOVER_FEED_MODE_OPTIONS, type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
@@ -1152,11 +1147,8 @@ const HomeInner = () => {
       </div>
 
       {!isSearchMode && scope === "all" ? (
-        <div className="mb-4 flex shrink-0 flex-col gap-2 xl:mb-3" data-disable-queue-wheel="true">
+        <div className="mb-4 flex shrink-0 xl:mb-3" data-disable-queue-wheel="true">
           <FeedModeToggle value={feedMode} options={DISCOVER_FEED_MODE_OPTIONS} onChange={setFeedMode} />
-          {feedMode !== "for_you" ? (
-            <p className="pl-1 text-sm text-base-content/55">{getDiscoverFeedModeDescription(feedMode)}</p>
-          ) : null}
         </div>
       ) : null}
 
