@@ -1,6 +1,6 @@
 "use client";
 
-import { CuryoLighthouseMark } from "~~/components/brand/CuryoLighthouseMark";
+import { CuryoPlanetMark } from "~~/components/brand/CuryoPlanetMark";
 
 export function CuryoAnimation() {
   const ambientStars = [
@@ -15,7 +15,7 @@ export function CuryoAnimation() {
   return (
     <div className="mx-auto flex h-[420px] w-full max-w-5xl items-center justify-center sm:h-[560px] lg:h-[620px]">
       <div className="relative flex h-[24rem] w-[22rem] items-center justify-center sm:h-[31rem] sm:w-[26rem] lg:h-[36rem] lg:w-[30rem]">
-        <div className="absolute inset-[10%] rounded-full bg-[radial-gradient(circle,_rgba(94,97,130,0.16),_rgba(8,13,29,0)_68%)] blur-3xl" />
+        <div className="absolute inset-[7%] rounded-full bg-[radial-gradient(circle,_rgba(250,160,112,0.14),_rgba(104,142,255,0.08)_44%,_rgba(8,13,29,0)_72%)] blur-3xl" />
 
         {ambientStars.map(star => (
           <span
@@ -32,19 +32,14 @@ export function CuryoAnimation() {
           />
         ))}
 
-        <div className="curyo-animation__logo relative h-[14rem] w-[14rem] sm:h-[18rem] sm:w-[18rem] lg:h-[20rem] lg:w-[20rem]">
-          <CuryoLighthouseMark
-            className="h-full w-full"
-            title="Curyo logo"
-            animationPreset="sequence"
-            showBeaconDot={false}
-          />
+        <div className="curyo-animation__logo relative h-[15rem] w-[15rem] sm:h-[20rem] sm:w-[20rem] lg:h-[23rem] lg:w-[23rem]">
+          <CuryoPlanetMark className="h-full w-full" title="Curyo logo" animationPreset="orbit" />
         </div>
       </div>
 
       <style jsx>{`
         .curyo-animation__logo {
-          filter: drop-shadow(0 0 42px rgba(239, 71, 111, 0.12)) drop-shadow(0 0 58px rgba(53, 158, 238, 0.1));
+          filter: drop-shadow(0 0 54px rgba(255, 140, 96, 0.16)) drop-shadow(0 0 64px rgba(64, 160, 241, 0.12));
         }
 
         .curyo-animation__star {
