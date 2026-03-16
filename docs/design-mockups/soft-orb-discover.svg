@@ -1,0 +1,137 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgWashLeft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(216 640) rotate(13.259) scale(522 438)">
+      <stop stop-color="#FF7B62" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FF7B62" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bgWashRight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1284 192) rotate(131.355) scale(514 406)">
+      <stop stop-color="#7F89FF" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#7F89FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bgWashBottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1136 886) rotate(159.113) scale(560 230)">
+      <stop stop-color="#F4B76B" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#F4B76B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbCore" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(130 714) rotate(-24.537) scale(386 386)">
+      <stop stop-color="#F9D48D"/>
+      <stop offset="0.26" stop-color="#F39677"/>
+      <stop offset="0.53" stop-color="#E2728C"/>
+      <stop offset="0.77" stop-color="#C8D6FF"/>
+      <stop offset="1" stop-color="#8BA2FF"/>
+    </radialGradient>
+    <linearGradient id="shell" x1="471" y1="251" x2="1447" y2="913" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#232322"/>
+      <stop offset="1" stop-color="#101114"/>
+    </linearGradient>
+    <linearGradient id="scoreArc" x1="965" y1="361" x2="1114" y2="487" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0C078"/>
+      <stop offset="0.5" stop-color="#E68AA1"/>
+      <stop offset="1" stop-color="#8CB0FF"/>
+    </linearGradient>
+    <filter id="blurOrb" x="-286" y="289" width="878" height="878" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="dropShell" x="420" y="195" width="1090" height="712" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="34" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#181615"/>
+  <rect width="1600" height="1000" fill="url(#bgWashLeft)"/>
+  <rect width="1600" height="1000" fill="url(#bgWashRight)"/>
+  <rect width="1600" height="1000" fill="url(#bgWashBottom)"/>
+
+  <g filter="url(#blurOrb)">
+    <circle cx="130" cy="714" r="286" fill="url(#orbCore)"/>
+  </g>
+  <circle cx="130" cy="714" r="286" fill="url(#orbCore)"/>
+
+  <g filter="url(#dropShell)">
+    <rect x="460" y="236" width="988" height="620" rx="28" fill="url(#shell)"/>
+    <rect x="460" y="236" width="988" height="620" rx="28" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  </g>
+
+  <rect x="550" y="132" width="350" height="90" rx="20" fill="rgba(33,33,35,0.92)"/>
+  <rect x="550" y="132" width="350" height="90" rx="20" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="20">
+    <rect x="580" y="156" width="104" height="30" rx="10" fill="#222224"/>
+    <circle cx="602" cy="171" r="6" fill="#6F68DF"/>
+    <text x="620" y="178" fill="white">Calm</text>
+    <rect x="696" y="156" width="112" height="30" rx="10" fill="#222224"/>
+    <circle cx="718" cy="171" r="6" fill="#BE3BE7"/>
+    <text x="736" y="178" fill="white">Forceful</text>
+    <rect x="820" y="156" width="108" height="30" rx="10" fill="#222224"/>
+    <circle cx="842" cy="171" r="6" fill="#F2A96A"/>
+    <text x="860" y="178" fill="white">Excited</text>
+    <rect x="580" y="191" width="98" height="30" rx="10" fill="#222224"/>
+    <circle cx="602" cy="206" r="6" fill="#D92B14"/>
+    <text x="620" y="213" fill="white">Rage</text>
+    <rect x="690" y="191" width="88" height="30" rx="10" fill="#222224"/>
+    <circle cx="712" cy="206" r="6" fill="#E3BE32"/>
+    <text x="730" y="213" fill="white">Joy</text>
+    <rect x="790" y="191" width="158" height="30" rx="10" fill="#222224"/>
+    <circle cx="812" cy="206" r="6" fill="#A6F0F1"/>
+    <text x="830" y="213" fill="white">Apprehensive</text>
+  </g>
+
+  <circle cx="507" cy="281" r="10" fill="white"/>
+  <text x="527" y="292" fill="white" font-size="30" font-weight="700" font-family="Arial, Helvetica, sans-serif">CURYO</text>
+
+  <rect x="596" y="348" width="204" height="188" rx="10" fill="#F4F4F5"/>
+  <circle cx="698" cy="442" r="62" fill="#FFFFFF"/>
+  <circle cx="698" cy="442" r="48" fill="url(#orbCore)"/>
+  <circle cx="698" cy="442" r="74" stroke="rgba(0,0,0,0.08)" stroke-width="3"/>
+
+  <text x="842" y="387" fill="white" font-size="32" font-weight="700" font-family="Arial, Helvetica, sans-serif">Discover human-backed signals</text>
+  <text x="842" y="432" fill="rgba(255,255,255,0.54)" font-size="21" font-family="Arial, Helvetica, sans-serif">A calmer Discover page with a large signal orb, softer background wash,</text>
+  <text x="842" y="461" fill="rgba(255,255,255,0.54)" font-size="21" font-family="Arial, Helvetica, sans-serif">and cleaner modules for rating, curator trust, and live phase context.</text>
+
+  <text x="842" y="512" fill="rgba(255,255,255,0.44)" font-size="17" font-family="Arial, Helvetica, sans-serif">TOP SIGNALS</text>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="18">
+    <rect x="842" y="528" width="112" height="30" rx="10" fill="#1C1C1E"/>
+    <circle cx="862" cy="543" r="5" fill="#6F68DF"/>
+    <text x="878" y="549" fill="white">Balanced</text>
+    <rect x="966" y="528" width="110" height="30" rx="10" fill="#1C1C1E"/>
+    <circle cx="986" cy="543" r="5" fill="#BE3BE7"/>
+    <text x="1002" y="549" fill="white">Debated</text>
+    <rect x="1088" y="528" width="104" height="30" rx="10" fill="#1C1C1E"/>
+    <circle cx="1108" cy="543" r="5" fill="#F2A96A"/>
+    <text x="1124" y="549" fill="white">Settling</text>
+    <rect x="1204" y="528" width="86" height="30" rx="10" fill="#1C1C1E"/>
+    <circle cx="1224" cy="543" r="5" fill="#A6F0F1"/>
+    <text x="1240" y="549" fill="white">Fresh</text>
+  </g>
+
+  <rect x="594" y="596" width="716" height="188" rx="18" fill="rgba(10,10,13,0.42)"/>
+  <rect x="594" y="596" width="716" height="188" rx="18" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+
+  <text x="628" y="646" fill="white" font-size="22" font-family="Arial, Helvetica, sans-serif">Trending Signals</text>
+  <text x="930" y="646" fill="rgba(255,255,255,0.42)" font-size="18" font-family="Arial, Helvetica, sans-serif">Consensus</text>
+  <text x="1095" y="646" fill="rgba(255,255,255,0.42)" font-size="18" font-family="Arial, Helvetica, sans-serif">Activity</text>
+  <text x="1222" y="646" fill="rgba(255,255,255,0.42)" font-size="18" font-family="Arial, Helvetica, sans-serif">Rating</text>
+  <line x1="624" y1="668" x2="1278" y2="668" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="628" y="694" width="42" height="42" rx="10" fill="url(#orbCore)"/>
+    <text x="686" y="722" fill="white" font-size="26">Indie film review</text>
+    <text x="930" y="722" fill="rgba(255,255,255,0.62)" font-size="22">Wide support</text>
+    <text x="1095" y="722" fill="rgba(255,255,255,0.62)" font-size="22">128 humans</text>
+    <text x="1222" y="722" fill="white" font-size="26">84</text>
+
+    <rect x="628" y="748" width="42" height="42" rx="10" fill="#8DC9E8"/>
+    <text x="686" y="776" fill="white" font-size="26">Tool benchmark</text>
+    <text x="930" y="776" fill="rgba(255,255,255,0.62)" font-size="22">Contested</text>
+    <text x="1095" y="776" fill="rgba(255,255,255,0.62)" font-size="22">72 humans</text>
+    <text x="1222" y="776" fill="white" font-size="26">67</text>
+  </g>
+
+  <rect x="1326" y="596" width="92" height="188" rx="18" fill="rgba(10,10,13,0.36)"/>
+  <rect x="1326" y="596" width="92" height="188" rx="18" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
+  <circle cx="1372" cy="658" r="34" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+  <circle cx="1372" cy="658" r="34" stroke="url(#scoreArc)" stroke-width="5" stroke-dasharray="170 44" transform="rotate(-96 1372 658)"/>
+  <text x="1350" y="667" fill="white" font-size="24" font-weight="700" font-family="Arial, Helvetica, sans-serif">84</text>
+  <text x="1342" y="718" fill="rgba(255,255,255,0.48)" font-size="16" font-family="Arial, Helvetica, sans-serif">rating</text>
+  <circle cx="1372" cy="750" r="20" fill="rgba(255,255,255,0.04)"/>
+  <path d="M1361 750C1365 743 1372 740 1380 741" stroke="url(#scoreArc)" stroke-width="3" stroke-linecap="round"/>
+  <text x="1344" y="785" fill="rgba(255,255,255,0.48)" font-size="16" font-family="Arial, Helvetica, sans-serif">orbit</text>
+</svg>
