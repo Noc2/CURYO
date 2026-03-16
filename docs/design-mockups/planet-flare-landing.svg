@@ -5,6 +5,11 @@
       <stop offset="0.58" stop-color="#10141D"/>
       <stop offset="1" stop-color="#0A0E15"/>
     </linearGradient>
+    <linearGradient id="landing-inner-wash" x1="94" y1="72" x2="1500" y2="930" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B0F16" stop-opacity="0.86"/>
+      <stop offset="0.56" stop-color="#101521" stop-opacity="0.44"/>
+      <stop offset="1" stop-color="#0B0E16" stop-opacity="0.18"/>
+    </linearGradient>
     <radialGradient id="landing-left-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(260 214) rotate(50.281) scale(388 448)">
       <stop stop-color="#294577" stop-opacity="0.24"/>
       <stop offset="1" stop-color="#294577" stop-opacity="0"/>
@@ -16,6 +21,18 @@
     <radialGradient id="landing-right-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1320 220) rotate(143.104) scale(408 330)">
       <stop stop-color="#F66C6F" stop-opacity="0.16"/>
       <stop offset="1" stop-color="#F66C6F" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="landing-shell-left-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(364 244) rotate(56.624) scale(356 444)">
+      <stop stop-color="#1A2A4A" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#1A2A4A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="landing-shell-bottom-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1188 864) rotate(158.683) scale(468 214)">
+      <stop stop-color="#FF7A47" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#FF7A47" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="landing-shell-right-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1298 208) rotate(144.192) scale(366 286)">
+      <stop stop-color="#D46A79" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#D46A79" stop-opacity="0"/>
     </radialGradient>
 
     <filter id="shell-shadow" x="28" y="18" width="1544" height="948" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
@@ -42,6 +59,9 @@
 
     <clipPath id="planet-clip">
       <circle cx="1122" cy="430" r="318"/>
+    </clipPath>
+    <clipPath id="shell-clip">
+      <rect x="52" y="40" width="1496" height="900" rx="36"/>
     </clipPath>
 
     <radialGradient id="planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1204 314) rotate(130.79) scale(460 448)">
@@ -88,6 +108,12 @@
   <g filter="url(#shell-shadow)">
     <rect x="52" y="40" width="1496" height="900" rx="36" fill="url(#landing-shell)"/>
     <rect x="52" y="40" width="1496" height="900" rx="36" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+  </g>
+  <g clip-path="url(#shell-clip)">
+    <rect x="52" y="40" width="1496" height="900" fill="url(#landing-inner-wash)"/>
+    <rect x="52" y="40" width="1496" height="900" fill="url(#landing-shell-left-glow)"/>
+    <rect x="52" y="40" width="1496" height="900" fill="url(#landing-shell-right-glow)"/>
+    <rect x="52" y="40" width="1496" height="900" fill="url(#landing-shell-bottom-glow)"/>
   </g>
 
   <circle cx="1122" cy="430" r="392" stroke="#FFFFFF" stroke-opacity="0.035" stroke-width="2"/>
