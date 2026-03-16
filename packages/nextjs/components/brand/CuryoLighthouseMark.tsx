@@ -4,13 +4,21 @@ interface CuryoLighthouseMarkProps {
   className?: string;
   title?: string;
   animated?: boolean;
+  animationPreset?: "breathe" | "sequence";
+  showBeaconDot?: boolean;
 }
 
 /**
  * Canonical Curyo Lighthouse brand mark.
  * This is a fixed logo primitive, separate from the data-driven avatar system.
  */
-export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = false }: CuryoLighthouseMarkProps) {
+export function CuryoLighthouseMark({
+  className = "h-8 w-8",
+  title,
+  animated = false,
+  animationPreset,
+  showBeaconDot = true,
+}: CuryoLighthouseMarkProps) {
   const id = useId().replace(/:/g, "");
   const ambientId = `${id}-ambient`;
   const orbGlowId = `${id}-orb-glow`;
@@ -19,11 +27,13 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
   const innerRingId = `${id}-inner-ring`;
   const middleRingId = `${id}-middle-ring`;
   const outerRingId = `${id}-outer-ring`;
+  const resolvedPreset = animationPreset ?? (animated ? "breathe" : undefined);
+  const animationClass = resolvedPreset ? `curyo-lighthouse-mark--${resolvedPreset}` : "";
 
   return (
     <>
       <svg
-        className={`${className} ${animated ? "curyo-lighthouse-mark--animated" : ""}`}
+        className={[className, animationClass].filter(Boolean).join(" ")}
         viewBox="0 0 512 512"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -82,12 +92,13 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
           </linearGradient>
         </defs>
 
-        <g className={animated ? "curyo-lighthouse-mark__ambient" : undefined}>
+        <g className={resolvedPreset ? "curyo-lighthouse-mark__ambient" : undefined}>
           <circle cx="256" cy="256" r="176" fill={`url(#${ambientId})`} />
         </g>
 
-        <g className={animated ? "curyo-lighthouse-mark__rings" : undefined}>
+        <g className={resolvedPreset ? "curyo-lighthouse-mark__rings" : undefined}>
           <circle
+            className={resolvedPreset ? "curyo-lighthouse-mark__ring curyo-lighthouse-mark__ring--inner" : undefined}
             cx="256"
             cy="256"
             r="114"
@@ -97,6 +108,7 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
             strokeOpacity="0.98"
           />
           <circle
+            className={resolvedPreset ? "curyo-lighthouse-mark__ring curyo-lighthouse-mark__ring--middle" : undefined}
             cx="256"
             cy="256"
             r="144"
@@ -106,6 +118,7 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
             strokeOpacity="0.9"
           />
           <circle
+            className={resolvedPreset ? "curyo-lighthouse-mark__ring curyo-lighthouse-mark__ring--outer" : undefined}
             cx="256"
             cy="256"
             r="174"
@@ -114,27 +127,29 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
             strokeWidth="8"
             strokeOpacity="0.8"
           />
-          <circle
-            className={animated ? "curyo-lighthouse-mark__dot" : undefined}
-            cx="371"
-            cy="334"
-            r="4.2"
-            fill="#F8FAFF"
-            fillOpacity="0.94"
-          />
+          {showBeaconDot ? (
+            <circle
+              className={resolvedPreset ? "curyo-lighthouse-mark__dot" : undefined}
+              cx="371"
+              cy="334"
+              r="4.2"
+              fill="#F8FAFF"
+              fillOpacity="0.94"
+            />
+          ) : null}
         </g>
 
-        <g className={animated ? "curyo-lighthouse-mark__core" : undefined}>
+        <g className={resolvedPreset ? "curyo-lighthouse-mark__core" : undefined}>
           <circle cx="256" cy="256" r="118" fill={`url(#${orbGlowId})`} />
           <circle
-            className={animated ? "curyo-lighthouse-mark__body" : undefined}
+            className={resolvedPreset ? "curyo-lighthouse-mark__body" : undefined}
             cx="256"
             cy="256"
             r="64"
             fill={`url(#${orbId})`}
           />
           <circle
-            className={animated ? "curyo-lighthouse-mark__gloss" : undefined}
+            className={resolvedPreset ? "curyo-lighthouse-mark__gloss" : undefined}
             cx="256"
             cy="256"
             r="52"
@@ -144,33 +159,69 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
       </svg>
 
       <style jsx>{`
-        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__ambient {
+        .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__ambient {
           animation: lighthouse-ambient-breathe 8s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
-        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__rings {
+        .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__rings {
           animation: lighthouse-rings-breathe 10s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
-        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__core {
+        .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__core {
           animation: lighthouse-core-float 7s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
-        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__body {
+        .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__body {
           animation: lighthouse-core-breathe 6.2s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
-        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__gloss {
+        .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__gloss {
           animation: lighthouse-gloss-shift 5.8s ease-in-out infinite;
           transform-origin: 256px 256px;
         }
 
-        .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__dot {
+        .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__dot {
           animation: lighthouse-dot-pulse 4.8s ease-in-out infinite;
+          transform-origin: 371px 334px;
+        }
+
+        .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ambient {
+          animation: lighthouse-sequence-ambient 5.2s ease-in-out infinite;
+          transform-origin: 256px 256px;
+        }
+
+        .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__core {
+          animation: lighthouse-sequence-core 5.2s ease-in-out infinite;
+          transform-origin: 256px 256px;
+        }
+
+        .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__gloss {
+          animation: lighthouse-sequence-gloss 5.2s ease-in-out infinite;
+          transform-origin: 256px 256px;
+        }
+
+        .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring {
+          transform-origin: 256px 256px;
+        }
+
+        .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring--inner {
+          animation: lighthouse-sequence-inner 5.2s ease-in-out infinite;
+        }
+
+        .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring--middle {
+          animation: lighthouse-sequence-middle 5.2s ease-in-out infinite;
+        }
+
+        .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring--outer {
+          animation: lighthouse-sequence-outer 5.2s ease-in-out infinite;
+        }
+
+        .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__dot {
+          animation: lighthouse-sequence-dot 5.2s ease-in-out infinite;
           transform-origin: 371px 334px;
         }
 
@@ -242,13 +293,124 @@ export function CuryoLighthouseMark({ className = "h-8 w-8", title, animated = f
           }
         }
 
+        @keyframes lighthouse-sequence-ambient {
+          0%,
+          100% {
+            opacity: 0.54;
+            transform: scale(0.97);
+          }
+          48% {
+            opacity: 1;
+            transform: scale(1.02);
+          }
+        }
+
+        @keyframes lighthouse-sequence-core {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          48% {
+            transform: scale(1.024);
+          }
+        }
+
+        @keyframes lighthouse-sequence-gloss {
+          0%,
+          100% {
+            opacity: 0.82;
+            transform: translate(-1px, 0px);
+          }
+          48% {
+            opacity: 1;
+            transform: translate(4px, -2px);
+          }
+        }
+
+        @keyframes lighthouse-sequence-inner {
+          0%,
+          12%,
+          92%,
+          100% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          18%,
+          54% {
+            opacity: 0.98;
+            transform: scale(1);
+          }
+          66% {
+            opacity: 0.08;
+            transform: scale(1.04);
+          }
+        }
+
+        @keyframes lighthouse-sequence-middle {
+          0%,
+          22%,
+          100% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          30%,
+          64% {
+            opacity: 0.92;
+            transform: scale(1);
+          }
+          76% {
+            opacity: 0.08;
+            transform: scale(1.03);
+          }
+        }
+
+        @keyframes lighthouse-sequence-outer {
+          0%,
+          34%,
+          100% {
+            opacity: 0;
+            transform: scale(0.92);
+          }
+          42%,
+          76% {
+            opacity: 0.84;
+            transform: scale(1);
+          }
+          88% {
+            opacity: 0.06;
+            transform: scale(1.02);
+          }
+        }
+
+        @keyframes lighthouse-sequence-dot {
+          0%,
+          22% {
+            opacity: 0.15;
+            transform: scale(0.72);
+          }
+          42%,
+          70% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+          100% {
+            opacity: 0.2;
+            transform: scale(0.8);
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__ambient,
-          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__rings,
-          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__core,
-          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__body,
-          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__gloss,
-          .curyo-lighthouse-mark--animated .curyo-lighthouse-mark__dot {
+          .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__ambient,
+          .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__rings,
+          .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__core,
+          .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__body,
+          .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__gloss,
+          .curyo-lighthouse-mark--breathe .curyo-lighthouse-mark__dot,
+          .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ambient,
+          .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__core,
+          .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__gloss,
+          .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__ring,
+          .curyo-lighthouse-mark--sequence .curyo-lighthouse-mark__dot {
             animation: none;
           }
         }

@@ -33,7 +33,12 @@ export function CuryoAnimation() {
         ))}
 
         <div className="curyo-animation__logo relative h-[14rem] w-[14rem] sm:h-[18rem] sm:w-[18rem] lg:h-[20rem] lg:w-[20rem]">
-          <CuryoLighthouseMark className="h-full w-full" title="Curyo logo" />
+          <CuryoLighthouseMark
+            className="h-full w-full"
+            title="Curyo logo"
+            animationPreset="sequence"
+            showBeaconDot={false}
+          />
         </div>
       </div>
 
