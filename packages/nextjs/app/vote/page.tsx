@@ -12,7 +12,6 @@ import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
-import { FeedModeToggle } from "~~/components/vote/FeedModeToggle";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
@@ -34,8 +33,9 @@ import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
-import { DISCOVER_FEED_MODE_OPTIONS, type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
+import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
+import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
@@ -54,7 +54,6 @@ const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 type SortOption = "for_you" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
 type SearchSortOption = Exclude<SortOption, "for_you">;
 type ScopeOption = "all" | "watched" | "my_votes" | "my_submissions" | "settling_soon" | "followed_curators";
-
 const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
   { value: "newest", label: "Newest" },
   { value: "oldest", label: "Oldest" },
@@ -93,15 +92,6 @@ const voteCardVariants: Variants = {
   }),
 };
 
-const SCOPE_OPTIONS: { value: ScopeOption; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "watched", label: "Watched" },
-  { value: "my_votes", label: "My Votes" },
-  { value: "my_submissions", label: "My Submissions" },
-  { value: "settling_soon", label: "Settling Soon" },
-  { value: "followed_curators", label: "Curators You Follow" },
-];
-
 const HomeInner = () => {
   const searchParams = useSearchParams();
   const searchQuery = searchParams?.get("q") ?? "";
@@ -112,8 +102,7 @@ const HomeInner = () => {
   const { openConnectModal } = useConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
   const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
-  const [scope, setScope] = useState<ScopeOption>("all");
-  const [feedMode, setFeedMode] = useState<DiscoverFeedMode>("for_you");
+  const [view, setView] = useState<VoteView>("for_you");
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
@@ -142,11 +131,17 @@ const HomeInner = () => {
     watchedItems,
     followedItems,
   });
+  const hasWallet = Boolean(address);
+  const viewGroups = useMemo(() => getVoteViewGroups(hasWallet), [hasWallet]);
+  const activeScope: ScopeOption = isActivityViewOption(view) ? view : "all";
+  const activeFeedMode: DiscoverFeedMode = isActivityViewOption(view) ? "for_you" : view;
 
   const feedRequestLimit = contentParam
     ? undefined
     : Math.max(
-        !isSearchMode && scope === "all" && feedMode !== "for_you" ? FEED_PAGE_SIZE * 4 : FEED_PAGE_SIZE * 2,
+        !isSearchMode && activeScope === "all" && activeFeedMode !== "for_you"
+          ? FEED_PAGE_SIZE * 4
+          : FEED_PAGE_SIZE * 2,
         visibleCount + FEED_PREFETCH_BUFFER + 1,
       );
 
@@ -203,7 +198,7 @@ const HomeInner = () => {
   }, [activeCategory, categoryNameToId]);
 
   const scopedContentIds = useMemo(() => {
-    switch (scope) {
+    switch (activeScope) {
       case "watched":
         return watchedContentOrder;
       case "my_votes":
@@ -215,7 +210,7 @@ const HomeInner = () => {
       default:
         return undefined;
     }
-  }, [followedCuratorContentOrder, scope, settlingSoonContentOrder, votedContentOrder, watchedContentOrder]);
+  }, [activeScope, followedCuratorContentOrder, settlingSoonContentOrder, votedContentOrder, watchedContentOrder]);
 
   const feedContentIds = useMemo(() => {
     if (!scopedContentIds) return undefined;
@@ -234,7 +229,7 @@ const HomeInner = () => {
     limit: feedRequestLimit,
     searchQuery: searchQuery.trim() || undefined,
     sortBy: isSearchMode ? effectiveSearchSortBy : "newest",
-    submitter: scope === "my_submissions" ? address : undefined,
+    submitter: activeScope === "my_submissions" ? address : undefined,
   });
   const totalContent = scopedContentIds?.length ?? serverTotalContent;
   const hasMoreFeed = scopedContentIds ? feed.length < totalContent : serverHasMoreFeed;
@@ -308,23 +303,17 @@ const HomeInner = () => {
     [discoverSignals.followedSubmissions],
   );
   const scopeLoading =
-    (scope === "watched" && !!address && watchedLoading) ||
-    (scope === "my_votes" && !!address && votesLoading) ||
-    ((scope === "settling_soon" || scope === "followed_curators") && !!address && discoverSignalsLoading) ||
-    (scope === "followed_curators" && !!address && followedProfilesLoading);
+    (activeScope === "watched" && !!address && watchedLoading) ||
+    (activeScope === "my_votes" && !!address && votesLoading) ||
+    ((activeScope === "settling_soon" || activeScope === "followed_curators") && !!address && discoverSignalsLoading) ||
+    (activeScope === "followed_curators" && !!address && followedProfilesLoading);
   const normalizedAddress = address?.toLowerCase();
 
   useEffect(() => {
-    if (!address && scope !== "all") {
-      setScope("all");
+    if (!address && isActivityViewOption(view)) {
+      setView("for_you");
     }
-  }, [address, scope]);
-
-  useEffect(() => {
-    if (scope !== "all" && feedMode !== "for_you") {
-      setFeedMode("for_you");
-    }
-  }, [feedMode, scope]);
+  }, [address, view]);
 
   // Sync category selection with URL hash (e.g. /#books, /#board-games)
   const selectCategory = useCallback((name: string) => {
@@ -356,7 +345,7 @@ const HomeInner = () => {
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
   const { commitVote, isCommitting, error: voteError } = useRoundVote();
   const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
-  // Apply search, category filter, and scope before sorting
+  // Apply search, category filter, and the selected view before sorting
   const filteredFeed = useMemo(() => {
     let items = feed.filter(item => !isContentItemBlocked(item));
 
@@ -382,7 +371,7 @@ const HomeInner = () => {
       items = items.filter(item => item.tags.includes(activeCategory));
     }
 
-    switch (scope) {
+    switch (activeScope) {
       case "watched":
         items = items.filter(item => watchedContentIds.has(item.id.toString()));
         break;
@@ -408,7 +397,7 @@ const HomeInner = () => {
     searchQuery,
     activeCategory,
     activeCategoryId,
-    scope,
+    activeScope,
     watchedContentIds,
     votedContentIds,
     settlingSoonContentIds,
@@ -433,11 +422,11 @@ const HomeInner = () => {
       return items;
     }
 
-    if (scope === "all" && feedMode !== "for_you") {
-      return sortDiscoverFeed(items, feedMode, nowSeconds);
+    if (activeScope === "all" && activeFeedMode !== "for_you") {
+      return sortDiscoverFeed(items, activeFeedMode, nowSeconds);
     }
 
-    switch (scope) {
+    switch (activeScope) {
       case "watched":
         items.sort((a, b) => {
           const indexA = watchedOrderMap.get(a.id.toString()) ?? Number.MAX_SAFE_INTEGER;
@@ -486,14 +475,14 @@ const HomeInner = () => {
     return items;
   }, [
     filteredFeed,
-    feedMode,
+    activeFeedMode,
+    activeScope,
     isSearchMode,
     activeCategory,
     effectiveSearchSortBy,
     categoryScores,
     hasPreferences,
     nowSeconds,
-    scope,
     watchedOrderMap,
     voteOrderMap,
     settlingSoonOrderMap,
@@ -597,7 +586,7 @@ const HomeInner = () => {
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(FEED_PAGE_SIZE);
-  }, [searchQuery, activeCategory, scope, sortBy, feedMode]);
+  }, [searchQuery, activeCategory, view, sortBy]);
 
   useEffect(() => {
     if (!voteError?.includes("You already voted on this content within the last")) return;
@@ -971,9 +960,9 @@ const HomeInner = () => {
     [openConnectModal, toggleFollow],
   );
 
-  const handleScopeChange = useCallback(
-    async (nextScope: ScopeOption) => {
-      if (nextScope === "watched") {
+  const handleViewChange = useCallback(
+    async (nextView: VoteView) => {
+      if (nextView === "watched") {
         const result = await requestWatchReadAccess();
         if (!result.ok) {
           if (result.reason === "not_connected") {
@@ -988,12 +977,12 @@ const HomeInner = () => {
           return;
         }
 
-        setScope("watched");
+        setView("watched");
         return;
       }
 
-      if (nextScope !== "followed_curators") {
-        setScope(nextScope);
+      if (nextView !== "followed_curators") {
+        setView(nextView);
         return;
       }
 
@@ -1011,7 +1000,7 @@ const HomeInner = () => {
         return;
       }
 
-      setScope("followed_curators");
+      setView("followed_curators");
     },
     [openConnectModal, requestFollowReadAccess, requestWatchReadAccess],
   );
@@ -1051,43 +1040,43 @@ const HomeInner = () => {
       return `No results for "${searchQuery}"`;
     }
 
-    if (scope === "watched") {
+    if (activeScope === "watched") {
       return address ? "You aren't watching any content yet." : "Connect your wallet to view watched content.";
     }
 
-    if (scope === "my_votes") {
+    if (activeScope === "my_votes") {
       return address ? "You haven't voted on any content yet." : "Connect your wallet to view your votes.";
     }
 
-    if (scope === "my_submissions") {
+    if (activeScope === "my_submissions") {
       return address ? "You haven't submitted any content yet." : "Connect your wallet to view your submissions.";
     }
 
-    if (scope === "settling_soon") {
+    if (activeScope === "settling_soon") {
       return address
         ? "Nothing you are tracking looks close to settlement right now."
         : "Connect your wallet to view rounds settling soon.";
     }
 
-    if (scope === "followed_curators") {
+    if (activeScope === "followed_curators") {
       return address
         ? "Follow a few curators to turn this into a live feed."
         : "Connect your wallet to view activity from curators you follow.";
     }
 
-    if (scope === "all" && feedMode === "trending") {
+    if (activeScope === "all" && activeFeedMode === "trending") {
       return "No content is trending right now.";
     }
 
-    if (scope === "all" && feedMode === "contested") {
+    if (activeScope === "all" && activeFeedMode === "contested") {
       return "No live rounds look meaningfully contested right now.";
     }
 
-    if (scope === "all" && feedMode === "fresh") {
+    if (activeScope === "all" && activeFeedMode === "fresh") {
       return "No fresh submissions are waiting for signal right now.";
     }
 
-    if (scope === "all" && feedMode === "near_settlement") {
+    if (activeScope === "all" && activeFeedMode === "near_settlement") {
       return "No open rounds look close to settlement right now.";
     }
 
@@ -1100,7 +1089,7 @@ const HomeInner = () => {
     }
 
     return `No content found in "${activeCategory}".`;
-  }, [activeCategory, address, feedMode, scope, searchQuery]);
+  }, [activeCategory, activeFeedMode, activeScope, address, searchQuery]);
 
   const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
     enabled: Boolean(primaryItem && canNavigateCards),
@@ -1131,26 +1120,18 @@ const HomeInner = () => {
               : "bg-base-200 text-warning/70 hover:bg-warning/10";
           }}
         />
-        {address ? (
-          <FeedScopeFilter
-            value={scope}
-            options={SCOPE_OPTIONS}
-            onChange={value => {
-              void handleScopeChange(value as ScopeOption);
-            }}
-            label="Feed"
-          />
-        ) : null}
+        <FeedScopeFilter
+          value={view}
+          groups={viewGroups}
+          onChange={value => {
+            void handleViewChange(value as VoteView);
+          }}
+          label="View"
+        />
         <div className="shrink-0 flex items-center">
           <StreakCounter />
         </div>
       </div>
-
-      {!isSearchMode && scope === "all" ? (
-        <div className="mb-4 flex shrink-0 xl:mb-3" data-disable-queue-wheel="true">
-          <FeedModeToggle value={feedMode} options={DISCOVER_FEED_MODE_OPTIONS} onChange={setFeedMode} />
-        </div>
-      ) : null}
 
       {isSearchMode ? (
         <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">

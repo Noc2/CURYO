@@ -7,23 +7,33 @@ import { useOutsideClick } from "~~/hooks/scaffold-eth/useOutsideClick";
 export interface FeedScopeOption {
   value: string;
   label: string;
+  description?: string;
+}
+
+export interface FeedScopeOptionGroup {
+  label: string;
+  options: FeedScopeOption[];
 }
 
 interface FeedScopeFilterProps {
   value: string;
-  options: FeedScopeOption[];
+  groups: FeedScopeOptionGroup[];
   onChange: (value: string) => void;
   label?: string;
 }
 
-export function FeedScopeFilter({ value, options, onChange, label = "Feed" }: FeedScopeFilterProps) {
+export function FeedScopeFilter({ value, groups, onChange, label = "View" }: FeedScopeFilterProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const defaultValue = options[0]?.value;
+  const flatOptions = useMemo(() => groups.flatMap(group => group.options), [groups]);
+  const defaultValue = flatOptions[0]?.value;
   const isFiltered = value !== defaultValue;
 
-  const selectedOption = useMemo(() => options.find(option => option.value === value) ?? options[0], [options, value]);
+  const selectedOption = useMemo(
+    () => flatOptions.find(option => option.value === value) ?? flatOptions[0],
+    [flatOptions, value],
+  );
   const buttonLabel = isFiltered ? (selectedOption?.label ?? label) : label;
 
   const close = useCallback(() => setIsOpen(false), []);
@@ -70,13 +80,13 @@ export function FeedScopeFilter({ value, options, onChange, label = "Feed" }: Fe
             ref={panelRef}
             className="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border border-base-content/10 bg-base-100 p-4 shadow-2xl sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:z-30 sm:mt-2 sm:w-72 sm:rounded-2xl sm:bg-base-200 sm:p-2"
             role="dialog"
-            aria-label="Feed options"
+            aria-label={`${label} options`}
           >
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-base-content/10 sm:hidden" />
             <div className="mb-3 flex items-center justify-between sm:hidden">
               <div>
                 <p className="text-sm font-semibold text-white">{label}</p>
-                <p className="text-xs text-base-content/50">Choose which items appear in your feed.</p>
+                <p className="text-xs text-base-content/50">Choose how you want to browse content.</p>
               </div>
               <button
                 type="button"
@@ -88,29 +98,41 @@ export function FeedScopeFilter({ value, options, onChange, label = "Feed" }: Fe
               </button>
             </div>
 
-            <div className="space-y-1">
-              {options.map(option => {
-                const isActive = option.value === value;
+            <div className="space-y-3 sm:space-y-2">
+              {groups.map(group => (
+                <div key={group.label}>
+                  {groups.length > 1 ? (
+                    <p className="px-2 pb-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/40">
+                      {group.label}
+                    </p>
+                  ) : null}
+                  <div className="space-y-1">
+                    {group.options.map(option => {
+                      const isActive = option.value === value;
 
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(option.value);
-                      setIsOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-base font-medium transition-colors sm:rounded-xl sm:px-3 sm:py-2 ${
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-base-content/80 hover:bg-base-200 hover:text-base-content sm:hover:bg-base-300"
-                    }`}
-                  >
-                    <span>{option.label}</span>
-                    {isActive ? <CheckIcon className="h-4 w-4" /> : null}
-                  </button>
-                );
-              })}
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            onChange(option.value);
+                            setIsOpen(false);
+                          }}
+                          title={option.description}
+                          className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-base font-medium transition-colors sm:rounded-xl sm:px-3 sm:py-2 ${
+                            isActive
+                              ? "bg-primary/10 text-primary"
+                              : "text-base-content/80 hover:bg-base-200 hover:text-base-content sm:hover:bg-base-300"
+                          }`}
+                        >
+                          <span>{option.label}</span>
+                          {isActive ? <CheckIcon className="h-4 w-4" /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {selectedOption && isFiltered ? (
