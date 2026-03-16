@@ -431,25 +431,15 @@ body {
   -webkit-text-fill-color: currentColor;
 }
 
-/* Active tab pill — green (Submit page) */
-.pill-active {
-  background: linear-gradient(135deg, var(--curyo-ember-deep) 0%, var(--curyo-ember) 60%, var(--curyo-ember-bright) 100%);
-  color: var(--color-primary-content);
-  box-shadow: 0 10px 24px rgb(242 100 38 / 0.24);
-}
-
-/* Active tab pill — yellow (Governance page) */
-.pill-active-yellow {
-  background: linear-gradient(135deg, var(--curyo-warm-white) 0%, var(--curyo-steel-soft) 100%);
-  color: #0d0b0a;
-  box-shadow: 0 10px 24px rgb(244 240 235 / 0.14);
-}
-
-/* Category filter pill — blue (Discover page) */
-.pill-category {
-  background: linear-gradient(135deg, var(--curyo-steel-soft) 0%, #b4bcc8 100%);
-  color: #0a0c10;
-  box-shadow: 0 10px 24px rgb(126 137 150 / 0.18);
+/* Selected pills and tabs */
+.pill-active,
+.pill-active-yellow,
+.pill-category,
+.pill-filter-active {
+  background: var(--curyo-ember);
+  background-image: none;
+  color: #fff;
+  box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
 }
 
 /* Feed scope filter pill — green */
@@ -460,11 +450,6 @@ body {
 }
 .pill-filter:hover {
   background: color-mix(in srgb, var(--color-base-content) 9%, transparent);
-}
-.pill-filter-active {
-  background: linear-gradient(135deg, var(--curyo-ember-deep) 0%, var(--curyo-ember) 60%, var(--curyo-ember-bright) 100%);
-  color: var(--color-primary-content);
-  box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
 }
 
 /* Hide scrollbar but keep scroll functionality */
