@@ -1,12 +1,18 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 const START_ANGLE = 0;
+const MIN_ANIMATION_MS = 500;
+const MAX_ANIMATION_MS = 1200;
 
 function clampRating(rating: number) {
   if (Number.isNaN(rating)) return 0;
   return Math.min(100, Math.max(0, rating));
+}
+
+function easeOutCubic(progress: number) {
+  return 1 - Math.pow(1 - progress, 3);
 }
 
 function polarToCartesian(center: number, radius: number, angleInDegrees: number) {
@@ -26,10 +32,14 @@ interface RatingOrbProps {
 export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps) {
   const orbId = useId().replace(/:/g, "");
   const clampedRating = clampRating(rating);
+  const [animatedRating, setAnimatedRating] = useState(0);
+  const animatedRatingRef = useRef(0);
   const center = size / 2;
   const trackRadius = size * 0.41;
   const trackWidth = Math.max(8, size * 0.034);
-  const progress = clampedRating / 100;
+  const displayedRating = clampRating(animatedRating);
+  const roundedDisplayedRating = Math.round(displayedRating);
+  const progress = displayedRating / 100;
   const circumference = 2 * Math.PI * trackRadius;
   const progressLength = circumference * progress;
   const flareStroke = `url(#${orbId}-flare)`;
@@ -37,6 +47,48 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
   const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
   const ratingFontSize = Math.max(44, size * 0.29);
   const percentFontSize = Math.max(22, ratingFontSize * 0.46);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mediaQuery.matches) {
+      animatedRatingRef.current = clampedRating;
+      setAnimatedRating(clampedRating);
+      return;
+    }
+
+    const startRating = animatedRatingRef.current;
+    const delta = clampedRating - startRating;
+
+    if (Math.abs(delta) < 0.01) {
+      animatedRatingRef.current = clampedRating;
+      setAnimatedRating(clampedRating);
+      return;
+    }
+
+    const duration = Math.min(MAX_ANIMATION_MS, Math.max(MIN_ANIMATION_MS, Math.abs(delta) * 14));
+    const startedAt = performance.now();
+    let frameId = 0;
+
+    const animate = (now: number) => {
+      const rawProgress = Math.min(1, (now - startedAt) / duration);
+      const nextRating = startRating + delta * easeOutCubic(rawProgress);
+
+      animatedRatingRef.current = nextRating;
+      setAnimatedRating(nextRating);
+
+      if (rawProgress < 1) {
+        frameId = window.requestAnimationFrame(animate);
+      } else {
+        animatedRatingRef.current = clampedRating;
+        setAnimatedRating(clampedRating);
+      }
+    };
+
+    frameId = window.requestAnimationFrame(animate);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [clampedRating]);
 
   return (
     <div
@@ -184,7 +236,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           className="flex items-end justify-center font-semibold leading-none tracking-[-0.065em] text-white"
           style={{ fontSize: ratingFontSize, maxWidth: trackRadius * 1.52 }}
         >
-          <span>{clampedRating}</span>
+          <span>{roundedDisplayedRating}</span>
           <span className="ml-1 shrink-0 leading-[0.92]" style={{ fontSize: percentFontSize }}>
             %
           </span>
