@@ -1,0 +1,90 @@
+<svg width="1400" height="1400" viewBox="0 0 1400 1400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg-main" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(980 300) rotate(140) scale(520 320)">
+      <stop stop-color="#F26426" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#F26426" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bg-side" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(420 1100) rotate(18) scale(420 240)">
+      <stop stop-color="#7E8996" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#7E8996" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(850 470) rotate(132) scale(720 700)">
+      <stop stop-color="#FFF6EE"/>
+      <stop offset="0.18" stop-color="#F6D9C3"/>
+      <stop offset="0.36" stop-color="#F4A36A"/>
+      <stop offset="0.58" stop-color="#E45A27"/>
+      <stop offset="0.82" stop-color="#A9321D"/>
+      <stop offset="1" stop-color="#201416"/>
+    </radialGradient>
+    <radialGradient id="orb-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(436 508) rotate(24) scale(238 560)">
+      <stop stop-color="#B9D1E5" stop-opacity="0.88"/>
+      <stop offset="0.2" stop-color="#7E8996" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#7E8996" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orb-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(808 520) rotate(140) scale(420 420)">
+      <stop stop-color="#FFF7EF" stop-opacity="0.72"/>
+      <stop offset="0.48" stop-color="#FFD6AF" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#FFD6AF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="upper-haze" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(610 408) rotate(24) scale(260 180)">
+      <stop stop-color="#FFF7EF" stop-opacity="0.46"/>
+      <stop offset="1" stop-color="#FFF7EF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="amber-bloom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(886 542) rotate(170) scale(300 240)">
+      <stop stop-color="#FFD38A" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#FFD38A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ember-violet" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(500 876) rotate(-30) scale(340 260)">
+      <stop stop-color="#5E2CA6" stop-opacity="0.68"/>
+      <stop offset="0.58" stop-color="#5E2CA6" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#5E2CA6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="flow-sheen" x1="306" y1="694" x2="1028" y2="510" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF5EA" stop-opacity="0"/>
+      <stop offset="0.22" stop-color="#FFF5EA" stop-opacity="0.06"/>
+      <stop offset="0.52" stop-color="#FFF5EA" stop-opacity="0.28"/>
+      <stop offset="0.78" stop-color="#FFD5AF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFD5AF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="deep-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(520 760) rotate(-8) scale(360 190)">
+      <stop stop-color="#110F12" stop-opacity="0.72"/>
+      <stop offset="0.5" stop-color="#34181D" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#34181D" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur-24" x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+    <filter id="blur-40" x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+    <clipPath id="orb-clip">
+      <circle cx="700" cy="700" r="360"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1400" height="1400" fill="#030405"/>
+  <rect width="1400" height="1400" fill="url(#bg-main)"/>
+  <rect width="1400" height="1400" fill="url(#bg-side)"/>
+
+  <circle cx="700" cy="700" r="360" fill="url(#orb-base)"/>
+  <circle cx="700" cy="700" r="360" fill="url(#orb-rim)"/>
+  <g clip-path="url(#orb-clip)">
+    <g filter="url(#blur-40)">
+      <ellipse cx="642" cy="546" rx="254" ry="182" fill="url(#upper-haze)"/>
+      <ellipse cx="864" cy="642" rx="248" ry="214" fill="url(#amber-bloom)"/>
+      <ellipse cx="532" cy="896" rx="290" ry="210" fill="url(#ember-violet)"/>
+    </g>
+
+    <path d="M302 804C420 700 534 634 668 620C786 608 900 648 1048 742C988 806 928 848 858 874C776 904 682 910 578 894C476 878 384 846 302 804Z" fill="url(#deep-pocket)"/>
+    <g filter="url(#blur-24)">
+      <path d="M322 808C446 708 556 648 678 634C782 624 884 660 1018 738" stroke="#1B1317" stroke-opacity="0.58" stroke-width="84" stroke-linecap="round"/>
+    </g>
+
+    <path d="M314 824C448 740 578 688 720 676C838 668 946 698 1054 760C972 814 886 844 794 852C666 864 530 854 398 834C370 830 342 826 314 824Z" fill="url(#flow-sheen)"/>
+    <path d="M392 520C536 454 672 448 808 490C900 518 984 572 1058 646" stroke="#FFF6EC" stroke-opacity="0.16" stroke-width="20" stroke-linecap="round"/>
+    <circle cx="1160" cy="482" r="56" fill="#FFF9F2" fill-opacity="0.88"/>
+    <circle cx="628" cy="560" r="186" fill="url(#orb-glow)"/>
+  </g>
+
+  <circle cx="700" cy="700" r="360" fill="none" stroke="#FFF8F2" stroke-opacity="0.14" stroke-width="2"/>
+</svg>
