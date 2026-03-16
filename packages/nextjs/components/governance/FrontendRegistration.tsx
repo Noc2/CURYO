@@ -382,13 +382,13 @@ export function FrontendRegistration() {
           <div className="obsidian-ember-info-card rounded-2xl p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="flex items-center gap-1.5 text-base font-medium text-white">
+                <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
                   Frontend Stake
                   <InfoTooltip text="Returned when you withdraw, forfeited if you act maliciously. Receive 1% of the losing stakes from votes via your interface" />
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xl font-bold text-white">{STAKE_AMOUNT.toLocaleString()} cREP</span>
+                <span className="text-xl font-bold text-base-content">{STAKE_AMOUNT.toLocaleString()} cREP</span>
               </div>
             </div>
           </div>

@@ -124,7 +124,7 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
       )}
       {totalClaimable > 0n && (
         <div className="text-left px-4 pl-12 mt-1">
-          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-xs text-white">
+          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-xs">
             {isClaiming ? `Claiming ${progress.current}/${progress.total}...` : `Claim ${claimableFormatted}`}
           </button>
         </div>

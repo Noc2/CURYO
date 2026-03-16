@@ -60,7 +60,7 @@ export const TermsAcceptanceModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#090A0C]/60 p-4">
       <div className="card bg-base-200 shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         <div className="card-body">
           {/* Close button */}
@@ -116,7 +116,7 @@ export const TermsAcceptanceModal = () => {
           <div className="divider my-2"></div>
 
           {/* Info notice */}
-          <div className="alert alert-info text-base text-white">
+          <div className="alert alert-info text-base text-base-content">
             <span>
               Smart contracts may contain bugs or vulnerabilities. By proceeding, you acknowledge that you understand
               the risks and accept full responsibility for any losses.
@@ -128,7 +128,7 @@ export const TermsAcceptanceModal = () => {
             <button className="btn btn-ghost" onClick={handleClose}>
               Cancel
             </button>
-            <button className="btn btn-primary text-white" disabled={!canAccept} onClick={handleAccept}>
+            <button className="btn btn-primary" disabled={!canAccept} onClick={handleAccept}>
               Accept &amp; Continue
             </button>
           </div>

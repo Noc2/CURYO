@@ -184,7 +184,7 @@ export function VotingQuestionCard({
         </div>
 
         {/* Vote error message */}
-        {displayError && <p className="mb-2 text-center text-base text-red-400">{displayError}</p>}
+        {displayError && <p className="mb-2 text-center text-base text-error">{displayError}</p>}
 
         {/* Voting arrows - centered below question */}
         <div className="mb-3 flex shrink-0 items-center justify-center gap-2 lg:gap-3">

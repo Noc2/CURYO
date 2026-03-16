@@ -16,7 +16,7 @@ export default function PublicProfilePage() {
         <p className="text-base-content/60">Invalid profile address.</p>
         <Link
           href="/governance"
-          className="mt-4 rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
+          className="mt-4 rounded-full bg-base-200 px-4 py-2 text-base font-medium text-base-content transition-colors hover:bg-[#F5F0EB]/[0.05]"
         >
           Back to governance
         </Link>

@@ -744,7 +744,7 @@ const SecurityAudit: NextPage = () => {
               </td>
               <td className="font-mono text-primary">CategoryRegistry</td>
               <td>
-                <span className="badge badge-success whitespace-nowrap text-white">Superseded</span>
+                <span className="badge badge-success whitespace-nowrap text-base-content">Superseded</span>
               </td>
             </tr>
             <tr>
@@ -1282,7 +1282,7 @@ const SecurityAudit: NextPage = () => {
               <td>&mdash;</td>
               <td>All checks skip if voterIdNFT == address(0)</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Deployment</span>
+                <span className="badge badge-warning whitespace-nowrap text-base-content">Deployment</span>
               </td>
             </tr>
             <tr>
@@ -1293,7 +1293,7 @@ const SecurityAudit: NextPage = () => {
               <td>4% of circulating cREP (dynamic quorum, 10K floor)</td>
               <td>Timelock delay allows community response</td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Deployment</span>
+                <span className="badge badge-warning whitespace-nowrap text-base-content">Deployment</span>
               </td>
             </tr>
             <tr>
@@ -1347,7 +1347,7 @@ const SecurityAudit: NextPage = () => {
                 at vote time.
               </td>
               <td>
-                <span className="badge badge-warning whitespace-nowrap text-white">Deployment</span>
+                <span className="badge badge-warning whitespace-nowrap text-base-content">Deployment</span>
               </td>
             </tr>
             <tr>

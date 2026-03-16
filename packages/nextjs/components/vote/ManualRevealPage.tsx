@@ -38,7 +38,7 @@ function RevealVoteCard({
         </div>
       </div>
       {vote.isReady ? (
-        <button className="btn btn-primary text-white min-w-36" disabled={isPending} onClick={() => onReveal(vote)}>
+        <button className="btn btn-primary min-w-36" disabled={isPending} onClick={() => onReveal(vote)}>
           {isPending ? "Revealing..." : "Reveal"}
         </button>
       ) : (

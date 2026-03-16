@@ -52,7 +52,7 @@ export function ShareModal({ contentId, title, description, onClose }: ShareModa
         </div>
 
         <h3 className="text-xl font-semibold text-center mb-2">Content Submitted!</h3>
-        <p className="text-lg font-medium text-center text-white mb-2 line-clamp-2">{title}</p>
+        <p className="mb-2 text-center text-lg font-medium text-base-content line-clamp-2">{title}</p>
         <p className="text-base text-base-content/60 text-center mb-6">{description}</p>
 
         {/* Share buttons */}
@@ -99,7 +99,7 @@ export function ShareModal({ contentId, title, description, onClose }: ShareModa
           Submit Another
         </button>
       </div>
-      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop bg-[#090A0C]/60 backdrop-blur-sm" onClick={onClose} />
     </div>
   );
 }

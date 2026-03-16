@@ -16,7 +16,7 @@ const STEPS = [
     hex: "#F26426",
     tone: "rgba(242, 100, 38, 0.18)",
   },
-  { label: "Stake", desc: "back your prediction with cREP tokens", hex: "#F4F0EB", tone: "rgba(244, 240, 235, 0.14)" },
+  { label: "Stake", desc: "back your prediction with cREP tokens", hex: "#F5F0EB", tone: "rgba(245, 240, 235, 0.14)" },
   {
     label: "Reveal & Resolve",
     desc: "votes are revealed after each blind phase (~20 min); rounds resolve automatically",
@@ -26,8 +26,8 @@ const STEPS = [
   {
     label: "Claim",
     desc: "collect your rewards if your prediction was correct",
-    hex: "#D7DCE3",
-    tone: "rgba(215, 220, 227, 0.16)",
+    hex: "#7E8996",
+    tone: "rgba(126, 137, 150, 0.16)",
   },
 ];
 
@@ -53,14 +53,14 @@ export function VotingGuide() {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 80 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed right-4 top-24 z-50 w-80 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(18,19,22,0.98),rgba(12,13,15,0.98))] shadow-[0_24px_54px_rgba(0,0,0,0.42)]"
+        className="fixed right-4 top-24 z-50 w-80 rounded-2xl border border-[#F5F0EB]/10 bg-[#090A0C] shadow-[0_24px_54px_rgba(9,10,12,0.42)]"
       >
         {/* Header */}
         <div
           className="relative rounded-t-2xl px-5 pt-5 pb-4"
           style={{
             background:
-              "linear-gradient(135deg, rgba(242,100,38,0.18) 0%, rgba(244,240,235,0.05) 42%, rgba(179,52,27,0.16) 100%)",
+              "linear-gradient(135deg, rgba(242,100,38,0.18) 0%, rgba(245,240,235,0.05) 42%, rgba(179,52,27,0.16) 100%)",
           }}
         >
           <button

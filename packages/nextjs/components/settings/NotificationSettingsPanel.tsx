@@ -56,7 +56,7 @@ function NotificationPreferenceToggle({
   return (
     <label className="flex items-start justify-between gap-4 rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3">
       <div>
-        <div className="text-base font-medium text-white">{label}</div>
+        <div className="text-base font-medium text-base-content">{label}</div>
         <p className="mt-1 text-sm text-base-content/50">{description}</p>
       </div>
       <input
@@ -240,16 +240,12 @@ export function NotificationSettingsPanel({
               <BellAlertIcon className="h-4 w-4" />
               Notifications
             </div>
-            <h2 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h2>
+            <h2 className="mt-3 text-3xl font-semibold text-base-content sm:text-4xl">Notification settings</h2>
             <p className="mt-3 text-base text-base-content/60">
               Connect your wallet to choose which in-app, browser, and email alerts you want to receive.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={openConnectModal}
-            className="btn border-none bg-white px-6 text-black hover:bg-gray-200"
-          >
+          <button type="button" onClick={openConnectModal} className="btn btn-curyo px-6">
             Connect wallet
           </button>
         </div>
@@ -266,7 +262,7 @@ export function NotificationSettingsPanel({
               <BellAlertIcon className="h-4 w-4" />
               Notifications
             </div>
-            <h2 className="mt-3 text-3xl font-semibold text-white sm:text-4xl">Notification settings</h2>
+            <h2 className="mt-3 text-3xl font-semibold text-base-content sm:text-4xl">Notification settings</h2>
           </div>
           <div className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3 text-sm text-base-content/60">
             {browserPermission === "granted"
@@ -283,7 +279,7 @@ export function NotificationSettingsPanel({
       <section className="surface-card rounded-3xl p-6 sm:p-8">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-white">In-app and browser alerts</h2>
+            <h2 className="text-xl font-semibold text-base-content">In-app and browser alerts</h2>
           </div>
           {browserPermission === "default" ? (
             <button type="button" onClick={() => void requestBrowserPermission()} className="btn btn-outline btn-sm">
@@ -315,7 +311,7 @@ export function NotificationSettingsPanel({
               <EnvelopeIcon className="h-4 w-4" />
               Email delivery
             </div>
-            <h2 className="mt-3 text-xl font-semibold text-white">Email notifications</h2>
+            <h2 className="mt-3 text-xl font-semibold text-base-content">Email notifications</h2>
           </div>
           <div className="rounded-2xl border border-base-content/10 bg-base-content/[0.03] px-4 py-3 text-sm text-base-content/60">
             {!emailSettings.email
@@ -374,7 +370,7 @@ export function NotificationSettingsPanel({
               type="button"
               onClick={() => void handleSaveEmailSettings()}
               disabled={isEmailSaving || (!emailDirty && emailPayload.email.length > 0)}
-              className="btn border-none bg-white text-black hover:bg-gray-200 disabled:bg-white/60"
+              className="btn btn-curyo disabled:bg-[#F5F0EB]/60 disabled:text-[#090A0C]/70"
             >
               {isEmailSaving ? "Saving..." : emailPayload.email ? "Save email settings" : "Remove email notifications"}
             </button>

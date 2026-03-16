@@ -30,7 +30,7 @@ export const RainbowKitCustomConnectButton = ({ inlineMenu = false }: { inlineMe
               if (!connected) {
                 return (
                   <button
-                    className="btn btn-sm bg-white text-black hover:bg-gray-200 border-none"
+                    className="btn btn-sm btn-curyo border-none"
                     onClick={openConnectModal}
                     type="button"
                     style={{ fontSize: "16px" }}

@@ -98,7 +98,7 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
   }
 
   if (error || (rpcFallbackActive && eventsError)) {
-    const textColor = variant === "dark" ? "text-white/40" : "text-base-content/25";
+    const textColor = variant === "dark" ? "text-[#F5F0EB]/40" : "text-base-content/25";
     return (
       <div className={`h-16 flex items-center justify-center text-base ${textColor}`}>
         Unable to load rating history
@@ -108,12 +108,12 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
 
   // Need at least 2 points to draw a line
   if (dataPoints.length < 2) {
-    const textColor = variant === "dark" ? "text-white/40" : "text-base-content/25";
+    const textColor = variant === "dark" ? "text-[#F5F0EB]/40" : "text-base-content/25";
     return <div className={`h-16 flex items-center justify-center text-base ${textColor}`}>No rating history yet</div>;
   }
 
   const currentRatingValue = dataPoints[dataPoints.length - 1];
-  const textColor = variant === "dark" ? "text-white/60" : "text-base-content/40";
+  const textColor = variant === "dark" ? "text-[#F5F0EB]/60" : "text-base-content/40";
 
   return (
     <div className="w-full">
@@ -187,7 +187,7 @@ function Sparkline({ data }: { data: number[] }) {
       />
 
       {/* End dot */}
-      <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="#FFF4EA" />
+      <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="#F5F0EB" />
     </svg>
   );
 }

@@ -101,32 +101,30 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
         <defs>
           <linearGradient id={`${orbId}-flare`} x1="0%" y1="10%" x2="100%" y2="90%">
             <stop offset="0%" stopColor="#B3341B" />
-            <stop offset="28%" stopColor="#E24D21" />
-            <stop offset="58%" stopColor="#F36A29" />
-            <stop offset="100%" stopColor="#FFF4EA" />
+            <stop offset="58%" stopColor="#F26426" />
+            <stop offset="100%" stopColor="#F5F0EB" />
           </linearGradient>
           <linearGradient id={`${orbId}-core`} x1="10%" y1="8%" x2="94%" y2="92%">
-            <stop offset="0%" stopColor="#FF9355" />
-            <stop offset="54%" stopColor="#FFE6D5" />
-            <stop offset="100%" stopColor="#FFF9F2" />
+            <stop offset="0%" stopColor="#F26426" />
+            <stop offset="100%" stopColor="#F5F0EB" />
           </linearGradient>
           <radialGradient id={`${orbId}-fill`} cx="50%" cy="42%" r="66%">
-            <stop offset="0%" stopColor="rgba(255,255,255,0.07)" />
-            <stop offset="72%" stopColor="rgba(255,255,255,0.02)" />
-            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+            <stop offset="0%" stopColor="rgba(245,240,235,0.07)" />
+            <stop offset="72%" stopColor="rgba(245,240,235,0.02)" />
+            <stop offset="100%" stopColor="rgba(245,240,235,0)" />
           </radialGradient>
           <filter id={`${orbId}-glow`} x="-35%" y="-35%" width="170%" height="170%">
             <feGaussianBlur stdDeviation="9" />
           </filter>
         </defs>
 
-        <circle cx={center} cy={center} r={trackRadius + trackWidth * 0.95} fill="rgba(255,255,255,0.03)" />
+        <circle cx={center} cy={center} r={trackRadius + trackWidth * 0.95} fill="rgba(245,240,235,0.03)" />
         <circle
           cx={center}
           cy={center}
           r={trackRadius + trackWidth * 0.62}
           fill="none"
-          stroke="rgba(255,255,255,0.04)"
+          stroke="rgba(245,240,235,0.04)"
           strokeWidth="2"
         />
         <circle
@@ -134,7 +132,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           cy={center}
           r={trackRadius}
           fill="none"
-          stroke="rgba(255,255,255,0.06)"
+          stroke="rgba(245,240,235,0.06)"
           strokeWidth={trackWidth}
         />
         <circle
@@ -215,7 +213,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
               strokeDasharray={`${progressLength} ${circumference}`}
               transform={`rotate(-90 ${center} ${center})`}
             />
-            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill="#FFF4EA" />
+            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill="#F5F0EB" />
             <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(242,100,38,0.22)" />
           </>
         ) : null}
@@ -225,7 +223,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
           cy={center}
           r={trackRadius - trackWidth * 0.92}
           fill="rgba(9,10,12,0.96)"
-          stroke="rgba(255,255,255,0.05)"
+          stroke="rgba(245,240,235,0.05)"
           strokeWidth="1.8"
         />
         <circle cx={center} cy={center} r={trackRadius - trackWidth * 1.55} fill={`url(#${orbId}-fill)`} />
@@ -233,7 +231,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
 
       <div className="relative z-10 flex flex-col items-center justify-center text-center">
         <span
-          className="flex items-end justify-center font-semibold leading-none tracking-[-0.065em] text-white"
+          className="flex items-end justify-center font-semibold leading-none tracking-[-0.065em] text-[#F5F0EB]"
           style={{ fontSize: ratingFontSize, maxWidth: trackRadius * 1.52 }}
         >
           <span>{roundedDisplayedRating}</span>

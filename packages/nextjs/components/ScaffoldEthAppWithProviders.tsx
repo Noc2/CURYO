@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { RainbowKitProvider, darkTheme, lightTheme } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
 import { useTheme } from "next-themes";
@@ -51,6 +51,13 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
   const isDarkMode = resolvedTheme === "dark";
   const [mounted, setMounted] = useState(false);
 
+  const obsidianEmberTheme = darkTheme({
+    accentColor: "#F26426",
+    accentColorForeground: "#090A0C",
+    borderRadius: "medium",
+    overlayBlur: "small",
+  });
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -60,23 +67,7 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           avatar={BlockieAvatar}
-          theme={
-            mounted
-              ? isDarkMode
-                ? darkTheme({
-                    accentColor: "#F26426",
-                    accentColorForeground: "#120A06",
-                    borderRadius: "medium",
-                    overlayBlur: "small",
-                  })
-                : lightTheme()
-              : darkTheme({
-                  accentColor: "#F26426",
-                  accentColorForeground: "#120A06",
-                  borderRadius: "medium",
-                  overlayBlur: "small",
-                })
-          }
+          theme={mounted ? (isDarkMode ? obsidianEmberTheme : obsidianEmberTheme) : obsidianEmberTheme}
         >
           <ProgressBar height="3px" color="#F26426" />
           <TermsAcceptanceProvider>

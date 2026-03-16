@@ -75,7 +75,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-30 bg-black/45 sm:hidden" onClick={close} aria-hidden="true" />
+          <div className="fixed inset-0 z-30 bg-[#090A0C]/45 sm:hidden" onClick={close} aria-hidden="true" />
           <div
             ref={panelRef}
             className="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl border border-base-content/10 bg-base-100 p-4 shadow-2xl sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:z-30 sm:mt-2 sm:w-72 sm:rounded-2xl sm:bg-base-200 sm:p-2"
@@ -85,7 +85,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-base-content/10 sm:hidden" />
             <div className="mb-3 flex items-center justify-between sm:hidden">
               <div>
-                <p className="text-sm font-semibold text-white">{label}</p>
+                <p className="text-sm font-semibold text-base-content">{label}</p>
                 <p className="text-xs text-base-content/50">Choose how you want to browse content.</p>
               </div>
               <button

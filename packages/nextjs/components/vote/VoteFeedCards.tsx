@@ -164,7 +164,7 @@ interface FeedContentHeaderProps {
 
 function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: FeedContentHeaderProps) {
   return (
-    <div className="rounded-2xl bg-black p-4 xl:p-3">
+    <div className="rounded-2xl bg-[#090A0C] p-4 xl:p-3">
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -176,7 +176,7 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <h2 className="break-words text-center text-xl font-semibold leading-tight text-white xl:text-lg">
+          <h2 className="break-words text-center text-xl font-semibold leading-tight text-base-content xl:text-lg">
             {item.title}
           </h2>
         </div>
@@ -210,7 +210,7 @@ function FeedContentMetaCard({
 
   return (
     <>
-      <div className="rounded-2xl bg-black p-4 xl:p-3">
+      <div className="rounded-2xl bg-[#090A0C] p-4 xl:p-3">
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
@@ -309,7 +309,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         ? "bg-warning/15 text-warning ring-warning/30"
         : queueStatus?.phaseTone === "blind"
           ? "bg-primary/15 text-primary ring-primary/30"
-          : "bg-white/5 text-white/65 ring-white/10";
+          : "bg-base-content/[0.05] text-base-content/65 ring-base-content/10";
 
   return (
     <button
@@ -346,16 +346,16 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       }}
       className={`group flex w-[11.1rem] min-w-[11.1rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl text-left transition-colors snap-start sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem] ${
         selected
-          ? "bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_18px_36px_rgba(0,0,0,0.26)]"
+          ? "bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_18px_36px_rgba(9,10,12,0.26)]"
           : "bg-base-content/[0.03] hover:bg-base-content/[0.05]"
       }`}
     >
       <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200">
         <div className="absolute inset-x-2 top-2 z-10 flex items-center justify-between gap-1.5">
-          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+          <span className="rounded-full bg-[#090A0C]/70 px-2.5 py-1 text-xs font-semibold text-[#F5F0EB] backdrop-blur">
             {queuePosition + 1}
           </span>
-          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+          <span className="rounded-full bg-[#090A0C]/70 px-2.5 py-1 text-xs font-semibold text-[#F5F0EB] backdrop-blur">
             {ratingLabel}
           </span>
         </div>
@@ -368,17 +368,17 @@ export const FeedQueueCard = memo(function FeedQueueCard({
             onError={() => setImageError(true)}
           />
         ) : (
-          <div className="flex h-full w-full cursor-pointer items-end bg-[radial-gradient(circle_at_top,_rgba(34,211,238,0.16),_transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.01))] p-3">
+          <div className="flex h-full w-full cursor-pointer items-end bg-[radial-gradient(circle_at_top,_rgba(242,100,38,0.18),_transparent_55%),linear-gradient(180deg,rgba(245,240,235,0.05),rgba(9,10,12,0.22))] p-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-primary/80">{platform.type}</p>
-              <p className="mt-1 line-clamp-2 text-sm font-medium text-white/90">{item.title}</p>
+              <p className="mt-1 line-clamp-2 text-sm font-medium text-[#F5F0EB]/90">{item.title}</p>
             </div>
           </div>
         )}
       </div>
 
       <div className="flex min-h-[5.5rem] flex-1 flex-col p-2.5">
-        <p className="line-clamp-2 text-sm font-medium leading-snug text-white/90">{item.title}</p>
+        <p className="line-clamp-2 text-sm font-medium leading-snug text-[#F5F0EB]/90">{item.title}</p>
         {queueStatus ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             <span

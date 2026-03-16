@@ -59,7 +59,7 @@ export function ShareContentModal({ contentId, title, description, onClose }: Sh
         </button>
 
         <h3 className="text-lg font-semibold text-center mb-1">Share this content</h3>
-        <p className="text-base font-medium text-center text-white mb-2 line-clamp-2">{title}</p>
+        <p className="mb-2 text-center text-base font-medium text-base-content line-clamp-2">{title}</p>
         <p className="text-sm text-base-content/60 text-center mb-5 line-clamp-2">{description}</p>
 
         {/* Share buttons */}
@@ -119,7 +119,7 @@ export function ShareContentModal({ contentId, title, description, onClose }: Sh
           </button>
         </div>
       </div>
-      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop bg-[#090A0C]/60 backdrop-blur-sm" onClick={onClose} />
     </div>
   );
 }

@@ -81,7 +81,7 @@ export function StakeBreakdown() {
       </div>
       {totalClaimable > 0n && (
         <div className="pt-2 border-t border-base-content/10">
-          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-sm text-white w-full">
+          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-sm w-full">
             {isClaiming ? `Claiming ${progress.current}/${progress.total}...` : `Claim ${claimableFormatted} cREP`}
           </button>
         </div>

@@ -71,21 +71,21 @@ export const rewardSplitTableRows: [string, string][] = [
 ];
 
 export const rewardSplitChartSlices = [
-  { label: "Revealed loser rebate", value: percentFromBps(REWARD_SPLIT_BPS.revealedLoserRefund), color: "#8B5E34" },
-  { label: "Voter pool (content-specific)", value: effectiveRawSharePercent(REWARD_SPLIT_BPS.voter), color: "#359EEE" },
-  { label: "Consensus subsidy reserve", value: effectiveRawSharePercent(REWARD_SPLIT_BPS.consensus), color: "#F97316" },
-  { label: "Content submitter", value: effectiveRawSharePercent(REWARD_SPLIT_BPS.submitter), color: "#FFC43D" },
+  { label: "Revealed loser rebate", value: percentFromBps(REWARD_SPLIT_BPS.revealedLoserRefund), color: "#7E8996" },
+  { label: "Voter pool (content-specific)", value: effectiveRawSharePercent(REWARD_SPLIT_BPS.voter), color: "#F26426" },
+  { label: "Consensus subsidy reserve", value: effectiveRawSharePercent(REWARD_SPLIT_BPS.consensus), color: "#B3341B" },
+  { label: "Content submitter", value: effectiveRawSharePercent(REWARD_SPLIT_BPS.submitter), color: "#F5F0EB" },
   {
     label: "Frontend operators",
     value: effectiveRawSharePercent(PLATFORM_REWARD_SPLIT_BPS.frontend),
-    color: "#EF476F",
+    color: "rgba(242, 100, 38, 0.6)",
   },
   {
     label: "Category submitters",
     value: effectiveRawSharePercent(PLATFORM_REWARD_SPLIT_BPS.category),
-    color: "#2B7FCC",
+    color: "rgba(126, 137, 150, 0.6)",
   },
-  { label: "Treasury", value: effectiveRawSharePercent(REWARD_SPLIT_BPS.treasury), color: "#029B7B" },
+  { label: "Treasury", value: effectiveRawSharePercent(REWARD_SPLIT_BPS.treasury), color: "rgba(245, 240, 235, 0.55)" },
 ] as const;
 
 export const whitepaperRewardSplitRows: string[][] = rewardSplitTableRows.map(([recipient, share]) => [

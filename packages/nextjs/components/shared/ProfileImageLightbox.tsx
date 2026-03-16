@@ -79,7 +79,7 @@ export function ProfileImageLightbox({
 
       {isOpen ? (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-[#090A0C]/80 px-4 py-6 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-label={modalLabel}
@@ -88,7 +88,7 @@ export function ProfileImageLightbox({
           <button
             type="button"
             onClick={() => setIsOpen(false)}
-            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-base-200/90 text-white transition-colors hover:bg-base-200"
+            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-base-200/90 text-base-content transition-colors hover:bg-base-200"
             aria-label="Close profile image"
           >
             <XMarkIcon className="h-6 w-6" />

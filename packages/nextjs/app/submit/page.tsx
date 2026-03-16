@@ -505,7 +505,7 @@ const SubmitPage: NextPage = () => {
         <button
           onClick={() => selectTab("content")}
           className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-            submissionType === "content" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
+            submissionType === "content" ? "pill-active" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
           }`}
         >
           Content
@@ -513,7 +513,7 @@ const SubmitPage: NextPage = () => {
         <button
           onClick={() => selectTab("category")}
           className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-            submissionType === "category" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
+            submissionType === "category" ? "pill-active" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
           }`}
         >
           Platform
@@ -521,7 +521,7 @@ const SubmitPage: NextPage = () => {
         <button
           onClick={() => selectTab("frontend")}
           className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-            submissionType === "frontend" ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
+            submissionType === "frontend" ? "pill-active" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
           }`}
         >
           Frontend
@@ -711,7 +711,7 @@ const SubmitPage: NextPage = () => {
                           type="button"
                           onClick={() => handleSubcategoryToggle(subcat)}
                           className={`px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                            isSelected ? "pill-active" : "bg-base-200 text-white hover:bg-base-300"
+                            isSelected ? "pill-active" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
                           }`}
                         >
                           {subcat}
@@ -770,7 +770,7 @@ const SubmitPage: NextPage = () => {
               {url && isValidUrl ? (
                 <div className="surface-card rounded-2xl p-4 space-y-3">
                   <p className="text-base font-medium uppercase tracking-wider text-base-content/40">Preview</p>
-                  {title ? <h3 className="text-lg font-semibold text-white line-clamp-2">{title}</h3> : null}
+                  {title ? <h3 className="text-lg font-semibold text-base-content line-clamp-2">{title}</h3> : null}
                   <ContentEmbed url={url} compact />
                   {description ? <p className="text-base text-base-content/70">{description}</p> : null}
                   {selectedSubcategories.length > 0 && (
@@ -808,7 +808,7 @@ const SubmitPage: NextPage = () => {
               <div className="obsidian-ember-info-card rounded-2xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="flex items-center gap-1.5 text-base font-medium text-white">
+                    <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
                       Submission Stake
                       <InfoTooltip
                         text={`Returned after ~4 days once a settled round confirms rating stays above 25. If no round ever settles, the stake unlocks when the content reaches dormancy instead. Settled two-sided rounds allocate ${protocolDocFacts.submitterShareLabel} to the submitter.`}
@@ -816,12 +816,12 @@ const SubmitPage: NextPage = () => {
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-white">10 cREP</span>
+                    <span className="text-xl font-bold text-base-content">10 cREP</span>
                   </div>
                 </div>
                 {submissionBonus !== undefined && (
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/10">
-                    <p className="flex items-center gap-1.5 text-sm text-white/60">
+                  <div className="mt-2 flex items-center justify-between border-t border-[#F5F0EB]/10 pt-2">
+                    <p className="flex items-center gap-1.5 text-sm text-base-content/60">
                       Participation Bonus
                       <InfoTooltip text="Projected cREP reward from the Participation Pool, paid only when the submitter stake resolves on the healthy path after a settled round. Rate decreases as more cREP is distributed." />
                     </p>

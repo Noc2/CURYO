@@ -155,7 +155,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           </ul>
         </div>
 
-        <Link href="/vote" className="btn btn-primary text-white w-full mt-4">
+        <Link href="/vote" className="btn btn-primary w-full mt-4">
           Start Voting
         </Link>
       </div>
@@ -260,7 +260,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
               that you are a human
             </p>
             <button
-              className="btn btn-primary text-white btn-lg"
+              className="btn btn-primary btn-lg"
               onClick={async () => {
                 const accepted = await requireAcceptance("faucet");
                 if (accepted) setTermsOk(true);

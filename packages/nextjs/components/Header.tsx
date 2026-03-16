@@ -44,7 +44,7 @@ export const HeaderMenuLinks = () => {
       {menuLinks.map(({ label, href, icon: Icon }) => {
         const isActive = pathname.startsWith(href);
         const isDocs = href === "/docs";
-        const navTone = isActive ? "text-white" : "text-[#6f7278]";
+        const navTone = isActive ? "text-[#F5F0EB]" : "text-[#7E8996]";
 
         // If we're on docs page, show Docs as header with submenu, otherwise show as regular link
         if (isDocs && isDocsPage) {
@@ -55,8 +55,8 @@ export const HeaderMenuLinks = () => {
                 href={href}
                 className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl hover:bg-base-200 transition-colors"
               >
-                <Icon className="w-6 h-6 shrink-0 text-white" />
-                <span className="text-base font-medium text-white">Docs</span>
+                <Icon className="w-6 h-6 shrink-0 text-[#F5F0EB]" />
+                <span className="text-base font-medium text-[#F5F0EB]">Docs</span>
               </Link>
               {/* Docs submenu - single column, explicitly block layout */}
               <div className="flex flex-col space-y-4 w-full">
@@ -75,7 +75,7 @@ export const HeaderMenuLinks = () => {
                             className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                               isLinkActive
                                 ? "bg-primary/10 text-primary font-medium"
-                                : "text-base-content/60 hover:text-base-content hover:bg-white/[0.04]"
+                                : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
                             }`}
                           >
                             {link.label}
@@ -98,8 +98,8 @@ export const HeaderMenuLinks = () => {
               passHref
               className={`flex items-center gap-3 px-3 py-2.5 text-base font-medium rounded-xl transition-colors ${
                 isActive
-                  ? "bg-white/[0.05] text-base-content ring-1 ring-white/8"
-                  : "text-base-content/60 hover:text-base-content hover:bg-white/[0.04]"
+                  ? "bg-[#F5F0EB]/[0.05] text-base-content ring-1 ring-[#F5F0EB]/8"
+                  : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
               }`}
             >
               <Icon className={`w-6 h-6 shrink-0 ${navTone}`} />
@@ -189,7 +189,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
         aria-label="Search content"
         value={inputValue}
         onChange={e => updateSearch(e.target.value)}
-        className={`input input-sm input-bordered pl-8 pr-7 border-white/8 bg-black/35 focus:border-primary/30 focus:bg-black/50 text-base ${
+        className={`input input-sm input-bordered pl-8 pr-7 border-[#F5F0EB]/8 bg-[#090A0C]/35 focus:border-primary/30 focus:bg-[#090A0C]/50 text-base ${
           isSidebar ? "w-full max-w-full" : "w-40 lg:w-56"
         }`}
       />
@@ -257,7 +257,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           value={draftValue}
           onChange={event => setDraftValue(event.target.value)}
           autoFocus
-          className="input input-sm w-full border-white/8 bg-black/45 pl-9 pr-9 text-base"
+          className="input input-sm w-full border-[#F5F0EB]/8 bg-[#090A0C]/45 pl-9 pr-9 text-base"
         />
         {draftValue ? (
           <button
@@ -297,7 +297,7 @@ export const Header = () => {
     <>
       {/* Mobile: top bar */}
       <div className="xl:hidden sticky top-0 z-20">
-        <div className="navbar min-h-0 shrink-0 justify-between px-4 sm:px-6 py-3 border-b border-white/8 bg-black backdrop-blur-xl shadow-[0_18px_44px_rgba(0,0,0,0.32)]">
+        <div className="navbar min-h-0 shrink-0 justify-between px-4 sm:px-6 py-3 border-b border-[#F5F0EB]/8 bg-[#090A0C] backdrop-blur-xl shadow-[0_18px_44px_rgba(9,10,12,0.32)]">
           {mobileSearchOpen ? (
             <Suspense>
               <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
@@ -310,7 +310,7 @@ export const Header = () => {
                     <Bars3Icon className="h-5 w-5" />
                   </summary>
                   <ul
-                    className="menu menu-compact dropdown-content mt-3 p-2 bg-black rounded-xl w-64 shadow-lg border border-base-content/5"
+                    className="menu menu-compact dropdown-content mt-3 p-2 bg-[#090A0C] rounded-xl w-64 shadow-lg border border-base-content/5"
                     onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
                   >
                     <Suspense>
@@ -321,7 +321,7 @@ export const Header = () => {
                 <Link href="/" className="flex min-w-0 items-center gap-2">
                   <CuryoLogo className="w-7 h-7 shrink-0" />
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate font-heading font-semibold text-base tracking-tight text-white">
+                    <span className="truncate font-heading font-semibold text-base tracking-tight text-[#F5F0EB]">
                       CURYO (BETA)
                     </span>
                     <span className="truncate text-base-content/60" style={{ fontSize: "14px" }}>
@@ -350,11 +350,11 @@ export const Header = () => {
       </div>
 
       {/* Desktop: left sidebar */}
-      <aside className="hidden xl:flex fixed left-0 top-0 z-20 h-screen w-56 flex-col items-stretch py-4 border-r border-white/8 bg-black shadow-[18px_0_48px_rgba(0,0,0,0.24)] backdrop-blur-xl shrink-0">
+      <aside className="hidden xl:flex fixed left-0 top-0 z-20 h-screen w-56 flex-col items-stretch py-4 border-r border-[#F5F0EB]/8 bg-[#090A0C] shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl shrink-0">
         <Link href="/" className="flex flex-row items-center gap-2 px-4 mb-4 shrink-0">
           <CuryoLogo className="w-8 h-8 shrink-0" />
           <div className="flex flex-col gap-0.5 items-start">
-            <span className="font-heading font-semibold text-base tracking-tight text-white">CURYO (BETA)</span>
+            <span className="font-heading font-semibold text-base tracking-tight text-[#F5F0EB]">CURYO (BETA)</span>
             <span className="text-base-content/60" style={{ fontSize: "14px" }}>
               Quality Signals
             </span>
@@ -371,7 +371,7 @@ export const Header = () => {
               const isActive = pathname.startsWith(href);
               const isDocs = href === "/docs";
               const isDocsPage = pathname.startsWith("/docs");
-              const navTone = isActive ? "text-white" : "text-[#6f7278]";
+              const navTone = isActive ? "text-[#F5F0EB]" : "text-[#7E8996]";
 
               // If we're on docs page, show Docs as header with submenu, otherwise show as regular link
               if (isDocs && isDocsPage) {
@@ -382,8 +382,8 @@ export const Header = () => {
                       href={href}
                       className="flex items-center justify-start gap-3 px-4 py-3 mb-2 rounded-xl hover:bg-base-200 transition-colors"
                     >
-                      <Icon className="w-6 h-6 shrink-0 text-white" />
-                      <span className="text-base font-medium text-white">Docs</span>
+                      <Icon className="w-6 h-6 shrink-0 text-[#F5F0EB]" />
+                      <span className="text-base font-medium text-[#F5F0EB]">Docs</span>
                     </Link>
                     {/* Docs submenu - single column, explicitly block layout */}
                     <div className="flex flex-col space-y-4 w-full">
@@ -402,7 +402,7 @@ export const Header = () => {
                                   className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                                     isLinkActive
                                       ? "bg-primary/10 text-primary font-medium"
-                                      : "text-base-content/60 hover:text-base-content hover:bg-white/[0.04]"
+                                      : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
                                   }`}
                                 >
                                   {link.label}
@@ -424,8 +424,8 @@ export const Header = () => {
                     href={href}
                     className={`flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors ${
                       isActive
-                        ? "bg-white/[0.05] text-base-content ring-1 ring-white/8"
-                        : "text-base-content/60 hover:text-base-content hover:bg-white/[0.04]"
+                        ? "bg-[#F5F0EB]/[0.05] text-base-content ring-1 ring-[#F5F0EB]/8"
+                        : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
                     }`}
                   >
                     <Icon className={`w-6 h-6 shrink-0 ${navTone}`} />

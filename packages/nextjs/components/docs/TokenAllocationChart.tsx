@@ -5,7 +5,7 @@ import { useState } from "react";
 const SLICES = [
   { label: "Faucet Pool", amount: "51,899,900 cREP", value: 51.8999, percentLabel: "51.8999%", color: "#7E8996" },
   { label: "Participation Pool", amount: "34,000,000 cREP", value: 34, percentLabel: "34.0%", color: "#F26426" },
-  { label: "Treasury", amount: "10,000,000 cREP", value: 10, percentLabel: "10.0%", color: "#F4F0EB" },
+  { label: "Treasury", amount: "10,000,000 cREP", value: 10, percentLabel: "10.0%", color: "#F5F0EB" },
   {
     label: "Consensus Subsidy Reserve",
     amount: "4,000,000 cREP",
@@ -13,8 +13,20 @@ const SLICES = [
     percentLabel: "4.0%",
     color: "#B3341B",
   },
-  { label: "Keeper Reward Pool", amount: "100,000 cREP", value: 0.1, percentLabel: "0.1%", color: "#D8875F" },
-  { label: "Category Registry", amount: "100 cREP", value: 0.0001, percentLabel: "0.0001%", color: "#2A2D33" },
+  {
+    label: "Keeper Reward Pool",
+    amount: "100,000 cREP",
+    value: 0.1,
+    percentLabel: "0.1%",
+    color: "rgba(242, 100, 38, 0.55)",
+  },
+  {
+    label: "Category Registry",
+    amount: "100 cREP",
+    value: 0.0001,
+    percentLabel: "0.0001%",
+    color: "rgba(126, 137, 150, 0.55)",
+  },
 ];
 
 const SIZE = 200;

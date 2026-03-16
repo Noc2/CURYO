@@ -137,7 +137,7 @@ export function ProfileForm() {
         <h1 className="text-2xl font-semibold">{hasProfile ? "Your Profile" : "Create Profile"}</h1>
         <Link
           href={publicProfileHref}
-          className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
+          className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-base-content transition-colors hover:bg-[#F5F0EB]/[0.05]"
         >
           Open public profile
         </Link>

@@ -15,8 +15,8 @@ export function WatchContentButton({ watched, pending = false, onClick, variant 
   const label = watched ? "Watching" : "Watch";
   const className =
     variant === "overlay"
-      ? `p-1 rounded bg-black/60 backdrop-blur hover:bg-black/80 ${
-          watched ? "text-primary opacity-100" : "text-white opacity-0 group-hover:opacity-100"
+      ? `rounded bg-[#090A0C]/60 p-1 backdrop-blur hover:bg-[#090A0C]/80 ${
+          watched ? "text-primary opacity-100" : "text-[#F5F0EB] opacity-0 group-hover:opacity-100"
         } transition-opacity`
       : `btn btn-ghost btn-sm btn-circle ${
           watched ? "text-primary hover:text-primary" : "text-base-content/50 hover:text-base-content"

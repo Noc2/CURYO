@@ -73,7 +73,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                     boxShadow: "inset 0 0 0 1px rgba(245,240,235,0.06), 0 14px 28px rgba(9,10,12,0.24)",
                   }}
                 >
-                  <Icon className="h-10 w-10 text-white" />
+                  <Icon className="h-10 w-10 text-[#F5F0EB]" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{title}</h3>
                 <p className="text-lg text-base-content/60">{description}</p>

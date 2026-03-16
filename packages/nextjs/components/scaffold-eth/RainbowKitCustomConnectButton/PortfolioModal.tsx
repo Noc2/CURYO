@@ -108,7 +108,7 @@ export const PortfolioModal = ({ address, modalId }: PortfolioModalProps) => {
                   <button
                     type="button"
                     onClick={loadMore}
-                    className="w-full rounded-lg border border-base-content/10 px-3 py-2 text-sm font-medium text-base-content/70 transition-colors hover:border-primary/30 hover:text-white"
+                    className="w-full rounded-lg border border-base-content/10 px-3 py-2 text-sm font-medium text-base-content/70 transition-colors hover:border-primary/30 hover:text-[#F5F0EB]"
                   >
                     Load more
                   </button>

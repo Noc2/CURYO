@@ -275,14 +275,14 @@ export const CategorySubmissionForm = () => {
           <div className="obsidian-ember-info-card rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <p className="flex items-center gap-1.5 text-base font-medium text-white">
+                <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
                   Platform Stake
                   <InfoTooltip text="Returned if approved by governance, forfeited if rejected. Receive 1% of the losing stakes from the platform" />
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xl font-bold text-white">100</span>
-                <span className="text-base text-white/60 ml-1">cREP</span>
+                <span className="text-xl font-bold text-base-content">100</span>
+                <span className="ml-1 text-base text-base-content/60">cREP</span>
               </div>
             </div>
           </div>

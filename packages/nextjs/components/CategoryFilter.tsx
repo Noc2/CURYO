@@ -137,7 +137,9 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             setSearch("");
           }}
           className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors ${
-            activeCategory !== categories[0] ? "pill-category" : "bg-base-200 text-white hover:bg-base-300"
+            activeCategory !== categories[0]
+              ? "pill-category"
+              : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
           }`}
         >
           {activeCategory}
@@ -172,7 +174,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                           handleSelect(category);
                           setMobileOpen(false);
                         }}
-                        className={`whitespace-nowrap ${isActive ? "bg-[#f26426] text-white hover:bg-[#f26426]" : ""}`}
+                        className={`whitespace-nowrap ${isActive ? "bg-[#F26426] text-[#F5F0EB] hover:bg-[#F26426]" : ""}`}
                       >
                         {category}
                       </button>
@@ -192,7 +194,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
         {visible.map(category => {
           const isActive = activeCategory === category;
           const custom = pillClassName?.(category, isActive);
-          const defaultCls = isActive ? "pill-category" : "bg-base-200 text-white hover:bg-base-300";
+          const defaultCls = isActive ? "pill-category" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]";
           return (
             <button
               key={category}
@@ -209,7 +211,9 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             <button
               onClick={() => setDropdownOpen(prev => !prev)}
               className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
-                overflow.includes(activeCategory) ? "pill-category" : "bg-base-200 text-white hover:bg-base-300"
+                overflow.includes(activeCategory)
+                  ? "pill-category"
+                  : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
               }`}
             >
               +{overflow.length} more
@@ -240,7 +244,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                         <button
                           onClick={() => handleSelect(category)}
                           className={`whitespace-nowrap ${
-                            activeCategory === category ? "bg-[#f26426] text-white hover:bg-[#f26426]" : ""
+                            activeCategory === category ? "bg-[#F26426] text-[#F5F0EB] hover:bg-[#F26426]" : ""
                           }`}
                         >
                           {category}
