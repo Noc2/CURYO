@@ -6,7 +6,6 @@ import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
-import { SignalDivider, SignalPill, type SignalTone } from "~~/components/shared/SignalElements";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
@@ -29,23 +28,6 @@ interface VotingQuestionCardProps {
   isOwnContent?: boolean;
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
-}
-
-function getPhaseSignal(phase: string, isEpoch1: boolean): { label: string; tone: SignalTone } {
-  switch (phase) {
-    case "settled":
-      return { label: "Resolved", tone: "success" };
-    case "cancelled":
-      return { label: "Refunded", tone: "warning" };
-    case "tied":
-      return { label: "Tied", tone: "neutral" };
-    case "revealFailed":
-      return { label: "Reveal issue", tone: "danger" };
-    case "voting":
-      return isEpoch1 ? { label: "Blind phase", tone: "primary" } : { label: "Open phase", tone: "warning" };
-    default:
-      return { label: "Signal", tone: "neutral" };
-  }
 }
 
 /**
@@ -104,7 +86,6 @@ export function VotingQuestionCard({
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
-  const phaseSignal = getPhaseSignal(phase, isEpoch1);
   const blindParticipationLabel = phase === "voting" && isEpoch1 ? getBlindParticipationLabel(ratePercent) : null;
   const votersNeeded = Math.max(0, minVoters - voteCount);
   const revealsNeeded = Math.max(0, minVoters - revealedCount);
@@ -172,28 +153,8 @@ export function VotingQuestionCard({
       className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
       style={embedded ? {} : { background: "var(--color-base-200)" }}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(53,158,238,0.12),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_55%)]"
-      />
       {/* Content */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="mb-3 flex shrink-0 flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-white/[0.45]">Public signal</p>
-            <div className="mt-1 flex items-end gap-2">
-              <span className="text-4xl font-semibold leading-none text-white">{currentRatingValue}</span>
-              <span className="pb-1 text-sm text-white/[0.58]">/100 rating</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <SignalPill tone="neutral">{contentLabel}</SignalPill>
-            <SignalPill tone={phaseSignal.tone}>{phaseSignal.label}</SignalPill>
-          </div>
-        </div>
-
-        <SignalDivider label="Vote signal" className="mb-3" />
-
         {/* Question at the top */}
         <p className="font-heading mb-3 shrink-0 break-words text-center text-[1.12rem] font-bold leading-[1.2] tracking-tight text-white xl:text-[1.16rem] 2xl:text-[1.24rem]">
           {questionDisplay.title ? (
