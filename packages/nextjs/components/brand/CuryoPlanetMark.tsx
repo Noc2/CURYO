@@ -35,15 +35,15 @@ export function CuryoPlanetMark({
   const variantClass = `curyo-planet-mark--${variant}`;
   const usesHeroVariant = variant === "hero";
   const usesCompactVariant = variant === "compact";
-  const planetRadius = usesCompactVariant ? 360 : 344;
-  const flareRadius = usesCompactVariant ? 394 : 406;
-  const flareRotation = usesCompactVariant ? -70 : -66;
-  const flareDashArray = usesCompactVariant ? "734 1741" : "666 1885";
-  const flareGlowStrokeWidth = usesCompactVariant ? 20 : 28;
-  const flareGlowOpacity = usesCompactVariant ? 0.4 : 0.54;
-  const flareBodyStrokeWidth = usesCompactVariant ? 12 : 10;
-  const flareMainStrokeWidth = usesCompactVariant ? 10.5 : 8;
-  const flareCoreStrokeWidth = usesCompactVariant ? 3 : 2.4;
+  const planetRadius = usesCompactVariant ? 332 : 344;
+  const flareRadius = usesCompactVariant ? 432 : 406;
+  const flareRotation = usesCompactVariant ? -72 : -66;
+  const flareDashArray = usesCompactVariant ? "916 1799" : "666 1885";
+  const flareGlowStrokeWidth = usesCompactVariant ? 24 : 28;
+  const flareGlowOpacity = usesCompactVariant ? 0.46 : 0.54;
+  const flareBodyStrokeWidth = usesCompactVariant ? 14 : 10;
+  const flareMainStrokeWidth = usesCompactVariant ? 12 : 8;
+  const flareCoreStrokeWidth = usesCompactVariant ? 3.6 : 2.4;
   const flareGlowFilterId = usesCompactVariant ? softBlur20Id : softBlur28Id;
 
   return (
