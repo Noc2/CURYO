@@ -133,18 +133,18 @@ function CoverCircle() {
         </RadialGradient>
 
         <LinearGradient id="cover-inner-ring" x1="146" y1="108" x2="366" y2="404" gradientUnits="userSpaceOnUse">
-          <Stop offset="0%" stopColor="#6B7280" />
-          <Stop offset="100%" stopColor="#A1A1AA" />
+          <Stop offset="0%" stopColor="#9CA3AF" />
+          <Stop offset="100%" stopColor="#D4D4D8" />
         </LinearGradient>
 
         <LinearGradient id="cover-middle-ring" x1="126" y1="90" x2="386" y2="422" gradientUnits="userSpaceOnUse">
-          <Stop offset="0%" stopColor="#374151" />
-          <Stop offset="100%" stopColor="#6B7280" />
+          <Stop offset="0%" stopColor="#6B7280" />
+          <Stop offset="100%" stopColor="#B4BDC8" />
         </LinearGradient>
 
         <LinearGradient id="cover-outer-ring" x1="106" y1="72" x2="406" y2="440" gradientUnits="userSpaceOnUse">
-          <Stop offset="0%" stopColor="#111827" />
-          <Stop offset="100%" stopColor="#4B5563" />
+          <Stop offset="0%" stopColor="#4B5563" />
+          <Stop offset="100%" stopColor="#9CA3AF" />
         </LinearGradient>
       </Defs>
 
@@ -176,7 +176,6 @@ function CoverCircle() {
         strokeWidth="11"
         strokeOpacity={0.96}
       />
-      <Circle cx="371" cy="334" r="4.2" fill="#111827" fillOpacity={0.78} />
       <Circle cx="256" cy="256" r="118" fill="url(#cover-orb-glow)" />
       <Circle cx="256" cy="256" r="64" fill="url(#cover-orb)" />
       <Circle cx="256" cy="256" r="52" fill="url(#cover-gloss)" />
