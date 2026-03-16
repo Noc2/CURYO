@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
@@ -12,8 +13,129 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
+import { IProfileRegistry } from "../contracts/interfaces/IProfileRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
+import { IVoterIdNFT } from "../contracts/interfaces/IVoterIdNFT.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
+
+/// @title Legacy ProfileRegistry implementation used to verify storage-safe upgrades
+contract ProfileRegistryV1 is Initializable, AccessControlUpgradeable, UUPSUpgradeable {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    uint256 public constant MIN_NAME_LENGTH = 3;
+    uint256 public constant MAX_NAME_LENGTH = 20;
+    uint256 public constant MAX_IMAGE_URL_LENGTH = 512;
+
+    struct Profile {
+        string name;
+        string imageUrl;
+        uint256 createdAt;
+        uint256 updatedAt;
+    }
+
+    mapping(address => Profile) private _profiles;
+    mapping(bytes32 => address) private _nameToAddress;
+    address[] private _registeredAddresses;
+    IVoterIdNFT public voterIdNFT;
+
+    uint256[50] private __gap;
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _admin, address _governance) public initializer {
+        __AccessControl_init();
+
+        require(_admin != address(0), "Invalid admin");
+        require(_governance != address(0), "Invalid governance");
+
+        _grantRole(DEFAULT_ADMIN_ROLE, _governance);
+        _grantRole(ADMIN_ROLE, _governance);
+        _grantRole(UPGRADER_ROLE, _governance);
+
+        if (_admin != _governance) {
+            _grantRole(ADMIN_ROLE, _admin);
+        }
+    }
+
+    function setProfile(string calldata name, string calldata imageUrl) external {
+        if (address(voterIdNFT) != address(0)) {
+            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+            require(voterIdNFT.resolveHolder(msg.sender) == msg.sender, "Profile owner must hold Voter ID");
+        }
+
+        require(bytes(name).length >= MIN_NAME_LENGTH, "Name too short");
+        require(bytes(name).length <= MAX_NAME_LENGTH, "Name too long");
+        require(bytes(imageUrl).length <= MAX_IMAGE_URL_LENGTH, "Image URL too long");
+        require(_isValidName(name), "Invalid name format");
+
+        bytes32 nameHash = _normalizeAndHash(name);
+        address existingOwner = _nameToAddress[nameHash];
+        require(existingOwner == address(0) || existingOwner == msg.sender, "Name already taken");
+
+        Profile storage profile = _profiles[msg.sender];
+        bool isNewProfile = profile.createdAt == 0;
+
+        if (!isNewProfile && bytes(profile.name).length > 0) {
+            bytes32 oldNameHash = _normalizeAndHash(profile.name);
+            if (oldNameHash != nameHash) {
+                delete _nameToAddress[oldNameHash];
+            }
+        }
+
+        profile.name = name;
+        profile.imageUrl = imageUrl;
+        profile.updatedAt = block.timestamp;
+
+        if (isNewProfile) {
+            profile.createdAt = block.timestamp;
+            _registeredAddresses.push(msg.sender);
+        }
+
+        _nameToAddress[nameHash] = msg.sender;
+    }
+
+    function getProfile(address user) external view returns (Profile memory) {
+        return _profiles[user];
+    }
+
+    function hasProfile(address user) external view returns (bool) {
+        return _profiles[user].createdAt > 0;
+    }
+
+    function _isValidName(string memory name) internal pure returns (bool) {
+        bytes memory nameBytes = bytes(name);
+        for (uint256 i = 0; i < nameBytes.length; i++) {
+            bytes1 char = nameBytes[i];
+            bool isLowercase = (char >= 0x61 && char <= 0x7A);
+            bool isUppercase = (char >= 0x41 && char <= 0x5A);
+            bool isDigit = (char >= 0x30 && char <= 0x39);
+            bool isUnderscore = (char == 0x5F);
+            if (!isLowercase && !isUppercase && !isDigit && !isUnderscore) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function _normalizeAndHash(string memory name) internal pure returns (bytes32) {
+        bytes memory nameBytes = bytes(name);
+        bytes memory lowercased = new bytes(nameBytes.length);
+        for (uint256 i = 0; i < nameBytes.length; i++) {
+            bytes1 char = nameBytes[i];
+            if (char >= 0x41 && char <= 0x5A) {
+                lowercased[i] = bytes1(uint8(char) + 32);
+            } else {
+                lowercased[i] = char;
+            }
+        }
+        return keccak256(lowercased);
+    }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
+}
 
 /// @title Minimal mock for RoundVotingEngine interface (used by FrontendRegistry)
 contract MockVotingEngineForUpgrade is IRoundVotingEngine {
@@ -282,6 +404,54 @@ contract UpgradeTest is Test {
         // State preserved
         assertTrue(profileRegistry.hasRole(UPGRADER_ROLE, governance));
         assertTrue(profileRegistry.hasProfile(address(10)));
+
+        IProfileRegistry.Profile memory profile = profileRegistry.getProfile(address(10));
+        assertEq(profile.name, "testuser");
+        assertEq(profile.imageUrl, "https://example.com/img.png");
+        assertEq(profile.strategy, "");
+        assertTrue(profile.createdAt > 0);
+        assertTrue(profile.updatedAt > 0);
+    }
+
+    function test_ProfileRegistry_UpgradeFromLegacyLayoutPreservesExistingProfiles() public {
+        vm.startPrank(admin);
+        ProfileRegistryV1 legacyImpl = new ProfileRegistryV1();
+        ProfileRegistryV1 legacyProfileRegistry = ProfileRegistryV1(
+            address(new ERC1967Proxy(address(legacyImpl), abi.encodeCall(ProfileRegistryV1.initialize, (admin, governance))))
+        );
+        vm.stopPrank();
+
+        address user = address(0xBEEF);
+        vm.prank(user);
+        legacyProfileRegistry.setProfile("legacyuser", "https://example.com/legacy.png");
+
+        ProfileRegistryV1.Profile memory oldProfile = legacyProfileRegistry.getProfile(user);
+        assertEq(oldProfile.name, "legacyuser");
+        assertEq(oldProfile.imageUrl, "https://example.com/legacy.png");
+        assertTrue(oldProfile.createdAt > 0);
+        assertEq(oldProfile.updatedAt, oldProfile.createdAt);
+
+        ProfileRegistry newImpl = new ProfileRegistry();
+        vm.prank(governance);
+        UUPSUpgradeable(address(legacyProfileRegistry)).upgradeToAndCall(address(newImpl), "");
+
+        ProfileRegistry upgradedRegistry = ProfileRegistry(address(legacyProfileRegistry));
+        IProfileRegistry.Profile memory upgradedProfile = upgradedRegistry.getProfile(user);
+        assertEq(upgradedProfile.name, oldProfile.name);
+        assertEq(upgradedProfile.imageUrl, oldProfile.imageUrl);
+        assertEq(upgradedProfile.strategy, "");
+        assertEq(upgradedProfile.createdAt, oldProfile.createdAt);
+        assertEq(upgradedProfile.updatedAt, oldProfile.updatedAt);
+
+        vm.prank(user);
+        upgradedRegistry.setProfile("legacyuser", "https://example.com/legacy-2.png", "I reward original, useful work.");
+
+        IProfileRegistry.Profile memory migratedProfile = upgradedRegistry.getProfile(user);
+        assertEq(migratedProfile.name, "legacyuser");
+        assertEq(migratedProfile.imageUrl, "https://example.com/legacy-2.png");
+        assertEq(migratedProfile.strategy, "I reward original, useful work.");
+        assertEq(migratedProfile.createdAt, oldProfile.createdAt);
+        assertTrue(migratedProfile.updatedAt >= oldProfile.updatedAt);
     }
 
     // =========================================================================

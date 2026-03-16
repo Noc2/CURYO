@@ -21,14 +21,23 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     uint256 public constant MAX_IMAGE_URL_LENGTH = 512;
     uint256 public constant MAX_STRATEGY_LENGTH = 560;
 
+    /// @dev Storage for the original profile shape. Keep append-only compatibility for proxy upgrades.
+    struct StoredProfile {
+        string name;
+        string imageUrl;
+        uint256 createdAt;
+        uint256 updatedAt;
+    }
+
     // --- State ---
-    mapping(address => Profile) private _profiles;
+    mapping(address => StoredProfile) private _profiles;
     mapping(bytes32 => address) private _nameToAddress; // lowercase name hash => owner
     address[] private _registeredAddresses;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
+    mapping(address => string) private _profileStrategies;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     // --- Events ---
     event ProfileCreated(address indexed user, string name, string imageUrl, string strategy);
@@ -92,7 +101,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         // Check uniqueness (allow if same user is updating)
         require(existingOwner == address(0) || existingOwner == msg.sender, "Name already taken");
 
-        Profile storage profile = _profiles[msg.sender];
+        StoredProfile storage profile = _profiles[msg.sender];
         bool isNewProfile = profile.createdAt == 0;
 
         // If user had a different name before, release it
@@ -106,7 +115,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         // Update or create profile
         profile.name = name;
         profile.imageUrl = imageUrl;
-        profile.strategy = strategy;
+        _profileStrategies[msg.sender] = strategy;
         profile.updatedAt = block.timestamp;
 
         if (isNewProfile) {
@@ -125,7 +134,14 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
 
     /// @inheritdoc IProfileRegistry
     function getProfile(address user) external view override returns (Profile memory) {
-        return _profiles[user];
+        StoredProfile storage profile = _profiles[user];
+        return Profile({
+            name: profile.name,
+            imageUrl: profile.imageUrl,
+            strategy: _profileStrategies[user],
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt
+        });
     }
 
     /// @inheritdoc IProfileRegistry
