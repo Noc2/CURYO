@@ -45,10 +45,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
           {/* Title (left on large screens) */}
           <div className="flex flex-col items-center lg:items-start lg:flex-[0.8] lg:max-w-[32rem]">
-            <span className="rounded-full border border-white/8 bg-white/[0.03] px-4 py-1 text-[0.72rem] font-semibold uppercase tracking-[0.24em] text-[#D7DCE3]">
-              Human-curated signal
-            </span>
-            <h1 className="mt-4 text-6xl font-bold uppercase tracking-tight sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">
+            <h1 className="text-6xl font-bold uppercase tracking-tight sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">
               Curyo
             </h1>
             <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[32rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
