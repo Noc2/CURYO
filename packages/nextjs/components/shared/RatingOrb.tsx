@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 
-const START_ANGLE = 222;
+const START_ANGLE = 0;
 
 function clampRating(rating: number) {
   if (Number.isNaN(rating)) return 0;
@@ -15,14 +15,6 @@ function polarToCartesian(center: number, radius: number, angleInDegrees: number
     x: center + radius * Math.cos(angleInRadians),
     y: center + radius * Math.sin(angleInRadians),
   };
-}
-
-function describeArc(center: number, radius: number, startAngle: number, endAngle: number) {
-  const start = polarToCartesian(center, radius, endAngle);
-  const end = polarToCartesian(center, radius, startAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-
-  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
 }
 
 interface RatingOrbProps {
@@ -38,15 +30,13 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
   const trackRadius = size * 0.41;
   const trackWidth = Math.max(8, size * 0.034);
   const progress = clampedRating / 100;
+  const circumference = 2 * Math.PI * trackRadius;
+  const progressLength = circumference * progress;
   const flareStroke = `url(#${orbId}-flare)`;
   const coreStroke = `url(#${orbId}-core)`;
-  const arcPath =
-    progress >= 1
-      ? null
-      : progress <= 0
-        ? null
-        : describeArc(center, trackRadius, START_ANGLE, START_ANGLE + progress * 360);
   const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
+  const ratingFontSize = Math.max(44, size * 0.29);
+  const percentFontSize = Math.max(22, ratingFontSize * 0.46);
 
   return (
     <div
@@ -136,24 +126,42 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
               strokeLinecap="round"
             />
           </>
-        ) : arcPath ? (
+        ) : progress > 0 ? (
           <>
-            <path
-              d={arcPath}
+            <circle
+              cx={center}
+              cy={center}
+              r={trackRadius}
               fill="none"
               stroke={flareStroke}
               strokeWidth={trackWidth}
               strokeLinecap="round"
               filter={`url(#${orbId}-glow)`}
               opacity="0.56"
+              strokeDasharray={`${progressLength} ${circumference}`}
+              transform={`rotate(-90 ${center} ${center})`}
             />
-            <path d={arcPath} fill="none" stroke={flareStroke} strokeWidth={trackWidth * 0.6} strokeLinecap="round" />
-            <path
-              d={arcPath}
+            <circle
+              cx={center}
+              cy={center}
+              r={trackRadius}
+              fill="none"
+              stroke={flareStroke}
+              strokeWidth={trackWidth * 0.6}
+              strokeLinecap="round"
+              strokeDasharray={`${progressLength} ${circumference}`}
+              transform={`rotate(-90 ${center} ${center})`}
+            />
+            <circle
+              cx={center}
+              cy={center}
+              r={trackRadius}
               fill="none"
               stroke={coreStroke}
               strokeWidth={Math.max(2, trackWidth * 0.22)}
               strokeLinecap="round"
+              strokeDasharray={`${progressLength} ${circumference}`}
+              transform={`rotate(-90 ${center} ${center})`}
             />
             <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill="#FFF1D8" />
             <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(255,141,101,0.18)" />
@@ -172,9 +180,14 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
       </svg>
 
       <div className="relative z-10 flex flex-col items-center justify-center text-center">
-        <span className="text-[clamp(3rem,12vw,5.2rem)] font-semibold leading-none tracking-[-0.05em] text-white">
-          {clampedRating}
-          <span className="ml-1 text-[0.62em]">%</span>
+        <span
+          className="flex items-end justify-center font-semibold leading-none tracking-[-0.065em] text-white"
+          style={{ fontSize: ratingFontSize, maxWidth: trackRadius * 1.52 }}
+        >
+          <span>{clampedRating}</span>
+          <span className="ml-1 shrink-0 leading-[0.92]" style={{ fontSize: percentFontSize }}>
+            %
+          </span>
         </span>
       </div>
     </div>
