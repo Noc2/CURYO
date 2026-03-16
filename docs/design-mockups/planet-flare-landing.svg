@@ -47,6 +47,12 @@
     <filter id="orbit-soft" x="754" y="62" width="740" height="740" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="10"/>
     </filter>
+    <filter id="metric-orbit-glow" x="120" y="560" width="256" height="242" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <filter id="metric-orbit-soft" x="134" y="574" width="228" height="214" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
     <filter id="planet-highlight-blur" x="874" y="102" width="592" height="432" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="28"/>
     </filter>
@@ -95,6 +101,17 @@
       <stop offset="0.52" stop-color="#FFF0CF"/>
       <stop offset="1" stop-color="#FFF7EA"/>
     </linearGradient>
+    <linearGradient id="metric-flare" x1="164" y1="604" x2="338" y2="748" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45D4F"/>
+      <stop offset="0.3" stop-color="#FF8C5F"/>
+      <stop offset="0.6" stop-color="#FFC37A"/>
+      <stop offset="1" stop-color="#FFF0D8"/>
+    </linearGradient>
+    <linearGradient id="metric-core" x1="172" y1="614" x2="330" y2="740" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9B75"/>
+      <stop offset="0.52" stop-color="#FFF0CF"/>
+      <stop offset="1" stop-color="#FFF7EA"/>
+    </linearGradient>
   </defs>
 
   <rect width="1600" height="1000" fill="#05060A"/>
@@ -120,16 +137,18 @@
 
   <circle cx="1122" cy="430" r="352" stroke="#6D3428" stroke-opacity="0.16" stroke-width="6"/>
   <circle cx="1122" cy="430" r="352" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+  <path d="M954 138A344 344 0 0 1 1118 84" stroke="#F7A36F" stroke-opacity="0.12" stroke-width="4" stroke-linecap="round"/>
+  <path d="M972 146A336 336 0 0 1 1128 98" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2" stroke-linecap="round"/>
   <g filter="url(#orbit-glow)">
-    <path d="M1109.7 78.2A352 352 0 1 1 818.4 251.9" stroke="#F4614F" stroke-opacity="0.44" stroke-width="22"/>
+    <path d="M1242 108A344 344 0 0 1 1458 548" stroke="#F4614F" stroke-opacity="0.56" stroke-width="28" stroke-linecap="round"/>
   </g>
   <g filter="url(#orbit-soft)">
-    <path d="M1109.7 78.2A352 352 0 1 1 818.4 251.9" stroke="url(#orbit-flare)" stroke-width="8"/>
+    <path d="M1242 108A344 344 0 0 1 1458 548" stroke="url(#orbit-flare)" stroke-width="9" stroke-linecap="round"/>
   </g>
-  <path d="M1109.7 78.2A352 352 0 1 1 818.4 251.9" stroke="url(#orbit-flare)" stroke-width="4.6"/>
-  <path d="M1109.7 78.2A352 352 0 1 1 818.4 251.9" stroke="url(#orbit-core)" stroke-width="1.8"/>
-  <circle cx="1110" cy="78" r="10" fill="#FFF1D8"/>
-  <circle cx="1110" cy="78" r="20" fill="#FF8D65" fill-opacity="0.18"/>
+  <path d="M1242 108A344 344 0 0 1 1458 548" stroke="url(#orbit-flare)" stroke-width="4.8" stroke-linecap="round"/>
+  <path d="M1252 116A336 336 0 0 1 1448 538" stroke="url(#orbit-core)" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="1456" cy="548" r="12" fill="#FFF1D8"/>
+  <circle cx="1456" cy="548" r="24" fill="#FF8D65" fill-opacity="0.18"/>
 
   <circle cx="1122" cy="430" r="318" fill="url(#planet-base)"/>
   <g clip-path="url(#planet-clip)">
@@ -175,7 +194,19 @@
   </g>
 
   <circle cx="248" cy="680" r="108" fill="url(#metric-glow)"/>
-  <circle cx="248" cy="680" r="86" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+  <circle cx="248" cy="680" r="104" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2"/>
+  <circle cx="248" cy="680" r="96" stroke="#6D3428" stroke-opacity="0.14" stroke-width="4"/>
+  <circle cx="248" cy="680" r="84" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+  <g filter="url(#metric-orbit-glow)">
+    <path d="M171.4 615.7A100 100 0 1 1 152.7 710.2" stroke="#F4614F" stroke-opacity="0.42" stroke-width="14"/>
+  </g>
+  <g filter="url(#metric-orbit-soft)">
+    <path d="M171.4 615.7A100 100 0 1 1 152.7 710.2" stroke="url(#metric-flare)" stroke-width="6"/>
+  </g>
+  <path d="M171.4 615.7A100 100 0 1 1 152.7 710.2" stroke="url(#metric-flare)" stroke-width="3.8"/>
+  <path d="M171.4 615.7A100 100 0 1 1 152.7 710.2" stroke="url(#metric-core)" stroke-width="1.5"/>
+  <circle cx="171.4" cy="615.7" r="8" fill="#FFF1D8"/>
+  <circle cx="171.4" cy="615.7" r="16" fill="#FF8D65" fill-opacity="0.18"/>
   <text x="176" y="706" fill="#FFFFFF" font-size="96" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">84%</text>
 
   <text x="414" y="652" fill="#FFFFFF" fill-opacity="0.42" font-size="24" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Current rating</text>
