@@ -169,7 +169,47 @@ test("confidence changes flare strength without changing its arc length", () => 
   assert.ok(highConfidence.flare);
   assert.equal(lowConfidence.flare.sweepDegrees, highConfidence.flare.sweepDegrees);
   assert.ok(highConfidence.flare.opacity > lowConfidence.flare.opacity);
-  assert.ok(highConfidence.flare.width > lowConfidence.flare.width);
+  assert.equal(highConfidence.flare.width, lowConfidence.flare.width);
+  assert.equal(highConfidence.flare.glowWidth, lowConfidence.flare.glowWidth);
+  assert.equal(highConfidence.flare.headRadius, lowConfidence.flare.headRadius);
+});
+
+test("flare start angle stays at the top for every address", () => {
+  const first = buildOrbitalAvatarModel(
+    buildPayload({
+      address: "0x1111111111111111111111111111111111111111",
+      stats: {
+        totalSettledVotes: 24,
+        totalWins: 12,
+        totalLosses: 12,
+        currentStreak: 0,
+        bestWinStreak: 2,
+        winRate: 0.5,
+      },
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+  const second = buildOrbitalAvatarModel(
+    buildPayload({
+      address: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      stats: {
+        totalSettledVotes: 24,
+        totalWins: 12,
+        totalLosses: 12,
+        currentStreak: 0,
+        bestWinStreak: 2,
+        winRate: 0.5,
+      },
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.ok(first.flare);
+  assert.ok(second.flare);
+  assert.equal(first.flare.rotationDegrees, -90);
+  assert.equal(second.flare.rotationDegrees, -90);
+  assert.equal(first.flare.headAngleDegrees, 90);
+  assert.equal(second.flare.headAngleDegrees, 90);
 });
 
 test("accuracy of zero removes the flare entirely", () => {

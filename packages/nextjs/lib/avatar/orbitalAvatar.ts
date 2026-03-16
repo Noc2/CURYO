@@ -61,6 +61,10 @@ export interface OrbitalAvatarModel {
 const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
 const CREP_DECIMALS = 1e6;
+const FLARE_START_ROTATION_DEGREES = -90;
+const AVATAR_FLARE_WIDTH = 7.5;
+const AVATAR_FLARE_GLOW_WIDTH = 15;
+const AVATAR_FLARE_HEAD_RADIUS = 5.5;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -196,7 +200,6 @@ function getAddressVariant(address: string) {
 
   return {
     compositionRotation: unitHash(`${address}:planet-rotation`) * 360,
-    flareRotation: -90,
     planetColorA: hslToHex(baseHue + 24, Math.min(saturation + 10, 98), 82),
     planetColorB: hslToHex(baseHue - 8, Math.min(saturation + 6, 94), 62),
     planetColorC: hslToHex(baseHue + 118, Math.min(saturation - 4, 88), 22),
@@ -247,11 +250,7 @@ function buildOrbit(
   };
 }
 
-function buildFlare(
-  payload: ReputationAvatarPayload,
-  orbit: OrbitalAvatarOrbit | null,
-  variant: ReturnType<typeof getAddressVariant>,
-): OrbitalAvatarFlare | null {
+function buildFlare(payload: ReputationAvatarPayload, orbit: OrbitalAvatarOrbit | null): OrbitalAvatarFlare | null {
   if (!orbit || !payload.stats || payload.stats.totalSettledVotes <= 0) return null;
 
   const { accuracy, accuracyConfidence } = getSignalScores(payload);
@@ -261,12 +260,12 @@ function buildFlare(
   return {
     radius: orbit.radius,
     sweepDegrees,
-    rotationDegrees: variant.flareRotation,
-    width: 8 + accuracyConfidence * 5,
-    glowWidth: 26 + accuracyConfidence * 10,
+    rotationDegrees: FLARE_START_ROTATION_DEGREES,
+    width: AVATAR_FLARE_WIDTH,
+    glowWidth: AVATAR_FLARE_GLOW_WIDTH,
     opacity: 0.24 + accuracyConfidence * 0.76,
-    headRadius: 8 + accuracyConfidence * 5,
-    headAngleDegrees: variant.flareRotation + sweepDegrees,
+    headRadius: AVATAR_FLARE_HEAD_RADIUS,
+    headAngleDegrees: FLARE_START_ROTATION_DEGREES + sweepDegrees,
     startColor: "#F45C4D",
     middleColor: "#FFC37A",
     endColor: "#FFF4DB",
@@ -293,7 +292,7 @@ export function buildOrbitalAvatarModel(
   const variant = getAddressVariant(payload.address);
   const planet = buildPlanet(payload, variant);
   const orbit = buildOrbit(planet, variant);
-  const flare = buildFlare(payload, orbit, variant);
+  const flare = buildFlare(payload, orbit);
 
   return {
     compositionRotation: variant.compositionRotation,
