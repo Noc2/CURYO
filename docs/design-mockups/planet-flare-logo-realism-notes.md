@@ -1,6 +1,6 @@
-# Planet Flare Realism Direction
+# Planet Flare Photoreal Direction
 
-This direction keeps the Curyo planet-and-flare silhouette, but pushes it toward a more believable planetary disk and a less "spinner-like" flare.
+This direction keeps the Curyo planet-and-flare silhouette, but pushes it much closer to a photoreal planetary disk and removes the idea that the flare is traveling on a perfect orbit.
 
 ## Research Notes
 
@@ -15,19 +15,19 @@ This direction keeps the Curyo planet-and-flare silhouette, but pushes it toward
 ## What Changes In The Logo
 
 - The planet becomes rust, ochre, ember, and deep maroon instead of rainbow gradients.
-- The surface uses irregular terrain patches and crater hints instead of horizontal highlight bands.
-- The light source becomes directional, with a clear day-night terminator and a thinner atmospheric rim.
-- The flare becomes an asymmetric plasma arch with a bright head and dimmer trailing tail.
+- The surface uses textured terrain masses, crater shadows, and relief-like variation instead of graphic bands.
+- The lighting becomes more cinematic and planetary, with a strong terminator, specular bloom, and a thin atmospheric rim.
+- The flare becomes a detached plasma stream with a hot leading head and dissipating tail, not a ring segment.
 
 ## Motion Direction
 
-- Do not rotate the entire flare path 360 degrees like a loading spinner.
-- Keep the flare anchored to one orbital sector and let it drift slowly, roughly 18-24 seconds for a full breathing cycle.
-- Let the flare length expand and contract subtly, around 8-12 percent, instead of staying mechanically fixed.
-- Pulse the brightness more than the position.
-- When the flare passes behind the darker side of the planet, dim and soften it rather than keeping identical intensity all the way around.
+- Do not rotate the flare around the planet on a circular orbit.
+- Keep the flare on a free curved path that skims past the planet and bends away from it.
+- Animate the flare like plasma: slow drift, brightness surges, and a slight tail reshaping over time.
+- Let the brightest point lead the motion while the tail lags and diffuses.
+- Preserve a static composition when motion is disabled; the flare should still read as a nearby event, not an orbit track.
 
 ## Logo Constraint
 
-- The production mark should feel more real, but not fully photoreal.
-- Tiny variants still need a clean silhouette, so atmosphere, craters, and terrain should stay broad and graphic rather than hyper-detailed.
+- The hero/logo exploration can lean photoreal, but the production badge still needs a simplified sibling for tiny sizes.
+- Tiny variants should borrow the same light direction and color language, but drop the fine terrain texture and detached tail complexity.

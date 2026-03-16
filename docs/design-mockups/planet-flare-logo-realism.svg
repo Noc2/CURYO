@@ -1,134 +1,155 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="bg-glow-top" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(652 202) rotate(138) scale(412 356)">
-      <stop stop-color="#52251A" stop-opacity="0.46"/>
-      <stop offset="0.58" stop-color="#201318" stop-opacity="0.22"/>
-      <stop offset="1" stop-color="#080B12" stop-opacity="0"/>
+    <radialGradient id="bg-core" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(520 468) rotate(90) scale(520 520)">
+      <stop stop-color="#191117"/>
+      <stop offset="0.64" stop-color="#0B0D13"/>
+      <stop offset="1" stop-color="#06080D"/>
     </radialGradient>
-    <radialGradient id="bg-glow-bottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(372 874) rotate(-18) scale(462 268)">
-      <stop stop-color="#1D2230" stop-opacity="0.48"/>
-      <stop offset="1" stop-color="#1D2230" stop-opacity="0"/>
+    <radialGradient id="bg-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(692 232) rotate(136) scale(364 286)">
+      <stop stop-color="#7E2E1D" stop-opacity="0.42"/>
+      <stop offset="0.46" stop-color="#391A1A" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#0B0D13" stop-opacity="0"/>
     </radialGradient>
-
-    <radialGradient id="planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(612 328) rotate(131) scale(474 448)">
-      <stop stop-color="#FFB55A"/>
-      <stop offset="0.22" stop-color="#F48C34"/>
-      <stop offset="0.46" stop-color="#D85B22"/>
-      <stop offset="0.72" stop-color="#8D2F1C"/>
-      <stop offset="1" stop-color="#351312"/>
+    <radialGradient id="planet-shell" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(638 332) rotate(136) scale(470 440)">
+      <stop stop-color="#FFBF73"/>
+      <stop offset="0.18" stop-color="#F7953E"/>
+      <stop offset="0.43" stop-color="#D65D22"/>
+      <stop offset="0.72" stop-color="#7A281A"/>
+      <stop offset="1" stop-color="#1D0D10"/>
     </radialGradient>
-    <radialGradient id="planet-terminator" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(350 710) rotate(-36) scale(318 248)">
-      <stop stop-color="#12090B" stop-opacity="0.92"/>
-      <stop offset="0.44" stop-color="#160A0D" stop-opacity="0.62"/>
-      <stop offset="1" stop-color="#160A0D" stop-opacity="0"/>
+    <radialGradient id="atmosphere-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(734 316) rotate(150) scale(228 84)">
+      <stop stop-color="#C9E7FF" stop-opacity="0.62"/>
+      <stop offset="0.38" stop-color="#DDF1FF" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#DDF1FF" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="planet-rim-light" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(650 318) rotate(136) scale(214 146)">
-      <stop stop-color="#FFF0C7" stop-opacity="0.7"/>
-      <stop offset="0.48" stop-color="#FFD59E" stop-opacity="0.3"/>
-      <stop offset="1" stop-color="#FFD59E" stop-opacity="0"/>
+    <radialGradient id="planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(658 354) rotate(135) scale(190 132)">
+      <stop stop-color="#FFF0CE" stop-opacity="0.54"/>
+      <stop offset="0.46" stop-color="#FFD49B" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFD49B" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="planet-atmosphere" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(744 330) rotate(150) scale(222 88)">
-      <stop stop-color="#A9D8FF" stop-opacity="0.42"/>
-      <stop offset="0.42" stop-color="#D7F0FF" stop-opacity="0.16"/>
-      <stop offset="1" stop-color="#D7F0FF" stop-opacity="0"/>
+    <radialGradient id="planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(336 722) rotate(-34) scale(332 260)">
+      <stop stop-color="#080509" stop-opacity="0.98"/>
+      <stop offset="0.48" stop-color="#0D060A" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#0D060A" stop-opacity="0"/>
     </radialGradient>
-
-    <linearGradient id="flare-gradient" x1="314" y1="164" x2="868" y2="564" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#3B120F" stop-opacity="0"/>
-      <stop offset="0.18" stop-color="#C33A22"/>
-      <stop offset="0.42" stop-color="#F56F31"/>
-      <stop offset="0.68" stop-color="#FFB05A"/>
-      <stop offset="0.88" stop-color="#FFD79C"/>
-      <stop offset="1" stop-color="#FFF4DB"/>
+    <radialGradient id="flare-head" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(818 608) rotate(142) scale(70 56)">
+      <stop stop-color="#FFF7EB"/>
+      <stop offset="0.28" stop-color="#FFD7A0"/>
+      <stop offset="0.64" stop-color="#FF8E4F"/>
+      <stop offset="1" stop-color="#FF5A34" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="flare-stream" x1="236" y1="238" x2="852" y2="598" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#35120F" stop-opacity="0"/>
+      <stop offset="0.12" stop-color="#8F2B1A" stop-opacity="0.28"/>
+      <stop offset="0.32" stop-color="#D64924" stop-opacity="0.84"/>
+      <stop offset="0.62" stop-color="#FF9F54"/>
+      <stop offset="0.86" stop-color="#FFD7A0"/>
+      <stop offset="1" stop-color="#FFF6E8"/>
     </linearGradient>
-    <linearGradient id="flare-core" x1="360" y1="186" x2="850" y2="552" gradientUnits="userSpaceOnUse">
+    <linearGradient id="flare-core" x1="292" y1="252" x2="826" y2="582" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FF8F47" stop-opacity="0"/>
-      <stop offset="0.34" stop-color="#FFD29A"/>
-      <stop offset="0.78" stop-color="#FFF8E8"/>
-      <stop offset="1" stop-color="#FFF8E8"/>
+      <stop offset="0.34" stop-color="#FFD8A8" stop-opacity="0.82"/>
+      <stop offset="0.72" stop-color="#FFF9EF"/>
+      <stop offset="1" stop-color="#FFF9EF"/>
     </linearGradient>
 
-    <filter id="soft-blur-16" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="planet-texture" x="110" y="110" width="804" height="804" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.010 0.024" numOctaves="3" seed="11" result="noise"/>
+      <feColorMatrix
+        in="noise"
+        type="matrix"
+        values="0.9 0 0 0 0
+                0 0.56 0 0 0
+                0 0 0.32 0 0
+                0 0 0 0.72 0"
+        result="noiseTint"
+      />
+      <feGaussianBlur in="noiseTint" stdDeviation="1.2" result="noiseSoft"/>
+    </filter>
+    <filter id="planet-relief" x="110" y="110" width="804" height="804" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.006 0.018" numOctaves="2" seed="7" result="reliefNoise"/>
+      <feDisplacementMap in="SourceGraphic" in2="reliefNoise" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="soft-blur-16" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
       <feGaussianBlur stdDeviation="16"/>
     </filter>
-    <filter id="soft-blur-28" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="28"/>
+    <filter id="soft-blur-24" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="24"/>
     </filter>
-    <filter id="soft-blur-42" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="42"/>
+    <filter id="soft-blur-40" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="40"/>
     </filter>
-
     <clipPath id="planet-clip">
-      <circle cx="512" cy="512" r="336"/>
+      <circle cx="512" cy="512" r="338"/>
     </clipPath>
   </defs>
 
-  <rect width="1024" height="1024" rx="44" fill="#080B12"/>
-  <rect width="1024" height="1024" rx="44" fill="url(#bg-glow-top)"/>
-  <rect width="1024" height="1024" rx="44" fill="url(#bg-glow-bottom)"/>
+  <rect width="1024" height="1024" rx="44" fill="url(#bg-core)"/>
+  <rect width="1024" height="1024" rx="44" fill="url(#bg-glow)"/>
 
-  <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.028" stroke-width="2"/>
-  <circle cx="512" cy="512" r="432" stroke="#1A1E27" stroke-opacity="0.96" stroke-width="18"/>
-  <circle cx="512" cy="512" r="404" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.8"/>
-
-  <ellipse cx="512" cy="520" rx="380" ry="396" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
-
-  <g filter="url(#soft-blur-42)">
-    <path d="M250 254C384 120 676 110 808 252C864 312 886 398 878 474C872 532 850 578 828 602" stroke="#FF5A36" stroke-opacity="0.24" stroke-width="34" stroke-linecap="round"/>
+  <g filter="url(#soft-blur-40)">
+    <path d="M234 254C350 146 552 110 686 150C774 176 842 238 860 322C874 392 850 474 820 536C802 576 786 598 770 618" stroke="#FF4F2B" stroke-opacity="0.22" stroke-width="38" stroke-linecap="round"/>
   </g>
+  <g filter="url(#soft-blur-24)">
+    <path d="M246 258C360 160 548 128 674 164C756 188 816 246 832 320C844 382 822 454 794 510C780 540 766 562 752 580" stroke="#FFB176" stroke-opacity="0.18" stroke-width="20" stroke-linecap="round"/>
+  </g>
+  <path d="M236 254C350 146 552 110 686 150C774 176 842 238 860 322C874 392 850 474 820 536C802 576 786 598 770 618" stroke="#48211A" stroke-opacity="0.42" stroke-width="14" stroke-linecap="round"/>
+  <path d="M236 254C350 146 552 110 686 150C774 176 842 238 860 322C874 392 850 474 820 536C802 576 786 598 770 618" stroke="url(#flare-stream)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M274 268C378 178 544 148 656 180C730 202 782 252 796 318C806 370 788 432 764 478C752 500 742 516 730 532" stroke="url(#flare-core)" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M720 540C760 518 794 524 820 562" stroke="#FFB987" stroke-opacity="0.36" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M742 570C784 562 810 574 826 602" stroke="#FF8D58" stroke-opacity="0.22" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="816" cy="604" r="13" fill="#FFF8EF"/>
+  <ellipse cx="816" cy="604" rx="42" ry="30" fill="url(#flare-head)"/>
+
   <g filter="url(#soft-blur-16)">
-    <path d="M266 258C394 134 664 126 790 256C844 312 864 392 856 466C850 520 832 564 814 588" stroke="#FFB17B" stroke-opacity="0.18" stroke-width="18" stroke-linecap="round"/>
+    <ellipse cx="504" cy="522" rx="354" ry="366" fill="#000000" fill-opacity="0.26"/>
   </g>
-  <path d="M260 252C392 122 672 114 804 252C860 310 882 396 874 474C868 530 848 576 826 602" stroke="#4B211A" stroke-opacity="0.42" stroke-width="13" stroke-linecap="round"/>
-  <path d="M260 252C392 122 672 114 804 252C860 310 882 396 874 474C868 530 848 576 826 602" stroke="url(#flare-gradient)" stroke-width="8.5" stroke-linecap="round"/>
-  <path d="M278 260C402 142 656 136 774 256C824 308 842 384 836 454C832 500 818 542 800 566" stroke="url(#flare-core)" stroke-width="2.6" stroke-linecap="round"/>
 
-  <path d="M746 548C780 534 804 542 820 572" stroke="#FFB785" stroke-opacity="0.34" stroke-width="2.2" stroke-linecap="round"/>
-  <path d="M732 526C764 510 792 516 814 542" stroke="#FF8E58" stroke-opacity="0.22" stroke-width="3.6" stroke-linecap="round"/>
-  <ellipse cx="824" cy="604" rx="24" ry="20" fill="#FF754D" fill-opacity="0.16"/>
-  <ellipse cx="812" cy="586" rx="34" ry="18" fill="#FFB07C" fill-opacity="0.11"/>
-  <circle cx="824" cy="604" r="10" fill="#FFF3DF"/>
-
-  <circle cx="512" cy="512" r="336" fill="url(#planet-base)"/>
+  <circle cx="512" cy="512" r="338" fill="url(#planet-shell)"/>
   <g clip-path="url(#planet-clip)">
-    <g filter="url(#soft-blur-16)">
-      <path d="M252 286C356 238 456 244 552 278C624 304 680 310 756 298C718 378 642 426 550 418C470 410 410 378 346 350C308 334 278 316 252 286Z" fill="#B84A20" fill-opacity="0.46"/>
-      <path d="M596 204C694 220 778 286 806 378C740 404 666 398 608 360C548 320 540 256 596 204Z" fill="#E17A28" fill-opacity="0.42"/>
-      <path d="M308 438C424 408 556 432 646 488C716 532 758 594 760 666C642 690 518 674 422 622C336 576 292 514 308 438Z" fill="#9A311D" fill-opacity="0.34"/>
-      <path d="M244 596C330 564 432 576 518 622C600 666 650 736 656 812C548 832 442 818 354 770C270 724 220 658 244 596Z" fill="#4E1715" fill-opacity="0.52"/>
-      <path d="M670 414C744 426 802 476 822 548C772 564 716 558 670 526C622 492 620 438 670 414Z" fill="#F19A36" fill-opacity="0.24"/>
+    <g filter="url(#planet-relief)">
+      <path d="M210 292C292 234 382 210 470 226C552 242 604 264 676 246C744 230 788 236 836 272C780 346 700 392 592 392C486 392 406 354 332 328C286 310 248 302 210 292Z" fill="#B84522" fill-opacity="0.44"/>
+      <path d="M560 182C656 184 746 234 804 320C748 350 682 352 626 332C566 310 534 260 560 182Z" fill="#E17B2C" fill-opacity="0.42"/>
+      <path d="M290 396C404 374 538 398 646 460C726 506 780 584 796 676C680 700 560 688 454 634C344 578 286 500 290 396Z" fill="#8A2E1D" fill-opacity="0.36"/>
+      <path d="M206 566C302 544 420 566 520 632C610 692 668 772 682 850C562 862 438 834 334 768C238 706 190 636 206 566Z" fill="#391317" fill-opacity="0.6"/>
+      <path d="M632 404C714 418 784 474 820 562C770 580 712 576 664 546C612 514 600 450 632 404Z" fill="#F39A39" fill-opacity="0.24"/>
     </g>
 
-    <path d="M238 334C296 296 360 278 432 278C498 278 566 294 630 318" stroke="#FFD5A5" stroke-opacity="0.09" stroke-width="20" stroke-linecap="round"/>
-    <path d="M220 430C302 394 392 392 492 420C590 448 674 450 756 430" stroke="#FFD8B2" stroke-opacity="0.08" stroke-width="16" stroke-linecap="round"/>
-    <path d="M222 548C320 510 418 520 516 560C606 596 684 612 742 602" stroke="#F5B07B" stroke-opacity="0.08" stroke-width="14" stroke-linecap="round"/>
-    <path d="M250 700C338 678 430 696 512 736C584 770 644 790 690 792" stroke="#2A0E14" stroke-opacity="0.36" stroke-width="20" stroke-linecap="round"/>
-
-    <ellipse cx="610" cy="304" rx="112" ry="74" fill="#FFD597" fill-opacity="0.12"/>
-    <ellipse cx="682" cy="368" rx="70" ry="44" fill="#FFCF8D" fill-opacity="0.08"/>
-
-    <g fill="#2A120F">
-      <ellipse cx="450" cy="330" rx="22" ry="14" fill-opacity="0.26"/>
-      <ellipse cx="608" cy="410" rx="16" ry="10" fill-opacity="0.2"/>
-      <ellipse cx="396" cy="574" rx="26" ry="18" fill-opacity="0.22"/>
-      <ellipse cx="594" cy="676" rx="18" ry="12" fill-opacity="0.18"/>
-      <ellipse cx="688" cy="566" rx="14" ry="10" fill-opacity="0.14"/>
-      <ellipse cx="344" cy="706" rx="16" ry="10" fill-opacity="0.18"/>
+    <g filter="url(#planet-texture)" opacity="0.56">
+      <rect x="154" y="154" width="716" height="716" fill="#B45E32"/>
     </g>
-    <g fill="#FFD6B0">
-      <ellipse cx="464" cy="326" rx="10" ry="6" fill-opacity="0.08"/>
-      <ellipse cx="602" cy="406" rx="7" ry="4" fill-opacity="0.08"/>
-      <ellipse cx="392" cy="568" rx="12" ry="7" fill-opacity="0.06"/>
-      <ellipse cx="592" cy="672" rx="9" ry="5" fill-opacity="0.05"/>
+
+    <path d="M230 328C296 286 374 266 452 270C536 274 604 292 664 320" stroke="#FFD09D" stroke-opacity="0.1" stroke-width="22" stroke-linecap="round"/>
+    <path d="M214 432C308 390 408 390 514 426C604 456 682 458 754 438" stroke="#FFDAB1" stroke-opacity="0.08" stroke-width="16" stroke-linecap="round"/>
+    <path d="M232 560C334 526 434 540 526 584C598 618 662 634 718 628" stroke="#F6B27A" stroke-opacity="0.08" stroke-width="14" stroke-linecap="round"/>
+    <path d="M262 724C350 706 440 726 518 766C576 794 626 812 666 816" stroke="#1C0C10" stroke-opacity="0.42" stroke-width="18" stroke-linecap="round"/>
+
+    <ellipse cx="620" cy="320" rx="116" ry="78" fill="#FFD79C" fill-opacity="0.12"/>
+    <ellipse cx="676" cy="372" rx="74" ry="46" fill="#FFE0AF" fill-opacity="0.06"/>
+    <ellipse cx="438" cy="318" rx="90" ry="54" fill="#5C211A" fill-opacity="0.14"/>
+
+    <g fill="#180A0D">
+      <ellipse cx="454" cy="324" rx="24" ry="15" fill-opacity="0.3"/>
+      <ellipse cx="612" cy="410" rx="17" ry="11" fill-opacity="0.22"/>
+      <ellipse cx="392" cy="576" rx="28" ry="18" fill-opacity="0.22"/>
+      <ellipse cx="594" cy="676" rx="18" ry="12" fill-opacity="0.2"/>
+      <ellipse cx="684" cy="562" rx="15" ry="10" fill-opacity="0.14"/>
+      <ellipse cx="342" cy="708" rx="18" ry="11" fill-opacity="0.2"/>
+      <ellipse cx="728" cy="452" rx="13" ry="8" fill-opacity="0.12"/>
+    </g>
+    <g fill="#F4B77B">
+      <ellipse cx="466" cy="326" rx="9" ry="5" fill-opacity="0.08"/>
+      <ellipse cx="608" cy="406" rx="7" ry="4" fill-opacity="0.08"/>
+      <ellipse cx="392" cy="570" rx="10" ry="6" fill-opacity="0.05"/>
+      <ellipse cx="592" cy="672" rx="8" ry="4.5" fill-opacity="0.05"/>
     </g>
   </g>
 
-  <circle cx="512" cy="512" r="336" fill="url(#planet-terminator)"/>
-  <g filter="url(#soft-blur-28)">
-    <ellipse cx="656" cy="340" rx="162" ry="104" fill="#FFF1CF" fill-opacity="0.16"/>
-    <ellipse cx="704" cy="318" rx="142" ry="58" fill="url(#planet-atmosphere)"/>
+  <circle cx="512" cy="512" r="338" fill="url(#planet-shadow)"/>
+  <g filter="url(#soft-blur-24)">
+    <ellipse cx="666" cy="352" rx="164" ry="108" fill="#FFF1D1" fill-opacity="0.14"/>
+    <ellipse cx="722" cy="320" rx="154" ry="64" fill="url(#atmosphere-rim)"/>
   </g>
-  <circle cx="512" cy="512" r="336" fill="url(#planet-rim-light)"/>
-  <circle cx="512" cy="512" r="336" fill="none" stroke="#DDF0FF" stroke-opacity="0.22" stroke-width="1.2" stroke-dasharray="420 1692" transform="rotate(-38 512 512)"/>
-  <circle cx="512" cy="512" r="336" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1.2"/>
+  <circle cx="512" cy="512" r="338" fill="url(#planet-highlight)"/>
+  <circle cx="512" cy="512" r="338" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="1.1"/>
 </svg>
