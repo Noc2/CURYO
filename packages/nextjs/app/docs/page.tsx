@@ -88,16 +88,15 @@ const DocsIntro: NextPage = () => {
         further.
       </p>
       <p>
-        Each category (platform) has a <strong>ranking question</strong> set by its creator &mdash; for example,
-        &ldquo;Are the fundamentals of Bitcoin strong enough to score above 50 out of 100?&rdquo;. Categories define
-        this as a template with <code>{"{title}"}</code> and <code>{"{rating}"}</code> placeholders, so every frontend
-        can render the same content-specific prompt. When you vote UP or DOWN, you are answering this question for the
-        current content. The question is displayed on the voting card.
+        Categories no longer define a custom voting question. Instead, every vote asks whether the current community
+        rating should move up or down based on the content itself, the surrounding evidence, and the current score.
+        Frontends surface the live rating directly and explain the rating process through guidance text instead of a
+        category-authored prompt.
       </p>
       <p>
         <strong>When to downvote:</strong> Illegal content, content that doesn&apos;t load, or content with an incorrect
-        description should always be downvoted, regardless of the ranking question. Content that falls below a rating of
-        25 after its grace period results in the submitter&apos;s deposit being forfeited.
+        description should always be downvoted regardless of the current rating. Content that falls below a rating of 25
+        after its grace period results in the submitter&apos;s deposit being forfeited.
       </p>
     </article>
   );

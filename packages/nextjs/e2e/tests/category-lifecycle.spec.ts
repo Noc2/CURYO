@@ -41,7 +41,6 @@ test.describe("Category lifecycle", () => {
       name,
       domain,
       ["Science", "Technology"],
-      `Is this ${name} content quality above {rating} out of 100?`,
       DEPLOYER.address,
       CATEGORY_REGISTRY,
     );
@@ -83,7 +82,6 @@ test.describe("Category lifecycle", () => {
         cat.name,
         cat.domain,
         ["General"],
-        `Rate this ${cat.name} content above {rating} out of 100?`,
         DEPLOYER.address,
         CATEGORY_REGISTRY,
       );

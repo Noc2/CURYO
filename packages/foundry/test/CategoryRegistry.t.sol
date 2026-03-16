@@ -94,8 +94,6 @@ contract MockVotingEngine is IRoundVotingEngine {
 
 /// @title CategoryRegistry Test Suite
 contract CategoryRegistryTest is Test {
-    string internal constant DEFAULT_TEMPLATE = "Is {title} good enough to score above {rating} out of 100?";
-
     CategoryRegistry public registry;
     CuryoReputation public token;
     MockGovernor public governor;
@@ -141,7 +139,7 @@ contract CategoryRegistryTest is Test {
 
         vm.startPrank(user1);
         token.approve(address(registry), STAKE);
-        categoryId = registry.submitCategory("MTG", domain, subcategories, DEFAULT_TEMPLATE);
+        categoryId = registry.submitCategory("MTG", domain, subcategories);
         vm.stopPrank();
     }
 
@@ -215,7 +213,7 @@ contract CategoryRegistryTest is Test {
         subcategories[1] = "Gaming";
 
         vm.prank(admin);
-        uint256 categoryId = registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        uint256 categoryId = registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         assertEq(categoryId, 1);
         assertTrue(registry.isApprovedCategory(categoryId));
@@ -225,7 +223,6 @@ contract CategoryRegistryTest is Test {
         assertEq(cat.domain, "youtube.com");
         assertEq(cat.subcategories.length, 2);
         assertEq(cat.subcategories[0], "Education");
-        assertEq(cat.rankingQuestion, DEFAULT_TEMPLATE);
         assertEq(cat.submitter, admin);
         assertEq(cat.stakeAmount, 0); // No stake for admin-added
         assertEq(uint256(cat.status), uint256(ICategoryRegistry.CategoryStatus.Approved));
@@ -236,8 +233,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        uint256 categoryId =
-            registry.addApprovedCategory("YouTube", "WWW.YouTube.COM", subcategories, DEFAULT_TEMPLATE);
+        uint256 categoryId = registry.addApprovedCategory("YouTube", "WWW.YouTube.COM", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "youtube.com"); // www removed, lowercased
@@ -249,7 +245,7 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(user1);
         vm.expectRevert();
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
     }
 
     function test_RevertAddApprovedCategoryEmptyName() public {
@@ -258,7 +254,7 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(admin);
         vm.expectRevert("Invalid name length");
-        registry.addApprovedCategory("", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("", "youtube.com", subcategories);
     }
 
     function test_SubmitCategoryRequiresHolderWhenVoterIdConfigured() public {
@@ -275,7 +271,7 @@ contract CategoryRegistryTest is Test {
         vm.startPrank(delegate);
         token.approve(address(registry), STAKE);
         vm.expectRevert("Category submitter must hold Voter ID");
-        registry.submitCategory("MTG", "delegate-submit.test", subcategories, DEFAULT_TEMPLATE);
+        registry.submitCategory("MTG", "delegate-submit.test", subcategories);
         vm.stopPrank();
     }
 
@@ -284,10 +280,10 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.startPrank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         vm.expectRevert("Domain already registered");
-        registry.addApprovedCategory("YouTube 2", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube 2", "youtube.com", subcategories);
         vm.stopPrank();
     }
 
@@ -296,10 +292,10 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.startPrank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         vm.expectRevert("Domain already registered");
-        registry.addApprovedCategory("YouTube Shortlinks", "youtu.be", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube Shortlinks", "youtu.be", subcategories);
         vm.stopPrank();
     }
 
@@ -308,27 +304,7 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(admin);
         vm.expectRevert("Invalid subcategories count");
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
-    }
-
-    function test_RevertAddApprovedCategoryMissingTitlePlaceholder() public {
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.prank(admin);
-        vm.expectRevert("Question missing {title}");
-        registry.addApprovedCategory(
-            "YouTube", "youtube.com", subcategories, "Is this video good enough to score above {rating} out of 100?"
-        );
-    }
-
-    function test_RevertAddApprovedCategoryMissingRatingPlaceholder() public {
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.prank(admin);
-        vm.expectRevert("Question missing {rating}");
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, "Is {title} good enough?");
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
     }
 
     // --- Submit Category Tests ---
@@ -340,8 +316,7 @@ contract CategoryRegistryTest is Test {
 
         vm.startPrank(user1);
         token.approve(address(registry), STAKE);
-        uint256 categoryId =
-            registry.submitCategory("MTG", "gatherer.wizards.com", subcategories, DEFAULT_TEMPLATE);
+        uint256 categoryId = registry.submitCategory("MTG", "gatherer.wizards.com", subcategories);
         vm.stopPrank();
 
         assertEq(categoryId, 1);
@@ -365,31 +340,7 @@ contract CategoryRegistryTest is Test {
         vm.startPrank(user1);
         token.approve(address(registry), STAKE - 1);
         vm.expectRevert();
-        registry.submitCategory("MTG", "gatherer.wizards.com", subcategories, DEFAULT_TEMPLATE);
-        vm.stopPrank();
-    }
-
-    function test_RevertSubmitCategoryMissingTitlePlaceholder() public {
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.startPrank(user1);
-        token.approve(address(registry), STAKE);
-        vm.expectRevert("Question missing {title}");
-        registry.submitCategory(
-            "MTG", "gatherer.wizards.com", subcategories, "Is this card iconic enough to score above {rating} out of 100?"
-        );
-        vm.stopPrank();
-    }
-
-    function test_RevertSubmitCategoryMissingRatingPlaceholder() public {
-        string[] memory subcategories = new string[](1);
-        subcategories[0] = "General";
-
-        vm.startPrank(user1);
-        token.approve(address(registry), STAKE);
-        vm.expectRevert("Question missing {rating}");
-        registry.submitCategory("MTG", "gatherer.wizards.com", subcategories, "Is {title} iconic enough?");
+        registry.submitCategory("MTG", "gatherer.wizards.com", subcategories);
         vm.stopPrank();
     }
 
@@ -620,7 +571,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategoryByDomain("youtube.com");
         assertEq(cat.name, "YouTube");
@@ -631,7 +582,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategoryByDomain("YOUTUBE.COM");
         assertEq(cat.name, "YouTube");
@@ -642,8 +593,8 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.startPrank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
-        registry.addApprovedCategory("Twitch", "twitch.tv", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
+        registry.addApprovedCategory("Twitch", "twitch.tv", subcategories);
         vm.stopPrank();
 
         (uint256[] memory ids, uint256 total) = registry.getApprovedCategoryIdsPaginated(0, 10);
@@ -661,7 +612,7 @@ contract CategoryRegistryTest is Test {
         assertEq(totalBefore, 0);
 
         vm.startPrank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
         vm.stopPrank();
 
         (, uint256 totalAfter) = registry.getApprovedCategoryIdsPaginated(0, 0);
@@ -675,7 +626,7 @@ contract CategoryRegistryTest is Test {
         subcategories[2] = "Music";
 
         vm.prank(admin);
-        uint256 categoryId = registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        uint256 categoryId = registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         string[] memory result = registry.getSubcategories(categoryId);
         assertEq(result.length, 3);
@@ -691,7 +642,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         assertTrue(registry.isDomainRegistered("youtube.com"));
         assertTrue(registry.isDomainRegistered("YOUTUBE.COM")); // Case insensitive
@@ -706,11 +657,11 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.startPrank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
-        registry.addApprovedCategory("Twitch", "twitch.tv", subcategories, DEFAULT_TEMPLATE);
-        registry.addApprovedCategory("Reddit", "reddit.com", subcategories, DEFAULT_TEMPLATE);
-        registry.addApprovedCategory("Twitter", "x.com", subcategories, DEFAULT_TEMPLATE);
-        registry.addApprovedCategory("TikTok", "tiktok.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
+        registry.addApprovedCategory("Twitch", "twitch.tv", subcategories);
+        registry.addApprovedCategory("Reddit", "reddit.com", subcategories);
+        registry.addApprovedCategory("Twitter", "x.com", subcategories);
+        registry.addApprovedCategory("TikTok", "tiktok.com", subcategories);
         vm.stopPrank();
 
         // Page 1: offset=0, limit=2
@@ -739,7 +690,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         (uint256[] memory result, uint256 total) = registry.getApprovedCategoryIdsPaginated(5, 2);
         assertEq(total, 1);
@@ -751,7 +702,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         (uint256[] memory result, uint256 total) = registry.getApprovedCategoryIdsPaginated(0, 0);
         assertEq(total, 1);
@@ -789,7 +740,7 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(admin);
         uint256 categoryId =
-            registry.addApprovedCategory("Example", "www.example.com", subcategories, DEFAULT_TEMPLATE);
+            registry.addApprovedCategory("Example", "www.example.com", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "example.com");
@@ -800,7 +751,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        uint256 categoryId = registry.addApprovedCategory("Example", "EXAMPLE.COM", subcategories, DEFAULT_TEMPLATE);
+        uint256 categoryId = registry.addApprovedCategory("Example", "EXAMPLE.COM", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "example.com");
@@ -814,7 +765,7 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(admin);
         uint256 categoryId =
-            registry.addApprovedCategory("Example", "https://example.com", subcategories, DEFAULT_TEMPLATE);
+            registry.addApprovedCategory("Example", "https://example.com", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "example.com");
@@ -826,7 +777,7 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(admin);
         uint256 categoryId =
-            registry.addApprovedCategory("Example", "http://example.com", subcategories, DEFAULT_TEMPLATE);
+            registry.addApprovedCategory("Example", "http://example.com", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "example.com");
@@ -838,7 +789,7 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(admin);
         uint256 categoryId =
-            registry.addApprovedCategory("YouTube", "youtube.com/channel", subcategories, DEFAULT_TEMPLATE);
+            registry.addApprovedCategory("YouTube", "youtube.com/channel", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "youtube.com");
@@ -849,7 +800,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        uint256 categoryId = registry.addApprovedCategory("YouTube", "youtube.com/", subcategories, DEFAULT_TEMPLATE);
+        uint256 categoryId = registry.addApprovedCategory("YouTube", "youtube.com/", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "youtube.com");
@@ -860,7 +811,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        uint256 categoryId = registry.addApprovedCategory("Example", "example.com.", subcategories, DEFAULT_TEMPLATE);
+        uint256 categoryId = registry.addApprovedCategory("Example", "example.com.", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "example.com");
@@ -872,9 +823,8 @@ contract CategoryRegistryTest is Test {
 
         // Full URL with protocol, www, path, and mixed case should normalize
         vm.prank(admin);
-        uint256 categoryId = registry.addApprovedCategory(
-            "YouTube", "https://WWW.YouTube.COM/channel?v=abc", subcategories, DEFAULT_TEMPLATE
-        );
+        uint256 categoryId =
+            registry.addApprovedCategory("YouTube", "https://WWW.YouTube.COM/channel?v=abc", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "youtube.com");
@@ -886,11 +836,11 @@ contract CategoryRegistryTest is Test {
 
         vm.startPrank(admin);
         // Register with plain domain
-        registry.addApprovedCategory("YouTube", "youtube.com", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube", "youtube.com", subcategories);
 
         // Attempt to register with full URL — should revert as duplicate
         vm.expectRevert("Domain already registered");
-        registry.addApprovedCategory("YouTube 2", "https://youtube.com/channel", subcategories, DEFAULT_TEMPLATE);
+        registry.addApprovedCategory("YouTube 2", "https://youtube.com/channel", subcategories);
         vm.stopPrank();
     }
 }

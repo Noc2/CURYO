@@ -134,11 +134,11 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: 'Each category (platform) has a ranking-question template set by its creator -- for example, "Are the fundamentals of {title} strong enough to score above {rating} out of 100?". Frontends render the final question by replacing {title} with the submitted content title and {rating} with the current score. When you vote UP or DOWN, you are answering this rendered question for the current content.',
+            text: "Categories no longer define custom voting questions. Instead, voters judge whether the current community rating should move up or down based on the content, the available evidence, and the current score shown by the frontend.",
           },
           {
             type: "paragraph",
-            text: "Illegal content, content that doesn't load, or content with an incorrect description should always be downvoted, regardless of the ranking question. Content that falls below a rating of 25 after its grace period results in the submitter's stake being slashed.",
+            text: "Illegal content, content that doesn't load, or content with an incorrect description should always be downvoted regardless of the current rating. Content that falls below a rating of 25 after its grace period results in the submitter's stake being slashed.",
           },
         ],
       },
@@ -398,7 +398,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: 'This dynamic makes the design of each category\'s ranking-question template critical. Well-defined, verifiable prompts anchor voter judgment and reduce ambiguity. A template like "Is {title} factually accurate enough to score above {rating} out of 100?" produces more stable equilibria than "Is {title} interesting?" because the former admits shared evidence while the latter invites pure preference divergence. Category creators shape equilibrium quality by choosing precise title-aware questions that guide honest evaluation.',
+            text: "This dynamic makes clear rating guidance critical. Stable equilibria emerge when voters can lean on shared evidence instead of vague taste or novelty. Frontends should therefore emphasize the live rating, the visible market signal, and concise guidance about what to consider when moving a score up or down.",
           },
           {
             type: "paragraph",

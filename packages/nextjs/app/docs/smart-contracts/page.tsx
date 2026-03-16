@@ -482,14 +482,13 @@ const SmartContracts: NextPage = () => {
       <h2>CategoryRegistry</h2>
       <p>
         Manages content categories. New categories require a governance proposal and on-chain vote for approval. Each
-        category maps to a domain and includes subcategories and a ranking-question template.
+        category maps to a domain and includes subcategories that help voters interpret the type of content being rated.
       </p>
       <h3>Key Functions</h3>
       <ul>
         <li>
-          <code>submitCategory(name, domain, subcategories, questionTemplate)</code> &mdash; Submit category for
-          governance sponsorship (100 cREP stake). Requires Voter ID. Templates must include <code>{"{title}"}</code>{" "}
-          and <code>{"{rating}"}</code>.
+          <code>submitCategory(name, domain, subcategories)</code> &mdash; Submit category for governance sponsorship
+          (100 cREP stake). Requires Voter ID.
         </li>
         <li>
           <code>linkApprovalProposal(categoryId, descriptionHash)</code> &mdash; Link the separately created governor
@@ -511,9 +510,8 @@ const SmartContracts: NextPage = () => {
           state).
         </li>
         <li>
-          <code>addApprovedCategory(name, domain, subcategories, questionTemplate)</code> &mdash; Add category directly
-          (ADMIN_ROLE, for bootstrapping). Templates must include <code>{"{title}"}</code> and <code>{"{rating}"}</code>
-          .
+          <code>addApprovedCategory(name, domain, subcategories)</code> &mdash; Add category directly (ADMIN_ROLE, for
+          bootstrapping).
         </li>
       </ul>
 

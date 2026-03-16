@@ -26,7 +26,6 @@ interface Category {
   name: string;
   domain: string;
   subcategories: readonly string[];
-  rankingQuestion: string;
   submitter: `0x${string}`;
   stakeAmount: bigint;
   status: number;
@@ -250,9 +249,6 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
         <p>Submitted by {formatAddress(category.submitter)}</p>
         {category.proposalId > 0n && <p>Proposal #{category.proposalId.toString()}</p>}
       </div>
-
-      {/* Ranking Question */}
-      <p className="text-base text-base-content/70 italic">&quot;{category.rankingQuestion}&quot;</p>
     </div>
   );
 }

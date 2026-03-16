@@ -8861,11 +8861,6 @@ const deployedContracts = {
               type: "string[]",
               internalType: "string[]",
             },
-            {
-              name: "rankingQuestion",
-              type: "string",
-              internalType: "string",
-            },
           ],
           outputs: [
             {
@@ -9005,11 +9000,6 @@ const deployedContracts = {
                   internalType: "string[]",
                 },
                 {
-                  name: "rankingQuestion",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
                   name: "submitter",
                   type: "address",
                   internalType: "address",
@@ -9074,11 +9064,6 @@ const deployedContracts = {
                   name: "subcategories",
                   type: "string[]",
                   internalType: "string[]",
-                },
-                {
-                  name: "rankingQuestion",
-                  type: "string",
-                  internalType: "string",
                 },
                 {
                   name: "submitter",
@@ -9409,11 +9394,6 @@ const deployedContracts = {
               name: "subcategories",
               type: "string[]",
               internalType: "string[]",
-            },
-            {
-              name: "rankingQuestion",
-              type: "string",
-              internalType: "string",
             },
           ],
           outputs: [
@@ -22442,11 +22422,6 @@ const deployedContracts = {
               type: "string[]",
               internalType: "string[]",
             },
-            {
-              name: "rankingQuestion",
-              type: "string",
-              internalType: "string",
-            },
           ],
           outputs: [
             {
@@ -22586,11 +22561,6 @@ const deployedContracts = {
                   internalType: "string[]",
                 },
                 {
-                  name: "rankingQuestion",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
                   name: "submitter",
                   type: "address",
                   internalType: "address",
@@ -22655,11 +22625,6 @@ const deployedContracts = {
                   name: "subcategories",
                   type: "string[]",
                   internalType: "string[]",
-                },
-                {
-                  name: "rankingQuestion",
-                  type: "string",
-                  internalType: "string",
                 },
                 {
                   name: "submitter",
@@ -22990,11 +22955,6 @@ const deployedContracts = {
               name: "subcategories",
               type: "string[]",
               internalType: "string[]",
-            },
-            {
-              name: "rankingQuestion",
-              type: "string",
-              internalType: "string",
             },
           ],
           outputs: [

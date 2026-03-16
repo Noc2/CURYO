@@ -1,0 +1,182 @@
+"use client";
+
+import { useId } from "react";
+
+const START_ANGLE = 222;
+
+function clampRating(rating: number) {
+  if (Number.isNaN(rating)) return 0;
+  return Math.min(100, Math.max(0, rating));
+}
+
+function polarToCartesian(center: number, radius: number, angleInDegrees: number) {
+  const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
+  return {
+    x: center + radius * Math.cos(angleInRadians),
+    y: center + radius * Math.sin(angleInRadians),
+  };
+}
+
+function describeArc(center: number, radius: number, startAngle: number, endAngle: number) {
+  const start = polarToCartesian(center, radius, endAngle);
+  const end = polarToCartesian(center, radius, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+  return `M ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
+}
+
+interface RatingOrbProps {
+  rating: number;
+  size?: number;
+  className?: string;
+}
+
+export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps) {
+  const orbId = useId().replace(/:/g, "");
+  const clampedRating = clampRating(rating);
+  const center = size / 2;
+  const trackRadius = size * 0.41;
+  const trackWidth = Math.max(8, size * 0.034);
+  const progress = clampedRating / 100;
+  const flareStroke = `url(#${orbId}-flare)`;
+  const coreStroke = `url(#${orbId}-core)`;
+  const arcPath =
+    progress >= 1
+      ? null
+      : progress <= 0
+        ? null
+        : describeArc(center, trackRadius, START_ANGLE, START_ANGLE + progress * 360);
+  const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
+
+  return (
+    <div
+      className={`relative flex items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label={`Community rating ${clampedRating}%`}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 overflow-visible">
+        <defs>
+          <linearGradient id={`${orbId}-flare`} x1="0%" y1="10%" x2="100%" y2="90%">
+            <stop offset="0%" stopColor="#F45D4F" />
+            <stop offset="28%" stopColor="#FF8C5F" />
+            <stop offset="58%" stopColor="#FFC37A" />
+            <stop offset="100%" stopColor="#FFF2D8" />
+          </linearGradient>
+          <linearGradient id={`${orbId}-core`} x1="10%" y1="8%" x2="94%" y2="92%">
+            <stop offset="0%" stopColor="#FF9B75" />
+            <stop offset="54%" stopColor="#FFF0CF" />
+            <stop offset="100%" stopColor="#FFF7EA" />
+          </linearGradient>
+          <radialGradient id={`${orbId}-fill`} cx="50%" cy="42%" r="66%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.07)" />
+            <stop offset="72%" stopColor="rgba(255,255,255,0.02)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </radialGradient>
+          <filter id={`${orbId}-glow`} x="-35%" y="-35%" width="170%" height="170%">
+            <feGaussianBlur stdDeviation="9" />
+          </filter>
+        </defs>
+
+        <circle cx={center} cy={center} r={trackRadius + trackWidth * 0.95} fill="rgba(255,255,255,0.03)" />
+        <circle
+          cx={center}
+          cy={center}
+          r={trackRadius + trackWidth * 0.62}
+          fill="none"
+          stroke="rgba(255,255,255,0.04)"
+          strokeWidth="2"
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r={trackRadius}
+          fill="none"
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth={trackWidth}
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r={trackRadius}
+          fill="none"
+          stroke="rgba(109,52,40,0.16)"
+          strokeWidth={Math.max(3, trackWidth * 0.42)}
+        />
+
+        {progress >= 1 ? (
+          <>
+            <circle
+              cx={center}
+              cy={center}
+              r={trackRadius}
+              fill="none"
+              stroke={flareStroke}
+              strokeWidth={trackWidth}
+              strokeLinecap="round"
+              filter={`url(#${orbId}-glow)`}
+              opacity="0.56"
+            />
+            <circle
+              cx={center}
+              cy={center}
+              r={trackRadius}
+              fill="none"
+              stroke={flareStroke}
+              strokeWidth={trackWidth * 0.6}
+              strokeLinecap="round"
+            />
+            <circle
+              cx={center}
+              cy={center}
+              r={trackRadius}
+              fill="none"
+              stroke={coreStroke}
+              strokeWidth={Math.max(2, trackWidth * 0.22)}
+              strokeLinecap="round"
+            />
+          </>
+        ) : arcPath ? (
+          <>
+            <path
+              d={arcPath}
+              fill="none"
+              stroke={flareStroke}
+              strokeWidth={trackWidth}
+              strokeLinecap="round"
+              filter={`url(#${orbId}-glow)`}
+              opacity="0.56"
+            />
+            <path d={arcPath} fill="none" stroke={flareStroke} strokeWidth={trackWidth * 0.6} strokeLinecap="round" />
+            <path
+              d={arcPath}
+              fill="none"
+              stroke={coreStroke}
+              strokeWidth={Math.max(2, trackWidth * 0.22)}
+              strokeLinecap="round"
+            />
+            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.3} fill="#FFF1D8" />
+            <circle cx={endPoint.x} cy={endPoint.y} r={trackWidth * 0.62} fill="rgba(255,141,101,0.18)" />
+          </>
+        ) : null}
+
+        <circle
+          cx={center}
+          cy={center}
+          r={trackRadius - trackWidth * 0.92}
+          fill="rgba(8,10,15,0.94)"
+          stroke="rgba(255,255,255,0.05)"
+          strokeWidth="1.8"
+        />
+        <circle cx={center} cy={center} r={trackRadius - trackWidth * 1.55} fill={`url(#${orbId}-fill)`} />
+      </svg>
+
+      <div className="relative z-10 flex flex-col items-center justify-center text-center">
+        <span className="text-[clamp(3rem,12vw,5.2rem)] font-semibold leading-none tracking-[-0.05em] text-white">
+          {clampedRating}
+          <span className="ml-1 text-[0.62em]">%</span>
+        </span>
+      </div>
+    </div>
+  );
+}

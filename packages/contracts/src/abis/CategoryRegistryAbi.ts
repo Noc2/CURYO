@@ -165,11 +165,6 @@ export const CategoryRegistryAbi = [
         "name": "subcategories",
         "type": "string[]",
         "internalType": "string[]"
-      },
-      {
-        "name": "rankingQuestion",
-        "type": "string",
-        "internalType": "string"
       }
     ],
     "outputs": [
@@ -310,11 +305,6 @@ export const CategoryRegistryAbi = [
             "internalType": "string[]"
           },
           {
-            "name": "rankingQuestion",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
             "name": "submitter",
             "type": "address",
             "internalType": "address"
@@ -379,11 +369,6 @@ export const CategoryRegistryAbi = [
             "name": "subcategories",
             "type": "string[]",
             "internalType": "string[]"
-          },
-          {
-            "name": "rankingQuestion",
-            "type": "string",
-            "internalType": "string"
           },
           {
             "name": "submitter",
@@ -714,11 +699,6 @@ export const CategoryRegistryAbi = [
         "name": "subcategories",
         "type": "string[]",
         "internalType": "string[]"
-      },
-      {
-        "name": "rankingQuestion",
-        "type": "string",
-        "internalType": "string"
       }
     ],
     "outputs": [

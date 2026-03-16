@@ -118,7 +118,6 @@ contract MockCategoryRegistry is ICategoryRegistry {
             name: "",
             domain: domains[categoryId],
             subcategories: subcategories,
-            rankingQuestion: "",
             submitter: submitters[categoryId],
             stakeAmount: 0,
             status: approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending,

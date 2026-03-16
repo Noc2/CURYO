@@ -10,12 +10,6 @@ import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { governorAbi, useGovernanceContracts, useGovernanceStats, useGovernanceWrite } from "~~/hooks/useGovernance";
-import {
-  RATING_PLACEHOLDER,
-  TITLE_PLACEHOLDER,
-  renderRankingQuestion,
-  validateRankingQuestionTemplate,
-} from "~~/lib/categories/rankingQuestionTemplate";
 
 type ComposerFieldType = "address" | "uint" | "crep" | "string" | "textarea" | "csv" | "bytes32";
 
@@ -190,19 +184,11 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
       { key: "name", label: "Name", type: "string", required: true },
       { key: "domain", label: "Domain", type: "string", required: true },
       { key: "subcategories", label: "Subcategories", type: "csv", required: true, helperText: "Comma-separated" },
-      {
-        key: "rankingQuestion",
-        label: "Ranking question",
-        type: "textarea",
-        required: true,
-        helperText: "Must include both {title} and {rating}.",
-      },
     ],
     buildArgs: (values, parser) => [
       parser.string("name", "Name"),
       parser.string("domain", "Domain").toLowerCase(),
       parser.csv("subcategories"),
-      parser.string("rankingQuestion", "Ranking question"),
     ],
     buildDescription: values => `Add approved category: ${values.name || "Unnamed"} (${values.domain || "domain"})`,
   },
@@ -495,22 +481,6 @@ export function GovernanceActionComposer() {
   );
 
   const selectedTemplate = visibleTemplates.find(template => template.id === selectedActionId);
-  const isCategoryAddAction = selectedTemplate?.id === "category-add-approved";
-  const rankingQuestionValue = formValues.rankingQuestion ?? "";
-  const rankingQuestionValidation = validateRankingQuestionTemplate(rankingQuestionValue);
-  const rankingQuestionError =
-    !isCategoryAddAction || !rankingQuestionValue.trim()
-      ? null
-      : !rankingQuestionValidation.hasTitlePlaceholder
-        ? `Ranking question must include ${TITLE_PLACEHOLDER}`
-        : !rankingQuestionValidation.hasRatingPlaceholder
-          ? `Ranking question must include ${RATING_PLACEHOLDER}`
-          : null;
-  const rankingQuestionPreview = renderRankingQuestion(rankingQuestionValue, {
-    title: formValues.name?.trim() || "Bitcoin",
-    rating: 50,
-    fallbackLabel: "content",
-  });
 
   const defaultDescription = selectedTemplate?.buildDescription?.(formValues) ?? selectedTemplate?.label ?? "";
   const effectiveDescription = customDescription.trim() || defaultDescription;
@@ -589,10 +559,6 @@ export function GovernanceActionComposer() {
         if (!raw) {
           throw new Error(`${field.label} is required.`);
         }
-      }
-
-      if (isCategoryAddAction && !rankingQuestionValidation.isValid) {
-        throw new Error(`Ranking question must include both ${TITLE_PLACEHOLDER} and ${RATING_PLACEHOLDER}.`);
       }
 
       const targetContract = knownContractsByName[selectedTemplate.contractName];
@@ -740,7 +706,7 @@ export function GovernanceActionComposer() {
                 </label>
                 {field.type === "textarea" ? (
                   <textarea
-                    className={`textarea textarea-bordered w-full min-h-[96px] ${field.key === "rankingQuestion" && rankingQuestionError ? "textarea-error" : ""}`}
+                    className="textarea textarea-bordered w-full min-h-[96px]"
                     value={formValues[field.key] ?? ""}
                     placeholder={field.placeholder}
                     onChange={event => setFormValues(current => ({ ...current, [field.key]: event.target.value }))}
@@ -755,15 +721,6 @@ export function GovernanceActionComposer() {
                   />
                 )}
                 {field.helperText && <p className="text-base text-base-content/50 mt-1">{field.helperText}</p>}
-                {field.key === "rankingQuestion" && rankingQuestionError && (
-                  <p className="text-base text-error mt-1">{rankingQuestionError}</p>
-                )}
-                {field.key === "rankingQuestion" && (
-                  <div className="mt-3 rounded-xl bg-base-300/30 p-4">
-                    <p className="text-base font-medium text-base-content mb-1.5">Preview</p>
-                    <p className="text-base text-base-content/70">{rankingQuestionPreview}</p>
-                  </div>
-                )}
               </div>
             ))}
 

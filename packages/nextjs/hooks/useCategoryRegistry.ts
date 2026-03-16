@@ -12,7 +12,6 @@ export interface Category {
   name: string;
   domain: string;
   subcategories: string[];
-  rankingQuestion: string;
   submitter: string;
   stakeAmount: bigint;
   status: number; // 0 = Pending, 1 = Approved, 2 = Rejected, 3 = Canceled
@@ -88,7 +87,6 @@ export function useCategoryRegistry() {
           name: string;
           domain: string;
           subcategories: string[];
-          rankingQuestion: string;
           submitter: string;
           stakeAmount: bigint;
           status: number;
@@ -100,7 +98,6 @@ export function useCategoryRegistry() {
           name: cat.name,
           domain: cat.domain,
           subcategories: cat.subcategories,
-          rankingQuestion: cat.rankingQuestion,
           submitter: cat.submitter,
           stakeAmount: cat.stakeAmount,
           status: cat.status,
@@ -116,7 +113,7 @@ export function useCategoryRegistry() {
     queryKey: ["categories"],
     ponderFn: async () => {
       const response = await ponderApi.getCategories("1");
-      // Ponder doesn't have subcategories/rankingQuestion/stakeAmount — fill defaults.
+      // Ponder doesn't have subcategories/stakeAmount — fill defaults.
       // These fields are only used on the submit page and can be fetched from RPC there.
       return response.items.map(
         (cat): Category => ({
@@ -124,7 +121,6 @@ export function useCategoryRegistry() {
           name: cat.name,
           domain: cat.domain,
           subcategories: [],
-          rankingQuestion: "",
           submitter: cat.submitter,
           stakeAmount: 0n,
           status: cat.status,
@@ -138,7 +134,7 @@ export function useCategoryRegistry() {
     refetchInterval: 300_000,
   });
 
-  // Merge Ponder categories with RPC data to fill in subcategories/rankingQuestion/stakeAmount.
+  // Merge Ponder categories with RPC data to fill in subcategories/stakeAmount.
   // Also include RPC-only categories that Ponder may have missed (e.g. due to incomplete indexing).
   const categories = useMemo(() => {
     const ponderCategories = result?.data;
@@ -158,7 +154,6 @@ export function useCategoryRegistry() {
       return {
         ...cat,
         subcategories: rpcCat.subcategories,
-        rankingQuestion: rpcCat.rankingQuestion,
         stakeAmount: rpcCat.stakeAmount,
       };
     });

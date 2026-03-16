@@ -102,13 +102,12 @@ export async function approveCategory(
 
 /**
  * Add an approved category directly (admin fast-path, no stake required).
- * Calls CategoryRegistry.addApprovedCategory(string, string, string[], string).
+ * Calls CategoryRegistry.addApprovedCategory(string, string, string[]).
  */
 export async function addApprovedCategory(
   name: string,
   domain: string,
   subcategories: string[],
-  rankingQuestion: string,
   fromAddress: string,
   contractAddress: string,
 ): Promise<boolean> {
@@ -122,14 +121,13 @@ export async function addApprovedCategory(
           { name: "name", type: "string" },
           { name: "domain", type: "string" },
           { name: "subcategories", type: "string[]" },
-          { name: "rankingQuestion", type: "string" },
         ],
         outputs: [{ name: "categoryId", type: "uint256" }],
         stateMutability: "nonpayable",
       },
     ],
     functionName: "addApprovedCategory",
-    args: [name, domain, subcategories, rankingQuestion],
+    args: [name, domain, subcategories],
   });
   return sendTx(fromAddress, contractAddress, data);
 }

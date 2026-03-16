@@ -1,17 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
+import { RatingOrb } from "~~/components/shared/RatingOrb";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { getContentLabel, useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
+import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
-import { buildRankingQuestionDisplay } from "~~/lib/categories/rankingQuestionTemplate";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
 import { getBlindParticipationLabel } from "~~/lib/vote/voteIncentives";
 import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
@@ -30,8 +29,11 @@ interface VotingQuestionCardProps {
   embedded?: boolean;
 }
 
+const RATING_GUIDANCE_TEXT =
+  "Rate this content against its current community score. Vote up when it deserves a higher rating and vote down when it deserves a lower one. Always vote down illegal, broken, or misdescribed content.";
+
 /**
- * Displays the voting question and all voting controls in a separate card.
+ * Displays the live rating signal and all voting controls in a separate card.
  */
 export function VotingQuestionCard({
   contentId,
@@ -52,21 +54,7 @@ export function VotingQuestionCard({
   });
 
   const currentRatingValue = currentRating ? Number(currentRating) : 50;
-
-  // Get category for the ranking question
-  const { categories } = useCategoryRegistry();
-  const category = useMemo(() => categories.find(c => c.id === categoryId), [categories, categoryId]);
-
-  const contentLabel = useMemo(() => getContentLabel(categoryId, categories), [categoryId, categories]);
-
-  // Build the question text from the category's ranking question
-  const questionDisplay = useMemo(() => {
-    return buildRankingQuestionDisplay(category?.rankingQuestion, {
-      title,
-      rating: currentRatingValue,
-      fallbackLabel: contentLabel,
-    });
-  }, [category?.rankingQuestion, contentLabel, currentRatingValue, title]);
+  const contentLabel = useContentLabel(categoryId);
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId);
@@ -121,72 +109,37 @@ export function VotingQuestionCard({
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-  const renderQuestionSegment = (segment: string) => {
-    const ratingSlash = `${currentRatingValue} out of 100`;
-    const ratingPercent = `${currentRatingValue}%`;
-    const highlightTarget = segment.includes(ratingSlash)
-      ? ratingSlash
-      : segment.includes(ratingPercent)
-        ? ratingPercent
-        : null;
-
-    if (!highlightTarget) {
-      return segment;
-    }
-
-    const ratingStr = currentRatingValue.toString();
-    const suffix = highlightTarget.slice(ratingStr.length);
-    const [before, after = ""] = segment.split(highlightTarget);
-
-    return (
-      <>
-        {before}
-        <span className="text-primary text-[1.15em]">{ratingStr}</span>
-        {suffix}
-        {after}
-      </>
-    );
-  };
-
   return (
     <div
       className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
       style={embedded ? {} : { background: "var(--color-base-200)" }}
     >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_14%,rgba(255,153,104,0.18),transparent_34%),radial-gradient(circle_at_50%_58%,rgba(255,241,216,0.08),transparent_40%)]"
+      />
       {/* Content */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-        {/* Question at the top */}
-        <p className="font-heading mb-3 shrink-0 break-words text-center text-[1.12rem] font-bold leading-[1.2] tracking-tight text-white xl:text-[1.16rem] 2xl:text-[1.24rem]">
-          {questionDisplay.title ? (
-            <>
-              {questionDisplay.beforeTitle ? renderQuestionSegment(questionDisplay.beforeTitle) : null}
-              <span>{questionDisplay.title}</span>
-              {questionDisplay.afterTitle ? renderQuestionSegment(questionDisplay.afterTitle) : null}
-            </>
-          ) : (
-            renderQuestionSegment(questionDisplay.fullText)
-          )}
-          <span
-            className="tooltip tooltip-bottom ml-1.5 inline-block cursor-help align-middle"
-            data-tip="Illegal content, content that doesn't load, or content with the wrong description should be downvoted."
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="opacity-50"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4" />
-              <path d="M12 8h.01" />
-            </svg>
-          </span>
-        </p>
+        <div className="mb-4 flex shrink-0 flex-col items-center text-center">
+          <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/45">
+            <span>Community rating</span>
+            <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
+          </div>
+          <RatingOrb rating={currentRatingValue} size={190} />
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <span className="rounded-full border border-base-content/10 bg-base-content/5 px-3 py-1 text-sm font-medium capitalize text-base-content/65">
+              {contentLabel}
+            </span>
+            {title && !embedded ? (
+              <span className="max-w-full truncate rounded-full border border-base-content/10 bg-base-content/5 px-3 py-1 text-sm text-base-content/55">
+                {title}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-3 max-w-[18rem] text-sm leading-relaxed text-base-content/62">
+            Downvote illegal, broken, or misdescribed content.
+          </p>
+        </div>
 
         {/* Committed voter icons */}
         {phase === "voting" && (

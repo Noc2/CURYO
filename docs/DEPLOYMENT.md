@@ -147,7 +147,7 @@ This will:
 3. Deploy all UUPS proxy contracts (ContentRegistry, RoundVotingEngine, RoundRewardDistributor, ProfileRegistry, FrontendRegistry) and non-upgradeable contracts (CategoryRegistry, VoterIdNFT, ParticipationPool, HumanFaucet)
 4. Deploy the stateless `SubmissionCanonicalizer` helper used by `ContentRegistry` URL canonicalization
 5. Wire cross-contract references
-6. Seed 12 content categories, each with a ranking-question template that includes `{title}` and `{rating}`
+6. Seed 12 content categories with their approved domains and subcategories
 7. Mint token allocations: 51,899,900→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 100K→KeeperRewardPool, 10M→Treasury
 8. **Renounce deployer's temporary admin roles** — governance transfers fully to TimelockController
 9. **Automatically verify** that governance owns the expected roles and the deployer retained none
