@@ -26,9 +26,17 @@ These are two standalone visual concepts for Curyo, created as review artifacts 
    A closer SpaceFox-dashboard interpretation with warmer charcoal/rust UI treatment and a rounder geometric font feel, while keeping the Curyo multicolor signal planet.
    Preview export: `planet-flare-spacefox-theme.png`
 
+6. `planet-flare-logo-exploration.svg`
+   Logo exploration board for replacing the lighthouse mark with a planet-plus-flare system.
+   Preview export: `planet-flare-logo-exploration.png`
+
+7. `logo-rollout-plan.md`
+   Concrete replacement plan covering the shared React mark, public brand assets, favicon, banner, and landing-page hero animation.
+
 ## Notes
 
 - Both concepts keep the current "signal planet" idea, but push it further as the main visual anchor.
 - The refined `planet-flare-*` versions are closer to the current product layouts and add a more three-dimensional orb, fire-like orbit, and faint containment rings.
+- The logo exploration board focuses on how the planet+flare system could scale from standalone badge to full lockup.
 - These are mock-ups only.
 - The live app was reverted separately and is not using these designs.

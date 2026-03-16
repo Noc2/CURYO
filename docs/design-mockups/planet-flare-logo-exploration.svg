@@ -1,0 +1,165 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="board-bg" x1="96" y1="54" x2="1510" y2="948" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A0C12"/>
+      <stop offset="0.56" stop-color="#10141F"/>
+      <stop offset="1" stop-color="#0A0E16"/>
+    </linearGradient>
+    <radialGradient id="board-left-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(286 186) rotate(54.462) scale(382 468)">
+      <stop stop-color="#1A2B4B" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#1A2B4B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="board-right-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1288 224) rotate(143.129) scale(432 324)">
+      <stop stop-color="#F17173" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#F17173" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="board-bottom-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1118 930) rotate(162.166) scale(544 246)">
+      <stop stop-color="#FF7A47" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#FF7A47" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="card-fill" x1="98" y1="148" x2="1502" y2="862" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0E1118"/>
+      <stop offset="1" stop-color="#0B0D14"/>
+    </linearGradient>
+    <filter id="card-shadow" x="56" y="102" width="1488" height="772" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+    <filter id="planet-glow" x="136" y="156" width="1248" height="590" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+    <filter id="flare-glow" x="126" y="106" width="1336" height="634" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+
+    <radialGradient id="planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(0.68 0.22) scale(0.92 0.96)">
+      <stop stop-color="#FFD49B"/>
+      <stop offset="0.18" stop-color="#FFB278"/>
+      <stop offset="0.36" stop-color="#F16A73"/>
+      <stop offset="0.58" stop-color="#7B78EA"/>
+      <stop offset="0.77" stop-color="#3395E8"/>
+      <stop offset="1" stop-color="#0A2D3F"/>
+    </radialGradient>
+    <radialGradient id="planet-rim" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.72 0.24) scale(0.5 0.4)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.54"/>
+      <stop offset="0.44" stop-color="#FFFFFF" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="flare-main" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#F45D4F"/>
+      <stop offset="30%" stop-color="#FF8C5F"/>
+      <stop offset="62%" stop-color="#FFC37A"/>
+      <stop offset="100%" stop-color="#FFF0D8"/>
+    </linearGradient>
+    <linearGradient id="flare-core" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#FF9B75"/>
+      <stop offset="52%" stop-color="#FFF0CF"/>
+      <stop offset="100%" stop-color="#FFF7EA"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#06070B"/>
+  <rect width="1600" height="1000" fill="url(#board-left-glow)"/>
+  <rect width="1600" height="1000" fill="url(#board-right-glow)"/>
+  <rect width="1600" height="1000" fill="url(#board-bottom-glow)"/>
+
+  <g filter="url(#card-shadow)">
+    <rect x="70" y="58" width="1460" height="884" rx="36" fill="url(#board-bg)"/>
+    <rect x="70" y="58" width="1460" height="884" rx="36" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="2"/>
+  </g>
+
+  <text x="116" y="150" fill="#FFFFFF" font-size="46" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Planet + Flare Logo Exploration</text>
+  <text x="116" y="194" fill="#FFFFFF" fill-opacity="0.56" font-size="22" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Three directions for replacing the lighthouse mark with the new planet-and-flare system.</text>
+
+  <g>
+    <rect x="100" y="246" width="420" height="596" rx="30" fill="url(#card-fill)"/>
+    <rect x="100" y="246" width="420" height="596" rx="30" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+    <text x="132" y="302" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Orbital Badge</text>
+    <text x="132" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Standalone app/header mark</text>
+
+    <g filter="url(#planet-glow)">
+      <circle cx="308" cy="510" r="126" fill="#3D95E7" fill-opacity="0.08"/>
+    </g>
+    <circle cx="308" cy="510" r="174" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+    <circle cx="308" cy="510" r="158" stroke="#1C1E29" stroke-opacity="0.9" stroke-width="16"/>
+
+    <g filter="url(#flare-glow)">
+      <path d="M390 332A178 178 0 0 1 470 566" stroke="#F4614F" stroke-opacity="0.5" stroke-width="18" stroke-linecap="round"/>
+    </g>
+    <path d="M390 332A178 178 0 0 1 470 566" stroke="url(#flare-main)" stroke-width="7" stroke-linecap="round"/>
+    <path d="M398 340A170 170 0 0 1 462 558" stroke="url(#flare-core)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="470" cy="566" r="9" fill="#FFF0D8"/>
+    <circle cx="470" cy="566" r="18" fill="#FF8D65" fill-opacity="0.18"/>
+
+    <circle cx="308" cy="510" r="138" fill="url(#planet-base)"/>
+    <ellipse cx="252" cy="446" rx="88" ry="70" fill="#399DF0" fill-opacity="0.52"/>
+    <ellipse cx="340" cy="420" rx="108" ry="74" fill="#F57680" fill-opacity="0.36"/>
+    <ellipse cx="376" cy="474" rx="104" ry="68" fill="#FFD388" fill-opacity="0.34"/>
+    <ellipse cx="320" cy="574" rx="130" ry="76" fill="#08C7A2" fill-opacity="0.26"/>
+    <ellipse cx="248" cy="586" rx="116" ry="84" fill="#13263D" fill-opacity="0.54"/>
+    <path d="M192 442C236 420 282 424 330 442C374 458 412 468 454 462" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="8" stroke-linecap="round"/>
+    <path d="M184 520C230 500 282 502 332 522C374 538 416 548 452 544" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="308" cy="510" r="138" fill="url(#planet-rim)"/>
+
+    <text x="132" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: top-left nav, social avatar, app icon base.</text>
+  </g>
+
+  <g>
+    <rect x="590" y="246" width="420" height="596" rx="30" fill="url(#card-fill)"/>
+    <rect x="590" y="246" width="420" height="596" rx="30" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+    <text x="622" y="302" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Signal Crest</text>
+    <text x="622" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Badge with faint containment rings</text>
+
+    <circle cx="798" cy="510" r="182" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2"/>
+    <circle cx="798" cy="510" r="160" stroke="#1C1E29" stroke-opacity="0.92" stroke-width="16"/>
+    <circle cx="798" cy="510" r="146" stroke="#FFFFFF" stroke-opacity="0.05" stroke-width="1.6"/>
+
+    <g filter="url(#flare-glow)">
+      <path d="M864 332A182 182 0 0 1 958 566" stroke="#F4614F" stroke-opacity="0.48" stroke-width="20" stroke-linecap="round"/>
+    </g>
+    <path d="M864 332A182 182 0 0 1 958 566" stroke="url(#flare-main)" stroke-width="7.5" stroke-linecap="round"/>
+    <path d="M872 340A174 174 0 0 1 950 558" stroke="url(#flare-core)" stroke-width="2.1" stroke-linecap="round"/>
+    <circle cx="958" cy="566" r="9" fill="#FFF0D8"/>
+
+    <circle cx="798" cy="510" r="134" fill="url(#planet-base)"/>
+    <ellipse cx="744" cy="448" rx="82" ry="66" fill="#399DF0" fill-opacity="0.54"/>
+    <ellipse cx="830" cy="420" rx="102" ry="72" fill="#F57680" fill-opacity="0.38"/>
+    <ellipse cx="864" cy="478" rx="96" ry="66" fill="#FFD388" fill-opacity="0.34"/>
+    <ellipse cx="812" cy="572" rx="126" ry="72" fill="#08C7A2" fill-opacity="0.25"/>
+    <ellipse cx="742" cy="584" rx="112" ry="82" fill="#13263D" fill-opacity="0.54"/>
+    <path d="M684 448C728 426 774 430 818 446C860 462 896 472 936 466" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="8" stroke-linecap="round"/>
+    <path d="M676 526C720 506 772 508 818 526C860 542 900 552 934 548" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="798" cy="510" r="134" fill="url(#planet-rim)"/>
+
+    <text x="622" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: canonical product mark and exported brand asset.</text>
+  </g>
+
+  <g>
+    <rect x="1080" y="246" width="420" height="596" rx="30" fill="url(#card-fill)"/>
+    <rect x="1080" y="246" width="420" height="596" rx="30" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2"/>
+    <text x="1112" y="302" fill="#FFFFFF" font-size="30" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Wordmark Lockup</text>
+    <text x="1112" y="336" fill="#FFFFFF" fill-opacity="0.5" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Planet mark paired with CURYO</text>
+
+    <circle cx="1200" cy="450" r="104" stroke="#1C1E29" stroke-opacity="0.92" stroke-width="14"/>
+    <g filter="url(#flare-glow)">
+      <path d="M1246 330A118 118 0 0 1 1312 490" stroke="#F4614F" stroke-opacity="0.46" stroke-width="16" stroke-linecap="round"/>
+    </g>
+    <path d="M1246 330A118 118 0 0 1 1312 490" stroke="url(#flare-main)" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="1312" cy="490" r="8" fill="#FFF0D8"/>
+
+    <circle cx="1200" cy="450" r="86" fill="url(#planet-base)"/>
+    <ellipse cx="1166" cy="410" rx="52" ry="44" fill="#399DF0" fill-opacity="0.54"/>
+    <ellipse cx="1220" cy="394" rx="66" ry="46" fill="#F57680" fill-opacity="0.38"/>
+    <ellipse cx="1244" cy="432" rx="62" ry="42" fill="#FFD388" fill-opacity="0.34"/>
+    <ellipse cx="1212" cy="492" rx="80" ry="50" fill="#08C7A2" fill-opacity="0.24"/>
+    <ellipse cx="1162" cy="498" rx="76" ry="56" fill="#13263D" fill-opacity="0.52"/>
+    <circle cx="1200" cy="450" r="86" fill="url(#planet-rim)"/>
+
+    <text x="1114" y="610" fill="#FFFFFF" font-size="84" font-weight="700" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1">CURYO</text>
+    <text x="1114" y="650" fill="#FFFFFF" fill-opacity="0.58" font-size="19" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Header/banner direction with a calmer</text>
+    <text x="1114" y="676" fill="#FFFFFF" fill-opacity="0.58" font-size="19" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">badge-to-wordmark transition.</text>
+
+    <text x="1112" y="744" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">Best fit: banner, README, exportable lockups,</text>
+    <text x="1112" y="770" fill="#FFFFFF" fill-opacity="0.78" font-size="18" font-family="'Avenir Next', Avenir, 'Helvetica Neue', Arial, sans-serif">and wider marketing surfaces.</text>
+  </g>
+</svg>
