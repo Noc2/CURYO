@@ -67,12 +67,12 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(636 360) rotate(130) scale(514 494)"
           >
-            <stop stopColor="#FFE1B5" />
-            <stop offset="0.16" stopColor="#FFBA84" />
-            <stop offset="0.34" stopColor="#F57E8A" />
-            <stop offset="0.56" stopColor="#8A82F2" />
-            <stop offset="0.76" stopColor="#41A0F1" />
-            <stop offset="1" stopColor="#112C41" />
+            <stop stopColor="#FFF0E0" />
+            <stop offset="0.15" stopColor="#F6A05D" />
+            <stop offset="0.34" stopColor="#E55A27" />
+            <stop offset="0.58" stopColor="#A6321D" />
+            <stop offset="0.8" stopColor="#43201A" />
+            <stop offset="1" stopColor="#0F0F12" />
           </radialGradient>
           <radialGradient
             id={planetShadowId}
@@ -82,8 +82,8 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(382 664) rotate(-28) scale(248 162)"
           >
-            <stop stopColor="#0B1322" stopOpacity="0.74" />
-            <stop offset="1" stopColor="#0B1322" stopOpacity="0" />
+            <stop stopColor="#08090B" stopOpacity="0.86" />
+            <stop offset="1" stopColor="#08090B" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={planetHighlightId}
@@ -93,9 +93,9 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(670 338) rotate(138) scale(192 126)"
           >
-            <stop stopColor="#FFF4E2" stopOpacity="0.64" />
-            <stop offset="0.48" stopColor="#FFF4E2" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#FFF4E2" stopOpacity="0" />
+            <stop stopColor="#FFF7EF" stopOpacity="0.68" />
+            <stop offset="0.48" stopColor="#FFF7EF" stopOpacity="0.23" />
+            <stop offset="1" stopColor="#FFF7EF" stopOpacity="0" />
           </radialGradient>
           <linearGradient id={flareGradientId} x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
             <stop stopColor="#F45C4D" />
@@ -155,179 +155,184 @@ export function CuryoPlanetMark({
           </>
         )}
 
-        <g className={resolvedPreset ? "curyo-planet-mark__flare-orbit" : undefined}>
-          <g>
-            {usesHeroVariant ? (
-              <>
-                <g filter={`url(#${softBlur42Id})`}>
-                  <circle
-                    className={
-                      resolvedPreset ? "curyo-planet-mark__flare-smoke curyo-planet-mark__flare-smoke--far" : undefined
-                    }
-                    cx="512"
-                    cy="512"
-                    r="406"
-                    stroke="#FF764F"
-                    strokeOpacity="0.2"
-                    strokeWidth="50"
-                    strokeLinecap="round"
-                    strokeDasharray="812 1739"
-                    transform="rotate(-70 512 512)"
-                  />
-                </g>
-                <g filter={`url(#${softBlur28Id})`}>
-                  <circle
-                    className={
-                      resolvedPreset ? "curyo-planet-mark__flare-smoke curyo-planet-mark__flare-smoke--near" : undefined
-                    }
-                    cx="512"
-                    cy="512"
-                    r="406"
-                    stroke="#FFB07B"
-                    strokeOpacity="0.18"
-                    strokeWidth="30"
-                    strokeLinecap="round"
-                    strokeDasharray="726 1825"
-                    transform="rotate(-68 512 512)"
-                  />
-                </g>
-              </>
-            ) : null}
+        <g className="curyo-planet-mark__flare-scale">
+          <g className={resolvedPreset ? "curyo-planet-mark__flare-orbit" : undefined}>
+            <g>
+              {usesHeroVariant ? (
+                <>
+                  <g filter={`url(#${softBlur42Id})`}>
+                    <circle
+                      className={
+                        resolvedPreset
+                          ? "curyo-planet-mark__flare-smoke curyo-planet-mark__flare-smoke--far"
+                          : undefined
+                      }
+                      cx="512"
+                      cy="512"
+                      r="406"
+                      stroke="#FF764F"
+                      strokeOpacity="0.2"
+                      strokeWidth="50"
+                      strokeLinecap="round"
+                      strokeDasharray="812 1739"
+                      transform="rotate(-70 512 512)"
+                    />
+                  </g>
+                  <g filter={`url(#${softBlur28Id})`}>
+                    <circle
+                      className={
+                        resolvedPreset
+                          ? "curyo-planet-mark__flare-smoke curyo-planet-mark__flare-smoke--near"
+                          : undefined
+                      }
+                      cx="512"
+                      cy="512"
+                      r="406"
+                      stroke="#FFB07B"
+                      strokeOpacity="0.18"
+                      strokeWidth="30"
+                      strokeLinecap="round"
+                      strokeDasharray="726 1825"
+                      transform="rotate(-68 512 512)"
+                    />
+                  </g>
+                </>
+              ) : null}
 
-            <g filter={`url(#${flareGlowFilterId})`}>
+              <g filter={`url(#${flareGlowFilterId})`}>
+                <circle
+                  className={resolvedPreset ? "curyo-planet-mark__flare-glow" : undefined}
+                  cx="512"
+                  cy="512"
+                  r={flareRadius}
+                  stroke="#F45C4D"
+                  strokeOpacity={flareGlowOpacity}
+                  strokeWidth={flareGlowStrokeWidth}
+                  strokeLinecap="round"
+                  strokeDasharray={flareDashArray}
+                  transform={`rotate(${flareRotation} 512 512)`}
+                />
+              </g>
               <circle
-                className={resolvedPreset ? "curyo-planet-mark__flare-glow" : undefined}
+                className={resolvedPreset ? "curyo-planet-mark__flare-body" : undefined}
                 cx="512"
                 cy="512"
                 r={flareRadius}
-                stroke="#F45C4D"
-                strokeOpacity={flareGlowOpacity}
-                strokeWidth={flareGlowStrokeWidth}
+                stroke="#6D352A"
+                strokeOpacity="0.42"
+                strokeWidth={flareBodyStrokeWidth}
+                strokeLinecap="round"
+                strokeDasharray={flareDashArray}
+                transform={`rotate(${flareRotation} 512 512)`}
+              />
+              <circle
+                className={resolvedPreset ? "curyo-planet-mark__flare-main" : undefined}
+                cx="512"
+                cy="512"
+                r={flareRadius}
+                stroke={`url(#${flareGradientId})`}
+                strokeWidth={flareMainStrokeWidth}
+                strokeLinecap="round"
+                strokeDasharray={flareDashArray}
+                transform={`rotate(${flareRotation} 512 512)`}
+              />
+              <circle
+                className={resolvedPreset ? "curyo-planet-mark__flare-core" : undefined}
+                cx="512"
+                cy="512"
+                r={flareRadius}
+                stroke={`url(#${flareCoreId})`}
+                strokeWidth={flareCoreStrokeWidth}
                 strokeLinecap="round"
                 strokeDasharray={flareDashArray}
                 transform={`rotate(${flareRotation} 512 512)`}
               />
             </g>
-            <circle
-              className={resolvedPreset ? "curyo-planet-mark__flare-body" : undefined}
-              cx="512"
-              cy="512"
-              r={flareRadius}
-              stroke="#6D352A"
-              strokeOpacity="0.42"
-              strokeWidth={flareBodyStrokeWidth}
-              strokeLinecap="round"
-              strokeDasharray={flareDashArray}
-              transform={`rotate(${flareRotation} 512 512)`}
-            />
-            <circle
-              className={resolvedPreset ? "curyo-planet-mark__flare-main" : undefined}
-              cx="512"
-              cy="512"
-              r={flareRadius}
-              stroke={`url(#${flareGradientId})`}
-              strokeWidth={flareMainStrokeWidth}
-              strokeLinecap="round"
-              strokeDasharray={flareDashArray}
-              transform={`rotate(${flareRotation} 512 512)`}
-            />
-            <circle
-              className={resolvedPreset ? "curyo-planet-mark__flare-core" : undefined}
-              cx="512"
-              cy="512"
-              r={flareRadius}
-              stroke={`url(#${flareCoreId})`}
-              strokeWidth={flareCoreStrokeWidth}
-              strokeLinecap="round"
-              strokeDasharray={flareDashArray}
-              transform={`rotate(${flareRotation} 512 512)`}
-            />
-          </g>
 
-          {usesCompactVariant ? null : (
-            <g>
-              {usesHeroVariant ? (
-                <>
-                  <ellipse
-                    className={
-                      resolvedPreset
-                        ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--primary"
-                        : undefined
-                    }
-                    cx="842"
-                    cy="686"
-                    rx="36"
-                    ry="20"
-                    fill="#FF835A"
-                    fillOpacity="0.12"
-                  />
-                  <ellipse
-                    className={
-                      resolvedPreset
-                        ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--secondary"
-                        : undefined
-                    }
-                    cx="824"
-                    cy="662"
-                    rx="28"
-                    ry="15"
-                    fill="#FFB88B"
-                    fillOpacity="0.1"
-                  />
-                </>
-              ) : null}
-              <circle
-                className={resolvedPreset ? "curyo-planet-mark__node-halo" : undefined}
-                cx="871"
-                cy="703"
-                r="23"
-                fill="#FF8D65"
-                fillOpacity="0.18"
-              />
-              {usesHeroVariant ? (
-                <>
-                  <circle
-                    className={
-                      resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--primary" : undefined
-                    }
-                    cx="858"
-                    cy="686"
-                    r="4.6"
-                    fill="#FFE4BC"
-                    fillOpacity="0.9"
-                  />
-                  <circle
-                    className={
-                      resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--secondary" : undefined
-                    }
-                    cx="884"
-                    cy="691"
-                    r="3.6"
-                    fill="#FFD39D"
-                    fillOpacity="0.76"
-                  />
-                </>
-              ) : null}
-              <circle
-                className={resolvedPreset ? "curyo-planet-mark__node" : undefined}
-                cx="871"
-                cy="703"
-                r="9"
-                fill="#FFF3DF"
-              />
-            </g>
-          )}
+            {usesCompactVariant ? null : (
+              <g>
+                {usesHeroVariant ? (
+                  <>
+                    <ellipse
+                      className={
+                        resolvedPreset
+                          ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--primary"
+                          : undefined
+                      }
+                      cx="842"
+                      cy="686"
+                      rx="36"
+                      ry="20"
+                      fill="#FF835A"
+                      fillOpacity="0.12"
+                    />
+                    <ellipse
+                      className={
+                        resolvedPreset
+                          ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--secondary"
+                          : undefined
+                      }
+                      cx="824"
+                      cy="662"
+                      rx="28"
+                      ry="15"
+                      fill="#FFB88B"
+                      fillOpacity="0.1"
+                    />
+                  </>
+                ) : null}
+                <circle
+                  className={resolvedPreset ? "curyo-planet-mark__node-halo" : undefined}
+                  cx="871"
+                  cy="703"
+                  r="23"
+                  fill="#FF8D65"
+                  fillOpacity="0.18"
+                />
+                {usesHeroVariant ? (
+                  <>
+                    <circle
+                      className={
+                        resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--primary" : undefined
+                      }
+                      cx="858"
+                      cy="686"
+                      r="4.6"
+                      fill="#FFE4BC"
+                      fillOpacity="0.9"
+                    />
+                    <circle
+                      className={
+                        resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--secondary" : undefined
+                      }
+                      cx="884"
+                      cy="691"
+                      r="3.6"
+                      fill="#FFD39D"
+                      fillOpacity="0.76"
+                    />
+                  </>
+                ) : null}
+                <circle
+                  className={resolvedPreset ? "curyo-planet-mark__node" : undefined}
+                  cx="871"
+                  cy="703"
+                  r="9"
+                  fill="#FFF3DF"
+                />
+              </g>
+            )}
+          </g>
         </g>
 
         <circle cx="512" cy="512" r={planetRadius} fill={`url(#${planetBaseId})`} />
         <g clipPath={`url(#${planetClipId})`}>
           <g filter={`url(#${softBlur20Id})`}>
-            <ellipse cx="338" cy="386" rx="214" ry="164" fill="#3E9FF0" fillOpacity="0.42" />
-            <ellipse cx="602" cy="312" rx="248" ry="174" fill="#F28593" fillOpacity="0.34" />
-            <ellipse cx="698" cy="438" rx="244" ry="160" fill="#FFD79A" fillOpacity="0.24" />
-            <ellipse cx="606" cy="648" rx="270" ry="150" fill="#11C6A4" fillOpacity="0.2" />
-            <ellipse cx="346" cy="694" rx="286" ry="174" fill="#13263D" fillOpacity="0.62" />
-            <ellipse cx="700" cy="760" rx="150" ry="110" fill="#35A5F6" fillOpacity="0.18" />
+            <ellipse cx="330" cy="392" rx="204" ry="154" fill="#B52E1B" fillOpacity="0.32" />
+            <ellipse cx="604" cy="320" rx="246" ry="172" fill="#F16A2D" fillOpacity="0.28" />
+            <ellipse cx="706" cy="444" rx="234" ry="154" fill="#FFD2AE" fillOpacity="0.2" />
+            <ellipse cx="612" cy="656" rx="268" ry="154" fill="#4C261D" fillOpacity="0.28" />
+            <ellipse cx="344" cy="706" rx="286" ry="176" fill="#0D0D10" fillOpacity="0.72" />
           </g>
 
           <path
@@ -360,15 +365,15 @@ export function CuryoPlanetMark({
           />
           <path
             d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770"
-            stroke="#2C4E72"
-            strokeOpacity="0.28"
+            stroke="#4B261D"
+            strokeOpacity="0.3"
             strokeWidth="24"
             strokeLinecap="round"
           />
           <path
             d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554"
-            stroke="#F6A17C"
-            strokeOpacity="0.12"
+            stroke="#E59A66"
+            strokeOpacity="0.14"
             strokeWidth="24"
             strokeLinecap="round"
           />
@@ -399,6 +404,7 @@ export function CuryoPlanetMark({
       </svg>
 
       <style jsx>{`
+        .curyo-planet-mark__flare-scale,
         .curyo-planet-mark__flare-orbit,
         .curyo-planet-mark__planet-highlight {
           transform-origin: 50% 50%;
@@ -590,6 +596,17 @@ export function CuryoPlanetMark({
           .curyo-planet-mark--orbit .curyo-planet-mark__node-halo,
           .curyo-planet-mark--orbit .curyo-planet-mark__node {
             animation: none;
+          }
+        }
+
+        @media (max-width: 639px) {
+          .curyo-planet-mark--hero .curyo-planet-mark__flare-scale {
+            transform: scale(1.08);
+          }
+
+          .curyo-planet-mark--compact .curyo-planet-mark__flare-scale,
+          .curyo-planet-mark--default .curyo-planet-mark__flare-scale {
+            transform: scale(1.04);
           }
         }
       `}</style>
