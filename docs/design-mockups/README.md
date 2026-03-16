@@ -22,6 +22,10 @@ These are two standalone visual concepts for Curyo, created as review artifacts 
    Refined SpaceFox-inspired Discover page mock-up using the current voting layout, filter bar, signal card, and queue.
    Preview export: `planet-flare-discover.png`
 
+5. `planet-flare-spacefox-theme.svg`
+   A closer SpaceFox-dashboard interpretation with warmer charcoal/rust UI treatment and a rounder geometric font feel, while keeping the Curyo multicolor signal planet.
+   Preview export: `planet-flare-spacefox-theme.png`
+
 ## Notes
 
 - Both concepts keep the current "signal planet" idea, but push it further as the main visual anchor.

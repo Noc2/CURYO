@@ -1,0 +1,146 @@
+<svg width="1600" height="1000" viewBox="0 0 1600 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="spacefox-shell" x1="108" y1="86" x2="1448" y2="916" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17171B"/>
+      <stop offset="1" stop-color="#111216"/>
+    </linearGradient>
+    <radialGradient id="spacefox-left-wash" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(284 742) rotate(25.401) scale(442 322)">
+      <stop stop-color="#AB5338" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#AB5338" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="spacefox-right-wash" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1286 266) rotate(134.615) scale(404 334)">
+      <stop stop-color="#5D140A" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#5D140A" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="spacefox-shell-shadow" x="52" y="48" width="1498" height="898" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="30" stdDeviation="28" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+    <clipPath id="spacefox-planet-clip">
+      <circle cx="1130" cy="448" r="298"/>
+    </clipPath>
+    <radialGradient id="spacefox-planet-body" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1198 356) rotate(131.329) scale(430 418)">
+      <stop stop-color="#FFE0AF"/>
+      <stop offset="0.16" stop-color="#FFB27C"/>
+      <stop offset="0.34" stop-color="#F06D76"/>
+      <stop offset="0.56" stop-color="#8A78EE"/>
+      <stop offset="0.76" stop-color="#3495F5"/>
+      <stop offset="1" stop-color="#0C344A"/>
+    </radialGradient>
+    <radialGradient id="spacefox-planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1030 590) rotate(-33.053) scale(300 198)">
+      <stop stop-color="#08111E" stop-opacity="0.84"/>
+      <stop offset="1" stop-color="#08111E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="spacefox-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1212 296) rotate(132.893) scale(228 154)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.58"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="spacefox-fire" x1="862" y1="592" x2="1294" y2="724" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AB5338"/>
+      <stop offset="0.28" stop-color="#D99073"/>
+      <stop offset="0.54" stop-color="#FFE1B8"/>
+      <stop offset="1" stop-color="#9C1504"/>
+    </linearGradient>
+    <linearGradient id="spacefox-fire-core" x1="878" y1="598" x2="1282" y2="714" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7D9B0"/>
+      <stop offset="0.5" stop-color="#FFF0DA"/>
+      <stop offset="1" stop-color="#E8B88E"/>
+    </linearGradient>
+    <filter id="spacefox-fire-blur" x="778" y="476" width="596" height="298" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+    <filter id="spacefox-fire-soft" x="808" y="504" width="546" height="244" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <filter id="spacefox-glow" x="920" y="146" width="478" height="338" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="26"/>
+    </filter>
+    <radialGradient id="spacefox-metric-bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(320 760) rotate(90) scale(108)">
+      <stop stop-color="#FFFFFF" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#020202"/>
+  <rect width="1600" height="1000" fill="url(#spacefox-left-wash)"/>
+  <rect width="1600" height="1000" fill="url(#spacefox-right-wash)"/>
+
+  <g filter="url(#spacefox-shell-shadow)">
+    <rect x="70" y="58" width="1460" height="884" rx="36" fill="url(#spacefox-shell)"/>
+    <rect x="70" y="58" width="1460" height="884" rx="36" stroke="rgba(228,220,216,0.06)" stroke-width="2"/>
+  </g>
+
+  <rect x="166" y="154" width="62" height="62" rx="20" fill="rgba(255,255,255,0.015)" stroke="rgba(228,220,216,0.12)" stroke-width="2"/>
+  <circle cx="195" cy="183" r="9" stroke="#E4DCD8" stroke-width="4"/>
+  <path d="M201 189L209 197" stroke="#E4DCD8" stroke-width="4" stroke-linecap="round"/>
+  <rect x="242" y="154" width="62" height="62" rx="20" fill="rgba(255,255,255,0.015)" stroke="rgba(228,220,216,0.12)" stroke-width="2"/>
+  <path d="M262 171V195" stroke="#E4DCD8" stroke-width="4" stroke-linecap="round"/>
+  <path d="M281 169V192" stroke="#E4DCD8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="262" cy="178" r="4" fill="#E4DCD8"/>
+  <circle cx="281" cy="184" r="4" fill="#E4DCD8"/>
+
+  <text x="164" y="316" fill="#7F7F80" font-size="24" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="600">Welcome to Curyo Signal System</text>
+  <text x="164" y="394" fill="#F6F3F0" font-size="64" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="700">Find a clearer place</text>
+  <text x="164" y="468" fill="#F6F3F0" font-size="64" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="700">for human-backed</text>
+  <text x="164" y="542" fill="#F6F3F0" font-size="64" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="700">quality signals.</text>
+
+  <rect x="164" y="606" width="386" height="138" rx="28" fill="#08080D"/>
+  <rect x="164" y="606" width="386" height="138" rx="28" stroke="rgba(228,220,216,0.06)" stroke-width="2"/>
+  <circle cx="232" cy="675" r="30" fill="#1D1F28"/>
+  <circle cx="232" cy="675" r="20" fill="url(#spacefox-fire)"/>
+  <path d="M219 684C226 674 237 669 248 670" stroke="#F4EEE9" stroke-width="3" stroke-linecap="round"/>
+  <text x="292" y="652" fill="#7F7F80" font-size="22" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="600">Top of the Round</text>
+  <text x="292" y="692" fill="#F6F3F0" font-size="30" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="600">Verified humans are</text>
+  <text x="292" y="726" fill="#F6F3F0" font-size="30" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="600">pushing this to 84/100.</text>
+  <path d="M494 640L514 620" stroke="#F4EEE9" stroke-width="4" stroke-linecap="round"/>
+  <path d="M495 620H514V639" stroke="#F4EEE9" stroke-width="4" stroke-linecap="round"/>
+
+  <circle cx="1130" cy="448" r="374" stroke="rgba(228,220,216,0.03)" stroke-width="2"/>
+  <circle cx="1130" cy="448" r="320" stroke="rgba(228,220,216,0.06)" stroke-width="2"/>
+  <circle cx="1130" cy="448" r="344" stroke="rgba(34,25,23,0.84)" stroke-width="22"/>
+  <ellipse cx="1134" cy="520" rx="316" ry="150" fill="none" stroke="rgba(217,144,115,0.08)" stroke-width="2.5"/>
+  <ellipse cx="1134" cy="520" rx="332" ry="162" fill="none" stroke="rgba(228,220,216,0.03)" stroke-width="2"/>
+
+  <circle cx="1130" cy="448" r="298" fill="url(#spacefox-planet-body)"/>
+  <g clip-path="url(#spacefox-planet-clip)">
+    <ellipse cx="1034" cy="314" rx="164" ry="132" fill="#3495F5" fill-opacity="0.5"/>
+    <ellipse cx="1188" cy="268" rx="196" ry="128" fill="#F06D76" fill-opacity="0.42"/>
+    <ellipse cx="1246" cy="366" rx="204" ry="140" fill="#FFE1A7" fill-opacity="0.38"/>
+    <ellipse cx="1168" cy="546" rx="244" ry="126" fill="#0CC49E" fill-opacity="0.28"/>
+    <ellipse cx="1026" cy="560" rx="238" ry="166" fill="#12253A" fill-opacity="0.56"/>
+    <path d="M846 364C926 324 1002 326 1088 354C1166 380 1244 404 1354 394C1424 388 1470 370 1498 356" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="16" stroke-linecap="round"/>
+    <path d="M842 462C924 422 1008 422 1096 452C1170 476 1250 498 1342 490C1408 484 1450 472 1480 458" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="14" stroke-linecap="round"/>
+    <path d="M868 578C940 546 1018 548 1104 572C1184 594 1262 612 1338 606" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="16" stroke-linecap="round"/>
+    <circle cx="1212" cy="494" r="10" fill="rgba(255,255,255,0.08)"/>
+    <circle cx="1116" cy="332" r="7" fill="rgba(255,255,255,0.06)"/>
+    <circle cx="1276" cy="346" r="8" fill="rgba(255,255,255,0.08)"/>
+  </g>
+  <circle cx="1130" cy="448" r="298" fill="url(#spacefox-planet-shadow)"/>
+  <g filter="url(#spacefox-glow)">
+    <ellipse cx="1176" cy="284" rx="124" ry="84" fill="#F7E9D6" fill-opacity="0.36"/>
+  </g>
+  <circle cx="1130" cy="448" r="298" fill="url(#spacefox-rim)"/>
+
+  <g filter="url(#spacefox-fire-blur)">
+    <path d="M852 612C958 544 1128 526 1294 734" stroke="#AB5338" stroke-opacity="0.5" stroke-width="34" stroke-linecap="round"/>
+  </g>
+  <g filter="url(#spacefox-fire-soft)">
+    <path d="M850 612C958 544 1128 526 1296 734" stroke="url(#spacefox-fire)" stroke-width="11" stroke-linecap="round"/>
+  </g>
+  <path d="M850 612C958 544 1128 526 1296 734" stroke="url(#spacefox-fire)" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M864 618C964 558 1122 544 1284 724" stroke="url(#spacefox-fire-core)" stroke-width="2.4" stroke-linecap="round"/>
+  <ellipse cx="886" cy="614" rx="22" ry="9" fill="#AB5338"/>
+  <ellipse cx="930" cy="586" rx="24" ry="10" fill="#D99073" fill-opacity="0.82"/>
+  <ellipse cx="1112" cy="548" rx="18" ry="7" fill="#FFE4B8" fill-opacity="0.42"/>
+  <ellipse cx="1242" cy="676" rx="18" ry="8" fill="#AB5338" fill-opacity="0.78"/>
+  <ellipse cx="1278" cy="712" rx="13" ry="6" fill="#E8B88E" fill-opacity="0.6"/>
+
+  <circle cx="320" cy="820" r="106" fill="url(#spacefox-metric-bg)"/>
+  <circle cx="320" cy="820" r="74" stroke="rgba(228,220,216,0.12)" stroke-width="2"/>
+  <circle cx="320" cy="820" r="74" stroke="url(#spacefox-fire)" stroke-width="5" stroke-dasharray="292 172" stroke-linecap="round" transform="rotate(-98 320 820)"/>
+  <circle cx="320" cy="820" r="118" stroke="rgba(228,220,216,0.05)" stroke-width="2"/>
+  <text x="280" y="834" fill="#F6F3F0" font-size="50" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="700">84%</text>
+  <text x="452" y="786" fill="#7F7F80" font-size="24" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Current Metrics</text>
+  <text x="452" y="850" fill="#F6F3F0" font-size="58" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif" font-weight="600">Quality Signal</text>
+  <text x="452" y="894" fill="rgba(228,220,216,0.68)" font-size="24" font-family="'Avenir Next', 'Helvetica Neue', Arial, sans-serif">Discover what the network is converging on.</text>
+</svg>

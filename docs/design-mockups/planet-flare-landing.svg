@@ -22,6 +22,9 @@
     <filter id="landing-orbit-soft" x="790" y="432" width="566" height="354" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="10"/>
     </filter>
+    <filter id="landing-smoke-blur" x="756" y="490" width="662" height="272" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
     <filter id="planet-highlight-blur" x="886" y="104" width="560" height="412" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="28"/>
     </filter>
@@ -73,6 +76,8 @@
   <circle cx="1104" cy="452" r="396" stroke="rgba(255,255,255,0.04)" stroke-width="2"/>
   <circle cx="1104" cy="452" r="344" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
   <circle cx="1104" cy="452" r="370" stroke="rgba(25,28,36,0.88)" stroke-width="26"/>
+  <ellipse cx="1108" cy="520" rx="336" ry="158" fill="none" stroke="rgba(255,182,126,0.08)" stroke-width="2.5"/>
+  <ellipse cx="1108" cy="520" rx="350" ry="170" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="2"/>
 
   <circle cx="1104" cy="452" r="324" fill="url(#planet-body)"/>
   <g clip-path="url(#landing-planet-clip)">
@@ -97,19 +102,24 @@
   </g>
   <circle cx="1104" cy="452" r="324" fill="url(#planet-rim)"/>
 
+  <g filter="url(#landing-smoke-blur)">
+    <path d="M824 606C946 540 1124 526 1332 704" stroke="#6D2615" stroke-opacity="0.48" stroke-width="46" stroke-linecap="round"/>
+  </g>
   <g filter="url(#landing-orbit-blur)">
-    <path d="M840 598C944 516 1132 504 1322 706" stroke="#FF7149" stroke-opacity="0.44" stroke-width="34" stroke-linecap="round"/>
+    <path d="M828 602C948 534 1126 518 1330 704" stroke="#FF7149" stroke-opacity="0.44" stroke-width="34" stroke-linecap="round"/>
   </g>
   <g filter="url(#landing-orbit-soft)">
-    <path d="M836 600C944 516 1134 504 1324 706" stroke="url(#orbit-fire)" stroke-width="12" stroke-linecap="round"/>
+    <path d="M828 602C948 534 1126 518 1330 704" stroke="url(#orbit-fire)" stroke-width="12" stroke-linecap="round"/>
   </g>
-  <path d="M836 600C944 516 1134 504 1324 706" stroke="url(#orbit-fire)" stroke-width="6" stroke-linecap="round"/>
-  <path d="M848 604C948 528 1130 520 1310 696" stroke="url(#orbit-hot-core)" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M828 602C948 534 1126 518 1330 704" stroke="url(#orbit-fire)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M842 608C952 548 1122 534 1318 696" stroke="url(#orbit-hot-core)" stroke-width="2.8" stroke-linecap="round"/>
   <g opacity="0.8">
-    <ellipse cx="866" cy="612" rx="22" ry="10" fill="#FF8D5F"/>
-    <ellipse cx="914" cy="578" rx="26" ry="12" fill="#FFA56F" fill-opacity="0.76"/>
-    <ellipse cx="1262" cy="656" rx="20" ry="9" fill="#FF8A5A" fill-opacity="0.78"/>
-    <ellipse cx="1306" cy="690" rx="14" ry="7" fill="#FFD09C" fill-opacity="0.58"/>
+    <ellipse cx="860" cy="612" rx="24" ry="10" fill="#FF8D5F"/>
+    <ellipse cx="908" cy="582" rx="28" ry="12" fill="#FFA56F" fill-opacity="0.82"/>
+    <ellipse cx="1038" cy="536" rx="20" ry="8" fill="#FFD5A1" fill-opacity="0.44"/>
+    <ellipse cx="1176" cy="560" rx="18" ry="7" fill="#FFD9A7" fill-opacity="0.36"/>
+    <ellipse cx="1260" cy="656" rx="20" ry="9" fill="#FF8A5A" fill-opacity="0.82"/>
+    <ellipse cx="1302" cy="690" rx="15" ry="7" fill="#FFD09C" fill-opacity="0.62"/>
   </g>
 
   <text x="148" y="228" fill="rgba(255,255,255,0.46)" font-size="24" font-family="Arial, Helvetica, sans-serif">Quality Signals Backed by Human Reputation</text>

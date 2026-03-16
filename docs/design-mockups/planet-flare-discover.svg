@@ -50,6 +50,9 @@
     <filter id="discover-fire-soft" x="900" y="432" width="530" height="242" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="9"/>
     </filter>
+    <filter id="discover-smoke-blur" x="884" y="430" width="596" height="248" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
     <filter id="discover-card-shadow" x="100" y="228" width="1132" height="640" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#000000" flood-opacity="0.34"/>
     </filter>
@@ -104,6 +107,8 @@
   <circle cx="1180" cy="392" r="324" stroke="rgba(255,255,255,0.04)" stroke-width="2"/>
   <circle cx="1180" cy="392" r="274" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
   <circle cx="1180" cy="392" r="296" stroke="rgba(23,25,33,0.9)" stroke-width="22"/>
+  <ellipse cx="1182" cy="454" rx="268" ry="126" fill="none" stroke="rgba(255,182,126,0.085)" stroke-width="2.2"/>
+  <ellipse cx="1182" cy="454" rx="282" ry="138" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
 
   <circle cx="1180" cy="392" r="248" fill="url(#discover-planet-base)"/>
   <g clip-path="url(#discover-planet-clip)">
@@ -125,19 +130,22 @@
   </g>
   <circle cx="1180" cy="392" r="248" fill="url(#discover-rim-light)"/>
 
+  <g filter="url(#discover-smoke-blur)">
+    <path d="M956 520C1060 468 1208 462 1368 596" stroke="#6D2615" stroke-opacity="0.5" stroke-width="38" stroke-linecap="round"/>
+  </g>
   <g filter="url(#discover-fire-blur)">
-    <path d="M972 514C1060 450 1208 446 1360 596" stroke="#FF7648" stroke-opacity="0.42" stroke-width="28" stroke-linecap="round"/>
+    <path d="M960 518C1062 466 1208 458 1366 596" stroke="#FF7648" stroke-opacity="0.42" stroke-width="28" stroke-linecap="round"/>
   </g>
   <g filter="url(#discover-fire-soft)">
-    <path d="M968 516C1058 450 1210 446 1364 596" stroke="url(#discover-fire)" stroke-width="10" stroke-linecap="round"/>
+    <path d="M960 518C1062 466 1208 458 1366 596" stroke="url(#discover-fire)" stroke-width="10" stroke-linecap="round"/>
   </g>
-  <path d="M968 516C1058 450 1210 446 1364 596" stroke="url(#discover-fire)" stroke-width="5" stroke-linecap="round"/>
-  <path d="M980 520C1066 462 1208 460 1350 588" stroke="url(#discover-fire-core)" stroke-width="2.2" stroke-linecap="round"/>
-  <ellipse cx="994" cy="512" rx="18" ry="8" fill="#FF9060" fill-opacity="0.86"/>
-  <ellipse cx="1028" cy="488" rx="22" ry="10" fill="#FFB26D" fill-opacity="0.72"/>
-  <ellipse cx="1116" cy="470" rx="16" ry="7" fill="#FFD09A" fill-opacity="0.42"/>
-  <ellipse cx="1248" cy="526" rx="20" ry="9" fill="#FF8D58" fill-opacity="0.58"/>
-  <ellipse cx="1324" cy="566" rx="18" ry="8" fill="#FF8858" fill-opacity="0.78"/>
+  <path d="M960 518C1062 466 1208 458 1366 596" stroke="url(#discover-fire)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M974 520C1066 474 1208 470 1354 588" stroke="url(#discover-fire-core)" stroke-width="2.4" stroke-linecap="round"/>
+  <ellipse cx="990" cy="516" rx="20" ry="8" fill="#FF9060" fill-opacity="0.9"/>
+  <ellipse cx="1022" cy="492" rx="22" ry="10" fill="#FFB26D" fill-opacity="0.76"/>
+  <ellipse cx="1116" cy="472" rx="16" ry="7" fill="#FFD09A" fill-opacity="0.46"/>
+  <ellipse cx="1248" cy="526" rx="20" ry="9" fill="#FF8D58" fill-opacity="0.62"/>
+  <ellipse cx="1326" cy="566" rx="18" ry="8" fill="#FF8858" fill-opacity="0.82"/>
 
   <rect x="128" y="724" width="1268" height="122" rx="28" fill="rgba(10,12,18,0.84)" stroke="rgba(255,255,255,0.06)" stroke-width="2"/>
   <text x="160" y="766" fill="rgba(255,255,255,0.44)" font-size="18" font-family="Arial, Helvetica, sans-serif">Up next queue</text>
