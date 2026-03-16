@@ -36,7 +36,7 @@ test("getQueueCardStatus shows vote deficit urgency in open phase", () => {
     phaseLabel: "Open",
     phaseTone: "open",
     urgencyLabel: "Needs 2 more votes",
-    urgencyTone: "neutral",
+    urgencyTone: "warning",
   });
 });
 

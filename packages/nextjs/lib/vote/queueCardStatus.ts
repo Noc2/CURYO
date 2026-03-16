@@ -66,6 +66,6 @@ export function getQueueCardStatus(snapshot: QueueCardStatusSnapshot): QueueCard
     phaseLabel: "Open",
     phaseTone: "open",
     urgencyLabel: `Needs ${votesNeeded} more vote${votesNeeded === 1 ? "" : "s"}`,
-    urgencyTone: votesNeeded === 1 ? "warning" : "neutral",
+    urgencyTone: "warning",
   };
 }

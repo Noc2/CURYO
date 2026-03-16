@@ -302,16 +302,14 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   const ratingLabel = `${item.rating}/100`;
   const roundSnapshot = useRoundSnapshot(item.id);
   const queueStatus = getQueueCardStatus(roundSnapshot);
-  const phaseBadgeClassName =
-    queueStatus?.phaseTone === "blind"
-      ? "bg-primary/15 text-primary ring-primary/30"
-      : "bg-warning/15 text-warning ring-warning/30";
-  const urgencyBadgeClassName =
+  const statusBadgeClassName =
     queueStatus?.urgencyTone === "success"
       ? "bg-success/15 text-success ring-success/30"
       : queueStatus?.urgencyTone === "warning"
         ? "bg-warning/15 text-warning ring-warning/30"
-        : "bg-white/5 text-white/65 ring-white/10";
+        : queueStatus?.phaseTone === "blind"
+          ? "bg-primary/15 text-primary ring-primary/30"
+          : "bg-white/5 text-white/65 ring-white/10";
 
   return (
     <button
@@ -384,12 +382,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         {queueStatus ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
             <span
-              className={`inline-flex items-center rounded-full px-2 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] ring-1 ${phaseBadgeClassName}`}
-            >
-              {queueStatus.phaseLabel}
-            </span>
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[0.72rem] font-medium ring-1 ${urgencyBadgeClassName}`}
+              className={`inline-flex items-center rounded-full px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] ring-1 ${statusBadgeClassName}`}
             >
               {queueStatus.urgencyLabel}
             </span>
