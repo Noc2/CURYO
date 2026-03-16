@@ -7,15 +7,18 @@ interface Point {
 
 interface OrbitalAvatarPlanet {
   radius: number;
-  atmosphereRadius: number;
-  colorA: string;
-  colorB: string;
-  colorC: string;
-  glowColor: string;
-  bandColorA: string;
-  bandColorB: string;
-  bandColorC: string;
+  highlightColor: string;
+  lightColor: string;
+  midColor: string;
+  warmColor: string;
+  deepColor: string;
   rimColor: string;
+  bloomColor: string;
+  pocketColor: string;
+  emberPocketColor: string;
+  foldColor: string;
+  foldStrokeColor: string;
+  shadowColor: string;
 }
 
 interface OrbitalAvatarOrbit {
@@ -197,18 +200,26 @@ function getAddressVariant(address: string) {
   const seedHsl = rgbToHsl(r, g, b);
   const baseHue = seedHsl.saturation < 0.18 ? seedValue % 360 : seedHsl.hue;
   const saturation = Math.max(seedHsl.saturation * 100, 70);
+  const orbHue = baseHue - 8;
+  const warmHue = baseHue + 18;
+  const deepHue = baseHue + 74;
+  const pocketHue = baseHue + 108;
 
   return {
-    compositionRotation: unitHash(`${address}:planet-rotation`) * 360,
-    planetColorA: hslToHex(baseHue + 24, Math.min(saturation + 10, 98), 82),
-    planetColorB: hslToHex(baseHue - 8, Math.min(saturation + 6, 94), 62),
-    planetColorC: hslToHex(baseHue + 118, Math.min(saturation - 4, 88), 22),
-    bandColorA: hslToHex(baseHue + 116, Math.min(saturation + 2, 92), 54),
-    bandColorB: hslToHex(baseHue + 42, Math.min(saturation + 8, 98), 76),
-    bandColorC: hslToHex(baseHue - 18, Math.min(saturation + 4, 95), 70),
-    glowColor: hslToHex(baseHue + 18, Math.min(saturation + 12, 100), 74),
-    rimColor: hslToHex(baseHue + 18, Math.min(saturation + 6, 94), 90),
-    accentColor: hslToHex(baseHue + 24, Math.min(saturation + 4, 94), 78),
+    compositionRotation: unitHash(`${address}:orb-rotation`) * 360,
+    orbHighlightColor: "#FFF8F2",
+    orbLightColor: hslToHex(warmHue, Math.min(saturation - 6, 88), 84),
+    orbMidColor: hslToHex(orbHue, Math.min(saturation + 8, 94), 64),
+    orbWarmColor: hslToHex(warmHue, Math.min(saturation + 4, 92), 50),
+    orbDeepColor: hslToHex(deepHue, Math.min(saturation - 8, 74), 34),
+    rimColor: hslToHex(baseHue + 182, 28, 66),
+    bloomColor: "#FFD77E",
+    pocketColor: hslToHex(pocketHue, Math.min(saturation - 6, 82), 42),
+    emberPocketColor: hslToHex(warmHue, Math.min(saturation - 12, 78), 46),
+    foldColor: "#F5E3D2",
+    foldStrokeColor: "#FFF7F1",
+    shadowColor: hslToHex(baseHue + 56, 34, 26),
+    accentColor: hslToHex(warmHue, Math.min(saturation + 2, 90), 78),
   };
 }
 
@@ -223,15 +234,18 @@ function buildPlanet(
 
   return {
     radius,
-    atmosphereRadius: radius + 20,
-    colorA: variant.planetColorA,
-    colorB: variant.planetColorB,
-    colorC: variant.planetColorC,
-    glowColor: variant.glowColor,
-    bandColorA: variant.bandColorA,
-    bandColorB: variant.bandColorB,
-    bandColorC: variant.bandColorC,
+    highlightColor: variant.orbHighlightColor,
+    lightColor: variant.orbLightColor,
+    midColor: variant.orbMidColor,
+    warmColor: variant.orbWarmColor,
+    deepColor: variant.orbDeepColor,
     rimColor: variant.rimColor,
+    bloomColor: variant.bloomColor,
+    pocketColor: variant.pocketColor,
+    emberPocketColor: variant.emberPocketColor,
+    foldColor: variant.foldColor,
+    foldStrokeColor: variant.foldStrokeColor,
+    shadowColor: variant.shadowColor,
   };
 }
 
@@ -329,51 +343,47 @@ function renderShellOrbit(shellOrbit: OrbitalAvatarShell) {
   `;
 }
 
-function renderPlanetBands(planet: OrbitalAvatarPlanet) {
-  const radius = planet.radius;
-  const curves = [
-    { yRatio: -0.38, bend: -0.08, width: 0.1, opacity: 0.16 },
-    { yRatio: -0.1, bend: -0.05, width: 0.085, opacity: 0.12 },
-    { yRatio: 0.18, bend: -0.03, width: 0.078, opacity: 0.1 },
-    { yRatio: 0.46, bend: 0.04, width: 0.11, opacity: 0.09 },
-  ];
+function scaleReferenceValue(value: number, radius: number) {
+  return (value * radius) / 360;
+}
 
-  return curves
-    .map(({ yRatio, bend, width, opacity }, index) => {
-      const y = CENTER + radius * yRatio;
-      const startX = CENTER - radius * 1.06;
-      const endX = CENTER + radius * 1.06;
-      const c1X = CENTER - radius * 0.58;
-      const c2X = CENTER + radius * 0.18;
-      const c1Y = y + radius * bend;
-      const c2Y = y - radius * bend;
-      const strokeWidth = radius * width;
-      const stroke = index === 3 ? planet.bandColorC : "#FFFFFF";
-      const strokeOpacity = index === 3 ? 0.16 : opacity;
+function scaleReferenceX(value: number, radius: number) {
+  return CENTER + (value - 700) * (radius / 360);
+}
 
-      return `<path d="M ${startX.toFixed(2)} ${y.toFixed(2)} C ${c1X.toFixed(2)} ${c1Y.toFixed(2)}, ${c2X.toFixed(2)} ${c2Y.toFixed(2)}, ${endX.toFixed(2)} ${(y + radius * bend * 0.45).toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth.toFixed(2)}" stroke-linecap="round" stroke-opacity="${strokeOpacity.toFixed(3)}"/>`;
-    })
-    .join("");
+function scaleReferenceY(value: number, radius: number) {
+  return CENTER + (value - 700) * (radius / 360);
+}
+
+function scaleReferencePoint(x: number, y: number, radius: number) {
+  return `${scaleReferenceX(x, radius).toFixed(2)} ${scaleReferenceY(y, radius).toFixed(2)}`;
 }
 
 function renderPlanet(planet: OrbitalAvatarPlanet, hashHex: string) {
   const radius = planet.radius;
+  const foldSheenPath = `M ${scaleReferencePoint(330, 822, radius)}C ${scaleReferencePoint(464, 734, radius)} ${scaleReferencePoint(582, 684, radius)} ${scaleReferencePoint(704, 670, radius)}C ${scaleReferencePoint(810, 658, radius)} ${scaleReferencePoint(902, 686, radius)} ${scaleReferencePoint(1018, 760, radius)}C ${scaleReferencePoint(944, 812, radius)} ${scaleReferencePoint(868, 844, radius)} ${scaleReferencePoint(788, 858, radius)}C ${scaleReferencePoint(680, 876, radius)} ${scaleReferencePoint(560, 868, radius)} ${scaleReferencePoint(442, 840, radius)}C ${scaleReferencePoint(404, 832, radius)} ${scaleReferencePoint(368, 826, radius)} ${scaleReferencePoint(330, 822, radius)}Z`;
+  const foldBodyPath = `M ${scaleReferencePoint(350, 838, radius)}C ${scaleReferencePoint(466, 760, radius)} ${scaleReferencePoint(574, 724, radius)} ${scaleReferencePoint(694, 714, radius)}C ${scaleReferencePoint(808, 704, radius)} ${scaleReferencePoint(906, 726, radius)} ${scaleReferencePoint(1012, 776, radius)}C ${scaleReferencePoint(932, 814, radius)} ${scaleReferencePoint(852, 838, radius)} ${scaleReferencePoint(766, 848, radius)}C ${scaleReferencePoint(642, 864, radius)} ${scaleReferencePoint(520, 858, radius)} ${scaleReferencePoint(402, 840, radius)}C ${scaleReferencePoint(384, 838, radius)} ${scaleReferencePoint(366, 838, radius)} ${scaleReferencePoint(350, 838, radius)}Z`;
+  const upperFoldStrokePath = `M ${scaleReferencePoint(404, 542, radius)}C ${scaleReferencePoint(518, 494, radius)} ${scaleReferencePoint(634, 492, radius)} ${scaleReferencePoint(752, 530, radius)}C ${scaleReferencePoint(842, 560, radius)} ${scaleReferencePoint(938, 626, radius)} ${scaleReferencePoint(1038, 724, radius)}`;
+  const lowerFoldStrokePath = `M ${scaleReferencePoint(344, 930, radius)}C ${scaleReferencePoint(456, 908, radius)} ${scaleReferencePoint(574, 916, radius)} ${scaleReferencePoint(706, 956, radius)}C ${scaleReferencePoint(820, 990, radius)} ${scaleReferencePoint(910, 1040, radius)} ${scaleReferencePoint(988, 1110, radius)}`;
 
   return `
-    <circle cx="${CENTER}" cy="${CENTER}" r="${planet.atmosphereRadius.toFixed(2)}" fill="url(#orbital-avatar-atmosphere-${hashHex})" fill-opacity="0.95"/>
     <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="url(#orbital-avatar-body-${hashHex})"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="url(#orbital-avatar-rim-${hashHex})"/>
     <g clip-path="url(#orbital-avatar-clip-${hashHex})">
       <g filter="url(#orbital-avatar-band-blur-${hashHex})">
-        <ellipse cx="${(CENTER - radius * 0.44).toFixed(2)}" cy="${(CENTER - radius * 0.3).toFixed(2)}" rx="${(radius * 0.68).toFixed(2)}" ry="${(radius * 0.46).toFixed(2)}" fill="${planet.bandColorA}" fill-opacity="0.38"/>
-        <ellipse cx="${(CENTER + radius * 0.22).toFixed(2)}" cy="${(CENTER - radius * 0.46).toFixed(2)}" rx="${(radius * 0.74).toFixed(2)}" ry="${(radius * 0.48).toFixed(2)}" fill="${planet.bandColorC}" fill-opacity="0.28"/>
-        <ellipse cx="${(CENTER + radius * 0.36).toFixed(2)}" cy="${(CENTER + radius * 0.14).toFixed(2)}" rx="${(radius * 0.78).toFixed(2)}" ry="${(radius * 0.46).toFixed(2)}" fill="${planet.bandColorB}" fill-opacity="0.18"/>
-        <ellipse cx="${(CENTER - radius * 0.28).toFixed(2)}" cy="${(CENTER + radius * 0.52).toFixed(2)}" rx="${(radius * 0.84).toFixed(2)}" ry="${(radius * 0.52).toFixed(2)}" fill="${planet.colorC}" fill-opacity="0.44"/>
+        <ellipse cx="${scaleReferenceX(672, radius).toFixed(2)}" cy="${scaleReferenceY(538, radius).toFixed(2)}" rx="${scaleReferenceValue(280, radius).toFixed(2)}" ry="${scaleReferenceValue(184, radius).toFixed(2)}" fill="url(#orbital-avatar-soft-white-${hashHex})"/>
+        <ellipse cx="${scaleReferenceX(930, radius).toFixed(2)}" cy="${scaleReferenceY(640, radius).toFixed(2)}" rx="${scaleReferenceValue(246, radius).toFixed(2)}" ry="${scaleReferenceValue(214, radius).toFixed(2)}" fill="url(#orbital-avatar-gold-bloom-${hashHex})"/>
+        <ellipse cx="${scaleReferenceX(508, radius).toFixed(2)}" cy="${scaleReferenceY(904, radius).toFixed(2)}" rx="${scaleReferenceValue(286, radius).toFixed(2)}" ry="${scaleReferenceValue(218, radius).toFixed(2)}" fill="url(#orbital-avatar-pocket-${hashHex})"/>
+        <ellipse cx="${scaleReferenceX(662, radius).toFixed(2)}" cy="${scaleReferenceY(774, radius).toFixed(2)}" rx="${scaleReferenceValue(316, radius).toFixed(2)}" ry="${scaleReferenceValue(176, radius).toFixed(2)}" fill="url(#orbital-avatar-ember-pocket-${hashHex})"/>
       </g>
-      ${renderPlanetBands(planet)}
+      <path d="${foldSheenPath}" fill="url(#orbital-avatar-fold-sheen-${hashHex})"/>
+      <path d="${foldBodyPath}" fill="${planet.foldColor}" fill-opacity="0.11"/>
+      <path d="${upperFoldStrokePath}" stroke="${planet.foldStrokeColor}" stroke-opacity="0.16" stroke-width="${scaleReferenceValue(22, radius).toFixed(2)}" stroke-linecap="round"/>
+      <path d="${lowerFoldStrokePath}" stroke="${planet.emberPocketColor}" stroke-opacity="0.1" stroke-width="${scaleReferenceValue(24, radius).toFixed(2)}" stroke-linecap="round"/>
+      <circle cx="${scaleReferenceX(1118, radius).toFixed(2)}" cy="${scaleReferenceY(490, radius).toFixed(2)}" r="${scaleReferenceValue(50, radius).toFixed(2)}" fill="${planet.highlightColor}" fill-opacity="0.9"/>
+      <circle cx="${scaleReferenceX(664, radius).toFixed(2)}" cy="${scaleReferenceY(556, radius).toFixed(2)}" r="${scaleReferenceValue(190, radius).toFixed(2)}" fill="url(#orbital-avatar-soft-white-${hashHex})"/>
     </g>
-    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="url(#orbital-avatar-shadow-${hashHex})"/>
-    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="url(#orbital-avatar-highlight-${hashHex})"/>
-    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="none" stroke="${planet.rimColor}" stroke-width="1.6" stroke-opacity="0.16"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="none" stroke="${planet.highlightColor}" stroke-width="1.6" stroke-opacity="0.14"/>
   `;
 }
 
@@ -414,35 +424,61 @@ function renderFlare(flare: OrbitalAvatarFlare, hashHex: string) {
 
 function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
   const defs: string[] = [
-    `<filter id="orbital-avatar-band-blur-${hashHex}" x="0" y="0" width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="14"/></filter>`,
+    `<filter id="orbital-avatar-band-blur-${hashHex}" x="0" y="0" width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="${model.planet ? Math.max(8, scaleReferenceValue(40, model.planet.radius)).toFixed(2) : "14"}"/></filter>`,
     `<filter id="orbital-avatar-flare-blur-${hashHex}" x="0" y="0" width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="12"/></filter>`,
   ];
 
   if (model.planet) {
     defs.push(
-      `<linearGradient id="orbital-avatar-body-${hashHex}" x1="0.18" y1="0.12" x2="0.86" y2="0.88" gradientUnits="objectBoundingBox" gradientTransform="rotate(${model.compositionRotation.toFixed(2)} 0.5 0.5)">
-        <stop stop-color="${model.planet.colorA}"/>
-        <stop offset="0.34" stop-color="${model.planet.colorB}"/>
-        <stop offset="1" stop-color="${model.planet.colorC}"/>
-      </linearGradient>`,
-    );
-    defs.push(
-      `<radialGradient id="orbital-avatar-atmosphere-${hashHex}" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="${model.planet.glowColor}" stop-opacity="0.28"/>
-        <stop offset="100%" stop-color="${model.planet.glowColor}" stop-opacity="0"/>
+      `<radialGradient id="orbital-avatar-body-${hashHex}" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${scaleReferenceX(856, model.planet.radius).toFixed(2)} ${scaleReferenceY(450, model.planet.radius).toFixed(2)}) rotate(${(136 + model.compositionRotation * 0.08).toFixed(2)}) scale(${scaleReferenceValue(720, model.planet.radius).toFixed(2)} ${scaleReferenceValue(702, model.planet.radius).toFixed(2)})">
+        <stop stop-color="${model.planet.highlightColor}"/>
+        <stop offset="0.18" stop-color="${model.planet.lightColor}"/>
+        <stop offset="0.34" stop-color="${model.planet.midColor}"/>
+        <stop offset="0.56" stop-color="${model.planet.warmColor}"/>
+        <stop offset="0.78" stop-color="${model.planet.emberPocketColor}"/>
+        <stop offset="1" stop-color="${model.planet.deepColor}"/>
       </radialGradient>`,
     );
     defs.push(
-      `<radialGradient id="orbital-avatar-highlight-${hashHex}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.66 0.28) scale(0.5 0.34)">
-        <stop stop-color="#FFF6E8" stop-opacity="0.56"/>
-        <stop offset="0.48" stop-color="#FFF6E8" stop-opacity="0.18"/>
-        <stop offset="1" stop-color="#FFF6E8" stop-opacity="0"/>
+      `<radialGradient id="orbital-avatar-rim-${hashHex}" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${scaleReferenceX(438, model.planet.radius).toFixed(2)} ${scaleReferenceY(516, model.planet.radius).toFixed(2)}) rotate(30) scale(${scaleReferenceValue(240, model.planet.radius).toFixed(2)} ${scaleReferenceValue(540, model.planet.radius).toFixed(2)})">
+        <stop stop-color="${model.planet.rimColor}" stop-opacity="0.82"/>
+        <stop offset="0.22" stop-color="${model.planet.rimColor}" stop-opacity="0.34"/>
+        <stop offset="1" stop-color="${model.planet.rimColor}" stop-opacity="0"/>
       </radialGradient>`,
     );
     defs.push(
-      `<radialGradient id="orbital-avatar-shadow-${hashHex}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.28 0.76) scale(0.54 0.32)">
-        <stop stop-color="#07111D" stop-opacity="0.72"/>
-        <stop offset="1" stop-color="#07111D" stop-opacity="0"/>
+      `<radialGradient id="orbital-avatar-soft-white-${hashHex}" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${scaleReferenceX(710, model.planet.radius).toFixed(2)} ${scaleReferenceY(520, model.planet.radius).toFixed(2)}) rotate(128) scale(${scaleReferenceValue(330, model.planet.radius).toFixed(2)} ${scaleReferenceValue(260, model.planet.radius).toFixed(2)})">
+        <stop stop-color="${model.planet.highlightColor}" stop-opacity="0.74"/>
+        <stop offset="0.52" stop-color="${model.planet.highlightColor}" stop-opacity="0.2"/>
+        <stop offset="1" stop-color="${model.planet.highlightColor}" stop-opacity="0"/>
+      </radialGradient>`,
+    );
+    defs.push(
+      `<radialGradient id="orbital-avatar-gold-bloom-${hashHex}" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${scaleReferenceX(930, model.planet.radius).toFixed(2)} ${scaleReferenceY(612, model.planet.radius).toFixed(2)}) rotate(166) scale(${scaleReferenceValue(270, model.planet.radius).toFixed(2)} ${scaleReferenceValue(220, model.planet.radius).toFixed(2)})">
+        <stop stop-color="${model.planet.bloomColor}" stop-opacity="0.82"/>
+        <stop offset="1" stop-color="${model.planet.bloomColor}" stop-opacity="0"/>
+      </radialGradient>`,
+    );
+    defs.push(
+      `<radialGradient id="orbital-avatar-pocket-${hashHex}" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${scaleReferenceX(500, model.planet.radius).toFixed(2)} ${scaleReferenceY(866, model.planet.radius).toFixed(2)}) rotate(-26) scale(${scaleReferenceValue(334, model.planet.radius).toFixed(2)} ${scaleReferenceValue(244, model.planet.radius).toFixed(2)})">
+        <stop stop-color="${model.planet.pocketColor}" stop-opacity="0.54"/>
+        <stop offset="1" stop-color="${model.planet.pocketColor}" stop-opacity="0"/>
+      </radialGradient>`,
+    );
+    defs.push(
+      `<radialGradient id="orbital-avatar-ember-pocket-${hashHex}" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${scaleReferenceX(620, model.planet.radius).toFixed(2)} ${scaleReferenceY(760, model.planet.radius).toFixed(2)}) rotate(8) scale(${scaleReferenceValue(320, model.planet.radius).toFixed(2)} ${scaleReferenceValue(180, model.planet.radius).toFixed(2)})">
+        <stop stop-color="${model.planet.shadowColor}" stop-opacity="0.36"/>
+        <stop offset="0.58" stop-color="${model.planet.emberPocketColor}" stop-opacity="0.22"/>
+        <stop offset="1" stop-color="${model.planet.emberPocketColor}" stop-opacity="0"/>
+      </radialGradient>`,
+    );
+    defs.push(
+      `<linearGradient id="orbital-avatar-fold-sheen-${hashHex}" x1="${scaleReferenceX(290, model.planet.radius).toFixed(2)}" y1="${scaleReferenceY(820, model.planet.radius).toFixed(2)}" x2="${scaleReferenceX(1036, model.planet.radius).toFixed(2)}" y2="${scaleReferenceY(650, model.planet.radius).toFixed(2)}" gradientUnits="userSpaceOnUse">
+        <stop stop-color="${model.planet.foldStrokeColor}" stop-opacity="0"/>
+        <stop offset="0.3" stop-color="${model.planet.foldStrokeColor}" stop-opacity="0.08"/>
+        <stop offset="0.56" stop-color="${model.planet.foldStrokeColor}" stop-opacity="0.34"/>
+        <stop offset="0.82" stop-color="${model.planet.foldColor}" stop-opacity="0.18"/>
+        <stop offset="1" stop-color="${model.planet.foldColor}" stop-opacity="0"/>
       </radialGradient>`,
     );
     defs.push(

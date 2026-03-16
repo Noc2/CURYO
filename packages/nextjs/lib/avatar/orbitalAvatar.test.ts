@@ -50,7 +50,7 @@ function buildPayload(overrides?: Partial<ReputationAvatarPayload>): ReputationA
   };
 }
 
-test("planet-flare avatars vary by address color and planet rotation", () => {
+test("orb-flare avatars vary by address color and composition rotation", () => {
   const modelA = buildOrbitalAvatarModel(buildPayload({ address: "0x0000000000000000000000000000000000ff3300" }), {
     nowSeconds: NOW_SECONDS,
   });
@@ -59,12 +59,12 @@ test("planet-flare avatars vary by address color and planet rotation", () => {
   });
 
   assert.notEqual(modelA.compositionRotation, modelB.compositionRotation);
-  assert.notEqual(modelA.planet?.colorA, modelB.planet?.colorA);
+  assert.notEqual(modelA.planet?.midColor, modelB.planet?.midColor);
   assert.equal(modelA.flare?.rotationDegrees, -90);
   assert.equal(modelB.flare?.rotationDegrees, -90);
 });
 
-test("planet size saturates at extreme cREP balances", () => {
+test("orb size saturates at extreme cREP balances", () => {
   const capped = buildOrbitalAvatarModel(
     buildPayload({
       balance: "100000000000",
@@ -230,7 +230,7 @@ test("accuracy of zero removes the flare entirely", () => {
   assert.equal(model.flare, null);
 });
 
-test("unclaimed wallets render an empty shell instead of a planet", () => {
+test("unclaimed wallets render an empty shell instead of an orb", () => {
   const model = buildOrbitalAvatarModel(
     buildPayload({
       voterId: null,
@@ -247,7 +247,7 @@ test("unclaimed wallets render an empty shell instead of a planet", () => {
   assert.ok(model.shellOrbit);
 });
 
-test("renderer returns svg markup for the planet-flare avatar", () => {
+test("renderer returns svg markup for the orb-flare avatar", () => {
   const svg = renderOrbitalAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
 
   assert.match(svg, /orbital-avatar-body-/);
