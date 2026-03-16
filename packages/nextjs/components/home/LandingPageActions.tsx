@@ -34,7 +34,7 @@ export function LandingPageActions() {
         className="btn btn-primary rounded-full px-5 text-black"
         style={{ fontSize: "16px" }}
       >
-        Discover Ratings
+        Discover
       </Link>
       <Link
         href="/docs"
