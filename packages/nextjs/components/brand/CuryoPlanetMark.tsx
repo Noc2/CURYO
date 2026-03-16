@@ -67,12 +67,12 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(636 360) rotate(130) scale(514 494)"
           >
-            <stop stopColor="#FFF0E0" />
-            <stop offset="0.15" stopColor="#F6A05D" />
-            <stop offset="0.34" stopColor="#E55A27" />
-            <stop offset="0.58" stopColor="#A6321D" />
-            <stop offset="0.8" stopColor="#43201A" />
-            <stop offset="1" stopColor="#0F0F12" />
+            <stop stopColor="#FFE1B5" />
+            <stop offset="0.16" stopColor="#FFBA84" />
+            <stop offset="0.34" stopColor="#F57E8A" />
+            <stop offset="0.56" stopColor="#8A82F2" />
+            <stop offset="0.76" stopColor="#41A0F1" />
+            <stop offset="1" stopColor="#112C41" />
           </radialGradient>
           <radialGradient
             id={planetShadowId}
@@ -82,8 +82,8 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(382 664) rotate(-28) scale(248 162)"
           >
-            <stop stopColor="#08090B" stopOpacity="0.86" />
-            <stop offset="1" stopColor="#08090B" stopOpacity="0" />
+            <stop stopColor="#0B1322" stopOpacity="0.74" />
+            <stop offset="1" stopColor="#0B1322" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={planetHighlightId}
@@ -93,9 +93,9 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(670 338) rotate(138) scale(192 126)"
           >
-            <stop stopColor="#FFF7EF" stopOpacity="0.68" />
-            <stop offset="0.48" stopColor="#FFF7EF" stopOpacity="0.23" />
-            <stop offset="1" stopColor="#FFF7EF" stopOpacity="0" />
+            <stop stopColor="#FFF4E2" stopOpacity="0.64" />
+            <stop offset="0.48" stopColor="#FFF4E2" stopOpacity="0.22" />
+            <stop offset="1" stopColor="#FFF4E2" stopOpacity="0" />
           </radialGradient>
           <linearGradient id={flareGradientId} x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
             <stop stopColor="#F45C4D" />
@@ -328,11 +328,12 @@ export function CuryoPlanetMark({
         <circle cx="512" cy="512" r={planetRadius} fill={`url(#${planetBaseId})`} />
         <g clipPath={`url(#${planetClipId})`}>
           <g filter={`url(#${softBlur20Id})`}>
-            <ellipse cx="330" cy="392" rx="204" ry="154" fill="#B52E1B" fillOpacity="0.32" />
-            <ellipse cx="604" cy="320" rx="246" ry="172" fill="#F16A2D" fillOpacity="0.28" />
-            <ellipse cx="706" cy="444" rx="234" ry="154" fill="#FFD2AE" fillOpacity="0.2" />
-            <ellipse cx="612" cy="656" rx="268" ry="154" fill="#4C261D" fillOpacity="0.28" />
-            <ellipse cx="344" cy="706" rx="286" ry="176" fill="#0D0D10" fillOpacity="0.72" />
+            <ellipse cx="338" cy="386" rx="214" ry="164" fill="#3E9FF0" fillOpacity="0.42" />
+            <ellipse cx="602" cy="312" rx="248" ry="174" fill="#F28593" fillOpacity="0.34" />
+            <ellipse cx="698" cy="438" rx="244" ry="160" fill="#FFD79A" fillOpacity="0.24" />
+            <ellipse cx="606" cy="648" rx="270" ry="150" fill="#11C6A4" fillOpacity="0.2" />
+            <ellipse cx="346" cy="694" rx="286" ry="174" fill="#13263D" fillOpacity="0.62" />
+            <ellipse cx="700" cy="760" rx="150" ry="110" fill="#35A5F6" fillOpacity="0.18" />
           </g>
 
           <path
@@ -365,15 +366,15 @@ export function CuryoPlanetMark({
           />
           <path
             d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770"
-            stroke="#4B261D"
+            stroke="#2C4E72"
             strokeOpacity="0.3"
             strokeWidth="24"
             strokeLinecap="round"
           />
           <path
             d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554"
-            stroke="#E59A66"
-            strokeOpacity="0.14"
+            stroke="#F6A17C"
+            strokeOpacity="0.12"
             strokeWidth="24"
             strokeLinecap="round"
           />

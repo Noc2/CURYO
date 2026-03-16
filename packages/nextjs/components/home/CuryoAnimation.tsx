@@ -34,7 +34,7 @@ export function CuryoAnimation() {
         ))}
 
         <div className="curyo-animation__logo relative h-[21rem] w-[21rem] sm:h-[28rem] sm:w-[28rem] lg:h-[39rem] lg:w-[39rem] xl:h-[42rem] xl:w-[42rem]">
-          <CuryoPlanetMark className="h-full w-full" title="Curyo logo" animationPreset="orbit" variant="hero" />
+          <CuryoPlanetMark className="h-full w-full" title="Curyo logo" animationPreset="orbit" />
         </div>
       </div>
 

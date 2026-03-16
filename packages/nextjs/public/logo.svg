@@ -1,21 +1,21 @@
 <svg width="512" height="512" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <radialGradient id="logo-planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(636 360) rotate(130) scale(514 494)">
-      <stop stop-color="#FFF0E0" />
-      <stop offset="0.15" stop-color="#F6A05D" />
-      <stop offset="0.34" stop-color="#E55A27" />
-      <stop offset="0.58" stop-color="#A6321D" />
-      <stop offset="0.8" stop-color="#43201A" />
-      <stop offset="1" stop-color="#0F0F12" />
+      <stop stop-color="#FFE1B5" />
+      <stop offset="0.16" stop-color="#FFBA84" />
+      <stop offset="0.34" stop-color="#F57E8A" />
+      <stop offset="0.56" stop-color="#8A82F2" />
+      <stop offset="0.76" stop-color="#41A0F1" />
+      <stop offset="1" stop-color="#112C41" />
     </radialGradient>
     <radialGradient id="logo-planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(382 664) rotate(-28) scale(248 162)">
-      <stop stop-color="#08090B" stop-opacity="0.86" />
-      <stop offset="1" stop-color="#08090B" stop-opacity="0" />
+      <stop stop-color="#0B1322" stop-opacity="0.74" />
+      <stop offset="1" stop-color="#0B1322" stop-opacity="0" />
     </radialGradient>
     <radialGradient id="logo-planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(670 338) rotate(138) scale(192 126)">
-      <stop stop-color="#FFF7EF" stop-opacity="0.68" />
-      <stop offset="0.48" stop-color="#FFF7EF" stop-opacity="0.23" />
-      <stop offset="1" stop-color="#FFF7EF" stop-opacity="0" />
+      <stop stop-color="#FFF4E2" stop-opacity="0.64" />
+      <stop offset="0.48" stop-color="#FFF4E2" stop-opacity="0.22" />
+      <stop offset="1" stop-color="#FFF4E2" stop-opacity="0" />
     </radialGradient>
     <linearGradient id="logo-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F45C4D" />
@@ -60,18 +60,19 @@
   <circle cx="512" cy="512" r="344" fill="url(#logo-planet-base)" />
   <g clip-path="url(#logo-planet-clip)">
     <g filter="url(#logo-soft-blur-20)">
-      <ellipse cx="330" cy="392" rx="204" ry="154" fill="#B52E1B" fill-opacity="0.32" />
-      <ellipse cx="604" cy="320" rx="246" ry="172" fill="#F16A2D" fill-opacity="0.28" />
-      <ellipse cx="706" cy="444" rx="234" ry="154" fill="#FFD2AE" fill-opacity="0.2" />
-      <ellipse cx="612" cy="656" rx="268" ry="154" fill="#4C261D" fill-opacity="0.28" />
-      <ellipse cx="344" cy="706" rx="286" ry="176" fill="#0D0D10" fill-opacity="0.72" />
+      <ellipse cx="338" cy="386" rx="214" ry="164" fill="#3E9FF0" fill-opacity="0.42" />
+      <ellipse cx="602" cy="312" rx="248" ry="174" fill="#F28593" fill-opacity="0.34" />
+      <ellipse cx="698" cy="438" rx="244" ry="160" fill="#FFD79A" fill-opacity="0.24" />
+      <ellipse cx="606" cy="648" rx="270" ry="150" fill="#11C6A4" fill-opacity="0.2" />
+      <ellipse cx="346" cy="694" rx="286" ry="174" fill="#13263D" fill-opacity="0.62" />
+      <ellipse cx="700" cy="760" rx="150" ry="110" fill="#35A5F6" fill-opacity="0.18" />
     </g>
     <path d="M132 312C242 264 356 264 476 290C578 312 678 322 814 316" stroke="#FFFFFF" stroke-opacity="0.11" stroke-width="16" stroke-linecap="round" />
     <path d="M120 418C236 372 354 378 474 406C578 430 676 440 810 434" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="13" stroke-linecap="round" />
     <path d="M118 522C236 478 356 486 478 516C582 542 676 552 806 546" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="11" stroke-linecap="round" />
     <path d="M132 648C236 612 356 614 478 642C584 668 680 678 810 668" stroke="#FFFFFF" stroke-opacity="0.075" stroke-width="14" stroke-linecap="round" />
-    <path d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770" stroke="#4B261D" stroke-opacity="0.3" stroke-width="24" stroke-linecap="round" />
-    <path d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554" stroke="#E59A66" stroke-opacity="0.14" stroke-width="24" stroke-linecap="round" />
+    <path d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770" stroke="#2C4E72" stroke-opacity="0.28" stroke-width="24" stroke-linecap="round" />
+    <path d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554" stroke="#F6A17C" stroke-opacity="0.12" stroke-width="24" stroke-linecap="round" />
     <circle cx="640" cy="430" r="18" fill="#FFF2E2" fill-opacity="0.14" />
     <circle cx="332" cy="414" r="14" fill="#FFF2E2" fill-opacity="0.08" />
     <circle cx="596" cy="570" r="20" fill="#FFF2E2" fill-opacity="0.1" />
