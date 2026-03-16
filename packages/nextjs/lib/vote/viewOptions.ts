@@ -38,7 +38,7 @@ export function getVoteViewGroups(hasWallet: boolean): VoteViewGroup[] {
   const groups: VoteViewGroup[] = [
     {
       label: "Discover",
-      options: DISCOVER_FEED_MODE_OPTIONS.map(option => ({
+      options: DISCOVER_FEED_MODE_OPTIONS.filter(option => option.value !== "contested").map(option => ({
         value: option.value,
         label: option.label,
         description: option.description,
