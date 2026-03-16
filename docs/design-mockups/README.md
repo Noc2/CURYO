@@ -44,17 +44,21 @@ These are standalone review artifacts rather than production UI.
    Glossy orb studies inspired by softer AI-sphere references, but recolored with the obsidian/ember site palette instead of the earlier blue/rainbow treatment.
    Preview exports: matching `.png` files for each concept.
 
-11. `planet-flare-logo-exploration.svg`
+11. `ai-sphere-obsidian-ember-fold-with-flare.svg`
+   A refined fold-based AI sphere that removes the internal black pocket and reintroduces the current website flare/orbit treatment around the orb.
+   Preview export: `ai-sphere-obsidian-ember-fold-with-flare.png`
+
+12. `planet-flare-logo-exploration.svg`
    Earlier logo exploration board for the planet-plus-flare direction.
    Preview export: `planet-flare-logo-exploration.png`
 
-12. `generate-planet-flare-theme-directions.mjs`
+13. `generate-planet-flare-theme-directions.mjs`
    Script that regenerates the theme-direction, alternative theme, contrast-study, and 3D-gradient SVG boards from code.
 
-13. `generate-planet-flare-obsidian-ember-abstract-variants.mjs`
+14. `generate-planet-flare-obsidian-ember-abstract-variants.mjs`
    Script that regenerates the abstract ember logo round and the comparison board.
 
-14. `logo-rollout-plan.md`
+15. `logo-rollout-plan.md`
    Rollout plan for replacing the shared brand assets.
 
 ## PNG Export
@@ -68,6 +72,7 @@ node docs/design-mockups/render-pngs.mjs docs/design-mockups/planet-flare-theme-
 node docs/design-mockups/render-pngs.mjs docs/design-mockups/planet-flare-logo-obsidian-ember-gradient-core.svg docs/design-mockups/planet-flare-logo-obsidian-ember-abstract-eclipse.svg docs/design-mockups/planet-flare-logo-obsidian-ember-abstract-lens.svg docs/design-mockups/planet-flare-logo-obsidian-ember-abstract-signal.svg docs/design-mockups/planet-flare-logo-obsidian-ember-abstract-variants.svg
 node docs/design-mockups/render-pngs.mjs docs/design-mockups/planet-flare-logo-ai-sphere-ember-lens.svg docs/design-mockups/planet-flare-logo-ai-sphere-ember-signal.svg docs/design-mockups/planet-flare-logo-ai-sphere-ember-prism.svg
 node docs/design-mockups/render-pngs.mjs docs/design-mockups/ai-sphere-obsidian-ember-glass.svg docs/design-mockups/ai-sphere-obsidian-ember-fold.svg docs/design-mockups/ai-sphere-obsidian-ember-core.svg
+node docs/design-mockups/render-pngs.mjs docs/design-mockups/ai-sphere-obsidian-ember-fold-with-flare.svg
 ```
 
 This keeps the raster previews in sync with the editable SVG artwork.
