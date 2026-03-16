@@ -45,72 +45,12 @@ function buildPayload(overrides?: Partial<ReputationAvatarPayload>): ReputationA
         winRate90d: 0.75,
         lastSettledAt: secondsAgo(4),
       },
-      {
-        categoryId: "2",
-        categoryName: "Beta",
-        settledVotes90d: 10,
-        wins90d: 7,
-        losses90d: 3,
-        stakeWon90d: "90000000",
-        stakeLost90d: "30000000",
-        totalStake90d: "120000000",
-        winRate90d: 0.7,
-        lastSettledAt: secondsAgo(7),
-      },
-      {
-        categoryId: "3",
-        categoryName: "Gamma",
-        settledVotes90d: 8,
-        wins90d: 5,
-        losses90d: 3,
-        stakeWon90d: "60000000",
-        stakeLost90d: "25000000",
-        totalStake90d: "85000000",
-        winRate90d: 0.625,
-        lastSettledAt: secondsAgo(10),
-      },
-      {
-        categoryId: "4",
-        categoryName: "Delta",
-        settledVotes90d: 7,
-        wins90d: 4,
-        losses90d: 3,
-        stakeWon90d: "55000000",
-        stakeLost90d: "25000000",
-        totalStake90d: "80000000",
-        winRate90d: 4 / 7,
-        lastSettledAt: secondsAgo(14),
-      },
-      {
-        categoryId: "5",
-        categoryName: "Epsilon",
-        settledVotes90d: 6,
-        wins90d: 4,
-        losses90d: 2,
-        stakeWon90d: "50000000",
-        stakeLost90d: "12000000",
-        totalStake90d: "62000000",
-        winRate90d: 4 / 6,
-        lastSettledAt: secondsAgo(20),
-      },
-      {
-        categoryId: "6",
-        categoryName: "Zeta",
-        settledVotes90d: 5,
-        wins90d: 3,
-        losses90d: 2,
-        stakeWon90d: "45000000",
-        stakeLost90d: "15000000",
-        totalStake90d: "60000000",
-        winRate90d: 0.6,
-        lastSettledAt: secondsAgo(25),
-      },
     ],
     ...overrides,
   };
 }
 
-test("lighthouse avatars vary by address color and composition", () => {
+test("planet-flare avatars vary by address color and orbit rotation", () => {
   const modelA = buildOrbitalAvatarModel(buildPayload({ address: "0x0000000000000000000000000000000000ff3300" }), {
     nowSeconds: NOW_SECONDS,
   });
@@ -119,10 +59,11 @@ test("lighthouse avatars vary by address color and composition", () => {
   });
 
   assert.notEqual(modelA.compositionRotation, modelB.compositionRotation);
-  assert.notEqual(modelA.coreOrb?.colorA, modelB.coreOrb?.colorA);
+  assert.notEqual(modelA.planet?.colorA, modelB.planet?.colorA);
+  assert.notEqual(modelA.flare?.rotationDegrees, modelB.flare?.rotationDegrees);
 });
 
-test("lighthouse core size saturates at extreme cREP balances", () => {
+test("planet size saturates at extreme cREP balances", () => {
   const capped = buildOrbitalAvatarModel(
     buildPayload({
       balance: "100000000000",
@@ -136,10 +77,10 @@ test("lighthouse core size saturates at extreme cREP balances", () => {
     { nowSeconds: NOW_SECONDS },
   );
 
-  assert.equal(extreme.coreOrb?.radius, capped.coreOrb?.radius);
+  assert.equal(extreme.planet?.radius, capped.planet?.radius);
 });
 
-test("lighthouse low cREP balances stay visibly smaller", () => {
+test("low cREP balances stay visibly smaller", () => {
   const lowBalance = buildOrbitalAvatarModel(
     buildPayload({
       balance: "10000000",
@@ -153,92 +94,99 @@ test("lighthouse low cREP balances stay visibly smaller", () => {
     { nowSeconds: NOW_SECONDS },
   );
 
-  assert.ok(lowBalance.coreOrb);
-  assert.ok(mediumBalance.coreOrb);
-  assert.ok(mediumBalance.coreOrb.radius - lowBalance.coreOrb.radius >= 7);
+  assert.ok(lowBalance.planet);
+  assert.ok(mediumBalance.planet);
+  assert.ok(mediumBalance.planet.radius - lowBalance.planet.radius >= 10);
 });
 
-test("lighthouse avatars do not render background stars", () => {
-  const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
-  assert.equal("backgroundStars" in model, false);
-});
-
-test("lighthouse accuracy rings stay bounded and concentric", () => {
-  const model = buildOrbitalAvatarModel(buildPayload(), { nowSeconds: NOW_SECONDS });
-
-  assert.equal(model.accuracyRings.length, 2);
-  assert.ok(model.accuracyRings.every(ring => typeof ring.radius === "number"));
-  assert.ok(model.accuracyRings.every(ring => ring.radius + ring.strokeWidth / 2 < 240));
-  assert.ok(model.accuracyRings[0].radius < model.accuracyRings[1].radius);
-});
-
-test("lighthouse accuracy rings appear above a 10% floor and grow stronger with accuracy", () => {
-  const belowFloorAccuracy = buildOrbitalAvatarModel(
+test("accuracy directly controls flare orbit coverage", () => {
+  const half = buildOrbitalAvatarModel(
     buildPayload({
       stats: {
         totalSettledVotes: 48,
-        totalWins: 4,
-        totalLosses: 44,
-        currentStreak: 0,
-        bestWinStreak: 1,
-        winRate: 4 / 48,
-      },
-    }),
-    { nowSeconds: NOW_SECONDS },
-  );
-  const lowAccuracy = buildOrbitalAvatarModel(
-    buildPayload({
-      stats: {
-        totalSettledVotes: 48,
-        totalWins: 14,
-        totalLosses: 34,
+        totalWins: 24,
+        totalLosses: 24,
         currentStreak: 1,
         bestWinStreak: 3,
-        winRate: 14 / 48,
+        winRate: 0.5,
       },
     }),
     { nowSeconds: NOW_SECONDS },
   );
-  const highAccuracy = buildOrbitalAvatarModel(
-    buildPayload({
-      stats: {
-        totalSettledVotes: 48,
-        totalWins: 41,
-        totalLosses: 7,
-        currentStreak: 6,
-        bestWinStreak: 11,
-        winRate: 41 / 48,
-      },
-    }),
-    { nowSeconds: NOW_SECONDS },
-  );
-  const perfectAccuracy = buildOrbitalAvatarModel(
+  const full = buildOrbitalAvatarModel(
     buildPayload({
       stats: {
         totalSettledVotes: 48,
         totalWins: 48,
         totalLosses: 0,
-        currentStreak: 9,
-        bestWinStreak: 14,
+        currentStreak: 6,
+        bestWinStreak: 10,
         winRate: 1,
       },
     }),
     { nowSeconds: NOW_SECONDS },
   );
 
-  assert.equal(belowFloorAccuracy.accuracyRings.length, 0);
-  assert.equal(lowAccuracy.accuracyRings.length, 1);
-  assert.equal(highAccuracy.accuracyRings.length, 3);
-  assert.equal(perfectAccuracy.accuracyRings.length, 3);
-
-  for (let index = 0; index < lowAccuracy.accuracyRings.length; index++) {
-    assert.equal(highAccuracy.accuracyRings[index].radius, lowAccuracy.accuracyRings[index].radius);
-    assert.ok(highAccuracy.accuracyRings[index].strokeWidth > lowAccuracy.accuracyRings[index].strokeWidth);
-    assert.ok(perfectAccuracy.accuracyRings[index].strokeWidth > highAccuracy.accuracyRings[index].strokeWidth);
-  }
+  assert.ok(half.flare);
+  assert.ok(full.flare);
+  assert.equal(half.flare.sweepDegrees, 180);
+  assert.equal(full.flare.sweepDegrees, 360);
 });
 
-test("unclaimed wallets render an empty shell instead of a filled orb", () => {
+test("confidence changes flare strength without changing its arc length", () => {
+  const lowConfidence = buildOrbitalAvatarModel(
+    buildPayload({
+      stats: {
+        totalSettledVotes: 2,
+        totalWins: 1,
+        totalLosses: 1,
+        currentStreak: 0,
+        bestWinStreak: 1,
+        winRate: 0.5,
+      },
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+  const highConfidence = buildOrbitalAvatarModel(
+    buildPayload({
+      stats: {
+        totalSettledVotes: 60,
+        totalWins: 30,
+        totalLosses: 30,
+        currentStreak: 0,
+        bestWinStreak: 4,
+        winRate: 0.5,
+      },
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.ok(lowConfidence.flare);
+  assert.ok(highConfidence.flare);
+  assert.equal(lowConfidence.flare.sweepDegrees, highConfidence.flare.sweepDegrees);
+  assert.ok(highConfidence.flare.opacity > lowConfidence.flare.opacity);
+  assert.ok(highConfidence.flare.width > lowConfidence.flare.width);
+});
+
+test("accuracy of zero removes the flare entirely", () => {
+  const model = buildOrbitalAvatarModel(
+    buildPayload({
+      stats: {
+        totalSettledVotes: 48,
+        totalWins: 0,
+        totalLosses: 48,
+        currentStreak: 0,
+        bestWinStreak: 0,
+        winRate: 0,
+      },
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.equal(model.flare, null);
+});
+
+test("unclaimed wallets render an empty shell instead of a planet", () => {
   const model = buildOrbitalAvatarModel(
     buildPayload({
       voterId: null,
@@ -249,17 +197,16 @@ test("unclaimed wallets render an empty shell instead of a filled orb", () => {
     { nowSeconds: NOW_SECONDS },
   );
 
-  assert.equal(model.coreOrb, null);
+  assert.equal(model.planet, null);
+  assert.equal(model.orbit, null);
+  assert.equal(model.flare, null);
   assert.ok(model.shellOrbit);
-  assert.equal(model.accuracyRings.length, 0);
 });
 
-test("renderer returns svg markup for the lighthouse avatar", () => {
+test("renderer returns svg markup for the planet-flare avatar", () => {
   const svg = renderOrbitalAvatarSvg(buildPayload(), { nowSeconds: NOW_SECONDS, size: 64 });
 
   assert.match(svg, /orbital-avatar-body-/);
-  assert.match(svg, /orbital-avatar-ring-/);
-  assert.match(svg, /circle/);
-  assert.doesNotMatch(svg, /ellipse/);
-  assert.doesNotMatch(svg, /clipPath/);
+  assert.match(svg, /orbital-avatar-flare-/);
+  assert.match(svg, /<svg[^>]+width="64"/);
 });

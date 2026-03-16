@@ -5,41 +5,62 @@ interface Point {
   y: number;
 }
 
-interface OrbitalAvatarOrb extends Point {
+interface OrbitalAvatarPlanet {
   radius: number;
+  atmosphereRadius: number;
   colorA: string;
   colorB: string;
   colorC: string;
   glowColor: string;
+  bandColorA: string;
+  bandColorB: string;
+  bandColorC: string;
+  rimColor: string;
 }
 
-interface OrbitalAvatarRing {
+interface OrbitalAvatarOrbit {
   radius: number;
+  trackWidth: number;
+  trackOpacity: number;
+  accentColor: string;
+  accentOpacity: number;
+}
+
+interface OrbitalAvatarFlare {
+  radius: number;
+  sweepDegrees: number;
+  rotationDegrees: number;
+  width: number;
+  glowWidth: number;
   opacity: number;
-  strokeWidth: number;
-  colorA: string;
-  colorB: string;
-  colorC: string;
+  headRadius: number;
+  headAngleDegrees: number;
+  startColor: string;
+  middleColor: string;
+  endColor: string;
+  glowColor: string;
 }
 
 interface OrbitalAvatarShell {
-  radii: number[];
-  opacity: number;
+  orbitRadii: number[];
+  orbitOpacity: number;
   strokeWidth: number;
-  color: string;
+  orbitStroke: string;
+  planetRadius: number;
+  planetStroke: string;
 }
 
 export interface OrbitalAvatarModel {
   compositionRotation: number;
-  coreOrb: OrbitalAvatarOrb | null;
+  planet: OrbitalAvatarPlanet | null;
+  orbit: OrbitalAvatarOrbit | null;
+  flare: OrbitalAvatarFlare | null;
   shellOrbit: OrbitalAvatarShell | null;
-  accuracyRings: OrbitalAvatarRing[];
 }
 
 const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
-const MIN_SIGNAL_WIN_RATE = 0.1;
-const SIGNAL_WIN_RATE_RANGE = 1 - MIN_SIGNAL_WIN_RATE;
+const CREP_DECIMALS = 1e6;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -52,8 +73,8 @@ function logScore(value: number, maxValue: number) {
 
 function hashString(input: string) {
   let hash = 2166136261;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
+  for (let index = 0; index < input.length; index++) {
+    hash ^= input.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
@@ -142,99 +163,125 @@ function rgbToHsl(r: number, g: number, b: number) {
   };
 }
 
+function polarToPoint(radius: number, angleDegrees: number): Point {
+  const angleRadians = (angleDegrees * Math.PI) / 180;
+  return {
+    x: CENTER + Math.cos(angleRadians) * radius,
+    y: CENTER + Math.sin(angleRadians) * radius,
+  };
+}
+
 function getAddressColorSeed(address: string) {
   return address.toLowerCase().replace(/^0x/, "").slice(-6).padStart(6, "0");
 }
 
 function getSignalScores(payload: ReputationAvatarPayload) {
-  const balanceCrep = Number(BigInt(payload.balance || "0")) / 1e6;
+  const balanceCrep = Number(BigInt(payload.balance || "0")) / CREP_DECIMALS;
   const stats = payload.stats;
-
   const balanceScore = logScore(balanceCrep, 100000);
   const totalSettledVotes = stats?.totalSettledVotes ?? 0;
+  const accuracy = clamp(stats?.winRate ?? 0, 0, 1);
   const accuracyConfidence = clamp(totalSettledVotes / 25, 0, 1);
-  const accuracyWinRate = stats?.winRate ?? 0;
-  const accuracyScore =
-    clamp((accuracyWinRate - MIN_SIGNAL_WIN_RATE) / SIGNAL_WIN_RATE_RANGE, 0, 1) * accuracyConfidence;
 
-  return { balanceScore, accuracyConfidence, accuracyScore };
+  return { balanceScore, accuracy, accuracyConfidence };
 }
 
 function getAddressVariant(address: string) {
-  const hashed = (salt: string) => unitHash(`${address}:${salt}`);
   const seedHex = getAddressColorSeed(address);
   const seedValue = Number.parseInt(seedHex, 16);
   const { r, g, b } = hexToRgb(seedHex);
   const seedHsl = rgbToHsl(r, g, b);
-  const hue = seedHsl.saturation < 0.18 ? seedValue % 360 : seedHsl.hue;
-  const saturation = Math.max(seedHsl.saturation * 100, 64);
+  const baseHue = seedHsl.saturation < 0.18 ? seedValue % 360 : seedHsl.hue;
+  const saturation = Math.max(seedHsl.saturation * 100, 70);
 
   return {
-    compositionRotation: hashed("orb-rotation") * 360,
-    orbColorA: hslToHex(hue + 32, Math.min(saturation + 10, 96), 68),
-    orbColorB: hslToHex(hue - 8, Math.min(saturation + 8, 94), 48),
-    orbColorC: hslToHex(hue + 116, Math.min(saturation + 6, 90), 34),
-    orbGlowColor: hslToHex(hue + 26, Math.min(saturation + 12, 98), 62),
-    ringColorA: hslToHex(hue + 22, 54, 84),
-    ringColorB: hslToHex(hue - 4, 72, 94),
-    ringColorC: hslToHex(hue + 118, 48, 82),
+    compositionRotation: unitHash(`${address}:planet-rotation`) * 360,
+    flareRotation: -90 + unitHash(`${address}:flare-rotation`) * 360,
+    planetColorA: hslToHex(baseHue + 24, Math.min(saturation + 10, 98), 82),
+    planetColorB: hslToHex(baseHue - 8, Math.min(saturation + 6, 94), 62),
+    planetColorC: hslToHex(baseHue + 118, Math.min(saturation - 4, 88), 22),
+    bandColorA: hslToHex(baseHue + 116, Math.min(saturation + 2, 92), 54),
+    bandColorB: hslToHex(baseHue + 42, Math.min(saturation + 8, 98), 76),
+    bandColorC: hslToHex(baseHue - 18, Math.min(saturation + 4, 95), 70),
+    glowColor: hslToHex(baseHue + 18, Math.min(saturation + 12, 100), 74),
+    rimColor: hslToHex(baseHue + 18, Math.min(saturation + 6, 94), 90),
+    accentColor: hslToHex(baseHue + 24, Math.min(saturation + 4, 94), 78),
   };
 }
 
-function buildCoreOrb(
+function buildPlanet(
   payload: ReputationAvatarPayload,
   variant: ReturnType<typeof getAddressVariant>,
-): OrbitalAvatarOrb | null {
+): OrbitalAvatarPlanet | null {
   if (!payload.voterId) return null;
 
   const { balanceScore } = getSignalScores(payload);
+  const radius = 92 + 40 * balanceScore;
+
   return {
-    x: CENTER,
-    y: CENTER,
-    radius: 100 + 28 * balanceScore,
-    colorA: variant.orbColorA,
-    colorB: variant.orbColorB,
-    colorC: variant.orbColorC,
-    glowColor: variant.orbGlowColor,
+    radius,
+    atmosphereRadius: radius + 20,
+    colorA: variant.planetColorA,
+    colorB: variant.planetColorB,
+    colorC: variant.planetColorC,
+    glowColor: variant.glowColor,
+    bandColorA: variant.bandColorA,
+    bandColorB: variant.bandColorB,
+    bandColorC: variant.bandColorC,
+    rimColor: variant.rimColor,
   };
 }
 
-function buildAccuracyRings(
-  payload: ReputationAvatarPayload,
-  coreOrb: OrbitalAvatarOrb | null,
+function buildOrbit(
+  planet: OrbitalAvatarPlanet | null,
   variant: ReturnType<typeof getAddressVariant>,
-): OrbitalAvatarRing[] {
-  if (!coreOrb || !payload.stats) return [];
+): OrbitalAvatarOrbit | null {
+  if (!planet) return null;
 
-  const { accuracyConfidence, accuracyScore } = getSignalScores(payload);
-  const ringCount = Math.ceil(accuracyScore * 3);
-  if (ringCount === 0) return [];
+  return {
+    radius: planet.radius + 62,
+    trackWidth: 16,
+    trackOpacity: 0.96,
+    accentColor: variant.accentColor,
+    accentOpacity: 0.12,
+  };
+}
 
-  const signalStrength = 0.22 + accuracyScore * 0.78;
-  const radii = [coreOrb.radius + 34, coreOrb.radius + 64, coreOrb.radius + 94];
-  const strokeWidths = [
-    5.5 + accuracyScore * 5 + accuracyConfidence * 1.5,
-    4 + accuracyScore * 4 + accuracyConfidence * 1.2,
-    3 + accuracyScore * 3 + accuracyConfidence * 0.8,
-  ];
-  const opacities = [0.24 + signalStrength * 0.62, 0.12 + signalStrength * 0.42, 0.06 + signalStrength * 0.28];
+function buildFlare(
+  payload: ReputationAvatarPayload,
+  orbit: OrbitalAvatarOrbit | null,
+  variant: ReturnType<typeof getAddressVariant>,
+): OrbitalAvatarFlare | null {
+  if (!orbit || !payload.stats || payload.stats.totalSettledVotes <= 0) return null;
 
-  return radii.slice(0, ringCount).map((radius, index) => ({
-    radius,
-    opacity: clamp(opacities[index], 0, 0.96),
-    strokeWidth: strokeWidths[index],
-    colorA: variant.ringColorA,
-    colorB: variant.ringColorB,
-    colorC: variant.ringColorC,
-  }));
+  const { accuracy, accuracyConfidence } = getSignalScores(payload);
+  if (accuracy <= 0) return null;
+
+  const sweepDegrees = accuracy * 360;
+  return {
+    radius: orbit.radius,
+    sweepDegrees,
+    rotationDegrees: variant.flareRotation,
+    width: 8 + accuracyConfidence * 5,
+    glowWidth: 26 + accuracyConfidence * 10,
+    opacity: 0.24 + accuracyConfidence * 0.76,
+    headRadius: 8 + accuracyConfidence * 5,
+    headAngleDegrees: variant.flareRotation + sweepDegrees,
+    startColor: "#F45C4D",
+    middleColor: "#FFC37A",
+    endColor: "#FFF4DB",
+    glowColor: "#FF8D65",
+  };
 }
 
 function buildShellOrbit(): OrbitalAvatarShell {
   return {
-    radii: [118, 148, 178],
-    opacity: 0.18,
+    orbitRadii: [120, 150, 180],
+    orbitOpacity: 0.18,
     strokeWidth: 12,
-    color: "rgba(255,255,255,0.14)",
+    orbitStroke: "rgba(255,255,255,0.14)",
+    planetRadius: 96,
+    planetStroke: "rgba(255,255,255,0.12)",
   };
 }
 
@@ -244,79 +291,186 @@ export function buildOrbitalAvatarModel(
 ): OrbitalAvatarModel {
   void _options;
   const variant = getAddressVariant(payload.address);
-  const coreOrb = buildCoreOrb(payload, variant);
-  const accuracyRings = buildAccuracyRings(payload, coreOrb, variant);
+  const planet = buildPlanet(payload, variant);
+  const orbit = buildOrbit(planet, variant);
+  const flare = buildFlare(payload, orbit, variant);
 
   return {
     compositionRotation: variant.compositionRotation,
-    coreOrb,
-    shellOrbit: coreOrb ? null : buildShellOrbit(),
-    accuracyRings,
+    planet,
+    orbit,
+    flare,
+    shellOrbit: planet ? null : buildShellOrbit(),
   };
 }
 
-function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
-  const defs: string[] = [];
+function renderOrbitTrack(orbit: OrbitalAvatarOrbit) {
+  return `
+    <circle cx="${CENTER}" cy="${CENTER}" r="${(orbit.radius + 26).toFixed(2)}" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.03"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${(orbit.radius + 12).toFixed(2)}" fill="none" stroke="${orbit.accentColor}" stroke-width="6" stroke-opacity="${orbit.accentOpacity.toFixed(3)}"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${orbit.radius.toFixed(2)}" fill="none" stroke="#1A1E28" stroke-width="${orbit.trackWidth.toFixed(2)}" stroke-opacity="${orbit.trackOpacity.toFixed(3)}"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${orbit.radius.toFixed(2)}" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-opacity="0.055"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${(orbit.radius - 12).toFixed(2)}" fill="none" stroke="#FFFFFF" stroke-width="1.2" stroke-opacity="0.032"/>
+  `;
+}
 
-  if (model.coreOrb) {
+function renderShellOrbit(shellOrbit: OrbitalAvatarShell) {
+  const shells = shellOrbit.orbitRadii
+    .map((radius, index) => {
+      const strokeWidth = Math.max(4, shellOrbit.strokeWidth - index * 2);
+      const opacity = Math.max(0.06, shellOrbit.orbitOpacity - index * 0.04);
+      return `<circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="none" stroke="${shellOrbit.orbitStroke}" stroke-width="${strokeWidth.toFixed(2)}" stroke-opacity="${opacity.toFixed(3)}"/>`;
+    })
+    .join("");
+
+  return `
+    ${shells}
+    <circle cx="${CENTER}" cy="${CENTER}" r="${shellOrbit.planetRadius.toFixed(2)}" fill="none" stroke="${shellOrbit.planetStroke}" stroke-width="10" stroke-opacity="0.75"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${(shellOrbit.planetRadius - 14).toFixed(2)}" fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-opacity="0.08"/>
+  `;
+}
+
+function renderPlanetBands(planet: OrbitalAvatarPlanet) {
+  const radius = planet.radius;
+  const curves = [
+    { yRatio: -0.38, bend: -0.08, width: 0.1, opacity: 0.16 },
+    { yRatio: -0.1, bend: -0.05, width: 0.085, opacity: 0.12 },
+    { yRatio: 0.18, bend: -0.03, width: 0.078, opacity: 0.1 },
+    { yRatio: 0.46, bend: 0.04, width: 0.11, opacity: 0.09 },
+  ];
+
+  return curves
+    .map(({ yRatio, bend, width, opacity }, index) => {
+      const y = CENTER + radius * yRatio;
+      const startX = CENTER - radius * 1.06;
+      const endX = CENTER + radius * 1.06;
+      const c1X = CENTER - radius * 0.58;
+      const c2X = CENTER + radius * 0.18;
+      const c1Y = y + radius * bend;
+      const c2Y = y - radius * bend;
+      const strokeWidth = radius * width;
+      const stroke = index === 3 ? planet.bandColorC : "#FFFFFF";
+      const strokeOpacity = index === 3 ? 0.16 : opacity;
+
+      return `<path d="M ${startX.toFixed(2)} ${y.toFixed(2)} C ${c1X.toFixed(2)} ${c1Y.toFixed(2)}, ${c2X.toFixed(2)} ${c2Y.toFixed(2)}, ${endX.toFixed(2)} ${(y + radius * bend * 0.45).toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth.toFixed(2)}" stroke-linecap="round" stroke-opacity="${strokeOpacity.toFixed(3)}"/>`;
+    })
+    .join("");
+}
+
+function renderPlanet(planet: OrbitalAvatarPlanet, hashHex: string) {
+  const radius = planet.radius;
+
+  return `
+    <circle cx="${CENTER}" cy="${CENTER}" r="${planet.atmosphereRadius.toFixed(2)}" fill="url(#orbital-avatar-atmosphere-${hashHex})" fill-opacity="0.95"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="url(#orbital-avatar-body-${hashHex})"/>
+    <g clip-path="url(#orbital-avatar-clip-${hashHex})">
+      <g filter="url(#orbital-avatar-band-blur-${hashHex})">
+        <ellipse cx="${(CENTER - radius * 0.44).toFixed(2)}" cy="${(CENTER - radius * 0.3).toFixed(2)}" rx="${(radius * 0.68).toFixed(2)}" ry="${(radius * 0.46).toFixed(2)}" fill="${planet.bandColorA}" fill-opacity="0.38"/>
+        <ellipse cx="${(CENTER + radius * 0.22).toFixed(2)}" cy="${(CENTER - radius * 0.46).toFixed(2)}" rx="${(radius * 0.74).toFixed(2)}" ry="${(radius * 0.48).toFixed(2)}" fill="${planet.bandColorC}" fill-opacity="0.28"/>
+        <ellipse cx="${(CENTER + radius * 0.36).toFixed(2)}" cy="${(CENTER + radius * 0.14).toFixed(2)}" rx="${(radius * 0.78).toFixed(2)}" ry="${(radius * 0.46).toFixed(2)}" fill="${planet.bandColorB}" fill-opacity="0.18"/>
+        <ellipse cx="${(CENTER - radius * 0.28).toFixed(2)}" cy="${(CENTER + radius * 0.52).toFixed(2)}" rx="${(radius * 0.84).toFixed(2)}" ry="${(radius * 0.52).toFixed(2)}" fill="${planet.colorC}" fill-opacity="0.44"/>
+      </g>
+      ${renderPlanetBands(planet)}
+    </g>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="url(#orbital-avatar-shadow-${hashHex})"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="url(#orbital-avatar-highlight-${hashHex})"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="none" stroke="${planet.rimColor}" stroke-width="1.6" stroke-opacity="0.16"/>
+  `;
+}
+
+function buildArcStrokeAttributes(flare: OrbitalAvatarFlare) {
+  if (flare.sweepDegrees >= 359.5) {
+    return "";
+  }
+
+  const circumference = 2 * Math.PI * flare.radius;
+  const visibleLength = circumference * (flare.sweepDegrees / 360);
+  const hiddenLength = Math.max(0, circumference - visibleLength);
+
+  return ` stroke-dasharray="${visibleLength.toFixed(2)} ${hiddenLength.toFixed(2)}"`;
+}
+
+function renderFlare(flare: OrbitalAvatarFlare, hashHex: string) {
+  const arcAttributes = buildArcStrokeAttributes(flare);
+  const rotation = flare.rotationDegrees.toFixed(2);
+  const head = flare.sweepDegrees >= 359.5 ? null : polarToPoint(flare.radius, flare.headAngleDegrees);
+
+  return `
+    <g filter="url(#orbital-avatar-flare-blur-${hashHex})">
+      <circle cx="${CENTER}" cy="${CENTER}" r="${flare.radius.toFixed(2)}" fill="none" stroke="${flare.glowColor}" stroke-width="${flare.glowWidth.toFixed(2)}" stroke-opacity="${(flare.opacity * 0.38).toFixed(3)}" stroke-linecap="round"${arcAttributes} transform="rotate(${rotation} ${CENTER} ${CENTER})"/>
+    </g>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${flare.radius.toFixed(2)}" fill="none" stroke="#6D352A" stroke-width="${(flare.width + 2).toFixed(2)}" stroke-opacity="${(flare.opacity * 0.45).toFixed(3)}" stroke-linecap="round"${arcAttributes} transform="rotate(${rotation} ${CENTER} ${CENTER})"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${flare.radius.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-flare-${hashHex})" stroke-width="${flare.width.toFixed(2)}" stroke-opacity="${flare.opacity.toFixed(3)}" stroke-linecap="round"${arcAttributes} transform="rotate(${rotation} ${CENTER} ${CENTER})"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${flare.radius.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-flare-core-${hashHex})" stroke-width="${Math.max(2.4, flare.width * 0.28).toFixed(2)}" stroke-opacity="${Math.min(1, flare.opacity + 0.08).toFixed(3)}" stroke-linecap="round"${arcAttributes} transform="rotate(${rotation} ${CENTER} ${CENTER})"/>
+    ${
+      head
+        ? `
+      <circle cx="${head.x.toFixed(2)}" cy="${head.y.toFixed(2)}" r="${(flare.headRadius * 1.85).toFixed(2)}" fill="${flare.glowColor}" fill-opacity="${(flare.opacity * 0.18).toFixed(3)}"/>
+      <circle cx="${head.x.toFixed(2)}" cy="${head.y.toFixed(2)}" r="${flare.headRadius.toFixed(2)}" fill="#FFF3DF"/>
+    `
+        : ""
+    }
+  `;
+}
+
+function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
+  const defs: string[] = [
+    `<filter id="orbital-avatar-band-blur-${hashHex}" x="0" y="0" width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="14"/></filter>`,
+    `<filter id="orbital-avatar-flare-blur-${hashHex}" x="0" y="0" width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="12"/></filter>`,
+  ];
+
+  if (model.planet) {
     defs.push(
-      `<linearGradient id="orbital-avatar-body-${hashHex}" x1="0.15" y1="0.1" x2="0.85" y2="0.9" gradientUnits="objectBoundingBox" gradientTransform="rotate(${model.compositionRotation.toFixed(2)} 0.5 0.5)">
-        <stop stop-color="${model.coreOrb.colorA}"/>
-        <stop offset="0.52" stop-color="${model.coreOrb.colorB}"/>
-        <stop offset="1" stop-color="${model.coreOrb.colorC}"/>
+      `<linearGradient id="orbital-avatar-body-${hashHex}" x1="0.18" y1="0.12" x2="0.86" y2="0.88" gradientUnits="objectBoundingBox" gradientTransform="rotate(${model.compositionRotation.toFixed(2)} 0.5 0.5)">
+        <stop stop-color="${model.planet.colorA}"/>
+        <stop offset="0.34" stop-color="${model.planet.colorB}"/>
+        <stop offset="1" stop-color="${model.planet.colorC}"/>
       </linearGradient>`,
     );
     defs.push(
-      `<radialGradient id="orbital-avatar-body-glow-${hashHex}" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stop-color="${model.coreOrb.glowColor}" stop-opacity="0.24"/>
-        <stop offset="100%" stop-color="${model.coreOrb.glowColor}" stop-opacity="0"/>
+      `<radialGradient id="orbital-avatar-atmosphere-${hashHex}" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="${model.planet.glowColor}" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="${model.planet.glowColor}" stop-opacity="0"/>
       </radialGradient>`,
     );
     defs.push(
-      `<radialGradient id="orbital-avatar-highlight-${hashHex}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.38 0.3) scale(0.42 0.34)">
-        <stop stop-color="#FFFFFF" stop-opacity="0.52"/>
-        <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+      `<radialGradient id="orbital-avatar-highlight-${hashHex}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.66 0.28) scale(0.5 0.34)">
+        <stop stop-color="#FFF6E8" stop-opacity="0.56"/>
+        <stop offset="0.48" stop-color="#FFF6E8" stop-opacity="0.18"/>
+        <stop offset="1" stop-color="#FFF6E8" stop-opacity="0"/>
       </radialGradient>`,
+    );
+    defs.push(
+      `<radialGradient id="orbital-avatar-shadow-${hashHex}" cx="0" cy="0" r="1" gradientUnits="objectBoundingBox" gradientTransform="translate(0.28 0.76) scale(0.54 0.32)">
+        <stop stop-color="#07111D" stop-opacity="0.72"/>
+        <stop offset="1" stop-color="#07111D" stop-opacity="0"/>
+      </radialGradient>`,
+    );
+    defs.push(
+      `<clipPath id="orbital-avatar-clip-${hashHex}">
+        <circle cx="${CENTER}" cy="${CENTER}" r="${model.planet.radius.toFixed(2)}"/>
+      </clipPath>`,
     );
   }
 
-  if (model.accuracyRings.length > 0) {
+  if (model.flare) {
     defs.push(
-      `<linearGradient id="orbital-avatar-ring-${hashHex}" x1="0" y1="0.3" x2="1" y2="0.7" gradientUnits="objectBoundingBox">
-        <stop offset="0%" stop-color="${model.accuracyRings[0].colorA}"/>
-        <stop offset="52%" stop-color="${model.accuracyRings[0].colorB}"/>
-        <stop offset="100%" stop-color="${model.accuracyRings[0].colorC}"/>
+      `<linearGradient id="orbital-avatar-flare-${hashHex}" x1="0.24" y1="0.08" x2="0.84" y2="0.92" gradientUnits="objectBoundingBox">
+        <stop stop-color="${model.flare.startColor}"/>
+        <stop offset="0.56" stop-color="${model.flare.middleColor}"/>
+        <stop offset="1" stop-color="${model.flare.endColor}"/>
+      </linearGradient>`,
+    );
+    defs.push(
+      `<linearGradient id="orbital-avatar-flare-core-${hashHex}" x1="0.3" y1="0.12" x2="0.74" y2="0.88" gradientUnits="objectBoundingBox">
+        <stop stop-color="#FF9E78"/>
+        <stop offset="0.52" stop-color="#FFF0CF"/>
+        <stop offset="1" stop-color="#FFF8ED"/>
       </linearGradient>`,
     );
   }
 
   return defs.join("");
-}
-
-function renderShellOrbit(shellOrbit: OrbitalAvatarShell) {
-  return shellOrbit.radii
-    .map((radius, index) => {
-      const strokeWidth = Math.max(4, shellOrbit.strokeWidth - index * 2);
-      const opacity = Math.max(0.06, shellOrbit.opacity - index * 0.04);
-      return `<circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="none" stroke="${shellOrbit.color}" stroke-width="${strokeWidth.toFixed(2)}" stroke-opacity="${opacity.toFixed(3)}"/>`;
-    })
-    .join("");
-}
-
-function renderAccuracyRings(rings: OrbitalAvatarRing[], hashHex: string) {
-  return rings
-    .map(
-      ring =>
-        `<circle cx="${CENTER}" cy="${CENTER}" r="${ring.radius.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-ring-${hashHex})" stroke-width="${ring.strokeWidth.toFixed(2)}" stroke-opacity="${ring.opacity.toFixed(3)}"/>`,
-    )
-    .join("");
-}
-
-function renderCoreOrb(coreOrb: OrbitalAvatarOrb, hashHex: string) {
-  return `
-    <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${(coreOrb.radius * 1.82).toFixed(2)}" fill="url(#orbital-avatar-body-glow-${hashHex})" fill-opacity="0.7"/>
-    <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${coreOrb.radius.toFixed(2)}" fill="url(#orbital-avatar-body-${hashHex})"/>
-    <circle cx="${coreOrb.x.toFixed(2)}" cy="${coreOrb.y.toFixed(2)}" r="${(coreOrb.radius * 0.78).toFixed(2)}" fill="url(#orbital-avatar-highlight-${hashHex})"/>`;
 }
 
 export function renderOrbitalAvatarSvg(
@@ -330,8 +484,9 @@ export function renderOrbitalAvatarSvg(
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}" fill="none">
   <defs>${defs}</defs>
-  ${model.accuracyRings.length > 0 ? renderAccuracyRings(model.accuracyRings, hashHex) : ""}
+  ${model.orbit ? renderOrbitTrack(model.orbit) : ""}
+  ${model.flare ? renderFlare(model.flare, hashHex) : ""}
   ${model.shellOrbit ? renderShellOrbit(model.shellOrbit) : ""}
-  ${model.coreOrb ? renderCoreOrb(model.coreOrb, hashHex) : ""}
+  ${model.planet ? renderPlanet(model.planet, hashHex) : ""}
 </svg>`;
 }
