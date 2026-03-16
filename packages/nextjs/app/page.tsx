@@ -61,7 +61,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
         {/* How it works */}
         <div className="w-full mt-12">
           <h2 className="mb-6 text-center text-4xl font-bold sm:mb-7 sm:text-5xl">
-            How it <span className="text-gradient">Works</span>
+            How it <span className="text-white">Works</span>
           </h2>
           <p className="mx-auto mb-10 max-w-3xl text-center text-xl leading-8 text-base-content/60 sm:text-2xl sm:leading-9">
             Verified Humans Stake on Content to Create Public Ratings.

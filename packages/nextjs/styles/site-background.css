@@ -1,26 +1,6 @@
 @layer base {
-  :root,
-  [data-theme] {
-    --curyo-shell-gradient: linear-gradient(180deg, #040506 0%, #060709 52%, #030405 100%);
-    --curyo-bg-left-glow: radial-gradient(40% 42% at 18% 20%, rgb(242 100 38 / 0.18) 0%, transparent 72%);
-    --curyo-bg-right-glow: radial-gradient(34% 30% at 84% 18%, rgb(126 137 150 / 0.12) 0%, transparent 72%);
-    --curyo-bg-bottom-glow: radial-gradient(44% 26% at 66% 92%, rgb(179 52 27 / 0.1) 0%, transparent 74%);
-    --curyo-bg-shell-left: radial-gradient(30% 38% at 24% 24%, rgb(244 240 235 / 0.04) 0%, transparent 72%);
-    --curyo-bg-shell-right: radial-gradient(30% 24% at 82% 22%, rgb(126 137 150 / 0.06) 0%, transparent 74%);
-    --curyo-bg-shell-bottom: radial-gradient(36% 20% at 50% 100%, rgb(242 100 38 / 0.04) 0%, transparent 74%);
-  }
-
   body {
-    background-color: #040506;
-    background-image:
-      var(--curyo-bg-left-glow),
-      var(--curyo-bg-right-glow),
-      var(--curyo-bg-bottom-glow),
-      var(--curyo-bg-shell-left),
-      var(--curyo-bg-shell-right),
-      var(--curyo-bg-shell-bottom),
-      var(--curyo-shell-gradient);
-    background-attachment: fixed;
-    background-repeat: no-repeat;
+    background-color: #000;
+    background-image: none;
   }
 }

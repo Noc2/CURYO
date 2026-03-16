@@ -17,14 +17,14 @@
   name: "dark";
 
   --color-primary: #f26426;
-  --color-primary-content: #120a06;
+  --color-primary-content: #ffffff;
   --color-secondary: #d7dce3;
   --color-secondary-content: #090a0c;
   --color-accent: #b3341b;
   --color-accent-content: #fff4ea;
   --color-neutral: #d7dce3;
   --color-neutral-content: #090a0c;
-  --color-base-100: #07080a;
+  --color-base-100: #000000;
   --color-base-200: #121316;
   --color-base-300: #1b1d22;
   --color-base-content: #f4f0eb;
@@ -141,7 +141,7 @@ body {
 /* Override DaisyUI dropdown content */
 .dropdown-content {
   font-size: 1rem !important; /* Enforce minimum 16px */
-  background: linear-gradient(180deg, rgb(24 25 29 / 0.98), rgb(18 19 22 / 0.96));
+  background: rgb(14 14 16 / 0.98);
   border: 1px solid var(--curyo-shell-border);
   box-shadow: var(--curyo-panel-shadow);
   backdrop-filter: blur(18px);
@@ -157,7 +157,7 @@ body {
 .select,
 .textarea {
   border-color: var(--curyo-shell-border);
-  background: linear-gradient(180deg, rgb(13 14 17 / 0.94), rgb(9 10 12 / 0.98));
+  background: rgb(10 10 12 / 0.96);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
 }
 
@@ -176,47 +176,47 @@ body {
 
 .btn-primary {
   @apply shadow-sm;
-  color: var(--color-primary-content);
-  background: linear-gradient(135deg, var(--curyo-ember-deep) 0%, var(--curyo-ember) 58%, var(--curyo-ember-bright) 100%);
+  color: #fff;
+  background: var(--curyo-ember);
   border: none;
-  box-shadow: 0 14px 30px rgb(242 100 38 / 0.24);
+  box-shadow: 0 14px 30px rgb(242 100 38 / 0.18);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #c63d1d 0%, #ff7840 62%, #ff9866 100%);
+  background: #df5620;
 }
 
 .btn-submit {
   @apply shadow-sm text-white;
-  background: linear-gradient(135deg, #8f2818 0%, var(--curyo-ember-deep) 48%, var(--curyo-ember) 100%);
+  background: var(--curyo-ember-deep);
   border: none;
-  box-shadow: 0 14px 30px rgb(179 52 27 / 0.24);
+  box-shadow: 0 14px 30px rgb(179 52 27 / 0.18);
 }
 
 .btn-submit:hover {
-  background: linear-gradient(135deg, #a5301b 0%, #d8481f 46%, #ff7840 100%);
+  background: #962d19;
 }
 
 .btn-curyo {
   @apply shadow-sm text-black;
-  background: linear-gradient(135deg, var(--curyo-warm-white) 0%, var(--curyo-steel-soft) 100%);
+  background: var(--curyo-warm-white);
   border: none;
   box-shadow: 0 12px 26px rgb(244 240 235 / 0.14);
 }
 
 .btn-curyo:hover {
-  background: linear-gradient(135deg, #fff8f1 0%, #ecf0f6 100%);
+  background: #fff8f1;
 }
 
 .btn-shell-secondary {
   color: var(--curyo-warm-white);
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0.02));
+  background: rgb(255 255 255 / 0.03);
   border: 1px solid var(--curyo-shell-border);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
 }
 
 .btn-shell-secondary:hover {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.04));
+  background: rgb(255 255 255 / 0.06);
   border-color: var(--curyo-shell-border-strong);
 }
 
@@ -240,7 +240,7 @@ body {
 .surface-card {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, rgb(20 21 24 / 0.96), rgb(14 15 18 / 0.98));
+  background: rgb(16 17 19 / 0.96);
   border: 1px solid var(--curyo-shell-border);
   box-shadow:
     var(--curyo-panel-shadow),
@@ -427,10 +427,8 @@ body {
 
 /* Brand gradient text */
 .text-gradient {
-  background: linear-gradient(90deg, var(--curyo-ember-deep), var(--curyo-ember), var(--curyo-warm-white), var(--curyo-steel-soft));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-base-content);
+  -webkit-text-fill-color: currentColor;
 }
 
 /* Active tab pill — green (Submit page) */
