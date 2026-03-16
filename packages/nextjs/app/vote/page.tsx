@@ -8,9 +8,11 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, type PanInfo, type Variants, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount, useReadContract } from "wagmi";
+import { ClockIcon, ExclamationTriangleIcon, UserGroupIcon } from "@heroicons/react/24/outline";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
+import { SignalDivider, SignalMetricBadge, SignalPanel, SignalPill } from "~~/components/shared/SignalElements";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
@@ -33,7 +35,7 @@ import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
-import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
+import { type DiscoverFeedMode, getDiscoverFeedModeDescription, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { trackContentClick } from "~~/utils/clickTracker";
@@ -69,6 +71,37 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
+}
+
+function getOpenRoundContention(item: ContentItem) {
+  const openRound = item.openRound;
+  if (!openRound) return 0;
+
+  const largerPool = openRound.upPool > openRound.downPool ? openRound.upPool : openRound.downPool;
+  const smallerPool = openRound.upPool > openRound.downPool ? openRound.downPool : openRound.upPool;
+
+  if (largerPool > 0n) {
+    return Number((smallerPool * 1_000n) / largerPool) / 1_000;
+  }
+
+  return openRound.voteCount >= 2 ? 0.35 : 0;
+}
+
+function getSignalNarrative(scope: ScopeOption, activeFeedMode: DiscoverFeedMode) {
+  switch (scope) {
+    case "watched":
+      return "Revisit the content you are tracking and see which signals are still moving.";
+    case "my_votes":
+      return "Check where your own voting history is shaping public quality signals.";
+    case "my_submissions":
+      return "Monitor how the public signal is forming around the content you submitted.";
+    case "settling_soon":
+      return "Focus on rounds that look closest to a public resolution.";
+    case "followed_curators":
+      return "Surface the content and resolutions coming from the curators you already trust.";
+    default:
+      return getDiscoverFeedModeDescription(activeFeedMode) ?? "Scan live quality signals backed by human reputation.";
+  }
 }
 
 const voteCardVariants: Variants = {
@@ -133,6 +166,13 @@ const HomeInner = () => {
   });
   const hasWallet = Boolean(address);
   const viewGroups = useMemo(() => getVoteViewGroups(hasWallet), [hasWallet]);
+  const selectedViewLabel = useMemo(() => {
+    for (const group of viewGroups) {
+      const option = group.options.find(candidate => candidate.value === view);
+      if (option) return option.label;
+    }
+    return "Discover";
+  }, [view, viewGroups]);
   const activeScope: ScopeOption = isActivityViewOption(view) ? view : "all";
   const activeFeedMode: DiscoverFeedMode = isActivityViewOption(view) ? "for_you" : view;
 
@@ -488,6 +528,23 @@ const HomeInner = () => {
     settlingSoonOrderMap,
     followedCuratorOrderMap,
   ]);
+
+  const contestedNowCount = useMemo(
+    () => filteredFeed.filter(item => item.openRound && getOpenRoundContention(item) >= 0.55).length,
+    [filteredFeed],
+  );
+  const nearSettlementCount = useMemo(
+    () => filteredFeed.filter(item => settlingSoonContentIds.has(item.id.toString())).length,
+    [filteredFeed, settlingSoonContentIds],
+  );
+  const followedCuratorSignalCount = useMemo(
+    () => filteredFeed.filter(item => followedCuratorContentIds.has(item.id.toString())).length,
+    [filteredFeed, followedCuratorContentIds],
+  );
+  const discoverSignalNarrative = useMemo(
+    () => getSignalNarrative(activeScope, activeFeedMode),
+    [activeFeedMode, activeScope],
+  );
 
   const {
     activeItem: primaryItem,
@@ -1105,33 +1162,89 @@ const HomeInner = () => {
   return (
     <AppPageShell>
       <VotingGuide />
-      <div
-        className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
-        data-disable-queue-wheel="true"
-      >
-        <CategoryFilter
-          categories={categories}
-          activeCategory={activeCategory}
-          onSelect={selectCategory}
-          pillClassName={(cat, isActive) => {
-            if (cat !== BROKEN_FILTER) return undefined;
-            return isActive
-              ? "bg-warning/20 text-warning border border-warning/40"
-              : "bg-base-200 text-warning/70 hover:bg-warning/10";
-          }}
-        />
-        <FeedScopeFilter
-          value={view}
-          groups={viewGroups}
-          onChange={value => {
-            void handleViewChange(value as VoteView);
-          }}
-          label="View"
-        />
-        <div className="shrink-0 flex items-center">
-          <StreakCounter />
+      {!isSearchMode ? (
+        <SignalPanel accent="primary" className="mb-4 p-5 sm:p-6" intensity="strong">
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <SignalPill tone="primary">{selectedViewLabel}</SignalPill>
+                <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-[2.35rem]">
+                  Discover live quality signals
+                </h1>
+                <p className="mt-2 max-w-3xl text-base leading-7 text-white/[0.62]">{discoverSignalNarrative}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <SignalPill tone="success">Human reputation</SignalPill>
+                <SignalPill tone="primary">Stake-backed signal</SignalPill>
+                {activeCategory !== ALL_FILTER ? (
+                  <SignalPill tone={activeCategory === BROKEN_FILTER ? "warning" : "neutral"}>
+                    {activeCategory}
+                  </SignalPill>
+                ) : null}
+              </div>
+            </div>
+
+            <SignalDivider label="Live signal board" />
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <SignalMetricBadge
+                label="Contested now"
+                value={contestedNowCount}
+                detail="close rounds"
+                tone="warning"
+                icon={<ExclamationTriangleIcon className="h-5 w-5" />}
+              />
+              <SignalMetricBadge
+                label="Near settlement"
+                value={nearSettlementCount}
+                detail="resolving soon"
+                tone="primary"
+                icon={<ClockIcon className="h-5 w-5" />}
+              />
+              <SignalMetricBadge
+                label="Followed curators"
+                value={address ? followedCuratorSignalCount : "..."}
+                detail={address ? "matching signals" : "connect to unlock"}
+                tone="success"
+                icon={<UserGroupIcon className="h-5 w-5" />}
+              />
+            </div>
+          </div>
+        </SignalPanel>
+      ) : null}
+
+      <SignalPanel accent="success" className="mb-4 p-3 sm:p-4">
+        <div
+          className="flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:flex-nowrap"
+          data-disable-queue-wheel="true"
+        >
+          <CategoryFilter
+            categories={categories}
+            activeCategory={activeCategory}
+            onSelect={selectCategory}
+            pillClassName={(cat, isActive) => {
+              if (cat !== BROKEN_FILTER) return undefined;
+              return isActive
+                ? "bg-warning/20 text-warning border border-warning/40"
+                : "bg-base-200 text-warning/70 hover:bg-warning/10";
+            }}
+          />
+          <FeedScopeFilter
+            value={view}
+            groups={viewGroups}
+            onChange={value => {
+              void handleViewChange(value as VoteView);
+            }}
+            label="View"
+          />
+          <div className="shrink-0 flex items-center gap-2">
+            <SignalPill tone="neutral" className="hidden xl:inline-flex">
+              Voting streak
+            </SignalPill>
+            <StreakCounter />
+          </div>
         </div>
-      </div>
+      </SignalPanel>
 
       {isSearchMode ? (
         <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
@@ -1193,26 +1306,28 @@ const HomeInner = () => {
                     dragMomentum={false}
                     onDragEnd={handleCardDragEnd}
                   >
-                    <FeedVoteCard
-                      item={primaryItem}
-                      submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                      onVote={handleButtonVote}
-                      onToggleWatch={handleToggleWatch}
-                      onToggleFollow={handleToggleFollow}
-                      watched={watchedContentIds.has(primaryItem.id.toString())}
-                      watchPending={isWatchPending(primaryItem.id)}
-                      following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                      followPending={isFollowPending(primaryItem.submitter)}
-                      normalizedAddress={normalizedAddress}
-                      isCommitting={isCommitting}
-                      voteError={voteError}
-                      cooldownSecondsRemaining={primaryItemCooldownSeconds}
-                      address={address}
-                      onPrevious={handleSelectPrevious}
-                      onNext={handleSelectNext}
-                      canPrevious={activeSourceIndex > 0}
-                      canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
-                    />
+                    <SignalPanel accent="success" className="p-3 sm:p-4" intensity="strong">
+                      <FeedVoteCard
+                        item={primaryItem}
+                        submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                        onVote={handleButtonVote}
+                        onToggleWatch={handleToggleWatch}
+                        onToggleFollow={handleToggleFollow}
+                        watched={watchedContentIds.has(primaryItem.id.toString())}
+                        watchPending={isWatchPending(primaryItem.id)}
+                        following={followedWallets.has(primaryItem.submitter.toLowerCase())}
+                        followPending={isFollowPending(primaryItem.submitter)}
+                        normalizedAddress={normalizedAddress}
+                        isCommitting={isCommitting}
+                        voteError={voteError}
+                        cooldownSecondsRemaining={primaryItemCooldownSeconds}
+                        address={address}
+                        onPrevious={handleSelectPrevious}
+                        onNext={handleSelectNext}
+                        canPrevious={activeSourceIndex > 0}
+                        canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
+                      />
+                    </SignalPanel>
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -1227,47 +1342,59 @@ const HomeInner = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.18, ease: VOTE_CARD_TRANSITION_EASE }}
               >
-                <div
-                  ref={handleQueueRailRef}
-                  data-disable-queue-wheel="true"
-                  className={`scrollbar-hide min-w-0 overflow-x-auto snap-x snap-mandatory ${
-                    queueLayout.rows === 2 ? "flex items-start gap-4 xl:gap-3" : "flex items-stretch gap-3 xl:gap-2.5"
-                  }`}
-                  aria-label="Content queue"
-                >
-                  {queueLayout.rows === 2
-                    ? queuePages.map((pageItems, pageIndex) => (
-                        <div
-                          key={`queue-page-${pageIndex}`}
-                          className="grid shrink-0 content-start gap-3 snap-start xl:gap-2.5"
-                          style={{
-                            gridTemplateColumns: queueGridTemplateColumns,
-                            width: queuePageWidth,
-                          }}
-                        >
-                          {pageItems.map(item => (
-                            <FeedQueueCard
-                              key={item.id.toString()}
-                              item={item}
-                              onSelect={handleSelectCard}
-                              onNavigate={handleQueueKeyboardNavigate}
-                              queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                              selected={item.id === primaryItem?.id}
-                            />
-                          ))}
-                        </div>
-                      ))
-                    : visibleFeedItems.map(item => (
-                        <FeedQueueCard
-                          key={item.id.toString()}
-                          item={item}
-                          onSelect={handleSelectCard}
-                          onNavigate={handleQueueKeyboardNavigate}
-                          queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                          selected={item.id === primaryItem?.id}
-                        />
-                      ))}
-                </div>
+                <SignalPanel accent="primary" className="p-3 sm:p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <SignalPill tone="primary">Signal queue</SignalPill>
+                      <p className="mt-2 text-sm text-white/[0.58]">
+                        Scan what is next in rotation and jump to the signals that need attention.
+                      </p>
+                    </div>
+                    <SignalPill tone="neutral">{displayFeed.length} in view</SignalPill>
+                  </div>
+                  <SignalDivider label="Up next" className="my-4" />
+                  <div
+                    ref={handleQueueRailRef}
+                    data-disable-queue-wheel="true"
+                    className={`scrollbar-hide min-w-0 overflow-x-auto snap-x snap-mandatory ${
+                      queueLayout.rows === 2 ? "flex items-start gap-4 xl:gap-3" : "flex items-stretch gap-3 xl:gap-2.5"
+                    }`}
+                    aria-label="Content queue"
+                  >
+                    {queueLayout.rows === 2
+                      ? queuePages.map((pageItems, pageIndex) => (
+                          <div
+                            key={`queue-page-${pageIndex}`}
+                            className="grid shrink-0 content-start gap-3 snap-start xl:gap-2.5"
+                            style={{
+                              gridTemplateColumns: queueGridTemplateColumns,
+                              width: queuePageWidth,
+                            }}
+                          >
+                            {pageItems.map(item => (
+                              <FeedQueueCard
+                                key={item.id.toString()}
+                                item={item}
+                                onSelect={handleSelectCard}
+                                onNavigate={handleQueueKeyboardNavigate}
+                                queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
+                                selected={item.id === primaryItem?.id}
+                              />
+                            ))}
+                          </div>
+                        ))
+                      : visibleFeedItems.map(item => (
+                          <FeedQueueCard
+                            key={item.id.toString()}
+                            item={item}
+                            onSelect={handleSelectCard}
+                            onNavigate={handleQueueKeyboardNavigate}
+                            queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
+                            selected={item.id === primaryItem?.id}
+                          />
+                        ))}
+                  </div>
+                </SignalPanel>
               </motion.section>
             ) : null}
 

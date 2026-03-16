@@ -7,6 +7,7 @@ import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
+import { SignalPill } from "~~/components/shared/SignalElements";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -105,13 +106,13 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       />
 
       <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:items-stretch">
-        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
+        <div className="min-w-0 min-h-0 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))]">
           <div className="h-[clamp(17rem,42vh,28rem)] w-full">
             <ContentEmbed url={item.url} prefetchedMetadata={item.contentMetadata} />
           </div>
         </div>
 
-        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
+        <div className="min-w-0 min-h-0 overflow-hidden rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))]">
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}
@@ -164,8 +165,12 @@ interface FeedContentHeaderProps {
 
 function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: FeedContentHeaderProps) {
   return (
-    <div className="rounded-2xl bg-black p-4 xl:p-3">
-      <div className="flex items-center justify-between gap-3">
+    <div className="relative overflow-hidden rounded-[1.4rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-4 xl:p-3">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(53,158,238,0.14),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_52%)]"
+      />
+      <div className="relative z-10 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={onPrevious}
@@ -210,8 +215,12 @@ function FeedContentMetaCard({
 
   return (
     <>
-      <div className="rounded-2xl bg-black p-4 xl:p-3">
-        <div className="flex items-center justify-between gap-3">
+      <div className="relative overflow-hidden rounded-[1.4rem] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-4 xl:p-3">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left,rgba(3,206,164,0.12),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_52%)]"
+        />
+        <div className="relative z-10 flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
             username={submitterProfile?.username}
@@ -243,9 +252,9 @@ function FeedContentMetaCard({
           </div>
         </div>
 
-        <div className="mt-3 text-base leading-relaxed text-base-content/85">
+        <div className="relative z-10 mt-3 text-base leading-relaxed text-base-content/85">
           <span>{item.description}</span>
-          <span className="ml-2 inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 align-middle text-sm font-medium leading-none text-base-content/70">
+          <span className="ml-2 inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 align-middle text-sm font-medium leading-none text-base-content/70">
             {platformType}
           </span>
           {item.tags[0] ? (
@@ -302,14 +311,14 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   const ratingLabel = `${item.rating}/100`;
   const roundSnapshot = useRoundSnapshot(item.id);
   const queueStatus = getQueueCardStatus(roundSnapshot);
-  const statusBadgeClassName =
+  const statusTone: "primary" | "success" | "warning" | "neutral" =
     queueStatus?.urgencyTone === "success"
-      ? "bg-success/15 text-success ring-success/30"
+      ? "success"
       : queueStatus?.urgencyTone === "warning"
-        ? "bg-warning/15 text-warning ring-warning/30"
+        ? "warning"
         : queueStatus?.phaseTone === "blind"
-          ? "bg-primary/15 text-primary ring-primary/30"
-          : "bg-white/5 text-white/65 ring-white/10";
+          ? "primary"
+          : "neutral";
 
   return (
     <button
@@ -344,12 +353,16 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           onNavigate?.("last", item.id);
         }
       }}
-      className={`group flex w-[11.1rem] min-w-[11.1rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border text-left transition-colors snap-start sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem] ${
+      className={`group relative flex w-[11.1rem] min-w-[11.1rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-[1.2rem] border text-left transition-colors snap-start sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem] ${
         selected
-          ? "border-primary bg-primary/[0.08] ring-2 ring-primary/35 shadow-[0_0_0_1px_rgba(56,189,248,0.18)]"
-          : "border-base-content/10 bg-base-content/[0.03] hover:border-primary/30 hover:bg-base-content/[0.05]"
+          ? "border-primary/70 bg-[linear-gradient(180deg,rgba(53,158,238,0.12),rgba(6,10,16,0.98))] shadow-[0_0_0_1px_rgba(53,158,238,0.18),0_20px_40px_rgba(0,0,0,0.28)]"
+          : "border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] hover:border-primary/30 hover:bg-white/[0.04]"
       }`}
     >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(53,158,238,0.12),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(3,206,164,0.08),transparent_22%)]"
+      />
       <div className="relative aspect-video cursor-pointer overflow-hidden bg-base-200">
         <div className="absolute inset-x-2 top-2 z-10 flex items-center justify-between gap-1.5">
           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
@@ -377,17 +390,18 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         )}
       </div>
 
-      <div className="flex min-h-[5.5rem] flex-1 flex-col p-2.5">
+      <div className="relative flex min-h-[5.7rem] flex-1 flex-col p-2.5">
         <p className="line-clamp-2 text-sm font-medium leading-snug text-white/90">{item.title}</p>
-        {queueStatus ? (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <span
-              className={`inline-flex items-center rounded-full px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] ring-1 ${statusBadgeClassName}`}
-            >
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {queueStatus ? (
+            <SignalPill tone={statusTone} className="px-2.5 py-1 text-[0.6rem] tracking-[0.16em]">
               {queueStatus.urgencyLabel}
-            </span>
-          </div>
-        ) : null}
+            </SignalPill>
+          ) : null}
+          <SignalPill tone="neutral" className="px-2.5 py-1 text-[0.6rem] tracking-[0.16em]">
+            {platform.type}
+          </SignalPill>
+        </div>
       </div>
     </button>
   );
