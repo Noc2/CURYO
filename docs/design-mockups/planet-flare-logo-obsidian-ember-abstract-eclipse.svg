@@ -1,0 +1,90 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <radialGradient id="abstract-eclipse-bg-left" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(244 236) rotate(50) scale(286 334)">
+      <stop stop-color="#28426F" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#28426F" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="abstract-eclipse-bg-right" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(804 248) rotate(144) scale(322 254)">
+      <stop stop-color="#F36D72" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#F36D72" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="abstract-eclipse-bg-bottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(704 876) rotate(161) scale(414 180)">
+      <stop stop-color="#FF7A47" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#FF7A47" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="abstract-eclipse-core-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(632 348) rotate(132) scale(492 468)">
+      <stop stop-color="#FFF4E6"/>
+      <stop offset="0.18" stop-color="#FFB36B"/>
+      <stop offset="0.38" stop-color="#FF6E3D"/>
+      <stop offset="0.58" stop-color="#C83722"/>
+      <stop offset="0.8" stop-color="#431717"/>
+      <stop offset="1" stop-color="#100E13"/>
+    </radialGradient>
+    <radialGradient id="abstract-eclipse-core-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(370 664) rotate(-26) scale(250 166)">
+      <stop stop-color="#06070A" stop-opacity="0.84"/>
+      <stop offset="1" stop-color="#06070A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="abstract-eclipse-core-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(650 326) rotate(142) scale(206 134)">
+      <stop stop-color="#FFF6E9" stop-opacity="0.56"/>
+      <stop offset="0.48" stop-color="#FFF6E9" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#FFF6E9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="abstract-eclipse-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45C4D"/>
+      <stop offset="0.24" stop-color="#FF8A5D"/>
+      <stop offset="0.56" stop-color="#FFC37A"/>
+      <stop offset="0.82" stop-color="#FFE1A7"/>
+      <stop offset="1" stop-color="#FFF4DB"/>
+    </linearGradient>
+    <linearGradient id="abstract-eclipse-flare-core" x1="684" y1="160" x2="892" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF9E78"/>
+      <stop offset="0.48" stop-color="#FFF0CF"/>
+      <stop offset="1" stop-color="#FFF8ED"/>
+    </linearGradient>
+    <filter id="abstract-eclipse-blur-18" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="abstract-eclipse-blur-24" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+    <filter id="abstract-eclipse-blur-34" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
+    <clipPath id="abstract-eclipse-circle-clip">
+      <circle cx="512" cy="512" r="308"/>
+    </clipPath>
+    <clipPath id="abstract-eclipse-lens-clip">
+      <ellipse cx="512" cy="512" rx="258" ry="312"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" rx="40" fill="#080B12"/>
+  <rect width="1024" height="1024" rx="40" fill="url(#abstract-eclipse-bg-left)"/>
+  <rect width="1024" height="1024" rx="40" fill="url(#abstract-eclipse-bg-right)"/>
+  <rect width="1024" height="1024" rx="40" fill="url(#abstract-eclipse-bg-bottom)"/>
+
+  <circle cx="512" cy="512" r="428" stroke="#FFFFFF" stroke-opacity="0.028" stroke-width="2"/>
+  <g filter="url(#abstract-eclipse-blur-24)">
+    <circle cx="512" cy="512" r="410" stroke="#FF6B4A" stroke-opacity="0.48" stroke-width="30" stroke-linecap="round" stroke-dasharray="1016 1710" transform="rotate(-94 512 512)"/>
+  </g>
+  <circle cx="512" cy="512" r="410" stroke="#6C3328" stroke-opacity="0.44" stroke-width="14" stroke-linecap="round" stroke-dasharray="1016 1710" transform="rotate(-94 512 512)"/>
+  <circle cx="512" cy="512" r="410" stroke="url(#abstract-eclipse-flare-gradient)" stroke-width="11" stroke-linecap="round" stroke-dasharray="1016 1710" transform="rotate(-94 512 512)"/>
+  <circle cx="512" cy="512" r="410" stroke="url(#abstract-eclipse-flare-core)" stroke-width="4" stroke-linecap="round" stroke-dasharray="1016 1710" transform="rotate(-94 512 512)"/>
+
+  <g clip-path="url(#abstract-eclipse-circle-clip)">
+    <circle cx="512" cy="512" r="304" fill="url(#abstract-eclipse-core-base)"/>
+    <g filter="url(#abstract-eclipse-blur-18)">
+      <ellipse cx="630" cy="330" rx="182" ry="122" fill="#FFD7B1" fill-opacity="0.24"/>
+      <ellipse cx="694" cy="474" rx="212" ry="150" fill="#FF8750" fill-opacity="0.16"/>
+      <circle cx="374" cy="626" r="214" fill="#08090D" fill-opacity="0.56"/>
+      <ellipse cx="334" cy="734" rx="236" ry="126" fill="#08090D" fill-opacity="0.72"/>
+    </g>
+    <circle cx="390" cy="608" r="214" fill="#0A0A0E" fill-opacity="0.58"/>
+  </g>
+  <g filter="url(#abstract-eclipse-blur-34)">
+    <ellipse cx="656" cy="312" rx="148" ry="104" fill="#FFF3E2" fill-opacity="0.22"/>
+  </g>
+  <circle cx="512" cy="512" r="304" fill="none" stroke="#FFFFFF" stroke-opacity="0.1" stroke-width="1.4"/>
+</svg>
