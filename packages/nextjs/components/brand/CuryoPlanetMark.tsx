@@ -9,9 +9,9 @@ interface CuryoPlanetMarkProps {
 }
 
 /**
- * Canonical Curyo planet-and-flare brand mark.
- * This stays close to the SVG reference design and reuses the same orbit geometry
- * for the flare so static and animated versions stay aligned.
+ * Canonical Curyo orb-and-flare brand mark.
+ * The flare/orbit geometry stays aligned with the live website treatment while
+ * the old planet surface is replaced with the softer AI-sphere orb.
  */
 export function CuryoPlanetMark({
   className = "h-8 w-8",
@@ -26,6 +26,11 @@ export function CuryoPlanetMark({
   const planetHighlightId = `${id}-planet-highlight`;
   const flareGradientId = `${id}-flare-gradient`;
   const flareCoreId = `${id}-flare-core`;
+  const orbSoftWhiteId = `${id}-orb-soft-white`;
+  const orbGoldBloomId = `${id}-orb-gold-bloom`;
+  const orbVioletPocketId = `${id}-orb-violet-pocket`;
+  const orbEmberPocketId = `${id}-orb-ember-pocket`;
+  const orbFoldSheenId = `${id}-orb-fold-sheen`;
   const softBlur20Id = `${id}-soft-blur-20`;
   const softBlur28Id = `${id}-soft-blur-28`;
   const softBlur42Id = `${id}-soft-blur-42`;
@@ -67,12 +72,12 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(636 360) rotate(130) scale(514 494)"
           >
-            <stop stopColor="#FFE1B5" />
-            <stop offset="0.16" stopColor="#FFBA84" />
-            <stop offset="0.34" stopColor="#F57E8A" />
-            <stop offset="0.56" stopColor="#8A82F2" />
-            <stop offset="0.76" stopColor="#41A0F1" />
-            <stop offset="1" stopColor="#112C41" />
+            <stop stopColor="#FFF8F2" />
+            <stop offset="0.18" stopColor="#F8E1D0" />
+            <stop offset="0.34" stopColor="#F7B070" />
+            <stop offset="0.56" stopColor="#F26426" />
+            <stop offset="0.78" stopColor="#B23C3B" />
+            <stop offset="1" stopColor="#6A345F" />
           </radialGradient>
           <radialGradient
             id={planetShadowId}
@@ -80,10 +85,11 @@ export function CuryoPlanetMark({
             cy="0"
             r="1"
             gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(382 664) rotate(-28) scale(248 162)"
+            gradientTransform="translate(600 742) rotate(8) scale(324 188)"
           >
-            <stop stopColor="#0B1322" stopOpacity="0.74" />
-            <stop offset="1" stopColor="#0B1322" stopOpacity="0" />
+            <stop stopColor="#8C4A53" stopOpacity="0.32" />
+            <stop offset="0.58" stopColor="#C46A4A" stopOpacity="0.2" />
+            <stop offset="1" stopColor="#C46A4A" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={planetHighlightId}
@@ -91,12 +97,65 @@ export function CuryoPlanetMark({
             cy="0"
             r="1"
             gradientUnits="userSpaceOnUse"
-            gradientTransform="translate(670 338) rotate(138) scale(192 126)"
+            gradientTransform="translate(674 366) rotate(134) scale(280 228)"
           >
-            <stop stopColor="#FFF4E2" stopOpacity="0.64" />
-            <stop offset="0.48" stopColor="#FFF4E2" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#FFF4E2" stopOpacity="0" />
+            <stop stopColor="#FFF8F3" stopOpacity="0.72" />
+            <stop offset="0.5" stopColor="#FFF8F3" stopOpacity="0.18" />
+            <stop offset="1" stopColor="#FFF8F3" stopOpacity="0" />
           </radialGradient>
+          <radialGradient
+            id={orbSoftWhiteId}
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(612 454) rotate(128) scale(310 236)"
+          >
+            <stop stopColor="#FFF8F3" stopOpacity="0.74" />
+            <stop offset="0.52" stopColor="#FFF8F3" stopOpacity="0.2" />
+            <stop offset="1" stopColor="#FFF8F3" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient
+            id={orbGoldBloomId}
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(724 566) rotate(166) scale(264 216)"
+          >
+            <stop stopColor="#FFD77E" stopOpacity="0.8" />
+            <stop offset="1" stopColor="#FFD77E" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient
+            id={orbVioletPocketId}
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(370 662) rotate(-26) scale(274 210)"
+          >
+            <stop stopColor="#6B37A5" stopOpacity="0.52" />
+            <stop offset="1" stopColor="#6B37A5" stopOpacity="0" />
+          </radialGradient>
+          <radialGradient
+            id={orbEmberPocketId}
+            cx="0"
+            cy="0"
+            r="1"
+            gradientUnits="userSpaceOnUse"
+            gradientTransform="translate(600 742) rotate(8) scale(324 188)"
+          >
+            <stop stopColor="#8C4A53" stopOpacity="0.32" />
+            <stop offset="0.58" stopColor="#C46A4A" stopOpacity="0.2" />
+            <stop offset="1" stopColor="#C46A4A" stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id={orbFoldSheenId} x1="188" y1="600" x2="744" y2="470" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#FFF7F0" stopOpacity="0" />
+            <stop offset="0.3" stopColor="#FFF7F0" stopOpacity="0.08" />
+            <stop offset="0.56" stopColor="#FFF7F0" stopOpacity="0.34" />
+            <stop offset="0.82" stopColor="#FFD7B2" stopOpacity="0.18" />
+            <stop offset="1" stopColor="#FFD7B2" stopOpacity="0" />
+          </linearGradient>
           <linearGradient id={flareGradientId} x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
             <stop stopColor="#F45C4D" />
             <stop offset="0.24" stopColor="#FF8A5D" />
@@ -326,71 +385,48 @@ export function CuryoPlanetMark({
         </g>
 
         <circle cx="512" cy="512" r={planetRadius} fill={`url(#${planetBaseId})`} />
+        {usesCompactVariant ? null : <circle cx="512" cy="512" r={planetRadius} fill={`url(#${orbEmberPocketId})`} />}
         <g clipPath={`url(#${planetClipId})`}>
           <g filter={`url(#${softBlur20Id})`}>
-            <ellipse cx="338" cy="386" rx="214" ry="164" fill="#3E9FF0" fillOpacity="0.42" />
-            <ellipse cx="602" cy="312" rx="248" ry="174" fill="#F28593" fillOpacity="0.34" />
-            <ellipse cx="698" cy="438" rx="244" ry="160" fill="#FFD79A" fillOpacity="0.24" />
-            <ellipse cx="606" cy="648" rx="270" ry="150" fill="#11C6A4" fillOpacity="0.2" />
-            <ellipse cx="346" cy="694" rx="286" ry="174" fill="#13263D" fillOpacity="0.62" />
-            <ellipse cx="700" cy="760" rx="150" ry="110" fill="#35A5F6" fillOpacity="0.18" />
+            <ellipse cx="502" cy="430" rx="268" ry="176" fill={`url(#${orbSoftWhiteId})`} />
+            <ellipse cx="726" cy="586" rx="236" ry="204" fill={`url(#${orbGoldBloomId})`} />
+            <ellipse cx="370" cy="714" rx="274" ry="208" fill={`url(#${orbVioletPocketId})`} />
+            <ellipse cx="562" cy="650" rx="302" ry="170" fill={`url(#${planetShadowId})`} />
           </g>
 
           <path
-            d="M132 312C242 264 356 264 476 290C578 312 678 322 814 316"
-            stroke="#FFFFFF"
-            strokeOpacity="0.11"
-            strokeWidth="16"
+            d="M188 602C322 514 440 464 562 452C668 440 760 468 876 542C802 594 726 626 646 640C538 658 418 650 300 620C262 612 226 606 188 602Z"
+            fill={`url(#${orbFoldSheenId})`}
+          />
+          <path
+            d="M210 618C330 560 444 538 550 540C654 542 748 568 826 618C744 658 652 678 546 678C430 676 320 656 210 618Z"
+            fill="#F5E3D2"
+            fillOpacity="0.11"
+          />
+          <path
+            d="M244 378C358 326 470 324 582 360C668 388 754 446 842 536"
+            stroke="#FFF7F1"
+            strokeOpacity="0.16"
+            strokeWidth="20"
             strokeLinecap="round"
           />
           <path
-            d="M120 418C236 372 354 378 474 406C578 430 676 440 810 434"
-            stroke="#FFFFFF"
+            d="M184 714C294 692 410 700 538 738C648 772 736 820 810 886"
+            stroke="#E2B2A0"
             strokeOpacity="0.1"
-            strokeWidth="13"
-            strokeLinecap="round"
-          />
-          <path
-            d="M118 522C236 478 356 486 478 516C582 542 676 552 806 546"
-            stroke="#FFFFFF"
-            strokeOpacity="0.08"
-            strokeWidth="11"
-            strokeLinecap="round"
-          />
-          <path
-            d="M132 648C236 612 356 614 478 642C584 668 680 678 810 668"
-            stroke="#FFFFFF"
-            strokeOpacity="0.075"
-            strokeWidth="14"
-            strokeLinecap="round"
-          />
-          <path
-            d="M110 760C224 724 350 724 482 748C590 768 684 778 816 770"
-            stroke="#2C4E72"
-            strokeOpacity="0.3"
-            strokeWidth="24"
-            strokeLinecap="round"
-          />
-          <path
-            d="M94 578C206 536 320 538 438 564C540 586 638 604 768 594C828 590 874 578 910 554"
-            stroke="#F6A17C"
-            strokeOpacity="0.12"
-            strokeWidth="24"
+            strokeWidth="22"
             strokeLinecap="round"
           />
 
-          <circle cx="640" cy="430" r="18" fill="#FFF2E2" fillOpacity="0.14" />
-          <circle cx="332" cy="414" r="14" fill="#FFF2E2" fillOpacity="0.08" />
-          <circle cx="596" cy="570" r="20" fill="#FFF2E2" fillOpacity="0.1" />
-          <circle cx="370" cy="804" r="16" fill="#FFF2E2" fillOpacity="0.05" />
+          <circle cx="286" cy="400" r="14" fill="#FFF2E2" fillOpacity="0.08" />
+          <circle cx="668" cy="360" r="46" fill="#FFF9F2" fillOpacity="0.9" />
         </g>
 
-        <circle cx="512" cy="512" r={planetRadius} fill={`url(#${planetShadowId})`} />
         <g
           className={resolvedPreset ? "curyo-planet-mark__planet-highlight" : undefined}
           filter={`url(#${softBlur28Id})`}
         >
-          <ellipse cx="644" cy="340" rx="154" ry="106" fill="#FFF4E2" fillOpacity="0.22" />
+          <ellipse cx="486" cy="406" rx="164" ry="128" fill="#FFF4E2" fillOpacity="0.22" />
         </g>
         <circle cx="512" cy="512" r={planetRadius} fill={`url(#${planetHighlightId})`} />
         <circle
