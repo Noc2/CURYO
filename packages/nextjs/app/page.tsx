@@ -35,18 +35,20 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
-      <div className="w-full max-w-6xl flex flex-col items-center">
+      <div className="w-full max-w-7xl flex flex-col items-center">
         {/* Hero: stacked on mobile, side-by-side on large screens */}
-        <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-8">
+        <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-2 xl:gap-6">
           {/* Animation (right on large screens) */}
-          <div className="lg:flex-1">
+          <div className="lg:flex-[1.2]">
             <CuryoAnimation />
           </div>
 
           {/* Title (left on large screens) */}
-          <div className="flex flex-col items-center lg:items-start lg:flex-1">
-            <h1 className="text-7xl sm:text-9xl font-bold tracking-tight -mt-8 lg:mt-0 uppercase">Curyo</h1>
-            <p className="mt-3 text-center text-2xl text-base-content/75 sm:text-3xl lg:text-left">
+          <div className="flex flex-col items-center lg:items-start lg:flex-[0.8] lg:max-w-[32rem]">
+            <h1 className="-mt-10 text-6xl font-bold uppercase tracking-tight sm:text-7xl lg:mt-0 lg:text-[5.5rem] xl:text-[6rem]">
+              Curyo
+            </h1>
+            <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[28rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
               Quality Signals Backed by Human Reputation
             </p>
             <LandingPageActions />

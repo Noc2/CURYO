@@ -90,6 +90,7 @@ const s = StyleSheet.create({
 });
 
 function CoverLogo() {
+  // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image is not a DOM img and has no alt prop.
   return <Image src={coverLogoPath} style={{ width: 280, height: 280 }} />;
 }
 

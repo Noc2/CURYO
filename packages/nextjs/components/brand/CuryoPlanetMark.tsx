@@ -5,6 +5,7 @@ interface CuryoPlanetMarkProps {
   title?: string;
   animated?: boolean;
   animationPreset?: "orbit";
+  variant?: "default" | "hero";
 }
 
 /**
@@ -17,6 +18,7 @@ export function CuryoPlanetMark({
   title,
   animated = false,
   animationPreset,
+  variant = "default",
 }: CuryoPlanetMarkProps) {
   const id = useId().replace(/:/g, "");
   const planetBaseId = `${id}-planet-base`;
@@ -26,14 +28,17 @@ export function CuryoPlanetMark({
   const flareCoreId = `${id}-flare-core`;
   const softBlur20Id = `${id}-soft-blur-20`;
   const softBlur28Id = `${id}-soft-blur-28`;
+  const softBlur42Id = `${id}-soft-blur-42`;
   const planetClipId = `${id}-planet-clip`;
   const resolvedPreset = animationPreset ?? (animated ? "orbit" : undefined);
   const animationClass = resolvedPreset ? `curyo-planet-mark--${resolvedPreset}` : "";
+  const variantClass = `curyo-planet-mark--${variant}`;
+  const usesHeroVariant = variant === "hero";
 
   return (
     <>
       <svg
-        className={[className, animationClass].filter(Boolean).join(" ")}
+        className={[className, variantClass, animationClass].filter(Boolean).join(" ")}
         viewBox="0 0 1024 1024"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -99,6 +104,9 @@ export function CuryoPlanetMark({
           <filter id={softBlur28Id} x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
             <feGaussianBlur stdDeviation="28" />
           </filter>
+          <filter id={softBlur42Id} x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse">
+            <feGaussianBlur stdDeviation="42" />
+          </filter>
           <clipPath id={planetClipId}>
             <circle cx="512" cy="512" r="344" />
           </clipPath>
@@ -132,9 +140,47 @@ export function CuryoPlanetMark({
           transform="rotate(-136 512 512)"
         />
 
-        <g className={resolvedPreset ? "curyo-planet-mark__flare" : undefined}>
+        <g>
+          {usesHeroVariant ? (
+            <>
+              <g filter={`url(#${softBlur42Id})`}>
+                <circle
+                  className={
+                    resolvedPreset ? "curyo-planet-mark__flare-smoke curyo-planet-mark__flare-smoke--far" : undefined
+                  }
+                  cx="512"
+                  cy="512"
+                  r="406"
+                  stroke="#FF764F"
+                  strokeOpacity="0.2"
+                  strokeWidth="50"
+                  strokeLinecap="round"
+                  strokeDasharray="812 1739"
+                  transform="rotate(-70 512 512)"
+                />
+              </g>
+              <g filter={`url(#${softBlur28Id})`}>
+                <circle
+                  className={
+                    resolvedPreset ? "curyo-planet-mark__flare-smoke curyo-planet-mark__flare-smoke--near" : undefined
+                  }
+                  cx="512"
+                  cy="512"
+                  r="406"
+                  stroke="#FFB07B"
+                  strokeOpacity="0.18"
+                  strokeWidth="30"
+                  strokeLinecap="round"
+                  strokeDasharray="726 1825"
+                  transform="rotate(-68 512 512)"
+                />
+              </g>
+            </>
+          ) : null}
+
           <g filter={`url(#${softBlur28Id})`}>
             <circle
+              className={resolvedPreset ? "curyo-planet-mark__flare-glow" : undefined}
               cx="512"
               cy="512"
               r="406"
@@ -147,6 +193,7 @@ export function CuryoPlanetMark({
             />
           </g>
           <circle
+            className={resolvedPreset ? "curyo-planet-mark__flare-body" : undefined}
             cx="512"
             cy="512"
             r="406"
@@ -158,6 +205,7 @@ export function CuryoPlanetMark({
             transform="rotate(-66 512 512)"
           />
           <circle
+            className={resolvedPreset ? "curyo-planet-mark__flare-main" : undefined}
             cx="512"
             cy="512"
             r="406"
@@ -168,6 +216,7 @@ export function CuryoPlanetMark({
             transform="rotate(-66 512 512)"
           />
           <circle
+            className={resolvedPreset ? "curyo-planet-mark__flare-core" : undefined}
             cx="512"
             cy="512"
             r="406"
@@ -177,6 +226,35 @@ export function CuryoPlanetMark({
             strokeDasharray="666 1885"
             transform="rotate(-66 512 512)"
           />
+        </g>
+
+        <g className={resolvedPreset ? "curyo-planet-mark__node-orbit" : undefined}>
+          {usesHeroVariant ? (
+            <>
+              <ellipse
+                className={
+                  resolvedPreset ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--primary" : undefined
+                }
+                cx="842"
+                cy="686"
+                rx="36"
+                ry="20"
+                fill="#FF835A"
+                fillOpacity="0.12"
+              />
+              <ellipse
+                className={
+                  resolvedPreset ? "curyo-planet-mark__smoke-tail curyo-planet-mark__smoke-tail--secondary" : undefined
+                }
+                cx="824"
+                cy="662"
+                rx="28"
+                ry="15"
+                fill="#FFB88B"
+                fillOpacity="0.1"
+              />
+            </>
+          ) : null}
           <circle
             className={resolvedPreset ? "curyo-planet-mark__node-halo" : undefined}
             cx="871"
@@ -185,6 +263,26 @@ export function CuryoPlanetMark({
             fill="#FF8D65"
             fillOpacity="0.18"
           />
+          {usesHeroVariant ? (
+            <>
+              <circle
+                className={resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--primary" : undefined}
+                cx="858"
+                cy="686"
+                r="4.6"
+                fill="#FFE4BC"
+                fillOpacity="0.9"
+              />
+              <circle
+                className={resolvedPreset ? "curyo-planet-mark__ember curyo-planet-mark__ember--secondary" : undefined}
+                cx="884"
+                cy="691"
+                r="3.6"
+                fill="#FFD39D"
+                fillOpacity="0.76"
+              />
+            </>
+          ) : null}
           <circle
             className={resolvedPreset ? "curyo-planet-mark__node" : undefined}
             cx="871"
@@ -266,18 +364,37 @@ export function CuryoPlanetMark({
       </svg>
 
       <style jsx>{`
-        .curyo-planet-mark__flare,
+        .curyo-planet-mark__node-orbit,
         .curyo-planet-mark__planet-highlight {
-          transform-origin: 512px 512px;
-          transform-box: fill-box;
+          transform-origin: 50% 50%;
+          transform-box: view-box;
         }
 
-        .curyo-planet-mark--orbit .curyo-planet-mark__flare {
-          animation: curyo-planet-mark-orbit 14s linear infinite;
+        .curyo-planet-mark--orbit .curyo-planet-mark__flare-glow,
+        .curyo-planet-mark--orbit .curyo-planet-mark__flare-body,
+        .curyo-planet-mark--orbit .curyo-planet-mark__flare-main,
+        .curyo-planet-mark--orbit .curyo-planet-mark__flare-core {
+          animation: curyo-planet-mark-orbit-dash 14s linear infinite;
+        }
+
+        .curyo-planet-mark--orbit .curyo-planet-mark__flare-smoke--far {
+          animation:
+            curyo-planet-mark-orbit-dash-far 14s linear infinite,
+            curyo-planet-mark-smoke-breathe 5.4s ease-in-out infinite;
+        }
+
+        .curyo-planet-mark--orbit .curyo-planet-mark__flare-smoke--near {
+          animation:
+            curyo-planet-mark-orbit-dash-near 14s linear infinite,
+            curyo-planet-mark-smoke-breathe-alt 4.7s ease-in-out infinite;
         }
 
         .curyo-planet-mark--orbit .curyo-planet-mark__planet-highlight {
           animation: curyo-planet-mark-highlight 7.2s ease-in-out infinite;
+        }
+
+        .curyo-planet-mark--orbit .curyo-planet-mark__node-orbit {
+          animation: curyo-planet-mark-node-orbit 14s linear infinite;
         }
 
         .curyo-planet-mark--orbit .curyo-planet-mark__node-halo {
@@ -290,7 +407,57 @@ export function CuryoPlanetMark({
           transform-origin: 871px 703px;
         }
 
-        @keyframes curyo-planet-mark-orbit {
+        .curyo-planet-mark--orbit .curyo-planet-mark__smoke-tail--primary {
+          animation: curyo-planet-mark-smoke-tail 4.8s ease-in-out infinite;
+          transform-origin: 842px 686px;
+        }
+
+        .curyo-planet-mark--orbit .curyo-planet-mark__smoke-tail--secondary {
+          animation: curyo-planet-mark-smoke-tail-alt 5.4s ease-in-out infinite;
+          transform-origin: 824px 662px;
+        }
+
+        .curyo-planet-mark--orbit .curyo-planet-mark__ember--primary {
+          animation: curyo-planet-mark-ember-primary 3.6s ease-in-out infinite;
+          transform-origin: 858px 686px;
+        }
+
+        .curyo-planet-mark--orbit .curyo-planet-mark__ember--secondary {
+          animation: curyo-planet-mark-ember-secondary 3.2s ease-in-out infinite;
+          transform-origin: 884px 691px;
+        }
+
+        @keyframes curyo-planet-mark-orbit-dash {
+          from {
+            stroke-dashoffset: 0;
+          }
+
+          to {
+            stroke-dashoffset: 2551px;
+          }
+        }
+
+        @keyframes curyo-planet-mark-orbit-dash-far {
+          from {
+            stroke-dashoffset: 34px;
+          }
+
+          to {
+            stroke-dashoffset: 2585px;
+          }
+        }
+
+        @keyframes curyo-planet-mark-orbit-dash-near {
+          from {
+            stroke-dashoffset: -22px;
+          }
+
+          to {
+            stroke-dashoffset: 2529px;
+          }
+        }
+
+        @keyframes curyo-planet-mark-node-orbit {
           from {
             transform: rotate(0deg);
           }
@@ -310,6 +477,28 @@ export function CuryoPlanetMark({
           50% {
             opacity: 1;
             transform: scale(1.025);
+          }
+        }
+
+        @keyframes curyo-planet-mark-smoke-breathe {
+          0%,
+          100% {
+            opacity: 0.42;
+          }
+
+          50% {
+            opacity: 0.8;
+          }
+        }
+
+        @keyframes curyo-planet-mark-smoke-breathe-alt {
+          0%,
+          100% {
+            opacity: 0.34;
+          }
+
+          50% {
+            opacity: 0.72;
           }
         }
 
@@ -339,9 +528,71 @@ export function CuryoPlanetMark({
           }
         }
 
+        @keyframes curyo-planet-mark-smoke-tail {
+          0%,
+          100% {
+            opacity: 0.34;
+            transform: scale(0.92) translate(-3px, 4px);
+          }
+
+          50% {
+            opacity: 0.62;
+            transform: scale(1.06) translate(6px, -6px);
+          }
+        }
+
+        @keyframes curyo-planet-mark-smoke-tail-alt {
+          0%,
+          100% {
+            opacity: 0.26;
+            transform: scale(0.9) translate(-4px, 3px);
+          }
+
+          50% {
+            opacity: 0.5;
+            transform: scale(1.02) translate(7px, -8px);
+          }
+        }
+
+        @keyframes curyo-planet-mark-ember-primary {
+          0%,
+          100% {
+            opacity: 0.34;
+            transform: scale(0.78) translate(0, 0);
+          }
+
+          50% {
+            opacity: 1;
+            transform: scale(1.14) translate(-8px, -14px);
+          }
+        }
+
+        @keyframes curyo-planet-mark-ember-secondary {
+          0%,
+          100% {
+            opacity: 0.26;
+            transform: scale(0.74) translate(0, 0);
+          }
+
+          50% {
+            opacity: 0.92;
+            transform: scale(1.08) translate(10px, -12px);
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
-          .curyo-planet-mark--orbit .curyo-planet-mark__flare,
+          .curyo-planet-mark--orbit .curyo-planet-mark__flare-smoke--far,
+          .curyo-planet-mark--orbit .curyo-planet-mark__flare-smoke--near,
+          .curyo-planet-mark--orbit .curyo-planet-mark__flare-glow,
+          .curyo-planet-mark--orbit .curyo-planet-mark__flare-body,
+          .curyo-planet-mark--orbit .curyo-planet-mark__flare-main,
+          .curyo-planet-mark--orbit .curyo-planet-mark__flare-core,
+          .curyo-planet-mark--orbit .curyo-planet-mark__node-orbit,
           .curyo-planet-mark--orbit .curyo-planet-mark__planet-highlight,
+          .curyo-planet-mark--orbit .curyo-planet-mark__smoke-tail--primary,
+          .curyo-planet-mark--orbit .curyo-planet-mark__smoke-tail--secondary,
+          .curyo-planet-mark--orbit .curyo-planet-mark__ember--primary,
+          .curyo-planet-mark--orbit .curyo-planet-mark__ember--secondary,
           .curyo-planet-mark--orbit .curyo-planet-mark__node-halo,
           .curyo-planet-mark--orbit .curyo-planet-mark__node {
             animation: none;
