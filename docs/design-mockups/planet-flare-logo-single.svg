@@ -67,15 +67,15 @@
   <circle cx="512" cy="512" r="406" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2"/>
   <circle cx="512" cy="512" r="394" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4"/>
 
-  <path d="M194 196A436 436 0 0 1 578 116" stroke="#F3A16E" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round"/>
-  <path d="M214 212A422 422 0 0 1 590 132" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="434" stroke="#F3A16E" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round" stroke-dasharray="580 2147" transform="rotate(-136 512 512)"/>
+  <circle cx="512" cy="512" r="420" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="520 2119" transform="rotate(-136 512 512)"/>
 
   <g filter="url(#soft-blur-28)">
-    <path d="M677 141A406 406 0 0 1 871 703" stroke="#F45C4D" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round"/>
+    <circle cx="512" cy="512" r="406" stroke="#F45C4D" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
   </g>
-  <path d="M677 141A406 406 0 0 1 871 703" stroke="#6D352A" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round"/>
-  <path d="M677 141A406 406 0 0 1 871 703" stroke="url(#flare-gradient)" stroke-width="8" stroke-linecap="round"/>
-  <path d="M677 141A406 406 0 0 1 871 703" stroke="url(#flare-core)" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="406" stroke="#6D352A" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+  <circle cx="512" cy="512" r="406" stroke="url(#flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
+  <circle cx="512" cy="512" r="406" stroke="url(#flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)"/>
   <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18"/>
   <circle cx="871" cy="703" r="9" fill="#FFF3DF"/>
 
