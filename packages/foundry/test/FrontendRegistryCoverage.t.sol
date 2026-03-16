@@ -333,16 +333,15 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 100e6);
     }
 
-    function test_CreditFees_ToSlashedFrontend_Succeeds() public {
+    function test_CreditFees_ToSlashedFrontend_Reverts() public {
         _registerFrontend(frontend1);
 
         vm.prank(admin);
         registry.slashFrontend(frontend1, 100e6, "test");
 
         vm.prank(feeCreditor);
+        vm.expectRevert("Frontend is slashed");
         registry.creditFees(frontend1, 100e6);
-
-        assertEq(registry.getAccumulatedFees(frontend1), 100e6);
     }
 
     // =========================================================================
@@ -545,6 +544,17 @@ contract FrontendRegistryCoverageTest is Test {
         assertFalse(registry.isApproved(frontend1));
     }
 
+    function test_Approve_AfterUnslashRequiresFullBond() public {
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, 100e6, "test");
+        registry.unslashFrontend(frontend1);
+        vm.expectRevert("Frontend is underbonded");
+        registry.approveFrontend(frontend1);
+        vm.stopPrank();
+    }
+
     // =========================================================================
     // 10. VIEW FUNCTIONS FOR UNREGISTERED ADDRESSES
     // =========================================================================
@@ -601,7 +611,7 @@ contract FrontendRegistryCoverageTest is Test {
     // 12. CLAIM FEES AFTER SLASH+UNSLASH
     // =========================================================================
 
-    function test_ClaimFees_AfterSlashAndUnslash() public {
+    function test_ClaimFees_AfterSlashAndUnslashRequiresTopUp() public {
         _registerFrontend(frontend1);
 
         vm.prank(feeCreditor);
@@ -612,16 +622,14 @@ contract FrontendRegistryCoverageTest is Test {
         registry.unslashFrontend(frontend1);
         vm.stopPrank();
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
-
         vm.prank(frontend1);
+        vm.expectRevert("Frontend is underbonded");
         registry.claimFees();
 
-        assertEq(crepToken.balanceOf(frontend1) - balanceBefore, 500e6);
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
-    function test_ClaimFees_WhileSlashed_Succeeds() public {
+    function test_ClaimFees_WhileSlashed_Reverts() public {
         _registerFrontend(frontend1);
 
         vm.prank(feeCreditor);
@@ -630,12 +638,10 @@ contract FrontendRegistryCoverageTest is Test {
         vm.prank(admin);
         registry.slashFrontend(frontend1, 100e6, "test");
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
-
         vm.prank(frontend1);
+        vm.expectRevert("Frontend is slashed");
         registry.claimFees();
 
-        assertEq(crepToken.balanceOf(frontend1) - balanceBefore, 500e6);
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 

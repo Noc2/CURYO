@@ -31,7 +31,8 @@ const FrontendCodes: NextPage = () => {
         <li>
           <strong>Claim:</strong> First call{" "}
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> on each settled round, then
-          withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>.
+          withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>. If governance slashes your
+          frontend, you must restore the full 1,000 cREP bond before fee claims can accrue to you again.
         </li>
       </ol>
 
@@ -164,10 +165,15 @@ const FrontendCodes: NextPage = () => {
           <strong>Approval required</strong> before earning frontend fees.
         </li>
         <li>
-          <strong>Slashing</strong> &mdash; Governance can slash staked cREP for abuse.
+          <strong>Slashing</strong> &mdash; Governance can slash staked cREP for abuse and confiscate already accrued
+          frontend fees.
         </li>
         <li>
           <strong>Revocation</strong> &mdash; Governance can revoke approval at any time.
+        </li>
+        <li>
+          <strong>Rebonding required</strong> &mdash; After a partial slash, operators must top back up to the full
+          1,000 cREP stake before governance can approve them again.
         </li>
       </ul>
     </article>

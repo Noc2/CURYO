@@ -137,7 +137,16 @@ contract FrontendRegistryBranchTest is Test {
         // Still not approved until explicitly re-approved
         assertFalse(reg.isApproved(frontend1));
 
-        // Re-approve
+        // Re-approve requires restoring the full bond first
+        vm.prank(admin);
+        vm.expectRevert("Frontend is underbonded");
+        reg.approveFrontend(frontend1);
+
+        vm.startPrank(frontend1);
+        crep.approve(address(reg), 500e6);
+        reg.topUpStake(500e6);
+        vm.stopPrank();
+
         vm.prank(admin);
         reg.approveFrontend(frontend1);
         assertTrue(reg.isApproved(frontend1));

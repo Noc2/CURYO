@@ -207,7 +207,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     expect(doubleClaim, "Frontend fee should not be claimable twice").toBe(false);
   });
 
-  test("slashed frontends keep historical fees claimable", async () => {
+  test("slashed frontends no longer accrue historical frontend fees", async () => {
     test.setTimeout(180_000);
 
     const uniqueId = Date.now() + 1;
@@ -233,8 +233,8 @@ test.describe("Frontend fee claim lifecycle", () => {
       DEPLOYER.address,
       REWARD_DISTRIBUTOR,
     );
-    expect(claimed, "Historical frontend fee claim should succeed even while slashed").toBe(true);
-    expect(await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY)).toBeGreaterThan(feesBefore);
+    expect(claimed, "Historical frontend fee claim should still execute while slashed").toBe(true);
+    expect(await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY)).toBe(feesBefore);
   });
 
   test("operator withdraws accumulated fees via claimFees()", async () => {

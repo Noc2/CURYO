@@ -383,6 +383,22 @@ contract FrontendRegistryTest is Test {
 
         (,,, slashed) = registry.getFrontendInfo(frontend1);
         assertFalse(slashed);
+        assertFalse(registry.isApproved(frontend1));
+        vm.stopPrank();
+    }
+
+    function test_RevertApproveFrontendUnderbondedAfterUnslash() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, STAKE / 2, "Test");
+        registry.unslashFrontend(frontend1);
+
+        vm.expectRevert("Frontend is underbonded");
+        registry.approveFrontend(frontend1);
         vm.stopPrank();
     }
 
@@ -463,6 +479,42 @@ contract FrontendRegistryTest is Test {
         assertEq(crepFees, 0);
     }
 
+    function test_RevertClaimFeesWhileSlashed() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, STAKE / 2, "Test");
+
+        vm.prank(frontend1);
+        vm.expectRevert("Frontend is slashed");
+        registry.claimFees();
+    }
+
+    function test_RevertClaimFeesWhileUnderbonded() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 100e6);
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, STAKE / 2, "Test");
+        registry.unslashFrontend(frontend1);
+        vm.stopPrank();
+
+        vm.prank(frontend1);
+        vm.expectRevert("Frontend is underbonded");
+        registry.claimFees();
+    }
+
     function test_RevertClaimFeesNotRegistered() public {
         vm.prank(frontend1);
         vm.expectRevert("Not registered");
@@ -494,6 +546,48 @@ contract FrontendRegistryTest is Test {
         registry.slashFrontend(frontend1, 1, "Test");
         assertFalse(registry.isApproved(frontend1));
         vm.stopPrank();
+    }
+
+    function test_TopUpStakeRestoresFullBond() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE + 500e6);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, 500e6, "Test");
+        registry.unslashFrontend(frontend1);
+        vm.stopPrank();
+
+        vm.startPrank(frontend1);
+        registry.topUpStake(500e6);
+        vm.stopPrank();
+
+        (, uint256 stakedAmount,, bool slashed) = registry.getFrontendInfo(frontend1);
+        assertEq(stakedAmount, STAKE);
+        assertFalse(slashed);
+
+        vm.prank(admin);
+        registry.approveFrontend(frontend1);
+        assertTrue(registry.isApproved(frontend1));
+    }
+
+    function test_SlashFrontendConfiscatesAccruedFees() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 200e6);
+
+        uint256 reserveBefore = votingEngine.totalAddedToReserve();
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, 100e6, "Malicious behavior");
+
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
+        assertEq(votingEngine.totalAddedToReserve(), reserveBefore + 300e6);
     }
 
     // --- Admin Functions Tests ---

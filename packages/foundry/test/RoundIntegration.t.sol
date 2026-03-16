@@ -1530,7 +1530,7 @@ contract RoundIntegrationTest is VotingTestBase {
         );
     }
 
-    function test_ClaimFrontendFee_PreservesHistoricalShareWhileFrontendIsSlashed() public {
+    function test_ClaimFrontendFee_ReroutesHistoricalShareWhileFrontendIsSlashed() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
@@ -1539,13 +1539,15 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
+        uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
+        uint256 reserveBefore = votingEngine.consensusReserve();
         rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertEq(crepToken.balanceOf(frontendOp), frontendBalanceBefore, "slashed frontend must not be paid directly");
-        assertGt(
-            frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
-            0,
-            "historical fees should remain claimable even while slashed"
+        assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend must not accrue fees");
+        assertTrue(
+            crepToken.balanceOf(treasury) > treasuryBalanceBefore || votingEngine.consensusReserve() > reserveBefore,
+            "redirected fee should reach protocol"
         );
     }
 
@@ -1575,7 +1577,7 @@ contract RoundIntegrationTest is VotingTestBase {
         assertFalse(frontendReg.isApproved(frontendOp), "Re-registration should not silently restore approval");
     }
 
-    function test_ClaimFrontendFee_SucceedsAfterFrontendIsUnslashed() public {
+    function test_ClaimFrontendFee_SucceedsAfterFrontendIsRebonded() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
@@ -1584,15 +1586,20 @@ contract RoundIntegrationTest is VotingTestBase {
         frontendReg.unslashFrontend(frontendOp);
         vm.stopPrank();
 
+        vm.startPrank(frontendOp);
+        crepToken.approve(address(frontendReg), 100e6);
+        frontendReg.topUpStake(100e6);
+        vm.stopPrank();
+
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
         assertGt(
             frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
             0,
-            "Unslashed frontend should receive preserved fees"
+            "Rebonded frontend should receive preserved fees"
         );
-        assertFalse(frontendReg.isApproved(frontendOp), "Unslashing should not silently restore approval");
+        assertFalse(frontendReg.isApproved(frontendOp), "Rebonding should not silently restore approval");
     }
 
     function test_ClaimFrontendFee_UsesCommitTimeApprovalSnapshot() public {

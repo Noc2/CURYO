@@ -805,7 +805,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "To incentivize keeper operation, the protocol allocates a dedicated 100,000 cREP keeper reward pool, funded separately from user stakes. Keepers currently earn a flat 0.1 cREP for rewarded housekeeping operations such as settlement, expiry cancellation, and unrevealed-vote cleanup. At this rate, the pool funds up to 1,000,000 rewarded operations. Rewards are best-effort: if the pool is depleted, operations still succeed but no reward is paid. The keeper reward amount is governance-configurable.",
+            text: "To incentivize keeper operation, the protocol allocates a dedicated 100,000 cREP keeper reward pool, funded separately from user stakes. Keepers currently earn a flat 0.1 cREP for rewarded housekeeping operations such as settlement and unrevealed-vote cleanup. At this rate, the pool funds up to 1,000,000 rewarded operations. Rewards are best-effort: if the pool is depleted, operations still succeed but no reward is paid. The keeper reward amount is governance-configurable.",
           },
         ],
       },

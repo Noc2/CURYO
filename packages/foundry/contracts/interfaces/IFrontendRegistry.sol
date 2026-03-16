@@ -7,6 +7,9 @@ interface IFrontendRegistry {
     error FrontendIsSlashed();
     error FrontendExitPending();
 
+    /// @notice Fixed cREP stake required for frontend registration
+    function STAKE_AMOUNT() external view returns (uint256);
+
     /// @notice Check if a frontend address is approved to earn fees
     /// @param frontend The frontend address to check
     /// @return True if the frontend is approved and not slashed

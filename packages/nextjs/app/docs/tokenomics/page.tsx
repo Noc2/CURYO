@@ -117,8 +117,8 @@ const Tokenomics = () => {
               <td className="font-medium">Keeper Reward Pool</td>
               <td className="font-mono">100,000 cREP</td>
               <td>
-                Dedicated flat rewards for settlement, expiry cancellation, and unrevealed-vote cleanup so keeper
-                incentives do not drain user stakes
+                Dedicated flat rewards for settlement and unrevealed-vote cleanup so keeper incentives do not drain user
+                stakes
               </td>
             </tr>
             <tr>

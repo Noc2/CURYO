@@ -342,19 +342,36 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
 
-        try snapshotRegistry.getFrontendInfo(frontend) returns (address frontendOperator, uint256, bool, bool) {
+        try snapshotRegistry.getFrontendInfo(frontend)
+        returns (address frontendOperator, uint256 stakedAmount, bool, bool slashed) {
             if (frontendOperator == address(0)) {
                 votingEngine.transferReward(frontend, fee);
+                return;
+            }
+            if (slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
+                _routeFrontendFeeToProtocol(fee);
                 return;
             }
             try snapshotRegistry.creditFees(frontend, fee) {
                 votingEngine.transferReward(snapshotRegistryAddress, fee);
             } catch {
-                votingEngine.transferReward(frontend, fee);
+                _routeFrontendFeeToProtocol(fee);
             }
         } catch {
             votingEngine.transferReward(frontend, fee);
         }
+    }
+
+    function _routeFrontendFeeToProtocol(uint256 fee) internal {
+        address treasury = registry.treasury();
+        if (treasury != address(0)) {
+            votingEngine.transferReward(treasury, fee);
+            return;
+        }
+
+        votingEngine.transferReward(address(this), fee);
+        crepToken.forceApprove(address(votingEngine), fee);
+        votingEngine.addToConsensusReserve(fee);
     }
 
     // --- Admin ---

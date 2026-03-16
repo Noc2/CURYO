@@ -66,8 +66,10 @@ contract FrontendRegistry is
     event FrontendSlashed(address indexed frontend, uint256 amount, string reason);
     event FrontendExitRequested(address indexed frontend, uint256 availableAt);
     event FrontendDeregistered(address indexed frontend);
+    event FrontendStakeToppedUp(address indexed frontend, uint256 amount, uint256 newStakedAmount);
     event FeesCredited(address indexed frontend, uint256 crepAmount);
     event FeesClaimed(address indexed frontend, uint256 crepAmount);
+    event FeesConfiscated(address indexed frontend, uint256 crepAmount);
     event VoterIdNFTUpdated(address voterIdNFT);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -105,7 +107,7 @@ contract FrontendRegistry is
     /// @inheritdoc IFrontendRegistry
     function isApproved(address frontend) external view override returns (bool) {
         Frontend storage f = frontends[frontend];
-        return f.approved && !f.slashed;
+        return f.approved && !f.slashed && f.stakedAmount == STAKE_AMOUNT;
     }
 
     /// @inheritdoc IFrontendRegistry
@@ -216,6 +218,8 @@ contract FrontendRegistry is
     function claimFees() external nonReentrant {
         Frontend storage f = frontends[msg.sender];
         require(f.operator != address(0), "Not registered");
+        require(!f.slashed, "Frontend is slashed");
+        require(f.stakedAmount == STAKE_AMOUNT, "Frontend is underbonded");
 
         uint256 crepAmount = f.crepFees;
 
@@ -231,14 +235,34 @@ contract FrontendRegistry is
     // --- Fee Crediting (called by RoundVotingEngine) ---
 
     /// @inheritdoc IFrontendRegistry
-    /// @dev No approval check here — VotingEngine checks approval at commit time,
-    ///      and fees are credited later at settlement/claim time regardless of current status.
+    /// @dev No approval check here — commit-time approval is snapshotted in RoundVotingEngine.
+    ///      Slashed or underbonded frontends cannot accrue newly claimed historical fees.
     function creditFees(address frontend, uint256 crepAmount) external override onlyRole(FEE_CREDITOR_ROLE) {
         require(crepAmount <= MAX_FEE_CREDIT, "Fee credit too large");
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
+        require(!f.slashed, "Frontend is slashed");
+        require(f.stakedAmount == STAKE_AMOUNT, "Frontend is underbonded");
         f.crepFees += crepAmount;
         emit FeesCredited(frontend, crepAmount);
+    }
+
+    /// @notice Restore stake after a partial slash so governance can approve the frontend again.
+    /// @param amount Additional cREP to bond.
+    function topUpStake(uint256 amount) external nonReentrant {
+        Frontend storage f = frontends[msg.sender];
+        require(f.operator != address(0), "Not registered");
+        if (frontendExitAvailableAt[msg.sender] != 0) revert FrontendExitPending();
+        require(amount > 0, "Invalid top-up amount");
+        require(f.stakedAmount < STAKE_AMOUNT, "Already fully bonded");
+
+        uint256 missingStake = STAKE_AMOUNT - f.stakedAmount;
+        require(amount <= missingStake, "Top-up exceeds requirement");
+
+        crepToken.safeTransferFrom(msg.sender, address(this), amount);
+        f.stakedAmount += amount;
+
+        emit FrontendStakeToppedUp(msg.sender, amount, f.stakedAmount);
     }
 
     // --- Governance Functions ---
@@ -249,6 +273,7 @@ contract FrontendRegistry is
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
+        require(f.stakedAmount == STAKE_AMOUNT, "Frontend is underbonded");
         if (frontendExitAvailableAt[frontend] != 0) revert FrontendExitPending();
 
         f.approved = true;
@@ -278,14 +303,20 @@ contract FrontendRegistry is
         require(f.operator != address(0), "Frontend not registered");
         require(f.stakedAmount >= amount, "Slash exceeds stake");
 
+        uint256 confiscatedFees = f.crepFees;
         f.stakedAmount -= amount;
+        f.crepFees = 0;
         f.slashed = true;
         f.approved = false;
 
-        // Transfer slashed amount to voter pool
-        if (address(votingEngine) != address(0)) {
-            crepToken.forceApprove(address(votingEngine), amount);
-            votingEngine.addToConsensusReserve(amount);
+        uint256 totalToReserve = amount + confiscatedFees;
+        if (totalToReserve > 0) {
+            crepToken.forceApprove(address(votingEngine), totalToReserve);
+            votingEngine.addToConsensusReserve(totalToReserve);
+        }
+
+        if (confiscatedFees > 0) {
+            emit FeesConfiscated(frontend, confiscatedFees);
         }
 
         emit FrontendSlashed(frontend, amount, reason);

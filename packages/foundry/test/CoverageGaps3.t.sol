@@ -1109,7 +1109,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         assertEq(keeperAfter - keeperBefore, 10e6);
     }
 
-    function test_KeeperRewardOnCancel() public {
+    function test_KeeperRewardOnCancel_IsNotPaid() public {
         vm.startPrank(owner);
         crep.approve(address(engine), 1000e6);
         engine.fundKeeperRewardPool(1000e6);
@@ -1123,11 +1123,13 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         vm.warp(block.timestamp + 7 days + 1);
 
         uint256 keeperBefore = crep.balanceOf(keeper);
+        uint256 poolBefore = engine.keeperRewardPool();
 
         vm.prank(keeper);
         engine.cancelExpiredRound(contentId, roundId);
 
-        assertEq(crep.balanceOf(keeper) - keeperBefore, 10e6);
+        assertEq(crep.balanceOf(keeper) - keeperBefore, 0);
+        assertEq(engine.keeperRewardPool(), poolBefore);
     }
 
     // --- Keeper reward when pool empty (no reward paid) ---

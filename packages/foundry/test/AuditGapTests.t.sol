@@ -233,6 +233,22 @@ contract AuditGapTests is VotingTestBase {
         votingEngine.cancelExpiredRound(contentId, 1);
     }
 
+    function test_CancelExpiredRound_DoesNotRewardKeeper() public {
+        uint256 contentId = _submitContent("https://pause-test-3.com");
+        _commit(voter1, contentId, true, STAKE, address(0));
+
+        vm.warp(block.timestamp + 7 days + 1);
+
+        uint256 keeperBalanceBefore = crepToken.balanceOf(voter4);
+        uint256 keeperPoolBefore = votingEngine.keeperRewardPool();
+
+        vm.prank(voter4);
+        votingEngine.cancelExpiredRound(contentId, 1);
+
+        assertEq(crepToken.balanceOf(voter4), keeperBalanceBefore, "cancel should not pay keeper rewards");
+        assertEq(votingEngine.keeperRewardPool(), keeperPoolBefore, "cancel should not drain keeper pool");
+    }
+
     /// @notice Verify processUnrevealedVotes respects whenNotPaused
     function test_Paused_ProcessUnrevealedVotes_Reverts() public {
         uint256 contentId = _submitContent("https://pause-test-4.com");

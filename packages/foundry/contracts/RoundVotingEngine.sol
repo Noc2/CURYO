@@ -209,7 +209,6 @@ contract RoundVotingEngine is
     uint8 internal constant REASON_FORFEITED_TRANSFER = 7;
 
     // Keeper operation codes
-    uint8 internal constant OP_CANCEL = 1;
     uint8 internal constant OP_SETTLE = 2;
     uint8 internal constant OP_PROCESS_UNREVEALED = 3;
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -595,7 +594,6 @@ contract RoundVotingEngine is
         round.state = RoundLib.RoundState.Cancelled;
 
         emit RoundCancelled(contentId, roundId);
-        _rewardKeeper(OP_CANCEL);
     }
 
     /// @notice Finalize a round whose reveal quorum never materialized after commit quorum was already reached.
