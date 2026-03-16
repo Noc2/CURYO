@@ -1,103 +1,96 @@
-<svg width="512" height="512" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="512" height="512" viewBox="0 0 1400 1400" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="logo-planet-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(636 360) rotate(130) scale(514 494)">
-      <stop stop-color="#FFF8F2" />
-      <stop offset="0.18" stop-color="#F8E1D0" />
-      <stop offset="0.34" stop-color="#F7B070" />
-      <stop offset="0.56" stop-color="#F26426" />
-      <stop offset="0.78" stop-color="#B23C3B" />
-      <stop offset="1" stop-color="#6A345F" />
+    <radialGradient id="logo-orb-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(874 472) rotate(136) scale(728 704)">
+      <stop stop-color="#FFE1B5" />
+      <stop offset="0.16" stop-color="#FFBA84" />
+      <stop offset="0.34" stop-color="#F57E8A" />
+      <stop offset="0.56" stop-color="#6D73E0" />
+      <stop offset="0.76" stop-color="#2F86D9" />
+      <stop offset="1" stop-color="#0B2134" />
     </radialGradient>
-    <radialGradient id="logo-planet-shadow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(600 742) rotate(8) scale(324 188)">
-      <stop stop-color="#8C4A53" stop-opacity="0.32" />
-      <stop offset="0.58" stop-color="#C46A4A" stop-opacity="0.2" />
-      <stop offset="1" stop-color="#C46A4A" stop-opacity="0" />
+    <radialGradient id="logo-orb-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(500 522) rotate(28) scale(256 552)">
+      <stop stop-color="#B7D7FB" stop-opacity="0.7" />
+      <stop offset="0.2" stop-color="#76A6D6" stop-opacity="0.28" />
+      <stop offset="1" stop-color="#76A6D6" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="logo-planet-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(674 366) rotate(134) scale(280 228)">
-      <stop stop-color="#FFF8F3" stop-opacity="0.72" />
-      <stop offset="0.5" stop-color="#FFF8F3" stop-opacity="0.18" />
-      <stop offset="1" stop-color="#FFF8F3" stop-opacity="0" />
+    <radialGradient id="logo-soft-white" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(742 504) rotate(136) scale(340 272)">
+      <stop stop-color="#FFF4E2" stop-opacity="0.8" />
+      <stop offset="0.52" stop-color="#FFF4E2" stop-opacity="0.24" />
+      <stop offset="1" stop-color="#FFF4E2" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="logo-orb-soft-white" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(612 454) rotate(128) scale(310 236)">
-      <stop stop-color="#FFF8F3" stop-opacity="0.74" />
-      <stop offset="0.52" stop-color="#FFF8F3" stop-opacity="0.2" />
-      <stop offset="1" stop-color="#FFF8F3" stop-opacity="0" />
+    <radialGradient id="logo-coral-bloom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(910 754) rotate(158) scale(294 236)">
+      <stop stop-color="#FF7E64" stop-opacity="0.42" />
+      <stop offset="1" stop-color="#FF7E64" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="logo-orb-gold-bloom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(724 566) rotate(166) scale(264 216)">
-      <stop stop-color="#FFD77E" stop-opacity="0.8" />
-      <stop offset="1" stop-color="#FFD77E" stop-opacity="0" />
+    <radialGradient id="logo-violet-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(520 926) rotate(-18) scale(356 258)">
+      <stop stop-color="#7E52BA" stop-opacity="0.32" />
+      <stop offset="1" stop-color="#7E52BA" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="logo-orb-violet-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(370 662) rotate(-26) scale(274 210)">
-      <stop stop-color="#6B37A5" stop-opacity="0.52" />
-      <stop offset="1" stop-color="#6B37A5" stop-opacity="0" />
+    <radialGradient id="logo-blue-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(560 840) rotate(8) scale(358 194)">
+      <stop stop-color="#2F8EDF" stop-opacity="0.32" />
+      <stop offset="0.56" stop-color="#4D88D7" stop-opacity="0.2" />
+      <stop offset="1" stop-color="#4D88D7" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="logo-orb-fold-sheen" x1="188" y1="600" x2="744" y2="470" gradientUnits="userSpaceOnUse">
+    <linearGradient id="logo-fold-sheen" x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FFF7F0" stop-opacity="0" />
       <stop offset="0.3" stop-color="#FFF7F0" stop-opacity="0.08" />
-      <stop offset="0.56" stop-color="#FFF7F0" stop-opacity="0.34" />
-      <stop offset="0.82" stop-color="#FFD7B2" stop-opacity="0.18" />
+      <stop offset="0.56" stop-color="#FFF7F0" stop-opacity="0.32" />
+      <stop offset="0.82" stop-color="#FFD7B2" stop-opacity="0.16" />
       <stop offset="1" stop-color="#FFD7B2" stop-opacity="0" />
     </linearGradient>
-    <linearGradient id="logo-flare-gradient" x1="674" y1="146" x2="906" y2="704" gradientUnits="userSpaceOnUse">
+    <linearGradient id="logo-flare-gradient" x1="860" y1="260" x2="1050" y2="736" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F45C4D" />
       <stop offset="0.24" stop-color="#FF8A5D" />
       <stop offset="0.56" stop-color="#FFC37A" />
       <stop offset="0.82" stop-color="#FFE1A7" />
       <stop offset="1" stop-color="#FFF4DB" />
     </linearGradient>
-    <linearGradient id="logo-flare-core" x1="684" y1="160" x2="892" y2="690" gradientUnits="userSpaceOnUse">
+    <linearGradient id="logo-flare-core" x1="870" y1="280" x2="1036" y2="716" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FF9E78" />
       <stop offset="0.48" stop-color="#FFF0CF" />
       <stop offset="1" stop-color="#FFF8ED" />
     </linearGradient>
-    <filter id="logo-soft-blur-20" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="20" />
+    <filter id="logo-blur-40" x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="40" />
     </filter>
-    <filter id="logo-soft-blur-28" x="0" y="0" width="1024" height="1024" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-      <feGaussianBlur stdDeviation="28" />
-    </filter>
-    <clipPath id="logo-planet-clip">
-      <circle cx="512" cy="512" r="344" />
+    <clipPath id="logo-orb-clip">
+      <circle cx="700" cy="700" r="360" />
     </clipPath>
   </defs>
 
-  <circle cx="512" cy="512" r="458" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2" />
-  <circle cx="512" cy="512" r="434" stroke="#342129" stroke-opacity="0.66" stroke-width="12" />
-  <circle cx="512" cy="512" r="420" stroke="#1A1E28" stroke-opacity="0.96" stroke-width="20" />
-  <circle cx="512" cy="512" r="406" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2" />
-  <circle cx="512" cy="512" r="394" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4" />
-  <circle cx="512" cy="512" r="434" stroke="#F3A16E" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round" stroke-dasharray="580 2147" transform="rotate(-136 512 512)" />
-  <circle cx="512" cy="512" r="420" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="520 2119" transform="rotate(-136 512 512)" />
+  <circle cx="700" cy="700" r="472" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2" />
+  <circle cx="700" cy="700" r="448" stroke="#342129" stroke-opacity="0.66" stroke-width="12" />
+  <circle cx="700" cy="700" r="434" stroke="#1A1E28" stroke-opacity="0.96" stroke-width="20" />
+  <circle cx="700" cy="700" r="420" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2" />
+  <circle cx="700" cy="700" r="408" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4" />
+  <circle cx="700" cy="700" r="448" stroke="#F3A16E" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round" stroke-dasharray="598 2218" transform="rotate(-136 700 700)" />
+  <circle cx="700" cy="700" r="434" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="536 2130" transform="rotate(-136 700 700)" />
 
-  <g filter="url(#logo-soft-blur-28)">
-    <circle cx="512" cy="512" r="406" stroke="#F45C4D" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)" />
+  <g filter="url(#logo-blur-40)">
+    <circle cx="700" cy="700" r="420" stroke="#F45C4D" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="689.1 1949.9" transform="rotate(-66 700 700)" />
   </g>
-  <circle cx="512" cy="512" r="406" stroke="#6D352A" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)" />
-  <circle cx="512" cy="512" r="406" stroke="url(#logo-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)" />
-  <circle cx="512" cy="512" r="406" stroke="url(#logo-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="666 1885" transform="rotate(-66 512 512)" />
-  <circle cx="871" cy="703" r="23" fill="#FF8D65" fill-opacity="0.18" />
-  <circle cx="871" cy="703" r="9" fill="#FFF3DF" />
+  <circle cx="700" cy="700" r="420" stroke="#6D352A" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="689.1 1949.9" transform="rotate(-66 700 700)" />
+  <circle cx="700" cy="700" r="420" stroke="url(#logo-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="689.1 1949.9" transform="rotate(-66 700 700)" />
+  <circle cx="700" cy="700" r="420" stroke="url(#logo-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="689.1 1949.9" transform="rotate(-66 700 700)" />
+  <circle cx="1070.8" cy="897.2" r="23" fill="#FF8D65" fill-opacity="0.18" />
+  <circle cx="1070.8" cy="897.2" r="9" fill="#FFF3DF" />
 
-  <circle cx="512" cy="512" r="344" fill="url(#logo-planet-base)" />
-  <circle cx="512" cy="512" r="344" fill="url(#logo-planet-shadow)" />
-  <g clip-path="url(#logo-planet-clip)">
-    <g filter="url(#logo-soft-blur-20)">
-      <ellipse cx="502" cy="430" rx="268" ry="176" fill="url(#logo-orb-soft-white)" />
-      <ellipse cx="726" cy="586" rx="236" ry="204" fill="url(#logo-orb-gold-bloom)" />
-      <ellipse cx="370" cy="714" rx="274" ry="208" fill="url(#logo-orb-violet-pocket)" />
-      <ellipse cx="562" cy="650" rx="302" ry="170" fill="url(#logo-planet-shadow)" />
+  <circle cx="700" cy="700" r="360" fill="url(#logo-orb-base)" />
+  <circle cx="700" cy="700" r="360" fill="url(#logo-orb-rim)" />
+  <g clip-path="url(#logo-orb-clip)">
+    <g filter="url(#logo-blur-40)">
+      <ellipse cx="700" cy="528" rx="292" ry="192" fill="url(#logo-soft-white)" />
+      <ellipse cx="910" cy="700" rx="270" ry="232" fill="url(#logo-coral-bloom)" />
+      <ellipse cx="504" cy="926" rx="300" ry="224" fill="url(#logo-violet-pocket)" />
+      <ellipse cx="612" cy="818" rx="344" ry="194" fill="url(#logo-blue-pocket)" />
     </g>
-    <path d="M188 602C322 514 440 464 562 452C668 440 760 468 876 542C802 594 726 626 646 640C538 658 418 650 300 620C262 612 226 606 188 602Z" fill="url(#logo-orb-fold-sheen)" />
-    <path d="M210 618C330 560 444 538 550 540C654 542 748 568 826 618C744 658 652 678 546 678C430 676 320 656 210 618Z" fill="#F5E3D2" fill-opacity="0.11" />
-    <path d="M244 378C358 326 470 324 582 360C668 388 754 446 842 536" stroke="#FFF7F1" stroke-opacity="0.16" stroke-width="20" stroke-linecap="round" />
-    <path d="M184 714C294 692 410 700 538 738C648 772 736 820 810 886" stroke="#E2B2A0" stroke-opacity="0.1" stroke-width="22" stroke-linecap="round" />
-    <circle cx="286" cy="400" r="14" fill="#FFF2E2" fill-opacity="0.08" />
-    <circle cx="668" cy="360" r="46" fill="#FFF9F2" fill-opacity="0.9" />
+    <path d="M330 822C464 734 582 684 704 670C810 658 902 686 1018 760C944 812 868 844 788 858C680 876 560 868 442 840C404 832 368 826 330 822Z" fill="url(#logo-fold-sheen)" />
+    <path d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z" fill="#FFF4E2" fill-opacity="0.11" />
+    <path d="M404 542C518 494 634 492 752 530C842 560 938 626 1038 724" stroke="#FFF7F1" stroke-opacity="0.16" stroke-width="22" stroke-linecap="round" />
+    <path d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110" stroke="#C8ADD6" stroke-opacity="0.085" stroke-width="24" stroke-linecap="round" />
+    <circle cx="1118" cy="490" r="50" fill="#FFF9F2" fill-opacity="0.9" />
+    <circle cx="664" cy="556" r="190" fill="url(#logo-soft-white)" />
   </g>
 
-  <g filter="url(#logo-soft-blur-28)">
-    <ellipse cx="486" cy="406" rx="164" ry="128" fill="#FFF4E2" fill-opacity="0.22" />
-  </g>
-  <circle cx="512" cy="512" r="344" fill="url(#logo-planet-highlight)" />
-  <circle cx="512" cy="512" r="344" fill="none" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="1.4" />
+  <circle cx="700" cy="700" r="360" fill="none" stroke="#FFF8F2" stroke-opacity="0.14" stroke-width="2" />
 </svg>

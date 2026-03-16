@@ -1,6 +1,10 @@
 ![CURYO — A Better Web, Guided by Human Reputation](packages/nextjs/public/banner.png)
 
 <p align="center">
+  <img src="packages/nextjs/public/logo.png" alt="Curyo logo" width="144">
+</p>
+
+<p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="License: MIT"></a>
 </p>
