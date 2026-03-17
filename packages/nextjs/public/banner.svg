@@ -128,7 +128,7 @@
     <circle cx="174" cy="378" r="4" fill="#7E8996" />
   </g>
 
-  <use href="#banner-mark" transform="translate(258 118) scale(0.295)" />
+  <use href="#banner-mark" transform="translate(376 121) scale(0.166)" />
 
   <text
     x="682"
