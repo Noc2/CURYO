@@ -30,8 +30,8 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
     // --- State ---
     IERC20 public immutable token;
-    IGovernor public immutable governor;
-    address public immutable timelock;
+    IGovernor public governor;
+    address public timelock;
     IRoundVotingEngine public votingEngine;
 
     uint256 public nextCategoryId;
@@ -42,6 +42,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
     // --- Events ---
     event VoterIdNFTUpdated(address voterIdNFT);
+    event GovernanceUpdated(address indexed governor, address indexed timelock);
 
     // --- Constructor ---
     constructor(address _admin, address _token, address _governor, address _timelock, address _votingEngine) {
@@ -75,6 +76,26 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         require(_voterIdNFT != address(0), "Invalid address");
         voterIdNFT = IVoterIdNFT(_voterIdNFT);
         emit VoterIdNFTUpdated(_voterIdNFT);
+    }
+
+    /// @notice Update the governor and timelock references after a governance migration.
+    /// @dev Transfers the permanent timelock roles to the new timelock address.
+    function updateGovernance(address _governor, address _timelock) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_governor != address(0), "Invalid governor");
+        require(_timelock != address(0), "Invalid timelock");
+
+        address previousTimelock = timelock;
+        governor = IGovernor(_governor);
+        timelock = _timelock;
+
+        if (_timelock != previousTimelock) {
+            _grantRole(DEFAULT_ADMIN_ROLE, _timelock);
+            _grantRole(ADMIN_ROLE, _timelock);
+            _revokeRole(ADMIN_ROLE, previousTimelock);
+            _revokeRole(DEFAULT_ADMIN_ROLE, previousTimelock);
+        }
+
+        emit GovernanceUpdated(_governor, _timelock);
     }
 
     // --- Category Submission ---

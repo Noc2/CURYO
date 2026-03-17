@@ -205,6 +205,42 @@ contract CategoryRegistryTest is Test {
         new CategoryRegistry(admin, address(token), address(governor), timelock, address(0));
     }
 
+    function test_UpdateGovernance_AllowsTimelockMigration() public {
+        uint256 categoryId = _submitCategory("migrate.example");
+        MockGovernor newGovernor = new MockGovernor();
+        address newTimelock = address(99);
+
+        vm.prank(timelock);
+        registry.updateGovernance(address(newGovernor), newTimelock);
+
+        assertEq(address(registry.governor()), address(newGovernor));
+        assertEq(registry.timelock(), newTimelock);
+        assertTrue(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), newTimelock));
+        assertFalse(registry.hasRole(registry.DEFAULT_ADMIN_ROLE(), timelock));
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(registry);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId);
+        string memory description = "Approve migrated category";
+
+        vm.prank(user2);
+        newGovernor.propose(targets, values, calldatas, description);
+
+        vm.prank(user1);
+        registry.linkApprovalProposal(categoryId, keccak256(bytes(description)));
+
+        vm.prank(timelock);
+        vm.expectRevert("Only timelock");
+        registry.approveCategory(categoryId);
+
+        vm.prank(newTimelock);
+        registry.approveCategory(categoryId);
+
+        assertTrue(registry.isApprovedCategory(categoryId));
+    }
+
     // --- Admin Add Approved Category Tests ---
 
     function test_AddApprovedCategory() public {
