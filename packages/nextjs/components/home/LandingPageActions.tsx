@@ -39,7 +39,7 @@ export function LandingPageActions() {
       <Link href="/docs" className="btn landing-cta landing-cta--secondary whitespace-nowrap">
         <span>Learn More</span>
         <span className="landing-cta__arrow" aria-hidden="true">
-          <ChevronRightIcon className="h-5 w-5 text-primary" />
+          <ChevronRightIcon className="h-5 w-5 text-primary-content" />
         </span>
       </Link>
     </div>
