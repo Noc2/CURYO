@@ -3,6 +3,7 @@
 import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { motion } from "framer-motion";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
 import {
@@ -35,29 +36,80 @@ export const menuLinks: HeaderMenuLink[] = [
   { label: "Docs", href: "/docs", icon: BookOpenIcon },
 ];
 
-export const HeaderMenuLinks = () => {
+type HeaderNavLinkProps = {
+  compact?: boolean;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  indicatorLayoutId?: string;
+  isActive: boolean;
+  label: string;
+};
+
+const navIndicatorClassName =
+  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-linear-to-b from-[#FFB27A] via-[#F26426] to-[#B3341B] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
+
+const HeaderNavLink = ({
+  compact = false,
+  href,
+  icon: Icon,
+  indicatorLayoutId,
+  isActive,
+  label,
+}: HeaderNavLinkProps) => {
+  const navTone = isActive ? "text-[#F5F0EB]" : "text-[#7E8996] group-hover:text-[#F5F0EB]";
+
+  return (
+    <Link
+      href={href}
+      className={`group relative flex items-center gap-3 overflow-hidden rounded-xl ${
+        compact ? "px-3 py-2.5" : "px-4 py-3"
+      } transition-colors duration-200 ${
+        isActive ? "text-[#F5F0EB]" : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
+      }`}
+    >
+      <Icon className={`relative z-10 h-6 w-6 shrink-0 transition-colors duration-200 ${navTone}`} />
+      <span className={`relative z-10 text-base font-medium transition-colors duration-200 ${navTone}`}>{label}</span>
+      {isActive ? (
+        indicatorLayoutId ? (
+          <motion.span
+            layoutId={indicatorLayoutId}
+            transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.55 }}
+            className={navIndicatorClassName}
+          />
+        ) : (
+          <span className={navIndicatorClassName} />
+        )
+      ) : null}
+    </Link>
+  );
+};
+
+export const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop" }) => {
   const pathname = usePathname() ?? "";
   const isDocsPage = pathname.startsWith("/docs");
+  const compact = variant === "mobile";
+  const indicatorLayoutId = variant === "desktop" ? "header-sidebar-active-indicator" : undefined;
 
   return (
     <>
       {menuLinks.map(({ label, href, icon: Icon }) => {
         const isActive = pathname.startsWith(href);
         const isDocs = href === "/docs";
-        const navTone = isActive ? "text-[#F5F0EB]" : "text-[#7E8996]";
 
         // If we're on docs page, show Docs as header with submenu, otherwise show as regular link
         if (isDocs && isDocsPage) {
           return (
             <li key={href} className="w-full">
-              {/* Docs header */}
-              <Link
-                href={href}
-                className="flex items-center gap-3 px-3 py-2.5 mb-2 rounded-xl hover:bg-base-200 transition-colors"
-              >
-                <Icon className="w-6 h-6 shrink-0 text-[#F5F0EB]" />
-                <span className="text-base font-medium text-[#F5F0EB]">Docs</span>
-              </Link>
+              <div className="mb-2">
+                <HeaderNavLink
+                  compact={compact}
+                  href={href}
+                  icon={Icon}
+                  indicatorLayoutId={indicatorLayoutId}
+                  isActive
+                  label="Docs"
+                />
+              </div>
               {/* Docs submenu - single column, explicitly block layout */}
               <div className="flex flex-col space-y-4 w-full">
                 {DOCS_NAV.map(group => (
@@ -93,18 +145,14 @@ export const HeaderMenuLinks = () => {
         // Regular menu items
         return (
           <li key={href} className="w-full">
-            <Link
+            <HeaderNavLink
               href={href}
-              passHref
-              className={`flex items-center gap-3 px-3 py-2.5 text-base font-medium rounded-xl transition-colors ${
-                isActive
-                  ? "bg-[#F5F0EB]/[0.05] text-base-content ring-1 ring-[#F5F0EB]/8"
-                  : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
-              }`}
-            >
-              <Icon className={`w-6 h-6 shrink-0 ${navTone}`} />
-              <span className={navTone}>{label}</span>
-            </Link>
+              icon={Icon}
+              compact={compact}
+              indicatorLayoutId={indicatorLayoutId}
+              isActive={isActive}
+              label={label}
+            />
           </li>
         );
       })}
@@ -367,73 +415,7 @@ export const Header = () => {
         </div>
         <nav className="flex flex-col gap-1 flex-1 overflow-y-auto">
           <ul className="menu menu-vertical p-0 gap-0.5 w-full">
-            {menuLinks.map(({ label, href, icon: Icon }) => {
-              const isActive = pathname.startsWith(href);
-              const isDocs = href === "/docs";
-              const isDocsPage = pathname.startsWith("/docs");
-              const navTone = isActive ? "text-[#F5F0EB]" : "text-[#7E8996]";
-
-              // If we're on docs page, show Docs as header with submenu, otherwise show as regular link
-              if (isDocs && isDocsPage) {
-                return (
-                  <li key={href} className="w-full">
-                    {/* Docs header */}
-                    <Link
-                      href={href}
-                      className="flex items-center justify-start gap-3 px-4 py-3 mb-2 rounded-xl hover:bg-base-200 transition-colors"
-                    >
-                      <Icon className="w-6 h-6 shrink-0 text-[#F5F0EB]" />
-                      <span className="text-base font-medium text-[#F5F0EB]">Docs</span>
-                    </Link>
-                    {/* Docs submenu - single column, explicitly block layout */}
-                    <div className="flex flex-col space-y-4 w-full">
-                      {DOCS_NAV.map(group => (
-                        <div key={group.section} className="w-full flex flex-col">
-                          <h3 className="text-base font-semibold uppercase tracking-wider text-base-content/40 mb-1.5 px-3 w-full">
-                            {group.section}
-                          </h3>
-                          <div className="flex flex-col space-y-0.5 w-full">
-                            {group.links.map(link => {
-                              const isLinkActive = pathname === link.href;
-                              return (
-                                <Link
-                                  key={link.href}
-                                  href={link.href}
-                                  className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
-                                    isLinkActive
-                                      ? "bg-primary/10 text-primary font-medium"
-                                      : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
-                                  }`}
-                                >
-                                  {link.label}
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </li>
-                );
-              }
-
-              // Regular menu items
-              return (
-                <li key={href} className="w-full">
-                  <Link
-                    href={href}
-                    className={`flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors ${
-                      isActive
-                        ? "bg-[#F5F0EB]/[0.05] text-base-content ring-1 ring-[#F5F0EB]/8"
-                        : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
-                    }`}
-                  >
-                    <Icon className={`w-6 h-6 shrink-0 ${navTone}`} />
-                    <span className={navTone}>{label}</span>
-                  </Link>
-                </li>
-              );
-            })}
+            <HeaderMenuLinks variant="desktop" />
           </ul>
         </nav>
         <div className="flex flex-col items-stretch gap-2 pt-4 border-t border-base-300 mt-auto shrink-0 w-full px-3">
