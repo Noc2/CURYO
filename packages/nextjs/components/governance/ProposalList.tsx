@@ -118,7 +118,7 @@ export const ProposalList = () => {
           <button
             key={nextFilter}
             className={`px-3 py-1.5 rounded-lg text-base font-medium transition-colors capitalize ${
-              filter === nextFilter ? "pill-active-yellow" : "bg-base-200 hover:bg-base-300"
+              filter === nextFilter ? "pill-active-yellow" : "pill-inactive"
             }`}
             onClick={() => setFilter(nextFilter)}
           >

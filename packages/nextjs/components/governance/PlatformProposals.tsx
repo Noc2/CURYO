@@ -98,7 +98,7 @@ export function PlatformProposals() {
           <button
             key={f}
             className={`px-3 py-1.5 rounded-lg text-base font-medium transition-colors capitalize ${
-              filter === f ? "pill-active-yellow" : "bg-base-200 hover:bg-base-300"
+              filter === f ? "pill-active-yellow" : "pill-inactive"
             }`}
             onClick={() => setFilter(f)}
           >

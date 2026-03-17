@@ -542,14 +542,29 @@ body {
   box-shadow: 0 10px 24px rgb(242 100 38 / 0.22);
 }
 
-/* Feed scope filter pill — green */
+.pill-inactive,
 .pill-filter {
-  background: color-mix(in srgb, var(--color-base-content) 5%, transparent);
+  background: rgb(20 19 22 / 0.96);
   color: var(--color-base-content);
-  border: 1px solid var(--curyo-shell-border);
+  border: none;
+  box-shadow: none;
 }
+
+.pill-inactive:hover,
 .pill-filter:hover {
-  background: color-mix(in srgb, var(--color-base-content) 9%, transparent);
+  background: color-mix(in srgb, var(--curyo-surface-elevated) 90%, var(--curyo-warm-white) 10%);
+}
+
+.pill-inactive-muted {
+  background: rgb(20 19 22 / 0.96);
+  color: rgb(245 240 235 / 0.6);
+  border: none;
+  box-shadow: none;
+}
+
+.pill-inactive-muted:hover {
+  background: color-mix(in srgb, var(--curyo-surface-elevated) 90%, var(--curyo-warm-white) 10%);
+  color: rgb(245 240 235 / 0.8);
 }
 
 /* Hide scrollbar but keep scroll functionality */

@@ -13,7 +13,7 @@ export function FollowScopeToggle({ value, onChange }: FollowScopeToggleProps) {
         onClick={() => onChange("all")}
         aria-pressed={value === "all"}
         className={`px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-          value === "all" ? "pill-category" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
+          value === "all" ? "pill-category" : "pill-inactive"
         }`}
       >
         All
@@ -23,7 +23,7 @@ export function FollowScopeToggle({ value, onChange }: FollowScopeToggleProps) {
         onClick={() => onChange("following")}
         aria-pressed={value === "following"}
         className={`px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-          value === "following" ? "pill-category" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
+          value === "following" ? "pill-category" : "pill-inactive"
         }`}
       >
         Following Only

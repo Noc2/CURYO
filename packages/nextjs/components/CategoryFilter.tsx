@@ -137,9 +137,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             setSearch("");
           }}
           className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors ${
-            activeCategory !== categories[0]
-              ? "pill-category"
-              : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
+            activeCategory !== categories[0] ? "pill-category" : "pill-inactive"
           }`}
         >
           {activeCategory}
@@ -194,7 +192,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
         {visible.map(category => {
           const isActive = activeCategory === category;
           const custom = pillClassName?.(category, isActive);
-          const defaultCls = isActive ? "pill-category" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]";
+          const defaultCls = isActive ? "pill-category" : "pill-inactive";
           return (
             <button
               key={category}
@@ -211,9 +209,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
             <button
               onClick={() => setDropdownOpen(prev => !prev)}
               className={`px-3 py-1.5 rounded-full text-base font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
-                overflow.includes(activeCategory)
-                  ? "pill-category"
-                  : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
+                overflow.includes(activeCategory) ? "pill-category" : "pill-inactive"
               }`}
             >
               +{overflow.length} more

@@ -1117,7 +1117,7 @@ const HomeInner = () => {
             if (cat !== BROKEN_FILTER) return undefined;
             return isActive
               ? "bg-warning/20 text-warning border border-warning/40"
-              : "bg-base-200 text-warning/70 hover:bg-warning/10";
+              : "pill-inactive text-warning/70 hover:bg-warning/10";
           }}
         />
         <FeedScopeFilter

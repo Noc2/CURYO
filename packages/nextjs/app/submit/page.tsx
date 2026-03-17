@@ -505,7 +505,7 @@ const SubmitPage: NextPage = () => {
         <button
           onClick={() => selectTab("content")}
           className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-            submissionType === "content" ? "pill-active" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
+            submissionType === "content" ? "pill-active" : "pill-inactive"
           }`}
         >
           Content
@@ -513,7 +513,7 @@ const SubmitPage: NextPage = () => {
         <button
           onClick={() => selectTab("category")}
           className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-            submissionType === "category" ? "pill-active" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
+            submissionType === "category" ? "pill-active" : "pill-inactive"
           }`}
         >
           Platform
@@ -521,7 +521,7 @@ const SubmitPage: NextPage = () => {
         <button
           onClick={() => selectTab("frontend")}
           className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-            submissionType === "frontend" ? "pill-active" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
+            submissionType === "frontend" ? "pill-active" : "pill-inactive"
           }`}
         >
           Frontend
@@ -711,7 +711,7 @@ const SubmitPage: NextPage = () => {
                           type="button"
                           onClick={() => handleSubcategoryToggle(subcat)}
                           className={`px-3 py-1.5 rounded-full text-base font-medium transition-colors ${
-                            isSelected ? "pill-active" : "bg-base-200 text-base-content hover:bg-[#F5F0EB]/[0.05]"
+                            isSelected ? "pill-active" : "pill-inactive"
                           }`}
                         >
                           {subcat}

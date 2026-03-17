@@ -208,9 +208,7 @@ export function StakeSelector({
                   key={preset}
                   onClick={() => setAmount(preset)}
                   className={`rounded-lg px-4 py-2 text-base font-medium transition-colors ${
-                    amount === preset
-                      ? "bg-primary text-primary-content"
-                      : "bg-base-200 text-base-content/60 hover:bg-base-300"
+                    amount === preset ? "bg-primary text-primary-content" : "pill-inactive-muted"
                   }`}
                 >
                   {preset}
