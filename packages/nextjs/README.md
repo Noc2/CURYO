@@ -26,8 +26,13 @@ Run these from the monorepo root unless noted otherwise:
 | `yarn workspace @curyo/nextjs db:push` | Apply migrations to the configured database          |
 | `yarn workspace @curyo/nextjs db:studio` | Open the Drizzle studio UI                        |
 | `yarn workspace @curyo/nextjs whitepaper` | Generate the whitepaper PDF                     |
-| `yarn e2e`              | Run Playwright E2E tests (requires local chain + deploy + ponder) |
+| `yarn e2e`              | Run the Playwright smoke suite (Chromium)                         |
+| `yarn workspace @curyo/nextjs e2e:ci:lifecycle` | Run lifecycle suites for settlement, cancellation, and dormancy |
+| `yarn workspace @curyo/nextjs e2e:ci:keeper` | Run keeper-backed settlement coverage                            |
+| `yarn workspace @curyo/nextjs e2e:full` | Run the full local Playwright suite, including keeper coverage          |
 | `yarn e2e:ui`           | Run E2E tests with interactive Playwright UI                      |
+
+CI runs the smoke, lifecycle, and keeper-backed suites separately, so `yarn e2e` is only the smallest browser pass.
 
 ## Configuration
 

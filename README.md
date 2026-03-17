@@ -173,12 +173,23 @@ yarn test:ts
 # Solidity unit tests
 yarn foundry:test
 
-# E2E browser tests (requires all services running — see "Run Locally" above)
+# E2E smoke suite (Chromium only)
 yarn e2e
+
+# E2E lifecycle coverage (settlement, cancellation, dormancy)
+yarn workspace @curyo/nextjs e2e:ci:lifecycle
+
+# E2E keeper-backed settlement coverage
+yarn workspace @curyo/nextjs e2e:ci:keeper
+
+# Full local E2E run
+yarn workspace @curyo/nextjs e2e:full
 
 # Interactive Playwright UI mode
 yarn e2e:ui
 ```
+
+CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn e2e` alone does not match full CI browser coverage.
 
 ## Docs and APIs
 
