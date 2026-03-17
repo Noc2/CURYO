@@ -2,7 +2,6 @@
 pragma solidity ^0.8.24;
 
 import { ContentRegistry } from "../ContentRegistry.sol";
-import { IParticipationPool } from "../interfaces/IParticipationPool.sol";
 
 /// @title SubmitterStakeLib
 /// @notice Shared policy for resolving submitter stakes after settlement or dormancy windows elapse.
@@ -14,7 +13,6 @@ library SubmitterStakeLib {
 
     function resolve(
         ContentRegistry registry,
-        IParticipationPool participationPool,
         bool hasSettledRound,
         uint256 contentId
     ) external {
@@ -49,14 +47,9 @@ library SubmitterStakeLib {
         }
 
         if (elapsed >= 4 days) {
-            uint256 rewardRateBps;
-            if (address(participationPool) != address(0)) {
-                try participationPool.getCurrentRateBps() returns (uint256 rateBps) {
-                    rewardRateBps = rateBps;
-                } catch { }
-            }
-
-            registry.returnSubmitterStakeWithRewardRate(contentId, rewardRateBps);
+            registry.returnSubmitterStakeWithRewardRate(
+                contentId, registry.submitterParticipationSnapshotRateBps(contentId)
+            );
         }
     }
 }

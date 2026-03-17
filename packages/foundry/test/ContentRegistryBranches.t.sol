@@ -310,6 +310,48 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(registry.submitterParticipationRewardPaid(1), 9e6, "all snapshotted rewards should be accounted for");
     }
 
+    function test_HealthyResolution_UsesSettlementSnapshotInsteadOfDelayedCurrentRate() public {
+        vm.startPrank(owner);
+        ParticipationPool shiftingPool = new ParticipationPool(address(crepToken), owner);
+        shiftingPool.setAuthorizedCaller(address(registry), true);
+        shiftingPool.setAuthorizedCaller(owner, true);
+        crepToken.mint(owner, 3_000_000e6);
+        crepToken.approve(address(shiftingPool), 3_000_000e6);
+        shiftingPool.depositPool(3_000_000e6);
+        registry.setParticipationPool(address(shiftingPool));
+        votingEngine.setParticipationPool(address(shiftingPool));
+        vm.stopPrank();
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/snapshotted-submitter-rate", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _settleHealthyRound(1);
+
+        assertEq(
+            registry.submitterParticipationSnapshotRateBps(1), 9000, "healthy settlement should snapshot the live rate"
+        );
+
+        vm.prank(owner);
+        shiftingPool.rewardSubmission(owner, 2_300_000e6);
+        assertEq(shiftingPool.getCurrentRateBps(), 4500, "live pool rate should have decayed before delayed resolution");
+
+        vm.warp(T0 + 4 days + 1);
+        votingEngine.resolveSubmitterStake(1);
+
+        assertEq(
+            registry.submitterParticipationRewardPool(1),
+            address(shiftingPool),
+            "delayed healthy resolution should use the snapshotted pool"
+        );
+        assertEq(
+            registry.submitterParticipationRewardOwed(1),
+            9e6,
+            "delayed healthy resolution should keep the settlement-time reward rate"
+        );
+    }
+
     function test_ClaimSubmitterParticipationReward_ReservedPortionSurvivesPoolDeauthorization() public {
         vm.startPrank(owner);
         ParticipationPool tinyPool = new ParticipationPool(address(crepToken), owner);
@@ -361,6 +403,49 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert("Not submitter");
         registry.claimSubmitterParticipationReward(1);
+    }
+
+    function test_MarkDormant_PreservesHealthySubmitterParticipationRewardSnapshot() public {
+        vm.startPrank(owner);
+        registry.setParticipationPool(address(participationPool));
+        votingEngine.setParticipationPool(address(participationPool));
+        vm.stopPrank();
+
+        uint256 submitterBalanceBeforeSubmit = crepToken.balanceOf(submitter);
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/dormant-submitter-reward", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _settleHealthyRound(1);
+
+        vm.warp(block.timestamp + 30 days + 1);
+        registry.markDormant(1);
+
+        (, , , , , , ContentRegistry.ContentStatus status, , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant), "content should transition to dormant");
+        assertTrue(submitterStakeReturned, "dormancy should still resolve the submitter stake");
+        assertEq(
+            crepToken.balanceOf(submitter),
+            submitterBalanceBeforeSubmit,
+            "dormancy fallback should return the locked submitter stake"
+        );
+        assertEq(
+            registry.submitterParticipationRewardOwed(1),
+            9e6,
+            "healthy dormancy fallback should preserve the snapshotted submitter reward"
+        );
+
+        uint256 submitterBalanceBeforeClaim = crepToken.balanceOf(submitter);
+        vm.prank(submitter);
+        uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
+
+        assertEq(paidAmount, 9e6, "submitter should still be able to claim the preserved reward after dormancy");
+        assertEq(
+            crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim,
+            9e6,
+            "claim should transfer the full preserved reward after dormancy"
+        );
     }
 
     function test_ResolveSubmitterStake_NoSettledRound_LowRatingSlashesAfterDormancyPeriod() public {

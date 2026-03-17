@@ -789,13 +789,17 @@ contract RoundVotingEngine is
             roundParticipationPool[contentId][roundId] = address(currentParticipationPool);
             try currentParticipationPool.getCurrentRateBps() returns (uint256 rate) {
                 roundParticipationRateBps[contentId][roundId] = rate;
+                try registry.snapshotSubmitterParticipationTerms(contentId, address(currentParticipationPool), rate) { }
+                catch {
+                    emit SettlementSideEffectFailed(contentId, roundId, REASON_PARTICIPATION_RATE);
+                }
             } catch {
                 emit SettlementSideEffectFailed(contentId, roundId, REASON_PARTICIPATION_RATE);
             }
         }
 
         // Check submitter stake return/slash conditions
-        try SubmitterStakeLib.resolve(registry, participationPool, contentHasSettledRound[contentId], contentId) { }
+        try SubmitterStakeLib.resolve(registry, contentHasSettledRound[contentId], contentId) { }
         catch {
             emit SettlementSideEffectFailed(contentId, roundId, REASON_SUBMITTER_STAKE);
         }
@@ -845,7 +849,7 @@ contract RoundVotingEngine is
         if (roundId != 0 && rounds[contentId][roundId].state == RoundLib.RoundState.Open) {
             revert ActiveRoundStillOpen();
         }
-        SubmitterStakeLib.resolve(registry, participationPool, contentHasSettledRound[contentId], contentId);
+        SubmitterStakeLib.resolve(registry, contentHasSettledRound[contentId], contentId);
     }
 
     // =========================================================================

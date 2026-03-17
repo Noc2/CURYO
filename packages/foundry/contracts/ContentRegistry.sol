@@ -86,6 +86,12 @@ contract ContentRegistry is
     /// @notice Participation pool for rewarding submitters
     IParticipationPool public participationPool;
 
+    /// @notice Snapshotted participation reward rate captured at the latest successful settlement.
+    mapping(uint256 => uint256) public submitterParticipationSnapshotRateBps;
+
+    /// @notice Snapshotted participation pool captured at the latest successful settlement.
+    mapping(uint256 => address) public submitterParticipationSnapshotPool;
+
     /// @notice Snapshotted submitter participation reward entitlement per content.
     mapping(uint256 => uint256) public submitterParticipationRewardOwed;
 
@@ -113,7 +119,7 @@ contract ContentRegistry is
     SubmissionCanonicalizer internal immutable SUBMISSION_CANONICALIZER;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[44] private __gap;
+    uint256[42] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -434,7 +440,22 @@ contract ContentRegistry is
     /// @dev This avoids coupling the submitter reward to whatever the live participation rate is when the
     ///      stake finally gets returned.
     function returnSubmitterStakeWithRewardRate(uint256 contentId, uint256 rewardRateBps) external {
-        _returnSubmitterStake(contentId, rewardRateBps);
+        address rewardPool = submitterParticipationSnapshotPool[contentId];
+        if (rewardPool == address(0)) {
+            rewardPool = address(participationPool);
+        }
+        _returnSubmitterStake(contentId, rewardPool, rewardRateBps);
+    }
+
+    /// @notice Called by VotingEngine to snapshot the submitter participation terms at settlement time.
+    function snapshotSubmitterParticipationTerms(uint256 contentId, address rewardPool, uint256 rewardRateBps) external {
+        require(msg.sender == votingEngine, "Only VotingEngine");
+        Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
+        if (c.submitterStakeReturned) return;
+
+        submitterParticipationSnapshotPool[contentId] = rewardPool;
+        submitterParticipationSnapshotRateBps[contentId] = rewardRateBps;
     }
 
     /// @notice Called by VotingEngine once the dormancy window elapses without any settled round.
@@ -445,7 +466,7 @@ contract ContentRegistry is
         _resolvePendingSubmitterStake(contentId, c);
     }
 
-    function _returnSubmitterStake(uint256 contentId, uint256 rewardRateBps) internal {
+    function _returnSubmitterStake(uint256 contentId, address rewardPool, uint256 rewardRateBps) internal {
         require(msg.sender == votingEngine, "Only VotingEngine");
         Content storage c = contents[contentId];
         require(!c.submitterStakeReturned, "Already returned");
@@ -453,7 +474,7 @@ contract ContentRegistry is
         c.submitterStakeReturned = true;
         crepToken.safeTransfer(c.submitter, c.submitterStake);
 
-        _accrueSubmitterParticipationReward(contentId, c, rewardRateBps);
+        _accrueSubmitterParticipationReward(contentId, c, rewardPool, rewardRateBps);
 
         emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
@@ -480,26 +501,29 @@ contract ContentRegistry is
 
         c.submitterStakeReturned = true;
         crepToken.safeTransfer(c.submitter, c.submitterStake);
+        _accrueSubmitterParticipationReward(
+            contentId, c, submitterParticipationSnapshotPool[contentId], submitterParticipationSnapshotRateBps[contentId]
+        );
         emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
 
     function _accrueSubmitterParticipationReward(
         uint256 contentId,
         Content storage c,
+        address rewardPool,
         uint256 rewardRateBps
     ) internal {
-        if (address(participationPool) == address(0)) return;
+        if (rewardPool == address(0)) return;
 
         uint256 rewardAmount = c.submitterStake * rewardRateBps / 10000;
 
         if (rewardAmount == 0) return;
 
-        address rewardPool = address(participationPool);
         submitterParticipationRewardPool[contentId] = rewardPool;
         submitterParticipationRewardOwed[contentId] = rewardAmount;
         emit SubmitterParticipationRewardAccrued(contentId, c.submitter, rewardPool, rewardAmount);
 
-        try participationPool.reserveReward(address(this), rewardAmount) returns (uint256 reservedAmount) {
+        try IParticipationPool(rewardPool).reserveReward(address(this), rewardAmount) returns (uint256 reservedAmount) {
             if (reservedAmount > 0) {
                 submitterParticipationRewardReserved[contentId] = reservedAmount;
             }
