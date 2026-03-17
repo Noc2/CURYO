@@ -77,12 +77,8 @@
   background: var(--color-base-100);
   --curyo-ember: #f26426;
   --curyo-ember-deep: #b3341b;
-  --curyo-ember-soft: #f26426;
-  --curyo-ember-bright: #f26426;
   --curyo-warm-white: #f5f0eb;
-  --curyo-warm-white-soft: #f5f0eb;
   --curyo-steel: #7e8996;
-  --curyo-steel-soft: #7e8996;
   --curyo-surface: #090a0c;
   --curyo-surface-elevated: #141316;
   --curyo-shell-border: rgb(245 240 235 / 0.08);
@@ -373,7 +369,7 @@ body {
   display: none;
 }
 
-.obsidian-ember-info-card {
+.surface-card-secondary {
   background: rgb(9 10 12 / 0.98);
   border: none;
   box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);
@@ -553,20 +549,13 @@ body {
   color: var(--color-primary);
 }
 
-/* Progress bar — brand gradient */
+/* Progress bar */
 #nprogress .bar {
-  background: linear-gradient(90deg, var(--curyo-ember-deep), var(--curyo-ember), var(--curyo-warm-white), var(--curyo-steel)) !important;
-}
-
-/* Brand gradient text */
-.text-gradient {
-  color: var(--color-base-content);
-  -webkit-text-fill-color: currentColor;
+  background: var(--curyo-ember) !important;
 }
 
 /* Selected pills and tabs */
 .pill-active,
-.pill-active-yellow,
 .pill-category,
 .pill-filter-active {
   background: var(--curyo-ember);

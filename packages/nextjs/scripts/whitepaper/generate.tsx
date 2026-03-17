@@ -9,16 +9,14 @@ import { renderLatex } from "./latex";
 import { Document, Image, Page, StyleSheet, Text, View, renderToFile, renderToStream } from "@react-pdf/renderer";
 
 // ── Brand colors ──
-const BLUE = "#359EEE";
-const PINK = "#EF476F";
-const CYAN = "#03CEA4";
-const DARK = "#1a1a2e";
-const GRAY = "#555";
-const LIGHT_BG = "#f5f5f5";
-// Darkened yellow for text readability on white paper
-const YELLOW_TEXT = "#D4A017";
-// Per-section accent colors (cycles through brand palette)
-const SECTION_COLORS = [BLUE, CYAN, PINK, YELLOW_TEXT, BLUE, CYAN, PINK];
+const EMBER = "#F26426";
+const EMBER_DEEP = "#B3341B";
+const STEEL = "#7E8996";
+const DARK = "#090A0C";
+const GRAY = STEEL;
+const LIGHT_BG = "#F5F0EB";
+// Per-section accent colors (cycles through the website palette)
+const SECTION_COLORS = [EMBER, STEEL, EMBER_DEEP, EMBER, STEEL, EMBER_DEEP, EMBER];
 const coverLogoPath = new URL("../../public/logo.png", import.meta.url).pathname;
 
 // Module-level map populated during first render pass (for TOC page numbers)
@@ -49,7 +47,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: "#e0e0e0",
   },
-  tocNum: { fontSize: 11, fontFamily: "Helvetica-Bold", color: BLUE, width: 20 },
+  tocNum: { fontSize: 11, fontFamily: "Helvetica-Bold", color: EMBER, width: 20 },
   tocLabel: { fontSize: 11, color: DARK, flex: 1 },
   tocSubEntry: {
     flexDirection: "row" as const,
@@ -59,19 +57,19 @@ const s = StyleSheet.create({
   tocSubNum: { fontSize: 9, fontFamily: "Helvetica-Bold", width: 28 },
   tocSubLabel: { fontSize: 9, flex: 1 },
   // Section
-  sectionTitle: { fontSize: 22, fontFamily: "Helvetica-Bold", color: BLUE, marginBottom: 14 },
+  sectionTitle: { fontSize: 22, fontFamily: "Helvetica-Bold", color: EMBER, marginBottom: 14 },
   sectionLead: { fontSize: 11, color: GRAY, marginBottom: 8 },
   subHeading: { fontSize: 14, fontFamily: "Helvetica-Bold", color: DARK, marginTop: 16, marginBottom: 6 },
   subSubHeading: { fontSize: 11, fontFamily: "Helvetica-Bold", color: DARK, marginTop: 10, marginBottom: 4 },
   paragraph: { marginBottom: 8 },
   bulletRow: { flexDirection: "row", marginBottom: 4, paddingLeft: 8 },
   orderedRow: { flexDirection: "row", marginBottom: 6, paddingLeft: 8 },
-  bulletDot: { width: 12, color: BLUE, fontFamily: "Helvetica-Bold" },
+  bulletDot: { width: 12, color: EMBER, fontFamily: "Helvetica-Bold" },
   bulletText: { flex: 1 },
-  orderedNum: { width: 18, color: BLUE, fontFamily: "Helvetica-Bold" },
+  orderedNum: { width: 18, color: EMBER, fontFamily: "Helvetica-Bold" },
   // Table
   table: { marginVertical: 8, borderWidth: 0.5, borderColor: "#d0d0d0" },
-  tableHeaderRow: { flexDirection: "row", backgroundColor: BLUE },
+  tableHeaderRow: { flexDirection: "row", backgroundColor: EMBER },
   tableHeaderCell: { flex: 1, padding: 5, fontSize: 9, fontFamily: "Helvetica-Bold", color: "#fff" },
   tableRow: { flexDirection: "row" },
   tableRowAlt: { backgroundColor: LIGHT_BG },
@@ -198,7 +196,7 @@ function WhitepaperDocument({ tocPageNumbers }: { tocPageNumbers?: Record<number
       <Page size="A4" style={s.page}>
         <Text style={[s.sectionTitle, { color: DARK }]}>Executive Summary</Text>
         {EXECUTIVE_SUMMARY.map((block, i) => (
-          <RenderBlock key={i} block={block} color={BLUE} />
+          <RenderBlock key={i} block={block} color={EMBER} />
         ))}
         <Footer />
       </Page>

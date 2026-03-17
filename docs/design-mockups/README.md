@@ -1,78 +1,37 @@
 # Design Mock-ups
 
-These are standalone review artifacts rather than production UI.
+These are standalone review artifacts for the current brand direction.
 
 ## Review Files
 
-1. `planet-flare-logo-single.svg`
-   Current standalone planet-plus-flare logo source used as the base geometry for the newer explorations.
-   Preview export: `planet-flare-logo-single.png`
-
-2. `planet-flare-theme-directions.svg`
-   Four site-wide color themes mapped back into the current logo and a compact UI mock-up so palette choices can be reviewed in context.
-   Preview export: `planet-flare-theme-directions.png`
-
-3. `planet-flare-alt-theme-directions.svg`
-   More adventurous color systems that also recolor the flare, useful for testing whether a broader brand refresh still feels like Curyo.
-   Preview export: `planet-flare-alt-theme-directions.png`
-
-4. `planet-flare-3d-gradient-tests.svg`
-   Focused planet-lighting and gradient study showing how far the mark can move toward a more dimensional 3D read.
-   Preview export: `planet-flare-3d-gradient-tests.png`
-
-5. `planet-flare-obsidian-ember.svg`
-   Dedicated high-contrast concept inspired by the orange / graphite / white reference palette, with a darker Mars-like planet and brighter flare highlight.
+1. `planet-flare-obsidian-ember.svg`
+   High-contrast palette board for the settled Obsidian Ember website direction.
    Preview export: `planet-flare-obsidian-ember.png`
 
-6. `planet-flare-landing.svg`
-   Landing page mock-up using the current Curyo hero and "How it Works" structure.
-   Preview export: `planet-flare-landing.png`
-
-7. `planet-flare-logo-obsidian-ember-abstract-variants.svg`
-   Four warmer orange/red logo studies that flatten or abstract the ember core while keeping the flare language.
-   Preview export: `planet-flare-logo-obsidian-ember-abstract-variants.png`
-
-8. `planet-flare-logo-obsidian-ember-gradient-core.svg`, `planet-flare-logo-obsidian-ember-abstract-eclipse.svg`, `planet-flare-logo-obsidian-ember-abstract-lens.svg`, `planet-flare-logo-obsidian-ember-abstract-signal.svg`
-   Individual exports from the abstract ember round.
-   Preview exports: matching `.png` files for each concept.
-
-9. `planet-flare-logo-ai-sphere-ember-lens.svg`, `planet-flare-logo-ai-sphere-ember-signal.svg`, `planet-flare-logo-ai-sphere-ember-prism.svg`
-   Orange/red AI-sphere variants that keep the flare language but move away from a literal planet surface toward more abstract lens, signal, and prism treatments.
-   Preview exports: matching `.png` files for each concept.
-
-10. `ai-sphere-obsidian-ember-glass.svg`, `ai-sphere-obsidian-ember-fold.svg`, `ai-sphere-obsidian-ember-core.svg`
-   Glossy orb studies inspired by softer AI-sphere references, but recolored with the obsidian/ember site palette instead of the earlier blue/rainbow treatment.
-   Preview exports: matching `.png` files for each concept.
-
-11. `ai-sphere-obsidian-ember-fold-with-flare.svg`
-   A refined fold-based AI sphere that removes the internal black pocket and reintroduces the current website flare/orbit treatment around the orb.
+2. `ai-sphere-obsidian-ember-fold-with-flare.svg`
+   Refined orb direction that replaces the earlier planet body with the folded sphere treatment while keeping the flare orbit.
    Preview export: `ai-sphere-obsidian-ember-fold-with-flare.png`
 
-12. `planet-flare-logo-exploration.svg`
-   Earlier logo exploration board for the planet-plus-flare direction.
-   Preview export: `planet-flare-logo-exploration.png`
+3. `ai-sphere-obsidian-ember-fold-with-flare-single-palette-deeper-blue.svg`
+   Reduced-palette orb variant used to test a cooler, more restrained sphere treatment against the same flare language.
+   Preview export: `ai-sphere-obsidian-ember-fold-with-flare-single-palette-deeper-blue.png`
 
-13. `generate-planet-flare-theme-directions.mjs`
-   Script that regenerates the theme-direction, alternative theme, contrast-study, and 3D-gradient SVG boards from code.
+4. `generate-planet-flare-theme-directions.mjs`
+   Script that regenerates the retained `planet-flare-obsidian-ember.svg` board from code.
 
-14. `generate-planet-flare-obsidian-ember-abstract-variants.mjs`
-   Script that regenerates the abstract ember logo round and the comparison board.
-
-15. `logo-rollout-plan.md`
-   Rollout plan for replacing the shared brand assets.
+5. `render-pngs.mjs`
+   Utility script that exports PNG previews from the SVG sources.
 
 ## PNG Export
 
-The PNG previews are generated from the SVG sources with:
+The checked-in PNG previews are generated from the retained SVG sources with:
 
 ```bash
 node docs/design-mockups/generate-planet-flare-theme-directions.mjs
-node docs/design-mockups/generate-planet-flare-obsidian-ember-abstract-variants.mjs
-node docs/design-mockups/render-pngs.mjs docs/design-mockups/planet-flare-theme-directions.svg docs/design-mockups/planet-flare-alt-theme-directions.svg docs/design-mockups/planet-flare-3d-gradient-tests.svg docs/design-mockups/planet-flare-obsidian-ember.svg
-node docs/design-mockups/render-pngs.mjs docs/design-mockups/planet-flare-logo-obsidian-ember-gradient-core.svg docs/design-mockups/planet-flare-logo-obsidian-ember-abstract-eclipse.svg docs/design-mockups/planet-flare-logo-obsidian-ember-abstract-lens.svg docs/design-mockups/planet-flare-logo-obsidian-ember-abstract-signal.svg docs/design-mockups/planet-flare-logo-obsidian-ember-abstract-variants.svg
-node docs/design-mockups/render-pngs.mjs docs/design-mockups/planet-flare-logo-ai-sphere-ember-lens.svg docs/design-mockups/planet-flare-logo-ai-sphere-ember-signal.svg docs/design-mockups/planet-flare-logo-ai-sphere-ember-prism.svg
-node docs/design-mockups/render-pngs.mjs docs/design-mockups/ai-sphere-obsidian-ember-glass.svg docs/design-mockups/ai-sphere-obsidian-ember-fold.svg docs/design-mockups/ai-sphere-obsidian-ember-core.svg
-node docs/design-mockups/render-pngs.mjs docs/design-mockups/ai-sphere-obsidian-ember-fold-with-flare.svg
+node docs/design-mockups/render-pngs.mjs \
+  docs/design-mockups/planet-flare-obsidian-ember.svg \
+  docs/design-mockups/ai-sphere-obsidian-ember-fold-with-flare.svg \
+  docs/design-mockups/ai-sphere-obsidian-ember-fold-with-flare-single-palette-deeper-blue.svg
 ```
 
 This keeps the raster previews in sync with the editable SVG artwork.
@@ -80,4 +39,5 @@ This keeps the raster previews in sync with the editable SVG artwork.
 ## Notes
 
 - These are mock-ups only.
-- The live app was reverted separately and is not using these designs.
+- The live app now uses the Obsidian Ember website direction.
+- The two AI-sphere SVGs are curated source files, not code-generated boards.

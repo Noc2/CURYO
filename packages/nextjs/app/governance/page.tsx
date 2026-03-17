@@ -129,7 +129,7 @@ function GovernancePageInner() {
           <button
             onClick={() => selectTab("faucet")}
             className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-              activeTab === "faucet" ? "pill-active-yellow" : "pill-inactive"
+              activeTab === "faucet" ? "pill-active" : "pill-inactive"
             }`}
           >
             Faucet
@@ -139,7 +139,7 @@ function GovernancePageInner() {
             <button
               onClick={() => selectTab("leaderboard")}
               className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === "leaderboard" ? "pill-active-yellow" : "pill-inactive"
+                activeTab === "leaderboard" ? "pill-active" : "pill-inactive"
               }`}
             >
               Leaderboard
@@ -147,7 +147,7 @@ function GovernancePageInner() {
             <button
               onClick={() => selectTab("accuracy")}
               className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === "accuracy" ? "pill-active-yellow" : "pill-inactive"
+                activeTab === "accuracy" ? "pill-active" : "pill-inactive"
               }`}
             >
               Accuracy
@@ -155,7 +155,7 @@ function GovernancePageInner() {
             <button
               onClick={() => selectTab("governance")}
               className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === "governance" ? "pill-active-yellow" : "pill-inactive"
+                activeTab === "governance" ? "pill-active" : "pill-inactive"
               }`}
             >
               Governance

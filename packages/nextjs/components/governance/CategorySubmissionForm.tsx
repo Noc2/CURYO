@@ -272,7 +272,7 @@ export const CategorySubmissionForm = () => {
           </div>
 
           {/* Stake info */}
-          <div className="obsidian-ember-info-card rounded-2xl p-4">
+          <div className="surface-card-secondary rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
               <div>
                 <p className="flex items-center gap-1.5 text-base font-medium text-base-content">

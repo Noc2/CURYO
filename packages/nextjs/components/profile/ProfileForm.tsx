@@ -246,7 +246,7 @@ export function ProfileForm() {
       )}
 
       {/* Info Box */}
-      <div className="obsidian-ember-info-card rounded-2xl p-4">
+      <div className="surface-card-secondary rounded-2xl p-4">
         <p className="text-base text-base-content/75">
           Your profile is stored publicly on the blockchain. A small gas fee is required to{" "}
           {hasProfile ? "update" : "create"} your profile.

@@ -1271,12 +1271,7 @@ function buildGradientBoard() {
 }
 
 async function main() {
-  const outputs = [
-    ["planet-flare-theme-directions.svg", buildThemeBoard()],
-    ["planet-flare-alt-theme-directions.svg", buildExperimentalThemeBoard()],
-    ["planet-flare-3d-gradient-tests.svg", buildGradientBoard()],
-    ["planet-flare-obsidian-ember.svg", buildObsidianEmberBoard()],
-  ];
+  const outputs = [["planet-flare-obsidian-ember.svg", buildObsidianEmberBoard()]];
 
   await Promise.all(
     outputs.map(([filename, contents]) =>
