@@ -1134,7 +1134,7 @@ const HomeInner = () => {
       {isSearchMode ? (
         <div className="mb-5 flex shrink-0 flex-wrap items-center gap-2 xl:mb-3" data-disable-queue-wheel="true">
           <div className="rounded-full bg-base-200 px-3 py-2 text-sm text-base-content/70">
-            Results for <span className="font-medium text-[#F5F0EB]">&quot;{searchQuery.trim()}&quot;</span>
+            Results for <span className="font-medium text-base-content">&quot;{searchQuery.trim()}&quot;</span>
           </div>
           <select
             value={effectiveSearchSortBy}

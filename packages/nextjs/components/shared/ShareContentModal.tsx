@@ -119,7 +119,7 @@ export function ShareContentModal({ contentId, title, description, onClose }: Sh
           </button>
         </div>
       </div>
-      <div className="modal-backdrop bg-[#090A0C]/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="modal-backdrop bg-black/60 backdrop-blur-sm" onClick={onClose} />
     </div>
   );
 }

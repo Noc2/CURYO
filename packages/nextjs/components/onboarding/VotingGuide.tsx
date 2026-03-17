@@ -53,7 +53,7 @@ export function VotingGuide() {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 80 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="fixed right-4 top-24 z-50 w-80 rounded-2xl bg-[#141316] shadow-[0_24px_54px_rgba(9,10,12,0.42)]"
+        className="fixed right-4 top-24 z-50 w-80 rounded-2xl bg-base-200 shadow-[0_24px_54px_rgba(9,10,12,0.42)]"
       >
         {/* Header */}
         <div

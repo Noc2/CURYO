@@ -138,10 +138,10 @@ export function StakeSelector({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <div className="absolute inset-0 bg-[#090A0C]/40 backdrop-blur-sm" onClick={onCancel} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
 
           <motion.div
-            className="relative w-full max-w-md rounded-t-2xl bg-[#141316] p-6 shadow-2xl sm:rounded-2xl"
+            className="relative w-full max-w-md rounded-t-2xl bg-base-200 p-6 shadow-2xl sm:rounded-2xl"
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
@@ -324,7 +324,7 @@ export function StakeSelector({
               </button>
               <button
                 onClick={() => onConfirm(amount)}
-                className={`btn flex-1 text-[#F5F0EB] ${isUp ? "bg-success hover:bg-success/90" : "bg-error hover:bg-error/90"}`}
+                className={`btn flex-1 text-primary-content ${isUp ? "bg-success hover:bg-success/90" : "bg-error hover:bg-error/90"}`}
                 disabled={!hasVoterId || cooldownActive || amount < 1 || amount > maxStake || maxStake < 1}
               >
                 Stake {amount} {symbol}

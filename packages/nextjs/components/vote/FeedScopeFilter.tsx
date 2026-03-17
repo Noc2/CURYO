@@ -75,10 +75,10 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
 
       {isOpen && (
         <>
-          <div className="fixed inset-0 z-30 bg-[#090A0C]/45 sm:hidden" onClick={close} aria-hidden="true" />
+          <div className="fixed inset-0 z-30 bg-black/45 sm:hidden" onClick={close} aria-hidden="true" />
           <div
             ref={panelRef}
-            className="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl bg-[#141316] p-4 shadow-2xl sm:absolute sm:inset-auto sm:left-0 sm:top-full sm:z-30 sm:mt-2 sm:w-72 sm:rounded-2xl sm:p-2"
+            className="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl bg-base-200 p-4 shadow-2xl sm:absolute sm:inset-auto sm:left-0 sm:top-full sm:z-30 sm:mt-2 sm:w-72 sm:rounded-2xl sm:p-2"
             role="dialog"
             aria-label={`${label} options`}
           >

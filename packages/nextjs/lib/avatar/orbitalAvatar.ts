@@ -222,17 +222,17 @@ function getAddressVariant(address: string) {
 
   return {
     compositionRotation: unitHash(`${address}:orb-rotation`) * 360,
-    orbHighlightColor: "#FFF8F2",
+    orbHighlightColor: "#F5F0EB",
     orbLightColor: hslToHex(warmHue, Math.min(saturation - 6, 88), 84),
     orbMidColor: hslToHex(orbHue, Math.min(saturation + 8, 94), 64),
     orbWarmColor: hslToHex(warmHue, Math.min(saturation + 4, 92), 50),
     orbDeepColor: hslToHex(deepHue, Math.min(saturation - 8, 74), 34),
     rimColor: hslToHex(baseHue + 182, 28, 66),
-    bloomColor: "#FFD77E",
+    bloomColor: "#F26426",
     pocketColor: hslToHex(pocketHue, Math.min(saturation - 6, 82), 42),
     emberPocketColor: hslToHex(warmHue, Math.min(saturation - 12, 78), 46),
     foldColor: "#F5E3D2",
-    foldStrokeColor: "#FFF7F1",
+    foldStrokeColor: "#F5F0EB",
     shadowColor: hslToHex(baseHue + 56, 34, 26),
     accentColor: hslToHex(warmHue, Math.min(saturation + 2, 90), 78),
   };
@@ -295,10 +295,10 @@ function buildFlare(payload: ReputationAvatarPayload, orbit: OrbitalAvatarOrbit 
     opacity: 0.24 + accuracyConfidence * 0.76,
     headRadius: AVATAR_FLARE_HEAD_RADIUS,
     headAngleDegrees: FLARE_START_ROTATION_DEGREES + sweepDegrees,
-    startColor: "#F45C4D",
-    middleColor: "#FFC37A",
-    endColor: "#FFF4DB",
-    glowColor: "#FF8D65",
+    startColor: "#B3341B",
+    middleColor: "#F26426",
+    endColor: "#F5F0EB",
+    glowColor: "#F26426",
   };
 }
 
@@ -487,9 +487,8 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
     );
     defs.push(
       `<linearGradient id="orbital-avatar-flare-core-${hashHex}" x1="0.3" y1="0.12" x2="0.74" y2="0.88" gradientUnits="objectBoundingBox">
-        <stop stop-color="#FF9E78"/>
-        <stop offset="0.52" stop-color="#FFF0CF"/>
-        <stop offset="1" stop-color="#FFF8ED"/>
+        <stop stop-color="#F26426"/>
+        <stop offset="1" stop-color="#F5F0EB"/>
       </linearGradient>`,
     );
   }

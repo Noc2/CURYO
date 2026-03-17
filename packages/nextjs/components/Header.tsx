@@ -46,7 +46,7 @@ type HeaderNavLinkProps = {
 };
 
 const navIndicatorClassName =
-  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-linear-to-b from-[#FFB27A] via-[#F26426] to-[#B3341B] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
+  "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-linear-to-b from-[#F5F0EB] via-[#F26426] to-[#B3341B] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
 
 const HeaderNavLink = ({
   compact = false,
@@ -56,7 +56,7 @@ const HeaderNavLink = ({
   isActive,
   label,
 }: HeaderNavLinkProps) => {
-  const navTone = isActive ? "text-[#F5F0EB]" : "text-[#7E8996] group-hover:text-[#F5F0EB]";
+  const navTone = isActive ? "text-base-content" : "text-secondary group-hover:text-base-content";
 
   return (
     <Link
@@ -64,7 +64,7 @@ const HeaderNavLink = ({
       className={`group relative flex items-center gap-3 overflow-hidden rounded-xl ${
         compact ? "px-3 py-2.5" : "px-4 py-3"
       } transition-colors duration-200 ${
-        isActive ? "text-[#F5F0EB]" : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
+        isActive ? "text-base-content" : "text-base-content/60 hover:bg-base-content/[0.04] hover:text-base-content"
       }`}
     >
       <Icon className={`relative z-10 h-6 w-6 shrink-0 transition-colors duration-200 ${navTone}`} />
@@ -127,7 +127,7 @@ export const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "
                             className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                               isLinkActive
                                 ? "bg-primary/10 text-primary font-medium"
-                                : "text-base-content/60 hover:text-base-content hover:bg-[#F5F0EB]/[0.04]"
+                                : "text-base-content/60 hover:bg-base-content/[0.04] hover:text-base-content"
                             }`}
                           >
                             {link.label}
@@ -237,7 +237,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
         aria-label="Search content"
         value={inputValue}
         onChange={e => updateSearch(e.target.value)}
-        className={`input input-sm input-bordered pl-8 pr-7 border-[#F5F0EB]/8 bg-[#090A0C]/80 focus:border-primary/30 focus:bg-[#090A0C] text-base ${
+        className={`input input-sm input-bordered border-base-content/10 bg-base-300/80 pl-8 pr-7 text-base focus:border-primary/30 focus:bg-base-300 ${
           isSidebar ? "w-full max-w-full" : "w-40 lg:w-56"
         }`}
       />
@@ -305,7 +305,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
           value={draftValue}
           onChange={event => setDraftValue(event.target.value)}
           autoFocus
-          className="input input-sm w-full border-[#F5F0EB]/8 bg-[#090A0C]/85 pl-9 pr-9 text-base"
+          className="input input-sm w-full border-base-content/10 bg-base-300/85 pl-9 pr-9 text-base"
         />
         {draftValue ? (
           <button
@@ -345,7 +345,7 @@ export const Header = () => {
     <>
       {/* Mobile: top bar */}
       <div className="xl:hidden sticky top-0 z-20">
-        <div className="navbar min-h-0 shrink-0 justify-between bg-[#141316] px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6">
+        <div className="navbar min-h-0 shrink-0 justify-between bg-base-200 px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6">
           {mobileSearchOpen ? (
             <Suspense>
               <MobileHeaderSearch onClose={() => setMobileSearchOpen(false)} />
@@ -358,7 +358,7 @@ export const Header = () => {
                     <Bars3Icon className="h-5 w-5" />
                   </summary>
                   <ul
-                    className="menu menu-compact dropdown-content mt-3 w-64 rounded-xl bg-[#141316] p-2 shadow-lg"
+                    className="menu menu-compact dropdown-content mt-3 w-64 rounded-xl bg-base-200 p-2 shadow-lg"
                     onClick={() => burgerMenuRef?.current?.removeAttribute("open")}
                   >
                     <Suspense>
@@ -369,7 +369,7 @@ export const Header = () => {
                 <Link href="/" className="flex min-w-0 items-center gap-2">
                   <CuryoLogo className="w-8 h-8 shrink-0" />
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-display truncate text-[1.35rem] leading-none tracking-[0.08em] text-[#F5F0EB]">
+                    <span className="font-display truncate text-[1.35rem] leading-none tracking-[0.08em] text-base-content">
                       CURYO (BETA)
                     </span>
                     <span className="truncate text-base-content/60" style={{ fontSize: "14px" }}>
@@ -398,11 +398,11 @@ export const Header = () => {
       </div>
 
       {/* Desktop: left sidebar */}
-      <aside className="fixed left-0 top-0 z-20 hidden h-screen w-56 shrink-0 flex-col items-stretch bg-[#141316] py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
+      <aside className="fixed left-0 top-0 z-20 hidden h-screen w-56 shrink-0 flex-col items-stretch bg-base-200 py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
         <Link href="/" className="flex flex-row items-center gap-2 px-4 mb-4 shrink-0">
           <CuryoLogo className="w-9 h-9 shrink-0" />
           <div className="flex flex-col gap-0.5 items-start">
-            <span className="font-display text-[1.4rem] leading-none tracking-[0.08em] text-[#F5F0EB]">
+            <span className="font-display text-[1.4rem] leading-none tracking-[0.08em] text-base-content">
               CURYO (BETA)
             </span>
             <span className="text-base-content/60" style={{ fontSize: "14px" }}>

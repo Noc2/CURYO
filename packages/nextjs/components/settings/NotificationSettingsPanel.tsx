@@ -54,7 +54,7 @@ function NotificationPreferenceToggle({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex items-start justify-between gap-4 rounded-2xl bg-[#090A0C] px-4 py-3">
+    <label className="flex items-start justify-between gap-4 rounded-2xl bg-base-300 px-4 py-3">
       <div>
         <div className="text-base font-medium text-base-content">{label}</div>
         <p className="mt-1 text-sm text-base-content/50">{description}</p>
@@ -264,7 +264,7 @@ export function NotificationSettingsPanel({
             </div>
             <h2 className="mt-3 text-3xl font-semibold text-base-content sm:text-4xl">Notification settings</h2>
           </div>
-          <div className="rounded-2xl bg-[#090A0C] px-4 py-3 text-sm text-base-content/60">
+          <div className="rounded-2xl bg-base-300 px-4 py-3 text-sm text-base-content/60">
             {browserPermission === "granted"
               ? "Browser notifications are enabled."
               : browserPermission === "denied"
@@ -313,7 +313,7 @@ export function NotificationSettingsPanel({
             </div>
             <h2 className="mt-3 text-xl font-semibold text-base-content">Email notifications</h2>
           </div>
-          <div className="rounded-2xl bg-[#090A0C] px-4 py-3 text-sm text-base-content/60">
+          <div className="rounded-2xl bg-base-300 px-4 py-3 text-sm text-base-content/60">
             {!emailSettings.email
               ? "No email configured yet."
               : emailSettings.verified
@@ -370,7 +370,7 @@ export function NotificationSettingsPanel({
               type="button"
               onClick={() => void handleSaveEmailSettings()}
               disabled={isEmailSaving || (!emailDirty && emailPayload.email.length > 0)}
-              className="btn btn-curyo disabled:bg-[#F5F0EB]/60 disabled:text-[#090A0C]/70"
+              className="btn btn-curyo disabled:bg-base-content/60 disabled:text-base-100/70"
             >
               {isEmailSaving ? "Saving..." : emailPayload.email ? "Save email settings" : "Remove email notifications"}
             </button>

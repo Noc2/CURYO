@@ -805,7 +805,7 @@ const SubmitPage: NextPage = () => {
               </div>
 
               {/* Stake info */}
-              <div className="surface-card-secondary rounded-2xl p-4">
+              <div className="surface-card-nested rounded-2xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="flex items-center gap-1.5 text-base font-medium text-base-content">
@@ -820,7 +820,7 @@ const SubmitPage: NextPage = () => {
                   </div>
                 </div>
                 {submissionBonus !== undefined && (
-                  <div className="mt-2 flex items-center justify-between border-t border-[#F5F0EB]/10 pt-2">
+                  <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-2">
                     <p className="flex items-center gap-1.5 text-sm text-base-content/60">
                       Participation Bonus
                       <InfoTooltip text="Projected cREP reward from the Participation Pool, paid only when the submitter stake resolves on the healthy path after a settled round. Rate decreases as more cREP is distributed." />

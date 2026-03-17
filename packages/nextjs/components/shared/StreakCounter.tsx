@@ -5,8 +5,8 @@ import { useVoterStreak } from "~~/hooks/useVoterStreak";
 
 function getStreakColor(streak: number): string {
   if (streak >= 90) return "text-primary";
-  if (streak >= 30) return "text-[#F5F0EB]";
-  if (streak >= 7) return "text-[#7E8996]";
+  if (streak >= 30) return "text-base-content";
+  if (streak >= 7) return "text-secondary";
   return "text-base-content/80";
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { CuryoPlanetMark } from "~~/components/brand/CuryoPlanetMark";
+import { CuryoBrandMark } from "~~/components/brand/CuryoBrandMark";
 
 export function CuryoAnimation() {
   const ambientStars = [
@@ -34,7 +34,7 @@ export function CuryoAnimation() {
         ))}
 
         <div className="curyo-animation__logo relative h-[21rem] w-[21rem] sm:h-[28rem] sm:w-[28rem] lg:h-[38rem] lg:w-[38rem] xl:h-[41rem] xl:w-[41rem]">
-          <CuryoPlanetMark className="h-full w-full" title="Curyo logo" animationPreset="orbit" />
+          <CuryoBrandMark className="h-full w-full" title="Curyo logo" animationPreset="orbit" />
         </div>
       </div>
 

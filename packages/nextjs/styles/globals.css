@@ -26,7 +26,7 @@
   --color-neutral: #7e8996;
   --color-neutral-content: #090a0c;
   --color-base-100: #090a0c;
-  --color-base-200: #090a0c;
+  --color-base-200: #141316;
   --color-base-300: #090a0c;
   --color-base-content: #f5f0eb;
   --color-info: #7e8996;
@@ -81,6 +81,7 @@
   --curyo-steel: #7e8996;
   --curyo-surface: #090a0c;
   --curyo-surface-elevated: #141316;
+  --curyo-surface-nested: #090a0c;
   --curyo-shell-border: rgb(245 240 235 / 0.08);
   --curyo-shell-border-strong: rgb(245 240 235 / 0.14);
   --curyo-panel-shadow: 0 24px 56px rgb(9 10 12 / 0.34);
@@ -392,7 +393,7 @@ body {
   display: none;
 }
 
-.surface-card-secondary {
+.surface-card-nested {
   background: rgb(9 10 12 / 0.98);
   border: none;
   box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);

@@ -565,8 +565,8 @@ const obsidianEmberTheme = {
   text: "#F4F0EB",
   muted: "#AAA39D",
   accent: "#F26426",
-  accentSoft: "#F4D7C7",
-  accentText: "#120A06",
+  accentSoft: "#F5F0EB",
+  accentText: "#090A0C",
   chip: "#232730",
   chipText: "#D7DCE3",
   swatches: ["#F5F0EB", "#F26426", "#B3341B", "#7E8996", "#090A0C"],
@@ -574,19 +574,19 @@ const obsidianEmberTheme = {
     outer: "#F26426",
     dark: "#631D11",
     glowOpacity: 0.58,
-    endpointGlow: "#FF9355",
-    endpointCore: "#FFF4EA",
+    endpointGlow: "#F26426",
+    endpointCore: "#F5F0EB",
     stops: [
       { color: "#B3341B" },
-      { offset: "0.22", color: "#E24D21" },
-      { offset: "0.54", color: "#F36A29" },
-      { offset: "0.82", color: "#FDBE9B" },
-      { offset: "1", color: "#FFF5EA" },
+      { offset: "0.22", color: "#F26426" },
+      { offset: "0.54", color: "#F26426" },
+      { offset: "0.82", color: "#F5F0EB" },
+      { offset: "1", color: "#F5F0EB" },
     ],
     coreStops: [
-      { color: "#FF8E59" },
-      { offset: "0.48", color: "#FFE6D5" },
-      { offset: "1", color: "#FFF9F2" },
+      { color: "#F26426" },
+      { offset: "0.48", color: "#F5F0EB" },
+      { offset: "1", color: "#F5F0EB" },
     ],
   },
   logo: {
@@ -600,7 +600,7 @@ const obsidianEmberTheme = {
     ],
     shadowColor: "#09090B",
     shadowOpacity: 0.88,
-    highlightColor: "#FFF7F0",
+    highlightColor: "#F5F0EB",
     highlightOpacity: 0.72,
     atmosphereColor: "#FFC592",
     atmosphereOpacity: 0.22,
@@ -614,9 +614,9 @@ const obsidianEmberTheme = {
     glows: [
       { cx: 322, cy: 390, rx: 204, ry: 156, color: "#B92C1B", opacity: 0.34 },
       { cx: 610, cy: 322, rx: 244, ry: 170, color: "#F16C28", opacity: 0.28 },
-      { cx: 716, cy: 446, rx: 236, ry: 156, color: "#FFD0AD", opacity: 0.22 },
-      { cx: 608, cy: 664, rx: 270, ry: 154, color: "#4D261D", opacity: 0.28 },
-      { cx: 340, cy: 710, rx: 294, ry: 182, color: "#0C0C0F", opacity: 0.74 },
+      { cx: 716, cy: 446, rx: 236, ry: 156, color: "#F5F0EB", opacity: 0.22 },
+      { cx: 608, cy: 664, rx: 270, ry: 154, color: "#B3341B", opacity: 0.28 },
+      { cx: 340, cy: 710, rx: 294, ry: 182, color: "#090A0C", opacity: 0.74 },
     ],
     darkBand: "#4C261C",
     darkBandOpacity: 0.3,
@@ -972,72 +972,6 @@ function renderGradientPanel(theme, index) {
   };
 }
 
-function buildThemeBoard() {
-  const panels = themeDirections.map(renderThemePanel);
-  return `
-<svg width="1740" height="1160" viewBox="0 0 1740 1160" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="theme-board-bg" x1="70" y1="40" x2="1670" y2="1120" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#05080F"/>
-      <stop offset="0.55" stop-color="#09111B"/>
-      <stop offset="1" stop-color="#070B12"/>
-    </linearGradient>
-    <radialGradient id="theme-board-left" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(220 180) rotate(42) scale(340 260)">
-      <stop stop-color="#264B72" stop-opacity="0.24"/>
-      <stop offset="1" stop-color="#264B72" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="theme-board-right" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1490 180) rotate(144) scale(360 240)">
-      <stop stop-color="#F57A58" stop-opacity="0.16"/>
-      <stop offset="1" stop-color="#F57A58" stop-opacity="0"/>
-    </radialGradient>
-    ${panels.map(panel => panel.defs).join("")}
-  </defs>
-
-  <rect width="1740" height="1160" fill="url(#theme-board-bg)"/>
-  <rect width="1740" height="1160" fill="url(#theme-board-left)"/>
-  <rect width="1740" height="1160" fill="url(#theme-board-right)"/>
-
-  <text x="80" y="62" fill="#FFFFFF" font-size="44" font-weight="700" font-family="${sans}">Planet + Flare Theme Directions</text>
-  <text x="80" y="100" fill="#D8E0EA" fill-opacity="0.72" font-size="18" font-family="${sans}">Four site-wide color systems mapped back into the current logo geometry, with the planet pushed toward a stronger 3D read.</text>
-
-  ${panels.map(panel => panel.content).join("")}
-</svg>
-`.trim();
-}
-
-function buildExperimentalThemeBoard() {
-  const panels = experimentalThemeDirections.map(renderThemePanel);
-  return `
-<svg width="1740" height="1160" viewBox="0 0 1740 1160" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="experimental-board-bg" x1="70" y1="40" x2="1670" y2="1120" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#05070D"/>
-      <stop offset="0.48" stop-color="#0A111B"/>
-      <stop offset="1" stop-color="#070B12"/>
-    </linearGradient>
-    <radialGradient id="experimental-board-left" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(250 180) rotate(42) scale(360 260)">
-      <stop stop-color="#7A67FF" stop-opacity="0.18"/>
-      <stop offset="1" stop-color="#7A67FF" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="experimental-board-right" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1490 180) rotate(144) scale(380 250)">
-      <stop stop-color="#8EFFC8" stop-opacity="0.14"/>
-      <stop offset="1" stop-color="#8EFFC8" stop-opacity="0"/>
-    </radialGradient>
-    ${panels.map(panel => panel.defs).join("")}
-  </defs>
-
-  <rect width="1740" height="1160" fill="url(#experimental-board-bg)"/>
-  <rect width="1740" height="1160" fill="url(#experimental-board-left)"/>
-  <rect width="1740" height="1160" fill="url(#experimental-board-right)"/>
-
-  <text x="80" y="62" fill="#FFFFFF" font-size="44" font-weight="700" font-family="${sans}">Alternative Planet + Flare Directions</text>
-  <text x="80" y="100" fill="#D8E0EA" fill-opacity="0.72" font-size="18" font-family="${sans}">Four deliberately different brand systems, including new flare colors, to test how far the logo and UI can move before they become a different identity.</text>
-
-  ${panels.map(panel => panel.content).join("")}
-</svg>
-`.trim();
-}
-
 function buildObsidianEmberBoard() {
   const theme = obsidianEmberTheme;
   const prefix = `${theme.id}-board`;
@@ -1086,7 +1020,7 @@ function buildObsidianEmberBoard() {
     <linearGradient id="${prefix}-accent-line" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#C73C1E"/>
       <stop offset="0.5" stop-color="#F26426"/>
-      <stop offset="1" stop-color="#FFD0AD"/>
+      <stop offset="1" stop-color="#F5F0EB"/>
     </linearGradient>
     <radialGradient id="${prefix}-hero-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(810 252) rotate(142) scale(260 160)">
       <stop stop-color="#F26426" stop-opacity="0.18"/>
@@ -1114,13 +1048,13 @@ function buildObsidianEmberBoard() {
 
     <rect x="110" y="156" width="134" height="32" rx="16" fill="#1C1E23"/>
     <circle cx="132" cy="172" r="5" fill="#F26426"/>
-    <text x="148" y="178" fill="#F4D7C7" font-size="13" letter-spacing="1.8" font-family="${mono}">EMBER / GRAPHITE</text>
+    <text x="148" y="178" fill="#F5F0EB" font-size="13" letter-spacing="1.8" font-family="${mono}">EMBER / GRAPHITE</text>
 
     ${renderTextLines(headlineLines, 110, headlineY, headlineLineHeight, `fill="#F4F0EB" font-size="52" font-weight="700" font-family="${sans}"`)}
     ${renderTextLines(bodyLines, 110, bodyY, bodyLineHeight, `fill="#AAA39D" font-size="18" font-family="${sans}"`)}
 
     <rect x="110" y="${buttonY}" width="178" height="48" rx="24" fill="#F4F0EB"/>
-    <text x="199" y="${buttonY + 30}" text-anchor="middle" fill="#120A06" font-size="15" font-weight="700" font-family="${sans}">Launch Signal Feed</text>
+    <text x="199" y="${buttonY + 30}" text-anchor="middle" fill="#090A0C" font-size="15" font-weight="700" font-family="${sans}">Launch Signal Feed</text>
     <rect x="302" y="${buttonY}" width="156" height="48" rx="24" fill="#1E222A" stroke="#F2642642" stroke-width="1.5"/>
     <text x="380" y="${buttonY + 30}" text-anchor="middle" fill="#D7DCE3" font-size="15" font-weight="600" font-family="${sans}">Review Theme Tokens</text>
 
@@ -1149,17 +1083,17 @@ function buildObsidianEmberBoard() {
     <text x="1282" y="250" fill="#F4F0EB" font-size="15" font-weight="600" font-family="${sans}">Novelty</text>
     <rect x="1282" y="262" width="278" height="10" rx="5" fill="#20242B"/>
     <rect x="1282" y="262" width="224" height="10" rx="5" fill="#F26426"/>
-    <text x="1576" y="272" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="${mono}">82</text>
+    <text x="1576" y="272" text-anchor="end" fill="#F5F0EB" font-size="13" font-family="${mono}">82</text>
 
     <text x="1282" y="302" fill="#F4F0EB" font-size="15" font-weight="600" font-family="${sans}">Signal confidence</text>
     <rect x="1282" y="314" width="278" height="10" rx="5" fill="#20242B"/>
     <rect x="1282" y="314" width="202" height="10" rx="5" fill="#E65022"/>
-    <text x="1576" y="324" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="${mono}">74</text>
+    <text x="1576" y="324" text-anchor="end" fill="#F5F0EB" font-size="13" font-family="${mono}">74</text>
 
     <text x="1282" y="354" fill="#F4F0EB" font-size="15" font-weight="600" font-family="${sans}">Consensus heat</text>
     <rect x="1282" y="366" width="278" height="10" rx="5" fill="#20242B"/>
     <rect x="1282" y="366" width="182" height="10" rx="5" fill="#D1401D"/>
-    <text x="1576" y="376" text-anchor="end" fill="#F4D7C7" font-size="13" font-family="${mono}">68</text>
+    <text x="1576" y="376" text-anchor="end" fill="#F5F0EB" font-size="13" font-family="${mono}">68</text>
   </g>
 
   <g>
@@ -1172,7 +1106,7 @@ function buildObsidianEmberBoard() {
     <circle cx="1106" cy="573" r="8" fill="#F26426"/>
     <text x="1126" y="568" fill="#F4F0EB" font-size="16" font-weight="600" font-family="${sans}">Freshly surfacing</text>
     <text x="1126" y="590" fill="#AAA39D" font-size="13" font-family="${sans}">Orange tags call attention without relying on large filled blocks.</text>
-    <text x="1620" y="576" text-anchor="end" fill="#F4D7C7" font-size="14" font-family="${mono}">+28%</text>
+    <text x="1620" y="576" text-anchor="end" fill="#F5F0EB" font-size="14" font-family="${mono}">+28%</text>
 
     <rect x="1076" y="620" width="578" height="66" rx="20" fill="#1A1D23"/>
     <circle cx="1106" cy="653" r="8" fill="#F4F0EB"/>
@@ -1183,7 +1117,7 @@ function buildObsidianEmberBoard() {
     <rect x="1076" y="706" width="578" height="92" rx="22" fill="#181B20"/>
     <text x="1104" y="736" fill="#AAA39D" font-size="13" font-family="${sans}">Signal velocity</text>
     <path d="M1106 774C1152 772 1178 744 1212 744C1242 744 1258 760 1290 760C1328 760 1344 728 1384 728C1420 728 1438 754 1472 754C1504 754 1522 734 1554 734C1586 734 1604 748 1630 742" stroke="url(#${prefix}-accent-line)" stroke-width="5" stroke-linecap="round"/>
-    <circle cx="1630" cy="742" r="6" fill="#FFF4EA"/>
+    <circle cx="1630" cy="742" r="6" fill="#F5F0EB"/>
     <path d="M1106 786H1630" stroke="#FFFFFF12" stroke-width="1"/>
   </g>
 
@@ -1219,7 +1153,7 @@ function buildObsidianEmberBoard() {
     <text x="606" y="870" fill="#AAA39D" font-size="12" font-family="${sans}">Source confidence</text>
     <rect x="606" y="886" width="230" height="38" rx="19" fill="#111316"/>
     <rect x="608" y="888" width="72" height="34" rx="17" fill="#F4F0EB"/>
-    <text x="644" y="911" text-anchor="middle" fill="#120A06" font-size="13" font-weight="700" font-family="${sans}">Low</text>
+    <text x="644" y="911" text-anchor="middle" fill="#090A0C" font-size="13" font-weight="700" font-family="${sans}">Low</text>
     <text x="722" y="911" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="${sans}">Med</text>
     <text x="790" y="911" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="${sans}">High</text>
 
@@ -1227,7 +1161,7 @@ function buildObsidianEmberBoard() {
     <rect x="606" y="976" width="230" height="38" rx="19" fill="#111316"/>
     <rect x="719" y="978" width="115" height="34" rx="17" fill="#F26426"/>
     <text x="663" y="1001" text-anchor="middle" fill="#AAA39D" font-size="13" font-family="${sans}">Calm</text>
-    <text x="776" y="1001" text-anchor="middle" fill="#120A06" font-size="13" font-weight="700" font-family="${sans}">Active</text>
+    <text x="776" y="1001" text-anchor="middle" fill="#090A0C" font-size="13" font-weight="700" font-family="${sans}">Active</text>
   </g>
 
   <g>
@@ -1238,34 +1172,6 @@ function buildObsidianEmberBoard() {
     ${renderSwatches(theme.swatches, 1090, 974, 58, 16)}
     <text x="1076" y="1012" fill="#AAA39D" font-size="12" font-family="${mono}">#F5F0EB / #F26426 / #B3341B / #7E8996 / #090A0C</text>
   </g>
-</svg>
-`.trim();
-}
-
-function buildGradientBoard() {
-  const panels = gradientTreatments.map(renderGradientPanel);
-  return `
-<svg width="1740" height="1000" viewBox="0 0 1740 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="gradient-board-bg" x1="90" y1="40" x2="1660" y2="980" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#06090F"/>
-      <stop offset="0.52" stop-color="#0A121B"/>
-      <stop offset="1" stop-color="#070B11"/>
-    </linearGradient>
-    <radialGradient id="gradient-board-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1420 188) rotate(150) scale(360 220)">
-      <stop stop-color="#F4815C" stop-opacity="0.16"/>
-      <stop offset="1" stop-color="#F4815C" stop-opacity="0"/>
-    </radialGradient>
-    ${panels.map(panel => panel.defs).join("")}
-  </defs>
-
-  <rect width="1740" height="1000" fill="url(#gradient-board-bg)"/>
-  <rect width="1740" height="1000" fill="url(#gradient-board-glow)"/>
-
-  <text x="80" y="62" fill="#FFFFFF" font-size="42" font-weight="700" font-family="${sans}">3D Planet Gradient Tests</text>
-  <text x="80" y="98" fill="#D8E0EA" fill-opacity="0.72" font-size="18" font-family="${sans}">Same mark, different planet-lighting strategies. These isolate how far the sphere can go toward depth before it stops feeling like the current brand.</text>
-
-  ${panels.map(panel => panel.content).join("")}
 </svg>
 `.trim();
 }

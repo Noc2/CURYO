@@ -17,7 +17,7 @@ const GRAY = STEEL;
 const LIGHT_BG = "#F5F0EB";
 // Per-section accent colors (cycles through the website palette)
 const SECTION_COLORS = [EMBER, STEEL, EMBER_DEEP, EMBER, STEEL, EMBER_DEEP, EMBER];
-const coverLogoPath = new URL("../../public/logo.png", import.meta.url).pathname;
+const coverLogoPath = new URL("../../public/favicon.png", import.meta.url).pathname;
 
 // Module-level map populated during first render pass (for TOC page numbers)
 const sectionPageMap: Record<number, number> = {};

@@ -79,7 +79,7 @@ export function ProfileImageLightbox({
 
       {isOpen ? (
         <div
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-[#090A0C]/80 px-4 py-6 backdrop-blur-md"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md"
           role="dialog"
           aria-modal="true"
           aria-label={modalLabel}

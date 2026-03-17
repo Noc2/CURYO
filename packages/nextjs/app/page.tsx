@@ -42,7 +42,9 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
           {/* Title (left on large screens) */}
           <div className="flex flex-col items-center lg:items-start lg:flex-[0.98] lg:max-w-[35rem]">
-            <h1 className="display-hero text-6xl text-[#F5F0EB] sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">Curyo</h1>
+            <h1 className="display-hero text-6xl text-base-content sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">
+              Curyo
+            </h1>
             <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[32rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
               A Better Web, Guided by Human Reputation
             </p>
@@ -52,8 +54,8 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
         {/* How it works */}
         <div className="w-full mt-12">
-          <h2 className="display-section mb-6 text-center text-4xl text-[#F5F0EB] sm:mb-7 sm:text-5xl">
-            How it <span className="text-[#F5F0EB]">Works</span>
+          <h2 className="display-section mb-6 text-center text-4xl text-base-content sm:mb-7 sm:text-5xl">
+            How it <span className="text-base-content">Works</span>
           </h2>
           <p className="mx-auto mb-10 max-w-3xl text-center text-xl leading-8 text-base-content/60 sm:text-2xl sm:leading-9">
             Verified Humans Stake on Content to Create Public Ratings.
@@ -64,16 +66,10 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 key={title}
                 className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
               >
-                <div
-                  className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl"
-                  style={{
-                    backgroundColor: "#090A0C",
-                    boxShadow: "inset 0 0 0 1px rgba(245,240,235,0.06), 0 14px 28px rgba(9,10,12,0.24)",
-                  }}
-                >
-                  <Icon className="h-10 w-10 text-[#F5F0EB]" />
+                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[inset_0_0_0_1px_rgba(245,240,235,0.06),0_14px_28px_rgba(9,10,12,0.24)]">
+                  <Icon className="h-10 w-10 text-base-content" />
                 </div>
-                <h3 className="display-section mb-2 text-2xl text-[#F5F0EB]">{title}</h3>
+                <h3 className="display-section mb-2 text-2xl text-base-content">{title}</h3>
                 <p className="text-lg text-base-content/60">{description}</p>
               </div>
             ))}

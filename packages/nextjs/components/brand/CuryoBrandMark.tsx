@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-interface CuryoPlanetMarkProps {
+interface CuryoBrandMarkProps {
   className?: string;
   title?: string;
   animated?: boolean;
@@ -54,13 +54,13 @@ function scaleAroundCenter(scale: number) {
  * Uses the warm fold-with-flare art direction, with a stronger compact
  * treatment for header-sized logos and favicons.
  */
-export function CuryoPlanetMark({
+export function CuryoBrandMark({
   className = "h-8 w-8",
   title,
   animated = false,
   animationPreset,
   variant = "default",
-}: CuryoPlanetMarkProps) {
+}: CuryoBrandMarkProps) {
   const id = useId().replace(/:/g, "");
   const orbBaseId = `${id}-orb-base`;
   const orbRimId = `${id}-orb-rim`;
@@ -77,8 +77,8 @@ export function CuryoPlanetMark({
   const orbClipId = `${id}-orb-clip`;
 
   const resolvedPreset = animationPreset ?? (animated ? "orbit" : undefined);
-  const animationClass = resolvedPreset ? `curyo-planet-mark--${resolvedPreset}` : "";
-  const variantClass = `curyo-planet-mark--${variant}`;
+  const animationClass = resolvedPreset ? `curyo-brand-mark--${resolvedPreset}` : "";
+  const variantClass = `curyo-brand-mark--${variant}`;
   const usesCompactVariant = variant === "compact";
   const usesHeroVariant = variant === "hero";
   const flareRadius = usesCompactVariant
@@ -130,12 +130,10 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(856 450) rotate(136) scale(720 702)"
           >
-            <stop stopColor="#FFF8F2" />
-            <stop offset="0.18" stopColor="#F8E1D0" />
-            <stop offset="0.34" stopColor="#F7B070" />
-            <stop offset="0.56" stopColor="#F26426" />
-            <stop offset="0.78" stopColor="#B23C3B" />
-            <stop offset="1" stopColor="#6A345F" />
+            <stop stopColor="#F5F0EB" />
+            <stop offset="0.24" stopColor="#F26426" />
+            <stop offset="0.58" stopColor="#B3341B" />
+            <stop offset="1" stopColor="#090A0C" />
           </radialGradient>
           <radialGradient
             id={orbRimId}
@@ -145,7 +143,7 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(438 516) rotate(30) scale(240 540)"
           >
-            <stop stopColor="#AFC5D7" stopOpacity="0.82" />
+            <stop stopColor="#7E8996" stopOpacity="0.82" />
             <stop offset="0.22" stopColor="#7E8996" stopOpacity="0.34" />
             <stop offset="1" stopColor="#7E8996" stopOpacity="0" />
           </radialGradient>
@@ -157,9 +155,9 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(710 520) rotate(128) scale(330 260)"
           >
-            <stop stopColor="#FFF8F3" stopOpacity="0.74" />
-            <stop offset="0.52" stopColor="#FFF8F3" stopOpacity="0.2" />
-            <stop offset="1" stopColor="#FFF8F3" stopOpacity="0" />
+            <stop stopColor="#F5F0EB" stopOpacity="0.74" />
+            <stop offset="0.52" stopColor="#F5F0EB" stopOpacity="0.2" />
+            <stop offset="1" stopColor="#F5F0EB" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={coralBloomId}
@@ -169,8 +167,8 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(930 612) rotate(166) scale(270 220)"
           >
-            <stop stopColor="#FFD77E" stopOpacity="0.82" />
-            <stop offset="1" stopColor="#FFD77E" stopOpacity="0" />
+            <stop stopColor="#F26426" stopOpacity="0.72" />
+            <stop offset="1" stopColor="#F26426" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={violetPocketId}
@@ -180,8 +178,8 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(500 866) rotate(-26) scale(334 244)"
           >
-            <stop stopColor="#6B37A5" stopOpacity="0.54" />
-            <stop offset="1" stopColor="#6B37A5" stopOpacity="0" />
+            <stop stopColor="#B3341B" stopOpacity="0.54" />
+            <stop offset="1" stopColor="#B3341B" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={bluePocketId}
@@ -191,28 +189,25 @@ export function CuryoPlanetMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(620 760) rotate(8) scale(320 180)"
           >
-            <stop stopColor="#8C4A53" stopOpacity="0.36" />
-            <stop offset="0.58" stopColor="#C46A4A" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#C46A4A" stopOpacity="0" />
+            <stop stopColor="#7E8996" stopOpacity="0.36" />
+            <stop offset="0.58" stopColor="#7E8996" stopOpacity="0.22" />
+            <stop offset="1" stopColor="#7E8996" stopOpacity="0" />
           </radialGradient>
           <linearGradient id={foldSheenId} x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#FFF7F0" stopOpacity="0" />
-            <stop offset="0.3" stopColor="#FFF7F0" stopOpacity="0.08" />
-            <stop offset="0.56" stopColor="#FFF7F0" stopOpacity="0.34" />
-            <stop offset="0.82" stopColor="#FFD7B2" stopOpacity="0.18" />
-            <stop offset="1" stopColor="#FFD7B2" stopOpacity="0" />
+            <stop stopColor="#F5F0EB" stopOpacity="0" />
+            <stop offset="0.3" stopColor="#F5F0EB" stopOpacity="0.08" />
+            <stop offset="0.56" stopColor="#F5F0EB" stopOpacity="0.34" />
+            <stop offset="0.82" stopColor="#F5F0EB" stopOpacity="0.18" />
+            <stop offset="1" stopColor="#F5F0EB" stopOpacity="0" />
           </linearGradient>
           <linearGradient id={flareGradientId} x1="860" y1="260" x2="1050" y2="736" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#F45C4D" />
-            <stop offset="0.24" stopColor="#FF8A5D" />
-            <stop offset="0.56" stopColor="#FFC37A" />
-            <stop offset="0.82" stopColor="#FFE1A7" />
-            <stop offset="1" stopColor="#FFF4DB" />
+            <stop stopColor="#B3341B" />
+            <stop offset="0.38" stopColor="#F26426" />
+            <stop offset="1" stopColor="#F5F0EB" />
           </linearGradient>
           <linearGradient id={flareCoreId} x1="870" y1="280" x2="1036" y2="716" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#FF9E78" />
-            <stop offset="0.48" stopColor="#FFF0CF" />
-            <stop offset="1" stopColor="#FFF8ED" />
+            <stop stopColor="#F26426" />
+            <stop offset="1" stopColor="#F5F0EB" />
           </linearGradient>
           <filter id={blur24Id} x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse">
             <feGaussianBlur stdDeviation="24" />
@@ -233,15 +228,15 @@ export function CuryoPlanetMark({
         ) : (
           <>
             <circle cx="700" cy="700" r={outerOrbitRadius} stroke="#FFFFFF" strokeOpacity="0.03" strokeWidth="2" />
-            <circle cx="700" cy="700" r={orbitAccentRadius} stroke="#342129" strokeOpacity="0.66" strokeWidth="12" />
-            <circle cx="700" cy="700" r={orbitTrackRadius} stroke="#1A1E28" strokeOpacity="0.96" strokeWidth="20" />
+            <circle cx="700" cy="700" r={orbitAccentRadius} stroke="#B3341B" strokeOpacity="0.24" strokeWidth="12" />
+            <circle cx="700" cy="700" r={orbitTrackRadius} stroke="#090A0C" strokeOpacity="0.96" strokeWidth="20" />
             <circle cx="700" cy="700" r={orbitArcRadius} stroke="#FFFFFF" strokeOpacity="0.055" strokeWidth="2" />
             <circle cx="700" cy="700" r={orbitInnerRadius} stroke="#FFFFFF" strokeOpacity="0.038" strokeWidth="1.4" />
             <circle
               cx="700"
               cy="700"
               r={orbitAccentRadius}
-              stroke="#F3A16E"
+              stroke="#F26426"
               strokeOpacity="0.08"
               strokeWidth="6"
               strokeLinecap="round"
@@ -262,14 +257,14 @@ export function CuryoPlanetMark({
           </>
         )}
 
-        <g className="curyo-planet-mark__flare-scale">
-          <g className={resolvedPreset ? "curyo-planet-mark__flare-orbit" : undefined}>
+        <g className="curyo-brand-mark__flare-scale">
+          <g className={resolvedPreset ? "curyo-brand-mark__flare-orbit" : undefined}>
             {usesCompactVariant ? (
               <>
                 <path
                   d={flarePath ?? undefined}
                   fill="none"
-                  stroke="#6D352A"
+                  stroke="#B3341B"
                   strokeOpacity="0.2"
                   strokeWidth={flareBodyStrokeWidth}
                   strokeLinecap="round"
@@ -303,7 +298,7 @@ export function CuryoPlanetMark({
                     cx="700"
                     cy="700"
                     r={flareRadius}
-                    stroke="#F45C4D"
+                    stroke="#F26426"
                     strokeOpacity={flareGlowOpacity}
                     strokeWidth={flareGlowStrokeWidth}
                     strokeLinecap="round"
@@ -315,7 +310,7 @@ export function CuryoPlanetMark({
                   cx="700"
                   cy="700"
                   r={flareRadius}
-                  stroke="#6D352A"
+                  stroke="#B3341B"
                   strokeOpacity="0.42"
                   strokeWidth={flareBodyStrokeWidth}
                   strokeLinecap="round"
@@ -343,19 +338,19 @@ export function CuryoPlanetMark({
                   transform={`rotate(${flareRotation} 700 700)`}
                 />
                 <circle
-                  className={resolvedPreset ? "curyo-planet-mark__node-halo" : undefined}
+                  className={resolvedPreset ? "curyo-brand-mark__node-halo" : undefined}
                   cx={nodePoint.x}
                   cy={nodePoint.y}
                   r={nodeHaloRadius}
-                  fill="#FF8D65"
+                  fill="#F26426"
                   fillOpacity={0.18}
                 />
                 <circle
-                  className={resolvedPreset ? "curyo-planet-mark__node" : undefined}
+                  className={resolvedPreset ? "curyo-brand-mark__node" : undefined}
                   cx={nodePoint.x}
                   cy={nodePoint.y}
                   r={nodeRadius}
-                  fill="#FFF3DF"
+                  fill="#F5F0EB"
                 />
               </>
             )}
@@ -379,60 +374,60 @@ export function CuryoPlanetMark({
             />
             <path
               d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z"
-              fill="#F5E3D2"
+              fill="#F5F0EB"
               fillOpacity="0.11"
             />
             <path
               d="M404 542C518 494 634 492 752 530C842 560 938 626 1038 724"
-              stroke="#FFF7F1"
+              stroke="#F5F0EB"
               strokeOpacity="0.16"
               strokeWidth="22"
               strokeLinecap="round"
             />
             <path
               d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110"
-              stroke="#E2B2A0"
+              stroke="#7E8996"
               strokeOpacity="0.1"
               strokeWidth="24"
               strokeLinecap="round"
             />
-            <g className={resolvedPreset ? "curyo-planet-mark__planet-highlight" : undefined}>
-              <circle cx="1118" cy="490" r="50" fill="#FFF9F2" fillOpacity="0.9" />
+            <g className={resolvedPreset ? "curyo-brand-mark__planet-highlight" : undefined}>
+              <circle cx="1118" cy="490" r="50" fill="#F5F0EB" fillOpacity="0.9" />
               <circle cx="664" cy="556" r="190" fill={`url(#${softWhiteId})`} />
             </g>
           </g>
 
-          <circle cx="700" cy="700" r="360" fill="none" stroke="#FFF8F2" strokeOpacity="0.14" strokeWidth="2" />
+          <circle cx="700" cy="700" r="360" fill="none" stroke="#F5F0EB" strokeOpacity="0.14" strokeWidth="2" />
         </g>
       </svg>
 
       <style jsx>{`
-        .curyo-planet-mark__flare-scale,
-        .curyo-planet-mark__flare-orbit,
-        .curyo-planet-mark__planet-highlight {
+        .curyo-brand-mark__flare-scale,
+        .curyo-brand-mark__flare-orbit,
+        .curyo-brand-mark__planet-highlight {
           transform-origin: 50% 50%;
           transform-box: view-box;
         }
 
-        .curyo-planet-mark--orbit .curyo-planet-mark__flare-orbit {
-          animation: curyo-planet-mark-orbit 14s linear infinite;
+        .curyo-brand-mark--orbit .curyo-brand-mark__flare-orbit {
+          animation: curyo-brand-mark-orbit 14s linear infinite;
         }
 
-        .curyo-planet-mark--orbit .curyo-planet-mark__planet-highlight {
-          animation: curyo-planet-mark-highlight 7.2s ease-in-out infinite;
+        .curyo-brand-mark--orbit .curyo-brand-mark__planet-highlight {
+          animation: curyo-brand-mark-highlight 7.2s ease-in-out infinite;
         }
 
-        .curyo-planet-mark--orbit .curyo-planet-mark__node-halo {
-          animation: curyo-planet-mark-node-halo 2.8s ease-in-out infinite;
+        .curyo-brand-mark--orbit .curyo-brand-mark__node-halo {
+          animation: curyo-brand-mark-node-halo 2.8s ease-in-out infinite;
           transform-origin: ${nodePoint.x}px ${nodePoint.y}px;
         }
 
-        .curyo-planet-mark--orbit .curyo-planet-mark__node {
-          animation: curyo-planet-mark-node 2.8s ease-in-out infinite;
+        .curyo-brand-mark--orbit .curyo-brand-mark__node {
+          animation: curyo-brand-mark-node 2.8s ease-in-out infinite;
           transform-origin: ${nodePoint.x}px ${nodePoint.y}px;
         }
 
-        @keyframes curyo-planet-mark-orbit {
+        @keyframes curyo-brand-mark-orbit {
           from {
             transform: rotate(0deg);
           }
@@ -442,7 +437,7 @@ export function CuryoPlanetMark({
           }
         }
 
-        @keyframes curyo-planet-mark-highlight {
+        @keyframes curyo-brand-mark-highlight {
           0%,
           100% {
             opacity: 0.82;
@@ -455,7 +450,7 @@ export function CuryoPlanetMark({
           }
         }
 
-        @keyframes curyo-planet-mark-node-halo {
+        @keyframes curyo-brand-mark-node-halo {
           0%,
           100% {
             opacity: 0.56;
@@ -468,7 +463,7 @@ export function CuryoPlanetMark({
           }
         }
 
-        @keyframes curyo-planet-mark-node {
+        @keyframes curyo-brand-mark-node {
           0%,
           100% {
             opacity: 0.96;
@@ -482,10 +477,10 @@ export function CuryoPlanetMark({
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .curyo-planet-mark--orbit .curyo-planet-mark__flare-orbit,
-          .curyo-planet-mark--orbit .curyo-planet-mark__planet-highlight,
-          .curyo-planet-mark--orbit .curyo-planet-mark__node-halo,
-          .curyo-planet-mark--orbit .curyo-planet-mark__node {
+          .curyo-brand-mark--orbit .curyo-brand-mark__flare-orbit,
+          .curyo-brand-mark--orbit .curyo-brand-mark__planet-highlight,
+          .curyo-brand-mark--orbit .curyo-brand-mark__node-halo,
+          .curyo-brand-mark--orbit .curyo-brand-mark__node {
             animation: none;
           }
         }

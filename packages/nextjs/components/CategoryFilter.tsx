@@ -172,7 +172,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                           handleSelect(category);
                           setMobileOpen(false);
                         }}
-                        className={`whitespace-nowrap ${isActive ? "bg-[#F26426] text-[#F5F0EB] hover:bg-[#F26426]" : ""}`}
+                        className={`whitespace-nowrap ${isActive ? "bg-primary text-primary-content hover:bg-primary" : ""}`}
                       >
                         {category}
                       </button>
@@ -240,7 +240,7 @@ export function CategoryFilter({ categories, activeCategory, onSelect, pillClass
                         <button
                           onClick={() => handleSelect(category)}
                           className={`whitespace-nowrap ${
-                            activeCategory === category ? "bg-[#F26426] text-[#F5F0EB] hover:bg-[#F26426]" : ""
+                            activeCategory === category ? "bg-primary text-primary-content hover:bg-primary" : ""
                           }`}
                         >
                           {category}

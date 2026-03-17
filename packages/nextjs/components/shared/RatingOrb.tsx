@@ -231,7 +231,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
 
       <div className="relative z-10 flex flex-col items-center justify-center text-center">
         <span
-          className="display-metric flex items-end justify-center text-[#F5F0EB]"
+          className="display-metric flex items-end justify-center text-base-content"
           style={{ fontSize: ratingFontSize, maxWidth: trackRadius * 1.52 }}
         >
           <span>{roundedDisplayedRating}</span>

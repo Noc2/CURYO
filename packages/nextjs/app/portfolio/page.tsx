@@ -192,7 +192,7 @@ export default function PortfolioPage() {
                 <button
                   type="button"
                   onClick={loadMore}
-                  className="w-full rounded-xl border border-base-content/10 px-4 py-3 text-sm font-medium text-base-content/70 transition-colors hover:border-primary/30 hover:text-[#F5F0EB]"
+                  className="w-full rounded-xl border border-base-content/10 px-4 py-3 text-sm font-medium text-base-content/70 transition-colors hover:border-primary/30 hover:text-base-content"
                 >
                   Load more votes
                 </button>

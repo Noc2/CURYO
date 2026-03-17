@@ -9,7 +9,7 @@
     "dev": "next dev",
     "format": "prettier --write . '!(node_modules|.next|contracts)/**/*'",
     "ipfs": "NEXT_PUBLIC_IPFS_BUILD=true yarn build && yarn bgipfs upload config init -u https://upload.bgipfs.com && CID=$(yarn bgipfs upload out | grep -o 'CID: [^ ]*' | cut -d' ' -f2) && [ ! -z \"$CID\" ] && echo '🚀 Upload complete! Your site is now available at: https://community.bgipfs.com/ipfs/'$CID || echo '❌ Upload failed'",
-    "lint": "next lint",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.mjs --ignore-pattern public --ignore-pattern .next --ignore-pattern out --ignore-pattern contracts",
     "serve": "next start",
     "start": "next dev",
     "vercel": "vercel --build-env YARN_ENABLE_IMMUTABLE_INSTALLS=false --build-env ENABLE_EXPERIMENTAL_COREPACK=1 --build-env VERCEL_TELEMETRY_DISABLED=1",
