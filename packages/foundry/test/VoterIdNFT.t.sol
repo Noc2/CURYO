@@ -71,6 +71,20 @@ contract VoterIdNFTTest is Test {
         voterIdNFT.addMinter(address(0));
     }
 
+    function test_SetGovernance_AllowsFutureOwnershipMigration() public {
+        address newGovernance = address(21);
+
+        vm.prank(admin);
+        voterIdNFT.setGovernance(newGovernance);
+
+        assertEq(voterIdNFT.governance(), newGovernance);
+
+        vm.prank(admin);
+        voterIdNFT.transferOwnership(newGovernance);
+
+        assertEq(voterIdNFT.owner(), newGovernance);
+    }
+
     function test_RemoveMinter() public {
         assertTrue(voterIdNFT.authorizedMinters(minterAddr));
 

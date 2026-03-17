@@ -62,6 +62,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     event StakeRecorded(uint256 indexed contentId, uint256 indexed epochId, uint256 indexed tokenId, uint256 amount);
     event DelegateSet(address indexed holder, address indexed delegate);
     event DelegateRemoved(address indexed holder, address indexed previousDelegate);
+    event GovernanceUpdated(address indexed governance);
 
     // ====================================================
     // Errors
@@ -87,7 +88,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     // ====================================================
 
     /// @notice The governance address (timelock) — ownership can only be transferred here
-    address public immutable governance;
+    address public governance;
 
     /// @notice Constructor for the VoterIdNFT contract
     /// @param _owner The initial contract owner (deployer, for setup)
@@ -120,6 +121,14 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         if (_minter == address(0)) revert InvalidAddress();
         authorizedMinters[_minter] = true;
         emit MinterAdded(_minter);
+    }
+
+    /// @notice Update the governance address that ownership can migrate to.
+    /// @dev Lets the current governance timelock retarget ownership before a governance migration.
+    function setGovernance(address _governance) external onlyOwner {
+        if (_governance == address(0)) revert InvalidAddress();
+        governance = _governance;
+        emit GovernanceUpdated(_governance);
     }
 
     /// @notice Remove an authorized minter
