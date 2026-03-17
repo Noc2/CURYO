@@ -130,10 +130,12 @@ export function CuryoBrandMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(856 450) rotate(136) scale(720 702)"
           >
-            <stop stopColor="#F5F0EB" />
-            <stop offset="0.24" stopColor="#F26426" />
-            <stop offset="0.58" stopColor="#B3341B" />
-            <stop offset="1" stopColor="#090A0C" />
+            <stop stopColor="#FFF8F2" />
+            <stop offset="0.18" stopColor="#F8E1D0" />
+            <stop offset="0.34" stopColor="#F7B070" />
+            <stop offset="0.56" stopColor="#F26426" />
+            <stop offset="0.78" stopColor="#B23C3B" />
+            <stop offset="1" stopColor="#6A345F" />
           </radialGradient>
           <radialGradient
             id={orbRimId}
@@ -143,7 +145,7 @@ export function CuryoBrandMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(438 516) rotate(30) scale(240 540)"
           >
-            <stop stopColor="#7E8996" stopOpacity="0.82" />
+            <stop stopColor="#AFC5D7" stopOpacity="0.82" />
             <stop offset="0.22" stopColor="#7E8996" stopOpacity="0.34" />
             <stop offset="1" stopColor="#7E8996" stopOpacity="0" />
           </radialGradient>
@@ -155,9 +157,9 @@ export function CuryoBrandMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(710 520) rotate(128) scale(330 260)"
           >
-            <stop stopColor="#F5F0EB" stopOpacity="0.74" />
-            <stop offset="0.52" stopColor="#F5F0EB" stopOpacity="0.2" />
-            <stop offset="1" stopColor="#F5F0EB" stopOpacity="0" />
+            <stop stopColor="#FFF8F3" stopOpacity="0.74" />
+            <stop offset="0.52" stopColor="#FFF8F3" stopOpacity="0.2" />
+            <stop offset="1" stopColor="#FFF8F3" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={coralBloomId}
@@ -167,8 +169,8 @@ export function CuryoBrandMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(930 612) rotate(166) scale(270 220)"
           >
-            <stop stopColor="#F26426" stopOpacity="0.72" />
-            <stop offset="1" stopColor="#F26426" stopOpacity="0" />
+            <stop stopColor="#FFD77E" stopOpacity="0.82" />
+            <stop offset="1" stopColor="#FFD77E" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={violetPocketId}
@@ -178,8 +180,8 @@ export function CuryoBrandMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(500 866) rotate(-26) scale(334 244)"
           >
-            <stop stopColor="#B3341B" stopOpacity="0.54" />
-            <stop offset="1" stopColor="#B3341B" stopOpacity="0" />
+            <stop stopColor="#6B37A5" stopOpacity="0.54" />
+            <stop offset="1" stopColor="#6B37A5" stopOpacity="0" />
           </radialGradient>
           <radialGradient
             id={bluePocketId}
@@ -189,25 +191,28 @@ export function CuryoBrandMark({
             gradientUnits="userSpaceOnUse"
             gradientTransform="translate(620 760) rotate(8) scale(320 180)"
           >
-            <stop stopColor="#7E8996" stopOpacity="0.36" />
-            <stop offset="0.58" stopColor="#7E8996" stopOpacity="0.22" />
-            <stop offset="1" stopColor="#7E8996" stopOpacity="0" />
+            <stop stopColor="#8C4A53" stopOpacity="0.36" />
+            <stop offset="0.58" stopColor="#C46A4A" stopOpacity="0.22" />
+            <stop offset="1" stopColor="#C46A4A" stopOpacity="0" />
           </radialGradient>
           <linearGradient id={foldSheenId} x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#F5F0EB" stopOpacity="0" />
-            <stop offset="0.3" stopColor="#F5F0EB" stopOpacity="0.08" />
-            <stop offset="0.56" stopColor="#F5F0EB" stopOpacity="0.34" />
-            <stop offset="0.82" stopColor="#F5F0EB" stopOpacity="0.18" />
-            <stop offset="1" stopColor="#F5F0EB" stopOpacity="0" />
+            <stop stopColor="#FFF7F0" stopOpacity="0" />
+            <stop offset="0.3" stopColor="#FFF7F0" stopOpacity="0.08" />
+            <stop offset="0.56" stopColor="#FFF7F0" stopOpacity="0.34" />
+            <stop offset="0.82" stopColor="#FFD7B2" stopOpacity="0.18" />
+            <stop offset="1" stopColor="#FFD7B2" stopOpacity="0" />
           </linearGradient>
           <linearGradient id={flareGradientId} x1="860" y1="260" x2="1050" y2="736" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#B3341B" />
-            <stop offset="0.38" stopColor="#F26426" />
-            <stop offset="1" stopColor="#F5F0EB" />
+            <stop stopColor="#F45C4D" />
+            <stop offset="0.24" stopColor="#FF8A5D" />
+            <stop offset="0.56" stopColor="#FFC37A" />
+            <stop offset="0.82" stopColor="#FFE1A7" />
+            <stop offset="1" stopColor="#FFF4DB" />
           </linearGradient>
           <linearGradient id={flareCoreId} x1="870" y1="280" x2="1036" y2="716" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#F26426" />
-            <stop offset="1" stopColor="#F5F0EB" />
+            <stop stopColor="#FF9E78" />
+            <stop offset="0.48" stopColor="#FFF0CF" />
+            <stop offset="1" stopColor="#FFF8ED" />
           </linearGradient>
           <filter id={blur24Id} x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse">
             <feGaussianBlur stdDeviation="24" />
@@ -228,15 +233,15 @@ export function CuryoBrandMark({
         ) : (
           <>
             <circle cx="700" cy="700" r={outerOrbitRadius} stroke="#FFFFFF" strokeOpacity="0.03" strokeWidth="2" />
-            <circle cx="700" cy="700" r={orbitAccentRadius} stroke="#B3341B" strokeOpacity="0.24" strokeWidth="12" />
-            <circle cx="700" cy="700" r={orbitTrackRadius} stroke="#090A0C" strokeOpacity="0.96" strokeWidth="20" />
+            <circle cx="700" cy="700" r={orbitAccentRadius} stroke="#342129" strokeOpacity="0.66" strokeWidth="12" />
+            <circle cx="700" cy="700" r={orbitTrackRadius} stroke="#1A1E28" strokeOpacity="0.96" strokeWidth="20" />
             <circle cx="700" cy="700" r={orbitArcRadius} stroke="#FFFFFF" strokeOpacity="0.055" strokeWidth="2" />
             <circle cx="700" cy="700" r={orbitInnerRadius} stroke="#FFFFFF" strokeOpacity="0.038" strokeWidth="1.4" />
             <circle
               cx="700"
               cy="700"
               r={orbitAccentRadius}
-              stroke="#F26426"
+              stroke="#F3A16E"
               strokeOpacity="0.08"
               strokeWidth="6"
               strokeLinecap="round"
@@ -264,8 +269,8 @@ export function CuryoBrandMark({
                 <path
                   d={flarePath ?? undefined}
                   fill="none"
-                  stroke="#B3341B"
-                  strokeOpacity="0.2"
+                  stroke="#6D352A"
+                  strokeOpacity="0.42"
                   strokeWidth={flareBodyStrokeWidth}
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -298,7 +303,7 @@ export function CuryoBrandMark({
                     cx="700"
                     cy="700"
                     r={flareRadius}
-                    stroke="#F26426"
+                    stroke="#F45C4D"
                     strokeOpacity={flareGlowOpacity}
                     strokeWidth={flareGlowStrokeWidth}
                     strokeLinecap="round"
@@ -310,7 +315,7 @@ export function CuryoBrandMark({
                   cx="700"
                   cy="700"
                   r={flareRadius}
-                  stroke="#B3341B"
+                  stroke="#6D352A"
                   strokeOpacity="0.42"
                   strokeWidth={flareBodyStrokeWidth}
                   strokeLinecap="round"
@@ -342,7 +347,7 @@ export function CuryoBrandMark({
                   cx={nodePoint.x}
                   cy={nodePoint.y}
                   r={nodeHaloRadius}
-                  fill="#F26426"
+                  fill="#FF8D65"
                   fillOpacity={0.18}
                 />
                 <circle
@@ -350,7 +355,7 @@ export function CuryoBrandMark({
                   cx={nodePoint.x}
                   cy={nodePoint.y}
                   r={nodeRadius}
-                  fill="#F5F0EB"
+                  fill="#FFF3DF"
                 />
               </>
             )}
@@ -374,30 +379,30 @@ export function CuryoBrandMark({
             />
             <path
               d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z"
-              fill="#F5F0EB"
+              fill="#F5E3D2"
               fillOpacity="0.11"
             />
             <path
               d="M404 542C518 494 634 492 752 530C842 560 938 626 1038 724"
-              stroke="#F5F0EB"
+              stroke="#FFF7F1"
               strokeOpacity="0.16"
               strokeWidth="22"
               strokeLinecap="round"
             />
             <path
               d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110"
-              stroke="#7E8996"
+              stroke="#E2B2A0"
               strokeOpacity="0.1"
               strokeWidth="24"
               strokeLinecap="round"
             />
             <g className={resolvedPreset ? "curyo-brand-mark__planet-highlight" : undefined}>
-              <circle cx="1118" cy="490" r="50" fill="#F5F0EB" fillOpacity="0.9" />
+              <circle cx="1118" cy="490" r="50" fill="#FFF9F2" fillOpacity="0.9" />
               <circle cx="664" cy="556" r="190" fill={`url(#${softWhiteId})`} />
             </g>
           </g>
 
-          <circle cx="700" cy="700" r="360" fill="none" stroke="#F5F0EB" strokeOpacity="0.14" strokeWidth="2" />
+          <circle cx="700" cy="700" r="360" fill="none" stroke="#FFF8F2" strokeOpacity="0.14" strokeWidth="2" />
         </g>
       </svg>
 
