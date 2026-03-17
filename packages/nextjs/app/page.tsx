@@ -34,19 +34,20 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
     <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
       <div className="w-full max-w-7xl flex flex-col items-center">
         {/* Hero: stacked on mobile, side-by-side on large screens */}
-        <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-6 xl:gap-10">
+        <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-4 xl:gap-8">
           {/* Animation (right on large screens) */}
-          <div className="lg:flex-[1.02]">
+          <div className="lg:flex-[0.92]">
             <CuryoAnimation />
           </div>
 
           {/* Title (left on large screens) */}
-          <div className="flex flex-col items-center lg:items-start lg:flex-[0.98] lg:max-w-[35rem]">
-            <h1 className="display-hero text-6xl text-base-content sm:text-7xl lg:text-[5.75rem] xl:text-[6.25rem]">
-              Curyo
+          <div className="flex flex-col items-center lg:items-start lg:flex-[1.08] lg:max-w-[43rem]">
+            <h1 className="hero-headline max-w-[14ch] text-center text-[3rem] text-base-content sm:text-[4.2rem] lg:max-w-none lg:text-left lg:text-[4.85rem] xl:text-[5.45rem]">
+              <span className="block">A Better Web,</span>
+              <span className="block">Guided by Human Reputation</span>
             </h1>
-            <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[32rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
-              A Better Web, Guided by Human Reputation
+            <p className="mt-5 max-w-[31rem] text-center text-lg leading-7 text-base-content/72 sm:max-w-[35rem] sm:text-xl sm:leading-8 lg:max-w-[33rem] lg:text-left lg:text-[1.45rem] lg:leading-[1.45]">
+              Verified Humans Stake on Content to Create Public Ratings.
             </p>
             <LandingPageActions />
           </div>
@@ -54,12 +55,9 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
         {/* How it works */}
         <div className="w-full mt-12">
-          <h2 className="display-section mb-6 text-center text-4xl text-base-content sm:mb-7 sm:text-5xl">
+          <h2 className="display-section mb-8 text-center text-4xl text-base-content sm:mb-10 sm:text-5xl">
             How it <span className="text-base-content">Works</span>
           </h2>
-          <p className="mx-auto mb-10 max-w-3xl text-center text-xl leading-8 text-base-content/60 sm:text-2xl sm:leading-9">
-            Verified Humans Stake on Content to Create Public Ratings.
-          </p>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {STEPS.map(({ icon: Icon, title, description }) => (
               <div

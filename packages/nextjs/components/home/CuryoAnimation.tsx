@@ -4,19 +4,17 @@ import { CuryoBrandMark } from "~~/components/brand/CuryoBrandMark";
 
 export function CuryoAnimation() {
   const ambientStars = [
-    { x: 12, y: 20, size: 8, color: "rgba(245, 240, 235, 0.88)" },
-    { x: 18, y: 74, size: 6, color: "rgba(242, 100, 38, 0.82)" },
-    { x: 80, y: 16, size: 7, color: "rgba(126, 137, 150, 0.84)" },
-    { x: 87, y: 72, size: 5, color: "rgba(179, 52, 27, 0.76)" },
-    { x: 27, y: 11, size: 4, color: "rgba(245, 240, 235, 0.74)" },
-    { x: 74, y: 86, size: 4, color: "rgba(126, 137, 150, 0.68)" },
+    { x: 14, y: 22, size: 6, color: "rgba(245, 240, 235, 0.76)" },
+    { x: 22, y: 72, size: 4, color: "rgba(242, 100, 38, 0.62)" },
+    { x: 78, y: 18, size: 5, color: "rgba(126, 137, 150, 0.7)" },
+    { x: 84, y: 70, size: 4, color: "rgba(179, 52, 27, 0.56)" },
   ];
 
   return (
-    <div className="mx-auto flex h-[500px] w-full items-center justify-center sm:h-[680px] lg:h-[820px] xl:h-[880px]">
-      <div className="relative flex h-[32rem] w-[26rem] items-center justify-center sm:h-[42rem] sm:w-[34rem] lg:h-[52rem] lg:w-[45rem] xl:h-[57rem] xl:w-[50rem]">
-        <div className="absolute inset-[4%] rounded-full bg-[radial-gradient(circle,_rgba(242,100,38,0.18),_rgba(179,52,27,0.12)_22%,_rgba(126,137,150,0.08)_46%,_rgba(9,10,12,0)_74%)] blur-3xl" />
-        <div className="absolute inset-[12%] rounded-full bg-[radial-gradient(circle,_rgba(245,240,235,0.08),_rgba(9,10,12,0)_68%)] blur-[120px]" />
+    <div className="mx-auto flex h-[360px] w-full items-center justify-center sm:h-[500px] lg:h-[620px] xl:h-[680px]">
+      <div className="relative flex h-[24rem] w-[20rem] items-center justify-center sm:h-[32rem] sm:w-[28rem] lg:h-[40rem] lg:w-[35rem] xl:h-[44rem] xl:w-[39rem]">
+        <div className="absolute inset-[10%] rounded-full bg-[radial-gradient(circle,_rgba(242,100,38,0.12),_rgba(179,52,27,0.08)_24%,_rgba(126,137,150,0.05)_50%,_rgba(9,10,12,0)_74%)] blur-3xl" />
+        <div className="absolute inset-[16%] rounded-full bg-[radial-gradient(circle,_rgba(245,240,235,0.06),_rgba(9,10,12,0)_70%)] blur-[96px]" />
 
         {ambientStars.map(star => (
           <span
@@ -33,19 +31,19 @@ export function CuryoAnimation() {
           />
         ))}
 
-        <div className="curyo-animation__logo relative h-[21rem] w-[21rem] sm:h-[28rem] sm:w-[28rem] lg:h-[38rem] lg:w-[38rem] xl:h-[41rem] xl:w-[41rem]">
-          <CuryoBrandMark className="h-full w-full" title="Curyo logo" animationPreset="orbit" />
+        <div className="curyo-animation__logo relative h-[16rem] w-[16rem] sm:h-[23rem] sm:w-[23rem] lg:h-[30rem] lg:w-[30rem] xl:h-[33rem] xl:w-[33rem]">
+          <CuryoBrandMark className="h-full w-full" title="Curyo logo" />
         </div>
       </div>
 
       <style jsx>{`
         .curyo-animation__logo {
-          filter: drop-shadow(0 0 68px rgba(242, 100, 38, 0.22)) drop-shadow(0 0 84px rgba(126, 137, 150, 0.12));
+          filter: drop-shadow(0 0 44px rgba(242, 100, 38, 0.16)) drop-shadow(0 0 56px rgba(126, 137, 150, 0.08));
         }
 
         .curyo-animation__star {
-          box-shadow: 0 0 18px currentColor;
-          opacity: 0.82;
+          box-shadow: 0 0 12px currentColor;
+          opacity: 0.7;
         }
       `}</style>
     </div>
