@@ -26,7 +26,7 @@
   --color-neutral: #7e8996;
   --color-neutral-content: #090a0c;
   --color-base-100: #090a0c;
-  --color-base-200: #141316;
+  --color-base-200: #17161a;
   --color-base-300: #090a0c;
   --color-base-content: #f5f0eb;
   --color-info: #7e8996;
@@ -80,7 +80,8 @@
   --curyo-warm-white: #f5f0eb;
   --curyo-steel: #7e8996;
   --curyo-surface: #090a0c;
-  --curyo-surface-elevated: #141316;
+  --curyo-surface-elevated: #17161a;
+  --curyo-surface-elevated-hover: #1d1c20;
   --curyo-surface-nested: #090a0c;
   --curyo-shell-border: rgb(245 240 235 / 0.08);
   --curyo-shell-border-strong: rgb(245 240 235 / 0.14);
@@ -171,7 +172,7 @@ body {
 /* Override DaisyUI dropdown content */
 .dropdown-content {
   font-size: 1rem !important; /* Enforce minimum 16px */
-  background: rgb(20 19 22 / 0.98);
+  background: rgb(23 22 26 / 0.98);
   border: none;
   box-shadow: var(--curyo-panel-shadow);
   backdrop-filter: blur(18px);
@@ -384,7 +385,7 @@ body {
 .surface-card {
   position: relative;
   overflow: hidden;
-  background: rgb(20 19 22 / 0.96);
+  background: rgb(23 22 26 / 0.96);
   border: none;
   box-shadow: var(--curyo-panel-shadow);
 }
@@ -409,12 +410,12 @@ body {
 }
 
 .embed-surface-hover:hover {
-  background: color-mix(in srgb, var(--curyo-surface-elevated) 90%, var(--curyo-warm-white) 10%) !important;
+  background: var(--curyo-surface-elevated-hover) !important;
 }
 
 .card.bg-base-200,
 .modal-box.bg-base-200 {
-  background: rgb(20 19 22 / 0.98) !important;
+  background: rgb(23 22 26 / 0.98) !important;
   border: none !important;
 }
 
@@ -598,7 +599,7 @@ body {
 
 .pill-inactive,
 .pill-filter {
-  background: rgb(20 19 22 / 0.96);
+  background: rgb(23 22 26 / 0.96);
   color: var(--color-base-content);
   border: none;
   box-shadow: none;
@@ -606,18 +607,18 @@ body {
 
 .pill-inactive:hover,
 .pill-filter:hover {
-  background: color-mix(in srgb, var(--curyo-surface-elevated) 90%, var(--curyo-warm-white) 10%);
+  background: var(--curyo-surface-elevated-hover);
 }
 
 .pill-inactive-muted {
-  background: rgb(20 19 22 / 0.96);
+  background: rgb(23 22 26 / 0.96);
   color: rgb(245 240 235 / 0.6);
   border: none;
   box-shadow: none;
 }
 
 .pill-inactive-muted:hover {
-  background: color-mix(in srgb, var(--curyo-surface-elevated) 90%, var(--curyo-warm-white) 10%);
+  background: var(--curyo-surface-elevated-hover);
   color: rgb(245 240 235 / 0.8);
 }
 
