@@ -369,7 +369,7 @@ export const Header = () => {
                 <Link href="/" className="flex min-w-0 items-center gap-2">
                   <CuryoLogo className="w-7 h-7 shrink-0" />
                   <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate font-heading font-semibold text-base tracking-tight text-[#F5F0EB]">
+                    <span className="font-display truncate text-[1.35rem] leading-none tracking-[0.08em] text-[#F5F0EB]">
                       CURYO (BETA)
                     </span>
                     <span className="truncate text-base-content/60" style={{ fontSize: "14px" }}>
@@ -402,7 +402,9 @@ export const Header = () => {
         <Link href="/" className="flex flex-row items-center gap-2 px-4 mb-4 shrink-0">
           <CuryoLogo className="w-8 h-8 shrink-0" />
           <div className="flex flex-col gap-0.5 items-start">
-            <span className="font-heading font-semibold text-base tracking-tight text-[#F5F0EB]">CURYO (BETA)</span>
+            <span className="font-display text-[1.4rem] leading-none tracking-[0.08em] text-[#F5F0EB]">
+              CURYO (BETA)
+            </span>
             <span className="text-base-content/60" style={{ fontSize: "14px" }}>
               A Better Web
             </span>
