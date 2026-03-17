@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { EyeSlashIcon, ScaleIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
+import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
@@ -153,6 +154,8 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             ))}
           </div>
         </div>
+
+        <LandingFaq />
       </div>
     </div>
   );
