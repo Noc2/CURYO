@@ -1,4 +1,4 @@
-import { Bebas_Neue, Space_Grotesk } from "next/font/google";
+import { Bebas_Neue, Nunito } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@scaffold-ui/components/styles.css";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
@@ -7,10 +7,10 @@ import "~~/styles/globals.css";
 import "~~/styles/site-background.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
-const spaceGrotesk = Space_Grotesk({
+const nunito = Nunito({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-space-grotesk",
+  variable: "--font-nunito",
   display: "swap",
 });
 
@@ -28,7 +28,7 @@ export const metadata = getMetadata({
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
-    <html suppressHydrationWarning className={`${bebasNeue.variable} ${spaceGrotesk.variable}`}>
+    <html suppressHydrationWarning className={`${bebasNeue.variable} ${nunito.variable}`}>
       <body suppressHydrationWarning>
         <ThemeProvider defaultTheme="dark" forcedTheme="dark">
           <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>

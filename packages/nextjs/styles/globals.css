@@ -5,8 +5,8 @@
 @theme {
   --shadow-center: 0 0 12px -2px rgb(9 10 12 / 0.05);
   --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
-  --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-bebas-neue), ui-sans-serif, system-ui, sans-serif;
 }
 
