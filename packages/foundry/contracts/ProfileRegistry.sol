@@ -21,10 +21,10 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     uint256 public constant MAX_IMAGE_URL_LENGTH = 512;
     uint256 public constant MAX_STRATEGY_LENGTH = 560;
 
-    /// @dev Storage for the original profile shape. Keep append-only compatibility for proxy upgrades.
     struct StoredProfile {
         string name;
         string imageUrl;
+        string strategy;
         uint256 createdAt;
         uint256 updatedAt;
     }
@@ -34,10 +34,9 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     mapping(bytes32 => address) private _nameToAddress; // lowercase name hash => owner
     address[] private _registeredAddresses;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
-    mapping(address => string) private _profileStrategies;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 
     // --- Events ---
     event ProfileCreated(address indexed user, string name, string imageUrl, string strategy);
@@ -115,7 +114,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         // Update or create profile
         profile.name = name;
         profile.imageUrl = imageUrl;
-        _profileStrategies[msg.sender] = strategy;
+        profile.strategy = strategy;
         profile.updatedAt = block.timestamp;
 
         if (isNewProfile) {
@@ -138,7 +137,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         return Profile({
             name: profile.name,
             imageUrl: profile.imageUrl,
-            strategy: _profileStrategies[user],
+            strategy: profile.strategy,
             createdAt: profile.createdAt,
             updatedAt: profile.updatedAt
         });

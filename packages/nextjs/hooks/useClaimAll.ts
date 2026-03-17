@@ -33,22 +33,22 @@ export function useClaimAll() {
     try {
       for (let i = 0; i < items.length; i++) {
         setProgress({ current: i + 1, total: items.length });
-        const { contentId, epochId, claimType } = items[i];
+        const { contentId, roundId, claimType } = items[i];
 
         try {
           if (claimType === "refund") {
             await (writeVotingEngine as any)({
               functionName: "claimCancelledRoundRefund",
-              args: [contentId, epochId],
+              args: [contentId, roundId],
             });
           } else {
             await (writeDistributor as any)({
               functionName: "claimReward",
-              args: [contentId, epochId],
+              args: [contentId, roundId],
             });
           }
         } catch (e: any) {
-          console.error(`Claim failed for content #${contentId} epoch ${epochId}:`, e?.shortMessage || e?.message);
+          console.error(`Claim failed for content #${contentId} round ${roundId}:`, e?.shortMessage || e?.message);
         }
       }
       onComplete?.();

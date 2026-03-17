@@ -8,9 +8,6 @@ import { DocumentTextIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { governorAbi, useGovernanceContracts, useGovernanceWrite, useGovernorProposals } from "~~/hooks/useGovernance";
 
-// Re-export types for backwards compatibility
-export type { Proposal, ProposalState } from "./types";
-
 type FilterState = "all" | "active" | "pending" | "closed";
 
 export const ProposalList = () => {

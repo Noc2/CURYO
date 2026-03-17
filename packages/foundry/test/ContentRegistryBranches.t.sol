@@ -183,23 +183,6 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(registry.getSubmitterIdentity(id), submitter, "submitter identity should snapshot the holder");
     }
 
-    function test_GetSubmitterIdentity_ResolvesLegacyRawSubmitterViaCurrentDelegateMapping() public {
-        vm.startPrank(delegate);
-        crepToken.approve(address(registry), 10e6);
-        uint256 id = registry.submitContent("https://example.com/legacy-delegate-submit", "goal", "goal", "tags", 0);
-        vm.stopPrank();
-
-        assertEq(registry.getSubmitterIdentity(id), delegate, "legacy content should default to raw submitter");
-
-        vm.prank(owner);
-        registry.setVoterIdNFT(address(mockVoterIdNFT));
-        mockVoterIdNFT.setHolder(submitter);
-        vm.prank(submitter);
-        mockVoterIdNFT.setDelegate(delegate);
-
-        assertEq(registry.getSubmitterIdentity(id), submitter, "current delegate mapping should refine legacy identity");
-    }
-
     function test_SubmitContent_VoterIdNotConfigured_Succeeds() public {
         // No voterIdNFT set — should skip check
         vm.startPrank(submitter);

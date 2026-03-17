@@ -8,7 +8,7 @@ import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 
 export interface ClaimableItem {
   contentId: bigint;
-  epochId: bigint; // roundId (kept as epochId for backwards compat with ClaimAll)
+  roundId: bigint;
   reward: bigint;
   claimType: "reward" | "refund";
 }
@@ -135,7 +135,7 @@ export function useAllClaimableRewards() {
       const stake = safeBigInt(v.stake);
       items.push({
         contentId: safeBigInt(v.contentId),
-        epochId: safeBigInt(v.roundId),
+        roundId: safeBigInt(v.roundId),
         reward: stake,
         claimType: "refund",
       });
@@ -164,7 +164,7 @@ export function useAllClaimableRewards() {
 
         items.push({
           contentId: safeBigInt(v.contentId),
-          epochId: safeBigInt(v.roundId),
+          roundId: safeBigInt(v.roundId),
           reward,
           claimType: "reward",
         });
@@ -178,7 +178,7 @@ export function useAllClaimableRewards() {
       const reward = (stake * BigInt(REWARD_SPLIT_BPS.revealedLoserRefund)) / 10000n;
       items.push({
         contentId: safeBigInt(v.contentId),
-        epochId: safeBigInt(v.roundId),
+        roundId: safeBigInt(v.roundId),
         reward,
         claimType: "reward",
       });

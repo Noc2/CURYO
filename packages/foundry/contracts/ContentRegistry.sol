@@ -342,7 +342,7 @@ contract ContentRegistry is
     function markDormant(uint256 contentId) external nonReentrant {
         Content storage c = contents[contentId];
         require(c.status == ContentStatus.Active, "Not active");
-        require(block.timestamp > _getDormancyAnchor(contentId, c) + DORMANCY_PERIOD, "Dormancy period not elapsed");
+        require(block.timestamp > _getDormancyAnchor(contentId) + DORMANCY_PERIOD, "Dormancy period not elapsed");
         // Prevent dormancy while any round is still open, even if all votes have been revealed.
         if (votingEngine != address(0)) {
             uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
@@ -401,15 +401,10 @@ contract ContentRegistry is
     // --- VotingEngine callbacks ---
 
     /// @notice Called by VotingEngine to update raw activity timestamp after commits.
-    /// @dev Legacy content lazily seeds `dormancyAnchorAt` from the pre-upgrade activity value so
-    ///      post-upgrade commit spam cannot keep extending dormancy indefinitely.
+    /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
-        Content storage c = contents[contentId];
-        if (dormancyAnchorAt[contentId] == 0) {
-            dormancyAnchorAt[contentId] = c.lastActivityAt;
-        }
-        c.lastActivityAt = block.timestamp;
+        contents[contentId].lastActivityAt = block.timestamp;
     }
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
@@ -566,21 +561,14 @@ contract ContentRegistry is
     // --- View functions ---
 
     function getSubmitterIdentity(uint256 contentId) external view returns (address) {
-        address submitterIdentity = contentSubmitterIdentity[contentId];
-        address submitter = contents[contentId].submitter;
-        if (submitter == address(0)) return address(0);
-
-        address resolvedSubmitter = _resolveSubmitterIdentity(submitter);
-        if (submitterIdentity == address(0) || submitterIdentity == submitter) {
-            return resolvedSubmitter;
-        }
-        return submitterIdentity;
+        if (contents[contentId].submitter == address(0)) return address(0);
+        return contentSubmitterIdentity[contentId];
     }
 
     function isDormancyEligible(uint256 contentId) external view returns (bool) {
         Content storage c = contents[contentId];
         if (c.id == 0 || c.status != ContentStatus.Active) return false;
-        return block.timestamp > _getDormancyAnchor(contentId, c) + DORMANCY_PERIOD;
+        return block.timestamp > _getDormancyAnchor(contentId) + DORMANCY_PERIOD;
     }
 
     function isUrlSubmitted(string calldata url) external view returns (bool) {
@@ -617,9 +605,8 @@ contract ContentRegistry is
         return submitter;
     }
 
-    function _getDormancyAnchor(uint256 contentId, Content storage c) internal view returns (uint256) {
-        uint256 anchor = dormancyAnchorAt[contentId];
-        return anchor == 0 ? c.lastActivityAt : anchor;
+    function _getDormancyAnchor(uint256 contentId) internal view returns (uint256) {
+        return dormancyAnchorAt[contentId];
     }
 
     // --- Admin ---

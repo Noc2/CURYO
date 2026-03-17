@@ -21,19 +21,11 @@ export async function ensureSignedWriteSessionTable() {
         CREATE TABLE IF NOT EXISTS signed_write_sessions (
           token_hash TEXT PRIMARY KEY,
           wallet_address TEXT NOT NULL,
-          scope TEXT NOT NULL DEFAULT 'legacy',
+          scope TEXT NOT NULL,
           expires_at INTEGER NOT NULL,
           created_at INTEGER NOT NULL
         )
       `);
-      const tableInfo = await dbClient.execute("PRAGMA table_info(signed_write_sessions)");
-      const hasScopeColumn = tableInfo.rows.some(row => row.name === "scope");
-      if (!hasScopeColumn) {
-        await dbClient.execute(`
-          ALTER TABLE signed_write_sessions
-          ADD COLUMN scope TEXT NOT NULL DEFAULT 'legacy'
-        `);
-      }
       await dbClient.execute(`
         CREATE INDEX IF NOT EXISTS signed_write_sessions_wallet_scope_expires_idx
         ON signed_write_sessions (wallet_address, scope, expires_at)

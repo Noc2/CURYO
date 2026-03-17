@@ -32,10 +32,6 @@ function encodeBase36FixedPoint(numerator: bigint, denominator: bigint, fraction
   return normalizeToken(encoded);
 }
 
-export function getLegacyTwitterSyndicationToken(id: string): string {
-  return normalizeToken(((Number(id) / 1e15) * Math.PI).toString(36));
-}
-
 export function getPreciseTwitterSyndicationToken(
   id: string,
   fractionalDigits = DEFAULT_FRACTIONAL_DIGITS,
@@ -46,10 +42,6 @@ export function getPreciseTwitterSyndicationToken(
 }
 
 export function getTwitterSyndicationTokens(id: string): string[] {
-  const tokens = [
-    getPreciseTwitterSyndicationToken(id),
-    getLegacyTwitterSyndicationToken(id),
-  ].filter(Boolean);
-
-  return [...new Set(tokens)];
+  const token = getPreciseTwitterSyndicationToken(id);
+  return token ? [token] : [];
 }
