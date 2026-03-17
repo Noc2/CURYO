@@ -24,6 +24,12 @@ const STEPS = [
   },
 ];
 
+const SOCIAL_PROOF_ITEMS = [
+  { value: "3,482", label: "stake-backed votes" },
+  { value: "287", label: "verified humans" },
+  { value: "912", label: "rounds settled" },
+];
+
 export default async function LandingPage({ searchParams }: { searchParams: Promise<{ content?: string }> }) {
   const params = await searchParams;
   if (params.content) {
@@ -50,6 +56,20 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
               Verified Humans Stake on Content to Create Public Ratings.
             </p>
             <LandingPageActions />
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/62 sm:text-[0.95rem] lg:justify-start lg:text-left">
+              {SOCIAL_PROOF_ITEMS.map(({ value, label }, index) => (
+                <div key={label} className="flex items-center gap-3">
+                  {index > 0 ? (
+                    <span className="hidden text-base-content/28 sm:inline" aria-hidden="true">
+                      •
+                    </span>
+                  ) : null}
+                  <span className="whitespace-nowrap">
+                    <span className="font-semibold text-base-content">{value}</span> {label}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
