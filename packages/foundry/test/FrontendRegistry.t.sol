@@ -61,6 +61,7 @@ contract FrontendRegistryTest is Test {
     address public admin = address(1);
     address public frontend1 = address(3);
     address public frontend2 = address(4);
+    address public frontend3 = address(6);
     address public feeCreditor = address(5);
 
     uint256 public constant STAKE = 1000e6; // Fixed 1,000 cREP
@@ -96,6 +97,7 @@ contract FrontendRegistryTest is Test {
         // Mint cREP tokens for frontends (not transfer, to avoid governance lock checks)
         crepToken.mint(frontend1, 10_000e6);
         crepToken.mint(frontend2, 10_000e6);
+        crepToken.mint(frontend3, 10_000e6);
 
         // Mint cREP for fee crediting (to registry)
         crepToken.mint(address(registry), 1_000_000e6);
@@ -252,6 +254,58 @@ contract FrontendRegistryTest is Test {
         (address operator, uint256 stakedAmount,,) = registry.getFrontendInfo(frontend1);
         assertEq(operator, frontend1);
         assertEq(stakedAmount, STAKE);
+    }
+
+    function test_RegisteredFrontendsPagination_RemovesExitedEntriesAndAvoidsDuplicates() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(frontend2);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.startPrank(frontend3);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(frontend1);
+        registry.requestDeregister();
+        _completeDeregister(frontend1);
+
+        (address[] memory frontendsAfterFirstExit, uint256 totalAfterFirstExit) =
+            registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(totalAfterFirstExit, 2);
+        assertEq(frontendsAfterFirstExit.length, 2);
+        assertFalse(_contains(frontendsAfterFirstExit, frontend1));
+        assertTrue(_contains(frontendsAfterFirstExit, frontend2));
+        assertTrue(_contains(frontendsAfterFirstExit, frontend3));
+
+        vm.prank(frontend3);
+        registry.requestDeregister();
+        _completeDeregister(frontend3);
+
+        (address[] memory frontendsAfterSecondExit, uint256 totalAfterSecondExit) =
+            registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(totalAfterSecondExit, 1);
+        assertEq(frontendsAfterSecondExit.length, 1);
+        assertEq(frontendsAfterSecondExit[0], frontend2);
+
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        (address[] memory frontendsAfterReregister, uint256 totalAfterReregister) =
+            registry.getRegisteredFrontendsPaginated(0, 10);
+        assertEq(totalAfterReregister, 2);
+        assertEq(frontendsAfterReregister.length, 2);
+        assertEq(_count(frontendsAfterReregister, frontend1), 1);
+        assertEq(_count(frontendsAfterReregister, frontend2), 1);
+        assertFalse(_contains(frontendsAfterReregister, frontend3));
     }
 
     function test_DeregisterAfterUnslash() public {
@@ -669,5 +723,17 @@ contract FrontendRegistryTest is Test {
         vm.warp(block.timestamp + registry.UNBONDING_PERIOD() + 1);
         vm.prank(frontend);
         registry.completeDeregister();
+    }
+
+    function _contains(address[] memory frontends, address frontend) internal pure returns (bool) {
+        return _count(frontends, frontend) > 0;
+    }
+
+    function _count(address[] memory frontends, address frontend) internal pure returns (uint256 matches) {
+        for (uint256 i = 0; i < frontends.length; i++) {
+            if (frontends[i] == frontend) {
+                matches++;
+            }
+        }
     }
 }

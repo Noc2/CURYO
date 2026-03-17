@@ -54,11 +54,12 @@ contract FrontendRegistry is
 
     mapping(address => Frontend) public frontends;
     address[] public registeredFrontends;
+    mapping(address => uint256) private registeredFrontendIndexPlusOne;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
     mapping(address => uint256) public frontendExitAvailableAt;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     // --- Events ---
     event FrontendRegistered(address indexed frontend, address indexed operator, uint256 stakedAmount);
@@ -177,6 +178,7 @@ contract FrontendRegistry is
         });
 
         registeredFrontends.push(msg.sender);
+        registeredFrontendIndexPlusOne[msg.sender] = registeredFrontends.length;
 
         emit FrontendRegistered(msg.sender, msg.sender, STAKE_AMOUNT);
     }
@@ -202,6 +204,7 @@ contract FrontendRegistry is
         f.approved = false;
         f.operator = address(0); // Allow re-registration
         delete frontendExitAvailableAt[msg.sender];
+        _removeRegisteredFrontend(msg.sender);
 
         uint256 total = refund + pendingFees;
         if (total > 0) {
@@ -376,5 +379,24 @@ contract FrontendRegistry is
         frontendExitAvailableAt[frontend] = availableAt;
 
         emit FrontendExitRequested(frontend, availableAt);
+    }
+
+    function _removeRegisteredFrontend(address frontend) internal {
+        uint256 indexPlusOne = registeredFrontendIndexPlusOne[frontend];
+        if (indexPlusOne == 0) {
+            return;
+        }
+
+        uint256 index = indexPlusOne - 1;
+        uint256 lastIndex = registeredFrontends.length - 1;
+
+        if (index != lastIndex) {
+            address movedFrontend = registeredFrontends[lastIndex];
+            registeredFrontends[index] = movedFrontend;
+            registeredFrontendIndexPlusOne[movedFrontend] = index + 1;
+        }
+
+        registeredFrontends.pop();
+        delete registeredFrontendIndexPlusOne[frontend];
     }
 }
