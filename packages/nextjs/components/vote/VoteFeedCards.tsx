@@ -346,7 +346,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       }}
       className={`group flex w-[11.1rem] min-w-[11.1rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl text-left transition-colors snap-start sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem] ${
         selected
-          ? "bg-[#141316] ring-2 ring-primary/35 shadow-[0_18px_36px_rgba(9,10,12,0.26)]"
+          ? "bg-[#141316] ring-2 ring-inset ring-primary/35 shadow-[0_18px_36px_rgba(9,10,12,0.26)]"
           : "bg-[#141316] hover:bg-[#141316]"
       }`}
     >
