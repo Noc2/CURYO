@@ -8,10 +8,8 @@ import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundStats } from "~~/components/shared/RoundStats";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
-import { getBlindParticipationLabel } from "~~/lib/vote/voteIncentives";
 import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 
 interface VotingQuestionCardProps {
@@ -55,7 +53,6 @@ export function VotingQuestionCard({
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId);
-  const { ratePercent } = useParticipationRate();
   const {
     roundId,
     isEpoch1,
@@ -71,16 +68,13 @@ export function VotingQuestionCard({
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
-  const blindParticipationLabel = phase === "voting" && isEpoch1 ? getBlindParticipationLabel(ratePercent) : null;
   const votersNeeded = Math.max(0, minVoters - voteCount);
   const revealsNeeded = Math.max(0, minVoters - revealedCount);
   const incentivePrompt =
     phase !== "voting"
       ? null
       : isEpoch1
-        ? blindParticipationLabel
-          ? `${blindParticipationLabel} if you vote during the blind phase.`
-          : "Vote early to lock in the 4x blind-phase reward weight."
+        ? null
         : readyToSettle || thresholdReachedAt > 0
           ? "Live pools are visible and this round is close to settlement."
           : votersNeeded > 0
@@ -88,7 +82,7 @@ export function VotingQuestionCard({
             : revealsNeeded > 0
               ? `${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"} and this round can settle.`
               : "Live pools are visible. Add your vote and help settle this round.";
-  const incentivePromptClassName = isEpoch1 ? "text-primary/80" : "text-warning";
+  const incentivePromptClassName = "text-warning";
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
 

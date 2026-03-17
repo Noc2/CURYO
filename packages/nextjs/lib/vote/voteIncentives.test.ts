@@ -22,7 +22,7 @@ test("getRoundProgressMessaging makes blind rounds sell bonus and urgency", () =
   );
 
   assert.deepEqual(message, {
-    badgeLabel: "Blind · 4x rewards",
+    badgeLabel: "Blind",
     badgeTone: "primary",
     detailLabel: "+90% bonus · 11m left",
     detailTone: "warning",

@@ -3,8 +3,6 @@ import type { RoundSnapshot } from "~~/lib/contracts/roundVotingEngine";
 
 const REMAINING_LOSING_POOL_BPS = BPS_SCALE - REWARD_SPLIT_BPS.revealedLoserRefund;
 const VOTER_POOL_SHARE_BPS = Math.floor((REMAINING_LOSING_POOL_BPS * REWARD_SPLIT_BPS.voter) / BPS_SCALE);
-const EARLY_VOTER_REWARD_MULTIPLIER = EPOCH_WEIGHT_BPS.blind / EPOCH_WEIGHT_BPS.informed;
-
 type ProgressTone = "primary" | "warning" | "success" | "neutral";
 
 type IncentiveSnapshot = Pick<
@@ -81,7 +79,7 @@ export function getRoundProgressMessaging(
       snapshot.epoch1Remaining > 0 ? `${formatCompactDuration(snapshot.epoch1Remaining)} left` : "Vote early";
 
     return {
-      badgeLabel: `Blind · ${EARLY_VOTER_REWARD_MULTIPLIER}x rewards`,
+      badgeLabel: "Blind",
       badgeTone: "primary",
       detailLabel: bonusLabel ? `${bonusLabel} · ${urgencyLabel}` : urgencyLabel,
       detailTone: snapshot.epoch1Remaining <= 15 * 60 ? "warning" : "primary",
