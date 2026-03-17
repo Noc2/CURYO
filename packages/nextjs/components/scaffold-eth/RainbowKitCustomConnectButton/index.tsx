@@ -8,8 +8,6 @@ import { RevealBurnerPKModal } from "./RevealBurnerPKModal";
 import { WrongNetworkDropdown } from "./WrongNetworkDropdown";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { Address } from "viem";
-import { hardhat } from "viem/chains";
-import { Faucet } from "~~/components/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 
 /**
@@ -56,11 +54,6 @@ export const RainbowKitCustomConnectButton = ({ inlineMenu = false }: { inlineMe
                   <AddressQRCodeModal address={account.address as Address} modalId="qrcode-modal" />
                   <PortfolioModal address={account.address as Address} modalId="portfolio-modal" />
                   <RevealBurnerPKModal />
-                  {inlineMenu && chain?.id === hardhat.id && (
-                    <div className="[&>div>label:first-child]:hidden">
-                      <Faucet />
-                    </div>
-                  )}
                 </>
               );
             })()}
