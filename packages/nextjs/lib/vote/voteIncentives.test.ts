@@ -24,7 +24,7 @@ test("getRoundProgressMessaging makes blind rounds sell bonus and urgency", () =
   assert.deepEqual(message, {
     badgeLabel: "Blind",
     badgeTone: "primary",
-    detailLabel: "+90% bonus · 11m left",
+    detailLabel: "+90% bonus · 11:00 left",
     detailTone: "warning",
     tooltip:
       "Blind votes stay hidden and earn full reward weight. Open-phase votes use 25% informed weight, so early voters keep the 4x advantage.",

@@ -42,6 +42,25 @@ function formatPercent(value: number): string {
   return `${value.toLocaleString(undefined, { maximumFractionDigits })}%`;
 }
 
+export function formatPreciseDuration(seconds: number): string {
+  if (seconds <= 0) return "00:00";
+
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (days > 0) {
+    return `${days}d ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  }
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
 export function formatCompactDuration(seconds: number): string {
   if (seconds <= 0) return "0m";
 
@@ -76,7 +95,7 @@ export function getRoundProgressMessaging(
   if (snapshot.isEpoch1) {
     const bonusLabel = getBlindParticipationLabel(ratePercent);
     const urgencyLabel =
-      snapshot.epoch1Remaining > 0 ? `${formatCompactDuration(snapshot.epoch1Remaining)} left` : "Vote early";
+      snapshot.epoch1Remaining > 0 ? `${formatPreciseDuration(snapshot.epoch1Remaining)} left` : "Vote early";
 
     return {
       badgeLabel: "Blind",
