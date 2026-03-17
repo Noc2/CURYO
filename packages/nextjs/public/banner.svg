@@ -114,8 +114,8 @@
   </defs>
 
   <rect width="1600" height="520" fill="url(#banner-bg)" />
-  <circle cx="460" cy="256" r="250" fill="url(#banner-left-glow)" />
-  <circle cx="500" cy="246" r="145" fill="url(#banner-core-glow)" />
+  <circle cx="478" cy="322" r="250" fill="url(#banner-left-glow)" />
+  <circle cx="518" cy="312" r="145" fill="url(#banner-core-glow)" />
 
   <g opacity="0.84">
     <circle cx="1180" cy="98" r="4" fill="#FFDCE7" />
@@ -128,7 +128,7 @@
     <circle cx="174" cy="378" r="4" fill="#7E8996" />
   </g>
 
-  <use href="#banner-mark" transform="translate(240 52) scale(0.295)" />
+  <use href="#banner-mark" transform="translate(258 118) scale(0.295)" />
 
   <text
     x="682"
