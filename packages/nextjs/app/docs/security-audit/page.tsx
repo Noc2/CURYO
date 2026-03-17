@@ -14,16 +14,21 @@ const SecurityAudit: NextPage = () => {
       <p>
         The March 4 consolidated audit below captures the historical finding inventory across the earlier review rounds.
         A follow-up full-contract review on <strong>March 11, 2026</strong> found{" "}
-        <strong>no new critical or high-severity issues</strong>. The three residual follow-up items from that review
-        have now been addressed on the current branch and are covered by regression tests.
+        <strong>no new critical or high-severity issues</strong>. The residual follow-up items from that review, plus
+        the final remediation sweep that followed, have now been addressed on the current branch and are covered by
+        regression tests.
       </p>
-      <p>The follow-up findings are summarized in the latest review section below.</p>
+      <p>
+        The latest follow-up section below summarizes both the March 11 review and the additional fixes that landed
+        immediately afterward.
+      </p>
 
       <h2>Latest Follow-Up Review (March 11, 2026)</h2>
       <p>
         The latest review re-ran the full Foundry suite, performed a fresh manual audit of the production contracts, and
-        drove a final remediation pass for the remaining medium/low findings. The reviewed branch passed the full
-        Foundry suite cleanly at the time of that follow-up review.
+        drove a final remediation pass for the remaining medium/low findings. A short follow-on hardening pass then
+        landed governance-migration hooks, live-balance enforcement for governance locks, and registry pagination
+        cleanup. The reviewed branch passed the full Foundry suite cleanly at the time of that follow-up review.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -52,6 +57,26 @@ const SecurityAudit: NextPage = () => {
               <td>Category and profile registries still treat delegates as standalone Voter ID holders</td>
               <td>Fixed on current branch</td>
             </tr>
+            <tr>
+              <td>Medium</td>
+              <td>Dormancy could zero a healthy participation reward if stake resolution had not happened first</td>
+              <td>Fixed on current branch</td>
+            </tr>
+            <tr>
+              <td>Medium</td>
+              <td>Governance locks did not require the account to still hold the locked balance</td>
+              <td>Fixed on current branch</td>
+            </tr>
+            <tr>
+              <td>Low</td>
+              <td>VoterIdNFT and CategoryRegistry were pinned to the original governance addresses</td>
+              <td>Fixed on current branch</td>
+            </tr>
+            <tr>
+              <td>Low</td>
+              <td>Frontend registry pagination retained exited operators and could duplicate re-registrations</td>
+              <td>Fixed on current branch</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -69,6 +94,22 @@ const SecurityAudit: NextPage = () => {
         <li>
           <strong>Auxiliary registries now require the holder address when Voter ID is configured.</strong> Delegates
           can no longer act as standalone category/profile owners.
+        </li>
+        <li>
+          <strong>Submitter participation rewards now survive dormancy edge cases.</strong> Content dormancy no longer
+          wipes an otherwise valid participation reward just because stake resolution had not already been materialized.
+        </li>
+        <li>
+          <strong>Governance locks now bind live balances.</strong> Accounts must still hold the locked cREP when the
+          governor applies a new lock, which closes the snapshot-then-transfer gap.
+        </li>
+        <li>
+          <strong>Governance migrations are now supported in the non-upgradeable registries.</strong> VoterIdNFT and
+          CategoryRegistry can both retarget their governor/timelock references before governance ownership migrates.
+        </li>
+        <li>
+          <strong>Frontend pagination now tracks the active set correctly.</strong> Exited operators are removed from
+          pagination and re-registering the same operator no longer creates duplicates.
         </li>
       </ol>
       <p className="text-base-content/60 text-sm">
