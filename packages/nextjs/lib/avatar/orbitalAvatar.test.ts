@@ -100,6 +100,29 @@ test("low cREP balances stay visibly smaller", () => {
   assert.ok(mediumBalance.planet.radius - lowBalance.planet.radius >= 10);
 });
 
+test("avatar orb and flare stay inside the square crop", () => {
+  const model = buildOrbitalAvatarModel(
+    buildPayload({
+      balance: "1000000000000",
+      stats: {
+        totalSettledVotes: 80,
+        totalWins: 80,
+        totalLosses: 0,
+        currentStreak: 10,
+        bestWinStreak: 10,
+        winRate: 1,
+      },
+    }),
+    { nowSeconds: NOW_SECONDS },
+  );
+
+  assert.ok(model.planet);
+  assert.ok(model.flare);
+  assert.ok(model.planet.radius < 256);
+  assert.ok(model.flare.radius + model.flare.glowWidth / 2 + 12 < 256);
+  assert.ok(model.flare.radius + model.flare.headRadius * 1.85 < 256);
+});
+
 test("accuracy directly controls flare orbit coverage", () => {
   const half = buildOrbitalAvatarModel(
     buildPayload({

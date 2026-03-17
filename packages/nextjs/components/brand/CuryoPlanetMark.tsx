@@ -9,9 +9,9 @@ interface CuryoPlanetMarkProps {
 }
 
 const CENTER = 700;
-const DEFAULT_FLARE_RADIUS = 420;
-const COMPACT_FLARE_RADIUS = 448;
-const HERO_FLARE_RADIUS = 426;
+const DEFAULT_FLARE_RADIUS = 626;
+const COMPACT_FLARE_RADIUS = 634;
+const HERO_FLARE_RADIUS = 630;
 const DEFAULT_ARC_DEGREES = 94;
 
 function polarPoint(radius: number, degrees: number) {
@@ -75,16 +75,23 @@ export function CuryoPlanetMark({
   const flareRotation = -66;
   const flareDashArray = circleDashArray(flareRadius, DEFAULT_ARC_DEGREES);
   const nodePoint = polarPoint(flareRadius, flareRotation + DEFAULT_ARC_DEGREES);
-  const planetScale = usesCompactVariant ? 0.88 : usesHeroVariant ? 1.02 : 1;
-  const flareGlowStrokeWidth = usesCompactVariant ? 42 : usesHeroVariant ? 34 : 28;
+  const planetScale = usesCompactVariant ? 1.34 : usesHeroVariant ? 1.46 : 1.42;
+  const flareGlowStrokeWidth = usesCompactVariant ? 36 : usesHeroVariant ? 32 : 28;
   const flareGlowOpacity = usesCompactVariant ? 0.68 : usesHeroVariant ? 0.58 : 0.54;
-  const flareBodyStrokeWidth = usesCompactVariant ? 20 : usesHeroVariant ? 12 : 10;
-  const flareMainStrokeWidth = usesCompactVariant ? 15 : usesHeroVariant ? 9 : 8;
+  const flareBodyStrokeWidth = usesCompactVariant ? 18 : usesHeroVariant ? 11 : 10;
+  const flareMainStrokeWidth = usesCompactVariant ? 14 : usesHeroVariant ? 8.4 : 8;
   const flareCoreStrokeWidth = usesCompactVariant ? 4.8 : usesHeroVariant ? 2.8 : 2.4;
-  const nodeHaloRadius = usesCompactVariant ? 32 : 23;
-  const nodeRadius = usesCompactVariant ? 13 : 9;
+  const nodeHaloRadius = usesCompactVariant ? 30 : usesHeroVariant ? 25 : 23;
+  const nodeRadius = usesCompactVariant ? 12.5 : usesHeroVariant ? 9.5 : 9;
   const flareGlowFilterId = usesHeroVariant ? blur52Id : blur40Id;
   const planetTransform = scaleAroundCenter(planetScale);
+  const outerOrbitRadius = 680;
+  const orbitAccentRadius = 654;
+  const orbitTrackRadius = 640;
+  const orbitArcRadius = DEFAULT_FLARE_RADIUS;
+  const orbitInnerRadius = 612;
+  const orbitAccentDashArray = circleDashArray(orbitAccentRadius, 76);
+  const orbitHighlightDashArray = circleDashArray(orbitTrackRadius, 68);
 
   return (
     <>
@@ -209,31 +216,31 @@ export function CuryoPlanetMark({
           <circle cx="700" cy="700" r={flareRadius} stroke="#FFFFFF" strokeOpacity="0.06" strokeWidth="2.2" />
         ) : (
           <>
-            <circle cx="700" cy="700" r="472" stroke="#FFFFFF" strokeOpacity="0.03" strokeWidth="2" />
-            <circle cx="700" cy="700" r="448" stroke="#342129" strokeOpacity="0.66" strokeWidth="12" />
-            <circle cx="700" cy="700" r="434" stroke="#1A1E28" strokeOpacity="0.96" strokeWidth="20" />
-            <circle cx="700" cy="700" r="420" stroke="#FFFFFF" strokeOpacity="0.055" strokeWidth="2" />
-            <circle cx="700" cy="700" r="408" stroke="#FFFFFF" strokeOpacity="0.038" strokeWidth="1.4" />
+            <circle cx="700" cy="700" r={outerOrbitRadius} stroke="#FFFFFF" strokeOpacity="0.03" strokeWidth="2" />
+            <circle cx="700" cy="700" r={orbitAccentRadius} stroke="#342129" strokeOpacity="0.66" strokeWidth="12" />
+            <circle cx="700" cy="700" r={orbitTrackRadius} stroke="#1A1E28" strokeOpacity="0.96" strokeWidth="20" />
+            <circle cx="700" cy="700" r={orbitArcRadius} stroke="#FFFFFF" strokeOpacity="0.055" strokeWidth="2" />
+            <circle cx="700" cy="700" r={orbitInnerRadius} stroke="#FFFFFF" strokeOpacity="0.038" strokeWidth="1.4" />
             <circle
               cx="700"
               cy="700"
-              r="448"
+              r={orbitAccentRadius}
               stroke="#F3A16E"
               strokeOpacity="0.08"
               strokeWidth="6"
               strokeLinecap="round"
-              strokeDasharray="598 2218"
+              strokeDasharray={orbitAccentDashArray}
               transform="rotate(-136 700 700)"
             />
             <circle
               cx="700"
               cy="700"
-              r="434"
+              r={orbitTrackRadius}
               stroke="#FFFFFF"
               strokeOpacity="0.04"
               strokeWidth="2.2"
               strokeLinecap="round"
-              strokeDasharray="536 2130"
+              strokeDasharray={orbitHighlightDashArray}
               transform="rotate(-136 700 700)"
             />
           </>
@@ -428,20 +435,6 @@ export function CuryoPlanetMark({
           .curyo-planet-mark--orbit .curyo-planet-mark__node-halo,
           .curyo-planet-mark--orbit .curyo-planet-mark__node {
             animation: none;
-          }
-        }
-
-        @media (max-width: 639px) {
-          .curyo-planet-mark--hero .curyo-planet-mark__flare-scale {
-            transform: scale(1.08);
-          }
-
-          .curyo-planet-mark--compact .curyo-planet-mark__flare-scale {
-            transform: scale(1.12);
-          }
-
-          .curyo-planet-mark--default .curyo-planet-mark__flare-scale {
-            transform: scale(1.04);
           }
         }
       `}</style>

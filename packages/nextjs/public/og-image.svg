@@ -74,41 +74,42 @@
     </clipPath>
 
     <symbol id="og-mark" viewBox="0 0 1400 1400">
-      <circle cx="700" cy="700" r="472" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2" />
-      <circle cx="700" cy="700" r="448" stroke="#342129" stroke-opacity="0.66" stroke-width="12" />
-      <circle cx="700" cy="700" r="434" stroke="#1A1E28" stroke-opacity="0.96" stroke-width="20" />
-      <circle cx="700" cy="700" r="420" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2" />
-      <circle cx="700" cy="700" r="408" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4" />
-      <circle cx="700" cy="700" r="448" stroke="#F3A16E" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round" stroke-dasharray="598 2218" transform="rotate(-136 700 700)" />
-      <circle cx="700" cy="700" r="434" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="536 2130" transform="rotate(-136 700 700)" />
+      <circle cx="700" cy="700" r="680" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2" />
+      <circle cx="700" cy="700" r="654" stroke="#342129" stroke-opacity="0.66" stroke-width="12" />
+      <circle cx="700" cy="700" r="640" stroke="#1A1E28" stroke-opacity="0.96" stroke-width="20" />
+      <circle cx="700" cy="700" r="626" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2" />
+      <circle cx="700" cy="700" r="612" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4" />
+      <circle cx="700" cy="700" r="654" stroke="#F3A16E" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round" stroke-dasharray="867.5 3241.7" transform="rotate(-136 700 700)" />
+      <circle cx="700" cy="700" r="640" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="759.6 3261.7" transform="rotate(-136 700 700)" />
 
       <g filter="url(#og-mark-blur-40)">
-        <circle cx="700" cy="700" r="420" stroke="#F45C4D" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="689.1 1949.9" transform="rotate(-66 700 700)" />
+        <circle cx="700" cy="700" r="626" stroke="#F45C4D" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
       </g>
-      <circle cx="700" cy="700" r="420" stroke="#6D352A" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="689.1 1949.9" transform="rotate(-66 700 700)" />
-      <circle cx="700" cy="700" r="420" stroke="url(#og-mark-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="689.1 1949.9" transform="rotate(-66 700 700)" />
-      <circle cx="700" cy="700" r="420" stroke="url(#og-mark-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="689.1 1949.9" transform="rotate(-66 700 700)" />
-      <circle cx="1070.8" cy="897.2" r="23" fill="#FF8D65" fill-opacity="0.18" />
-      <circle cx="1070.8" cy="897.2" r="9" fill="#FFF3DF" />
+      <circle cx="700" cy="700" r="626" stroke="#6D352A" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
+      <circle cx="700" cy="700" r="626" stroke="url(#og-mark-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
+      <circle cx="700" cy="700" r="626" stroke="url(#og-mark-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
+      <circle cx="1252.7" cy="993.9" r="23" fill="#FF8D65" fill-opacity="0.18" />
+      <circle cx="1252.7" cy="993.9" r="9" fill="#FFF3DF" />
 
-      <circle cx="700" cy="700" r="360" fill="url(#og-mark-orb-base)" />
-      <circle cx="700" cy="700" r="360" fill="url(#og-mark-orb-rim)" />
-      <g clip-path="url(#og-mark-orb-clip)">
-        <g filter="url(#og-mark-blur-40)">
-          <ellipse cx="672" cy="538" rx="280" ry="184" fill="url(#og-mark-soft-white)" />
-          <ellipse cx="930" cy="640" rx="246" ry="214" fill="url(#og-mark-coral-bloom)" />
-          <ellipse cx="508" cy="904" rx="286" ry="218" fill="url(#og-mark-violet-pocket)" />
-          <ellipse cx="662" cy="774" rx="316" ry="176" fill="url(#og-mark-blue-pocket)" />
+      <g transform="translate(700 700) scale(1.42) translate(-700 -700)">
+        <circle cx="700" cy="700" r="360" fill="url(#og-mark-orb-base)" />
+        <circle cx="700" cy="700" r="360" fill="url(#og-mark-orb-rim)" />
+        <g clip-path="url(#og-mark-orb-clip)">
+          <g filter="url(#og-mark-blur-40)">
+            <ellipse cx="672" cy="538" rx="280" ry="184" fill="url(#og-mark-soft-white)" />
+            <ellipse cx="930" cy="640" rx="246" ry="214" fill="url(#og-mark-coral-bloom)" />
+            <ellipse cx="508" cy="904" rx="286" ry="218" fill="url(#og-mark-violet-pocket)" />
+            <ellipse cx="662" cy="774" rx="316" ry="176" fill="url(#og-mark-blue-pocket)" />
+          </g>
+          <path d="M330 822C464 734 582 684 704 670C810 658 902 686 1018 760C944 812 868 844 788 858C680 876 560 868 442 840C404 832 368 826 330 822Z" fill="url(#og-mark-fold-sheen)" />
+          <path d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z" fill="#F5E3D2" fill-opacity="0.11" />
+          <path d="M404 542C518 494 634 492 752 530C842 560 938 626 1038 724" stroke="#FFF7F1" stroke-opacity="0.16" stroke-width="22" stroke-linecap="round" />
+          <path d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110" stroke="#E2B2A0" stroke-opacity="0.1" stroke-width="24" stroke-linecap="round" />
+          <circle cx="1118" cy="490" r="50" fill="#FFF9F2" fill-opacity="0.9" />
+          <circle cx="664" cy="556" r="190" fill="url(#og-mark-soft-white)" />
         </g>
-        <path d="M330 822C464 734 582 684 704 670C810 658 902 686 1018 760C944 812 868 844 788 858C680 876 560 868 442 840C404 832 368 826 330 822Z" fill="url(#og-mark-fold-sheen)" />
-        <path d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z" fill="#F5E3D2" fill-opacity="0.11" />
-        <path d="M404 542C518 494 634 492 752 530C842 560 938 626 1038 724" stroke="#FFF7F1" stroke-opacity="0.16" stroke-width="22" stroke-linecap="round" />
-        <path d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110" stroke="#E2B2A0" stroke-opacity="0.1" stroke-width="24" stroke-linecap="round" />
-        <circle cx="1118" cy="490" r="50" fill="#FFF9F2" fill-opacity="0.9" />
-        <circle cx="664" cy="556" r="190" fill="url(#og-mark-soft-white)" />
+        <circle cx="700" cy="700" r="360" fill="none" stroke="#FFF8F2" stroke-opacity="0.14" stroke-width="2" />
       </g>
-
-      <circle cx="700" cy="700" r="360" fill="none" stroke="#FFF8F2" stroke-opacity="0.14" stroke-width="2" />
     </symbol>
   </defs>
 

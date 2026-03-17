@@ -68,6 +68,9 @@ const FLARE_START_ROTATION_DEGREES = -90;
 const AVATAR_FLARE_WIDTH = 7.5;
 const AVATAR_FLARE_GLOW_WIDTH = 15;
 const AVATAR_FLARE_HEAD_RADIUS = 5.5;
+const AVATAR_BASE_PLANET_RADIUS = 108;
+const AVATAR_PLANET_RADIUS_GAIN = 44;
+const AVATAR_ORBIT_GAP = 60;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -230,7 +233,7 @@ function buildPlanet(
   if (!payload.voterId) return null;
 
   const { balanceScore } = getSignalScores(payload);
-  const radius = 92 + 40 * balanceScore;
+  const radius = AVATAR_BASE_PLANET_RADIUS + AVATAR_PLANET_RADIUS_GAIN * balanceScore;
 
   return {
     radius,
@@ -256,7 +259,7 @@ function buildOrbit(
   if (!planet) return null;
 
   return {
-    radius: planet.radius + 62,
+    radius: planet.radius + AVATAR_ORBIT_GAP,
     trackWidth: 16,
     trackOpacity: 0.96,
     accentColor: variant.accentColor,
@@ -289,11 +292,11 @@ function buildFlare(payload: ReputationAvatarPayload, orbit: OrbitalAvatarOrbit 
 
 function buildShellOrbit(): OrbitalAvatarShell {
   return {
-    orbitRadii: [120, 150, 180],
+    orbitRadii: [150, 186, 220],
     orbitOpacity: 0.18,
     strokeWidth: 12,
     orbitStroke: "rgba(255,255,255,0.14)",
-    planetRadius: 96,
+    planetRadius: 126,
     planetStroke: "rgba(255,255,255,0.12)",
   };
 }
