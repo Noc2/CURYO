@@ -42,9 +42,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
           {/* Title (left on large screens) */}
           <div className="flex flex-col items-center lg:items-start lg:flex-[0.8] lg:max-w-[32rem]">
-            <h1 className="text-6xl font-bold uppercase tracking-tight sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">
-              Curyo
-            </h1>
+            <h1 className="display-hero text-6xl text-[#F5F0EB] sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">Curyo</h1>
             <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[32rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
               A Better Web, Guided by Human Reputation
             </p>
@@ -54,7 +52,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
         {/* How it works */}
         <div className="w-full mt-12">
-          <h2 className="mb-6 text-center text-4xl font-bold sm:mb-7 sm:text-5xl">
+          <h2 className="display-section mb-6 text-center text-4xl text-[#F5F0EB] sm:mb-7 sm:text-5xl">
             How it <span className="text-[#F5F0EB]">Works</span>
           </h2>
           <p className="mx-auto mb-10 max-w-3xl text-center text-xl leading-8 text-base-content/60 sm:text-2xl sm:leading-9">
@@ -75,7 +73,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 >
                   <Icon className="h-10 w-10 text-[#F5F0EB]" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{title}</h3>
+                <h3 className="display-section mb-2 text-2xl text-[#F5F0EB]">{title}</h3>
                 <p className="text-lg text-base-content/60">{description}</p>
               </div>
             ))}

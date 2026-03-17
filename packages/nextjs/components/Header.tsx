@@ -373,7 +373,7 @@ export const Header = () => {
                       CURYO (BETA)
                     </span>
                     <span className="truncate text-base-content/60" style={{ fontSize: "14px" }}>
-                      Quality Signals
+                      A Better Web
                     </span>
                   </div>
                 </Link>
@@ -404,7 +404,7 @@ export const Header = () => {
           <div className="flex flex-col gap-0.5 items-start">
             <span className="font-heading font-semibold text-base tracking-tight text-[#F5F0EB]">CURYO (BETA)</span>
             <span className="text-base-content/60" style={{ fontSize: "14px" }}>
-              Quality Signals
+              A Better Web
             </span>
           </div>
         </Link>

@@ -33,7 +33,7 @@ import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
-import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
+import { type DiscoverFeedMode, getDiscoverFeedModeDescription, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { trackContentClick } from "~~/utils/clickTracker";
@@ -60,6 +60,14 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
   { value: "highest_rated", label: "Highest Rated" },
   { value: "lowest_rated", label: "Lowest Rated" },
 ];
+const ACTIVITY_VIEW_DESCRIPTIONS: Record<ScopeOption, string> = {
+  all: "Browse live quality signals backed by human reputation.",
+  watched: "Track the submissions you care about and jump back into active rounds quickly.",
+  my_votes: "Review the content you have voted on and keep an eye on how those rounds evolve.",
+  my_submissions: "See how the network is rating the content you have contributed.",
+  settling_soon: "Surface the rounds closest to resolution so you can follow outcomes as they land.",
+  followed_curators: "Keep up with the curators you follow and the signals they are helping shape.",
+};
 
 const FEED_PAGE_SIZE = 20;
 const FEED_PREFETCH_BUFFER = 20;
@@ -135,6 +143,16 @@ const HomeInner = () => {
   const viewGroups = useMemo(() => getVoteViewGroups(hasWallet), [hasWallet]);
   const activeScope: ScopeOption = isActivityViewOption(view) ? view : "all";
   const activeFeedMode: DiscoverFeedMode = isActivityViewOption(view) ? "for_you" : view;
+  const activeViewOption = useMemo(
+    () => viewGroups.flatMap(group => group.options).find(option => option.value === view) ?? null,
+    [view, viewGroups],
+  );
+  const discoverEyebrow = isSearchMode ? "Search" : (activeViewOption?.label ?? "Discover");
+  const discoverDescription = isSearchMode
+    ? "Search across live ratings, active rounds, and emerging quality signals."
+    : activeScope === "all"
+      ? (getDiscoverFeedModeDescription(activeFeedMode) ?? ACTIVITY_VIEW_DESCRIPTIONS.all)
+      : ACTIVITY_VIEW_DESCRIPTIONS[activeScope];
 
   const feedRequestLimit = contentParam
     ? undefined
@@ -1105,6 +1123,30 @@ const HomeInner = () => {
   return (
     <AppPageShell>
       <VotingGuide />
+      <div className="mb-5 flex flex-col gap-2 xl:mb-4">
+        <div className="display-kicker text-sm text-primary/80">{discoverEyebrow}</div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <h1 className="display-hero text-[3.8rem] text-[#F5F0EB] sm:text-[4.6rem] xl:text-[5.2rem]">Discover</h1>
+          {!isSearchMode ? (
+            <div className="rounded-2xl bg-[#141316] px-4 py-3 text-right shadow-[0_18px_36px_rgba(9,10,12,0.24)]">
+              <div className="display-metric text-[2.35rem] text-[#F5F0EB]">
+                {isLoading || categoriesLoading || scopeLoading ? "…" : displayFeed.length}
+              </div>
+              <div className="text-sm text-base-content/55">
+                {isLoading || categoriesLoading || scopeLoading
+                  ? "loading signals"
+                  : displayFeed.length === 1
+                    ? "live signal in view"
+                    : "live signals in view"}
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <p className="max-w-2xl text-base leading-7 text-base-content/68 sm:text-lg sm:leading-8">
+          {discoverDescription}
+        </p>
+      </div>
+
       <div
         className="mb-4 flex shrink-0 flex-wrap items-center gap-2 sm:gap-3 xl:mb-2 xl:flex-nowrap"
         data-disable-queue-wheel="true"

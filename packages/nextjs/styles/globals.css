@@ -5,8 +5,9 @@
 @theme {
   --shadow-center: 0 0 12px -2px rgb(9 10 12 / 0.05);
   --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bebas-neue), ui-sans-serif, system-ui, sans-serif;
 }
 
 @plugin "daisyui" {
@@ -91,6 +92,38 @@
 
 body {
   color: var(--color-base-content);
+  font-family: var(--font-sans);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.display-hero {
+  font-family: var(--font-display);
+  line-height: 0.9;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.display-section {
+  font-family: var(--font-display);
+  line-height: 0.94;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.display-kicker {
+  font-family: var(--font-display);
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.display-metric {
+  font-family: var(--font-display);
+  line-height: 0.88;
+  letter-spacing: -0.02em;
 }
 
 .btn {
