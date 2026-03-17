@@ -60,9 +60,9 @@
 
   <circle cx="700" cy="700" r="652" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2.2" />
 
-  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="#6D352A" stroke-opacity="0.2" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
-  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="url(#favicon-flare-gradient)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
-  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="url(#favicon-flare-core)" stroke-opacity="0.96" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
+  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="#6D352A" stroke-opacity="0.2" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
+  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="url(#favicon-flare-gradient)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
+  <path d="M 654.52 49.59 A 652.00 652.00 0 0 1 1275.68 1006.10" fill="none" stroke="url(#favicon-flare-core)" stroke-opacity="0.96" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
 
   <g transform="translate(700 700) scale(1.24) translate(-700 -700)">
     <circle cx="700" cy="700" r="360" fill="url(#favicon-orb-base)" />
