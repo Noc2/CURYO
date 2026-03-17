@@ -56,7 +56,7 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
       <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            In play
+            Staked
             <InfoTooltip text="Total cREP committed in the current round." position="bottom" />
           </span>
           <span className="font-semibold tabular-nums">{totalStakeFormatted.toFixed(0)}</span>
