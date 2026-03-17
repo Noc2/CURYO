@@ -34,14 +34,14 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
     <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
       <div className="w-full max-w-7xl flex flex-col items-center">
         {/* Hero: stacked on mobile, side-by-side on large screens */}
-        <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-4 xl:gap-8">
+        <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-6 xl:gap-10">
           {/* Animation (right on large screens) */}
-          <div className="lg:flex-[1.2]">
+          <div className="lg:flex-[1.02]">
             <CuryoAnimation />
           </div>
 
           {/* Title (left on large screens) */}
-          <div className="flex flex-col items-center lg:items-start lg:flex-[0.8] lg:max-w-[32rem]">
+          <div className="flex flex-col items-center lg:items-start lg:flex-[0.98] lg:max-w-[35rem]">
             <h1 className="display-hero text-6xl text-[#F5F0EB] sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">Curyo</h1>
             <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[32rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
               A Better Web, Guided by Human Reputation
