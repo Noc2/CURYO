@@ -128,7 +128,7 @@
     <circle cx="174" cy="378" r="4" fill="#7E8996" />
   </g>
 
-  <svg x="360" y="122" width="250" height="250" viewBox="140 140 1120 1120" overflow="visible">
+  <svg x="368" y="127" width="250" height="250" viewBox="140 140 1120 1120" overflow="visible">
     <use href="#banner-mark" />
   </svg>
 
