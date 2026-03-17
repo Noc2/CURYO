@@ -10,9 +10,10 @@ interface CuryoPlanetMarkProps {
 
 const CENTER = 700;
 const DEFAULT_FLARE_RADIUS = 626;
-const COMPACT_FLARE_RADIUS = 634;
+const COMPACT_FLARE_RADIUS = 648;
 const HERO_FLARE_RADIUS = 630;
 const DEFAULT_ARC_DEGREES = 94;
+const COMPACT_ARC_DEGREES = 112;
 
 function polarPoint(radius: number, degrees: number) {
   const radians = (degrees * Math.PI) / 180;
@@ -73,16 +74,17 @@ export function CuryoPlanetMark({
       ? HERO_FLARE_RADIUS
       : DEFAULT_FLARE_RADIUS;
   const flareRotation = -66;
-  const flareDashArray = circleDashArray(flareRadius, DEFAULT_ARC_DEGREES);
-  const nodePoint = polarPoint(flareRadius, flareRotation + DEFAULT_ARC_DEGREES);
+  const flareArcDegrees = usesCompactVariant ? COMPACT_ARC_DEGREES : DEFAULT_ARC_DEGREES;
+  const flareDashArray = circleDashArray(flareRadius, flareArcDegrees);
+  const nodePoint = polarPoint(flareRadius, flareRotation + flareArcDegrees);
   const planetScale = usesCompactVariant ? 1.34 : usesHeroVariant ? 1.46 : 1.42;
-  const flareGlowStrokeWidth = usesCompactVariant ? 36 : usesHeroVariant ? 32 : 28;
+  const flareGlowStrokeWidth = usesCompactVariant ? 44 : usesHeroVariant ? 32 : 28;
   const flareGlowOpacity = usesCompactVariant ? 0.68 : usesHeroVariant ? 0.58 : 0.54;
-  const flareBodyStrokeWidth = usesCompactVariant ? 18 : usesHeroVariant ? 11 : 10;
-  const flareMainStrokeWidth = usesCompactVariant ? 14 : usesHeroVariant ? 8.4 : 8;
-  const flareCoreStrokeWidth = usesCompactVariant ? 4.8 : usesHeroVariant ? 2.8 : 2.4;
-  const nodeHaloRadius = usesCompactVariant ? 30 : usesHeroVariant ? 25 : 23;
-  const nodeRadius = usesCompactVariant ? 12.5 : usesHeroVariant ? 9.5 : 9;
+  const flareBodyStrokeWidth = usesCompactVariant ? 21 : usesHeroVariant ? 11 : 10;
+  const flareMainStrokeWidth = usesCompactVariant ? 16 : usesHeroVariant ? 8.4 : 8;
+  const flareCoreStrokeWidth = usesCompactVariant ? 5.6 : usesHeroVariant ? 2.8 : 2.4;
+  const nodeHaloRadius = usesCompactVariant ? 34 : usesHeroVariant ? 25 : 23;
+  const nodeRadius = usesCompactVariant ? 14 : usesHeroVariant ? 9.5 : 9;
   const flareGlowFilterId = usesHeroVariant ? blur52Id : blur40Id;
   const planetTransform = scaleAroundCenter(planetScale);
   const outerOrbitRadius = 680;
