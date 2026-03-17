@@ -32,7 +32,11 @@ export function LandingPageActions() {
       <Link href="/vote" className="btn btn-primary rounded-full px-5" style={{ fontSize: "16px" }}>
         Discover
       </Link>
-      <Link href="/docs" className="btn btn-shell-secondary rounded-full px-5" style={{ fontSize: "16px" }}>
+      <Link
+        href="/docs"
+        className="pill-inactive inline-flex items-center justify-center rounded-full px-5 py-3 text-base font-medium whitespace-nowrap transition-colors"
+        style={{ fontSize: "16px" }}
+      >
         Learn More
       </Link>
     </div>
