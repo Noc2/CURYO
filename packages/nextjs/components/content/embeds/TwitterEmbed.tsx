@@ -25,7 +25,7 @@ export function TwitterEmbed({ info, compact }: TwitterEmbedProps) {
     return (
       <SafeExternalLink
         href={info.url}
-        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+        className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
       >
@@ -45,7 +45,7 @@ export function TwitterEmbed({ info, compact }: TwitterEmbedProps) {
       <Tweet
         id={tweetId}
         fallback={
-          <div className={`flex items-center gap-3 bg-base-200 rounded-xl ${compact ? "p-3" : "p-5"}`}>
+          <div className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface ${compact ? "p-3" : "p-5"}`}>
             <div className="w-10 h-10 rounded-lg bg-black flex items-center justify-center shrink-0">
               <span className="loading loading-spinner loading-sm text-white"></span>
             </div>

@@ -95,7 +95,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
 
   if (loading) {
     return (
-      <div className={`flex items-center gap-3 bg-base-200 rounded-xl ${compact ? "p-3" : "p-5"}`}>
+      <div className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface ${compact ? "p-3" : "p-5"}`}>
         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#ff9d00] to-[#ff5a00] flex items-center justify-center shrink-0">
           <span className="loading loading-spinner loading-sm text-white"></span>
         </div>
@@ -111,7 +111,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
     return (
       <SafeExternalLink
         href={info.url}
-        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+        className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
       >
@@ -131,7 +131,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
     return (
       <SafeExternalLink
         href={info.url}
-        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+        className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
       >
@@ -150,14 +150,14 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
 
   // Image card with org avatar and metadata
   return (
-    <div className="block w-full overflow-hidden rounded-xl bg-base-200 relative h-full flex flex-col">
+    <div className="block w-full overflow-hidden rounded-xl bg-base-200 embed-surface relative h-full flex flex-col">
       <SafeExternalLink href={info.url} className="flex-1 flex items-center justify-center relative group">
         {!imageLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-base-200">
+          <div className="absolute inset-0 flex items-center justify-center embed-surface">
             <span className="loading loading-spinner loading-md text-primary"></span>
           </div>
         )}
-        <div className="flex items-center justify-center p-10 bg-gradient-to-br from-base-200 to-base-300 w-full h-full">
+        <div className="flex h-full w-full items-center justify-center p-10 embed-surface">
           <img
             src={`/api/image-proxy?url=${encodeURIComponent(model.imageUrl)}`}
             alt={model.name}
@@ -173,7 +173,7 @@ export function HuggingFaceEmbed({ info, compact, prefetchedMetadata }: HuggingF
         </div>
       </SafeExternalLink>
       {/* HuggingFace Attribution */}
-      <div className="flex items-center justify-center gap-2 py-2 px-3 bg-base-300/50 rounded-b-xl">
+      <div className="flex items-center justify-center gap-2 rounded-b-xl px-3 py-2 embed-surface">
         <HuggingFaceIcon className="w-4 h-4 text-base-content/50" />
         <span className="text-xs text-base-content/50">Data from Hugging Face</span>
       </div>

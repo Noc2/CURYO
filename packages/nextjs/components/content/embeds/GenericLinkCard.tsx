@@ -19,7 +19,7 @@ export function GenericLinkCard({ url, compact }: GenericLinkCardProps) {
   return (
     <SafeExternalLink
       href={url}
-      className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+      className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
         compact ? "p-3" : "p-5"
       }`}
     >

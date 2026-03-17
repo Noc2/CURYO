@@ -21,7 +21,7 @@ function TwitchFallbackCard({ url, compact }: { url: string; compact?: boolean }
   return (
     <SafeExternalLink
       href={url}
-      className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+      className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
         compact ? "p-3" : "p-5"
       }`}
     >
@@ -57,7 +57,7 @@ export function TwitchEmbed({ info, compact }: TwitchEmbedProps) {
     return (
       <button
         onClick={() => setLoaded(true)}
-        className="w-full overflow-hidden rounded-xl aspect-video bg-[#0e0e10] flex items-center justify-center group cursor-pointer relative"
+        className="relative flex aspect-video w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl bg-[#0e0e10] embed-surface group"
       >
         <div className="flex flex-col items-center gap-3">
           <div className="w-16 h-16 rounded-full bg-[#9146FF] flex items-center justify-center group-hover:scale-110 transition-transform">

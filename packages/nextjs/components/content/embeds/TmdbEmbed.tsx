@@ -102,7 +102,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
   // Loading state
   if (loading) {
     return (
-      <div className={`flex items-center gap-3 bg-base-200 rounded-xl ${compact ? "p-3" : "p-5"}`}>
+      <div className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface ${compact ? "p-3" : "p-5"}`}>
         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0d253f] to-[#01b4e4] flex items-center justify-center shrink-0">
           <span className="loading loading-spinner loading-sm text-white"></span>
         </div>
@@ -119,7 +119,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
     return (
       <SafeExternalLink
         href={info.url}
-        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+        className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
       >
@@ -139,7 +139,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
     return (
       <SafeExternalLink
         href={info.url}
-        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+        className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
       >
@@ -159,13 +159,13 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
   // Image card with poster and TMDB attribution
   return (
     <div
-      className={`block w-full overflow-hidden rounded-xl bg-base-200 relative ${
+      className={`block w-full overflow-hidden rounded-xl bg-base-200 embed-surface relative ${
         compact ? "max-w-[200px] mx-auto" : "h-full max-w-full flex flex-col"
       }`}
     >
       <SafeExternalLink href={info.url} className={`relative group ${compact ? "block" : "flex-1 min-h-0"}`}>
         {!imageLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-base-200">
+          <div className="absolute inset-0 flex items-center justify-center embed-surface">
             <span className="loading loading-spinner loading-md text-primary"></span>
           </div>
         )}
@@ -189,7 +189,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
         </div>
       </SafeExternalLink>
       {/* TMDB Attribution - Required by TMDB Terms of Use */}
-      <div className="flex items-center justify-center gap-2 py-2 px-3 bg-base-300/50 rounded-b-xl">
+      <div className="flex items-center justify-center gap-2 rounded-b-xl px-3 py-2 embed-surface">
         <Image src="/tmdb-logo.svg" alt="TMDB" width={60} height={14} className="opacity-70" />
         <span className="text-xs text-base-content/50">Data provided by TMDB</span>
       </div>

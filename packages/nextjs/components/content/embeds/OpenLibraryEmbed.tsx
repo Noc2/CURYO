@@ -96,7 +96,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   // Loading state
   if (loading) {
     return (
-      <div className={`flex items-center gap-3 bg-base-200 rounded-xl ${compact ? "p-3" : "p-5"}`}>
+      <div className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface ${compact ? "p-3" : "p-5"}`}>
         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#3d3929] to-[#5c553e] flex items-center justify-center shrink-0">
           <span className="loading loading-spinner loading-sm text-white"></span>
         </div>
@@ -113,7 +113,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
     return (
       <SafeExternalLink
         href={info.url}
-        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+        className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
       >
@@ -135,7 +135,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
     return (
       <SafeExternalLink
         href={info.url}
-        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+        className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
       >
@@ -155,17 +155,13 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
   // Cover card with image and attribution
   return (
     <div
-      className={`block w-full overflow-hidden rounded-xl bg-base-200 relative ${
+      className={`block w-full overflow-hidden rounded-xl bg-base-200 embed-surface relative ${
         compact ? "max-w-[200px] mx-auto" : "h-full max-w-full flex flex-col"
       }`}
-      style={{ background: "var(--curyo-surface-elevated)" }}
     >
       <SafeExternalLink href={info.url} className={`relative group ${compact ? "block" : "flex-1 min-h-0"}`}>
         {!imageLoaded && (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ background: "var(--curyo-surface-elevated)" }}
-          >
+          <div className="absolute inset-0 flex items-center justify-center embed-surface">
             <span className="loading loading-spinner loading-md text-primary"></span>
           </div>
         )}
@@ -185,10 +181,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
         </div>
       </SafeExternalLink>
       {/* Open Library Attribution */}
-      <div
-        className="flex items-center justify-center gap-2 rounded-b-xl px-3 py-2"
-        style={{ background: "var(--curyo-surface-elevated)" }}
-      >
+      <div className="flex items-center justify-center gap-2 rounded-b-xl px-3 py-2 embed-surface">
         <BookIcon className="w-4 h-4 text-base-content/50" />
         <span className="text-xs text-base-content/50">Data from Open Library</span>
       </div>

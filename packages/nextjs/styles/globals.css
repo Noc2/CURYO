@@ -380,6 +380,14 @@ body {
   box-shadow: 0 16px 32px rgb(9 10 12 / 0.26);
 }
 
+.embed-surface {
+  background: var(--curyo-surface-elevated) !important;
+}
+
+.embed-surface-hover:hover {
+  background: color-mix(in srgb, var(--curyo-surface-elevated) 90%, var(--curyo-warm-white) 10%) !important;
+}
+
 .card.bg-base-200,
 .modal-box.bg-base-200 {
   background: rgb(20 19 22 / 0.98) !important;

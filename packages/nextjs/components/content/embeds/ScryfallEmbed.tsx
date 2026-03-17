@@ -35,7 +35,7 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
     return (
       <SafeExternalLink
         href={info.url}
-        className={`flex items-center gap-3 bg-base-200 rounded-xl hover:bg-base-300 transition-colors ${
+        className={`flex items-center gap-3 rounded-xl bg-base-200 embed-surface embed-surface-hover transition-colors ${
           compact ? "p-3" : "p-5"
         }`}
       >
@@ -53,12 +53,12 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
   return (
     <SafeExternalLink
       href={info.url}
-      className={`block w-full overflow-hidden rounded-xl bg-base-200 relative group ${
+      className={`block w-full overflow-hidden rounded-xl bg-base-200 embed-surface relative group ${
         compact ? "max-w-[200px] mx-auto" : "h-full max-w-full flex flex-col"
       }`}
     >
       {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-base-200">
+        <div className="absolute inset-0 flex items-center justify-center embed-surface">
           <span className="loading loading-spinner loading-md text-primary"></span>
         </div>
       )}
@@ -69,7 +69,7 @@ export function ScryfallEmbed({ info, compact }: ScryfallEmbedProps) {
         className={`shadow-lg transition-transform group-hover:scale-[1.02] ${
           compact
             ? "w-full h-auto rounded-xl aspect-[5/7] object-cover"
-            : "h-full w-full rounded-xl object-contain object-center bg-base-200"
+            : "h-full w-full rounded-xl object-contain object-center embed-surface"
         } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setImageLoaded(true)}
         onError={() => setImageError(true)}
