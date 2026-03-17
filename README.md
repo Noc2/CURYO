@@ -1,4 +1,4 @@
-![CURYO — A Better Web, Guided by Human Reputation](packages/nextjs/public/banner.png)
+![CURYO — A Better Web, Guided by Human Reputation](packages/nextjs/public/banner.svg)
 
 <p align="center">
   <img src="packages/nextjs/public/logo.png" alt="Curyo logo" width="144">

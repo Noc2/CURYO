@@ -5,12 +5,12 @@
       <stop offset="54%" stop-color="#070B16" />
       <stop offset="100%" stop-color="#0E1627" />
     </linearGradient>
-    <radialGradient id="banner-left-glow" cx="286" cy="256" r="290" gradientUnits="userSpaceOnUse">
+    <radialGradient id="banner-left-glow" cx="460" cy="256" r="250" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#141D32" stop-opacity="0.55" />
       <stop offset="56%" stop-color="#0B1222" stop-opacity="0.16" />
       <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
     </radialGradient>
-    <radialGradient id="banner-core-glow" cx="334" cy="246" r="158" gradientUnits="userSpaceOnUse">
+    <radialGradient id="banner-core-glow" cx="500" cy="246" r="145" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#F26426" stop-opacity="0.18" />
       <stop offset="52%" stop-color="#6B37A5" stop-opacity="0.1" />
       <stop offset="100%" stop-color="#7E8996" stop-opacity="0" />
@@ -114,8 +114,8 @@
   </defs>
 
   <rect width="1600" height="520" fill="url(#banner-bg)" />
-  <circle cx="286" cy="256" r="290" fill="url(#banner-left-glow)" />
-  <circle cx="334" cy="246" r="158" fill="url(#banner-core-glow)" />
+  <circle cx="460" cy="256" r="250" fill="url(#banner-left-glow)" />
+  <circle cx="500" cy="246" r="145" fill="url(#banner-core-glow)" />
 
   <g opacity="0.84">
     <circle cx="1180" cy="98" r="4" fill="#FFDCE7" />
@@ -128,7 +128,7 @@
     <circle cx="174" cy="378" r="4" fill="#7E8996" />
   </g>
 
-  <use href="#banner-mark" transform="translate(8 52) scale(0.295)" />
+  <use href="#banner-mark" transform="translate(240 52) scale(0.295)" />
 
   <text
     x="682"
