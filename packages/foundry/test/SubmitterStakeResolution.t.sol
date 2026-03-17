@@ -113,6 +113,10 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         assertTrue(activeRoundId != 0 && activeRoundId != firstRoundId, "later round should remain open");
 
         vm.warp(T0 + 4 days + 1);
+        assertFalse(
+            votingEngine.isSubmitterStakeResolvable(1),
+            "healthy submitter stake should stay locked while a later round is open"
+        );
         vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
@@ -145,6 +149,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         vm.warp(T0 + 7 days + 1 hours + 2);
         votingEngine.cancelExpiredRound(1, laterRoundId);
+        assertTrue(votingEngine.isSubmitterStakeResolvable(1), "healthy submitter stake should unlock once later rounds close");
 
         votingEngine.resolveSubmitterStake(1);
 
@@ -169,6 +174,10 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         assertTrue(activeRoundId != 0, "later round should remain open");
 
         vm.warp(T0 + 31 days);
+        assertFalse(
+            votingEngine.isSubmitterStakeResolvable(1),
+            "dormancy fallback should stay blocked while a later round remains open"
+        );
         vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
@@ -177,14 +186,60 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         assertEq(crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged");
     }
 
+    function test_IsSubmitterStakeResolvable_DormancyFallbackTurnsTrueAfterOpenRoundCancels() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/dormancy-ready", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        _commit(voter1, 1, true);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        vm.warp(T0 + 31 days);
+        assertFalse(votingEngine.isSubmitterStakeResolvable(1), "open rounds should block dormancy fallback");
+
+        votingEngine.cancelExpiredRound(1, roundId);
+        assertTrue(votingEngine.isSubmitterStakeResolvable(1), "closed rounds should allow dormancy fallback to resolve");
+    }
+
+    function test_IsSubmitterStakeResolvable_SlashPathTurnsTrueAfterGrace() public {
+        uint256 slashStake = 20e6;
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/slash-path", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        (bytes32 commitKey1, bytes32 salt1) = _commitWithStake(voter1, 1, false, slashStake);
+        (bytes32 commitKey2, bytes32 salt2) = _commitWithStake(voter2, 1, false, slashStake);
+        (bytes32 commitKey3, bytes32 salt3) = _commitWithStake(voter3, 1, false, slashStake);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        vm.warp(T0 + 1 hours + 1);
+        votingEngine.revealVoteByCommitKey(1, roundId, commitKey1, false, salt1);
+        votingEngine.revealVoteByCommitKey(1, roundId, commitKey2, false, salt2);
+        votingEngine.revealVoteByCommitKey(1, roundId, commitKey3, false, salt3);
+        votingEngine.settleRound(1, roundId);
+
+        vm.warp(T0 + 24 hours + 1);
+        assertTrue(votingEngine.isSubmitterStakeResolvable(1), "low ratings should become slash-resolvable after grace");
+    }
+
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {
+        return _commitWithStake(voter, contentId, isUp, STAKE);
+    }
+
+    function _commitWithStake(address voter, uint256 contentId, bool isUp, uint256 stake)
+        internal
+        returns (bytes32 commitKey, bytes32 salt)
+    {
         salt = keccak256(abi.encodePacked(voter, block.timestamp, contentId, isUp));
         bytes memory ciphertext = _testCiphertext(isUp, salt, contentId);
         bytes32 commitHash = _commitHash(isUp, salt, contentId, ciphertext);
 
         vm.startPrank(voter);
-        crepToken.approve(address(votingEngine), STAKE);
-        votingEngine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
+        crepToken.approve(address(votingEngine), stake);
+        votingEngine.commitVote(contentId, commitHash, ciphertext, stake, address(0));
         vm.stopPrank();
 
         commitKey = keccak256(abi.encodePacked(voter, commitHash));

@@ -10,7 +10,9 @@
  *   4. Call `processUnrevealedVotes(contentId, roundId, startIndex, count)` for
  *      terminal rounds that still have unrevealed stake to sweep/refund.
  *   5. Call `cancelExpiredRound(contentId, roundId)` for rounds past maxDuration that
- *      never reached commit quorum, and `markDormant(contentId)` for stale content.
+ *      never reached commit quorum.
+ *   6. Call `resolveSubmitterStake(contentId)` once the slash/healthy-return window opens,
+ *      and `markDormant(contentId)` for stale content.
  *
  * Vote ciphertext is tlock-encrypted to a future drand round. After the epoch ends,
  * the drand beacon makes the decryption key available and the keeper can decrypt.
@@ -41,6 +43,7 @@ export interface KeeperResult {
   roundsRevealFailedFinalized: number;
   votesRevealed: number;
   cleanupBatchesProcessed: number;
+  submitterStakesResolved: number;
   contentMarkedDormant: number;
 }
 
@@ -193,6 +196,7 @@ function emptyResult(): KeeperResult {
     roundsRevealFailedFinalized: 0,
     votesRevealed: 0,
     cleanupBatchesProcessed: 0,
+    submitterStakesResolved: 0,
     contentMarkedDormant: 0,
   };
 }
@@ -665,7 +669,38 @@ export async function resolveRounds(
         });
       }
 
-      // --- 6. Dormancy sweep ---
+      // --- 6. Resolve submitter stakes once their policy window opens ---
+      try {
+        const submitterStakeResolvable = (await publicClient.readContract({
+          address: engineAddr,
+          abi: RoundVotingEngineAbi,
+          functionName: "isSubmitterStakeResolvable",
+          args: [contentId],
+        })) as boolean;
+
+        if (submitterStakeResolvable) {
+          await writeContractAndConfirm(publicClient, walletClient, {
+            chain,
+            account,
+            address: engineAddr,
+            abi: RoundVotingEngineAbi,
+            functionName: "resolveSubmitterStake",
+            args: [contentId],
+          });
+          logger.info("Resolved submitter stake", { contentId: Number(contentId) });
+          result.submitterStakesResolved++;
+        }
+      } catch (err: unknown) {
+        const reason = getRevertReason(err);
+        if (!isExpectedRevert(reason) && !reason.includes("ActiveRoundStillOpen")) {
+          logger.debug("Could not resolve submitter stake", {
+            contentId: Number(contentId),
+            error: reason,
+          });
+        }
+      }
+
+      // --- 7. Dormancy sweep ---
       try {
         const dormancyEligible = (await publicClient.readContract({
           address: registryAddr,
@@ -688,7 +723,7 @@ export async function resolveRounds(
         }
       } catch (err: unknown) {
         const reason = getRevertReason(err);
-        if (!reason.includes("pending votes")) {
+        if (!reason.includes("pending votes") && !reason.includes("Content has active round")) {
           logger.debug("Could not check dormancy", {
             contentId: Number(contentId),
             error: reason,

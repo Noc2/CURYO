@@ -842,13 +842,43 @@ contract RoundVotingEngine is
         emit CancelledRoundRefundClaimed(contentId, roundId, msg.sender, refundAmount);
     }
 
+    /// @notice Check whether the submitter stake can be resolved right now.
+    /// @dev Mirrors the same timing/open-round gates enforced by resolveSubmitterStake().
+    function isSubmitterStakeResolvable(uint256 contentId) external view returns (bool) {
+        if (_hasOpenRound(contentId)) return false;
+
+        (
+            uint256 existingContentId,
+            ,
+            ,
+            ,
+            uint256 contentCreatedAt,
+            ,
+            ,
+            ,
+            ,
+            bool submitterStakeReturned,
+            uint256 rating,
+        ) = registry.contents(contentId);
+        if (existingContentId == 0 || submitterStakeReturned) return false;
+
+        uint256 elapsed = block.timestamp - contentCreatedAt;
+
+        if (!contentHasSettledRound[contentId]) {
+            return elapsed >= registry.DORMANCY_PERIOD();
+        }
+
+        if (elapsed >= 24 hours && rating < registry.SLASH_RATING_THRESHOLD()) {
+            return true;
+        }
+
+        return elapsed >= 4 days;
+    }
+
     /// @notice Resolve submitter stake once the slash or healthy-return window has elapsed.
     /// @dev Permissionless so idle content cannot bypass the submitter stake policy.
     function resolveSubmitterStake(uint256 contentId) external nonReentrant whenNotPaused {
-        uint256 roundId = currentRoundId[contentId];
-        if (roundId != 0 && rounds[contentId][roundId].state == RoundLib.RoundState.Open) {
-            revert ActiveRoundStillOpen();
-        }
+        if (_hasOpenRound(contentId)) revert ActiveRoundStillOpen();
         SubmitterStakeLib.resolve(registry, contentHasSettledRound[contentId], contentId);
     }
 
@@ -992,6 +1022,11 @@ contract RoundVotingEngine is
         if (finalizationTime == 0) return false;
 
         return block.timestamp >= finalizationTime;
+    }
+
+    function _hasOpenRound(uint256 contentId) internal view returns (bool) {
+        uint256 roundId = currentRoundId[contentId];
+        return roundId != 0 && rounds[contentId][roundId].state == RoundLib.RoundState.Open;
     }
 
     function _revealVoteInternal(

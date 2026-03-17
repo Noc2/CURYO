@@ -349,15 +349,7 @@ contract ContentRegistry is
         Content storage c = contents[contentId];
         require(c.status == ContentStatus.Active, "Not active");
         require(block.timestamp > _getDormancyAnchor(contentId) + DORMANCY_PERIOD, "Dormancy period not elapsed");
-        // Prevent dormancy while any round is still open, even if all votes have been revealed.
-        if (votingEngine != address(0)) {
-            uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
-            if (activeRoundId != 0) {
-                (, RoundLib.RoundState roundState,,,,,,,,,,,,) =
-                    IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
-                require(roundState != RoundLib.RoundState.Open, "Content has active round");
-            }
-        }
+        require(!_hasOpenRound(contentId), "Content has active round");
 
         c.status = ContentStatus.Dormant;
 
@@ -592,7 +584,8 @@ contract ContentRegistry is
     function isDormancyEligible(uint256 contentId) external view returns (bool) {
         Content storage c = contents[contentId];
         if (c.id == 0 || c.status != ContentStatus.Active) return false;
-        return block.timestamp > _getDormancyAnchor(contentId) + DORMANCY_PERIOD;
+        if (block.timestamp <= _getDormancyAnchor(contentId) + DORMANCY_PERIOD) return false;
+        return !_hasOpenRound(contentId);
     }
 
     function isUrlSubmitted(string calldata url) external view returns (bool) {
@@ -631,6 +624,16 @@ contract ContentRegistry is
 
     function _getDormancyAnchor(uint256 contentId) internal view returns (uint256) {
         return dormancyAnchorAt[contentId];
+    }
+
+    function _hasOpenRound(uint256 contentId) internal view returns (bool) {
+        if (votingEngine == address(0)) return false;
+
+        uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
+        if (activeRoundId == 0) return false;
+
+        (, RoundLib.RoundState roundState,,,,,,,,,,,,) = IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
+        return roundState == RoundLib.RoundState.Open;
     }
 
     // --- Admin ---

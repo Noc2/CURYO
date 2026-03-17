@@ -745,6 +745,22 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.markDormant(1);
     }
 
+    function test_IsDormancyEligible_ActiveRound_AllVotesRevealed_ReturnsFalse() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        registry.submitContent("https://example.com/open-round-eligible", "goal", "goal", "tags", 0);
+        vm.stopPrank();
+
+        (bytes32 commitKey, bytes32 salt) = _commit(voter1, 1, true);
+        uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
+
+        vm.warp(T0 + 1 hours + 1);
+        votingEngine.revealVoteByCommitKey(1, roundId, commitKey, true, salt);
+
+        vm.warp(T0 + 31 days);
+        assertFalse(registry.isDormancyEligible(1), "open rounds should block dormancy eligibility");
+    }
+
     function test_MarkDormant_CancelledRound_UsesDormancyAnchor() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);

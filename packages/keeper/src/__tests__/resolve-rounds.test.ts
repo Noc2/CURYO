@@ -145,6 +145,7 @@ function makeHarness(options: {
   currentRoundId?: bigint;
   tupleResults?: boolean;
   dormancyEligible?: boolean;
+  submitterStakeResolvable?: boolean;
   round: RoundData;
   roundConfig?: { epochDuration: bigint; maxDuration: bigint; minVoters: bigint; maxVoters: bigint };
   commitKeys?: readonly `0x${string}`[];
@@ -164,6 +165,7 @@ function makeHarness(options: {
   const currentRoundId = options.currentRoundId ?? (latestRoundId > 0n ? latestRoundId : activeRoundId);
   const tupleResults = options.tupleResults ?? false;
   const dormancyEligible = options.dormancyEligible ?? false;
+  const submitterStakeResolvable = options.submitterStakeResolvable ?? false;
   const commitKeys = options.commitKeys ?? [];
   const commits = options.commits ?? {};
   const round = options.round;
@@ -201,6 +203,8 @@ function makeHarness(options: {
           return tupleResults
             ? toCommitTuple(commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n }))
             : commits[String(args[2])] ?? makeCommit({ revealed: true, stakeAmount: 0n });
+        case "isSubmitterStakeResolvable":
+          return submitterStakeResolvable;
         case "isDormancyEligible":
           return dormancyEligible;
         default:
@@ -262,6 +266,10 @@ function makeHarness(options: {
 
       if (functionName === "markDormant") {
         return "0xdormant";
+      }
+
+      if (functionName === "resolveSubmitterStake") {
+        return "0xsubmitter";
       }
 
       throw new Error(`Unexpected writeContract(${functionName})`);
@@ -559,6 +567,43 @@ describe("resolveRounds", () => {
     expect(result.roundsRevealFailedFinalized).toBe(0);
     expect(walletClient.writeContract).not.toHaveBeenCalledWith(
       expect.objectContaining({ functionName: "finalizeRevealFailedRound" }),
+    );
+  });
+
+  it("resolves submitter stakes before the dormancy sweep when eligible", async () => {
+    const round = makeRound({
+      state: 2,
+      voteCount: 1n,
+      revealedCount: 0n,
+    });
+    const { publicClient, walletClient } = makeHarness({
+      activeRoundId: 0n,
+      latestRoundId: 1n,
+      round,
+      submitterStakeResolvable: true,
+      dormancyEligible: true,
+    });
+    const logger = makeLogger();
+
+    const result = await resolveRounds(
+      publicClient as any,
+      walletClient as any,
+      {} as any,
+      { address: ACCOUNT } as any,
+      logger as any,
+    );
+
+    expect(result).toMatchObject({
+      submitterStakesResolved: 1,
+      contentMarkedDormant: 1,
+    });
+    expect(walletClient.writeContract).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ functionName: "resolveSubmitterStake", args: [1n] }),
+    );
+    expect(walletClient.writeContract).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ functionName: "markDormant", args: [1n] }),
     );
   });
 });

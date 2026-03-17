@@ -1229,7 +1229,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(newRoundId, roundId + 1, "new commits roll into a fresh round after reveal failure");
     }
 
-    function test_CommitAfterRevealFailedGrace_RevertsWhenDormancyElapsed() public {
+    function test_CommitAfterRevealFailedGrace_AllowsVotingWhileOpenRoundBlocksDormancy() public {
         uint256 contentId = _submitContent();
 
         _commit(voter1, contentId, true, STAKE);
@@ -1243,9 +1243,13 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.warp(T0 + 31 days);
         vm.startPrank(voter4);
         crepToken.approve(address(engine), STAKE);
-        vm.expectRevert(RoundVotingEngine.DormancyWindowElapsed.selector);
         engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
+
+        uint256 newRoundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
+        assertEq(newRoundId, 2, "stale open rounds should finalize before dormancy blocks new voting");
+        RoundLib.Round memory failedRound = RoundEngineReadHelpers.round(engine, contentId, 1);
+        assertEq(uint256(failedRound.state), uint256(RoundLib.RoundState.RevealFailed));
     }
 
     function test_RoundKeepsAcceptingVotesBeforeMaxDurationEvenIfEarlyRevealGracePassed() public {
