@@ -3,38 +3,98 @@ import { EyeSlashIcon, ScaleIcon, ShieldCheckIcon } from "@heroicons/react/24/ou
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
 
+const LANDING_STATS_REVALIDATE_SECONDS = 300;
+
 const STEPS = [
   {
     icon: ShieldCheckIcon,
     title: "Verify Humanity",
-    description:
-      "Claim one privacy-preserving Voter ID and cREP so each rating comes from a real human with a fair stake limit.",
+    description: "Claim one privacy-preserving Voter ID and cREP so each rating comes from a real human.",
   },
   {
     icon: EyeSlashIcon,
     title: "Blind Vote with Stake",
-    description:
-      "Vote UP or DOWN on content with cREP. Your direction stays hidden during the blind phase, which makes copycat voting harder and rewards independent judgment.",
+    description: "Vote UP or DOWN on content with cREP. Your direction stays hidden during the blind phase.",
   },
   {
     icon: ScaleIcon,
     title: "Reveal and Settle",
-    description:
-      "After the blind phase, votes are revealed and the round settles. Winning voters earn rewards, and the content's public rating updates from the final stake imbalance.",
+    description: "After the blind phase, votes are revealed and the round settles. Winning voters earn rewards.",
   },
 ];
 
-const SOCIAL_PROOF_ITEMS = [
-  { value: "3,482", label: "stake-backed votes" },
-  { value: "287", label: "verified humans" },
-  { value: "912", label: "rounds settled" },
-];
+const FALLBACK_SOCIAL_PROOF_STATS = {
+  totalVotes: 3482,
+  totalVoterIds: 287,
+  totalRoundsSettled: 912,
+};
+
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+}
+
+function getPonderUrl(): string | null {
+  const rawValue =
+    readEnv("NEXT_PUBLIC_PONDER_URL") ?? (process.env.NODE_ENV !== "production" ? "http://localhost:42069" : undefined);
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return new URL(rawValue).toString().replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
+async function getLandingPageSocialProofItems() {
+  const fallbackItems = [
+    { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "stake-backed votes" },
+    { value: FALLBACK_SOCIAL_PROOF_STATS.totalVoterIds.toLocaleString("en-US"), label: "verified humans" },
+    { value: FALLBACK_SOCIAL_PROOF_STATS.totalRoundsSettled.toLocaleString("en-US"), label: "rounds settled" },
+  ];
+
+  const ponderUrl = getPonderUrl();
+  if (!ponderUrl) {
+    return fallbackItems;
+  }
+
+  try {
+    const response = await fetch(`${ponderUrl}/stats`, {
+      next: { revalidate: LANDING_STATS_REVALIDATE_SECONDS },
+    });
+
+    if (!response.ok) {
+      return fallbackItems;
+    }
+
+    const stats = (await response.json()) as {
+      totalVotes?: number;
+      totalVoterIds?: number;
+      totalRoundsSettled?: number;
+    };
+
+    return [
+      { value: Math.max(0, Number(stats.totalVotes ?? 0)).toLocaleString("en-US"), label: "stake-backed votes" },
+      { value: Math.max(0, Number(stats.totalVoterIds ?? 0)).toLocaleString("en-US"), label: "verified humans" },
+      {
+        value: Math.max(0, Number(stats.totalRoundsSettled ?? 0)).toLocaleString("en-US"),
+        label: "rounds settled",
+      },
+    ];
+  } catch {
+    return fallbackItems;
+  }
+}
 
 export default async function LandingPage({ searchParams }: { searchParams: Promise<{ content?: string }> }) {
   const params = await searchParams;
   if (params.content) {
     redirect(`/vote?content=${encodeURIComponent(params.content)}`);
   }
+
+  const socialProofItems = await getLandingPageSocialProofItems();
 
   return (
     <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
@@ -57,7 +117,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             </p>
             <LandingPageActions />
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/62 sm:text-[0.95rem] lg:justify-start lg:text-left">
-              {SOCIAL_PROOF_ITEMS.map(({ value, label }, index) => (
+              {socialProofItems.map(({ value, label }, index) => (
                 <div key={label} className="flex items-center gap-3">
                   {index > 0 ? (
                     <span className="hidden text-base-content/28 sm:inline" aria-hidden="true">
