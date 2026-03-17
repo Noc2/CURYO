@@ -367,7 +367,7 @@ export const Header = () => {
                   </ul>
                 </details>
                 <Link href="/" className="flex min-w-0 items-center gap-2">
-                  <CuryoLogo className="w-7 h-7 shrink-0" />
+                  <CuryoLogo className="w-8 h-8 shrink-0" />
                   <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="font-display truncate text-[1.35rem] leading-none tracking-[0.08em] text-[#F5F0EB]">
                       CURYO (BETA)
@@ -400,7 +400,7 @@ export const Header = () => {
       {/* Desktop: left sidebar */}
       <aside className="fixed left-0 top-0 z-20 hidden h-screen w-56 shrink-0 flex-col items-stretch bg-[#141316] py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
         <Link href="/" className="flex flex-row items-center gap-2 px-4 mb-4 shrink-0">
-          <CuryoLogo className="w-8 h-8 shrink-0" />
+          <CuryoLogo className="w-9 h-9 shrink-0" />
           <div className="flex flex-col gap-0.5 items-start">
             <span className="font-display text-[1.4rem] leading-none tracking-[0.08em] text-[#F5F0EB]">
               CURYO (BETA)

@@ -65,12 +65,12 @@ const VIEWBOX_SIZE = 512;
 const CENTER = VIEWBOX_SIZE / 2;
 const CREP_DECIMALS = 1e6;
 const FLARE_START_ROTATION_DEGREES = -90;
-const AVATAR_FLARE_WIDTH = 11.5;
+const AVATAR_FLARE_WIDTH = 15.5;
 const AVATAR_FLARE_GLOW_WIDTH = 22;
 const AVATAR_FLARE_HEAD_RADIUS = 8.4;
-const AVATAR_BASE_PLANET_RADIUS = 108;
-const AVATAR_PLANET_RADIUS_GAIN = 44;
-const AVATAR_ORBIT_GAP = 72;
+const AVATAR_BASE_PLANET_RADIUS = 98;
+const AVATAR_PLANET_RADIUS_GAIN = 40;
+const AVATAR_ORBIT_GAP = 82;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));

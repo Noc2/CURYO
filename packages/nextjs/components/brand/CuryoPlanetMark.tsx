@@ -10,11 +10,11 @@ interface CuryoPlanetMarkProps {
 
 const CENTER = 700;
 const DEFAULT_FLARE_RADIUS = 626;
-const COMPACT_FLARE_RADIUS = 648;
+const COMPACT_FLARE_RADIUS = 652;
 const HERO_FLARE_RADIUS = 630;
 const DEFAULT_ARC_DEGREES = 94;
-const COMPACT_ARC_DEGREES = 118;
-const COMPACT_FLARE_START_DEGREES = -92;
+const COMPACT_ARC_DEGREES = 122;
+const COMPACT_FLARE_START_DEGREES = -94;
 
 function polarPoint(radius: number, degrees: number) {
   const radians = (degrees * Math.PI) / 180;
@@ -91,12 +91,12 @@ export function CuryoPlanetMark({
   const flareDashArray = usesCompactVariant ? null : circleDashArray(flareRadius, flareArcDegrees);
   const flarePath = usesCompactVariant ? describeArcPath(flareRadius, flareRotation, flareArcDegrees) : null;
   const nodePoint = polarPoint(flareRadius, flareRotation + flareArcDegrees);
-  const planetScale = usesCompactVariant ? 1.34 : usesHeroVariant ? 1.46 : 1.42;
+  const planetScale = usesCompactVariant ? 1.24 : usesHeroVariant ? 1.46 : 1.42;
   const flareGlowStrokeWidth = usesCompactVariant ? 0 : usesHeroVariant ? 32 : 28;
   const flareGlowOpacity = usesCompactVariant ? 0.68 : usesHeroVariant ? 0.58 : 0.54;
-  const flareBodyStrokeWidth = usesCompactVariant ? 24 : usesHeroVariant ? 11 : 10;
-  const flareMainStrokeWidth = usesCompactVariant ? 18 : usesHeroVariant ? 8.4 : 8;
-  const flareCoreStrokeWidth = usesCompactVariant ? 6.4 : usesHeroVariant ? 2.8 : 2.4;
+  const flareBodyStrokeWidth = usesCompactVariant ? 30 : usesHeroVariant ? 11 : 10;
+  const flareMainStrokeWidth = usesCompactVariant ? 24 : usesHeroVariant ? 8.4 : 8;
+  const flareCoreStrokeWidth = usesCompactVariant ? 9 : usesHeroVariant ? 2.8 : 2.4;
   const nodeHaloRadius = usesCompactVariant ? 0 : usesHeroVariant ? 25 : 23;
   const nodeRadius = usesCompactVariant ? 0 : usesHeroVariant ? 9.5 : 9;
   const flareGlowFilterId = usesHeroVariant ? blur52Id : blur40Id;
