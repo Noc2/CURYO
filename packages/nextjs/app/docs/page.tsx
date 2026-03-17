@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { NextPage } from "next";
 import { RewardSplitChart } from "~~/components/docs/RewardSplitChart";
 import { VotingFlowDiagram } from "~~/components/docs/VotingFlowDiagram";
+import { protocolCopy } from "~~/lib/docs/protocolCopy";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const DocsIntro: NextPage = () => {
@@ -20,17 +21,13 @@ const DocsIntro: NextPage = () => {
       </p>
 
       <h2>What is Curyo?</h2>
-      <p>
-        Curyo replaces passive likes with <strong>prediction games</strong>. Voters predict whether content&apos;s
-        rating will go UP or DOWN and back their predictions with cREP token stakes. The majority side wins and the
-        losing side&apos;s stakes are distributed to the winners.
-      </p>
+      <p>{protocolCopy.predictionGamesOverview}</p>
 
       <h2>Key Principles</h2>
       <div className="not-prose grid sm:grid-cols-2 gap-4 my-6">
         <FeatureCard
           title="Skin in the Game"
-          description="Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes."
+          description="Every vote requires a token stake, aligning incentives. Rewards come from settled losing pools and participation incentives, not passive likes."
         />
         <FeatureCard
           title="Voter ID (One Person, One Vote)"
@@ -40,10 +37,7 @@ const DocsIntro: NextPage = () => {
           title="Per-Content Rounds"
           description={`Each content item has independent rounds with blind voting. Blind phase voters earn ${protocolDocFacts.earlyVoterAdvantageLabel} more reward weight per cREP than open phase voters.`}
         />
-        <FeatureCard
-          title="Contributor Rewards"
-          description={`After a ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate for revealed losers, the remaining losing stake funds submitter, category, frontend, and winner rewards.`}
-        />
+        <FeatureCard title="Contributor Rewards" description={protocolCopy.contributorRewardsOverview} />
       </div>
 
       <h2>Voting Flow</h2>
@@ -68,7 +62,8 @@ const DocsIntro: NextPage = () => {
         <li>
           <strong>Resolve:</strong> After the blind phase ends, the keeper normally reveals eligible votes. Once at
           least {protocolDocFacts.minVotersLabel} votes are revealed, the round resolves. Connected users can also
-          self-reveal if needed. The majority side wins and the losing side&apos;s stakes become the reward pool.
+          self-reveal if needed. The majority side wins the content-specific voter pool. Revealed losers can later claim
+          a fixed rebate, and the remaining losing pool follows the fixed on-chain split.
         </li>
       </ol>
       <p>The losing stakes are split:</p>

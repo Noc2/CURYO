@@ -11,8 +11,9 @@ const SmartContracts: NextPage = () => {
 
       <h2>Architecture</h2>
       <p>
-        All core contracts use <strong>UUPS upgradeable proxies</strong> (except CuryoReputation, VoterIdNFT,
-        HumanFaucet, and CategoryRegistry which are non-upgradeable).
+        The upgradeable control-plane contracts use <strong>UUPS proxies</strong>: ContentRegistry, RoundVotingEngine,
+        RoundRewardDistributor, FrontendRegistry, and ProfileRegistry. Token, identity, faucet, participation,
+        governance, and helper contracts are intentionally non-upgradeable.
       </p>
       <p>
         The current production surface also includes one stateless helper contract, <code>SubmissionCanonicalizer</code>
@@ -248,12 +249,6 @@ const SmartContracts: NextPage = () => {
               </td>
               <td>Voluntarily removed by the submitter (1 cREP cancellation fee).</td>
             </tr>
-            <tr>
-              <td>
-                <span className="badge badge-secondary badge-sm">Flagged</span>
-              </td>
-              <td>Removed by moderator for policy violations.</td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -276,8 +271,8 @@ const SmartContracts: NextPage = () => {
           <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 cREP, max 2 times).
         </li>
         <li>
-          <code>updateRating(contentId, upWins, ratingDelta)</code> &mdash; Called by RoundVotingEngine after
-          settlement. Rating is recalculated from the final revealed UP and DOWN stake pools using the protocol&apos;s
+          <code>updateRatingDirect(contentId, newRating)</code> &mdash; Called by RoundVotingEngine after settlement
+          with the new rating computed from the final revealed UP and DOWN stake pools using the protocol&apos;s
           smoothed stake-imbalance formula.
         </li>
       </ul>
@@ -593,10 +588,11 @@ const SmartContracts: NextPage = () => {
 
       <h2>ParticipationPool</h2>
       <p>
-        Distributes participation rewards to both voters and content submitters. Submitter rewards are paid immediately
-        on content submission, while voter rewards are claimed after round settlement using the rate snapshotted at
-        settlement time. Funded with 34M cREP. Uses a halving schedule: starting at 90% reward rate, halving each time a
-        tier threshold is reached (2M, 6M, 14M, 30M cumulative), with a 1% floor rate.
+        Distributes participation rewards to both voters and content submitters. Voter rewards are claimed after round
+        settlement using the rate snapshotted at settlement time. Submitter rewards are snapshotted only when a healthy
+        submitter stake return resolves after a settled round. Funded with 34M cREP. Uses a halving schedule: starting
+        at 90% reward rate, halving each time a tier threshold is reached (2M, 6M, 14M, 30M cumulative), with a 1% floor
+        rate.
       </p>
 
       <hr />

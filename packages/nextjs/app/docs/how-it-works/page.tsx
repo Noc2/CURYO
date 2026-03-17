@@ -65,9 +65,10 @@ const HowItWorks: NextPage = () => {
         <li>
           <strong>Resolve:</strong> Once at least {protocolDocFacts.minVotersLabel} votes are revealed and all
           past-phase votes have been revealed (or the {protocolDocFacts.revealGracePeriodLabel} reveal grace period has
-          expired), the round can be resolved. The majority side wins. The losing side&apos;s stakes become the reward
-          pool. Content rating is recalculated from the final revealed stake imbalance, with small rounds pulled toward
-          50 by a fixed smoothing parameter. Winners can then click Claim to collect their rewards.
+          expired), the round can be resolved. The majority side wins the content-specific voter pool, while revealed
+          losers later reclaim a fixed rebate and the remaining losing pool follows the fixed on-chain split. Content
+          rating is recalculated from the final revealed stake imbalance, with small rounds pulled toward 50 by a fixed
+          smoothing parameter. Winners can then click Claim to collect their rewards.
         </li>
       </ol>
 
@@ -135,8 +136,8 @@ const HowItWorks: NextPage = () => {
         {protocolDocFacts.minVotersLabel} votes are revealed and all past-phase votes have been revealed (or the{" "}
         {protocolDocFacts.revealGracePeriodLabel} reveal grace period has expired), resolution can be triggered.
         Resolution is fully open &mdash; anyone can trigger it. Winners receive their original stake plus a
-        phase-weighted share of the losing stakes, while revealed losers can later claim a fixed{" "}
-        {protocolDocFacts.revealedLoserRefundPercentLabel} rebate.
+        phase-weighted share of the content-specific voter pool, while revealed losers can later claim a fixed rebate
+        and the remaining losing pool is split across submitter, category, frontend, consensus, and treasury shares.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">

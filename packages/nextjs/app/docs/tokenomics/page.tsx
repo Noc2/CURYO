@@ -4,6 +4,7 @@ import { FaucetHalvingChart } from "~~/components/docs/FaucetHalvingChart";
 import { FaucetTierChart } from "~~/components/docs/FaucetTierChart";
 import { RewardSplitChart } from "~~/components/docs/RewardSplitChart";
 import { TokenAllocationChart } from "~~/components/docs/TokenAllocationChart";
+import { protocolCopy } from "~~/lib/docs/protocolCopy";
 import { protocolDocFacts, rewardSplitTableRows } from "~~/lib/docs/protocolFacts";
 
 const Tokenomics = () => {
@@ -16,8 +17,8 @@ const Tokenomics = () => {
       <p>
         cREP has no monetary value and is not designed as an investment or financial instrument. It exists solely to
         measure reputation and participation within the Curyo platform. It cannot be purchased &mdash; it is only earned
-        through verified identity claims and active participation. There is no team, no company, and no central entity
-        behind the token. Curyo is a fully decentralized, community-governed system from day one.
+        through verified identity claims and active participation. There is no team, no company, and no central issuer
+        behind the token. {protocolCopy.governanceOverview}
       </p>
 
       <h2>Token Overview</h2>
@@ -60,8 +61,7 @@ const Tokenomics = () => {
           cREP. Distribution is handled entirely by automated system contracts.
         </li>
         <li>
-          <strong>Decentralized from genesis.</strong> All protocol parameters are governed by the community. After
-          deployment finalization (role renounce ceremony), no privileged admin keys remain.
+          <strong>Governance-finalized deployments.</strong> {protocolCopy.governanceDesignPrinciple}
         </li>
         <li>
           <strong>Fair distribution (one person, one claim).</strong> Tokens are claimed once per verified human via
@@ -96,10 +96,7 @@ const Tokenomics = () => {
             <tr>
               <td className="font-medium">Participation Pool</td>
               <td className="font-mono">34,000,000 cREP</td>
-              <td>
-                Bootstraps early adoption &mdash; immediate submitter bonuses + voter rewards claimable after round
-                resolution (rate halving schedule)
-              </td>
+              <td>{protocolCopy.participationPoolPurpose}</td>
             </tr>
             <tr>
               <td className="font-medium">Consensus Subsidy Reserve</td>
@@ -201,15 +198,7 @@ const Tokenomics = () => {
       </p>
 
       <h3>Participation Pool</h3>
-      <p>
-        The participation pool solves the <strong>cold start problem</strong>. When the platform is new and vote stakes
-        are small, round rewards alone may not be enough to attract voters and submitters. The participation pool pays a{" "}
-        <strong>proportional bonus on stake</strong>: submitters are rewarded immediately on submission, while voters
-        can claim their participation rewards after round resolution (regardless of vote outcome). The voter reward rate
-        is snapshotted at resolution time for fairness. Early participants receive the most thanks to a halving
-        schedule: as cumulative rewards grow, the reward rate decreases. This creates a strong incentive to participate
-        early and helps bootstrap the network.
-      </p>
+      <p>{protocolCopy.participationPoolOverview}</p>
       <p>
         Reward formula: <code>reward = stakeAmount &times; currentRate</code>. The rate starts at <strong>90%</strong>{" "}
         and halves based on cumulative cREP distributed from the pool &mdash; making the pool&apos;s lifetime
@@ -342,8 +331,8 @@ const Tokenomics = () => {
 
       <h2>Point Distribution</h2>
       <p>
-        When a round is resolved, the losing side&apos;s stakes are distributed. Winners also get their original stake
-        back.
+        When a round is resolved, winners recover their original stake and claim from the content-specific voter pool.
+        Revealed losers can reclaim a fixed rebate, and the remaining losing pool follows the fixed protocol split.
       </p>
 
       <h3>Pool Split</h3>

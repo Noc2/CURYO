@@ -2,6 +2,7 @@
  * Whitepaper content extracted from the Curyo documentation.
  * Sections: Introduction, How It Works, tlock Commit-Reveal Voting, Tokenomics, Governance.
  */
+import { protocolCopy } from "../../lib/docs/protocolCopy";
 import {
   protocolDocFacts,
   whitepaperRewardSplitRows,
@@ -84,7 +85,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo replaces passive likes with prediction games. Voters predict whether content's rating will go UP or DOWN and back their predictions with cREP token stakes. The majority side wins and the losing side's stakes are distributed to the winners.",
+            text: protocolCopy.predictionGamesOverview,
           },
         ],
       },
@@ -94,10 +95,10 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Points come from the losing side's stakes.",
+              "Skin in the Game  -- Every vote requires a token stake, aligning incentives. Rewards come from settled losing pools and participation incentives, not passive likes.",
               "Voter ID (Sybil Resistance)  -- Each verified human gets one soulbound Voter ID NFT, limiting stake to 100 cREP per content per round.",
               `Per-Content Rounds  -- Each content item has independent voting rounds. Votes are encrypted via tlock and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends. After each epoch the keeper normally reveals eligible votes in the background, and connected users can self-reveal if needed. Settlement occurs after at least ${protocolDocFacts.minVotersLabel} votes are revealed and the reveal conditions are satisfied.`,
-              `Contributor Rewards  -- After the ${protocolDocFacts.revealedLoserRefundPercentLabel} revealed-loser rebate, content submitters receive ${protocolDocFacts.submitterShareLabel}, category submitters receive ${protocolDocFacts.categoryShareLabel}, and frontend operators receive ${protocolDocFacts.frontendShareLabel}.`,
+              `Contributor Rewards  -- ${protocolCopy.contributorRewardsOverview}`,
             ],
           },
         ],
@@ -116,7 +117,7 @@ export const SECTIONS: Section[] = [
               `Accumulate: More voters commit during the ${protocolDocFacts.blindPhaseDurationLabel} epoch. No one can see anyone else's vote direction until the epoch ends.`,
               "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
               `Settle: Once at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.`,
-              `Claim: Winners receive their original stake back plus an epoch-weighted share of the losing pool (Tier 1 = ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.`,
+              `Claim: Winners receive their original stake back plus an epoch-weighted share of the content-specific voter pool (Tier 1 = ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} reward per cREP vs Tier 2). One-sided rounds receive a consensus subsidy.`,
             ],
           },
           {
@@ -684,7 +685,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Reputation, not money. cREP represents your standing in the community. It is staked to curate and vote, not traded for profit.",
               "No issuer, no sale. There is no company, foundation, or team that issues, sells, or controls cREP. Distribution is handled entirely by on-chain protocol contracts.",
-              "Decentralized from genesis. All protocol parameters are governed on-chain by token holders. After deployment finalization (role renounce ceremony), no privileged admin keys remain.",
+              `Governance-finalized deployments. ${protocolCopy.governanceDesignPrinciple}`,
               "Sybil-resistant distribution. Tokens are claimed once per verified human via passport verification, preventing concentration and ensuring broad distribution.",
             ],
           },
@@ -703,11 +704,7 @@ export const SECTIONS: Section[] = [
                   "51,899,900 cREP",
                   "One-time claims for verified humans (10,000 to 1 cREP per claim, tiered by adoption, serves up to ~41M users without referrals)",
                 ],
-                [
-                  "Participation Pool",
-                  "34,000,000 cREP",
-                  "Bootstraps early adoption  -- immediate submitter bonuses + voter rewards claimable after round settlement (rate halving schedule)",
-                ],
+                ["Participation Pool", "34,000,000 cREP", protocolCopy.participationPoolPurpose],
                 [
                   "Consensus Subsidy",
                   "4,000,000 cREP",
@@ -760,7 +757,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The participation pool solves the cold start problem. When the platform is new and vote stakes are small, round rewards alone may not be enough to attract voters and submitters. The participation pool pays proportional bonuses based on stake amount: submitters receive rewards immediately on content submission, while all voters claim deferred participation rewards after round settlement, regardless of vote outcome.",
+            text: protocolCopy.participationPoolOverview,
           },
           {
             type: "paragraph",
@@ -952,7 +949,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo is fully decentralized from day one. There is no team, company, foundation, or central authority making decisions  -- every aspect of the platform is shaped by its community through on-chain governance. Built on OpenZeppelin's Governor contracts, token holders create proposals, vote, and execute approved changes directly on-chain. After deployment finalization (role renounce ceremony), no privileged admin keys or multisigs remain.",
+            text: protocolCopy.governanceOverview,
           },
           {
             type: "paragraph",

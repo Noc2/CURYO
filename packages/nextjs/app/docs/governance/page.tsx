@@ -1,4 +1,5 @@
 import type { NextPage } from "next";
+import { protocolCopy } from "~~/lib/docs/protocolCopy";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const GovernanceDocs: NextPage = () => {
@@ -8,13 +9,7 @@ const GovernanceDocs: NextPage = () => {
       <p className="lead text-base-content/60 text-lg">Community governance for shaping the platform&apos;s future.</p>
 
       <h2>Overview</h2>
-      <p>
-        Curyo is fully decentralized from day one. There is no team, company, foundation, or central authority making
-        decisions &mdash; every aspect of the platform is shaped by its community through community voting. Built on
-        OpenZeppelin&apos;s Governor contracts, token holders create proposals, vote, and execute approved changes
-        directly through the system. After deployment finalization (role renounce ceremony), no privileged admin keys or
-        multisigs remain.
-      </p>
+      <p>{protocolCopy.governanceOverview}</p>
       <p>
         Curyo is a <strong>reputation token with no monetary value</strong>. It is not sold, has no treasury backing,
         and is not designed as a financial instrument. Governance power comes from earning reputation through verified

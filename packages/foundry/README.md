@@ -73,6 +73,10 @@ scripts-js/                      # JS helpers for deployment & account managemen
 
 ## Architecture
 
-All contracts use the **UUPS upgradeable** pattern with `AccessControlUpgradeable` for role-based permissions. Storage layout must be preserved across upgrades — never reorder, remove, or change types of existing storage variables.
+The upgradeable control-plane contracts use the **UUPS** pattern with `AccessControlUpgradeable` for role-based
+permissions: `ContentRegistry`, `RoundVotingEngine`, `RoundRewardDistributor`, `FrontendRegistry`, and
+`ProfileRegistry`. Token, identity, faucet, participation, governance, and helper contracts are intentionally
+non-upgradeable. For UUPS-backed contracts, storage layout must be preserved across upgrades — never reorder, remove,
+or change types of existing storage variables.
 
 Compiled ABIs and deployed addresses are generated into `packages/contracts/src/` and consumed via the `@curyo/contracts` workspace package.
