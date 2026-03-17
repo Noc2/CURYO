@@ -344,10 +344,8 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           onNavigate?.("last", item.id);
         }
       }}
-      className={`group flex w-[11.1rem] min-w-[11.1rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl text-left transition-colors snap-start sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem] ${
-        selected
-          ? "bg-[#141316] ring-2 ring-inset ring-primary/35 shadow-[0_18px_36px_rgba(9,10,12,0.26)]"
-          : "bg-[#141316] hover:bg-[#141316]"
+      className={`group relative isolate flex w-[11.1rem] min-w-[11.1rem] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl text-left transition-colors snap-start sm:w-[11.35rem] sm:min-w-[11.35rem] xl:w-[11.8rem] xl:min-w-[11.8rem] ${
+        selected ? "bg-[#141316] shadow-[0_18px_36px_rgba(9,10,12,0.26)]" : "bg-[#141316] hover:bg-[#141316]"
       }`}
     >
       <div className="relative aspect-video cursor-pointer overflow-hidden bg-[#141316]">
@@ -389,6 +387,12 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           </div>
         ) : null}
       </div>
+      {selected ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-20 rounded-xl ring-2 ring-inset ring-[#F26426]/75"
+        />
+      ) : null}
     </button>
   );
 });
