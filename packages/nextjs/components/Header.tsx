@@ -1,8 +1,8 @@
 "use client";
 
-import React, { Suspense, startTransition, useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
@@ -21,6 +21,7 @@ import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { AddressInfoDropdown } from "~~/components/scaffold-eth/RainbowKitCustomConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { useVoteSearch } from "~~/hooks/useVoteSearch";
 import { getBlockExplorerAddressLink } from "~~/utils/scaffold-eth";
 
 type HeaderMenuLink = {
@@ -185,40 +186,33 @@ const MobileMenuLinks = () => {
   );
 };
 
-const buildVoteSearchTarget = (value: string) => {
-  const trimmed = value.trim();
-  return trimmed ? `/vote?q=${encodeURIComponent(trimmed)}` : "/vote";
-};
-
 const SEARCH_COMMIT_DEBOUNCE_MS = 200;
 
-const HeaderSearchBar = ({ className }: { className?: string }) => {
-  const router = useRouter();
-  const pathname = usePathname() ?? "";
-  const searchParams = useSearchParams();
+const HeaderBrand = ({ className, compact = false }: { className?: string; compact?: boolean }) => (
+  <Link href="/" className={`flex min-w-0 items-center gap-2 ${className ?? ""}`}>
+    <CuryoLogo className={compact ? "h-8 w-8 shrink-0" : "h-9 w-9 shrink-0"} />
+    <div className={`flex min-w-0 flex-col gap-0.5 ${compact ? "" : "items-start"}`}>
+      <span
+        className={`font-display leading-none tracking-[0.08em] text-base-content ${
+          compact ? "truncate text-[1.35rem]" : "text-[1.4rem]"
+        }`}
+      >
+        CURYO (BETA)
+      </span>
+      <span className={`${compact ? "truncate" : ""} text-base-content/60`} style={{ fontSize: "14px" }}>
+        A Better Web
+      </span>
+    </div>
+  </Link>
+);
 
-  const activeQuery = searchParams?.get("q") ?? "";
+const HeaderSearchBar = ({ className }: { className?: string }) => {
+  const { activeQuery, commitSearch } = useVoteSearch();
   const [inputValue, setInputValue] = useState(activeQuery);
 
   useEffect(() => {
     setInputValue(activeQuery);
   }, [activeQuery]);
-
-  const commitSearch = useCallback(
-    (value: string) => {
-      const target = buildVoteSearchTarget(value);
-      if (pathname === "/vote" && target === buildVoteSearchTarget(activeQuery)) return;
-
-      startTransition(() => {
-        if (pathname === "/vote") {
-          router.replace(target, { scroll: false });
-        } else {
-          router.push(target);
-        }
-      });
-    },
-    [activeQuery, pathname, router],
-  );
 
   const updateSearch = useCallback((value: string) => {
     setInputValue(value);
@@ -233,7 +227,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
     if (inputValue === activeQuery) return;
 
     const timeoutId = setTimeout(() => {
-      commitSearch(inputValue);
+      commitSearch(inputValue, { skipIfUnchanged: true });
     }, SEARCH_COMMIT_DEBOUNCE_MS);
 
     return () => {
@@ -254,7 +248,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
         onKeyDown={event => {
           if (event.key === "Enter") {
             event.preventDefault();
-            commitSearch(inputValue);
+            commitSearch(inputValue, { skipIfUnchanged: true });
           }
         }}
         className={`input input-sm input-bordered border-base-content/10 bg-base-300/80 pl-8 pr-7 text-base focus:border-primary/30 focus:bg-base-300 ${
@@ -275,27 +269,12 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
 };
 
 const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
-  const router = useRouter();
-  const pathname = usePathname() ?? "";
-  const searchParams = useSearchParams();
-  const activeQuery = searchParams?.get("q") ?? "";
+  const { activeQuery, commitSearch } = useVoteSearch();
   const [draftValue, setDraftValue] = useState(activeQuery);
 
   useEffect(() => {
     setDraftValue(activeQuery);
   }, [activeQuery]);
-
-  const commitSearch = useCallback(
-    (value: string) => {
-      const target = buildVoteSearchTarget(value);
-      if (pathname === "/vote") {
-        router.replace(target, { scroll: false });
-      } else {
-        router.push(target);
-      }
-    },
-    [pathname, router],
-  );
 
   const handleClose = useCallback(() => {
     setDraftValue(activeQuery);
@@ -386,17 +365,7 @@ export const Header = () => {
                     </Suspense>
                   </ul>
                 </details>
-                <Link href="/" className="flex min-w-0 items-center gap-2">
-                  <CuryoLogo className="w-8 h-8 shrink-0" />
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="font-display truncate text-[1.35rem] leading-none tracking-[0.08em] text-base-content">
-                      CURYO (BETA)
-                    </span>
-                    <span className="truncate text-base-content/60" style={{ fontSize: "14px" }}>
-                      A Better Web
-                    </span>
-                  </div>
-                </Link>
+                <HeaderBrand compact />
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
@@ -419,17 +388,7 @@ export const Header = () => {
 
       {/* Desktop: left sidebar */}
       <aside className="fixed left-0 top-0 z-20 hidden h-screen w-56 shrink-0 flex-col items-stretch bg-base-200 py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
-        <Link href="/" className="flex flex-row items-center gap-2 px-4 mb-4 shrink-0">
-          <CuryoLogo className="w-9 h-9 shrink-0" />
-          <div className="flex flex-col gap-0.5 items-start">
-            <span className="font-display text-[1.4rem] leading-none tracking-[0.08em] text-base-content">
-              CURYO (BETA)
-            </span>
-            <span className="text-base-content/60" style={{ fontSize: "14px" }}>
-              A Better Web
-            </span>
-          </div>
-        </Link>
+        <HeaderBrand className="mb-4 shrink-0 px-4" />
         <div className="w-full min-w-0 px-3 mb-4">
           <Suspense>
             <HeaderSearchBar className="sidebar" />

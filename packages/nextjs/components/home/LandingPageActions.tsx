@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import styles from "./LandingPageActions.module.css";
 import { useAccount } from "wagmi";
 import { ChevronRightIcon } from "@heroicons/react/20/solid";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -30,15 +31,15 @@ export function LandingPageActions() {
 
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <Link href="/vote" className="btn btn-primary landing-cta landing-cta--primary">
+      <Link href="/vote" className={`btn btn-primary ${styles.cta} ${styles.primary}`}>
         <span>Discover</span>
-        <span className="landing-cta__arrow" aria-hidden="true">
+        <span className={styles.arrow} aria-hidden="true">
           <ChevronRightIcon className="h-5 w-5 text-primary-content" />
         </span>
       </Link>
-      <Link href="/docs" className="btn landing-cta landing-cta--secondary whitespace-nowrap">
+      <Link href="/docs" className={`btn whitespace-nowrap ${styles.cta} ${styles.secondary}`}>
         <span>Learn More</span>
-        <span className="landing-cta__arrow" aria-hidden="true">
+        <span className={styles.arrow} aria-hidden="true">
           <ChevronRightIcon className="h-5 w-5 text-primary-content" />
         </span>
       </Link>
