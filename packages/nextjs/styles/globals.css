@@ -105,10 +105,10 @@ body {
 }
 
 .hero-headline {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  line-height: 0.9;
-  letter-spacing: -0.055em;
+  font-family: var(--font-display);
+  line-height: 0.94;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
   text-wrap: balance;
 }
 
