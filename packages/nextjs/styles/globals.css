@@ -296,7 +296,7 @@ body {
 }
 
 .landing-cta {
-  min-height: 3.55rem;
+  min-height: 3.35rem;
   padding-inline: 1.3rem 0.9rem;
   border-radius: 9999px;
   gap: 0.75rem;
@@ -307,8 +307,8 @@ body {
 
 .landing-cta__arrow {
   display: inline-flex;
-  height: 1.75rem;
-  width: 1.75rem;
+  height: 1.7rem;
+  width: 1.7rem;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
