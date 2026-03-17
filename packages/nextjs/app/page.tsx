@@ -66,8 +66,8 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 key={title}
                 className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
               >
-                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[inset_0_0_0_1px_rgba(245,240,235,0.06),0_14px_28px_rgba(9,10,12,0.24)]">
-                  <Icon className="h-10 w-10 text-base-content" />
+                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 shadow-[inset_0_0_0_1px_rgba(242,100,38,0.16),0_14px_28px_rgba(242,100,38,0.12)]">
+                  <Icon className="h-10 w-10 text-primary" />
                 </div>
                 <h3 className="display-section mb-2 text-2xl text-base-content">{title}</h3>
                 <p className="text-lg text-base-content/60">{description}</p>
