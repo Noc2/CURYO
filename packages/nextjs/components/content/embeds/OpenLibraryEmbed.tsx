@@ -158,10 +158,14 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
       className={`block w-full overflow-hidden rounded-xl bg-base-200 relative ${
         compact ? "max-w-[200px] mx-auto" : "h-full max-w-full flex flex-col"
       }`}
+      style={{ background: "var(--curyo-surface-elevated)" }}
     >
       <SafeExternalLink href={info.url} className={`relative group ${compact ? "block" : "flex-1 min-h-0"}`}>
         {!imageLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-base-200">
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ background: "var(--curyo-surface-elevated)" }}
+          >
             <span className="loading loading-spinner loading-md text-primary"></span>
           </div>
         )}
@@ -181,7 +185,10 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
         </div>
       </SafeExternalLink>
       {/* Open Library Attribution */}
-      <div className="flex items-center justify-center gap-2 py-2 px-3 bg-base-300/50 rounded-b-xl">
+      <div
+        className="flex items-center justify-center gap-2 rounded-b-xl px-3 py-2"
+        style={{ background: "var(--curyo-surface-elevated)" }}
+      >
         <BookIcon className="w-4 h-4 text-base-content/50" />
         <span className="text-xs text-base-content/50">Data from Open Library</span>
       </div>
