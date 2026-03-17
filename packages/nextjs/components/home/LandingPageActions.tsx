@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { ChevronRightIcon } from "@heroicons/react/20/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
@@ -29,11 +30,17 @@ export function LandingPageActions() {
 
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
-      <Link href="/vote" className="btn btn-primary rounded-full px-5" style={{ fontSize: "16px" }}>
-        Discover
+      <Link href="/vote" className="btn btn-primary landing-cta landing-cta--primary">
+        <span>Discover</span>
+        <span className="landing-cta__arrow" aria-hidden="true">
+          <ChevronRightIcon className="h-5 w-5 text-primary-content" />
+        </span>
       </Link>
-      <Link href="/docs" className="btn pill-inactive rounded-full px-5 whitespace-nowrap" style={{ fontSize: "16px" }}>
-        Learn More
+      <Link href="/docs" className="btn landing-cta landing-cta--secondary whitespace-nowrap">
+        <span>Learn More</span>
+        <span className="landing-cta__arrow" aria-hidden="true">
+          <ChevronRightIcon className="h-5 w-5 text-primary" />
+        </span>
       </Link>
     </div>
   );
