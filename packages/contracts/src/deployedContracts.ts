@@ -7,7 +7,7 @@ import type { GenericContractsDeclaration } from "./types";
 const deployedContracts = {
   31337: {
     CategoryFeeLib: {
-      address: "0x97a5ec7cb69a099029f33504464333f0dfbecf17",
+      address: "0x7574625416e5ecf2d534321fdb1e2e549025ae07",
       abi: [
         {
           type: "error",
@@ -43,7 +43,7 @@ const deployedContracts = {
       deployedOnBlock: 2,
     },
     SubmitterStakeLib: {
-      address: "0x0cacf2567d22d903a06c831edf765d22d53b052b",
+      address: "0x56c491f3e4268cf6b7ba60342b51e2e381bbf84b",
       abi: [
         {
           type: "error",
@@ -2542,6 +2542,29 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "snapshotSubmitterParticipationTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "submissionKeyUsed",
           inputs: [
             {
@@ -2658,6 +2681,44 @@ const deployedContracts = {
         {
           type: "function",
           name: "submitterParticipationRewardReserved",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationSnapshotPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationSnapshotRateBps",
           inputs: [
             {
               name: "",
@@ -3905,6 +3966,25 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "isSubmitterStakeResolvable",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -9521,6 +9601,24 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "updateGovernance",
+          inputs: [
+            {
+              name: "_governor",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_timelock",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -9667,6 +9765,25 @@ const deployedContracts = {
               type: "uint256",
               indexed: false,
               internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "GovernanceUpdated",
+          inputs: [
+            {
+              name: "governor",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "timelock",
+              type: "address",
+              indexed: true,
+              internalType: "address",
             },
           ],
           anonymous: false,
@@ -10441,6 +10558,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "setGovernance",
+          inputs: [
+            {
+              name: "_governance",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "setStakeRecorder",
           inputs: [
             {
@@ -10652,6 +10782,19 @@ const deployedContracts = {
             },
             {
               name: "delegate",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "GovernanceUpdated",
+          inputs: [
+            {
+              name: "governance",
               type: "address",
               indexed: true,
               internalType: "address",
@@ -14867,6 +15010,25 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "isSubmitterStakeResolvable",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -20657,6 +20819,29 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "snapshotSubmitterParticipationTerms",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "rewardRateBps",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "submissionKeyUsed",
           inputs: [
             {
@@ -20773,6 +20958,44 @@ const deployedContracts = {
         {
           type: "function",
           name: "submitterParticipationRewardReserved",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationSnapshotPool",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "submitterParticipationSnapshotRateBps",
           inputs: [
             {
               name: "",
@@ -23151,6 +23374,24 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "updateGovernance",
+          inputs: [
+            {
+              name: "_governor",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_timelock",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -23297,6 +23538,25 @@ const deployedContracts = {
               type: "uint256",
               indexed: false,
               internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "GovernanceUpdated",
+          inputs: [
+            {
+              name: "governor",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "timelock",
+              type: "address",
+              indexed: true,
+              internalType: "address",
             },
           ],
           anonymous: false,
@@ -25131,6 +25391,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "setGovernance",
+          inputs: [
+            {
+              name: "_governance",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "setStakeRecorder",
           inputs: [
             {
@@ -25342,6 +25615,19 @@ const deployedContracts = {
             },
             {
               name: "delegate",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "GovernanceUpdated",
+          inputs: [
+            {
+              name: "governance",
               type: "address",
               indexed: true,
               internalType: "address",

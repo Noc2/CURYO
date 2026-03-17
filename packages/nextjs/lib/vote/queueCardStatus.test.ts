@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getQueueCardStatus } from "~~/lib/vote/queueCardStatus";
+import { getQueueCardStatus, getQueueCardStatusFromOpenRound } from "~~/lib/vote/queueCardStatus";
 
 test("getQueueCardStatus shows blind rounds with countdown urgency", () => {
   const status = getQueueCardStatus({
@@ -72,4 +72,48 @@ test("getQueueCardStatus hides labels when there is no active round", () => {
     }),
     null,
   );
+});
+
+test("getQueueCardStatusFromOpenRound derives blind urgency from open round timing", () => {
+  const status = getQueueCardStatusFromOpenRound({
+    openRound: {
+      voteCount: 1,
+      startTime: 1_000n,
+    },
+    now: 1_540,
+    config: {
+      epochDuration: 900,
+      maxDuration: 3_600,
+      minVoters: 3,
+    },
+  });
+
+  assert.deepEqual(status, {
+    phaseLabel: "Blind",
+    phaseTone: "blind",
+    urgencyLabel: "6m left",
+    urgencyTone: "warning",
+  });
+});
+
+test("getQueueCardStatusFromOpenRound marks quorum-met rounds near settlement", () => {
+  const status = getQueueCardStatusFromOpenRound({
+    openRound: {
+      voteCount: 3,
+      startTime: 1_000n,
+    },
+    now: 2_200,
+    config: {
+      epochDuration: 900,
+      maxDuration: 3_600,
+      minVoters: 3,
+    },
+  });
+
+  assert.deepEqual(status, {
+    phaseLabel: "Open",
+    phaseTone: "open",
+    urgencyLabel: "Near settlement",
+    urgencyTone: "success",
+  });
 });

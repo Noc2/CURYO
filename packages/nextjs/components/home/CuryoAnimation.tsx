@@ -32,7 +32,7 @@ export function CuryoAnimation() {
         ))}
 
         <div className="curyo-animation__logo relative h-[16rem] w-[16rem] sm:h-[23rem] sm:w-[23rem] lg:h-[30rem] lg:w-[30rem] xl:h-[33rem] xl:w-[33rem]">
-          <CuryoBrandMark className="h-full w-full" title="Curyo logo" />
+          <CuryoBrandMark className="h-full w-full" title="Curyo logo" animated variant="hero" />
         </div>
       </div>
 

@@ -10,9 +10,8 @@ import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
-import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
-import { getQueueCardStatus } from "~~/lib/vote/queueCardStatus";
+import type { QueueCardStatus } from "~~/lib/vote/queueCardStatus";
 import { detectPlatform } from "~~/utils/platforms";
 
 const PROXYABLE_THUMBNAIL_HOSTS = new Set([
@@ -286,6 +285,7 @@ interface FeedQueueCardProps {
   onSelect: (id: bigint, categoryId: bigint) => void;
   onNavigate?: (action: "previous" | "next" | "first" | "last", currentId: bigint) => void;
   queuePosition: number;
+  queueStatus?: QueueCardStatus | null;
   selected: boolean;
 }
 
@@ -294,14 +294,13 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   onSelect,
   onNavigate,
   queuePosition,
+  queueStatus,
   selected,
 }: FeedQueueCardProps) {
   const platform = detectPlatform(item.url);
   const [imageError, setImageError] = useState(false);
   const thumbnailSrc = getVoteFeedThumbnailSrc(item);
   const ratingLabel = `${item.rating}/100`;
-  const roundSnapshot = useRoundSnapshot(item.id);
-  const queueStatus = getQueueCardStatus(roundSnapshot);
   const statusBadgeClassName =
     queueStatus?.urgencyTone === "success"
       ? "bg-success/15 text-success ring-success/30"

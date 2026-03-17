@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, startTransition, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -190,6 +190,8 @@ const buildVoteSearchTarget = (value: string) => {
   return trimmed ? `/vote?q=${encodeURIComponent(trimmed)}` : "/vote";
 };
 
+const SEARCH_COMMIT_DEBOUNCE_MS = 200;
+
 const HeaderSearchBar = ({ className }: { className?: string }) => {
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -205,27 +207,39 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
   const commitSearch = useCallback(
     (value: string) => {
       const target = buildVoteSearchTarget(value);
-      if (pathname === "/vote") {
-        router.replace(target, { scroll: false });
-      } else {
-        router.push(target);
-      }
+      if (pathname === "/vote" && target === buildVoteSearchTarget(activeQuery)) return;
+
+      startTransition(() => {
+        if (pathname === "/vote") {
+          router.replace(target, { scroll: false });
+        } else {
+          router.push(target);
+        }
+      });
     },
-    [pathname, router],
+    [activeQuery, pathname, router],
   );
 
-  const updateSearch = useCallback(
-    (value: string) => {
-      setInputValue(value);
-      commitSearch(value);
-    },
-    [commitSearch],
-  );
+  const updateSearch = useCallback((value: string) => {
+    setInputValue(value);
+  }, []);
 
   const clearSearch = useCallback(() => {
     setInputValue("");
     commitSearch("");
   }, [commitSearch]);
+
+  useEffect(() => {
+    if (inputValue === activeQuery) return;
+
+    const timeoutId = setTimeout(() => {
+      commitSearch(inputValue);
+    }, SEARCH_COMMIT_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [activeQuery, commitSearch, inputValue]);
 
   const isSidebar = className?.includes("sidebar");
   return (
@@ -237,6 +251,12 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
         aria-label="Search content"
         value={inputValue}
         onChange={e => updateSearch(e.target.value)}
+        onKeyDown={event => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            commitSearch(inputValue);
+          }
+        }}
         className={`input input-sm input-bordered border-base-content/10 bg-base-300/80 pl-8 pr-7 text-base focus:border-primary/30 focus:bg-base-300 ${
           isSidebar ? "w-full max-w-full" : "w-40 lg:w-56"
         }`}

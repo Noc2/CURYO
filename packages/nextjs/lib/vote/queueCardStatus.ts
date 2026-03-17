@@ -1,4 +1,4 @@
-import type { RoundPhase } from "~~/lib/contracts/roundVotingEngine";
+import { type RoundPhase, type VotingConfig, deriveRoundTiming } from "~~/lib/contracts/roundVotingEngine";
 
 type QueueCardPhaseTone = "blind" | "open";
 type QueueCardUrgencyTone = "neutral" | "warning" | "success";
@@ -18,6 +18,11 @@ export interface QueueCardStatus {
   phaseTone: QueueCardPhaseTone;
   urgencyLabel: string;
   urgencyTone: QueueCardUrgencyTone;
+}
+
+export interface QueueCardStatusOpenRound {
+  voteCount: number;
+  startTime: bigint | null;
 }
 
 function formatQueueCountdown(seconds: number): string {
@@ -68,4 +73,32 @@ export function getQueueCardStatus(snapshot: QueueCardStatusSnapshot): QueueCard
     urgencyLabel: `Needs ${votesNeeded} more vote${votesNeeded === 1 ? "" : "s"}`,
     urgencyTone: "warning",
   };
+}
+
+export function getQueueCardStatusFromOpenRound(params: {
+  openRound: QueueCardStatusOpenRound | null;
+  now: number;
+  config: Pick<VotingConfig, "epochDuration" | "maxDuration" | "minVoters">;
+}): QueueCardStatus | null {
+  if (!params.openRound) {
+    return null;
+  }
+
+  const startTime = Number(params.openRound.startTime ?? 0n);
+  const timing = deriveRoundTiming({
+    startTime,
+    now: params.now,
+    epochDuration: params.config.epochDuration,
+    maxDuration: params.config.maxDuration,
+  });
+
+  return getQueueCardStatus({
+    phase: "voting",
+    isEpoch1: timing.isEpoch1,
+    epoch1Remaining: timing.epoch1Remaining,
+    voteCount: params.openRound.voteCount,
+    minVoters: params.config.minVoters,
+    readyToSettle: params.openRound.voteCount >= params.config.minVoters,
+    thresholdReachedAt: 0,
+  });
 }

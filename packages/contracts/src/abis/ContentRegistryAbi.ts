@@ -781,6 +781,29 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "snapshotSubmitterParticipationTerms",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPool",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "rewardRateBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "submissionKeyUsed",
     "inputs": [
       {
@@ -897,6 +920,44 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "submitterParticipationRewardReserved",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "submitterParticipationSnapshotPool",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "submitterParticipationSnapshotRateBps",
     "inputs": [
       {
         "name": "",

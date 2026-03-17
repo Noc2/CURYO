@@ -152,11 +152,13 @@ export function useContentFeedQuery(voterAddress?: string, options: UseContentFe
   const feed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);
   const totalContent = result?.source === "rpc" ? rpcTotalContent : (result?.data?.totalContent ?? rpcTotalContent);
   const isLoading = ponderLoading || (rpcFallbackActive && eventsLoading && result?.source !== "ponder");
+  const source = result?.source ?? (rpcFallbackActive ? "rpc" : "ponder");
 
   return {
     feed,
     isLoading,
     totalContent,
     offset,
+    source,
   };
 }

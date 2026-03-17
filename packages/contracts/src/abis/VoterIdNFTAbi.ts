@@ -616,6 +616,19 @@ export const VoterIdNFTAbi = [
   },
   {
     "type": "function",
+    "name": "setGovernance",
+    "inputs": [
+      {
+        "name": "_governance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setStakeRecorder",
     "inputs": [
       {
@@ -827,6 +840,19 @@ export const VoterIdNFTAbi = [
       },
       {
         "name": "delegate",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GovernanceUpdated",
+    "inputs": [
+      {
+        "name": "governance",
         "type": "address",
         "indexed": true,
         "internalType": "address"

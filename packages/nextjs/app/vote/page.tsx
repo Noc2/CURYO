@@ -22,6 +22,7 @@ import { useContentFeed } from "~~/hooks/useContentFeed";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useOnboarding } from "~~/hooks/useOnboarding";
+import { useQueueCardStatusMap } from "~~/hooks/useQueueCardStatusMap";
 import { useQueueNavigation } from "~~/hooks/useQueueNavigation";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
@@ -221,6 +222,7 @@ const HomeInner = () => {
     isLoading,
     totalContent: serverTotalContent,
     hasMore: serverHasMoreFeed,
+    source: feedSource,
   } = useContentFeed(address, {
     categoryId: activeCategoryId,
     contentIds: feedContentIds,
@@ -354,17 +356,6 @@ const HomeInner = () => {
       items = items.filter(item => item.isValidUrl !== false);
     }
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      items = items.filter(
-        item =>
-          item.title.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q) ||
-          item.url.toLowerCase().includes(q) ||
-          item.tags.some(tag => tag.toLowerCase().includes(q)),
-      );
-    }
-
     if (activeCategory !== ALL_FILTER && activeCategory !== BROKEN_FILTER && activeCategoryId === undefined) {
       items = items.filter(item => item.tags.includes(activeCategory));
     }
@@ -392,7 +383,6 @@ const HomeInner = () => {
     return items;
   }, [
     feed,
-    searchQuery,
     activeCategory,
     activeCategoryId,
     activeScope,
@@ -497,6 +487,11 @@ const HomeInner = () => {
     requestedActiveId,
     windowSize: queueLayout.rows === 2 ? Math.max(8, queueLayout.pageSize) : 7,
   });
+  const queueStatusByContentId = useQueueCardStatusMap(visibleFeedItems, feedSource, nowSeconds);
+  const nextThumbnailSrc = useMemo(() => {
+    const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
+    return selectedNextItem ? getVoteFeedThumbnailSrc(selectedNextItem) : null;
+  }, [activeSourceIndex, displayFeed]);
 
   const submitterAddresses = useMemo(() => {
     return visibleFeedItems.map(item => item.submitter);
@@ -617,6 +612,7 @@ const HomeInner = () => {
   }, []);
 
   const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
+  const lastPreloadedThumbnailRef = useRef<string | null>(null);
 
   useEffect(() => {
     const remainingLoadedItems = displayFeed.length - (activeSourceIndex + 1);
@@ -636,14 +632,14 @@ const HomeInner = () => {
   }, [activeSourceIndex, displayFeed.length, hasMoreFeed, visibleCount]);
 
   useEffect(() => {
-    const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
-    const nextThumbnailSrc = selectedNextItem ? getVoteFeedThumbnailSrc(selectedNextItem) : null;
     if (!nextThumbnailSrc) return;
+    if (lastPreloadedThumbnailRef.current === nextThumbnailSrc) return;
 
+    lastPreloadedThumbnailRef.current = nextThumbnailSrc;
     const image = new window.Image();
     image.decoding = "async";
     image.src = nextThumbnailSrc;
-  }, [activeSourceIndex, displayFeed]);
+  }, [nextThumbnailSrc]);
 
   useEffect(() => {
     const rail = queueRailRef.current;
@@ -1250,6 +1246,7 @@ const HomeInner = () => {
                               onSelect={handleSelectCard}
                               onNavigate={handleQueueKeyboardNavigate}
                               queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
+                              queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
                               selected={item.id === primaryItem?.id}
                             />
                           ))}
@@ -1262,6 +1259,7 @@ const HomeInner = () => {
                           onSelect={handleSelectCard}
                           onNavigate={handleQueueKeyboardNavigate}
                           queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
+                          queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
                           selected={item.id === primaryItem?.id}
                         />
                       ))}

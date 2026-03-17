@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ChevronRightIcon } from "@heroicons/react/20/solid";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
+import { ChevronRightIcon } from "@heroicons/react/20/solid";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 export function LandingPageActions() {
