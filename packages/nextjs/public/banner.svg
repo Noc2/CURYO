@@ -1,70 +1,65 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 520" width="1600" height="520" fill="none">
   <defs>
     <linearGradient id="banner-bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#020307" />
-      <stop offset="54%" stop-color="#070B16" />
-      <stop offset="100%" stop-color="#0E1627" />
+      <stop offset="0%" stop-color="#090A0C" />
+      <stop offset="54%" stop-color="#141316" />
+      <stop offset="100%" stop-color="#090A0C" />
     </linearGradient>
     <radialGradient id="banner-left-glow" cx="460" cy="256" r="250" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#141D32" stop-opacity="0.55" />
-      <stop offset="56%" stop-color="#0B1222" stop-opacity="0.16" />
-      <stop offset="100%" stop-color="#05070D" stop-opacity="0" />
+      <stop offset="0%" stop-color="#7E8996" stop-opacity="0.18" />
+      <stop offset="56%" stop-color="#7E8996" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#7E8996" stop-opacity="0" />
     </radialGradient>
     <radialGradient id="banner-core-glow" cx="500" cy="246" r="145" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#F26426" stop-opacity="0.18" />
-      <stop offset="52%" stop-color="#6B37A5" stop-opacity="0.1" />
+      <stop offset="52%" stop-color="#B3341B" stop-opacity="0.12" />
       <stop offset="100%" stop-color="#7E8996" stop-opacity="0" />
     </radialGradient>
 
     <radialGradient id="banner-mark-orb-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(856 450) rotate(136) scale(720 702)">
-      <stop stop-color="#FFF8F2" />
-      <stop offset="0.18" stop-color="#F8E1D0" />
-      <stop offset="0.34" stop-color="#F7B070" />
-      <stop offset="0.56" stop-color="#F26426" />
-      <stop offset="0.78" stop-color="#B23C3B" />
-      <stop offset="1" stop-color="#6A345F" />
+      <stop stop-color="#F5F0EB" />
+      <stop offset="0.24" stop-color="#F26426" />
+      <stop offset="0.58" stop-color="#B3341B" />
+      <stop offset="1" stop-color="#090A0C" />
     </radialGradient>
     <radialGradient id="banner-mark-orb-rim" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(438 516) rotate(30) scale(240 540)">
-      <stop stop-color="#AFC5D7" stop-opacity="0.82" />
+      <stop stop-color="#7E8996" stop-opacity="0.82" />
       <stop offset="0.22" stop-color="#7E8996" stop-opacity="0.34" />
       <stop offset="1" stop-color="#7E8996" stop-opacity="0" />
     </radialGradient>
     <radialGradient id="banner-mark-soft-white" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(710 520) rotate(128) scale(330 260)">
-      <stop stop-color="#FFF8F3" stop-opacity="0.74" />
-      <stop offset="0.52" stop-color="#FFF8F3" stop-opacity="0.2" />
-      <stop offset="1" stop-color="#FFF8F3" stop-opacity="0" />
+      <stop stop-color="#F5F0EB" stop-opacity="0.74" />
+      <stop offset="0.52" stop-color="#F5F0EB" stop-opacity="0.2" />
+      <stop offset="1" stop-color="#F5F0EB" stop-opacity="0" />
     </radialGradient>
     <radialGradient id="banner-mark-coral-bloom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(910 754) rotate(158) scale(294 236)">
-      <stop stop-color="#FFD77E" stop-opacity="0.82" />
-      <stop offset="1" stop-color="#FFD77E" stop-opacity="0" />
+      <stop stop-color="#F26426" stop-opacity="0.72" />
+      <stop offset="1" stop-color="#F26426" stop-opacity="0" />
     </radialGradient>
     <radialGradient id="banner-mark-violet-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(500 866) rotate(-26) scale(334 244)">
-      <stop stop-color="#6B37A5" stop-opacity="0.54" />
-      <stop offset="1" stop-color="#6B37A5" stop-opacity="0" />
+      <stop stop-color="#B3341B" stop-opacity="0.54" />
+      <stop offset="1" stop-color="#B3341B" stop-opacity="0" />
     </radialGradient>
     <radialGradient id="banner-mark-blue-pocket" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(620 760) rotate(8) scale(320 180)">
-      <stop stop-color="#8C4A53" stop-opacity="0.36" />
-      <stop offset="0.58" stop-color="#C46A4A" stop-opacity="0.22" />
-      <stop offset="1" stop-color="#C46A4A" stop-opacity="0" />
+      <stop stop-color="#7E8996" stop-opacity="0.36" />
+      <stop offset="0.58" stop-color="#7E8996" stop-opacity="0.22" />
+      <stop offset="1" stop-color="#7E8996" stop-opacity="0" />
     </radialGradient>
     <linearGradient id="banner-mark-fold-sheen" x1="290" y1="820" x2="1036" y2="650" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFF7F0" stop-opacity="0" />
-      <stop offset="0.3" stop-color="#FFF7F0" stop-opacity="0.08" />
-      <stop offset="0.56" stop-color="#FFF7F0" stop-opacity="0.34" />
-      <stop offset="0.82" stop-color="#FFD7B2" stop-opacity="0.18" />
-      <stop offset="1" stop-color="#FFD7B2" stop-opacity="0" />
+      <stop stop-color="#F5F0EB" stop-opacity="0" />
+      <stop offset="0.3" stop-color="#F5F0EB" stop-opacity="0.08" />
+      <stop offset="0.56" stop-color="#F5F0EB" stop-opacity="0.34" />
+      <stop offset="0.82" stop-color="#F5F0EB" stop-opacity="0.18" />
+      <stop offset="1" stop-color="#F5F0EB" stop-opacity="0" />
     </linearGradient>
     <linearGradient id="banner-mark-flare-gradient" x1="860" y1="260" x2="1050" y2="736" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F45C4D" />
-      <stop offset="0.24" stop-color="#FF8A5D" />
-      <stop offset="0.56" stop-color="#FFC37A" />
-      <stop offset="0.82" stop-color="#FFE1A7" />
-      <stop offset="1" stop-color="#FFF4DB" />
+      <stop stop-color="#B3341B" />
+      <stop offset="0.38" stop-color="#F26426" />
+      <stop offset="1" stop-color="#F5F0EB" />
     </linearGradient>
     <linearGradient id="banner-mark-flare-core" x1="870" y1="280" x2="1036" y2="716" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FF9E78" />
-      <stop offset="0.48" stop-color="#FFF0CF" />
-      <stop offset="1" stop-color="#FFF8ED" />
+      <stop stop-color="#F26426" />
+      <stop offset="1" stop-color="#F5F0EB" />
     </linearGradient>
     <filter id="banner-mark-blur-40" x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="40" />
@@ -75,21 +70,21 @@
 
     <symbol id="banner-mark" viewBox="0 0 1400 1400">
       <circle cx="700" cy="700" r="680" stroke="#FFFFFF" stroke-opacity="0.03" stroke-width="2" />
-      <circle cx="700" cy="700" r="654" stroke="#342129" stroke-opacity="0.66" stroke-width="12" />
-      <circle cx="700" cy="700" r="640" stroke="#1A1E28" stroke-opacity="0.96" stroke-width="20" />
+      <circle cx="700" cy="700" r="654" stroke="#B3341B" stroke-opacity="0.24" stroke-width="12" />
+      <circle cx="700" cy="700" r="640" stroke="#090A0C" stroke-opacity="0.96" stroke-width="20" />
       <circle cx="700" cy="700" r="626" stroke="#FFFFFF" stroke-opacity="0.055" stroke-width="2" />
       <circle cx="700" cy="700" r="612" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.4" />
-      <circle cx="700" cy="700" r="654" stroke="#F3A16E" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round" stroke-dasharray="867.5 3241.7" transform="rotate(-136 700 700)" />
+      <circle cx="700" cy="700" r="654" stroke="#F26426" stroke-opacity="0.08" stroke-width="6" stroke-linecap="round" stroke-dasharray="867.5 3241.7" transform="rotate(-136 700 700)" />
       <circle cx="700" cy="700" r="640" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="759.6 3261.7" transform="rotate(-136 700 700)" />
 
       <g filter="url(#banner-mark-blur-40)">
-        <circle cx="700" cy="700" r="626" stroke="#F45C4D" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
+        <circle cx="700" cy="700" r="626" stroke="#F26426" stroke-opacity="0.54" stroke-width="28" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
       </g>
-      <circle cx="700" cy="700" r="626" stroke="#6D352A" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
+      <circle cx="700" cy="700" r="626" stroke="#B3341B" stroke-opacity="0.42" stroke-width="10" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
       <circle cx="700" cy="700" r="626" stroke="url(#banner-mark-flare-gradient)" stroke-width="8" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
       <circle cx="700" cy="700" r="626" stroke="url(#banner-mark-flare-core)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1027.0 2906.3" transform="rotate(-66 700 700)" />
-      <circle cx="1252.7" cy="993.9" r="23" fill="#FF8D65" fill-opacity="0.18" />
-      <circle cx="1252.7" cy="993.9" r="9" fill="#FFF3DF" />
+      <circle cx="1252.7" cy="993.9" r="23" fill="#F26426" fill-opacity="0.18" />
+      <circle cx="1252.7" cy="993.9" r="9" fill="#F5F0EB" />
 
       <g transform="translate(700 700) scale(1.42) translate(-700 -700)">
         <circle cx="700" cy="700" r="360" fill="url(#banner-mark-orb-base)" />
@@ -102,13 +97,13 @@
             <ellipse cx="662" cy="774" rx="316" ry="176" fill="url(#banner-mark-blue-pocket)" />
           </g>
           <path d="M330 822C464 734 582 684 704 670C810 658 902 686 1018 760C944 812 868 844 788 858C680 876 560 868 442 840C404 832 368 826 330 822Z" fill="url(#banner-mark-fold-sheen)" />
-          <path d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z" fill="#F5E3D2" fill-opacity="0.11" />
-          <path d="M404 542C518 494 634 492 752 530C842 560 938 626 1038 724" stroke="#FFF7F1" stroke-opacity="0.16" stroke-width="22" stroke-linecap="round" />
-          <path d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110" stroke="#E2B2A0" stroke-opacity="0.1" stroke-width="24" stroke-linecap="round" />
-          <circle cx="1118" cy="490" r="50" fill="#FFF9F2" fill-opacity="0.9" />
+          <path d="M350 838C466 760 574 724 694 714C808 704 906 726 1012 776C932 814 852 838 766 848C642 864 520 858 402 840C384 838 366 838 350 838Z" fill="#F5F0EB" fill-opacity="0.11" />
+          <path d="M404 542C518 494 634 492 752 530C842 560 938 626 1038 724" stroke="#F5F0EB" stroke-opacity="0.16" stroke-width="22" stroke-linecap="round" />
+          <path d="M344 930C456 908 574 916 706 956C820 990 910 1040 988 1110" stroke="#7E8996" stroke-opacity="0.1" stroke-width="24" stroke-linecap="round" />
+          <circle cx="1118" cy="490" r="50" fill="#F5F0EB" fill-opacity="0.9" />
           <circle cx="664" cy="556" r="190" fill="url(#banner-mark-soft-white)" />
         </g>
-        <circle cx="700" cy="700" r="360" fill="none" stroke="#FFF8F2" stroke-opacity="0.14" stroke-width="2" />
+        <circle cx="700" cy="700" r="360" fill="none" stroke="#F5F0EB" stroke-opacity="0.14" stroke-width="2" />
       </g>
     </symbol>
   </defs>
@@ -118,17 +113,17 @@
   <circle cx="518" cy="312" r="145" fill="url(#banner-core-glow)" />
 
   <g opacity="0.84">
-    <circle cx="1180" cy="98" r="4" fill="#FFDCE7" />
-    <circle cx="1308" cy="130" r="3" fill="#359EEE" />
-    <circle cx="1452" cy="176" r="5" fill="#F7B070" />
-    <circle cx="1104" cy="390" r="4" fill="#FFD77E" />
-    <circle cx="1268" cy="422" r="3" fill="#FFFFFF" fill-opacity="0.72" />
-    <circle cx="238" cy="122" r="3" fill="#FFFFFF" fill-opacity="0.72" />
-    <circle cx="400" cy="88" r="4" fill="#FFDCE7" />
+    <circle cx="1180" cy="98" r="4" fill="#F5F0EB" fill-opacity="0.72" />
+    <circle cx="1308" cy="130" r="3" fill="#7E8996" />
+    <circle cx="1452" cy="176" r="5" fill="#F26426" />
+    <circle cx="1104" cy="390" r="4" fill="#B3341B" />
+    <circle cx="1268" cy="422" r="3" fill="#F5F0EB" fill-opacity="0.72" />
+    <circle cx="238" cy="122" r="3" fill="#F5F0EB" fill-opacity="0.72" />
+    <circle cx="400" cy="88" r="4" fill="#F26426" />
     <circle cx="174" cy="378" r="4" fill="#7E8996" />
   </g>
 
-  <svg x="374" y="130" width="250" height="250" viewBox="140 140 1120 1120" overflow="visible">
+  <svg x="380" y="132" width="250" height="250" viewBox="140 140 1120 1120" overflow="visible">
     <use href="#banner-mark" />
   </svg>
 
@@ -138,7 +133,7 @@
     font-family="'Helvetica Neue', Arial, sans-serif"
     font-size="110"
     font-weight="700"
-    fill="#FFFFFF"
+    fill="#F5F0EB"
     letter-spacing="6"
   >
     CURYO
@@ -149,11 +144,11 @@
     font-family="'Helvetica Neue', Arial, sans-serif"
     font-size="27"
     font-weight="400"
-    fill="#A7B0C7"
+    fill="#7E8996"
     letter-spacing=".2"
   >
     <tspan x="690" dy="0">A Better Web,</tspan>
     <tspan x="690" dy="34">Guided by Human Reputation</tspan>
   </text>
-  <rect x="690" y="342" width="356" height="2" rx="1" fill="#1C2740" />
+  <rect x="690" y="342" width="356" height="2" rx="1" fill="#B3341B" />
 </svg>
