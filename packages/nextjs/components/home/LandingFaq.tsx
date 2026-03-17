@@ -7,9 +7,6 @@ export function LandingFaq() {
     <section className="w-full mt-14 sm:mt-16">
       <div className="mx-auto w-full max-w-4xl">
         <h2 className="display-section mb-4 text-center text-4xl text-base-content sm:text-5xl">FAQ</h2>
-        <p className="mx-auto max-w-2xl text-center text-base text-base-content/60 sm:text-lg">
-          The biggest questions new visitors usually ask before they trust or use Curyo.
-        </p>
 
         <div className="mt-8 space-y-4">
           {landingFaqItems.map(item => (
