@@ -105,6 +105,7 @@ contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessContr
     function lockForGovernance(address account, uint256 amount) external {
         require(msg.sender == governor, "Only governor");
         require(amount > 0, "Amount must be > 0");
+        require(balanceOf(account) >= amount, "Insufficient current balance for governance lock");
 
         GovernanceLock storage lock = _governanceLock[account];
         uint256 newUnlockTime = block.timestamp + GOVERNANCE_LOCK_DURATION;
