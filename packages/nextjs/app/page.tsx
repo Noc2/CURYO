@@ -42,7 +42,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
           {/* Title (left on large screens) */}
           <div className="flex flex-col items-center lg:items-start lg:flex-[0.98] lg:max-w-[35rem]">
-            <h1 className="display-hero text-6xl text-base-content sm:text-7xl lg:text-[5.5rem] xl:text-[6rem]">
+            <h1 className="display-hero text-6xl text-base-content sm:text-7xl lg:text-[5.75rem] xl:text-[6.25rem]">
               Curyo
             </h1>
             <p className="mt-4 max-w-[24rem] text-center text-xl leading-8 text-base-content/75 sm:max-w-[32rem] sm:text-2xl sm:leading-9 lg:max-w-none lg:text-left lg:text-[1.95rem] lg:leading-[1.25]">
