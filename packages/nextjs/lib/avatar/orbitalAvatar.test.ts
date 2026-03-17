@@ -235,6 +235,16 @@ test("flare start angle stays at the top for every address", () => {
   assert.equal(second.flare.headAngleDegrees, 90);
 });
 
+test("avatar flare renders as a smooth path without a blur halo filter", () => {
+  const svg = renderOrbitalAvatarSvg(buildPayload(), {
+    size: 96,
+    nowSeconds: NOW_SECONDS,
+  });
+
+  assert.match(svg, /<path d="M [^"]+A [^"]+" fill="none" stroke="url\(#orbital-avatar-flare-/);
+  assert.doesNotMatch(svg, /orbital-avatar-flare-blur-/);
+});
+
 test("accuracy of zero removes the flare entirely", () => {
   const model = buildOrbitalAvatarModel(
     buildPayload({

@@ -181,6 +181,18 @@ function polarToPoint(radius: number, angleDegrees: number): Point {
   };
 }
 
+function describeArcPath(radius: number, startDegrees: number, sweepDegrees: number) {
+  const clampedSweep = Math.max(0, Math.min(sweepDegrees, 359.9));
+  const startPoint = polarToPoint(radius, startDegrees);
+  const endPoint = polarToPoint(radius, startDegrees + clampedSweep);
+  const largeArcFlag = clampedSweep > 180 ? 1 : 0;
+
+  return [
+    `M ${startPoint.x.toFixed(2)} ${startPoint.y.toFixed(2)}`,
+    `A ${radius.toFixed(2)} ${radius.toFixed(2)} 0 ${largeArcFlag} 1 ${endPoint.x.toFixed(2)} ${endPoint.y.toFixed(2)}`,
+  ].join(" ");
+}
+
 function getAddressColorSeed(address: string) {
   return address.toLowerCase().replace(/^0x/, "").slice(-6).padStart(6, "0");
 }
@@ -390,45 +402,19 @@ function renderPlanet(planet: OrbitalAvatarPlanet, hashHex: string) {
   `;
 }
 
-function buildArcStrokeAttributes(flare: OrbitalAvatarFlare) {
-  if (flare.sweepDegrees >= 359.5) {
-    return "";
-  }
-
-  const circumference = 2 * Math.PI * flare.radius;
-  const visibleLength = circumference * (flare.sweepDegrees / 360);
-  const hiddenLength = Math.max(0, circumference - visibleLength);
-
-  return ` stroke-dasharray="${visibleLength.toFixed(2)} ${hiddenLength.toFixed(2)}"`;
-}
-
 function renderFlare(flare: OrbitalAvatarFlare, hashHex: string) {
-  const arcAttributes = buildArcStrokeAttributes(flare);
-  const rotation = flare.rotationDegrees.toFixed(2);
-  const head = flare.sweepDegrees >= 359.5 ? null : polarToPoint(flare.radius, flare.headAngleDegrees);
+  const flarePath = describeArcPath(flare.radius, flare.rotationDegrees, flare.sweepDegrees);
 
   return `
-    <g filter="url(#orbital-avatar-flare-blur-${hashHex})">
-      <circle cx="${CENTER}" cy="${CENTER}" r="${flare.radius.toFixed(2)}" fill="none" stroke="${flare.glowColor}" stroke-width="${flare.glowWidth.toFixed(2)}" stroke-opacity="${(flare.opacity * 0.38).toFixed(3)}" stroke-linecap="round"${arcAttributes} transform="rotate(${rotation} ${CENTER} ${CENTER})"/>
-    </g>
-    <circle cx="${CENTER}" cy="${CENTER}" r="${flare.radius.toFixed(2)}" fill="none" stroke="#6D352A" stroke-width="${(flare.width + 2).toFixed(2)}" stroke-opacity="${(flare.opacity * 0.45).toFixed(3)}" stroke-linecap="round"${arcAttributes} transform="rotate(${rotation} ${CENTER} ${CENTER})"/>
-    <circle cx="${CENTER}" cy="${CENTER}" r="${flare.radius.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-flare-${hashHex})" stroke-width="${flare.width.toFixed(2)}" stroke-opacity="${flare.opacity.toFixed(3)}" stroke-linecap="round"${arcAttributes} transform="rotate(${rotation} ${CENTER} ${CENTER})"/>
-    <circle cx="${CENTER}" cy="${CENTER}" r="${flare.radius.toFixed(2)}" fill="none" stroke="url(#orbital-avatar-flare-core-${hashHex})" stroke-width="${Math.max(2.4, flare.width * 0.28).toFixed(2)}" stroke-opacity="${Math.min(1, flare.opacity + 0.08).toFixed(3)}" stroke-linecap="round"${arcAttributes} transform="rotate(${rotation} ${CENTER} ${CENTER})"/>
-    ${
-      head
-        ? `
-      <circle cx="${head.x.toFixed(2)}" cy="${head.y.toFixed(2)}" r="${(flare.headRadius * 1.85).toFixed(2)}" fill="${flare.glowColor}" fill-opacity="${(flare.opacity * 0.18).toFixed(3)}"/>
-      <circle cx="${head.x.toFixed(2)}" cy="${head.y.toFixed(2)}" r="${flare.headRadius.toFixed(2)}" fill="#FFF3DF"/>
-    `
-        : ""
-    }
+    <path d="${flarePath}" fill="none" stroke="#6D352A" stroke-width="${(flare.width + 2.2).toFixed(2)}" stroke-opacity="${(flare.opacity * 0.22).toFixed(3)}" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+    <path d="${flarePath}" fill="none" stroke="url(#orbital-avatar-flare-${hashHex})" stroke-width="${flare.width.toFixed(2)}" stroke-opacity="${flare.opacity.toFixed(3)}" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
+    <path d="${flarePath}" fill="none" stroke="url(#orbital-avatar-flare-core-${hashHex})" stroke-width="${Math.max(2.4, flare.width * 0.24).toFixed(2)}" stroke-opacity="${Math.min(1, flare.opacity + 0.08).toFixed(3)}" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision"/>
   `;
 }
 
 function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
   const defs: string[] = [
     `<filter id="orbital-avatar-band-blur-${hashHex}" x="0" y="0" width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="${model.planet ? Math.max(8, scaleReferenceValue(40, model.planet.radius)).toFixed(2) : "14"}"/></filter>`,
-    `<filter id="orbital-avatar-flare-blur-${hashHex}" x="0" y="0" width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="12"/></filter>`,
   ];
 
   if (model.planet) {

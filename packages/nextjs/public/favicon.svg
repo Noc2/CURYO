@@ -50,7 +50,7 @@
       <stop offset="0.48" stop-color="#FFF0CF" />
       <stop offset="1" stop-color="#FFF8ED" />
     </linearGradient>
-    <filter id="favicon-blur-40" x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="favicon-band-blur" x="0" y="0" width="1400" height="1400" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="40" />
     </filter>
     <clipPath id="favicon-orb-clip">
@@ -60,20 +60,15 @@
 
   <circle cx="700" cy="700" r="648" stroke="#FFFFFF" stroke-opacity="0.06" stroke-width="2.2" />
 
-  <g filter="url(#favicon-blur-40)">
-    <circle cx="700" cy="700" r="648" stroke="#F45C4D" stroke-opacity="0.68" stroke-width="44" stroke-linecap="round" stroke-dasharray="1266.7 2804.8" transform="rotate(-66 700 700)" />
-  </g>
-  <circle cx="700" cy="700" r="648" stroke="#6D352A" stroke-opacity="0.42" stroke-width="21" stroke-linecap="round" stroke-dasharray="1266.7 2804.8" transform="rotate(-66 700 700)" />
-  <circle cx="700" cy="700" r="648" stroke="url(#favicon-flare-gradient)" stroke-width="16" stroke-linecap="round" stroke-dasharray="1266.7 2804.8" transform="rotate(-66 700 700)" />
-  <circle cx="700" cy="700" r="648" stroke="url(#favicon-flare-core)" stroke-width="5.6" stroke-linecap="round" stroke-dasharray="1266.7 2804.8" transform="rotate(-66 700 700)" />
-  <circle cx="1150.1" cy="1166.1" r="34" fill="#FF8D65" fill-opacity="0.22" />
-  <circle cx="1150.1" cy="1166.1" r="14" fill="#FFF3DF" />
+  <path d="M 677.39 52.39 A 648.00 648.00 0 0 1 1282.42 984.06" fill="none" stroke="#6D352A" stroke-opacity="0.2" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
+  <path d="M 677.39 52.39 A 648.00 648.00 0 0 1 1282.42 984.06" fill="none" stroke="url(#favicon-flare-gradient)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
+  <path d="M 677.39 52.39 A 648.00 648.00 0 0 1 1282.42 984.06" fill="none" stroke="url(#favicon-flare-core)" stroke-opacity="0.96" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round" shape-rendering="geometricPrecision" />
 
   <g transform="translate(700 700) scale(1.34) translate(-700 -700)">
     <circle cx="700" cy="700" r="360" fill="url(#favicon-orb-base)" />
     <circle cx="700" cy="700" r="360" fill="url(#favicon-orb-rim)" />
     <g clip-path="url(#favicon-orb-clip)">
-      <g filter="url(#favicon-blur-40)">
+      <g filter="url(#favicon-band-blur)">
         <ellipse cx="672" cy="538" rx="280" ry="184" fill="url(#favicon-soft-white)" />
         <ellipse cx="930" cy="640" rx="246" ry="214" fill="url(#favicon-coral-bloom)" />
         <ellipse cx="508" cy="904" rx="286" ry="218" fill="url(#favicon-violet-pocket)" />

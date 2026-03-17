@@ -13,7 +13,8 @@ const DEFAULT_FLARE_RADIUS = 626;
 const COMPACT_FLARE_RADIUS = 648;
 const HERO_FLARE_RADIUS = 630;
 const DEFAULT_ARC_DEGREES = 94;
-const COMPACT_ARC_DEGREES = 112;
+const COMPACT_ARC_DEGREES = 118;
+const COMPACT_FLARE_START_DEGREES = -92;
 
 function polarPoint(radius: number, degrees: number) {
   const radians = (degrees * Math.PI) / 180;
@@ -29,6 +30,18 @@ function circleDashArray(radius: number, arcDegrees: number) {
   const dashLength = (circumference * arcDegrees) / 360;
 
   return `${dashLength.toFixed(1)} ${(circumference - dashLength).toFixed(1)}`;
+}
+
+function describeArcPath(radius: number, startDegrees: number, sweepDegrees: number) {
+  const clampedSweep = Math.max(0, Math.min(sweepDegrees, 359.9));
+  const startPoint = polarPoint(radius, startDegrees);
+  const endPoint = polarPoint(radius, startDegrees + clampedSweep);
+  const largeArcFlag = clampedSweep > 180 ? 1 : 0;
+
+  return [
+    `M ${startPoint.x.toFixed(2)} ${startPoint.y.toFixed(2)}`,
+    `A ${radius.toFixed(2)} ${radius.toFixed(2)} 0 ${largeArcFlag} 1 ${endPoint.x.toFixed(2)} ${endPoint.y.toFixed(2)}`,
+  ].join(" ");
 }
 
 function scaleAroundCenter(scale: number) {
@@ -73,18 +86,19 @@ export function CuryoPlanetMark({
     : usesHeroVariant
       ? HERO_FLARE_RADIUS
       : DEFAULT_FLARE_RADIUS;
-  const flareRotation = -66;
+  const flareRotation = usesCompactVariant ? COMPACT_FLARE_START_DEGREES : -66;
   const flareArcDegrees = usesCompactVariant ? COMPACT_ARC_DEGREES : DEFAULT_ARC_DEGREES;
-  const flareDashArray = circleDashArray(flareRadius, flareArcDegrees);
+  const flareDashArray = usesCompactVariant ? null : circleDashArray(flareRadius, flareArcDegrees);
+  const flarePath = usesCompactVariant ? describeArcPath(flareRadius, flareRotation, flareArcDegrees) : null;
   const nodePoint = polarPoint(flareRadius, flareRotation + flareArcDegrees);
   const planetScale = usesCompactVariant ? 1.34 : usesHeroVariant ? 1.46 : 1.42;
-  const flareGlowStrokeWidth = usesCompactVariant ? 44 : usesHeroVariant ? 32 : 28;
+  const flareGlowStrokeWidth = usesCompactVariant ? 0 : usesHeroVariant ? 32 : 28;
   const flareGlowOpacity = usesCompactVariant ? 0.68 : usesHeroVariant ? 0.58 : 0.54;
-  const flareBodyStrokeWidth = usesCompactVariant ? 21 : usesHeroVariant ? 11 : 10;
-  const flareMainStrokeWidth = usesCompactVariant ? 16 : usesHeroVariant ? 8.4 : 8;
-  const flareCoreStrokeWidth = usesCompactVariant ? 5.6 : usesHeroVariant ? 2.8 : 2.4;
-  const nodeHaloRadius = usesCompactVariant ? 34 : usesHeroVariant ? 25 : 23;
-  const nodeRadius = usesCompactVariant ? 14 : usesHeroVariant ? 9.5 : 9;
+  const flareBodyStrokeWidth = usesCompactVariant ? 24 : usesHeroVariant ? 11 : 10;
+  const flareMainStrokeWidth = usesCompactVariant ? 18 : usesHeroVariant ? 8.4 : 8;
+  const flareCoreStrokeWidth = usesCompactVariant ? 6.4 : usesHeroVariant ? 2.8 : 2.4;
+  const nodeHaloRadius = usesCompactVariant ? 0 : usesHeroVariant ? 25 : 23;
+  const nodeRadius = usesCompactVariant ? 0 : usesHeroVariant ? 9.5 : 9;
   const flareGlowFilterId = usesHeroVariant ? blur52Id : blur40Id;
   const planetTransform = scaleAroundCenter(planetScale);
   const outerOrbitRadius = 680;
@@ -250,65 +264,101 @@ export function CuryoPlanetMark({
 
         <g className="curyo-planet-mark__flare-scale">
           <g className={resolvedPreset ? "curyo-planet-mark__flare-orbit" : undefined}>
-            <g filter={`url(#${flareGlowFilterId})`}>
-              <circle
-                cx="700"
-                cy="700"
-                r={flareRadius}
-                stroke="#F45C4D"
-                strokeOpacity={flareGlowOpacity}
-                strokeWidth={flareGlowStrokeWidth}
-                strokeLinecap="round"
-                strokeDasharray={flareDashArray}
-                transform={`rotate(${flareRotation} 700 700)`}
-              />
-            </g>
-            <circle
-              cx="700"
-              cy="700"
-              r={flareRadius}
-              stroke="#6D352A"
-              strokeOpacity="0.42"
-              strokeWidth={flareBodyStrokeWidth}
-              strokeLinecap="round"
-              strokeDasharray={flareDashArray}
-              transform={`rotate(${flareRotation} 700 700)`}
-            />
-            <circle
-              cx="700"
-              cy="700"
-              r={flareRadius}
-              stroke={`url(#${flareGradientId})`}
-              strokeWidth={flareMainStrokeWidth}
-              strokeLinecap="round"
-              strokeDasharray={flareDashArray}
-              transform={`rotate(${flareRotation} 700 700)`}
-            />
-            <circle
-              cx="700"
-              cy="700"
-              r={flareRadius}
-              stroke={`url(#${flareCoreId})`}
-              strokeWidth={flareCoreStrokeWidth}
-              strokeLinecap="round"
-              strokeDasharray={flareDashArray}
-              transform={`rotate(${flareRotation} 700 700)`}
-            />
-            <circle
-              className={resolvedPreset ? "curyo-planet-mark__node-halo" : undefined}
-              cx={nodePoint.x}
-              cy={nodePoint.y}
-              r={nodeHaloRadius}
-              fill="#FF8D65"
-              fillOpacity={usesCompactVariant ? 0.22 : 0.18}
-            />
-            <circle
-              className={resolvedPreset ? "curyo-planet-mark__node" : undefined}
-              cx={nodePoint.x}
-              cy={nodePoint.y}
-              r={nodeRadius}
-              fill="#FFF3DF"
-            />
+            {usesCompactVariant ? (
+              <>
+                <path
+                  d={flarePath ?? undefined}
+                  fill="none"
+                  stroke="#6D352A"
+                  strokeOpacity="0.2"
+                  strokeWidth={flareBodyStrokeWidth}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  shapeRendering="geometricPrecision"
+                />
+                <path
+                  d={flarePath ?? undefined}
+                  fill="none"
+                  stroke={`url(#${flareGradientId})`}
+                  strokeWidth={flareMainStrokeWidth}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  shapeRendering="geometricPrecision"
+                />
+                <path
+                  d={flarePath ?? undefined}
+                  fill="none"
+                  stroke={`url(#${flareCoreId})`}
+                  strokeOpacity="0.96"
+                  strokeWidth={flareCoreStrokeWidth}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  shapeRendering="geometricPrecision"
+                />
+              </>
+            ) : (
+              <>
+                <g filter={`url(#${flareGlowFilterId})`}>
+                  <circle
+                    cx="700"
+                    cy="700"
+                    r={flareRadius}
+                    stroke="#F45C4D"
+                    strokeOpacity={flareGlowOpacity}
+                    strokeWidth={flareGlowStrokeWidth}
+                    strokeLinecap="round"
+                    strokeDasharray={flareDashArray ?? undefined}
+                    transform={`rotate(${flareRotation} 700 700)`}
+                  />
+                </g>
+                <circle
+                  cx="700"
+                  cy="700"
+                  r={flareRadius}
+                  stroke="#6D352A"
+                  strokeOpacity="0.42"
+                  strokeWidth={flareBodyStrokeWidth}
+                  strokeLinecap="round"
+                  strokeDasharray={flareDashArray ?? undefined}
+                  transform={`rotate(${flareRotation} 700 700)`}
+                />
+                <circle
+                  cx="700"
+                  cy="700"
+                  r={flareRadius}
+                  stroke={`url(#${flareGradientId})`}
+                  strokeWidth={flareMainStrokeWidth}
+                  strokeLinecap="round"
+                  strokeDasharray={flareDashArray ?? undefined}
+                  transform={`rotate(${flareRotation} 700 700)`}
+                />
+                <circle
+                  cx="700"
+                  cy="700"
+                  r={flareRadius}
+                  stroke={`url(#${flareCoreId})`}
+                  strokeWidth={flareCoreStrokeWidth}
+                  strokeLinecap="round"
+                  strokeDasharray={flareDashArray ?? undefined}
+                  transform={`rotate(${flareRotation} 700 700)`}
+                />
+                <circle
+                  className={resolvedPreset ? "curyo-planet-mark__node-halo" : undefined}
+                  cx={nodePoint.x}
+                  cy={nodePoint.y}
+                  r={nodeHaloRadius}
+                  fill="#FF8D65"
+                  fillOpacity={0.18}
+                />
+                <circle
+                  className={resolvedPreset ? "curyo-planet-mark__node" : undefined}
+                  cx={nodePoint.x}
+                  cy={nodePoint.y}
+                  r={nodeRadius}
+                  fill="#FFF3DF"
+                />
+              </>
+            )}
           </g>
         </g>
 
