@@ -319,7 +319,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   const platform = detectPlatform(item.url);
   const [imageError, setImageError] = useState(false);
   const thumbnailSrc = getVoteFeedThumbnailSrc(item);
-  const ratingLabel = `${item.rating}/100`;
+  const ratingLabel = `${item.rating}%`;
   const statusBadgeClassName =
     queueStatus?.urgencyTone === "success"
       ? "bg-success/15 text-success ring-success/30"
