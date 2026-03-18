@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { getAddress } from "viem";
 import { Address } from "viem";
 import { hardhat } from "viem/chains";
@@ -43,11 +44,32 @@ function formatCrepAmount(value: bigint | null | undefined) {
 
 function useWalletSummaryData(address: Address, crepBalance: bigint | undefined) {
   const isPageVisible = usePageVisibility();
+  const { data: syncedCrepBalance } = useQuery({
+    queryKey: ["wallet-crep-balance", address.toLowerCase()],
+    queryFn: async () => {
+      const response = await fetch(`/api/leaderboard?includeAddress=${address}&limit=1`);
+      const body = (await response.json().catch(() => null)) as {
+        entries?: { address?: string; balance?: string }[];
+        error?: string;
+      } | null;
+      const matchedEntry = body?.entries?.find(entry => entry.address?.toLowerCase() === address.toLowerCase());
+      if (!response.ok || typeof matchedEntry?.balance !== "string") {
+        throw new Error(body?.error || `Failed to fetch cREP balance (${response.status})`);
+      }
+      return BigInt(matchedEntry.balance);
+    },
+    enabled: Boolean(address),
+    initialData: crepBalance,
+    staleTime: 15_000,
+    refetchInterval: isPageVisible ? 30_000 : false,
+    retry: 1,
+  });
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked: votingStaked } = useVotingStakes(address);
   const { votes: activeVotes, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
   const { readyCount: manualRevealReadyCount } = useManualRevealVotes(address);
   const showManualRevealLink = manualRevealReadyCount > 0;
+  const liquidBalance = syncedCrepBalance ?? crepBalance;
 
   const { data: frontendInfo } = useScaffoldReadContract({
     contractName: "FrontendRegistry",
@@ -64,17 +86,17 @@ function useWalletSummaryData(address: Address, crepBalance: bigint | undefined)
   const effectiveVotingStaked = Math.max(votingStaked, fallbackVotingStaked);
   const summary = useWalletDisplaySummary(
     address,
-    crepBalance === undefined
+    liquidBalance === undefined
       ? null
       : {
-          liquidMicro: crepBalance,
+          liquidMicro: liquidBalance,
           votingStakedMicro: BigInt(Math.round(effectiveVotingStaked * 1e6)),
           submissionStakedMicro: BigInt(Math.round(totalSubmissionStake * 1e6)),
           frontendStakedMicro: frontendInfo?.[1] ?? 0n,
         },
   );
 
-  return { summary, activeVotes, earliestReveal, hasPendingReveals, showManualRevealLink };
+  return { summary, liquidBalance, activeVotes, earliestReveal, hasPendingReveals, showManualRevealLink };
 }
 
 function WalletBalanceText({
@@ -86,21 +108,17 @@ function WalletBalanceText({
   crepBalance: bigint | undefined;
   className?: string;
 }) {
-  const { summary } = useWalletSummaryData(address, crepBalance);
-  const displayBalance = summary?.totalMicro ?? crepBalance;
+  const { liquidBalance } = useWalletSummaryData(address, crepBalance);
 
-  return <div className={className}>{formatCrepAmount(displayBalance)} cREP</div>;
+  return <div className={className}>{formatCrepAmount(liquidBalance)} cREP</div>;
 }
 
 function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
   const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
   const { claimAll, isClaiming, progress } = useClaimAll();
-  const { summary, activeVotes, earliestReveal, hasPendingReveals, showManualRevealLink } = useWalletSummaryData(
-    address,
-    crepBalance,
-  );
+  const { summary, liquidBalance, activeVotes, earliestReveal, hasPendingReveals, showManualRevealLink } =
+    useWalletSummaryData(address, crepBalance);
   const shouldShowStaked = (summary?.totalStakedMicro ?? 0n) > 0n || activeVotes.length > 0;
-  const displayBalance = summary?.totalMicro ?? crepBalance;
 
   const claimableFormatted =
     totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
@@ -126,7 +144,7 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
 
   return (
     <>
-      <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(displayBalance)} cREP</div>
+      <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(liquidBalance)} cREP</div>
       {showManualRevealLink ? (
         <div className="text-left px-4 pl-12">
           <Link
