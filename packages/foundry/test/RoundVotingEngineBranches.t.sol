@@ -1445,13 +1445,26 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
         bytes32 commitHash = _commitHash(true, salt, contentId);
-        bytes memory hugeCiphertext = new bytes(10_241); // exceeds MAX_CIPHERTEXT_SIZE
+        bytes memory hugeCiphertext = new bytes(2_049); // exceeds MAX_CIPHERTEXT_SIZE
 
         vm.prank(voter1);
         crepToken.approve(address(engine), STAKE);
         vm.prank(voter1);
         vm.expectRevert(RoundVotingEngine.CiphertextTooLarge.selector);
         engine.commitVote(contentId, commitHash, hugeCiphertext, STAKE, address(0));
+    }
+
+    function test_Commit_MaxCiphertextSize_Accepted() public {
+        uint256 contentId = _submitContent();
+
+        bytes32 salt = keccak256(abi.encodePacked(voter1, block.timestamp));
+        bytes memory maxCiphertext = new bytes(2_048); // exactly MAX_CIPHERTEXT_SIZE
+        bytes32 commitHash = _commitHash(true, salt, contentId, maxCiphertext);
+
+        vm.prank(voter1);
+        crepToken.approve(address(engine), STAKE);
+        vm.prank(voter1);
+        engine.commitVote(contentId, commitHash, maxCiphertext, STAKE, address(0));
     }
 
     function test_Commit_MaxVotersReached_Reverts() public {

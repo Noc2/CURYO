@@ -90,7 +90,7 @@ contract RoundVotingEngine is
     uint256 public constant MIN_STAKE = 1e6; // 1 cREP (6 decimals)
     uint256 public constant MAX_STAKE = 100e6; // 100 cREP (6 decimals)
     uint256 public constant VOTE_COOLDOWN = 24 hours; // Time-based cooldown per content per voter
-    uint256 public constant MAX_CIPHERTEXT_SIZE = 10_240; // 10 KB max ciphertext to prevent storage bloat
+    uint256 public constant MAX_CIPHERTEXT_SIZE = 2_048; // 2 KB max ciphertext to prevent storage bloat
 
     // --- State ---
     IERC20 public crepToken;
@@ -1180,5 +1180,5 @@ contract RoundVotingEngine is
     mapping(uint256 => bool) internal contentHasSettledRound;
 
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[20] private __gap;
+    uint256[50] private __gap;
 }

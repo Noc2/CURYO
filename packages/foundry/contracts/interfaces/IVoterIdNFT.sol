@@ -69,4 +69,8 @@ interface IVoterIdNFT {
     /// @param delegate The delegate address
     /// @return The holder address (address(0) if not a delegate)
     function delegateOf(address delegate) external view returns (address);
+
+    /// @notice Reset a nullifier to allow re-verification after revocation
+    /// @param nullifier The nullifier to reset
+    function resetNullifier(uint256 nullifier) external;
 }

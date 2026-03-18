@@ -348,6 +348,7 @@ contract ContentRegistry is
     /// @dev Anyone can call this. Returns submitter stake in cREP.
     function markDormant(uint256 contentId) external nonReentrant {
         Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
         require(c.status == ContentStatus.Active, "Not active");
         require(block.timestamp > _getDormancyAnchor(contentId) + DORMANCY_PERIOD, "Dormancy period not elapsed");
         require(!_hasOpenRound(contentId), "Content has active round");

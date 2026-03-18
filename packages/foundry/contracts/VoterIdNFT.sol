@@ -63,6 +63,7 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
     event DelegateSet(address indexed holder, address indexed delegate);
     event DelegateRemoved(address indexed holder, address indexed previousDelegate);
     event GovernanceUpdated(address indexed governance);
+    event NullifierReset(uint256 indexed nullifier);
 
     // ====================================================
     // Errors
@@ -174,6 +175,13 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         _burn(tokenId);
 
         emit VoterIdRevoked(tokenId, holder);
+    }
+
+    /// @notice Reset a nullifier to allow re-verification after revocation.
+    /// @param nullifier The nullifier to reset
+    function resetNullifier(uint256 nullifier) external onlyOwner {
+        nullifierUsed[nullifier] = false;
+        emit NullifierReset(nullifier);
     }
 
     // ====================================================

@@ -1201,6 +1201,12 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
     }
 
+    function test_MarkDormant_PhantomContentId_Reverts() public {
+        vm.warp(block.timestamp + 31 days);
+        vm.expectRevert("Content does not exist");
+        registry.markDormant(999999);
+    }
+
     function test_SubmitContent_CanonicalDuplicate_SpotifyEmbedVariantCollides() public {
         vm.prank(owner);
         registry.setCategoryRegistry(address(mockCategoryRegistry));

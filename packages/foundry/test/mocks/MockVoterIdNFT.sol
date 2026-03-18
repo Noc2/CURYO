@@ -97,4 +97,8 @@ contract MockVoterIdNFT is IVoterIdNFT {
     function delegateOf(address delegate) external view returns (address) {
         return delegateToHolder[delegate];
     }
+
+    function resetNullifier(uint256 nullifier) external {
+        usedNullifiers[nullifier] = false;
+    }
 }
