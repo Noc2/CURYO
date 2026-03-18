@@ -122,7 +122,7 @@ export function ProfileForm() {
           <p className="text-base-content/70">
             You need a Voter ID to create a profile. Verify your identity with Self.xyz to receive your Voter ID.
           </p>
-          <Link href="/governance" className="btn btn-curyo">
+          <Link href="/governance" className="btn btn-submit">
             <IdentificationIcon className="w-5 h-5" />
             Get Voter ID
           </Link>
@@ -135,10 +135,7 @@ export function ProfileForm() {
     <div className="surface-card rounded-2xl p-6 space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <h1 className="text-2xl font-semibold">{hasProfile ? "Your Profile" : "Create Profile"}</h1>
-        <Link
-          href={publicProfileHref}
-          className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-base-content transition-colors hover:bg-[#F5F0EB]/[0.05]"
-        >
+        <Link href={publicProfileHref} className="btn btn-submit">
           Open public profile
         </Link>
       </div>
@@ -253,7 +250,7 @@ export function ProfileForm() {
       {/* Submit Button */}
       <button
         onClick={handleSave}
-        className="btn btn-curyo w-full"
+        className="btn btn-submit w-full"
         disabled={isPending || !nameInput.trim() || nameIsTaken || strategyInput.trim().length > MAX_STRATEGY_LENGTH}
       >
         {isPending ? (

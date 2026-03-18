@@ -139,7 +139,7 @@ export function DelegationSection() {
 
           <button
             onClick={handleSetDelegate}
-            className="btn btn-curyo w-full"
+            className="btn btn-submit w-full"
             disabled={isPending || !isValidAddress || isSelfAddress}
           >
             {isPending ? (

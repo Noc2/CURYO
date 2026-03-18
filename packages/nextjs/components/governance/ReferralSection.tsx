@@ -132,7 +132,7 @@ export function ReferralSection({ className = "" }: ReferralSectionProps) {
             readOnly
             className="input input-bordered flex-1 bg-base-100 text-base font-mono"
           />
-          <button onClick={handleCopy} className="btn btn-curyo btn-square" title="Copy to clipboard">
+          <button onClick={handleCopy} className="btn btn-submit btn-square" title="Copy to clipboard">
             {isCopiedToClipboard ? <CheckIcon className="w-5 h-5" /> : <ClipboardDocumentIcon className="w-5 h-5" />}
           </button>
         </div>
@@ -144,14 +144,14 @@ export function ReferralSection({ className = "" }: ReferralSectionProps) {
           href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn btn-outline flex-1 gap-2"
+          className="btn btn-submit flex-1 gap-2"
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
           Share on X
         </a>
-        <button onClick={handleCopy} className="btn btn-curyo flex-1 gap-2">
+        <button onClick={handleCopy} className="btn btn-submit flex-1 gap-2">
           <LinkIcon className="w-5 h-5" />
           {isCopiedToClipboard ? "Copied!" : "Copy Link"}
         </button>

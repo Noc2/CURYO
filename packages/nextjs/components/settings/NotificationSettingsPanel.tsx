@@ -245,7 +245,7 @@ export function NotificationSettingsPanel({
               Connect your wallet to choose which in-app, browser, and email alerts you want to receive.
             </p>
           </div>
-          <button type="button" onClick={openConnectModal} className="btn btn-curyo px-6">
+          <button type="button" onClick={openConnectModal} className="btn btn-submit px-6">
             Connect wallet
           </button>
         </div>
@@ -282,7 +282,7 @@ export function NotificationSettingsPanel({
             <h2 className="text-xl font-semibold text-base-content">In-app and browser alerts</h2>
           </div>
           {browserPermission === "default" ? (
-            <button type="button" onClick={() => void requestBrowserPermission()} className="btn btn-outline btn-sm">
+            <button type="button" onClick={() => void requestBrowserPermission()} className="btn btn-submit btn-sm">
               Enable browser notifications
             </button>
           ) : null}
@@ -370,7 +370,7 @@ export function NotificationSettingsPanel({
               type="button"
               onClick={() => void handleSaveEmailSettings()}
               disabled={isEmailSaving || (!emailDirty && emailPayload.email.length > 0)}
-              className="btn btn-curyo disabled:bg-base-content/60 disabled:text-base-100/70"
+              className="btn btn-submit disabled:bg-base-content/60 disabled:text-base-100/70"
             >
               {isEmailSaving ? "Saving..." : emailPayload.email ? "Save email settings" : "Remove email notifications"}
             </button>
@@ -379,7 +379,7 @@ export function NotificationSettingsPanel({
                 type="button"
                 onClick={() => void handleSaveEmailSettings()}
                 disabled={isEmailSaving}
-                className="btn btn-outline"
+                className="btn btn-submit"
               >
                 Resend verification
               </button>
