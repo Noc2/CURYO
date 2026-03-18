@@ -47,8 +47,8 @@ test("getRoundProgressMessaging reframes open rounds around settlement momentum"
     weightedDownPool: 8n,
   });
 
-  assert.equal(message?.badgeLabel, "Open · live pools");
-  assert.equal(message?.detailLabel, "Only 1 more voter to settle");
+  assert.equal(message?.badgeLabel, "Open");
+  assert.equal(message?.detailLabel, null);
 });
 
 test("estimateVoteReturn uses informed weight during open phase", () => {

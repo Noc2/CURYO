@@ -112,7 +112,7 @@ export function getRoundProgressMessaging(
 
   if (snapshot.readyToSettle || snapshot.thresholdReachedAt > 0) {
     return {
-      badgeLabel: "Open · live pools",
+      badgeLabel: "Open",
       badgeTone: "warning",
       detailLabel: "Near settlement",
       detailTone: "success",
@@ -123,9 +123,9 @@ export function getRoundProgressMessaging(
 
   if (votersNeeded > 0) {
     return {
-      badgeLabel: "Open · live pools",
+      badgeLabel: "Open",
       badgeTone: "warning",
-      detailLabel: `Only ${votersNeeded} more voter${votersNeeded === 1 ? "" : "s"} to settle`,
+      detailLabel: null,
       detailTone: votersNeeded === 1 ? "success" : "warning",
       tooltip:
         "Open votes can use the revealed market signal. This round still needs more voters before settlement can begin.",
@@ -134,7 +134,7 @@ export function getRoundProgressMessaging(
 
   if (revealsNeeded > 0) {
     return {
-      badgeLabel: "Open · live pools",
+      badgeLabel: "Open",
       badgeTone: "warning",
       detailLabel: `${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"} before settlement`,
       detailTone: "warning",
@@ -144,7 +144,7 @@ export function getRoundProgressMessaging(
   }
 
   return {
-    badgeLabel: "Open · live pools",
+    badgeLabel: "Open",
     badgeTone: "warning",
     detailLabel: "Help settle this round",
     detailTone: "success",

@@ -68,7 +68,6 @@ export function VotingQuestionCard({
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
-  const votersNeeded = Math.max(0, minVoters - voteCount);
   const revealsNeeded = Math.max(0, minVoters - revealedCount);
   const incentivePrompt =
     phase !== "voting"
@@ -76,12 +75,10 @@ export function VotingQuestionCard({
       : isEpoch1
         ? null
         : readyToSettle || thresholdReachedAt > 0
-          ? "Live pools are visible and this round is close to settlement."
-          : votersNeeded > 0
-            ? `Live pools are visible. ${votersNeeded} more voter${votersNeeded === 1 ? "" : "s"} can unlock settlement.`
-            : revealsNeeded > 0
-              ? `${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"} and this round can settle.`
-              : "Live pools are visible. Add your vote and help settle this round.";
+          ? null
+          : revealsNeeded > 0
+            ? `${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"} and this round can settle.`
+            : null;
   const incentivePromptClassName = "text-warning";
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
