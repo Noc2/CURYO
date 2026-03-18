@@ -165,7 +165,7 @@ test.describe("Frontend fee claim lifecycle", () => {
       BigInt(contentId!),
       roundId,
       ANVIL_ACCOUNTS.account1.address,
-      REWARD_DISTRIBUTOR,
+      VOTING_ENGINE,
     );
     expect(settled, "Frontend-fee round did not settle").toBe(true);
 
