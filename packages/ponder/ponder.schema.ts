@@ -20,8 +20,6 @@ export const content = onchainTable(
     submitterStakeReturned: t.boolean().notNull(),
     createdAt: t.bigint().notNull(),
     lastActivityAt: t.bigint().notNull(),
-    dormantCount: t.integer().notNull(),
-    reviver: t.hex(),
     totalVotes: t.integer().notNull(),
     totalRounds: t.integer().notNull(),
   }),

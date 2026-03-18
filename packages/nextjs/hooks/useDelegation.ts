@@ -1,8 +1,7 @@
 "use client";
 
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
-
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
 /**
  * Hook to read and manage delegation state for a VoterIdNFT holder.

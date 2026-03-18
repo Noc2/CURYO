@@ -109,8 +109,6 @@ export interface PonderContentItem {
   submitterStakeReturned: boolean;
   createdAt: string;
   lastActivityAt: string;
-  dormantCount: number;
-  reviver: string | null;
   totalVotes: number;
   totalRounds: number;
   openRound: PonderContentOpenRoundSummary | null;

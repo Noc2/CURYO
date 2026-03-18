@@ -22,7 +22,6 @@ ponder.on("ContentRegistry:ContentSubmitted", async ({ event, context }) => {
       submitterStakeReturned: false,
       createdAt: event.block.timestamp,
       lastActivityAt: event.block.timestamp,
-      dormantCount: 0,
       totalVotes: 0,
       totalRounds: 0,
     })
@@ -69,13 +68,11 @@ ponder.on("ContentRegistry:ContentDormant", async ({ event, context }) => {
 });
 
 ponder.on("ContentRegistry:ContentRevived", async ({ event, context }) => {
-  const { contentId, reviver } = event.args;
-  await context.db.update(content, { id: contentId }).set((row) => ({
+  const { contentId } = event.args;
+  await context.db.update(content, { id: contentId }).set({
     status: 0,
-    reviver,
     lastActivityAt: event.block.timestamp,
-    dormantCount: row.dormantCount + 1,
-  }));
+  });
 });
 
 ponder.on("ContentRegistry:ContentCancelled", async ({ event, context }) => {

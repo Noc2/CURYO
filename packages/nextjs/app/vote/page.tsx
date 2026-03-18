@@ -40,6 +40,7 @@ import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/v
 import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
+import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
 const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").then(m => m.StakeSelector), {
   loading: () => (
@@ -65,7 +66,6 @@ const FEED_PAGE_SIZE = 20;
 const FEED_PREFETCH_BUFFER = 20;
 const CARD_SWIPE_THRESHOLD = 96;
 const VOTE_CARD_TRANSITION_EASE = [0.22, 1, 0.36, 1] as const;
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;

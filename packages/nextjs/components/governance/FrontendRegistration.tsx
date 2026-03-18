@@ -10,9 +10,9 @@ import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContr
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
 import scaffoldConfig from "~~/scaffold.config";
 import { notification } from "~~/utils/scaffold-eth";
+import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
 const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 /**
  * Frontend Registration section for developers to register as frontend operators
