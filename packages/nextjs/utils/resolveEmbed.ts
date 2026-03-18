@@ -1,4 +1,4 @@
-import { getTwitterSyndicationTokens } from "@curyo/contracts";
+import { getTwitterSyndicationTokens } from "@curyo/contracts/twitterSyndication";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { getTmdbApiKey } from "~~/lib/env/server";

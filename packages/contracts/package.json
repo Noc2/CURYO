@@ -8,6 +8,7 @@
     "./abis": "./src/abis/index.ts",
     "./deployedContracts": "./src/deployedContracts.ts",
     "./protocol": "./src/protocol.ts",
+    "./twitterSyndication": "./src/twitterSyndication.ts",
     "./types": "./src/types.ts",
     "./voting": "./src/voting.ts"
   },
