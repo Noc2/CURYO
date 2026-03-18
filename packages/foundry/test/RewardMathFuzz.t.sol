@@ -89,6 +89,74 @@ contract RewardMathFuzz is Test {
     }
 
     // =========================================================================
+    // calculateRevealedLoserRefund
+    // =========================================================================
+
+    function testFuzz_calculateRevealedLoserRefund_FivePercentOfInput(uint256 losingStake) public pure {
+        losingStake = bound(losingStake, 0, type(uint128).max);
+
+        uint256 refund = RewardMath.calculateRevealedLoserRefund(losingStake);
+
+        // Refund should be exactly floor(losingStake * 500 / 10000)
+        uint256 expected = (losingStake * 500) / 10000;
+        assertEq(refund, expected, "refund != 5% of losing stake");
+    }
+
+    function testFuzz_calculateRevealedLoserRefund_NeverExceedsStake(uint256 losingStake) public pure {
+        losingStake = bound(losingStake, 0, type(uint128).max);
+
+        uint256 refund = RewardMath.calculateRevealedLoserRefund(losingStake);
+        assertLe(refund, losingStake, "refund exceeds original stake");
+    }
+
+    // =========================================================================
+    // splitPoolAfterLoserRefund
+    // =========================================================================
+
+    function testFuzz_splitPoolAfterLoserRefund_SharesSumToInput(uint256 losingPool) public pure {
+        losingPool = bound(losingPool, 0, type(uint128).max);
+
+        (
+            uint256 loserRefundShare,
+            uint256 voterShare,
+            uint256 submitterShare,
+            uint256 platformShare,
+            uint256 treasuryShare,
+            uint256 consensusShare
+        ) = RewardMath.splitPoolAfterLoserRefund(losingPool);
+
+        uint256 total = loserRefundShare + voterShare + submitterShare + platformShare + treasuryShare + consensusShare;
+        assertEq(total, losingPool, "shares do not sum to input");
+    }
+
+    function testFuzz_splitPoolAfterLoserRefund_LoserRefundIsFivePercent(uint256 losingPool) public pure {
+        losingPool = bound(losingPool, 0, type(uint128).max);
+
+        (uint256 loserRefundShare,,,,,) = RewardMath.splitPoolAfterLoserRefund(losingPool);
+
+        uint256 expected = (losingPool * 500) / 10000;
+        assertEq(loserRefundShare, expected, "loser refund share != 5% of pool");
+    }
+
+    function testFuzz_splitPoolAfterLoserRefund_VoterGetsLargestShare(uint256 losingPool) public pure {
+        losingPool = bound(losingPool, 10000, type(uint128).max);
+
+        (
+            ,
+            uint256 voterShare,
+            uint256 submitterShare,
+            uint256 platformShare,
+            uint256 treasuryShare,
+            uint256 consensusShare
+        ) = RewardMath.splitPoolAfterLoserRefund(losingPool);
+
+        assertGe(voterShare, submitterShare, "voter share < submitter share");
+        assertGe(voterShare, platformShare, "voter share < platform share");
+        assertGe(voterShare, treasuryShare, "voter share < treasury share");
+        assertGe(voterShare, consensusShare, "voter share < consensus share");
+    }
+
+    // =========================================================================
     // calculateConsensusSubsidy
     // =========================================================================
 
