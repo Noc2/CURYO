@@ -7,6 +7,24 @@ import { checkRateLimit } from "~~/utils/rateLimit";
 const RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 const MAX_LIMIT = 100;
 
+async function buildIncludedAddressFallback(address: string) {
+  const [balances, profiles] = await Promise.all([readCRepBalances([address]), readProfileRegistryProfiles([address])]);
+
+  return NextResponse.json({
+    entries: [
+      {
+        rank: 0,
+        address,
+        username: profiles[address]?.username ?? null,
+        balance: (balances[address] ?? 0n).toString(),
+      },
+    ],
+    totalCount: 1,
+    source: "onchain_fallback",
+    type: "voters",
+  });
+}
+
 // GET: Fetch cREP leaderboard data.
 // Uses Ponder when available for candidate discovery, then ranks by live on-chain cREP balances.
 export async function GET(request: NextRequest) {
@@ -22,10 +40,15 @@ export async function GET(request: NextRequest) {
     const includeAddressParam = request.nextUrl.searchParams.get("includeAddress");
     const includeAddress =
       includeAddressParam && isAddress(includeAddressParam) ? includeAddressParam.toLowerCase() : null;
+    const canFallbackToIncludedAddress = includeAddress !== null && limit === 1;
 
     // Try Ponder first for complete holder discovery.
     const ponderAvailable = await isPonderAvailable();
     if (!ponderAvailable) {
+      if (canFallbackToIncludedAddress) {
+        return buildIncludedAddressFallback(includeAddress);
+      }
+
       return NextResponse.json(
         { error: "Leaderboard is temporarily unavailable while the indexer is offline" },
         { status: 503 },
@@ -37,6 +60,11 @@ export async function GET(request: NextRequest) {
       const holders = await ponderApi.getAllTokenHolders();
       candidateAddresses = holders.map(holder => holder.address);
     } catch (e) {
+      if (canFallbackToIncludedAddress) {
+        console.warn("Ponder token-holder discovery failed, using included-address fallback");
+        return buildIncludedAddressFallback(includeAddress);
+      }
+
       console.warn("Ponder token-holder discovery failed:", e);
       return NextResponse.json(
         { error: "Leaderboard is temporarily unavailable while holder indexing catches up" },
