@@ -78,7 +78,11 @@ test.describe("Tied round lifecycle", () => {
     await expect(urlInput).toBeVisible({ timeout: 5_000 });
     await urlInput.fill(`https://www.youtube.com/watch?v=tie_test_${uniqueId}`);
 
-    // Enter title
+    // Enter title and description
+    const titleInput = page.getByPlaceholder("Add a short title for this content");
+    await expect(titleInput).toBeVisible({ timeout: 3_000 });
+    await titleInput.fill(`Tie Test Title ${uniqueId}`);
+
     const descInput = page.locator("textarea").first();
     await expect(descInput).toBeVisible({ timeout: 3_000 });
     await descInput.fill(`Tie Test ${uniqueId}`);

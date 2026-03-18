@@ -37,6 +37,10 @@ test.describe("Content submission", () => {
     await urlInput.fill(`https://www.youtube.com/watch?v=e2etest${uniqueId}`);
 
     // 3. Enter title/description
+    const titleInput = page.getByPlaceholder("Add a short title for this content");
+    await expect(titleInput).toBeVisible({ timeout: 3_000 });
+    await titleInput.fill(`E2E Test Title ${uniqueId}`);
+
     const descInput = page.locator("textarea").first();
     await expect(descInput).toBeVisible({ timeout: 3_000 });
     await descInput.fill(`E2E Test Content ${uniqueId}`);

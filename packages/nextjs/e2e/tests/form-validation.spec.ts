@@ -1,23 +1,22 @@
 import { expect, test } from "../fixtures/wallet";
 
 test.describe("Submit form validation", () => {
-  test("submit button is disabled without platform selection", async ({ connectedPage: page }) => {
+  test("submit shows a platform validation error before submission", async ({ connectedPage: page }) => {
     await page.goto("/submit");
     await page.waitForLoadState("domcontentloaded");
 
     // Wait for form to load
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
 
-    // Without selecting a platform, the submit button should be disabled
     const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
+    await expect(submitBtn).toBeEnabled();
+    await submitBtn.click();
 
-    // The button should be disabled when no platform is selected
-    const isDisabled = await submitBtn.isDisabled().catch(() => false);
-    expect(isDisabled).toBe(true);
+    await expect(page.getByText("Select a platform before submitting.")).toBeVisible({ timeout: 5_000 });
   });
 
-  test("submit button is disabled without URL", async ({ connectedPage: page }) => {
+  test("submit shows a URL validation error before submission", async ({ connectedPage: page }) => {
     await page.goto("/submit");
 
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
@@ -42,11 +41,13 @@ test.describe("Submit form validation", () => {
       }
     }
 
-    // Don't fill in URL — submit should still be disabled
+    // Leave the URL blank and submit to trigger inline validation
     const submitBtn = page.getByRole("button", { name: /^Submit Content/i });
     await expect(submitBtn).toBeVisible({ timeout: 5_000 });
-    const isDisabled = await submitBtn.isDisabled().catch(() => false);
-    expect(isDisabled).toBe(true);
+    await expect(submitBtn).toBeEnabled();
+    await submitBtn.click();
+
+    await expect(page.getByText("URL is required.")).toBeVisible({ timeout: 5_000 });
   });
 
   test("platform dropdown shows options", async ({ connectedPage: page }) => {
