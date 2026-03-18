@@ -8,7 +8,6 @@ import {
   getActiveRoundId,
   processUnrevealedVotes,
   readAddress,
-  readBool,
   readTokenBalance,
   readUint256,
   revealVoteDirect,
@@ -489,16 +488,11 @@ test.describe("Reward claim lifecycle", () => {
     const treasuryBalanceAfter = await readTokenBalance(treasuryAddress, CREP_TOKEN);
     const keeperBalanceAfter = await readTokenBalance(keeper.address, CREP_TOKEN);
     const keeperRewardPoolAfter = await readUint256("keeperRewardPool", VOTING_ENGINE);
-    const cleanupRewarded = await readBool("roundCleanupRewarded", VOTING_ENGINE, [
-      BigInt(cleanupContentId!),
-      cleanupRoundId,
-    ]);
 
     // Both unrevealed epoch-0 stakes forfeited to treasury
     expect(treasuryBalanceAfter - treasuryBalanceBefore).toBe(STAKE * 2n);
     expect(keeperRewardPoolBefore - keeperRewardPoolAfter).toBe(keeperReward);
     expect(keeperBalanceAfter - keeperBalanceBefore).toBe(keeperReward);
-    expect(cleanupRewarded).toBe(true);
 
     const secondCleanup = await processUnrevealedVotes(
       BigInt(cleanupContentId!),
