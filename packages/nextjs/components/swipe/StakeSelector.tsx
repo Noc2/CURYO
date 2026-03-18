@@ -5,6 +5,7 @@ import Link from "next/link";
 import { EPOCH_WEIGHT_BPS } from "@curyo/contracts/protocol";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAccount } from "wagmi";
+import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useContentLabel } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
@@ -45,17 +46,7 @@ export function StakeSelector({
   const tokenId = voterIdData.tokenId as bigint;
 
   const roundSnapshot = useRoundSnapshot(contentId);
-  const {
-    roundId: currentRoundId,
-    phase,
-    isEpoch1,
-    voteCount,
-    minVoters,
-    upPool,
-    downPool,
-    readyToSettle,
-    thresholdReachedAt,
-  } = roundSnapshot;
+  const { roundId: currentRoundId, phase, isEpoch1, upPool, downPool } = roundSnapshot;
   const effectiveIsBlind = phase !== "voting" || isEpoch1;
 
   const estimateSnapshot = useMemo(
@@ -102,19 +93,21 @@ export function StakeSelector({
   const isCapacityLimited = maxByCapacity < maxByBalance;
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
-  const votersNeeded = Math.max(0, minVoters - voteCount);
   const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
-  const phaseDetail =
-    readyToSettle || thresholdReachedAt > 0
-      ? "Live pools are visible and this round is close to settlement."
-      : votersNeeded > 0
-        ? `${votersNeeded} more voter${votersNeeded === 1 ? "" : "s"} can unlock settlement.`
-        : "Live pools are visible. Vote with signal and help settle this round.";
   const phaseToneClassName = effectiveIsBlind ? "bg-primary/10" : "bg-warning/10";
   const phaseHeadlineClassName = effectiveIsBlind ? "text-primary" : "text-warning";
   const weightPercent = Math.round(
     (effectiveIsBlind ? EPOCH_WEIGHT_BPS.blind : EPOCH_WEIGHT_BPS.informed) / 100,
   ).toLocaleString();
+  const participationBonusMicro = voteBonus !== undefined ? BigInt(Math.round(voteBonus * 1e6)) : null;
+  const openPhaseGrossReturnMicro =
+    participationBonusMicro !== null ? voteEstimate.estimatedGrossReturnMicro + participationBonusMicro : null;
+  const openPhaseRevealedRefundMicro =
+    participationBonusMicro !== null ? voteEstimate.revealedLoserRefundMicro + participationBonusMicro : null;
+  const openPhaseParticipationTooltip =
+    voteBonus !== undefined
+      ? `Includes the current participation bonus of +${voteBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${symbol}.`
+      : "Includes the current participation bonus once it finishes loading.";
 
   return (
     <AnimatePresence>
@@ -254,8 +247,10 @@ export function StakeSelector({
             </div>
 
             <div className={`mb-4 rounded-2xl px-4 py-3 ${phaseToneClassName}`}>
-              <p className={`text-sm font-semibold ${phaseHeadlineClassName}`}>{phaseHeadline}</p>
-              {!effectiveIsBlind && <p className="mt-1 text-sm text-base-content/75">{phaseDetail}</p>}
+              <div className="flex items-center gap-1.5">
+                <p className={`text-sm font-semibold ${phaseHeadlineClassName}`}>{phaseHeadline}</p>
+                {!effectiveIsBlind && <InfoTooltip text={openPhaseParticipationTooltip} position="bottom" />}
+              </div>
               <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-base-content/80">
                 {effectiveIsBlind ? (
                   <>
@@ -277,21 +272,17 @@ export function StakeSelector({
                     <div className="flex items-center justify-between gap-3">
                       <span>Est. return if right</span>
                       <span className="font-semibold tabular-nums">
-                        {formatCrepAmount(voteEstimate.estimatedGrossReturnMicro)} {symbol}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Participation bonus</span>
-                      <span className="font-semibold tabular-nums">
-                        {voteBonus !== undefined
-                          ? `+${voteBonus.toLocaleString(undefined, { maximumFractionDigits: 1 })} ${symbol}`
+                        {openPhaseGrossReturnMicro !== null
+                          ? `${formatCrepAmount(openPhaseGrossReturnMicro)} ${symbol}`
                           : "Loading"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span>If wrong but revealed</span>
                       <span className="font-semibold tabular-nums">
-                        {formatCrepAmount(voteEstimate.revealedLoserRefundMicro)} {symbol}
+                        {openPhaseRevealedRefundMicro !== null
+                          ? `${formatCrepAmount(openPhaseRevealedRefundMicro)} ${symbol}`
+                          : "Loading"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
