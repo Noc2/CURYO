@@ -177,7 +177,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     return "Still building a public curator track record";
   }, [stats, strongestCategories, totalContent]);
   const followExplanation = ownProfile
-    ? "This is the public view other curators use to decide whether to trust your submissions and follow your activity."
+    ? null
     : following
       ? "Following turns this curator into a signal source for you: their new submissions show up in Curators You Follow, and you can enable submission and resolution alerts in Settings."
       : "Follow to surface this curator's new submissions in Curators You Follow and optionally get alerts when they submit or resolve rounds.";
@@ -324,7 +324,9 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
             <div className="max-w-3xl">
               <div className="text-sm font-semibold uppercase tracking-[0.2em] text-primary/80">Curator snapshot</div>
               <h2 className="mt-2 text-2xl font-semibold">{curatorHeadline}</h2>
-              <p className="mt-3 text-base leading-7 text-base-content/60">{followExplanation}</p>
+              {followExplanation ? (
+                <p className="mt-3 text-base leading-7 text-base-content/60">{followExplanation}</p>
+              ) : null}
             </div>
 
             {!ownProfile && following ? (
