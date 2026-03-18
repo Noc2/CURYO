@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ContentItem } from "~~/hooks/useContentFeed";
-import { getDiscoverFeedModeDescription, sortDiscoverFeed } from "~~/lib/vote/feedModes";
+import { sortDiscoverFeed } from "~~/lib/vote/feedModes";
 
 function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id" | "url" | "title">): ContentItem {
   return {
@@ -176,11 +176,4 @@ test("near settlement favors rounds with sooner estimated settlement", () => {
   );
 
   assert.equal(ranked[0]?.id, 1n);
-});
-
-test("mode descriptions stay available for UI help text", () => {
-  assert.equal(
-    getDiscoverFeedModeDescription("contested"),
-    "Open rounds with the closest split between UP and DOWN stake.",
-  );
 });

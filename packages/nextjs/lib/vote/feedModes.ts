@@ -145,10 +145,6 @@ function compareTimestampDesc(a: ContentItem, b: ContentItem) {
   return Number(b.id - a.id);
 }
 
-export function getDiscoverFeedModeDescription(mode: DiscoverFeedMode): string | null {
-  return DISCOVER_FEED_MODE_OPTIONS.find(option => option.value === mode)?.description ?? null;
-}
-
 export function sortDiscoverFeed(items: ContentItem[], mode: Exclude<DiscoverFeedMode, "for_you">, nowSeconds: number) {
   const ranked = items
     .filter(item => {

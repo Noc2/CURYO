@@ -177,15 +177,6 @@ export type FrontendItem = {
 };
 
 /**
- * Fetch all registered frontends.
- */
-export async function getFrontends(baseURL = PONDER_URL): Promise<{ items: FrontendItem[] }> {
-  const res = await fetchWithRetry(`${baseURL}/frontends`);
-  if (!res.ok) throw new Error(`GET /frontends returned ${res.status}`);
-  return res.json();
-}
-
-/**
  * Fetch a single frontend by address.
  */
 export async function getFrontend(address: string, baseURL = PONDER_URL): Promise<{ frontend: FrontendItem }> {

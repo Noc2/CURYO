@@ -693,15 +693,6 @@ export async function hasVoterIdOnChain(holderAddress: string, contractAddress: 
 }
 
 /**
- * Check if an address is registered as a frontend on-chain (not Ponder).
- * Calls FrontendRegistry.getFrontendInfo(address) — returns true if operator != address(0).
- */
-export async function isFrontendRegisteredOnChain(frontendAddr: string, contractAddress: string): Promise<boolean> {
-  const info = await getFrontendInfoOnChain(frontendAddr, contractAddress);
-  return info.registered;
-}
-
-/**
  * Get full frontend info from chain.
  * Calls FrontendRegistry.getFrontendInfo(address).
  */
@@ -1139,22 +1130,6 @@ export async function claimCancelledRoundRefund(
 }
 
 /**
- * Mine multiple blocks on Anvil. Uses anvil_mine for fast block advancement.
- */
-export async function mineBlocks(count: number): Promise<void> {
-  await fetch(ANVIL_RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      method: "anvil_mine",
-      params: [`0x${count.toString(16)}`, `0x1`],
-      id: Date.now(),
-    }),
-  });
-}
-
-/**
  * Claim a settled-round voter payout.
  * Winners receive stake plus winnings; revealed losers receive the fixed rebate.
  */
@@ -1472,7 +1447,7 @@ export async function setTestConfig(
 
 /**
  * Wait for Ponder to catch up to the current chain block number.
- * Call this after mineBlocks() to ensure Ponder has processed all new blocks
+ * Call this after mining blocks to ensure Ponder has processed all new blocks
  * before polling for specific indexed data.
  */
 export async function waitForPonderSync(

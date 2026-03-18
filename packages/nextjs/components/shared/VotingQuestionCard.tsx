@@ -15,7 +15,6 @@ import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 interface VotingQuestionCardProps {
   contentId: bigint;
   categoryId: bigint;
-  title?: string;
   onVote: (isUp: boolean) => void;
   isCommitting: boolean;
   address?: string;
