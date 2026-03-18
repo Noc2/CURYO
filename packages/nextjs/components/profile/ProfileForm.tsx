@@ -14,13 +14,13 @@ import {
   useSetAvatarAccent,
   useSetProfile,
 } from "~~/hooks/useProfileRegistry";
+import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import {
   MAX_PROFILE_IMAGE_URL_LENGTH,
   MAX_PROFILE_STRATEGY_LENGTH,
   validateProfileImageUrl,
 } from "~~/lib/profile/profileValidation";
-import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
-import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -251,7 +251,6 @@ export function ProfileForm() {
           />
         </div>
         <div className="flex-1">
-          <p className="text-base text-base-content/60 mb-1">Profile preview</p>
           <p className="text-xl font-semibold">{nameInput || "Your Name"}</p>
           <p className="text-base text-base-content/50 font-mono">
             {address?.slice(0, 6)}...{address?.slice(-4)}
@@ -362,7 +361,6 @@ export function ProfileForm() {
 
         <div className="flex flex-col gap-2 text-sm text-base-content/65">
           <p>Used for your generated reputation avatar whenever you do not set a custom profile image.</p>
-          {!avatarAccent?.enabled ? <p>Currently using the default address-based color palette.</p> : null}
           {avatarAccentInputError ? <p className="text-error">Use a valid 6-digit hex color like #f26426.</p> : null}
           {accentError ? <p className="text-error">{accentError}</p> : null}
         </div>
@@ -444,10 +442,7 @@ export function ProfileForm() {
         onClick={handleSave}
         className="btn btn-submit w-full"
         disabled={
-          isPending ||
-          !nameInput.trim() ||
-          nameIsTaken ||
-          strategyInput.trim().length > MAX_PROFILE_STRATEGY_LENGTH
+          isPending || !nameInput.trim() || nameIsTaken || strategyInput.trim().length > MAX_PROFILE_STRATEGY_LENGTH
         }
       >
         {isPending ? (
