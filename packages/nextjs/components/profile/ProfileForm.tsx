@@ -426,7 +426,7 @@ export function ProfileForm() {
       </button>
 
       {/* Last updated info */}
-      {hasProfile && profile?.updatedAt && (
+      {hasProfile && profile && profile.updatedAt > 0n && (
         <p className="text-base text-base-content/50 text-center">
           Last updated: {new Date(Number(profile.updatedAt) * 1000).toLocaleDateString()}
         </p>
