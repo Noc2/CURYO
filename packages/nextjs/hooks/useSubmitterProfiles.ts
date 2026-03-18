@@ -8,7 +8,6 @@ import { ponderApi } from "~~/services/ponder/client";
 
 export interface SubmitterProfile {
   username: string | null;
-  profileImageUrl: string | null;
   winRate?: number;
   totalSettledVotes?: number;
 }
@@ -61,20 +60,18 @@ export function useSubmitterProfiles(addresses: string[]) {
       if (response.status === "success" && response.result) {
         const profile = response.result as {
           name: string;
-          imageUrl: string;
           createdAt: bigint;
           updatedAt: bigint;
         };
         if (profile.createdAt > 0n) {
           result[addr] = {
             username: profile.name || null,
-            profileImageUrl: profile.imageUrl || null,
           };
         } else {
-          result[addr] = { username: null, profileImageUrl: null };
+          result[addr] = { username: null };
         }
       } else {
-        result[addr] = { username: null, profileImageUrl: null };
+        result[addr] = { username: null };
       }
     });
 
@@ -94,10 +91,9 @@ export function useSubmitterProfiles(addresses: string[]) {
         if (p) {
           mapped[addr] = {
             username: p.name || null,
-            profileImageUrl: p.imageUrl || null,
           };
         } else {
-          mapped[addr] = { username: null, profileImageUrl: null };
+          mapped[addr] = { username: null };
         }
       }
       return mapped;

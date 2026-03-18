@@ -8,14 +8,13 @@ import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
-import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
+import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface LeaderboardEntry {
   rank: number;
   address: string;
   username: string | null;
-  profileImageUrl: string | null;
   balance: string;
 }
 
@@ -182,8 +181,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
           <tbody>
             {visibleEntries.map(entry => {
               const isCurrentUser = connectedAddress?.toLowerCase() === entry.address.toLowerCase();
-              const fallbackImageUrl = getReputationAvatarUrl(entry.address, 32) || "";
-              const avatarSrc = getProxiedProfileImageUrl(entry.profileImageUrl) || fallbackImageUrl;
+              const avatarSrc = getReputationAvatarUrl(entry.address, 32) || "";
               return (
                 <tr
                   key={entry.address}
@@ -211,9 +209,6 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
                       >
                         <img
                           src={avatarSrc}
-                          onError={e => {
-                            e.currentTarget.src = fallbackImageUrl;
-                          }}
                           width={32}
                           height={32}
                           className="w-8 h-8 rounded-full object-cover shrink-0"

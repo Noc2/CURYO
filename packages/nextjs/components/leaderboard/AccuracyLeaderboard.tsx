@@ -10,7 +10,7 @@ import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHead
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { PonderAccuracyLeaderboardItem, PonderAccuracyLeaderboardWindow, ponderApi } from "~~/services/ponder/client";
-import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
+import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 type SortOption = "winRate" | "wins" | "stakeWon" | "settledVotes";
@@ -236,8 +236,7 @@ export function AccuracyLeaderboard() {
                 const streak = entry.currentStreak;
                 const streakLabel =
                   streak !== undefined ? (streak > 0 ? `${streak}W` : streak < 0 ? `${Math.abs(streak)}L` : "0") : "-";
-                const fallbackImageUrl = getReputationAvatarUrl(entry.voter, 32) || "";
-                const avatarSrc = getProxiedProfileImageUrl(entry.profileImageUrl) || fallbackImageUrl;
+                const avatarSrc = getReputationAvatarUrl(entry.voter, 32) || "";
 
                 return (
                   <tr
@@ -262,9 +261,6 @@ export function AccuracyLeaderboard() {
                         >
                           <img
                             src={avatarSrc}
-                            onError={e => {
-                              e.currentTarget.src = fallbackImageUrl;
-                            }}
                             width={32}
                             height={32}
                             className="w-8 h-8 rounded-full object-cover shrink-0"

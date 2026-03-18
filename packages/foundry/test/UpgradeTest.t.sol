@@ -271,7 +271,7 @@ contract UpgradeTest is Test {
     function test_ProfileRegistry_StatePreservedAfterUpgrade() public {
         // Create a profile before upgrade
         vm.prank(address(10));
-        profileRegistry.setProfile("testuser", "https://example.com/img.png", "");
+        profileRegistry.setProfile("testuser", "");
 
         vm.prank(address(10));
         profileRegistry.setAvatarAccent(0xF26426);
@@ -289,7 +289,6 @@ contract UpgradeTest is Test {
 
         IProfileRegistry.Profile memory profile = profileRegistry.getProfile(address(10));
         assertEq(profile.name, "testuser");
-        assertEq(profile.imageUrl, "https://example.com/img.png");
         assertEq(profile.strategy, "");
         assertTrue(profile.createdAt > 0);
         assertTrue(profile.updatedAt > 0);

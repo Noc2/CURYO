@@ -50,7 +50,6 @@ export function registerLeaderboardRoutes(app: ApiApp) {
       holderOnly = holders.map(holder => ({
         address: holder.address,
         name: "",
-        imageUrl: "",
         strategy: "",
         createdAt: holder.firstSeenAt,
         updatedAt: holder.firstSeenAt,
@@ -147,7 +146,6 @@ export function registerLeaderboardRoutes(app: ApiApp) {
         totalStakeWon: sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then ${vote.stake} else 0 end), 0)`,
         totalStakeLost: sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then 0 else ${vote.stake} end), 0)`,
         profileName: profile.name,
-        profileImageUrl: profile.imageUrl,
       };
 
       const baseConditions = [
@@ -168,7 +166,7 @@ export function registerLeaderboardRoutes(app: ApiApp) {
             .innerJoin(content, eq(vote.contentId, content.id))
             .leftJoin(profile, eq(vote.voter, profile.address))
             .where(and(...baseConditions, eq(content.categoryId, categoryId)))
-            .groupBy(vote.voter, profile.name, profile.imageUrl)
+            .groupBy(vote.voter, profile.name)
             .having(sql`count(*) >= ${minVotes}`)
             .limit(1000)
         : await db
@@ -180,7 +178,7 @@ export function registerLeaderboardRoutes(app: ApiApp) {
             )
             .leftJoin(profile, eq(vote.voter, profile.address))
             .where(and(...baseConditions))
-            .groupBy(vote.voter, profile.name, profile.imageUrl)
+            .groupBy(vote.voter, profile.name)
             .having(sql`count(*) >= ${minVotes}`)
             .limit(1000);
 
@@ -193,7 +191,6 @@ export function registerLeaderboardRoutes(app: ApiApp) {
           totalStakeWon: typeof row.totalStakeWon === "bigint" ? row.totalStakeWon : BigInt(row.totalStakeWon ?? 0),
           totalStakeLost: typeof row.totalStakeLost === "bigint" ? row.totalStakeLost : BigInt(row.totalStakeLost ?? 0),
           profileName: row.profileName,
-          profileImageUrl: row.profileImageUrl,
           winRate: Number(row.totalSettledVotes) > 0 ? Number(row.totalWins) / Number(row.totalSettledVotes) : 0,
         }))
         .filter(row => row.totalSettledVotes >= minVotes);
@@ -222,7 +219,6 @@ export function registerLeaderboardRoutes(app: ApiApp) {
           totalStakeWon: voterCategoryStats.totalStakeWon,
           totalStakeLost: voterCategoryStats.totalStakeLost,
           profileName: profile.name,
-          profileImageUrl: profile.imageUrl,
         })
         .from(voterCategoryStats)
         .leftJoin(profile, eq(voterCategoryStats.voter, profile.address))
@@ -261,7 +257,6 @@ export function registerLeaderboardRoutes(app: ApiApp) {
         currentStreak: voterStats.currentStreak,
         bestWinStreak: voterStats.bestWinStreak,
         profileName: profile.name,
-        profileImageUrl: profile.imageUrl,
       })
       .from(voterStats)
       .leftJoin(profile, eq(voterStats.voter, profile.address))

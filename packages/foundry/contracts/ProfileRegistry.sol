@@ -8,8 +8,8 @@ import { IProfileRegistry } from "./interfaces/IProfileRegistry.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title ProfileRegistry
-/// @notice Manages on-chain user profiles with unique names, profile images, and short rating strategies
-/// @dev Users can set their profile name (unique), image URL, and public rating strategy. No stake required.
+/// @notice Manages on-chain user profiles with unique names and short rating strategies
+/// @dev Users can set their profile name (unique) and public rating strategy. No stake required.
 contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgradeable, UUPSUpgradeable {
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -18,12 +18,10 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     // --- Constants ---
     uint256 public constant MIN_NAME_LENGTH = 3;
     uint256 public constant MAX_NAME_LENGTH = 20;
-    uint256 public constant MAX_IMAGE_URL_LENGTH = 512;
     uint256 public constant MAX_STRATEGY_LENGTH = 560;
 
     struct StoredProfile {
         string name;
-        string imageUrl;
         string strategy;
         uint256 createdAt;
         uint256 updatedAt;
@@ -40,8 +38,8 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     uint256[49] private __gap;
 
     // --- Events ---
-    event ProfileCreated(address indexed user, string name, string imageUrl, string strategy);
-    event ProfileUpdated(address indexed user, string name, string imageUrl, string strategy);
+    event ProfileCreated(address indexed user, string name, string strategy);
+    event ProfileUpdated(address indexed user, string name, string strategy);
     event AvatarAccentUpdated(address indexed user, uint24 rgb);
     event AvatarAccentCleared(address indexed user);
     event VoterIdNFTUpdated(address voterIdNFT);
@@ -84,12 +82,11 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     // --- Public Functions ---
 
     /// @inheritdoc IProfileRegistry
-    function setProfile(string calldata name, string calldata imageUrl, string calldata strategy) external override {
+    function setProfile(string calldata name, string calldata strategy) external override {
         _requireEligibleVoterIdHolder(msg.sender);
 
         require(bytes(name).length >= MIN_NAME_LENGTH, "Name too short");
         require(bytes(name).length <= MAX_NAME_LENGTH, "Name too long");
-        require(bytes(imageUrl).length <= MAX_IMAGE_URL_LENGTH, "Image URL too long");
         require(bytes(strategy).length <= MAX_STRATEGY_LENGTH, "Strategy too long");
         require(_isValidName(name), "Invalid name format");
 
@@ -112,16 +109,15 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
 
         // Update or create profile
         profile.name = name;
-        profile.imageUrl = imageUrl;
         profile.strategy = strategy;
         profile.updatedAt = block.timestamp;
 
         if (isNewProfile) {
             profile.createdAt = block.timestamp;
             _registeredAddresses.push(msg.sender);
-            emit ProfileCreated(msg.sender, name, imageUrl, strategy);
+            emit ProfileCreated(msg.sender, name, strategy);
         } else {
-            emit ProfileUpdated(msg.sender, name, imageUrl, strategy);
+            emit ProfileUpdated(msg.sender, name, strategy);
         }
 
         // Register name ownership
@@ -151,7 +147,6 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         StoredProfile storage profile = _profiles[user];
         return Profile({
             name: profile.name,
-            imageUrl: profile.imageUrl,
             strategy: profile.strategy,
             createdAt: profile.createdAt,
             updatedAt: profile.updatedAt

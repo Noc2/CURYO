@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
+import { getReputationAvatarUrl } from "~~/utils/profileImage";
 
 interface SubmitterBadgeProps {
   address: string;
   username?: string | null;
-  profileImageUrl?: string | null;
   size?: "sm" | "md";
   showAddress?: boolean;
   winRate?: number;
@@ -16,12 +15,10 @@ interface SubmitterBadgeProps {
 
 /**
  * Displays a submitter's avatar and name/address.
- * Falls back to the Curyo reputation avatar if no custom image or if image fails to load.
  */
 export function SubmitterBadge({
   address,
   username,
-  profileImageUrl,
   size = "sm",
   showAddress = false,
   winRate,
@@ -34,8 +31,7 @@ export function SubmitterBadge({
   const truncatedAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
   const displayName = username || truncatedAddress;
   const profileHref = `/profiles/${address.toLowerCase()}`;
-  const fallbackImageUrl = getReputationAvatarUrl(address, avatarSize) || "";
-  const avatarSrc = getProxiedProfileImageUrl(profileImageUrl) || fallbackImageUrl;
+  const avatarSrc = getReputationAvatarUrl(address, avatarSize) || "";
 
   const showAccuracy = winRate !== undefined && totalSettledVotes !== undefined && totalSettledVotes >= 3;
   const winPct = showAccuracy ? Math.round(winRate! * 100) : 0;
@@ -48,10 +44,6 @@ export function SubmitterBadge({
         ? "text-error"
         : "text-base-content/50"
     : "";
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    e.currentTarget.src = fallbackImageUrl;
-  };
 
   const stopPropagation = (event: React.SyntheticEvent) => {
     event.stopPropagation();
@@ -69,7 +61,6 @@ export function SubmitterBadge({
       >
         <img
           src={avatarSrc}
-          onError={handleImageError}
           width={avatarSize}
           height={avatarSize}
           alt={`${displayName} avatar`}

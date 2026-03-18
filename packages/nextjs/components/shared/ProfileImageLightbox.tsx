@@ -22,8 +22,8 @@ export function ProfileImageLightbox({
   alt,
   width,
   height,
-  triggerLabel = "Open profile image",
-  modalLabel = "Profile image",
+  triggerLabel = "Open profile avatar",
+  modalLabel = "Profile avatar",
   buttonClassName = "",
   imageClassName = "",
   modalImageClassName = "",
@@ -89,7 +89,7 @@ export function ProfileImageLightbox({
             type="button"
             onClick={() => setIsOpen(false)}
             className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-base-200/90 text-base-content transition-colors hover:bg-base-200"
-            aria-label="Close profile image"
+            aria-label="Close profile avatar"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>

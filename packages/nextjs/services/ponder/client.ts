@@ -197,7 +197,6 @@ export interface PonderCategory {
 export interface PonderProfile {
   address: string;
   name: string;
-  imageUrl: string;
   strategy: string;
   createdAt: string;
   updatedAt: string;
@@ -239,7 +238,6 @@ export interface PonderDiscoverSignalsSettlingItem {
   roundStartTime: string | null;
   estimatedSettlementTime: string | null;
   profileName: string | null;
-  profileImageUrl: string | null;
   source: "watched" | "voted" | "watched_voted";
 }
 
@@ -252,7 +250,6 @@ export interface PonderDiscoverSignalsSubmissionItem {
   categoryId: string;
   submitter: string;
   profileName: string | null;
-  profileImageUrl: string | null;
 }
 
 export interface PonderDiscoverSignalsResolutionItem {
@@ -268,7 +265,6 @@ export interface PonderDiscoverSignalsResolutionItem {
   roundState: RoundState | null;
   roundUpWins: boolean | null;
   profileName: string | null;
-  profileImageUrl: string | null;
   outcome: "won" | "lost" | "cancelled" | "tied" | "reveal_failed" | "resolved";
 }
 
@@ -291,7 +287,6 @@ export interface PonderFeaturedTodayItem {
   totalStake: string;
   roundStartTime: string | null;
   profileName: string | null;
-  profileImageUrl: string | null;
   featuredReason: string;
 }
 
@@ -383,7 +378,6 @@ export interface PonderAccuracyLeaderboardItem {
   currentStreak?: number;
   bestWinStreak?: number;
   profileName: string | null;
-  profileImageUrl: string | null;
   winRate: number;
 }
 

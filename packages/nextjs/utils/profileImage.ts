@@ -1,19 +1,5 @@
 import { isAddress } from "viem";
 import { normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
-import { sanitizeExternalUrl } from "~~/utils/externalUrl";
-
-export function getProxiedProfileImageUrl(imageUrl: string | null | undefined): string | null {
-  if (!imageUrl) {
-    return null;
-  }
-
-  const safeUrl = sanitizeExternalUrl(imageUrl);
-  if (!safeUrl) {
-    return null;
-  }
-
-  return `/api/profile-image?url=${encodeURIComponent(safeUrl)}`;
-}
 
 export function getReputationAvatarUrl(
   address: string | null | undefined,

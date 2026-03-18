@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         address: normalizedAddress,
         username: profile.username,
-        profileImageUrl: profile.profileImageUrl,
       });
     }
 
@@ -42,12 +41,11 @@ export async function GET(request: NextRequest) {
 
       const profiles = await readProfileRegistryProfiles(addresses);
 
-      const profilesMap: Record<string, { username: string | null; profileImageUrl: string | null }> = {};
+      const profilesMap: Record<string, { username: string | null }> = {};
       addresses.forEach(addr => {
         const profile = profiles[addr];
         profilesMap[addr] = {
           username: profile?.username || null,
-          profileImageUrl: profile?.profileImageUrl || null,
         };
       });
 

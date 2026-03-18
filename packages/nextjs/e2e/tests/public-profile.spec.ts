@@ -16,16 +16,16 @@ test.describe("Public profiles", () => {
     await expect(recentVotes.first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("profile image opens in a larger pop-up", async ({ page }) => {
+  test("profile avatar opens in a larger pop-up", async ({ page }) => {
     await page.goto(`/profiles/${ANVIL_ACCOUNTS.account9.address}`);
 
-    const openAvatar = page.getByRole("button", { name: "Open profile image" });
+    const openAvatar = page.getByRole("button", { name: "Open profile avatar" });
     await expect(openAvatar).toBeVisible({ timeout: 15_000 });
     await openAvatar.click();
 
-    const dialog = page.getByRole("dialog", { name: /profile image/i });
+    const dialog = page.getByRole("dialog", { name: /profile avatar/i });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Close profile image" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Close profile avatar" })).toBeVisible();
 
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();

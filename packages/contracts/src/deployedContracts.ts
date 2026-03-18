@@ -8070,19 +8070,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "MAX_IMAGE_URL_LENGTH",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "MAX_NAME_LENGTH",
           inputs: [],
           outputs: [
@@ -8214,11 +8201,6 @@ const deployedContracts = {
               components: [
                 {
                   name: "name",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
-                  name: "imageUrl",
                   type: "string",
                   internalType: "string",
                 },
@@ -8460,11 +8442,6 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "imageUrl",
-              type: "string",
-              internalType: "string",
-            },
-            {
               name: "strategy",
               type: "string",
               internalType: "string",
@@ -8598,12 +8575,6 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "imageUrl",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
               name: "strategy",
               type: "string",
               indexed: false,
@@ -8624,12 +8595,6 @@ const deployedContracts = {
             },
             {
               name: "name",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "imageUrl",
               type: "string",
               indexed: false,
               internalType: "string",
@@ -19407,19 +19372,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "MAX_IMAGE_URL_LENGTH",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "MAX_NAME_LENGTH",
           inputs: [],
           outputs: [
@@ -19551,11 +19503,6 @@ const deployedContracts = {
               components: [
                 {
                   name: "name",
-                  type: "string",
-                  internalType: "string",
-                },
-                {
-                  name: "imageUrl",
                   type: "string",
                   internalType: "string",
                 },
@@ -19797,11 +19744,6 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "imageUrl",
-              type: "string",
-              internalType: "string",
-            },
-            {
               name: "strategy",
               type: "string",
               internalType: "string",
@@ -19935,12 +19877,6 @@ const deployedContracts = {
               internalType: "string",
             },
             {
-              name: "imageUrl",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
               name: "strategy",
               type: "string",
               indexed: false,
@@ -19961,12 +19897,6 @@ const deployedContracts = {
             },
             {
               name: "name",
-              type: "string",
-              indexed: false,
-              internalType: "string",
-            },
-            {
-              name: "imageUrl",
               type: "string",
               indexed: false,
               internalType: "string",

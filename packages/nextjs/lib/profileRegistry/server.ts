@@ -5,7 +5,6 @@ import scaffoldConfig from "~~/scaffold.config";
 
 export interface ProfileRegistryProfile {
   username: string | null;
-  profileImageUrl: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -29,7 +28,6 @@ type DeployedContractsMap = Record<
 
 const EMPTY_PROFILE: ProfileRegistryProfile = {
   username: null,
-  profileImageUrl: null,
   createdAt: null,
   updatedAt: null,
 };
@@ -83,7 +81,6 @@ function normalizeUniqueAddresses(addresses: string[]): `0x${string}`[] {
 function parseProfile(result: unknown): ProfileRegistryProfile {
   const profile = result as {
     name?: unknown;
-    imageUrl?: unknown;
     createdAt?: unknown;
     updatedAt?: unknown;
   };
@@ -97,7 +94,6 @@ function parseProfile(result: unknown): ProfileRegistryProfile {
 
   return {
     username: typeof profile.name === "string" && profile.name.length > 0 ? profile.name : null,
-    profileImageUrl: typeof profile.imageUrl === "string" && profile.imageUrl.length > 0 ? profile.imageUrl : null,
     createdAt: createdAt.toString(),
     updatedAt: updatedAt.toString(),
   };

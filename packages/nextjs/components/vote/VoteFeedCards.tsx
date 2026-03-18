@@ -231,7 +231,6 @@ function FeedContentMetaCard({
           <SubmitterBadge
             address={item.submitter}
             username={submitterProfile?.username}
-            profileImageUrl={submitterProfile?.profileImageUrl}
             winRate={submitterProfile?.winRate}
             totalSettledVotes={submitterProfile?.totalSettledVotes}
             size="sm"

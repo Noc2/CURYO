@@ -16,12 +16,8 @@ import {
 } from "~~/hooks/useProfileRegistry";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
-import {
-  MAX_PROFILE_IMAGE_URL_LENGTH,
-  MAX_PROFILE_STRATEGY_LENGTH,
-  validateProfileImageUrl,
-} from "~~/lib/profile/profileValidation";
-import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
+import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
+import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 // Validation regex: 3-20 alphanumeric + underscore
@@ -39,7 +35,6 @@ export function ProfileForm() {
 
   // Form state
   const [nameInput, setNameInput] = useState("");
-  const [imageInput, setImageInput] = useState("");
   const [strategyInput, setStrategyInput] = useState("");
   const [avatarAccentInput, setAvatarAccentInput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +51,6 @@ export function ProfileForm() {
   useEffect(() => {
     if (profile && hasProfile && !initialized) {
       setNameInput(profile.name);
-      setImageInput(profile.imageUrl);
       setStrategyInput(profile.strategy);
       setInitialized(true);
     }
@@ -76,7 +70,6 @@ export function ProfileForm() {
     setInitialized(false);
     setAvatarAccentInitialized(false);
     setNameInput("");
-    setImageInput("");
     setStrategyInput("");
     setAvatarAccentInput("");
     setError(null);
@@ -86,7 +79,6 @@ export function ProfileForm() {
   const handleSave = async () => {
     if (!address) return;
     const trimmedStrategy = strategyInput.trim();
-    const { error: imageUrlError, sanitizedImageUrl } = validateProfileImageUrl(imageInput);
 
     // Validate name
     if (!nameInput.trim()) {
@@ -105,11 +97,6 @@ export function ProfileForm() {
       return;
     }
 
-    if (imageUrlError) {
-      setError(imageUrlError);
-      return;
-    }
-
     if (trimmedStrategy.length > MAX_PROFILE_STRATEGY_LENGTH) {
       setError(`How you rate must be ${MAX_PROFILE_STRATEGY_LENGTH} characters or fewer`);
       return;
@@ -118,7 +105,7 @@ export function ProfileForm() {
     setError(null);
 
     try {
-      await setProfile(nameInput.trim(), sanitizedImageUrl ?? "", trimmedStrategy);
+      await setProfile(nameInput.trim(), trimmedStrategy);
       notification.success(hasProfile ? "Profile updated!" : "Profile created!");
       refetch();
     } catch (e: any) {
@@ -182,7 +169,6 @@ export function ProfileForm() {
   const nameIsAvailable = showNameStatus && (!isNameTaken || isOwnName);
   const nameIsTaken = showNameStatus && isNameTaken && !isOwnName;
   const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/settings";
-  const previewImageUrl = getProxiedProfileImageUrl(imageInput);
   const storedAvatarAccentHex = avatarAccent?.hex ?? null;
   const normalizedAvatarAccentInput = normalizeAvatarAccentHex(avatarAccentInput);
   const avatarAccentInputError = avatarAccentInput.trim().length > 0 && !normalizedAvatarAccentInput;
@@ -238,13 +224,13 @@ export function ProfileForm() {
       <div className="flex items-center gap-4">
         <div className="relative">
           <ProfileImageLightbox
-            src={previewImageUrl || fallbackImageUrl}
+            src={fallbackImageUrl}
             fallbackSrc={fallbackImageUrl}
             alt="Profile preview"
             width={80}
             height={80}
-            triggerLabel="Open profile preview image"
-            modalLabel="Profile image preview"
+            triggerLabel="Open profile preview avatar"
+            modalLabel="Profile avatar preview"
             buttonClassName="rounded-full"
             imageClassName="h-20 w-20 rounded-full border-2 border-base-300 object-cover"
             modalImageClassName="rounded-[2rem]"
@@ -288,29 +274,12 @@ export function ProfileForm() {
         </div>
       </div>
 
-      {/* Image URL Input */}
-      <div>
-        <label className="flex items-center gap-1.5 text-base font-medium mb-2">
-          Profile Image URL
-          <InfoTooltip text="Leave empty to use your Curyo reputation avatar" />
-        </label>
-        <input
-          type="url"
-          placeholder="https://example.com/your-image.jpg"
-          className="input input-bordered w-full bg-base-100"
-          value={imageInput}
-          onChange={e => setImageInput(e.target.value)}
-          maxLength={MAX_PROFILE_IMAGE_URL_LENGTH}
-          disabled={isPending}
-        />
-      </div>
-
       <div className="surface-card-nested rounded-2xl p-4 space-y-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
               <h2 className="text-lg font-semibold">Reputation avatar color</h2>
-              <InfoTooltip text="Choose one accent color for your generated Curyo avatar. The rest of the palette is derived automatically, and custom profile images still override the generated avatar across the app." />
+              <InfoTooltip text="Choose one accent color for your generated Curyo avatar. The rest of the palette is derived automatically from your address and activity." />
             </div>
             <p className="text-sm leading-6 text-base-content/70">
               Personalize the generated avatar tied to your account without changing the overall Curyo visual style.
@@ -360,7 +329,8 @@ export function ProfileForm() {
         </div>
 
         <div className="flex flex-col gap-2 text-sm text-base-content/65">
-          <p>Used for your generated reputation avatar whenever you do not set a custom profile image.</p>
+          <p>Used for your generated reputation avatar everywhere on Curyo.</p>
+          {!avatarAccent?.enabled ? <p>Currently using the default address-based color palette.</p> : null}
           {avatarAccentInputError ? <p className="text-error">Use a valid 6-digit hex color like #f26426.</p> : null}
           {accentError ? <p className="text-error">{accentError}</p> : null}
         </div>

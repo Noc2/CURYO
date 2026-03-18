@@ -35,7 +35,6 @@ contract ProfileRegistryTest is Test {
     function test_Initialization() public view {
         assertEq(registry.MIN_NAME_LENGTH(), 3);
         assertEq(registry.MAX_NAME_LENGTH(), 20);
-        assertEq(registry.MAX_IMAGE_URL_LENGTH(), 512);
         assertEq(registry.MAX_STRATEGY_LENGTH(), 560);
         (, uint256 total) = registry.getRegisteredAddressesPaginated(0, 10);
         assertEq(total, 0);
@@ -45,11 +44,10 @@ contract ProfileRegistryTest is Test {
 
     function test_SetProfileCreate() public {
         vm.prank(user1);
-        registry.setProfile("alice", "https://example.com/alice.png", "");
+        registry.setProfile("alice", "");
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice");
-        assertEq(profile.imageUrl, "https://example.com/alice.png");
         assertEq(profile.strategy, "");
         assertTrue(profile.createdAt > 0);
         assertTrue(profile.updatedAt > 0);
@@ -61,40 +59,34 @@ contract ProfileRegistryTest is Test {
 
     function test_SetProfileUpdate() public {
         vm.startPrank(user1);
-        registry.setProfile("alice", "https://example.com/alice.png", "");
+        registry.setProfile("alice", "");
 
         vm.warp(block.timestamp + 1 days);
 
-        registry.setProfile("alice", "https://example.com/alice_new.png", "");
+        registry.setProfile("alice", "");
         vm.stopPrank();
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
-        assertEq(profile.imageUrl, "https://example.com/alice_new.png");
         assertEq(profile.strategy, "");
         assertTrue(profile.updatedAt > profile.createdAt);
     }
 
     function test_SetProfileStoresStrategy() public {
         vm.prank(user1);
-        registry.setProfile(
-            "alice",
-            "https://example.com/alice.png",
-            "I rate highly when content is original, accurate, and genuinely useful."
-        );
+        registry.setProfile("alice", "I rate highly when content is original, accurate, and genuinely useful.");
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice");
-        assertEq(profile.imageUrl, "https://example.com/alice.png");
         assertEq(profile.strategy, "I rate highly when content is original, accurate, and genuinely useful.");
     }
 
     function test_SetProfileUpdateStrategy() public {
         vm.startPrank(user1);
-        registry.setProfile("alice", "", "I look for originality and depth.");
+        registry.setProfile("alice", "I look for originality and depth.");
 
         vm.warp(block.timestamp + 1 days);
 
-        registry.setProfile("alice", "", "I downvote broken links, low-effort reposts, and misleading descriptions.");
+        registry.setProfile("alice", "I downvote broken links, low-effort reposts, and misleading descriptions.");
         vm.stopPrank();
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
@@ -104,10 +96,10 @@ contract ProfileRegistryTest is Test {
 
     function test_SetProfileChangeName() public {
         vm.startPrank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         // Old name should be released when changing
-        registry.setProfile("alice2", "", "");
+        registry.setProfile("alice2", "");
         vm.stopPrank();
 
         // Old name should be available
@@ -117,40 +109,40 @@ contract ProfileRegistryTest is Test {
 
     function test_SetProfileSameNameUpdate() public {
         vm.startPrank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         // Should not revert when updating with same name
-        registry.setProfile("alice", "new_url", "");
+        registry.setProfile("alice", "I focus on original and well-sourced content.");
         vm.stopPrank();
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice");
-        assertEq(profile.imageUrl, "new_url");
+        assertEq(profile.strategy, "I focus on original and well-sourced content.");
     }
 
     function test_RevertSetProfileNameTooShort() public {
         vm.prank(user1);
         vm.expectRevert("Name too short");
-        registry.setProfile("ab", "", "");
+        registry.setProfile("ab", "");
     }
 
     function test_RevertSetProfileNameTooLong() public {
         vm.prank(user1);
         vm.expectRevert("Name too long");
-        registry.setProfile("abcdefghijklmnopqrstuvwxyz", "", ""); // 26 chars, max is 20
+        registry.setProfile("abcdefghijklmnopqrstuvwxyz", ""); // 26 chars, max is 20
     }
 
     function test_RevertSetProfileInvalidName() public {
         vm.startPrank(user1);
 
         vm.expectRevert("Invalid name format");
-        registry.setProfile("alice!", "", ""); // Contains !
+        registry.setProfile("alice!", ""); // Contains !
 
         vm.expectRevert("Invalid name format");
-        registry.setProfile("alice bob", "", ""); // Contains space
+        registry.setProfile("alice bob", ""); // Contains space
 
         vm.expectRevert("Invalid name format");
-        registry.setProfile("alice@bob", "", ""); // Contains @
+        registry.setProfile("alice@bob", ""); // Contains @
 
         vm.stopPrank();
     }
@@ -159,7 +151,7 @@ contract ProfileRegistryTest is Test {
         vm.startPrank(user1);
 
         // Alphanumeric and underscore should be valid
-        registry.setProfile("alice_123", "", "");
+        registry.setProfile("alice_123", "");
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice_123");
@@ -169,23 +161,11 @@ contract ProfileRegistryTest is Test {
 
     function test_RevertSetProfileNameTaken() public {
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         vm.prank(user2);
         vm.expectRevert("Name already taken");
-        registry.setProfile("alice", "", "");
-    }
-
-    function test_RevertSetProfileImageUrlTooLong() public {
-        // Create a URL that's too long (513 chars)
-        bytes memory longUrl = new bytes(513);
-        for (uint256 i = 0; i < 513; i++) {
-            longUrl[i] = "a";
-        }
-
-        vm.prank(user1);
-        vm.expectRevert("Image URL too long");
-        registry.setProfile("alice", string(longUrl), "");
+        registry.setProfile("alice", "");
     }
 
     function test_RevertSetProfileStrategyTooLong() public {
@@ -196,14 +176,14 @@ contract ProfileRegistryTest is Test {
 
         vm.prank(user1);
         vm.expectRevert("Strategy too long");
-        registry.setProfile("alice", "", string(longStrategy));
+        registry.setProfile("alice", string(longStrategy));
     }
 
     // --- Name Uniqueness Tests (Case Insensitive) ---
 
     function test_NameTakenCaseInsensitive() public {
         vm.prank(user1);
-        registry.setProfile("Alice", "", "");
+        registry.setProfile("Alice", "");
 
         assertTrue(registry.isNameTaken("alice"));
         assertTrue(registry.isNameTaken("ALICE"));
@@ -212,22 +192,21 @@ contract ProfileRegistryTest is Test {
 
     function test_RevertSetProfileNameTakenCaseInsensitive() public {
         vm.prank(user1);
-        registry.setProfile("Alice", "", "");
+        registry.setProfile("Alice", "");
 
         vm.prank(user2);
         vm.expectRevert("Name already taken");
-        registry.setProfile("ALICE", "", "");
+        registry.setProfile("ALICE", "");
     }
 
     // --- View Functions Tests ---
 
     function test_GetProfile() public {
         vm.prank(user1);
-        registry.setProfile("alice", "https://example.com/alice.png", "");
+        registry.setProfile("alice", "");
 
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "alice");
-        assertEq(profile.imageUrl, "https://example.com/alice.png");
         assertEq(profile.strategy, "");
     }
 
@@ -277,7 +256,7 @@ contract ProfileRegistryTest is Test {
         assertFalse(registry.isNameTaken("alice"));
 
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         assertTrue(registry.isNameTaken("alice"));
     }
@@ -291,7 +270,7 @@ contract ProfileRegistryTest is Test {
         assertFalse(registry.hasProfile(user1));
 
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         assertTrue(registry.hasProfile(user1));
     }
@@ -306,7 +285,7 @@ contract ProfileRegistryTest is Test {
 
         vm.prank(delegate);
         vm.expectRevert("Profile owner must hold Voter ID");
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
     }
 
     function test_SetAvatarAccentRequiresHolderWhenVoterIdConfigured() public {
@@ -326,7 +305,7 @@ contract ProfileRegistryTest is Test {
         assertEq(registry.getAddressByName("alice"), address(0));
 
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         assertEq(registry.getAddressByName("alice"), user1);
         assertEq(registry.getAddressByName("ALICE"), user1); // Case insensitive
@@ -337,13 +316,13 @@ contract ProfileRegistryTest is Test {
         assertEq(total, 0);
 
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         (, total) = registry.getRegisteredAddressesPaginated(0, 10);
         assertEq(total, 1);
 
         vm.prank(user2);
-        registry.setProfile("bob", "", "");
+        registry.setProfile("bob", "");
 
         (, total) = registry.getRegisteredAddressesPaginated(0, 10);
         assertEq(total, 2);
@@ -351,10 +330,10 @@ contract ProfileRegistryTest is Test {
 
     function test_GetRegisteredAddressesPaginatedWholeList() public {
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         vm.prank(user2);
-        registry.setProfile("bob", "", "");
+        registry.setProfile("bob", "");
 
         (address[] memory addresses, uint256 total) = registry.getRegisteredAddressesPaginated(0, 10);
         assertEq(total, 2);
@@ -382,7 +361,7 @@ contract ProfileRegistryTest is Test {
         }
 
         vm.prank(user1);
-        registry.setProfile(name, "", "");
+        registry.setProfile(name, "");
 
         assertTrue(registry.hasProfile(user1));
     }
@@ -391,10 +370,10 @@ contract ProfileRegistryTest is Test {
 
     function test_MultipleUsersUniqueNames() public {
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         vm.prank(user2);
-        registry.setProfile("bob", "", "");
+        registry.setProfile("bob", "");
 
         assertEq(registry.getAddressByName("alice"), user1);
         assertEq(registry.getAddressByName("bob"), user2);
@@ -411,15 +390,15 @@ contract ProfileRegistryTest is Test {
         address user5 = address(8);
 
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
         vm.prank(user2);
-        registry.setProfile("bob", "", "");
+        registry.setProfile("bob", "");
         vm.prank(user3);
-        registry.setProfile("carol", "", "");
+        registry.setProfile("carol", "");
         vm.prank(user4);
-        registry.setProfile("dave", "", "");
+        registry.setProfile("dave", "");
         vm.prank(user5);
-        registry.setProfile("eve", "", "");
+        registry.setProfile("eve", "");
 
         // Page 1: offset=0, limit=2
         (address[] memory page1, uint256 total1) = registry.getRegisteredAddressesPaginated(0, 2);
@@ -444,7 +423,7 @@ contract ProfileRegistryTest is Test {
 
     function test_GetRegisteredAddressesPaginated_OffsetBeyondLength() public {
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         (address[] memory result, uint256 total) = registry.getRegisteredAddressesPaginated(5, 2);
         assertEq(total, 1);
@@ -453,7 +432,7 @@ contract ProfileRegistryTest is Test {
 
     function test_GetRegisteredAddressesPaginated_ZeroLimit() public {
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         (address[] memory result, uint256 total) = registry.getRegisteredAddressesPaginated(0, 0);
         assertEq(total, 1);
@@ -464,19 +443,19 @@ contract ProfileRegistryTest is Test {
 
     function test_NameReleasedOnChange() public {
         vm.prank(user1);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         assertTrue(registry.isNameTaken("alice"));
 
         vm.prank(user1);
-        registry.setProfile("alice_new", "", "");
+        registry.setProfile("alice_new", "");
 
         assertFalse(registry.isNameTaken("alice"));
         assertTrue(registry.isNameTaken("alice_new"));
 
         // Now user2 can take "alice"
         vm.prank(user2);
-        registry.setProfile("alice", "", "");
+        registry.setProfile("alice", "");
 
         assertEq(registry.getAddressByName("alice"), user2);
     }

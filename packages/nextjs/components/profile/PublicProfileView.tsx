@@ -18,7 +18,7 @@ import { usePonderQuery } from "~~/hooks/usePonderQuery";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
-import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
+import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface PublicProfileViewProps {
@@ -140,7 +140,6 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const fallbackImageUrl = getReputationAvatarUrl(normalizedAddress, 96) || "";
 
   const displayName = summary?.name || truncateAddress(normalizedAddress);
-  const profileImageUrl = getProxiedProfileImageUrl(summary?.imageUrl) || fallbackImageUrl;
   const totalVotes = profileDetail?.summary.totalVotes ?? 0;
   const totalContent = profileDetail?.summary.totalContent ?? 0;
   const totalRewardsClaimed = profileDetail?.summary.totalRewardsClaimed ?? "0";
@@ -222,13 +221,13 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-center gap-4 min-w-0">
               <ProfileImageLightbox
-                src={profileImageUrl}
+                src={fallbackImageUrl}
                 fallbackSrc={fallbackImageUrl}
                 alt={`${displayName} avatar`}
                 width={96}
                 height={96}
-                triggerLabel="Open profile image"
-                modalLabel={`${displayName} profile image`}
+                triggerLabel="Open profile avatar"
+                modalLabel={`${displayName} profile avatar`}
                 buttonClassName="shrink-0 rounded-3xl"
                 imageClassName="h-24 w-24 rounded-3xl object-cover shrink-0"
                 modalImageClassName="rounded-[2rem]"

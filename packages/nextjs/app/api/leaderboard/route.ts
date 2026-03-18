@@ -72,7 +72,6 @@ export async function GET(request: NextRequest) {
       rank: ranks.get(address) ?? 0,
       address,
       username: profiles[address]?.username ?? null,
-      profileImageUrl: profiles[address]?.profileImageUrl ?? null,
       balance: (balances[address] ?? 0n).toString(),
     }));
 

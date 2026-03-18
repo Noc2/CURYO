@@ -19,7 +19,6 @@ interface NotificationEventSubmissionItem {
   categoryId: string;
   submitter: string;
   profileName: string | null;
-  profileImageUrl: string | null;
 }
 
 interface NotificationEventResolutionItem {
@@ -35,7 +34,6 @@ interface NotificationEventResolutionItem {
   roundState: number | null;
   roundUpWins: boolean | null;
   profileName: string | null;
-  profileImageUrl: string | null;
   outcome: "won" | "lost" | "cancelled" | "tied" | "reveal_failed" | "resolved";
   source?: "watched" | "voted" | "watched_voted";
 }
@@ -52,7 +50,6 @@ interface NotificationEventSettlingItem {
   roundStartTime: string | null;
   estimatedSettlementTime: string | null;
   profileName: string | null;
-  profileImageUrl: string | null;
   source: "watched" | "voted" | "watched_voted";
 }
 

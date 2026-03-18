@@ -35,7 +35,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         categoryId: content.categoryId,
         roundStartTime: round.startTime,
         profileName: profile.name,
-        profileImageUrl: profile.imageUrl,
       })
       .from(vote)
       .innerJoin(
@@ -68,7 +67,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             categoryId: content.categoryId,
             roundStartTime: round.startTime,
             profileName: profile.name,
-            profileImageUrl: profile.imageUrl,
           })
           .from(round)
           .innerJoin(content, eq(round.contentId, content.id))
@@ -95,7 +93,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       roundStartTime: bigint | null;
       estimatedSettlementTime: bigint | null;
       profileName: string | null;
-      profileImageUrl: string | null;
       source: "watched" | "voted" | "watched_voted";
     }>();
 
@@ -139,7 +136,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             categoryId: content.categoryId,
             submitter: content.submitter,
             profileName: profile.name,
-            profileImageUrl: profile.imageUrl,
           })
           .from(content)
           .leftJoin(profile, eq(content.submitter, profile.address))
@@ -163,7 +159,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             roundState: round.state,
             roundUpWins: round.upWins,
             profileName: profile.name,
-            profileImageUrl: profile.imageUrl,
           })
           .from(vote)
           .innerJoin(
@@ -217,7 +212,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         categoryId: content.categoryId,
         roundStartTime: round.startTime,
         profileName: profile.name,
-        profileImageUrl: profile.imageUrl,
       })
       .from(vote)
       .innerJoin(round, and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)))
@@ -247,7 +241,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             categoryId: content.categoryId,
             roundStartTime: round.startTime,
             profileName: profile.name,
-            profileImageUrl: profile.imageUrl,
           })
           .from(round)
           .innerJoin(content, eq(round.contentId, content.id))
@@ -297,7 +290,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             categoryId: content.categoryId,
             submitter: content.submitter,
             profileName: profile.name,
-            profileImageUrl: profile.imageUrl,
           })
           .from(content)
           .leftJoin(profile, eq(content.submitter, profile.address))
@@ -321,7 +313,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             roundState: round.state,
             roundUpWins: round.upWins,
             profileName: profile.name,
-            profileImageUrl: profile.imageUrl,
           })
           .from(vote)
           .innerJoin(round, and(eq(vote.contentId, round.contentId), eq(vote.roundId, round.roundId)))
@@ -355,7 +346,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
         roundState: round.state,
         roundUpWins: round.upWins,
         profileName: profile.name,
-        profileImageUrl: profile.imageUrl,
         source: sql<string>`'voted'`,
       })
       .from(vote)
@@ -391,7 +381,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
             roundState: round.state,
             roundUpWins: round.upWins,
             profileName: profile.name,
-            profileImageUrl: profile.imageUrl,
             source: sql<string>`'watched'`,
           })
           .from(round)
@@ -457,7 +446,6 @@ export function registerDiscoveryRoutes(app: ApiApp) {
       totalStake: round.totalStake,
       roundStartTime: round.startTime,
       profileName: profile.name,
-      profileImageUrl: profile.imageUrl,
     };
 
     const activeDebates = await db
