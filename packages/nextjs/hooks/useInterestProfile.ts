@@ -224,5 +224,8 @@ export function buildInterestProfile({ address, feed, votes }: BuildInterestProf
 }
 
 export function useInterestProfile({ address, feed, votes, signalVersion }: BuildInterestProfileOptions) {
-  return useMemo(() => buildInterestProfile({ address, feed, votes }), [address, feed, votes, signalVersion]);
+  return useMemo(() => {
+    void signalVersion;
+    return buildInterestProfile({ address, feed, votes });
+  }, [address, feed, votes, signalVersion]);
 }

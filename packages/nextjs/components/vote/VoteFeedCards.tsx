@@ -300,7 +300,7 @@ function FeedContentMetaCard({
 
 interface FeedQueueCardProps {
   item: ContentItem;
-  onSelect: (id: bigint, categoryId: bigint) => void;
+  onSelect: (id: bigint) => void;
   onNavigate?: (action: "previous" | "next" | "first" | "last", currentId: bigint) => void;
   queuePosition: number;
   queueStatus?: QueueCardStatus | null;
@@ -336,7 +336,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
       data-disable-queue-wheel="true"
       aria-current={selected ? "true" : undefined}
       tabIndex={selected ? 0 : -1}
-      onClick={() => onSelect(item.id, item.categoryId)}
+      onClick={() => onSelect(item.id)}
       onKeyDown={event => {
         if (event.key === "ArrowLeft") {
           event.preventDefault();

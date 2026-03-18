@@ -524,7 +524,6 @@ const HomeInner = () => {
   }, [
     activeFeedMode,
     activeScope,
-    activeCategory,
     effectiveSearchSortBy,
     filteredFeed,
     followedCuratorOrderMap,
@@ -900,7 +899,7 @@ const HomeInner = () => {
   );
 
   const handleSelectCard = useCallback(
-    (id: bigint, _categoryId: bigint) => {
+    (id: bigint) => {
       const item = displayFeed.find(entry => entry.id === id);
       if (item) {
         recordRecommendationSignal(item, "card_open");
