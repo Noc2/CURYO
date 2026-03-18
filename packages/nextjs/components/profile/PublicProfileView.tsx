@@ -77,7 +77,7 @@ function getVoteOutcome(vote: PonderVoteItem) {
 
 function StatCard({ label, value, tooltip }: { label: string; value: string; tooltip?: string }) {
   return (
-    <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
+    <div className="surface-card rounded-2xl px-4 py-3">
       <div className="flex items-center gap-1.5 text-base text-base-content/45">
         <span>{label}</span>
         {tooltip ? <InfoTooltip text={tooltip} /> : null}
