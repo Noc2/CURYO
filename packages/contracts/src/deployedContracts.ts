@@ -7,7 +7,7 @@ import type { GenericContractsDeclaration } from "./types";
 const deployedContracts = {
   31337: {
     CategoryFeeLib: {
-      address: "0x7574625416e5ecf2d534321fdb1e2e549025ae07",
+      address: "0x8aa1f0beb96f82feabc2fe5cdc76fb898441d3d1",
       abi: [
         {
           type: "error",
@@ -43,7 +43,7 @@ const deployedContracts = {
       deployedOnBlock: 2,
     },
     SubmitterStakeLib: {
-      address: "0x56c491f3e4268cf6b7ba60342b51e2e381bbf84b",
+      address: "0x14f3021090b496f9b024bcda6f38fcfa4be1ca1b",
       abi: [
         {
           type: "error",
@@ -3071,6 +3071,31 @@ const deployedContracts = {
               type: "address",
               indexed: true,
               internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "SubmitterParticipationReservationFailed",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -6589,7 +6614,7 @@ const deployedContracts = {
               internalType: "uint256",
             },
             {
-              name: "crepReward",
+              name: "reward",
               type: "uint256",
               indexed: false,
               internalType: "uint256",
@@ -10488,6 +10513,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "resetNullifier",
+          inputs: [
+            {
+              name: "nullifier",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "resolveHolder",
           inputs: [
             {
@@ -10874,6 +10912,19 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "NullifierReset",
+          inputs: [
+            {
+              name: "nullifier",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "OwnershipTransferred",
           inputs: [
             {
@@ -11236,6 +11287,7 @@ const deployedContracts = {
         mint: "contracts/interfaces/IVoterIdNFT.sol",
         recordStake: "contracts/interfaces/IVoterIdNFT.sol",
         removeDelegate: "contracts/interfaces/IVoterIdNFT.sol",
+        resetNullifier: "contracts/interfaces/IVoterIdNFT.sol",
         resolveHolder: "contracts/interfaces/IVoterIdNFT.sol",
         revokeVoterId: "contracts/interfaces/IVoterIdNFT.sol",
         setDelegate: "contracts/interfaces/IVoterIdNFT.sol",
@@ -21442,6 +21494,31 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "SubmitterParticipationReservationFailed",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+            {
+              name: "rewardPool",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "amount",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "SubmitterParticipationRewardAccrued",
           inputs: [
             {
@@ -22384,7 +22461,7 @@ const deployedContracts = {
               internalType: "uint256",
             },
             {
-              name: "crepReward",
+              name: "reward",
               type: "uint256",
               indexed: false,
               internalType: "uint256",
@@ -25365,6 +25442,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "resetNullifier",
+          inputs: [
+            {
+              name: "nullifier",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "resolveHolder",
           inputs: [
             {
@@ -25751,6 +25841,19 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "NullifierReset",
+          inputs: [
+            {
+              name: "nullifier",
+              type: "uint256",
+              indexed: true,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "OwnershipTransferred",
           inputs: [
             {
@@ -26113,6 +26216,7 @@ const deployedContracts = {
         mint: "contracts/interfaces/IVoterIdNFT.sol",
         recordStake: "contracts/interfaces/IVoterIdNFT.sol",
         removeDelegate: "contracts/interfaces/IVoterIdNFT.sol",
+        resetNullifier: "contracts/interfaces/IVoterIdNFT.sol",
         resolveHolder: "contracts/interfaces/IVoterIdNFT.sol",
         revokeVoterId: "contracts/interfaces/IVoterIdNFT.sol",
         setDelegate: "contracts/interfaces/IVoterIdNFT.sol",

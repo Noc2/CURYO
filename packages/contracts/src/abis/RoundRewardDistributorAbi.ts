@@ -676,7 +676,7 @@ export const RoundRewardDistributorAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "crepReward",
+        "name": "reward",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"

@@ -1316,6 +1316,31 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "event",
+    "name": "SubmitterParticipationReservationFailed",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPool",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "SubmitterParticipationRewardAccrued",
     "inputs": [
       {
