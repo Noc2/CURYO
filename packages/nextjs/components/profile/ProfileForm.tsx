@@ -228,10 +228,7 @@ export function ProfileForm() {
           disabled={isPending}
           rows={6}
         />
-        <div className="mt-2 flex items-start justify-between gap-4">
-          <p className="max-w-2xl text-sm leading-6 text-base-content/55">
-            This shows up publicly on your profile and helps other curators understand how you judge quality.
-          </p>
+        <div className="mt-2 flex justify-end">
           <span className="text-sm text-base-content/40">
             {strategyInput.trim().length}/{MAX_STRATEGY_LENGTH}
           </span>
