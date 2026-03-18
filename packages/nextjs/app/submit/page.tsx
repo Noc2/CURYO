@@ -26,6 +26,7 @@ import {
 } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
@@ -108,6 +109,10 @@ function getTitleValidationError(value: string): string | null {
 }
 
 function getDescriptionValidationError(value: string): string | null {
+  if (value.length > MAX_CONTENT_DESCRIPTION_LENGTH) {
+    return `Description must be ${MAX_CONTENT_DESCRIPTION_LENGTH} characters or fewer`;
+  }
+
   const check = containsBlockedText(value);
   return check.blocked ? "Your description contains prohibited content" : null;
 }
@@ -728,14 +733,16 @@ const SubmitPage: NextPage = () => {
                   }`}
                   value={description}
                   onChange={e => handleDescriptionChange(e.target.value)}
-                  maxLength={500}
+                  maxLength={MAX_CONTENT_DESCRIPTION_LENGTH}
                 />
                 {submitAttempted && !description.trim() && (
                   <p className="mt-1 text-base text-error">Description is required.</p>
                 )}
                 {descriptionError && <p className="text-error text-base mt-1">{descriptionError}</p>}
                 <div className="text-right mt-1">
-                  <span className="text-base text-base-content/30">{description.length}/500</span>
+                  <span className="text-base text-base-content/30">
+                    {description.length}/{MAX_CONTENT_DESCRIPTION_LENGTH}
+                  </span>
                 </div>
               </div>
 

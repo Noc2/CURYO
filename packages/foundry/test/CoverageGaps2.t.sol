@@ -841,9 +841,26 @@ contract ContentRegistryCoverageTest is Test {
         vm.stopPrank();
     }
 
+    function test_SubmitContentDescriptionAtMaxLengthSucceeds() public {
+        uint256 maxDescriptionLength = registry.MAX_DESCRIPTION_LENGTH();
+        bytes memory description = new bytes(maxDescriptionLength);
+        for (uint256 i = 0; i < maxDescriptionLength; i++) {
+            description[i] = "b";
+        }
+
+        vm.startPrank(submitter);
+        crep.approve(address(registry), 10e6);
+        uint256 contentId =
+            registry.submitContent("https://example.com/exact-max-description", "title", string(description), "tag1", 0);
+        vm.stopPrank();
+
+        assertEq(contentId, 1);
+    }
+
     function test_SubmitContentDescriptionTooLongReverts() public {
-        bytes memory longDescription = new bytes(501);
-        for (uint256 i = 0; i < 501; i++) {
+        uint256 maxDescriptionLength = registry.MAX_DESCRIPTION_LENGTH() + 1;
+        bytes memory longDescription = new bytes(maxDescriptionLength);
+        for (uint256 i = 0; i < maxDescriptionLength; i++) {
             longDescription[i] = "b";
         }
         vm.startPrank(submitter);
