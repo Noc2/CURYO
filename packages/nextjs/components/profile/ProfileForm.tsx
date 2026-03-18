@@ -281,9 +281,6 @@ export function ProfileForm() {
               <h2 className="text-lg font-semibold">Reputation avatar color</h2>
               <InfoTooltip text="Choose one accent color for your generated Curyo avatar. The rest of the palette is derived automatically from your address and activity." />
             </div>
-            <p className="text-sm leading-6 text-base-content/70">
-              Personalize the generated avatar tied to your account without changing the overall Curyo visual style.
-            </p>
           </div>
 
           <ProfileImageLightbox
