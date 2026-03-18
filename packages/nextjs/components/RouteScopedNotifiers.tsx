@@ -21,8 +21,8 @@ export function RouteScopedNotifiers() {
 
   return (
     <>
-      <RewardNotifier />
       <SettlementNotifier />
+      <RewardNotifier />
     </>
   );
 }

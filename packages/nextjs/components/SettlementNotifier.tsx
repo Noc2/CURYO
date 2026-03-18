@@ -1,19 +1,35 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { useScaffoldWatchContractEvent } from "~~/hooks/scaffold-eth";
+import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { truncateContentTitle } from "~~/lib/contentTitle";
+import {
+  CLAIM_REWARD_NOTIFICATION_DELAY_MS,
+  CLAIM_REWARD_NOTIFICATION_EXPIRY_MS,
+  CLAIM_REWARD_NOTIFICATION_RECHECK_MS,
+  type PendingClaimRewardNotification,
+  pickClaimRewardNotification,
+  readLastClaimRewardNotificationAt,
+  writeLastClaimRewardNotificationAt,
+} from "~~/lib/notifications/claimRewards";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { notification } from "~~/utils/scaffold-eth";
 
-const GOVERNANCE_REWARDS_HREF = "/governance";
+const PORTFOLIO_REWARDS_HREF = "/portfolio";
+
+type PendingClaimRoundNotification = PendingClaimRewardNotification & {
+  contentId: string;
+  expiresAtMs: number;
+  roundId: string;
+};
 
 /**
  * Headless component that fires browser notifications + in-app toasts for
@@ -22,8 +38,11 @@ const GOVERNANCE_REWARDS_HREF = "/governance";
 export function SettlementNotifier() {
   const { address } = useAccount();
   const [activeKeys, setActiveKeys] = useState<Set<string>>(new Set());
+  const [pendingClaimCount, setPendingClaimCount] = useState(0);
+  const [claimRecheckTick, setClaimRecheckTick] = useState(0);
   const permissionRef = useRef<NotificationPermission>("default");
   const activeKeysRef = useRef<Set<string>>(new Set());
+  const pendingClaimNotificationsRef = useRef<Map<string, PendingClaimRoundNotification>>(new Map());
   const watchedContentIdsRef = useRef<Set<string>>(new Set());
   const seenSettlementKeysRef = useRef<Set<string>>(new Set());
   const discoverSignalsInitializedRef = useRef(false);
@@ -36,10 +55,54 @@ export function SettlementNotifier() {
   const { followedItems } = useFollowedProfiles(address, { autoRead: false });
   const { discoverSignals } = useDiscoverSignals(address, { watchedItems, followedItems });
   const { preferences } = useNotificationPreferences(address, { autoRead: false });
+  const { claimableItems, refetch: refetchClaimable } = useAllClaimableRewards();
+
+  const claimableRoundKeys = useMemo(
+    () => new Set(claimableItems.map(item => `${item.contentId.toString()}-${item.roundId.toString()}`)),
+    [claimableItems],
+  );
 
   useEffect(() => {
     roundResolvedEnabledRef.current = preferences.roundResolved;
   }, [preferences.roundResolved]);
+
+  const openBrowserNotification = useCallback((title: string, body: string, href: string) => {
+    if (typeof window === "undefined" || permissionRef.current !== "granted") return;
+
+    try {
+      const browserNotification = new Notification(title, {
+        body,
+        icon: "/favicon.png",
+      });
+
+      browserNotification.onclick = () => {
+        window.focus();
+        window.location.href = href;
+        browserNotification.close();
+      };
+    } catch {
+      // Browser may block notifications in some contexts
+    }
+  }, []);
+
+  const notifyWithLink = useCallback(
+    (kind: "info" | "success", title: string, body: string, href: string) => {
+      const toastBody = (
+        <Link href={href} className="font-medium underline">
+          {body}
+        </Link>
+      );
+
+      if (kind === "success") {
+        notification.success(toastBody, { duration: 8000 });
+      } else {
+        notification.info(toastBody, { duration: 8000 });
+      }
+
+      openBrowserNotification(title, body, href);
+    },
+    [openBrowserNotification],
+  );
 
   // Request notification permission on mount (only if connected)
   useEffect(() => {
@@ -77,47 +140,15 @@ export function SettlementNotifier() {
   useEffect(() => {
     if (!address) {
       discoverSignalsInitializedRef.current = false;
+      pendingClaimNotificationsRef.current = new Map();
+      setPendingClaimCount(0);
+      setClaimRecheckTick(0);
       seenSettlingDayKeysRef.current = new Set();
       seenSettlingHourKeysRef.current = new Set();
       seenFollowedSubmissionKeysRef.current = new Set();
       seenFollowedResolutionKeysRef.current = new Set();
       return;
     }
-
-    const openBrowserNotification = (title: string, body: string, href: string) => {
-      if (permissionRef.current !== "granted") return;
-
-      try {
-        const browserNotification = new Notification(title, {
-          body,
-          icon: "/favicon.png",
-        });
-
-        browserNotification.onclick = () => {
-          window.focus();
-          window.location.href = href;
-          browserNotification.close();
-        };
-      } catch {
-        // Browser may block notifications in some contexts
-      }
-    };
-
-    const notifyWithLink = (kind: "info" | "success", title: string, body: string, href: string) => {
-      const toastBody = (
-        <Link href={href} className="font-medium underline">
-          {body}
-        </Link>
-      );
-
-      if (kind === "success") {
-        notification.success(toastBody, { duration: 8000 });
-      } else {
-        notification.info(toastBody, { duration: 8000 });
-      }
-
-      openBrowserNotification(title, body, href);
-    };
 
     const nowSeconds = Math.floor(Date.now() / 1000);
     const currentSettlingDayKeys = new Set<string>();
@@ -226,7 +257,58 @@ export function SettlementNotifier() {
       ...seenFollowedResolutionKeysRef.current,
       ...currentResolutionKeys,
     ]);
-  }, [address, discoverSignals, preferences]);
+  }, [address, discoverSignals, notifyWithLink, preferences]);
+
+  useEffect(() => {
+    if (!address || pendingClaimCount === 0) return;
+
+    const timerId = window.setInterval(() => {
+      void refetchClaimable();
+      setClaimRecheckTick(tick => tick + 1);
+    }, CLAIM_REWARD_NOTIFICATION_RECHECK_MS);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [address, pendingClaimCount, refetchClaimable]);
+
+  useEffect(() => {
+    if (!address || pendingClaimCount === 0) return;
+
+    const pending = [...pendingClaimNotificationsRef.current.values()];
+    const nowMs = Date.now();
+
+    const expiredKeys = pending.filter(item => nowMs >= item.expiresAtMs).map(item => item.key);
+    if (expiredKeys.length > 0) {
+      for (const key of expiredKeys) {
+        pendingClaimNotificationsRef.current.delete(key);
+      }
+      setPendingClaimCount(pendingClaimNotificationsRef.current.size);
+      if (pendingClaimNotificationsRef.current.size === 0) return;
+    }
+
+    const nextNotification = pickClaimRewardNotification({
+      nowMs,
+      pending: [...pendingClaimNotificationsRef.current.values()],
+      claimableKeys: claimableRoundKeys,
+      lastNotifiedAtMs: readLastClaimRewardNotificationAt(address),
+    });
+    if (!nextNotification) return;
+
+    const pendingRound = pendingClaimNotificationsRef.current.get(nextNotification.key);
+    if (!pendingRound) return;
+
+    pendingClaimNotificationsRef.current.delete(nextNotification.key);
+    setPendingClaimCount(pendingClaimNotificationsRef.current.size);
+
+    writeLastClaimRewardNotificationAt(address, nowMs);
+    notifyWithLink(
+      "success",
+      "Reward Ready to Claim",
+      `Round resolved! Content #${pendingRound.contentId} round #${pendingRound.roundId} is now ready to claim in Portfolio.`,
+      PORTFOLIO_REWARDS_HREF,
+    );
+  }, [address, claimableRoundKeys, claimRecheckTick, notifyWithLink, pendingClaimCount]);
 
   // Watch for RoundSettled events
   useScaffoldWatchContractEvent({
@@ -255,42 +337,23 @@ export function SettlementNotifier() {
             next.delete(key);
             return next;
           });
+          pendingClaimNotificationsRef.current.set(key, {
+            key,
+            contentId,
+            expiresAtMs: Date.now() + CLAIM_REWARD_NOTIFICATION_EXPIRY_MS,
+            roundId: args.roundId.toString(),
+            readyAtMs: Date.now() + CLAIM_REWARD_NOTIFICATION_DELAY_MS,
+          });
+          setPendingClaimCount(pendingClaimNotificationsRef.current.size);
+          continue;
         }
 
-        const href = votedRound ? GOVERNANCE_REWARDS_HREF : `/vote?content=${contentId}`;
-        const title = votedRound ? "Round Resolved!" : "Watched Content Resolved!";
-        const body = votedRound
-          ? `Content #${contentId} round resolved. Open Governance to claim rewards.`
-          : `Content #${contentId} just resolved. Open Curyo to see the latest result.`;
-        const toastBody = votedRound ? (
-          <Link href={href} className="font-medium underline">
-            {`Round resolved! Content #${contentId} round #${args.roundId.toString()}. Open Governance to claim rewards.`}
-          </Link>
-        ) : (
-          <Link href={href} className="font-medium underline">
-            {`Watched content resolved! Content #${contentId} round #${args.roundId.toString()} is ready to review.`}
-          </Link>
+        notifyWithLink(
+          "success",
+          "Watched Content Resolved!",
+          `Watched content resolved! Content #${contentId} round #${args.roundId.toString()} is ready to review.`,
+          `/vote?content=${contentId}`,
         );
-
-        // In-app toast (always fires)
-        notification.success(toastBody, { duration: 8000 });
-
-        // Browser notification (only if permitted)
-        if (permissionRef.current === "granted") {
-          try {
-            const browserNotification = new Notification(title, {
-              body,
-              icon: "/favicon.png",
-            });
-            browserNotification.onclick = () => {
-              window.focus();
-              window.location.href = href;
-              browserNotification.close();
-            };
-          } catch {
-            // Browser may block notifications in some contexts
-          }
-        }
       }
     },
   } as any);
