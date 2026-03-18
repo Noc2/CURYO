@@ -11,12 +11,7 @@ import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { useVoterIdNFT, useVoterIdStake } from "~~/hooks/useVoterIdNFT";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
-import {
-  estimateVoteReturn,
-  formatCompactDuration,
-  formatCrepAmount,
-  getBlindParticipationLabel,
-} from "~~/lib/vote/voteIncentives";
+import { estimateVoteReturn, formatCrepAmount } from "~~/lib/vote/voteIncentives";
 
 interface StakeSelectorProps {
   isOpen: boolean;
@@ -54,7 +49,6 @@ export function StakeSelector({
     roundId: currentRoundId,
     phase,
     isEpoch1,
-    epoch1Remaining,
     voteCount,
     minVoters,
     upPool,
@@ -95,7 +89,7 @@ export function StakeSelector({
   }, [isOpen, onCancel]);
 
   const symbol = tokenSymbol ?? "cREP";
-  const { ratePercent, calculateBonus } = useParticipationRate();
+  const { calculateBonus } = useParticipationRate();
   const voteBonus = calculateBonus(amount);
   const voteEstimate = estimateVoteReturn(estimateSnapshot, isUp, amount);
 
@@ -108,19 +102,15 @@ export function StakeSelector({
   const isCapacityLimited = maxByCapacity < maxByBalance;
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
-  const blindParticipationLabel = getBlindParticipationLabel(ratePercent);
   const votersNeeded = Math.max(0, minVoters - voteCount);
   const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
-  const phaseDetail = effectiveIsBlind
-    ? phase === "voting"
-      ? `${blindParticipationLabel ?? "Participation bonus available"} · ${formatCompactDuration(epoch1Remaining)} left`
-      : `${blindParticipationLabel ?? "Participation bonus available"} · first vote opens the blind round`
-    : readyToSettle || thresholdReachedAt > 0
+  const phaseDetail =
+    readyToSettle || thresholdReachedAt > 0
       ? "Live pools are visible and this round is close to settlement."
       : votersNeeded > 0
         ? `${votersNeeded} more voter${votersNeeded === 1 ? "" : "s"} can unlock settlement.`
         : "Live pools are visible. Vote with signal and help settle this round.";
-  const phaseToneClassName = effectiveIsBlind ? "border-primary/20 bg-primary/10" : "border-warning/20 bg-warning/10";
+  const phaseToneClassName = effectiveIsBlind ? "bg-primary/10" : "bg-warning/10";
   const phaseHeadlineClassName = effectiveIsBlind ? "text-primary" : "text-warning";
   const weightPercent = Math.round(
     (effectiveIsBlind ? EPOCH_WEIGHT_BPS.blind : EPOCH_WEIGHT_BPS.informed) / 100,
@@ -263,9 +253,9 @@ export function StakeSelector({
               )}
             </div>
 
-            <div className={`mb-4 rounded-2xl border px-4 py-3 ${phaseToneClassName}`}>
+            <div className={`mb-4 rounded-2xl px-4 py-3 ${phaseToneClassName}`}>
               <p className={`text-sm font-semibold ${phaseHeadlineClassName}`}>{phaseHeadline}</p>
-              <p className="mt-1 text-sm text-base-content/75">{phaseDetail}</p>
+              {!effectiveIsBlind && <p className="mt-1 text-sm text-base-content/75">{phaseDetail}</p>}
               <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-base-content/80">
                 {effectiveIsBlind ? (
                   <>
