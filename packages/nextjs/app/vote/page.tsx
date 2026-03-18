@@ -34,11 +34,15 @@ import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
+import {
+  DISCOVER_ALL_FILTER,
+  DISCOVER_BROKEN_FILTER,
+  filterDiscoverCategoryItems,
+} from "~~/lib/vote/discoverFeedFilter";
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
-import { isContentItemBlocked } from "~~/utils/contentFilter";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
 import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
@@ -51,8 +55,8 @@ const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").
   ),
 });
 
-const ALL_FILTER = "All";
-const BROKEN_FILTER = "Broken";
+const ALL_FILTER = DISCOVER_ALL_FILTER;
+const BROKEN_FILTER = DISCOVER_BROKEN_FILTER;
 const slugify = (name: string) => name.toLowerCase().replace(/\s+/g, "-");
 type SortOption = "for_you" | "newest" | "oldest" | "highest_rated" | "lowest_rated";
 type SearchSortOption = Exclude<SortOption, "for_you">;
@@ -411,18 +415,7 @@ const HomeInner = () => {
   const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
   // Apply search, category filter, and the selected view before sorting
   const filteredFeed = useMemo(() => {
-    let items = feed.filter(item => !isContentItemBlocked(item));
-
-    // Broken URL filter: show only broken when selected, exclude broken otherwise
-    if (activeCategory === BROKEN_FILTER) {
-      items = items.filter(item => item.isValidUrl === false);
-    } else {
-      items = items.filter(item => item.isValidUrl !== false);
-    }
-
-    if (activeCategory !== ALL_FILTER && activeCategory !== BROKEN_FILTER && activeCategoryId === undefined) {
-      items = items.filter(item => item.tags.includes(activeCategory));
-    }
+    let items = filterDiscoverCategoryItems(feed, activeCategory, activeCategoryId);
 
     switch (activeScope) {
       case "watched":
@@ -1134,7 +1127,7 @@ const HomeInner = () => {
 
   // Count broken URLs for the filter pill
   const brokenCount = useMemo(() => {
-    return feed.filter(item => !isContentItemBlocked(item) && item.isValidUrl === false).length;
+    return filterDiscoverCategoryItems(feed, BROKEN_FILTER).length;
   }, [feed]);
 
   // Build category filter list sorted by popularity (vote count)
