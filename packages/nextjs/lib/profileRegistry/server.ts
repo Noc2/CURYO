@@ -177,16 +177,6 @@ export async function readProfileRegistryProfiles(
   return profiles;
 }
 
-export async function readProfileRegistryProfile(address: string): Promise<ProfileRegistryProfile> {
-  if (!isAddress(address)) {
-    return EMPTY_PROFILE;
-  }
-
-  const normalizedAddress = normalizeAddress(address);
-  const profiles = await readProfileRegistryProfiles([normalizedAddress]);
-  return profiles[normalizedAddress] ?? EMPTY_PROFILE;
-}
-
 export async function readProfileRegistryAvatarAccent(address: string): Promise<ProfileRegistryAvatarAccent> {
   if (!isAddress(address) || !profileRegistry || !publicClient) {
     return EMPTY_AVATAR_ACCENT;

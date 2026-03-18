@@ -2,8 +2,6 @@
 
 // @refresh reset
 import { AddressInfoDropdown } from "./AddressInfoDropdown";
-import { AddressQRCodeModal } from "./AddressQRCodeModal";
-import { PortfolioModal } from "./PortfolioModal";
 import { RevealBurnerPKModal } from "./RevealBurnerPKModal";
 import { WrongNetworkDropdown } from "./WrongNetworkDropdown";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -51,8 +49,6 @@ export const RainbowKitCustomConnectButton = ({ inlineMenu = false }: { inlineMe
                     ensAvatar={account.ensAvatar}
                     inlineMenu={inlineMenu}
                   />
-                  <AddressQRCodeModal address={account.address as Address} modalId="qrcode-modal" />
-                  <PortfolioModal address={account.address as Address} modalId="portfolio-modal" />
                   <RevealBurnerPKModal />
                 </>
               );

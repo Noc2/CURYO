@@ -15,22 +15,22 @@ Requires the local chain (`yarn chain`), deployed contracts (`yarn deploy`), and
 
 Run these from the monorepo root unless noted otherwise:
 
-| Command                 | Description                                                       |
-| ----------------------- | ----------------------------------------------------------------- |
-| `yarn start`            | Start development server (localhost:3000)                         |
-| `yarn next:build`       | Production build                                                  |
-| `yarn next:lint`        | Run ESLint                                                        |
-| `yarn next:check-types` | TypeScript type checking                                          |
-| `yarn workspace @curyo/nextjs format` | Format frontend code with Prettier                    |
-| `yarn workspace @curyo/nextjs db:generate` | Generate Drizzle migrations                     |
-| `yarn workspace @curyo/nextjs db:push` | Apply migrations to the configured database          |
-| `yarn workspace @curyo/nextjs db:studio` | Open the Drizzle studio UI                        |
-| `yarn workspace @curyo/nextjs whitepaper` | Generate the whitepaper PDF                     |
-| `yarn e2e`              | Run the Playwright smoke suite (Chromium)                         |
+| Command                                         | Description                                                     |
+| ----------------------------------------------- | --------------------------------------------------------------- |
+| `yarn start`                                    | Start development server (localhost:3000)                       |
+| `yarn next:build`                               | Production build                                                |
+| `yarn next:lint`                                | Run ESLint                                                      |
+| `yarn next:check-types`                         | TypeScript type checking                                        |
+| `yarn workspace @curyo/nextjs format`           | Format frontend code with Prettier                              |
+| `yarn workspace @curyo/nextjs db:generate`      | Generate Drizzle migrations                                     |
+| `yarn workspace @curyo/nextjs db:push`          | Apply migrations to the configured database                     |
+| `yarn workspace @curyo/nextjs db:studio`        | Open the Drizzle studio UI                                      |
+| `yarn workspace @curyo/nextjs whitepaper`       | Generate the whitepaper PDF                                     |
+| `yarn e2e`                                      | Run the Playwright smoke suite (Chromium)                       |
 | `yarn workspace @curyo/nextjs e2e:ci:lifecycle` | Run lifecycle suites for settlement, cancellation, and dormancy |
-| `yarn workspace @curyo/nextjs e2e:ci:keeper` | Run keeper-backed settlement coverage                            |
-| `yarn workspace @curyo/nextjs e2e:full` | Run the full local Playwright suite, including keeper coverage          |
-| `yarn e2e:ui`           | Run E2E tests with interactive Playwright UI                      |
+| `yarn workspace @curyo/nextjs e2e:ci:keeper`    | Run keeper-backed settlement coverage                           |
+| `yarn workspace @curyo/nextjs e2e:full`         | Run the full local Playwright suite, including keeper coverage  |
+| `yarn e2e:ui`                                   | Run E2E tests with interactive Playwright UI                    |
 
 CI runs the smoke, lifecycle, and keeper-backed suites separately, so `yarn e2e` is only the smallest browser pass.
 
@@ -68,7 +68,7 @@ app/                          # Next.js App Router
 ├── blockexplorer/            # Scaffold-ETH block explorer
 ├── debug/                    # Contract debugger
 ├── docs/                     # In-app documentation
-├── explore/, portfolio/      # Core browsing and portfolio surfaces
+├── portfolio/                # Portfolio and voting history surface
 ├── radar/, submit/, vote/    # Discovery and voting flows
 └── profiles/, settings/      # User profile and preference routes
 

@@ -136,17 +136,6 @@ test.describe("Next.js API routes", () => {
     expect(res.status).toBe(400);
   });
 
-  test("GET /api/username returns profile for known address", async () => {
-    const address = ANVIL_ACCOUNTS.account2.address;
-    const res = await fetch(`${BASE_URL}/api/username?address=${address}`);
-    expect(res.ok).toBe(true);
-
-    const data = await res.json();
-    expect(data).toHaveProperty("address");
-    expect(data).toHaveProperty("username");
-    expect(data.address).toBe(address.toLowerCase());
-  });
-
   test("GET /api/thumbnail resolves YouTube thumbnail", async () => {
     // YouTube thumbnails are resolved statically (no external API call)
     const videoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
@@ -225,7 +214,10 @@ test.describe("Next.js API routes", () => {
     );
     expect(authorizedRes.status).toBe(200);
 
-    const authorizedSession = await getNotificationPreferencesSessionStatus(account.address.toLowerCase(), session.cookie);
+    const authorizedSession = await getNotificationPreferencesSessionStatus(
+      account.address.toLowerCase(),
+      session.cookie,
+    );
     expect(authorizedSession.hasSession).toBe(true);
 
     const otherWalletSession = await getNotificationPreferencesSessionStatus(otherAddress, session.cookie);
