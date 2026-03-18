@@ -53,15 +53,7 @@ export function VotingQuestionCard({
 
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId);
-  const {
-    roundId,
-    isEpoch1,
-    isRoundFull,
-    phase,
-    voteCount,
-    revealedCount,
-    minVoters,
-  } = roundSnapshot;
+  const { roundId, isRoundFull, phase, voteCount, revealedCount, minVoters } = roundSnapshot;
   const pendingRevealCount = Math.max(0, voteCount - revealedCount);
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;

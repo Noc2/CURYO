@@ -18,7 +18,7 @@ interface RoundStatsProps {
  */
 export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, maxVoters, isRoundFull, phase, isEpoch1, minVoters } = snapshot;
+  const { round, isLoading, maxVoters, isRoundFull, phase, isEpoch1 } = snapshot;
 
   if (isLoading) {
     return (
