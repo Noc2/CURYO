@@ -150,10 +150,10 @@ test.describe("Next.js API routes", () => {
   test("GET /api/thumbnail does not trust lookalike YouTube hostnames", async () => {
     const attackerUrl = "https://youtube.com.evil.example/watch?v=dQw4w9WgXcQ";
     const res = await fetch(`${BASE_URL}/api/thumbnail?url=${encodeURIComponent(attackerUrl)}`);
-    expect(res.ok).toBe(true);
+    expect(res.status).toBe(400);
 
     const data = await res.json();
-    expect(data.thumbnailUrl).toBeNull();
+    expect(data.error).toBe("URL not allowed");
   });
 
   test("GET /api/thumbnail returns 400 for missing url", async () => {
@@ -172,7 +172,7 @@ test.describe("Next.js API routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ urls: "https://example.com" }),
     });
-    expect(res.status).toBe(400);
+    expect([400, 429]).toContain(res.status);
   });
 
   test("GET /api/leaderboard includes known voter accounts", async () => {

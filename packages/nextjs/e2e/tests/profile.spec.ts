@@ -30,13 +30,13 @@ test.describe("Profile management", () => {
     await setupWallet(page, profileAccount.privateKey);
     await page.goto("/settings");
 
-    await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Account Overview")).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(profileAccount.address)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Profile" }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /Your Profile/i })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator("main").getByText(/^0x2361\.\.\.1E8f$/).last()).toBeVisible({ timeout: 5_000 });
 
-    const delegationShortcut = page.getByRole("button", { name: "Open delegation settings" });
-    await expect(delegationShortcut).toBeVisible({ timeout: 5_000 });
-    await delegationShortcut.click();
+    const delegationTab = page.getByRole("button", { name: "Delegation" });
+    await expect(delegationTab).toBeVisible({ timeout: 5_000 });
+    await delegationTab.click();
 
     await expect(page).toHaveURL(/\/settings\?tab=delegation$/);
     await expect(page.getByRole("heading", { name: /Delegated Vote ID/i })).toBeVisible({ timeout: 10_000 });

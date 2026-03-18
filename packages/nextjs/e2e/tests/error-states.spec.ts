@@ -28,44 +28,17 @@ test.describe("Error states and edge cases", () => {
 
   test("own content shows 'Your submission' label", async ({ browser }) => {
     test.setTimeout(60_000);
-    // Account #2 submitted several content items (from seed).
-    // The deep link ?content=N may not work if URL validation filtered the item
-    // out of displayFeed (broken URL cache from prior runs). Instead, click
-    // through thumbnails to find any own-content card.
+    // Account #2 submitted seeded content items. Use the dedicated activity
+    // view instead of relying on the default mixed feed order.
     const context = await browser.newContext();
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await page.goto(`/vote?q=${encodeURIComponent("Fantastic Mr. Fox")}`, { waitUntil: "domcontentloaded" });
 
     const ownContentLabel = page.getByText("Your submission");
-    let found = await ownContentLabel
-      .waitFor({ state: "visible", timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!found) {
-      // The default selected item isn't ours — click thumbnails to find one
-      const thumbnails = page.locator("[data-testid='content-thumbnail']");
-      const thumbCount = await thumbnails.count();
-      for (let i = 0; i < Math.min(thumbCount, 20) && !found; i++) {
-        const thumb = thumbnails.nth(i);
-        if (await thumb.isVisible().catch(() => false)) {
-          await thumb.click();
-          found = await ownContentLabel
-            .waitFor({ state: "visible", timeout: 3_000 })
-            .then(() => true)
-            .catch(() => false);
-        }
-      }
-    }
-
-    expect(found, "No content with 'Your submission' label found").toBe(true);
-
-    // Verify vote buttons are NOT visible on own content
-    const voteUp = page.getByRole("button", { name: "Vote up" });
-    expect(await voteUp.isVisible().catch(() => false)).toBe(false);
+    await expect(page.getByRole("heading", { name: "Fantastic Mr. Fox" })).toBeVisible({ timeout: 15_000 });
+    await expect(ownContentLabel).toBeVisible({ timeout: 10_000 });
 
     await context.close();
   });

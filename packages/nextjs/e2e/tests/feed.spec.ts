@@ -31,7 +31,7 @@ test.describe("Content feed", () => {
     await page.goto("/vote");
     await waitForFeedLoaded(page);
 
-    const filterPill = page.getByRole("button", { name: /^Feed$/i }).first();
+    const filterPill = page.getByRole("button", { name: /^View$/i }).first();
     await expect(filterPill).toBeVisible({ timeout: 10_000 });
   });
 });
