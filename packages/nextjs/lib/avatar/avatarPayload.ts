@@ -36,6 +36,7 @@ export interface ReputationAvatarCategory {
 export interface ReputationAvatarPayload {
   address: string;
   balance: string;
+  avatarAccentHex: string | null;
   voterId: ReputationAvatarVoterId | null;
   stats: ReputationAvatarStats | null;
   streak: ReputationAvatarStreak | null;

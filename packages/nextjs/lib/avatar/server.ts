@@ -1,9 +1,11 @@
 import "server-only";
 import { isAddress } from "viem";
 import type { ReputationAvatarPayload } from "~~/lib/avatar/avatarPayload";
-import { readCRepBalances } from "~~/lib/profileRegistry/server";
+import { readCRepBalances, readProfileRegistryAvatarAccent } from "~~/lib/profileRegistry/server";
 
-type ReputationAvatarApiResponse = Omit<ReputationAvatarPayload, "balance">;
+type ReputationAvatarApiResponse = Omit<ReputationAvatarPayload, "balance" | "avatarAccentHex"> & {
+  avatarAccentHex?: string | null;
+};
 
 const isProduction = process.env.NODE_ENV === "production";
 const AVATAR_REVALIDATE_SECONDS = 300;
@@ -44,6 +46,7 @@ export function createEmptyReputationAvatarPayload(address: string): ReputationA
   return {
     address: normalizedAddress,
     balance: "0",
+    avatarAccentHex: null,
     voterId: null,
     stats: null,
     streak: {
@@ -66,7 +69,7 @@ export async function getReputationAvatarPayload(address: string): Promise<Reput
   const fallbackPayload = createEmptyReputationAvatarPayload(normalizedAddress);
   const ponderUrl = getPonderUrl();
 
-  const [apiPayload, balances] = await Promise.all([
+  const [apiPayload, balances, avatarAccent] = await Promise.all([
     ponderUrl
       ? fetch(`${ponderUrl}/avatar/${normalizedAddress}`, {
           next: { revalidate: AVATAR_REVALIDATE_SECONDS },
@@ -80,6 +83,7 @@ export async function getReputationAvatarPayload(address: string): Promise<Reput
           .catch(() => null)
       : Promise.resolve<ReputationAvatarApiResponse | null>(null),
     readCRepBalances([normalizedAddress]).catch(() => ({ [normalizedAddress]: 0n }) as Record<string, bigint>),
+    readProfileRegistryAvatarAccent(normalizedAddress).catch(() => ({ enabled: false, rgb: null, hex: null })),
   ]);
 
   return {
@@ -87,6 +91,7 @@ export async function getReputationAvatarPayload(address: string): Promise<Reput
     ...(apiPayload ?? {}),
     address: normalizedAddress,
     balance: (balances[normalizedAddress] ?? 0n).toString(),
+    avatarAccentHex: avatarAccent.hex,
     categories90d: apiPayload?.categories90d ?? [],
     stats: apiPayload?.stats ?? null,
     streak: apiPayload?.streak ?? fallbackPayload.streak,

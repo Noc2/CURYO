@@ -13,6 +13,7 @@ function buildPayload(overrides?: Partial<ReputationAvatarPayload>): ReputationA
   return {
     address: "0x1111111111111111111111111111111111111111",
     balance: "250000000",
+    avatarAccentHex: null,
     voterId: {
       tokenId: "1",
       mintedAt: "1700000000",
@@ -62,6 +63,48 @@ test("orb-flare avatars vary by address color and composition rotation", () => {
   assert.notEqual(modelA.planet?.midColor, modelB.planet?.midColor);
   assert.equal(modelA.flare?.rotationDegrees, -90);
   assert.equal(modelB.flare?.rotationDegrees, -90);
+});
+
+test("avatar accent override changes palette without changing composition rotation", () => {
+  const base = buildOrbitalAvatarModel(buildPayload(), {
+    nowSeconds: NOW_SECONDS,
+  });
+  const custom = buildOrbitalAvatarModel(
+    buildPayload({
+      avatarAccentHex: "#00ccff",
+    }),
+    {
+      nowSeconds: NOW_SECONDS,
+    },
+  );
+
+  assert.equal(base.compositionRotation, custom.compositionRotation);
+  assert.notEqual(base.planet?.midColor, custom.planet?.midColor);
+  assert.notEqual(base.orbit?.accentColor, custom.orbit?.accentColor);
+});
+
+test("same avatar accent keeps address-based composition differences", () => {
+  const modelA = buildOrbitalAvatarModel(
+    buildPayload({
+      address: "0x0000000000000000000000000000000000111111",
+      avatarAccentHex: "#f26426",
+    }),
+    {
+      nowSeconds: NOW_SECONDS,
+    },
+  );
+  const modelB = buildOrbitalAvatarModel(
+    buildPayload({
+      address: "0x0000000000000000000000000000000000222222",
+      avatarAccentHex: "#f26426",
+    }),
+    {
+      nowSeconds: NOW_SECONDS,
+    },
+  );
+
+  assert.notEqual(modelA.compositionRotation, modelB.compositionRotation);
+  assert.equal(modelA.planet?.midColor, modelB.planet?.midColor);
 });
 
 test("orb size saturates at extreme cREP balances", () => {

@@ -6,8 +6,16 @@ import { useAccount } from "wagmi";
 import { IdentificationIcon } from "@heroicons/react/24/outline";
 import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
-import { useIsNameTaken, useProfileRegistry, useSetProfile } from "~~/hooks/useProfileRegistry";
+import {
+  useAvatarAccent,
+  useClearAvatarAccent,
+  useIsNameTaken,
+  useProfileRegistry,
+  useSetAvatarAccent,
+  useSetProfile,
+} from "~~/hooks/useProfileRegistry";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
@@ -15,18 +23,24 @@ import { notification } from "~~/utils/scaffold-eth";
 // Validation regex: 3-20 alphanumeric + underscore
 const NAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const MAX_STRATEGY_LENGTH = 560;
+const DEFAULT_AVATAR_ACCENT_HEX = "#f26426";
 
 export function ProfileForm() {
   const { address } = useAccount();
   const { hasVoterId, isLoading: voterIdLoading } = useVoterIdNFT(address);
   const { profile, hasProfile, isLoading: profileLoading, refetch } = useProfileRegistry(address);
+  const { avatarAccent, isLoading: avatarAccentLoading, refetch: refetchAvatarAccent } = useAvatarAccent(address);
   const { setProfile, isPending } = useSetProfile();
+  const { setAvatarAccent, isPending: avatarAccentPending } = useSetAvatarAccent();
+  const { clearAvatarAccent, isPending: clearAvatarAccentPending } = useClearAvatarAccent();
 
   // Form state
   const [nameInput, setNameInput] = useState("");
   const [imageInput, setImageInput] = useState("");
   const [strategyInput, setStrategyInput] = useState("");
+  const [avatarAccentInput, setAvatarAccentInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [accentError, setAccentError] = useState<string | null>(null);
 
   // Check name availability (debounced via query)
   const { isTaken: isNameTaken, isLoading: nameCheckLoading } = useIsNameTaken(nameInput);
@@ -44,6 +58,27 @@ export function ProfileForm() {
       setInitialized(true);
     }
   }, [profile, hasProfile, initialized]);
+
+  const [avatarAccentInitialized, setAvatarAccentInitialized] = useState(false);
+  useEffect(() => {
+    if (!address || avatarAccentLoading || avatarAccentInitialized) {
+      return;
+    }
+
+    setAvatarAccentInput(avatarAccent?.hex ?? "");
+    setAvatarAccentInitialized(true);
+  }, [address, avatarAccent, avatarAccentInitialized, avatarAccentLoading]);
+
+  useEffect(() => {
+    setInitialized(false);
+    setAvatarAccentInitialized(false);
+    setNameInput("");
+    setImageInput("");
+    setStrategyInput("");
+    setAvatarAccentInput("");
+    setError(null);
+    setAccentError(null);
+  }, [address]);
 
   const handleSave = async () => {
     if (!address) return;
@@ -91,15 +126,73 @@ export function ProfileForm() {
     }
   };
 
+  const handleSaveAvatarAccent = async () => {
+    if (!address) return;
+
+    const normalizedAccentHex = normalizeAvatarAccentHex(avatarAccentInput);
+    if (!normalizedAccentHex) {
+      setAccentError("Enter a valid 6-digit hex color like #f26426");
+      return;
+    }
+
+    const rgbValue = avatarAccentHexToRgb(normalizedAccentHex);
+    if (rgbValue === null) {
+      setAccentError("Enter a valid 6-digit hex color like #f26426");
+      return;
+    }
+
+    setAccentError(null);
+
+    try {
+      await setAvatarAccent(rgbValue);
+      setAvatarAccentInput(normalizedAccentHex);
+      notification.success("Avatar color updated!");
+      refetchAvatarAccent();
+    } catch (e: any) {
+      console.error("Avatar accent update failed:", e);
+      setAccentError(e?.shortMessage || "Failed to update avatar color");
+    }
+  };
+
+  const handleResetAvatarAccent = async () => {
+    if (!address) return;
+
+    if (!avatarAccent?.enabled) {
+      setAvatarAccentInput("");
+      setAccentError(null);
+      return;
+    }
+
+    setAccentError(null);
+
+    try {
+      await clearAvatarAccent();
+      setAvatarAccentInput("");
+      notification.success("Avatar color reset!");
+      refetchAvatarAccent();
+    } catch (e: any) {
+      console.error("Avatar accent reset failed:", e);
+      setAccentError(e?.shortMessage || "Failed to reset avatar color");
+    }
+  };
+
   // Show name availability status
   const showNameStatus = nameInput.length >= 3 && !nameCheckLoading;
   const nameIsAvailable = showNameStatus && (!isNameTaken || isOwnName);
   const nameIsTaken = showNameStatus && isNameTaken && !isOwnName;
   const publicProfileHref = address ? `/profiles/${address.toLowerCase()}` : "/settings";
   const previewImageUrl = getProxiedProfileImageUrl(imageInput);
-  const fallbackImageUrl = getReputationAvatarUrl(address, 80) || "";
+  const storedAvatarAccentHex = avatarAccent?.hex ?? null;
+  const normalizedAvatarAccentInput = normalizeAvatarAccentHex(avatarAccentInput);
+  const avatarAccentInputError = avatarAccentInput.trim().length > 0 && !normalizedAvatarAccentInput;
+  const previewAvatarAccentHex = normalizedAvatarAccentInput ?? storedAvatarAccentHex;
+  const fallbackImageUrl = getReputationAvatarUrl(address, 80, previewAvatarAccentHex) || "";
+  const generatedAvatarPreviewUrl = getReputationAvatarUrl(address, 96, previewAvatarAccentHex) || "";
+  const avatarAccentPickerValue = normalizedAvatarAccentInput ?? storedAvatarAccentHex ?? DEFAULT_AVATAR_ACCENT_HEX;
+  const avatarAccentBusy = avatarAccentPending || clearAvatarAccentPending;
+  const hasAvatarAccentChanges = normalizedAvatarAccentInput !== storedAvatarAccentHex;
 
-  if (profileLoading || voterIdLoading) {
+  if (profileLoading || voterIdLoading || avatarAccentLoading) {
     return (
       <div className="surface-card rounded-2xl p-6">
         <div className="flex items-center justify-center py-8">
@@ -209,6 +302,103 @@ export function ProfileForm() {
           onChange={e => setImageInput(e.target.value)}
           disabled={isPending}
         />
+      </div>
+
+      <div className="surface-card-nested rounded-2xl p-4 space-y-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-lg font-semibold">Reputation avatar color</h2>
+              <InfoTooltip text="Choose one accent color for your generated Curyo avatar. The rest of the palette is derived automatically, and custom profile images still override the generated avatar across the app." />
+            </div>
+            <p className="text-sm leading-6 text-base-content/70">
+              Personalize the generated avatar tied to your account without changing the overall Curyo visual style.
+            </p>
+          </div>
+
+          <ProfileImageLightbox
+            src={generatedAvatarPreviewUrl}
+            fallbackSrc={generatedAvatarPreviewUrl}
+            alt="Generated avatar preview"
+            width={96}
+            height={96}
+            triggerLabel="Open generated avatar preview"
+            modalLabel="Generated avatar preview"
+            buttonClassName="rounded-full"
+            imageClassName="h-24 w-24 rounded-full border-2 border-base-300 object-cover"
+            modalImageClassName="rounded-[2rem]"
+          />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-[auto,1fr] sm:items-center">
+          <label className="text-base font-medium">Accent color</label>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <input
+              type="color"
+              aria-label="Avatar accent color picker"
+              className="h-12 w-20 cursor-pointer rounded-xl border border-base-300 bg-base-100 p-1"
+              value={avatarAccentPickerValue}
+              onChange={e => {
+                setAvatarAccentInput(e.target.value);
+                setAccentError(null);
+              }}
+              disabled={avatarAccentBusy}
+            />
+            <input
+              type="text"
+              placeholder="#f26426"
+              className={`input input-bordered w-full bg-base-100 sm:max-w-xs ${avatarAccentInputError ? "input-error" : ""}`}
+              value={avatarAccentInput}
+              onChange={e => {
+                setAvatarAccentInput(e.target.value);
+                setAccentError(null);
+              }}
+              disabled={avatarAccentBusy}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 text-sm text-base-content/65">
+          <p>Used for your generated reputation avatar whenever you do not set a custom profile image.</p>
+          {!avatarAccent?.enabled ? <p>Currently using the default address-based color palette.</p> : null}
+          {avatarAccentInputError ? <p className="text-error">Use a valid 6-digit hex color like #f26426.</p> : null}
+          {accentError ? <p className="text-error">{accentError}</p> : null}
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleSaveAvatarAccent}
+            className="btn btn-submit sm:flex-1"
+            disabled={
+              avatarAccentBusy || !normalizedAvatarAccentInput || avatarAccentInputError || !hasAvatarAccentChanges
+            }
+          >
+            {avatarAccentPending ? (
+              <span className="flex items-center gap-2">
+                <span className="loading loading-spinner loading-sm"></span>
+                Saving color...
+              </span>
+            ) : (
+              "Save avatar color"
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={handleResetAvatarAccent}
+            className="btn btn-ghost border border-base-300 sm:w-auto"
+            disabled={avatarAccentBusy || (!avatarAccent?.enabled && avatarAccentInput.trim().length === 0)}
+          >
+            {clearAvatarAccentPending ? (
+              <span className="flex items-center gap-2">
+                <span className="loading loading-spinner loading-sm"></span>
+                Resetting...
+              </span>
+            ) : (
+              "Reset to default"
+            )}
+          </button>
+        </div>
       </div>
 
       <div>

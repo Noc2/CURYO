@@ -197,6 +197,10 @@ function getAddressColorSeed(address: string) {
   return address.toLowerCase().replace(/^0x/, "").slice(-6).padStart(6, "0");
 }
 
+function getPaletteSeedHex(payload: ReputationAvatarPayload) {
+  return payload.avatarAccentHex?.replace(/^#/, "") || getAddressColorSeed(payload.address);
+}
+
 function getSignalScores(payload: ReputationAvatarPayload) {
   const balanceCrep = Number(BigInt(payload.balance || "0")) / CREP_DECIMALS;
   const stats = payload.stats;
@@ -208,8 +212,8 @@ function getSignalScores(payload: ReputationAvatarPayload) {
   return { balanceScore, accuracy, accuracyConfidence };
 }
 
-function getAddressVariant(address: string) {
-  const seedHex = getAddressColorSeed(address);
+function getAvatarVariant(payload: ReputationAvatarPayload) {
+  const seedHex = getPaletteSeedHex(payload);
   const seedValue = Number.parseInt(seedHex, 16);
   const { r, g, b } = hexToRgb(seedHex);
   const seedHsl = rgbToHsl(r, g, b);
@@ -221,7 +225,7 @@ function getAddressVariant(address: string) {
   const pocketHue = baseHue + 108;
 
   return {
-    compositionRotation: unitHash(`${address}:orb-rotation`) * 360,
+    compositionRotation: unitHash(`${payload.address}:orb-rotation`) * 360,
     orbHighlightColor: "#F5F0EB",
     orbLightColor: hslToHex(warmHue, Math.min(saturation - 6, 88), 84),
     orbMidColor: hslToHex(orbHue, Math.min(saturation + 8, 94), 64),
@@ -240,7 +244,7 @@ function getAddressVariant(address: string) {
 
 function buildPlanet(
   payload: ReputationAvatarPayload,
-  variant: ReturnType<typeof getAddressVariant>,
+  variant: ReturnType<typeof getAvatarVariant>,
 ): OrbitalAvatarPlanet | null {
   if (!payload.voterId) return null;
 
@@ -266,7 +270,7 @@ function buildPlanet(
 
 function buildOrbit(
   planet: OrbitalAvatarPlanet | null,
-  variant: ReturnType<typeof getAddressVariant>,
+  variant: ReturnType<typeof getAvatarVariant>,
 ): OrbitalAvatarOrbit | null {
   if (!planet) return null;
 
@@ -318,7 +322,7 @@ export function buildOrbitalAvatarModel(
   _options?: { nowSeconds?: number },
 ): OrbitalAvatarModel {
   void _options;
-  const variant = getAddressVariant(payload.address);
+  const variant = getAvatarVariant(payload);
   const planet = buildPlanet(payload, variant);
   const orbit = buildOrbit(planet, variant);
   const flare = buildFlare(payload, orbit);

@@ -273,6 +273,9 @@ contract UpgradeTest is Test {
         vm.prank(address(10));
         profileRegistry.setProfile("testuser", "https://example.com/img.png", "");
 
+        vm.prank(address(10));
+        profileRegistry.setAvatarAccent(0xF26426);
+
         assertTrue(profileRegistry.hasRole(UPGRADER_ROLE, governance));
         assertTrue(profileRegistry.hasProfile(address(10)));
 
@@ -290,6 +293,10 @@ contract UpgradeTest is Test {
         assertEq(profile.strategy, "");
         assertTrue(profile.createdAt > 0);
         assertTrue(profile.updatedAt > 0);
+
+        (bool enabled, uint24 rgb) = profileRegistry.getAvatarAccent(address(10));
+        assertTrue(enabled);
+        assertEq(rgb, 0xF26426);
     }
 
     // =========================================================================

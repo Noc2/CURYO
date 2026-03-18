@@ -1,5 +1,6 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { type Abi, type Address, createPublicClient, http, isAddress } from "viem";
+import { avatarAccentRgbToHex } from "~~/lib/avatar/avatarAccent";
 import scaffoldConfig from "~~/scaffold.config";
 
 export interface ProfileRegistryProfile {
@@ -7,6 +8,12 @@ export interface ProfileRegistryProfile {
   profileImageUrl: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+export interface ProfileRegistryAvatarAccent {
+  enabled: boolean;
+  rgb: number | null;
+  hex: string | null;
 }
 
 type DeployedContractsMap = Record<
@@ -25,6 +32,11 @@ const EMPTY_PROFILE: ProfileRegistryProfile = {
   profileImageUrl: null,
   createdAt: null,
   updatedAt: null,
+};
+const EMPTY_AVATAR_ACCENT: ProfileRegistryAvatarAccent = {
+  enabled: false,
+  rgb: null,
+  hex: null,
 };
 const MULTICALL_BATCH_SIZE = 200;
 
@@ -91,6 +103,31 @@ function parseProfile(result: unknown): ProfileRegistryProfile {
   };
 }
 
+function parseAvatarAccent(result: unknown): ProfileRegistryAvatarAccent {
+  if (Array.isArray(result)) {
+    const enabled = result[0] === true;
+    const rgbValue = typeof result[1] === "bigint" ? Number(result[1]) : 0;
+    return {
+      enabled,
+      rgb: enabled ? rgbValue : null,
+      hex: enabled ? avatarAccentRgbToHex(rgbValue) : null,
+    };
+  }
+
+  const accent = result as {
+    enabled?: unknown;
+    rgb?: unknown;
+  };
+  const enabled = accent.enabled === true;
+  const rgbValue = typeof accent.rgb === "bigint" ? Number(accent.rgb) : 0;
+
+  return {
+    enabled,
+    rgb: enabled ? rgbValue : null,
+    hex: enabled ? avatarAccentRgbToHex(rgbValue) : null,
+  };
+}
+
 export async function readProfileRegistryProfiles(
   addresses: string[],
 ): Promise<Record<string, ProfileRegistryProfile>> {
@@ -152,6 +189,24 @@ export async function readProfileRegistryProfile(address: string): Promise<Profi
   const normalizedAddress = normalizeAddress(address);
   const profiles = await readProfileRegistryProfiles([normalizedAddress]);
   return profiles[normalizedAddress] ?? EMPTY_PROFILE;
+}
+
+export async function readProfileRegistryAvatarAccent(address: string): Promise<ProfileRegistryAvatarAccent> {
+  if (!isAddress(address) || !profileRegistry || !publicClient) {
+    return EMPTY_AVATAR_ACCENT;
+  }
+
+  try {
+    const result = await publicClient.readContract({
+      address: profileRegistry.address,
+      abi: profileRegistry.abi,
+      functionName: "getAvatarAccent",
+      args: [normalizeAddress(address)],
+    });
+    return parseAvatarAccent(result);
+  } catch {
+    return EMPTY_AVATAR_ACCENT;
+  }
 }
 
 export async function readCRepBalances(addresses: string[]): Promise<Record<string, bigint>> {

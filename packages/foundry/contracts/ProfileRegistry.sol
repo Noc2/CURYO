@@ -31,16 +31,19 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
 
     // --- State ---
     mapping(address => StoredProfile) private _profiles;
+    mapping(address => uint32) private _avatarAccents;
     mapping(bytes32 => address) private _nameToAddress; // lowercase name hash => owner
     address[] private _registeredAddresses;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     // --- Events ---
     event ProfileCreated(address indexed user, string name, string imageUrl, string strategy);
     event ProfileUpdated(address indexed user, string name, string imageUrl, string strategy);
+    event AvatarAccentUpdated(address indexed user, uint24 rgb);
+    event AvatarAccentCleared(address indexed user);
     event VoterIdNFTUpdated(address voterIdNFT);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -82,11 +85,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
 
     /// @inheritdoc IProfileRegistry
     function setProfile(string calldata name, string calldata imageUrl, string calldata strategy) external override {
-        // Require Voter ID if VoterIdNFT is configured
-        if (address(voterIdNFT) != address(0)) {
-            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
-            require(voterIdNFT.resolveHolder(msg.sender) == msg.sender, "Profile owner must hold Voter ID");
-        }
+        _requireEligibleVoterIdHolder(msg.sender);
 
         require(bytes(name).length >= MIN_NAME_LENGTH, "Name too short");
         require(bytes(name).length <= MAX_NAME_LENGTH, "Name too long");
@@ -129,6 +128,22 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         _nameToAddress[nameHash] = msg.sender;
     }
 
+    /// @inheritdoc IProfileRegistry
+    function setAvatarAccent(uint24 rgb) external override {
+        _requireEligibleVoterIdHolder(msg.sender);
+
+        _avatarAccents[msg.sender] = uint32(rgb) + 1;
+        emit AvatarAccentUpdated(msg.sender, rgb);
+    }
+
+    /// @inheritdoc IProfileRegistry
+    function clearAvatarAccent() external override {
+        _requireEligibleVoterIdHolder(msg.sender);
+
+        delete _avatarAccents[msg.sender];
+        emit AvatarAccentCleared(msg.sender);
+    }
+
     // --- View Functions ---
 
     /// @inheritdoc IProfileRegistry
@@ -141,6 +156,16 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
             createdAt: profile.createdAt,
             updatedAt: profile.updatedAt
         });
+    }
+
+    /// @inheritdoc IProfileRegistry
+    function getAvatarAccent(address user) external view override returns (bool enabled, uint24 rgb) {
+        uint32 packedAccent = _avatarAccents[user];
+        if (packedAccent == 0) {
+            return (false, 0);
+        }
+
+        return (true, uint24(packedAccent - 1));
     }
 
     /// @inheritdoc IProfileRegistry
@@ -187,6 +212,15 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     }
 
     // --- Internal Functions ---
+
+    function _requireEligibleVoterIdHolder(address user) internal view {
+        if (address(voterIdNFT) == address(0)) {
+            return;
+        }
+
+        require(voterIdNFT.hasVoterId(user), "Voter ID required");
+        require(voterIdNFT.resolveHolder(user) == user, "Profile owner must hold Voter ID");
+    }
 
     /// @notice Validate name format (alphanumeric and underscore only)
     function _isValidName(string memory name) internal pure returns (bool) {

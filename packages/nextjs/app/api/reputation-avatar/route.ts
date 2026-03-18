@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
+import { normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
 import { getReputationAvatarPayload } from "~~/lib/avatar/server";
 
@@ -19,7 +20,14 @@ export async function GET(request: NextRequest) {
 
   const payload = await getReputationAvatarPayload(address);
   const size = parseRequestedSize(request.nextUrl.searchParams.get("size"));
-  const svg = renderOrbitalAvatarSvg(payload, { size });
+  const previewAccentHex = normalizeAvatarAccentHex(request.nextUrl.searchParams.get("accent"));
+  const svg = renderOrbitalAvatarSvg(
+    {
+      ...payload,
+      avatarAccentHex: previewAccentHex ?? payload.avatarAccentHex,
+    },
+    { size },
+  );
 
   return new NextResponse(svg, {
     headers: {

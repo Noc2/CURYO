@@ -8148,6 +8148,13 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "clearAvatarAccent",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "getAddressByName",
           inputs: [
             {
@@ -8161,6 +8168,30 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAvatarAccent",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "enabled",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "rgb",
+              type: "uint24",
+              internalType: "uint24",
             },
           ],
           stateMutability: "view",
@@ -8408,6 +8439,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "setAvatarAccent",
+          inputs: [
+            {
+              name: "rgb",
+              type: "uint24",
+              internalType: "uint24",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "setProfile",
           inputs: [
             {
@@ -8491,6 +8535,38 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "event",
+          name: "AvatarAccentCleared",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "AvatarAccentUpdated",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "rgb",
+              type: "uint24",
+              indexed: false,
+              internalType: "uint24",
+            },
+          ],
+          anonymous: false,
         },
         {
           type: "event",
@@ -8749,10 +8825,13 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {
+        clearAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
         getAddressByName: "contracts/interfaces/IProfileRegistry.sol",
+        getAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
         getProfile: "contracts/interfaces/IProfileRegistry.sol",
         hasProfile: "contracts/interfaces/IProfileRegistry.sol",
         isNameTaken: "contracts/interfaces/IProfileRegistry.sol",
+        setAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
         setProfile: "contracts/interfaces/IProfileRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
@@ -19406,6 +19485,13 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "clearAvatarAccent",
+          inputs: [],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "getAddressByName",
           inputs: [
             {
@@ -19419,6 +19505,30 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getAvatarAccent",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "enabled",
+              type: "bool",
+              internalType: "bool",
+            },
+            {
+              name: "rgb",
+              type: "uint24",
+              internalType: "uint24",
             },
           ],
           stateMutability: "view",
@@ -19666,6 +19776,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "setAvatarAccent",
+          inputs: [
+            {
+              name: "rgb",
+              type: "uint24",
+              internalType: "uint24",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "setProfile",
           inputs: [
             {
@@ -19749,6 +19872,38 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "event",
+          name: "AvatarAccentCleared",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "AvatarAccentUpdated",
+          inputs: [
+            {
+              name: "user",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "rgb",
+              type: "uint24",
+              indexed: false,
+              internalType: "uint24",
+            },
+          ],
+          anonymous: false,
         },
         {
           type: "event",
@@ -20007,10 +20162,13 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {
+        clearAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
         getAddressByName: "contracts/interfaces/IProfileRegistry.sol",
+        getAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
         getProfile: "contracts/interfaces/IProfileRegistry.sol",
         hasProfile: "contracts/interfaces/IProfileRegistry.sol",
         isNameTaken: "contracts/interfaces/IProfileRegistry.sol",
+        setAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
         setProfile: "contracts/interfaces/IProfileRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",

@@ -19,10 +19,23 @@ interface IProfileRegistry {
     /// @param strategy Short public note describing how the user rates on Curyo
     function setProfile(string calldata name, string calldata imageUrl, string calldata strategy) external;
 
+    /// @notice Set or update the user's generated avatar accent color
+    /// @param rgb The RGB accent value encoded as 0xRRGGBB
+    function setAvatarAccent(uint24 rgb) external;
+
+    /// @notice Clear the user's generated avatar accent override
+    function clearAvatarAccent() external;
+
     /// @notice Get a user's profile
     /// @param user The address to query
     /// @return The profile data
     function getProfile(address user) external view returns (Profile memory);
+
+    /// @notice Get a user's generated avatar accent override
+    /// @param user The address to query
+    /// @return enabled True when the user has set an explicit accent override
+    /// @return rgb The RGB accent value encoded as 0xRRGGBB
+    function getAvatarAccent(address user) external view returns (bool enabled, uint24 rgb);
 
     /// @notice Check if a profile name is already taken
     /// @param name The name to check

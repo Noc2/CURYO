@@ -231,6 +231,41 @@ contract ProfileRegistryTest is Test {
         assertEq(profile.strategy, "");
     }
 
+    function test_GetAvatarAccentDefault() public view {
+        (bool enabled, uint24 rgb) = registry.getAvatarAccent(user1);
+        assertFalse(enabled);
+        assertEq(rgb, 0);
+    }
+
+    function test_SetAvatarAccentStoresOverride() public {
+        vm.prank(user1);
+        registry.setAvatarAccent(0xF26426);
+
+        (bool enabled, uint24 rgb) = registry.getAvatarAccent(user1);
+        assertTrue(enabled);
+        assertEq(rgb, 0xF26426);
+    }
+
+    function test_SetAvatarAccentSupportsBlack() public {
+        vm.prank(user1);
+        registry.setAvatarAccent(0x000000);
+
+        (bool enabled, uint24 rgb) = registry.getAvatarAccent(user1);
+        assertTrue(enabled);
+        assertEq(rgb, 0x000000);
+    }
+
+    function test_ClearAvatarAccentRemovesOverride() public {
+        vm.startPrank(user1);
+        registry.setAvatarAccent(0xF26426);
+        registry.clearAvatarAccent();
+        vm.stopPrank();
+
+        (bool enabled, uint24 rgb) = registry.getAvatarAccent(user1);
+        assertFalse(enabled);
+        assertEq(rgb, 0);
+    }
+
     function test_GetProfileNonExistent() public view {
         IProfileRegistry.Profile memory profile = registry.getProfile(user1);
         assertEq(profile.name, "");
@@ -272,6 +307,19 @@ contract ProfileRegistryTest is Test {
         vm.prank(delegate);
         vm.expectRevert("Profile owner must hold Voter ID");
         registry.setProfile("alice", "", "");
+    }
+
+    function test_SetAvatarAccentRequiresHolderWhenVoterIdConfigured() public {
+        vm.prank(admin);
+        registry.setVoterIdNFT(address(voterIdNFT));
+
+        voterIdNFT.setHolder(user1);
+        vm.prank(user1);
+        voterIdNFT.setDelegate(delegate);
+
+        vm.prank(delegate);
+        vm.expectRevert("Profile owner must hold Voter ID");
+        registry.setAvatarAccent(0xF26426);
     }
 
     function test_GetAddressByName() public {
