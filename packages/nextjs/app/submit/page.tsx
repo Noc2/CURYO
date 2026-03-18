@@ -108,6 +108,11 @@ function getTitleValidationError(value: string): string | null {
   return check.blocked ? "Your title contains prohibited content" : null;
 }
 
+function getDescriptionValidationError(value: string): string | null {
+  const check = containsBlockedText(value);
+  return check.blocked ? "Your description contains prohibited content" : null;
+}
+
 // Platform favicon using Google's favicon service
 function PlatformIcon({ domain, className }: { domain: string; className?: string }) {
   const iconClass = className || "w-4 h-4";
@@ -163,6 +168,7 @@ const SubmitPage: NextPage = () => {
   const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
   const [customSubcategory, setCustomSubcategory] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submittedContent, setSubmittedContent] = useState<{
     id: bigint;
     title: string;
@@ -239,23 +245,20 @@ const SubmitPage: NextPage = () => {
     );
   }, [selectedCategory]);
 
-  const validateUrl = (value: string) => {
+  const getUrlValidationError = (value: string): string | null => {
     if (!value) {
-      setUrlError(null);
-      return;
+      return null;
     }
 
     const sanitizedUrl = sanitizeExternalUrl(value);
     if (!sanitizedUrl) {
-      setUrlError("Please enter a valid HTTPS URL");
-      return;
+      return "Please enter a valid HTTPS URL";
     }
 
     // Check for prohibited content in URL
     const urlCheck = containsBlockedUrl(sanitizedUrl);
     if (urlCheck.blocked) {
-      setUrlError("This URL contains prohibited content and cannot be submitted");
-      return;
+      return "This URL contains prohibited content and cannot be submitted";
     }
 
     // Check against approved platforms from CategoryRegistry
@@ -264,20 +267,21 @@ const SubmitPage: NextPage = () => {
       const categoryId = getCategoryIdFromUrl(sanitizedUrl, domainToCategoryId);
       if (categoryId === 0n) {
         const platformNames = websiteCategories.map(c => c.name).join(", ");
-        setUrlError(`Please enter a URL from an approved platform (${platformNames})`);
-      } else {
-        setUrlError(null);
+        return `Please enter a URL from an approved platform (${platformNames})`;
       }
-      return;
+      return null;
     }
 
     // Fallback to static validation if categories not loaded
     if (!isSupportedVideoPlatform(sanitizedUrl)) {
-      setUrlError("Please enter a URL from YouTube or Twitch");
-      return;
+      return "Please enter a URL from YouTube or Twitch";
     }
 
-    setUrlError(null);
+    return null;
+  };
+
+  const validateUrl = (value: string) => {
+    setUrlError(getUrlValidationError(value));
   };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -360,28 +364,41 @@ const SubmitPage: NextPage = () => {
 
   const handleDescriptionChange = (value: string) => {
     setDescription(value);
-    const check = containsBlockedText(value);
-    setDescriptionError(check.blocked ? "Your description contains prohibited content" : null);
+    setDescriptionError(getDescriptionValidationError(value));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!address || !registryInfo?.address || !isValidUrl || !selectedCategory) return;
+    setSubmitAttempted(true);
+    if (!address || !registryInfo?.address) return;
+
+    const trimmedTitle = title.trim();
+    const trimmedDescription = description.trim();
+    const nextUrlError = getUrlValidationError(url);
+    const nextTitleError = trimmedTitle ? getTitleValidationError(trimmedTitle) : null;
+    const nextDescriptionError = trimmedDescription ? getDescriptionValidationError(trimmedDescription) : null;
+
+    setUrlError(nextUrlError);
+    setTitleError(nextTitleError);
+    setDescriptionError(nextDescriptionError);
+
+    if (!selectedCategory || !url || !trimmedTitle || !trimmedDescription || selectedSubcategories.length === 0) {
+      notification.warning("Fill in the highlighted fields before submitting.");
+      return;
+    }
+
+    if (nextUrlError || nextTitleError || nextDescriptionError) {
+      notification.warning("Please fix the highlighted fields before submitting.");
+      return;
+    }
+
+    if (isUrlAlreadySubmitted) {
+      notification.warning("This content has already been submitted.");
+      return;
+    }
 
     if (urlCategoryMismatch) {
       notification.error("URL doesn't match the selected platform");
-      return;
-    }
-
-    const nextTitleError = getTitleValidationError(title);
-    if (nextTitleError) {
-      setTitleError(nextTitleError);
-      notification.warning(nextTitleError);
-      return;
-    }
-
-    if (containsBlockedText(title).blocked || containsBlockedText(description).blocked) {
-      notification.warning("Your title or description contains prohibited content and cannot be submitted");
       return;
     }
 
@@ -443,6 +460,7 @@ const SubmitPage: NextPage = () => {
       setSelectedCategory(null);
       setSelectedSubcategories([]);
       setCustomSubcategory("");
+      setSubmitAttempted(false);
     } catch (e: unknown) {
       console.error("Submit failed:", e);
       notification.error("Failed to submit content");
@@ -534,12 +552,17 @@ const SubmitPage: NextPage = () => {
 
           <form
             onSubmit={handleSubmit}
+            noValidate
             className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)] xl:items-start"
           >
             <div className="space-y-5">
               {/* Platform Selection - Searchable Dropdown */}
               <div ref={platformDropdownRef} className="relative">
-                <label className="block text-base font-medium mb-2">Select Platform</label>
+                <label
+                  className={`block text-base font-medium mb-2 ${submitAttempted && !selectedCategory ? "text-error" : ""}`}
+                >
+                  Select Platform
+                </label>
                 {categoriesLoading ? (
                   <div className="input input-bordered w-full bg-base-100 flex items-center">
                     <span className="loading loading-spinner loading-sm"></span>
@@ -550,7 +573,9 @@ const SubmitPage: NextPage = () => {
                     <button
                       type="button"
                       onClick={() => setIsPlatformDropdownOpen(!isPlatformDropdownOpen)}
-                      className="input input-bordered w-full bg-base-100 flex items-center justify-between cursor-pointer hover:bg-base-200 transition-colors"
+                      className={`input input-bordered w-full bg-base-100 flex items-center justify-between cursor-pointer hover:bg-base-200 transition-colors ${
+                        submitAttempted && !selectedCategory ? "input-error" : ""
+                      }`}
                     >
                       {selectedCategory ? (
                         <div className="flex items-center gap-2">
@@ -564,6 +589,9 @@ const SubmitPage: NextPage = () => {
                         className={`w-5 h-5 text-base-content/50 transition-transform ${isPlatformDropdownOpen ? "rotate-180" : ""}`}
                       />
                     </button>
+                    {submitAttempted && !selectedCategory && (
+                      <p className="mt-1 text-base text-error">Select a platform before submitting.</p>
+                    )}
 
                     {/* Dropdown Menu */}
                     {isPlatformDropdownOpen && (
@@ -635,19 +663,21 @@ const SubmitPage: NextPage = () => {
 
               {/* URL Input - with dynamic placeholder */}
               <div>
-                <label className="flex items-center gap-1.5 text-base font-medium mb-2">
+                <label
+                  className={`flex items-center gap-1.5 text-base font-medium mb-2 ${submitAttempted && !url ? "text-error" : ""}`}
+                >
                   URL
                   <InfoTooltip text={urlConfig.urlHint} />
                 </label>
                 <input
                   type="url"
                   placeholder={urlConfig.urlPlaceholder}
-                  className={`input input-bordered w-full bg-base-100 ${urlError ? "input-error" : ""}`}
+                  className={`input input-bordered w-full bg-base-100 ${urlError || (submitAttempted && !url) ? "input-error" : ""}`}
                   value={url}
                   onChange={handleUrlChange}
                   onBlur={() => validateUrl(url)}
-                  required
                 />
+                {submitAttempted && !url && <p className="mt-1 text-base text-error">URL is required.</p>}
                 {urlError && <p className="text-error text-base mt-1">{urlError}</p>}
                 {!urlError && isUrlAlreadySubmitted && (
                   <p className="text-error text-base mt-1">This content has already been submitted</p>
@@ -661,16 +691,22 @@ const SubmitPage: NextPage = () => {
 
               {/* Title Input */}
               <div>
-                <label className="block text-base font-medium mb-2">Title</label>
+                <label
+                  className={`block text-base font-medium mb-2 ${submitAttempted && !title.trim() ? "text-error" : ""}`}
+                >
+                  Title
+                </label>
                 <input
                   type="text"
                   placeholder="Add a short title for this content"
-                  className={`input input-bordered w-full bg-base-100 ${titleError ? "input-error" : ""}`}
+                  className={`input input-bordered w-full bg-base-100 ${
+                    titleError || (submitAttempted && !title.trim()) ? "input-error" : ""
+                  }`}
                   value={title}
                   onChange={e => handleTitleChange(e.target.value)}
-                  required
                   maxLength={MAX_TITLE_LENGTH}
                 />
+                {submitAttempted && !title.trim() && <p className="mt-1 text-base text-error">Title is required.</p>}
                 {titleError && <p className="text-error text-base mt-1">{titleError}</p>}
                 <div className="text-right mt-1">
                   <span className="text-base text-base-content/30">
@@ -681,15 +717,23 @@ const SubmitPage: NextPage = () => {
 
               {/* Description Input */}
               <div>
-                <label className="block text-base font-medium mb-2">Description</label>
+                <label
+                  className={`block text-base font-medium mb-2 ${submitAttempted && !description.trim() ? "text-error" : ""}`}
+                >
+                  Description
+                </label>
                 <textarea
                   placeholder="Add a description to help others discover this content"
-                  className={`textarea textarea-bordered w-full h-24 bg-base-100 ${descriptionError ? "textarea-error" : ""}`}
+                  className={`textarea textarea-bordered w-full h-24 bg-base-100 ${
+                    descriptionError || (submitAttempted && !description.trim()) ? "textarea-error" : ""
+                  }`}
                   value={description}
                   onChange={e => handleDescriptionChange(e.target.value)}
-                  required
                   maxLength={500}
                 />
+                {submitAttempted && !description.trim() && (
+                  <p className="mt-1 text-base text-error">Description is required.</p>
+                )}
                 {descriptionError && <p className="text-error text-base mt-1">{descriptionError}</p>}
                 <div className="text-right mt-1">
                   <span className="text-base text-base-content/30">{description.length}/500</span>
@@ -699,7 +743,11 @@ const SubmitPage: NextPage = () => {
               {/* Subcategory Selection - Only show when category is selected */}
               {selectedCategory && (
                 <div>
-                  <label className="block text-base font-medium mb-2">
+                  <label
+                    className={`block text-base font-medium mb-2 ${
+                      submitAttempted && selectedSubcategories.length === 0 ? "text-error" : ""
+                    }`}
+                  >
                     Select Categories <span className="text-base-content/40 font-normal">(1-3)</span>
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -762,6 +810,9 @@ const SubmitPage: NextPage = () => {
                       Add
                     </button>
                   </div>
+                  {submitAttempted && selectedSubcategories.length === 0 && (
+                    <p className="mt-2 text-base text-error">Pick at least one category before submitting.</p>
+                  )}
                 </div>
               )}
             </div>
@@ -835,18 +886,7 @@ const SubmitPage: NextPage = () => {
               <button
                 type="submit"
                 className="btn btn-submit w-full"
-                disabled={
-                  !isValidUrl ||
-                  !title ||
-                  !!titleError ||
-                  !description ||
-                  !!descriptionError ||
-                  !selectedCategory ||
-                  selectedSubcategories.length === 0 ||
-                  isSubmitting ||
-                  isUrlAlreadySubmitted ||
-                  urlCategoryMismatch
-                }
+                disabled={isSubmitting || isUrlAlreadySubmitted || urlCategoryMismatch}
               >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
