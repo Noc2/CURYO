@@ -48,7 +48,7 @@ test("getRoundProgressMessaging reframes open rounds around settlement momentum"
   });
 
   assert.equal(message?.badgeLabel, "Open");
-  assert.equal(message?.detailLabel, null);
+  assert.equal(message?.detailLabel, "Only 1 more vote to settle");
 });
 
 test("estimateVoteReturn uses informed weight during open phase", () => {

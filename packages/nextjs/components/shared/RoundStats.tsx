@@ -18,8 +18,7 @@ interface RoundStatsProps {
  */
 export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, maxVoters, isRoundFull, phase, isEpoch1, minVoters, readyToSettle, thresholdReachedAt } =
-    snapshot;
+  const { round, isLoading, maxVoters, isRoundFull, phase, isEpoch1, minVoters } = snapshot;
 
   if (isLoading) {
     return (
@@ -42,15 +41,6 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
   const upCount = Number(round.upCount);
   const downCount = Number(round.downCount);
   const hasRevealedVotes = revealedCount > 0;
-  const revealsNeeded = Math.max(0, minVoters - revealedCount);
-  const settlementHint =
-    !isEpoch1 && phase === "voting"
-      ? readyToSettle || thresholdReachedAt > 0
-        ? "Settlement window is opening now."
-        : revealsNeeded > 0
-          ? `${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"} needed before settlement.`
-          : null
-      : null;
   const higherUpsideSide =
     !isEpoch1 && upPoolFormatted > 0 && downPoolFormatted > 0 && upPoolFormatted !== downPoolFormatted
       ? upPoolFormatted < downPoolFormatted
@@ -99,12 +89,6 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
           </>
         )}
       </div>
-
-      {settlementHint ? (
-        <div className="flex items-center gap-1 text-sm">
-          <span className="text-base-content/70">{settlementHint}</span>
-        </div>
-      ) : null}
 
       {hasRevealedVotes && (
         <div className="flex items-center gap-2 flex-wrap">

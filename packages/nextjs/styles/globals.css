@@ -426,8 +426,8 @@ body {
 }
 
 .vote-btn.vote-no .vote-bg {
-  background: var(--curyo-steel);
-  box-shadow: 0 6px 16px rgb(126 137 150 / 0.28);
+  background: var(--curyo-ember-deep);
+  box-shadow: 0 6px 16px rgb(179 52 27 / 0.28);
 }
 
 .vote-btn .vote-symbol {
@@ -448,8 +448,8 @@ body {
 }
 
 .vote-btn.vote-no:hover .vote-bg {
-  background: var(--curyo-steel);
-  box-shadow: 0 8px 18px rgb(126 137 150 / 0.34);
+  background: var(--curyo-ember-deep);
+  box-shadow: 0 8px 18px rgb(179 52 27 / 0.34);
 }
 
 .vote-btn:active .vote-bg {
@@ -471,8 +471,8 @@ body {
 }
 
 .vote-btn:disabled.vote-no:hover .vote-bg {
-  background: var(--curyo-steel);
-  box-shadow: 0 6px 16px rgb(126 137 150 / 0.28);
+  background: var(--curyo-ember-deep);
+  box-shadow: 0 6px 16px rgb(179 52 27 / 0.28);
 }
 
 /* Prose typography for docs pages */

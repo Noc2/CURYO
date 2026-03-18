@@ -125,7 +125,7 @@ export function getRoundProgressMessaging(
     return {
       badgeLabel: "Open",
       badgeTone: "warning",
-      detailLabel: null,
+      detailLabel: `Only ${votersNeeded} more vote${votersNeeded === 1 ? "" : "s"} to settle`,
       detailTone: votersNeeded === 1 ? "success" : "warning",
       tooltip:
         "Open votes can use the revealed market signal. This round still needs more voters before settlement can begin.",
@@ -136,7 +136,7 @@ export function getRoundProgressMessaging(
     return {
       badgeLabel: "Open",
       badgeTone: "warning",
-      detailLabel: `${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"} before settlement`,
+      detailLabel: null,
       detailTone: "warning",
       tooltip:
         "Open votes can use the revealed market signal. Settlement starts once the reveal threshold and past-epoch checks clear.",

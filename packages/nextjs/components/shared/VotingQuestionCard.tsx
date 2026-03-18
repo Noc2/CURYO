@@ -61,25 +61,11 @@ export function VotingQuestionCard({
     voteCount,
     revealedCount,
     minVoters,
-    readyToSettle,
-    thresholdReachedAt,
   } = roundSnapshot;
   const pendingRevealCount = Math.max(0, voteCount - revealedCount);
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
-  const revealsNeeded = Math.max(0, minVoters - revealedCount);
-  const incentivePrompt =
-    phase !== "voting"
-      ? null
-      : isEpoch1
-        ? null
-        : readyToSettle || thresholdReachedAt > 0
-          ? null
-          : revealsNeeded > 0
-            ? `${revealsNeeded} more reveal${revealsNeeded === 1 ? "" : "s"} and this round can settle.`
-            : null;
-  const incentivePromptClassName = "text-warning";
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
 
@@ -163,12 +149,6 @@ export function VotingQuestionCard({
         <div className="mb-1.5 flex shrink-0 justify-start">
           <RoundProgress snapshot={roundSnapshot} />
         </div>
-
-        {incentivePrompt ? (
-          <div className="mb-1.5 flex shrink-0 justify-start">
-            <p className={`text-sm ${incentivePromptClassName}`}>{incentivePrompt}</p>
-          </div>
-        ) : null}
 
         <div className="mb-3 flex shrink-0 justify-start">
           <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
