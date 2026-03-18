@@ -162,9 +162,9 @@ export function ProfileForm() {
           <p className="text-base text-base-content/50 font-mono">
             {address?.slice(0, 6)}...{address?.slice(-4)}
           </p>
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-base-content/65">
-            {strategyInput.trim() || "Add a short note explaining how you rate on Curyo."}
-          </p>
+          {strategyInput.trim() ? (
+            <p className="mt-2 line-clamp-2 text-sm leading-6 text-base-content/65">{strategyInput.trim()}</p>
+          ) : null}
         </div>
       </div>
 
