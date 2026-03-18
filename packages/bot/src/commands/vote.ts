@@ -1,5 +1,5 @@
+import { randomBytes } from "crypto";
 import { createTlockVoteCommit } from "@curyo/contracts/voting";
-import { encodePacked, keccak256 } from "viem";
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
@@ -119,7 +119,7 @@ export async function runVote() {
       log.debug(`Approved cREP: ${approveTx}`);
 
       // tlock commit-reveal: encrypt vote direction to epoch's drand round
-      const salt = keccak256(encodePacked(["address", "uint256", "uint256"], [account.address, contentId, BigInt(Date.now())]));
+      const salt = `0x${randomBytes(32).toString("hex")}` as `0x${string}`;
       // Read epoch duration from contract config
       const configResult = (await publicClient.readContract({
         ...contractConfig.votingEngine,

@@ -86,6 +86,18 @@ export function resetKeeperStateForTests(): void {
 // Track repeated decrypt failures per commitKey to stop retrying permanently bad ciphertexts
 const decryptFailureCount = new Map<string, number>();
 const MAX_DECRYPT_RETRIES = 10;
+const MAX_DECRYPT_FAILURE_ENTRIES = 10_000;
+
+function trackDecryptFailure(commitKey: string): number {
+  const count = (decryptFailureCount.get(commitKey) ?? 0) + 1;
+  decryptFailureCount.set(commitKey, count);
+  // FIFO eviction: remove oldest entries when the map grows too large
+  if (decryptFailureCount.size > MAX_DECRYPT_FAILURE_ENTRIES) {
+    const first = decryptFailureCount.keys().next().value;
+    if (first !== undefined) decryptFailureCount.delete(first);
+  }
+  return count;
+}
 
 function cleanupRoundKey(contentId: bigint, roundId: bigint): string {
   return `${contentId}:${roundId}`;
@@ -157,10 +169,14 @@ async function discoverCleanupCandidate(
  * Ciphertext on-chain is hex-encoded UTF-8 armored AGE string.
  * Plaintext is 33 bytes: [uint8 isUp (0|1), bytes32 salt].
  */
+// Valid tlock ciphertexts are ~600-800 bytes; 4KB is a generous upper bound.
+const MAX_CIPHERTEXT_BYTES = 4096;
+
 export async function decryptTlockCiphertext(
   ciphertext: `0x${string}`,
 ): Promise<{ isUp: boolean; salt: `0x${string}` } | null> {
   const hex = ciphertext.startsWith("0x") ? ciphertext.slice(2) : ciphertext;
+  if (hex.length / 2 > MAX_CIPHERTEXT_BYTES) return null;
   // Convert hex bytes back to UTF-8 armored string
   const armored = Buffer.from(hex, "hex").toString("utf-8");
 
@@ -468,10 +484,13 @@ async function writeContractAndConfirm(
 
   const hash = await walletClient.writeContract(request);
 
-  const waitForReceipt = (publicClient as { waitForTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<unknown> })
+  const waitForReceipt = (publicClient as { waitForTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<{ status: string }> })
     .waitForTransactionReceipt;
   if (waitForReceipt) {
-    await waitForReceipt.call(publicClient, { hash });
+    const receipt = await waitForReceipt.call(publicClient, { hash });
+    if (receipt && receipt.status === "reverted") {
+      throw new Error(`Transaction ${hash} reverted on-chain`);
+    }
   }
 
   return hash;
@@ -526,8 +545,7 @@ async function _revealCommits(
       try {
         decrypted = await decryptTlockCiphertext(commit.ciphertext as `0x${string}`);
       } catch (err: unknown) {
-        const count = priorFailures + 1;
-        decryptFailureCount.set(commitKey, count);
+        const count = trackDecryptFailure(commitKey);
         incrementCounter("keeper_decrypt_failures_total");
         const logFn = count >= MAX_DECRYPT_RETRIES ? logger.error.bind(logger) : logger.warn.bind(logger);
         logFn("tlock decryption failed", {
@@ -542,8 +560,7 @@ async function _revealCommits(
       }
 
       if (!decrypted) {
-        const count = priorFailures + 1;
-        decryptFailureCount.set(commitKey, count);
+        const count = trackDecryptFailure(commitKey);
         incrementCounter("keeper_decrypt_failures_total");
         const logFn = count >= MAX_DECRYPT_RETRIES ? logger.error.bind(logger) : logger.warn.bind(logger);
         logFn("Failed to decode tlock ciphertext", {

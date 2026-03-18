@@ -282,6 +282,8 @@ export async function readRoundRevealGracePeriod(
   })) as bigint;
 }
 
+const RPC_BATCH_SIZE = 50;
+
 export async function readRoundCommitKeys(
   publicClient: Pick<PublicClient, "readContract">,
   engineAddr: `0x${string}`,
@@ -299,14 +301,23 @@ export async function readRoundCommitKeys(
     return [];
   }
 
-  return (await Promise.all(
-    Array.from({ length: Number(count) }, (_, index) =>
-      publicClient.readContract({
-        address: engineAddr,
-        abi: RoundVotingEngineAbi,
-        functionName: "roundCommitHashes",
-        args: [contentId, roundId, BigInt(index)],
-      }) as Promise<`0x${string}`>,
-    ),
-  )) as readonly `0x${string}`[];
+  const total = Number(count);
+  const results: `0x${string}`[] = [];
+
+  for (let offset = 0; offset < total; offset += RPC_BATCH_SIZE) {
+    const batchSize = Math.min(RPC_BATCH_SIZE, total - offset);
+    const batch = await Promise.all(
+      Array.from({ length: batchSize }, (_, i) =>
+        publicClient.readContract({
+          address: engineAddr,
+          abi: RoundVotingEngineAbi,
+          functionName: "roundCommitHashes",
+          args: [contentId, roundId, BigInt(offset + i)],
+        }) as Promise<`0x${string}`>,
+      ),
+    );
+    results.push(...batch);
+  }
+
+  return results;
 }
