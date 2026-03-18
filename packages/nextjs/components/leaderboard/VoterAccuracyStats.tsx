@@ -2,9 +2,10 @@
 
 import { useAccount } from "wagmi";
 import { CategoryBars } from "~~/components/leaderboard/CategoryBars";
-import { WinRateRing } from "~~/components/leaderboard/WinRateRing";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
+import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
+import { getReputationAvatarUrl } from "~~/utils/profileImage";
 
 export function VoterAccuracyStats() {
   const { address } = useAccount();
@@ -28,6 +29,9 @@ export function VoterAccuracyStats() {
       : stats.currentStreak < 0
         ? `${Math.abs(stats.currentStreak)}L`
         : "0";
+  const avatarSrc = getReputationAvatarUrl(address, 128) || "";
+  const winRateLabel = `${(stats.winRate * 100).toFixed(1)}%`;
+  const recordLabel = `${stats.totalWins}W / ${stats.totalLosses}L`;
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-4">
@@ -36,9 +40,27 @@ export function VoterAccuracyStats() {
         <span className="text-base tabular-nums text-base-content/60">{stats.totalSettledVotes} resolved votes</span>
       </div>
 
-      {/* Ring gauge + side stats */}
-      <div className="flex items-center gap-5">
-        <WinRateRing winRate={stats.winRate} wins={stats.totalWins} losses={stats.totalLosses} />
+      {/* Avatar + side stats */}
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4">
+          <img
+            src={avatarSrc}
+            alt="Your profile avatar"
+            width={128}
+            height={128}
+            className="h-28 w-28 shrink-0 rounded-[1.75rem] bg-base-200 object-cover"
+          />
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-3xl font-mono font-semibold tabular-nums text-base-content sm:text-4xl">
+                {winRateLabel}
+              </span>
+              <InfoTooltip text="Accuracy is the share of your resolved votes that matched the final settled outcome. The flare around your avatar reflects this same signal." />
+            </div>
+            <div className="mt-1 font-mono text-base tabular-nums text-base-content/50">{recordLabel}</div>
+          </div>
+        </div>
 
         <div className="flex flex-col gap-2">
           {/* Streak pills */}
