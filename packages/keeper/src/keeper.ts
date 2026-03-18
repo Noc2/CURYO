@@ -87,6 +87,8 @@ export function resetKeeperStateForTests(): void {
 const decryptFailureCount = new Map<string, number>();
 const MAX_DECRYPT_RETRIES = 10;
 const MAX_DECRYPT_FAILURE_ENTRIES = 10_000;
+const TOO_EARLY_TLOCK_ERROR_FRAGMENT = "too early to decrypt the ciphertext";
+const DECRYPTABLE_AT_ROUND_PATTERN = /decryptable at round (\d+)/i;
 
 function trackDecryptFailure(commitKey: string): number {
   const count = (decryptFailureCount.get(commitKey) ?? 0) + 1;
@@ -97,6 +99,23 @@ function trackDecryptFailure(commitKey: string): number {
     if (first !== undefined) decryptFailureCount.delete(first);
   }
   return count;
+}
+
+function classifyDecryptError(err: unknown): {
+  retryable: boolean;
+  message: string;
+  decryptableAtRound?: string;
+} {
+  const message = (err as { message?: string } | undefined)?.message ?? String(err);
+  if (message.toLowerCase().includes(TOO_EARLY_TLOCK_ERROR_FRAGMENT)) {
+    return {
+      retryable: true,
+      message,
+      decryptableAtRound: message.match(DECRYPTABLE_AT_ROUND_PATTERN)?.[1],
+    };
+  }
+
+  return { retryable: false, message };
 }
 
 function cleanupRoundKey(contentId: bigint, roundId: bigint): string {
@@ -545,6 +564,19 @@ async function _revealCommits(
       try {
         decrypted = await decryptTlockCiphertext(commit.ciphertext as `0x${string}`);
       } catch (err: unknown) {
+        const decryptError = classifyDecryptError(err);
+        if (decryptError.retryable) {
+          decryptFailureCount.delete(commitKey);
+          logger.debug("tlock ciphertext not decryptable yet", {
+            contentId: Number(contentId),
+            roundId: Number(roundId),
+            commitKey,
+            decryptableAtRound: decryptError.decryptableAtRound,
+            error: decryptError.message,
+          });
+          continue;
+        }
+
         const count = trackDecryptFailure(commitKey);
         incrementCounter("keeper_decrypt_failures_total");
         const logFn = count >= MAX_DECRYPT_RETRIES ? logger.error.bind(logger) : logger.warn.bind(logger);
@@ -554,7 +586,7 @@ async function _revealCommits(
           commitKey,
           attempt: count,
           permanent: count >= MAX_DECRYPT_RETRIES,
-          error: (err as any)?.message || String(err),
+          error: decryptError.message,
         });
         continue;
       }
@@ -764,12 +796,12 @@ async function _findNextPendingCleanupIndex(
   startIndex: number,
 ): Promise<number> {
   for (let i = startIndex; i < commitKeys.length; i++) {
-    const commit = (await publicClient.readContract({
+    const commit = parseCommitData(await publicClient.readContract({
       address: engineAddr,
       abi: RoundVotingEngineAbi,
       functionName: "commits",
       args: [contentId, roundId, commitKeys[i]],
-    })) as CommitData;
+    }));
 
     if (!commit.revealed && commit.stakeAmount > 0n) {
       return i;

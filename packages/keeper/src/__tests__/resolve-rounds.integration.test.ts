@@ -178,6 +178,8 @@ describe("resolveRounds integration", () => {
     await waitForReceipt(
       publicClient,
       await submitterClient.writeContract({
+        account: ACCOUNTS.submitter,
+        chain: CHAIN,
         address: CONTRACTS.crep,
         abi: CuryoReputationAbi,
         functionName: "approve",
@@ -188,6 +190,8 @@ describe("resolveRounds integration", () => {
     await waitForReceipt(
       publicClient,
       await submitterClient.writeContract({
+        account: ACCOUNTS.submitter,
+        chain: CHAIN,
         address: CONTRACTS.contentRegistry,
         abi: ContentRegistryAbi,
         functionName: "submitContent",
@@ -195,6 +199,7 @@ describe("resolveRounds integration", () => {
           `https://example.com/keeper-integration-${Date.now()}`,
           "Keeper integration test",
           "integration",
+          "keeper,integration",
           1n,
         ],
       }),
@@ -211,6 +216,8 @@ describe("resolveRounds integration", () => {
       await waitForReceipt(
         publicClient,
         await voter.client.writeContract({
+          account: voter.account,
+          chain: CHAIN,
           address: CONTRACTS.crep,
           abi: CuryoReputationAbi,
           functionName: "approve",
@@ -224,6 +231,8 @@ describe("resolveRounds integration", () => {
       await waitForReceipt(
         publicClient,
         await voter.client.writeContract({
+          account: voter.account,
+          chain: CHAIN,
           address: CONTRACTS.roundVotingEngine,
           abi: RoundVotingEngineAbi,
           functionName: "commitVote",
@@ -257,17 +266,13 @@ describe("resolveRounds integration", () => {
       abi: RoundVotingEngineAbi,
       functionName: "rounds",
       args: [contentId, roundId],
-    })) as {
-      state: number;
-      revealedCount: bigint;
-      thresholdReachedAt: bigint;
-      settledAt: bigint;
-    };
+    })) as readonly [bigint, number, bigint, bigint, bigint, bigint, bigint, bigint, bigint, boolean, bigint, bigint, bigint, bigint];
+    const [, state, , revealedCount, , , , , , , settledAt, thresholdReachedAt] = round;
 
-    expect(round.revealedCount).toBe(3n);
-    expect(round.thresholdReachedAt).toBeGreaterThan(0n);
-    expect(round.settledAt).toBeGreaterThan(0n);
-    expect(round.state).toBe(1);
+    expect(revealedCount).toBe(3n);
+    expect(thresholdReachedAt).toBeGreaterThan(0n);
+    expect(settledAt).toBeGreaterThan(0n);
+    expect(state).toBe(1);
     expect(logger.warn).not.toHaveBeenCalledWith(expect.stringContaining("Failed"));
   });
 });

@@ -6,6 +6,8 @@ const VOTER = "0x3333333333333333333333333333333333333333" as const;
 const ACCOUNT = "0x4444444444444444444444444444444444444444" as const;
 const COMMIT_KEY_1 = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as const;
 const COMMIT_KEY_2 = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const;
+const TOO_EARLY_TLOCK_ERROR = "It's too early to decrypt the ciphertext - decryptable at round 27013021";
+const zeroHash = `0x${"0".repeat(64)}` as const;
 
 const { mockConfig, timelockDecrypt } = vi.hoisted(() => ({
   mockConfig: {
@@ -382,6 +384,104 @@ describe("resolveRounds", () => {
     expect(commits[COMMIT_KEY_1].revealed).toBe(true);
     expect(commits[COMMIT_KEY_2].revealed).toBe(true);
     expect(round.state).toBe(1);
+  });
+
+  it("keeps retrying when tlock says the ciphertext is not decryptable yet", async () => {
+    timelockDecrypt.mockRejectedValue(new Error(TOO_EARLY_TLOCK_ERROR));
+
+    const round = makeRound({
+      state: 0,
+      voteCount: 1n,
+      revealedCount: 0n,
+    });
+    const { publicClient, walletClient } = makeHarness({
+      activeRoundId: 1n,
+      latestRoundId: 1n,
+      round,
+      commitKeys: [COMMIT_KEY_1],
+      commits: {
+        [COMMIT_KEY_1]: makeCommit({ revealableAfter: 100n }),
+      },
+      now: 1_000n,
+    });
+    const logger = makeLogger();
+
+    for (let i = 0; i < 12; i++) {
+      await resolveRounds(
+        publicClient as any,
+        walletClient as any,
+        {} as any,
+        { address: ACCOUNT } as any,
+        logger as any,
+      );
+    }
+
+    expect(timelockDecrypt).toHaveBeenCalledTimes(12);
+    expect(walletClient.writeContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "revealVoteByCommitKey" }),
+    );
+    expect(logger.warn).not.toHaveBeenCalledWith("tlock decryption failed", expect.anything());
+    expect(logger.error).not.toHaveBeenCalledWith("tlock decryption failed", expect.anything());
+    expect(logger.debug).toHaveBeenCalledTimes(12);
+    expect(logger.debug).toHaveBeenLastCalledWith(
+      "tlock ciphertext not decryptable yet",
+      expect.objectContaining({
+        contentId: 1,
+        roundId: 1,
+        commitKey: COMMIT_KEY_1,
+        decryptableAtRound: "27013021",
+        error: TOO_EARLY_TLOCK_ERROR,
+      }),
+    );
+  });
+
+  it("stops retrying permanently bad ciphertext after the max retry budget", async () => {
+    timelockDecrypt.mockRejectedValue(new Error("beacon unavailable"));
+
+    const round = makeRound({
+      state: 0,
+      voteCount: 1n,
+      revealedCount: 0n,
+    });
+    const { publicClient, walletClient } = makeHarness({
+      activeRoundId: 1n,
+      latestRoundId: 1n,
+      round,
+      commitKeys: [COMMIT_KEY_1],
+      commits: {
+        [COMMIT_KEY_1]: makeCommit({ revealableAfter: 100n }),
+      },
+      now: 1_000n,
+    });
+    const logger = makeLogger();
+
+    for (let i = 0; i < 12; i++) {
+      await resolveRounds(
+        publicClient as any,
+        walletClient as any,
+        {} as any,
+        { address: ACCOUNT } as any,
+        logger as any,
+      );
+    }
+
+    expect(timelockDecrypt).toHaveBeenCalledTimes(10);
+    expect(logger.warn).toHaveBeenCalledTimes(9);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenLastCalledWith(
+      "tlock decryption failed",
+      expect.objectContaining({
+        contentId: 1,
+        roundId: 1,
+        commitKey: COMMIT_KEY_1,
+        attempt: 10,
+        permanent: true,
+        error: "beacon unavailable",
+      }),
+    );
+    expect(walletClient.writeContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "revealVoteByCommitKey" }),
+    );
   });
 
   it("handles tuple-shaped viem reads from live contracts", async () => {
