@@ -38,6 +38,7 @@ export function isExpectedRevert(msg: string): boolean {
     "RevealGraceActive",
     "NothingProcessed",
     "IndexOutOfBounds",
+    "ActiveRoundStillOpen",
   ];
   const lower = msg.toLowerCase();
   return benign.some(phrase => lower.includes(phrase.toLowerCase()));

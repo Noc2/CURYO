@@ -1,26 +1,31 @@
 import type { EmbedOptions, PlatformHandler, PlatformInfo } from "../types";
 import { matchesHostname } from "~~/utils/urlHosts";
 
+function isValidYouTubeId(id: string | null | undefined): id is string {
+  return typeof id === "string" && id.length > 0 && /^[\w-]+$/.test(id);
+}
+
 function extractYouTubeId(url: string): string | null {
   try {
     const parsed = new URL(url);
+    let id: string | null | undefined;
 
     // youtube.com/watch?v=...
     if (matchesHostname(parsed.hostname, "youtube.com") && parsed.searchParams.has("v")) {
-      return parsed.searchParams.get("v");
+      id = parsed.searchParams.get("v");
     }
 
     // youtu.be/...
-    if (parsed.hostname === "youtu.be") {
-      return parsed.pathname.slice(1);
+    else if (parsed.hostname === "youtu.be") {
+      id = parsed.pathname.slice(1).split("/")[0];
     }
 
     // youtube.com/embed/...
-    if (matchesHostname(parsed.hostname, "youtube.com") && parsed.pathname.startsWith("/embed/")) {
-      return parsed.pathname.split("/embed/")[1];
+    else if (matchesHostname(parsed.hostname, "youtube.com") && parsed.pathname.startsWith("/embed/")) {
+      id = parsed.pathname.split("/embed/")[1]?.split("/")[0];
     }
 
-    return null;
+    return isValidYouTubeId(id) ? id : null;
   } catch {
     return null;
   }

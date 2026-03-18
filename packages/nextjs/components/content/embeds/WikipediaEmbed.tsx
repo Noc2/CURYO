@@ -44,12 +44,14 @@ function getPrefetchedWikipediaPerson(prefetchedMetadata?: ContentMetadataResult
 export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaEmbedProps) {
   const [person, setPerson] = useState<WikipediaPerson | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const title = info.id || (info.metadata?.title as string);
 
   useEffect(() => {
+    setFetchError(false);
     setImageError(false);
     setImageLoaded(false);
 
@@ -81,7 +83,9 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
           });
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setFetchError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -119,7 +123,9 @@ export function WikipediaEmbed({ info, compact, prefetchedMetadata }: WikipediaE
           <WikipediaIcon className="w-5 h-5 text-white" />
         </div>
         <div className="min-w-0">
-          <p className="text-base font-medium truncate">Article not found</p>
+          <p className="text-base font-medium truncate">
+            {fetchError ? "Failed to load article" : "Article not found"}
+          </p>
           <p className="text-base text-base-content/50 mt-0.5">View on Wikipedia</p>
         </div>
       </SafeExternalLink>

@@ -141,6 +141,7 @@ contract ContentRegistry is
         uint256 indexed contentId, address indexed submitter, address indexed rewardPool, uint256 amount
     );
     event SubmitterParticipationRewardClaimed(uint256 indexed contentId, address indexed submitter, uint256 amount);
+    event SubmitterParticipationReservationFailed(uint256 indexed contentId, address rewardPool, uint256 amount);
     event RatingUpdated(uint256 indexed contentId, uint256 oldRating, uint256 newRating);
     event VoterIdNFTUpdated(address voterIdNFT);
 
@@ -519,7 +520,9 @@ contract ContentRegistry is
             if (reservedAmount > 0) {
                 submitterParticipationRewardReserved[contentId] = reservedAmount;
             }
-        } catch { }
+        } catch {
+            emit SubmitterParticipationReservationFailed(contentId, rewardPool, rewardAmount);
+        }
     }
 
     function _claimSubmitterParticipationReward(uint256 contentId, Content storage c)

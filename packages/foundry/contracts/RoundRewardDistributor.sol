@@ -69,7 +69,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 indexed roundId,
         address indexed voter,
         uint256 stakeReturned,
-        uint256 crepReward
+        uint256 reward
     );
     event LoserNotified(uint256 indexed contentId, uint256 indexed roundId, address indexed voter);
     event SubmitterRewardClaimed(
@@ -163,12 +163,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 weightedWinningStake = votingEngine.roundWinningStake(contentId, roundId);
         uint256 reward = RewardMath.calculateVoterReward(effectiveStake, weightedWinningStake, voterPool);
 
-        // Total = original stake return + reward from voter pool
-        uint256 crepReward = commit.stakeAmount + reward;
+        // Total payout = original stake return + reward from voter pool
+        uint256 totalPayout = commit.stakeAmount + reward;
 
-        votingEngine.transferReward(msg.sender, crepReward);
+        votingEngine.transferReward(msg.sender, totalPayout);
 
-        emit RewardClaimed(contentId, roundId, msg.sender, commit.stakeAmount, crepReward);
+        emit RewardClaimed(contentId, roundId, msg.sender, commit.stakeAmount, reward);
     }
 
     // --- Submitter Reward Claiming ---

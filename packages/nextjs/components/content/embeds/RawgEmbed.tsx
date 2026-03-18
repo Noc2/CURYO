@@ -45,6 +45,7 @@ async function fetchRawgGame(slug: string): Promise<RawgGame | null> {
 export function RawgEmbed({ info, compact }: RawgEmbedProps) {
   const [game, setGame] = useState<RawgGame | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -53,6 +54,7 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
   useEffect(() => {
     setLoading(true);
     setGame(null);
+    setFetchError(false);
     setImageError(false);
     setImageLoaded(false);
 
@@ -67,7 +69,9 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
       .then(data => {
         if (!cancelled) setGame(data);
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setFetchError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -105,7 +109,7 @@ export function RawgEmbed({ info, compact }: RawgEmbedProps) {
           <GamepadIcon className="w-5 h-5 text-white" />
         </div>
         <div className="min-w-0">
-          <p className="text-base font-medium truncate">Game not found</p>
+          <p className="text-base font-medium truncate">{fetchError ? "Failed to load game" : "Game not found"}</p>
           <p className="text-base text-base-content/50 mt-0.5">View on RAWG</p>
         </div>
       </SafeExternalLink>

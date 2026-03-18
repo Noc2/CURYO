@@ -80,7 +80,12 @@ export function resetKeeperStateForTests(): void {
   cleanupQueue.clear();
   cleanupCompletedRounds.clear();
   cleanupDiscoveryRoundByContent.clear();
+  decryptFailureCount.clear();
 }
+
+// Track repeated decrypt failures per commitKey to stop retrying permanently bad ciphertexts
+const decryptFailureCount = new Map<string, number>();
+const MAX_DECRYPT_RETRIES = 10;
 
 function cleanupRoundKey(contentId: bigint, roundId: bigint): string {
   return `${contentId}:${roundId}`;
@@ -393,7 +398,7 @@ export async function resolveRounds(
         }
       } catch (err: unknown) {
         const reason = getRevertReason(err);
-        if (!isExpectedRevert(reason) && !reason.includes("ActiveRoundStillOpen")) {
+        if (!isExpectedRevert(reason)) {
           logger.debug("Could not resolve submitter stake", {
             contentId: Number(contentId),
             error: reason,
@@ -512,31 +517,47 @@ async function _revealCommits(
       if (commit.revealed) continue;
       if (now < commit.revealableAfter) continue;
 
+      // Skip commitKeys that have permanently failed decryption
+      const priorFailures = decryptFailureCount.get(commitKey) ?? 0;
+      if (priorFailures >= MAX_DECRYPT_RETRIES) continue;
+
       // Decrypt the tlock ciphertext using the drand beacon
       let decrypted: { isUp: boolean; salt: `0x${string}` } | null;
       try {
         decrypted = await decryptTlockCiphertext(commit.ciphertext as `0x${string}`);
       } catch (err: unknown) {
-        // Beacon not yet available — retry on next tick
+        const count = priorFailures + 1;
+        decryptFailureCount.set(commitKey, count);
         incrementCounter("keeper_decrypt_failures_total");
-        logger.warn("tlock decryption failed", {
+        const logFn = count >= MAX_DECRYPT_RETRIES ? logger.error.bind(logger) : logger.warn.bind(logger);
+        logFn("tlock decryption failed", {
           contentId: Number(contentId),
           roundId: Number(roundId),
           commitKey,
+          attempt: count,
+          permanent: count >= MAX_DECRYPT_RETRIES,
           error: (err as any)?.message || String(err),
         });
         continue;
       }
 
       if (!decrypted) {
+        const count = priorFailures + 1;
+        decryptFailureCount.set(commitKey, count);
         incrementCounter("keeper_decrypt_failures_total");
-        logger.warn("Failed to decode tlock ciphertext", {
+        const logFn = count >= MAX_DECRYPT_RETRIES ? logger.error.bind(logger) : logger.warn.bind(logger);
+        logFn("Failed to decode tlock ciphertext", {
           contentId: Number(contentId),
           roundId: Number(roundId),
           commitKey,
+          attempt: count,
+          permanent: count >= MAX_DECRYPT_RETRIES,
         });
         continue;
       }
+
+      // Successful decrypt — clear any prior failure count
+      decryptFailureCount.delete(commitKey);
 
       // Submit reveal to chain
       try {

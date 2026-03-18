@@ -10,6 +10,7 @@ describe("isExpectedRevert", () => {
     "AlreadyRevealed",
     "AlreadyCancelled",
     "ThresholdReached",
+    "ActiveRoundStillOpen",
   ];
 
   for (const phrase of benign) {

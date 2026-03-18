@@ -45,12 +45,14 @@ function getPrefetchedOpenLibraryBook(prefetchedMetadata?: ContentMetadataResult
 export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibraryEmbedProps) {
   const [book, setBook] = useState<OpenLibraryBook | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const olId = info.id || (info.metadata?.olId as string);
 
   useEffect(() => {
+    setFetchError(false);
     setImageError(false);
     setImageLoaded(false);
 
@@ -83,7 +85,9 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
           });
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setFetchError(true);
+      })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -121,7 +125,7 @@ export function OpenLibraryEmbed({ info, compact, prefetchedMetadata }: OpenLibr
           <BookIcon className="w-5 h-5 text-white" />
         </div>
         <div className="min-w-0">
-          <p className="text-base font-medium truncate">Book not found</p>
+          <p className="text-base font-medium truncate">{fetchError ? "Failed to load book" : "Book not found"}</p>
           <p className="text-base text-base-content/50 mt-0.5">View on Open Library</p>
         </div>
       </SafeExternalLink>

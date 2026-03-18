@@ -9,8 +9,11 @@ import {
 ponder.on(
   "RoundRewardDistributor:RewardClaimed",
   async ({ event, context }) => {
-    const { contentId, roundId, voter, stakeReturned, crepReward } =
+    const { contentId, roundId, voter, stakeReturned, reward } =
       event.args;
+
+    // Total payout = stake returned + reward earned
+    const totalPayout = stakeReturned + reward;
 
     await context.db
       .insert(rewardClaim)
@@ -22,7 +25,7 @@ ponder.on(
         source: "round",
         voter,
         stakeReturned,
-        crepReward,
+        crepReward: reward,
         claimedAt: event.block.timestamp,
       })
       .onConflictDoNothing();
@@ -33,7 +36,7 @@ ponder.on(
       await context.db
         .update(profile, { address: voter })
         .set((row) => ({
-          totalRewardsClaimed: row.totalRewardsClaimed + crepReward,
+          totalRewardsClaimed: row.totalRewardsClaimed + totalPayout,
         }));
     }
 
@@ -45,12 +48,12 @@ ponder.on(
         totalContent: 0,
         totalVotes: 0,
         totalRoundsSettled: 0,
-        totalRewardsClaimed: crepReward,
+        totalRewardsClaimed: totalPayout,
         totalProfiles: 0,
         totalVoterIds: 0,
       })
       .onConflictDoUpdate((row) => ({
-        totalRewardsClaimed: row.totalRewardsClaimed + crepReward,
+        totalRewardsClaimed: row.totalRewardsClaimed + totalPayout,
       }));
   },
 );
