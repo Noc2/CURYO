@@ -11,7 +11,6 @@ import { GovernanceActionComposer } from "~~/components/governance/GovernanceAct
 import { GovernanceStats } from "~~/components/governance/GovernanceStats";
 import { PlatformProposals } from "~~/components/governance/PlatformProposals";
 import { ProposalList } from "~~/components/governance/ProposalList";
-import { TokenManagement } from "~~/components/governance/TokenManagement";
 import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
 import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
 import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
@@ -185,16 +184,9 @@ function GovernancePageInner() {
 
       {activeTab === "governance" && (
         <div className="space-y-6">
-          <div className="grid gap-6 xl:grid-cols-3">
-            <div className="xl:col-span-1">
-              <TokenManagement />
-            </div>
-            <div className="xl:col-span-2">
-              <TreasuryBalance />
-            </div>
-            <div className="xl:col-span-3">
-              <GovernanceStats />
-            </div>
+          <div className="space-y-6">
+            <TreasuryBalance />
+            <GovernanceStats />
           </div>
           <GovernanceActionComposer />
           <ProposalList />
