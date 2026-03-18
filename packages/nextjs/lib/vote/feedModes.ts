@@ -15,7 +15,7 @@ export const DISCOVER_FEED_MODE_OPTIONS: DiscoverFeedModeOption[] = [
   {
     value: "for_you",
     label: "For You",
-    description: "Ranked by your category preferences and recent submissions.",
+    description: "Ranked by your recent interactions, saved items, and vote history.",
   },
   {
     value: "trending",

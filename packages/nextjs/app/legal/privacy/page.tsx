@@ -51,8 +51,8 @@ const PrivacyPage: NextPage = () => {
         <ul>
           <li>
             <strong>Browser Storage Data:</strong> Terms acceptance status, onboarding state, interface preferences,
-            temporary wallet-display and notification state, referral information, locally tracked content-click data,
-            and similar functional data stored in your browser via local storage or session storage.
+            temporary wallet-display and notification state, referral information, locally tracked content-interaction
+            data, and similar functional data stored in your browser via local storage or session storage.
           </li>
           <li>
             <strong>Wallet-Linked Application Data:</strong> Watchlist entries, followed wallet addresses, notification

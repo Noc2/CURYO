@@ -56,6 +56,7 @@ interface FeedVoteCardProps {
   item: ContentItem;
   submitterProfile?: SubmitterProfile;
   onVote: (item: ContentItem, isUp: boolean) => void;
+  onExternalOpen?: (item: ContentItem, href: string) => void;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
   watched: boolean;
@@ -77,6 +78,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   item,
   submitterProfile,
   onVote,
+  onExternalOpen,
   onToggleWatch,
   onToggleFollow,
   watched,
@@ -94,7 +96,23 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   canNext = false,
 }: FeedVoteCardProps) {
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5">
+    <div
+      className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5"
+      onClickCapture={event => {
+        if (!onExternalOpen) return;
+
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        const anchor = target.closest<HTMLAnchorElement>("a[href]");
+        if (!anchor) return;
+
+        const href = anchor.getAttribute("href");
+        if (!href || href.startsWith("/") || href.startsWith("#")) return;
+
+        onExternalOpen(item, href);
+      }}
+    >
       <FeedContentHeader
         item={item}
         onPrevious={onPrevious}

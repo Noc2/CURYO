@@ -21,13 +21,13 @@ import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
+import { useInterestProfile } from "~~/hooks/useInterestProfile";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useQueueCardStatusMap } from "~~/hooks/useQueueCardStatusMap";
 import { useQueueNavigation } from "~~/hooks/useQueueNavigation";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUnixTime } from "~~/hooks/useUnixTime";
-import { useUserPreferences } from "~~/hooks/useUserPreferences";
 import { useVoteFeedStage } from "~~/hooks/useVoteFeedStage";
 import { useVoteHistoryQuery } from "~~/hooks/useVoteHistoryQuery";
 import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
@@ -35,10 +35,11 @@ import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
+import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
 import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
-import { trackContentClick } from "~~/utils/clickTracker";
 import { isContentItemBlocked } from "~~/utils/contentFilter";
+import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
 import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
@@ -107,6 +108,7 @@ const HomeInner = () => {
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
   const [supportsTouchNavigation, setSupportsTouchNavigation] = useState(false);
+  const [interactionVersion, setInteractionVersion] = useState(0);
   const isSearchMode = searchQuery.trim().length > 0;
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
@@ -138,9 +140,7 @@ const HomeInner = () => {
   const feedRequestLimit = contentParam
     ? undefined
     : Math.max(
-        !isSearchMode && activeScope === "all" && activeFeedMode !== "for_you"
-          ? FEED_PAGE_SIZE * 4
-          : FEED_PAGE_SIZE * 2,
+        !isSearchMode && activeScope === "all" ? FEED_PAGE_SIZE * 4 : FEED_PAGE_SIZE * 2,
         visibleCount + FEED_PREFETCH_BUFFER + 1,
       );
 
@@ -233,7 +233,12 @@ const HomeInner = () => {
   });
   const totalContent = scopedContentIds?.length ?? serverTotalContent;
   const hasMoreFeed = scopedContentIds ? feed.length < totalContent : serverHasMoreFeed;
-  const { categoryScores, hasPreferences } = useUserPreferences(feed, address);
+  const interestProfile = useInterestProfile({
+    address,
+    feed,
+    votes,
+    signalVersion: interactionVersion,
+  });
   const voteCounts = useCategoryPopularity(feed);
   const voteCooldownByContentId = useMemo(() => {
     const cooldowns = new Map<string, number>();
@@ -333,8 +338,67 @@ const HomeInner = () => {
 
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const queueRailRef = useRef<HTMLDivElement>(null);
+  const displayFeedRef = useRef<ContentItem[]>([]);
+  const activeViewSessionRef = useRef<{ contentId: string; startedAt: number; hasPositiveInteraction: boolean } | null>(
+    null,
+  );
+  const isMountedRef = useRef(true);
   const [queueRailElement, setQueueRailElement] = useState<HTMLDivElement | null>(null);
   const queueLayout = useVoteQueueLayout(queueRailElement);
+  const persistRecommendationSignal = useCallback(
+    (
+      item: Pick<ContentItem, "id" | "categoryId" | "url" | "submitter" | "tags">,
+      type: Parameters<typeof trackRecommendationSignal>[1],
+      fields: Parameters<typeof trackRecommendationSignal>[2] = {},
+    ) => {
+      if (!item.url || !item.submitter) return;
+      trackRecommendationSignal(buildRecommendationSignalContext(item), type, fields);
+    },
+    [],
+  );
+  const recordRecommendationSignal = useCallback(
+    (
+      item: Pick<ContentItem, "id" | "categoryId" | "url" | "submitter" | "tags">,
+      type: Parameters<typeof trackRecommendationSignal>[1],
+      fields: Parameters<typeof trackRecommendationSignal>[2] = {},
+    ) => {
+      persistRecommendationSignal(item, type, fields);
+      setInteractionVersion(version => version + 1);
+    },
+    [persistRecommendationSignal],
+  );
+  const markPrimaryInteraction = useCallback((contentId: bigint) => {
+    if (activeViewSessionRef.current?.contentId === contentId.toString()) {
+      activeViewSessionRef.current.hasPositiveInteraction = true;
+    }
+  }, []);
+  const flushActiveViewSession = useCallback(
+    (syncProfile: boolean) => {
+      const session = activeViewSessionRef.current;
+      if (!session) return;
+
+      activeViewSessionRef.current = null;
+      const item = displayFeedRef.current.find(entry => entry.id.toString() === session.contentId);
+      if (!item) return;
+
+      const dwellMs = Date.now() - session.startedAt;
+      let profileChanged = false;
+
+      if (dwellMs >= 1_200) {
+        persistRecommendationSignal(item, "dwell", { dwellMs });
+        profileChanged = true;
+      }
+      if (!session.hasPositiveInteraction && dwellMs < 4_000) {
+        persistRecommendationSignal(item, "quick_skip", { dwellMs });
+        profileChanged = true;
+      }
+
+      if (syncProfile && profileChanged && isMountedRef.current) {
+        setInteractionVersion(version => version + 1);
+      }
+    },
+    [persistRecommendationSignal],
+  );
 
   // Voting state
   const [stakeModal, setStakeModal] = useState<{
@@ -447,35 +511,34 @@ const HomeInner = () => {
         });
         break;
       default:
-        if (hasPreferences && activeCategory === ALL_FILTER) {
-          items.sort((a, b) => {
-            const scoreA = categoryScores.get(a.categoryId.toString()) ?? 0;
-            const scoreB = categoryScores.get(b.categoryId.toString()) ?? 0;
-            if (scoreA !== scoreB) return scoreB - scoreA;
-            return Number(b.id - a.id);
-          });
-        } else {
-          items.sort((a, b) => Number(b.id - a.id));
-        }
-        break;
+        return rankForYouFeed(items, {
+          nowSeconds,
+          profile: interestProfile,
+          votedContentIds,
+          watchedContentIds,
+          followedWallets,
+        });
     }
 
     return items;
   }, [
-    filteredFeed,
     activeFeedMode,
     activeScope,
-    isSearchMode,
     activeCategory,
     effectiveSearchSortBy,
-    categoryScores,
-    hasPreferences,
+    filteredFeed,
+    followedCuratorOrderMap,
+    followedWallets,
+    interestProfile,
+    isSearchMode,
     nowSeconds,
-    watchedOrderMap,
     voteOrderMap,
     settlingSoonOrderMap,
-    followedCuratorOrderMap,
+    votedContentIds,
+    watchedContentIds,
+    watchedOrderMap,
   ]);
+  displayFeedRef.current = displayFeed;
 
   const {
     activeItem: primaryItem,
@@ -492,6 +555,33 @@ const HomeInner = () => {
     const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
     return selectedNextItem ? getVoteFeedThumbnailSrc(selectedNextItem) : null;
   }, [activeSourceIndex, displayFeed]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!primaryItem) {
+      activeViewSessionRef.current = null;
+      return;
+    }
+
+    persistRecommendationSignal(primaryItem, "impression");
+    const session = {
+      contentId: primaryItem.id.toString(),
+      startedAt: Date.now(),
+      hasPositiveInteraction: false,
+    };
+    activeViewSessionRef.current = session;
+
+    return () => {
+      if (activeViewSessionRef.current === session) {
+        flushActiveViewSession(false);
+      }
+    };
+  }, [flushActiveViewSession, persistRecommendationSignal, primaryItem]);
 
   const submitterAddresses = useMemo(() => {
     return visibleFeedItems.map(item => item.submitter);
@@ -687,9 +777,17 @@ const HomeInner = () => {
         return;
       }
 
+      markPrimaryInteraction(item.id);
+      recordRecommendationSignal(item, "vote_intent", { isUp });
       setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
     },
-    [getContentCooldownSeconds, primaryItem, primaryItemCooldownSeconds],
+    [
+      getContentCooldownSeconds,
+      markPrimaryInteraction,
+      primaryItem,
+      primaryItemCooldownSeconds,
+      recordRecommendationSignal,
+    ],
   );
 
   const handleConfirmStake = useCallback(
@@ -712,6 +810,10 @@ const HomeInner = () => {
       void refetchStakeModalCooldown();
       setStakeModal(prev => ({ ...prev, isOpen: false }));
       if (success) {
+        if (item) {
+          markPrimaryInteraction(item.id);
+          recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
+        }
         notification.success(`Vote committed! Stake: ${stakeAmount} cREP`);
         if (isFirstVote) {
           markVoteCompleted();
@@ -724,8 +826,10 @@ const HomeInner = () => {
       displayFeed,
       isFirstVote,
       markVoteCompleted,
+      markPrimaryInteraction,
       refetchPrimaryItemCooldown,
       refetchStakeModalCooldown,
+      recordRecommendationSignal,
       stakeModal,
       stakeModalCooldownSeconds,
     ],
@@ -772,6 +876,7 @@ const HomeInner = () => {
       }
 
       if (activeSourceIndex !== -1) {
+        flushActiveViewSession(true);
         setNavigationDirection(targetIndex > activeSourceIndex ? "next" : "previous");
       }
 
@@ -784,17 +889,27 @@ const HomeInner = () => {
 
       return true;
     },
-    [activeSourceIndex, displayFeed, focusQueueThumbnail, replaceContentQueryParam, selectContent],
+    [
+      activeSourceIndex,
+      displayFeed,
+      flushActiveViewSession,
+      focusQueueThumbnail,
+      replaceContentQueryParam,
+      selectContent,
+    ],
   );
 
   const handleSelectCard = useCallback(
-    (id: bigint, categoryId: bigint) => {
-      trackContentClick(id, categoryId);
+    (id: bigint, _categoryId: bigint) => {
+      const item = displayFeed.find(entry => entry.id === id);
+      if (item) {
+        recordRecommendationSignal(item, "card_open");
+      }
       const targetIndex = displayFeed.findIndex(item => item.id === id);
       if (targetIndex === -1) return;
       handleSelectByIndex(targetIndex);
     },
-    [displayFeed, handleSelectByIndex],
+    [displayFeed, handleSelectByIndex, recordRecommendationSignal],
   );
 
   const handleNavigateSelection = useCallback(
@@ -925,9 +1040,14 @@ const HomeInner = () => {
         return;
       }
 
+      const item = displayFeed.find(entry => entry.id === contentId);
+      if (item) {
+        markPrimaryInteraction(item.id);
+        recordRecommendationSignal(item, "watch_toggle", { selected: result.watched });
+      }
       notification.success(result.watched ? "Added to your watchlist" : "Removed from your watchlist");
     },
-    [openConnectModal, toggleWatch],
+    [displayFeed, markPrimaryInteraction, openConnectModal, recordRecommendationSignal, toggleWatch],
   );
 
   const handleToggleFollow = useCallback(
@@ -949,9 +1069,23 @@ const HomeInner = () => {
         return;
       }
 
+      const item =
+        displayFeed.find(entry => entry.submitter.toLowerCase() === targetAddress.toLowerCase()) ?? primaryItem;
+      if (item) {
+        markPrimaryInteraction(item.id);
+        recordRecommendationSignal(item, "follow_toggle", { selected: result.following });
+      }
       notification.success(result.following ? "Following curator" : "Unfollowed curator");
     },
-    [openConnectModal, toggleFollow],
+    [displayFeed, markPrimaryInteraction, openConnectModal, primaryItem, recordRecommendationSignal, toggleFollow],
+  );
+
+  const handleExternalOpen = useCallback(
+    (item: ContentItem) => {
+      markPrimaryInteraction(item.id);
+      recordRecommendationSignal(item, "external_open");
+    },
+    [markPrimaryInteraction, recordRecommendationSignal],
   );
 
   const handleViewChange = useCallback(
@@ -1190,6 +1324,7 @@ const HomeInner = () => {
                     <FeedVoteCard
                       item={primaryItem}
                       submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
+                      onExternalOpen={handleExternalOpen}
                       onVote={handleButtonVote}
                       onToggleWatch={handleToggleWatch}
                       onToggleFollow={handleToggleFollow}
