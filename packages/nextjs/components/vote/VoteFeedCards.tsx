@@ -175,7 +175,7 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <h2 className="break-words text-center text-xl font-semibold leading-tight text-base-content xl:text-lg">
+          <h2 className="break-words text-center font-display text-[1.7rem] leading-[0.94] tracking-[0.02em] text-base-content sm:text-[1.9rem] xl:text-[1.75rem]">
             {item.title}
           </h2>
         </div>
