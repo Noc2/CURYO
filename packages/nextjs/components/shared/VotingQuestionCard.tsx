@@ -75,6 +75,40 @@ export function VotingQuestionCard({
     myCommitHash != null &&
     (myCommitHash as unknown as string) !== "0x0000000000000000000000000000000000000000000000000000000000000000";
 
+  const centerStatusContent = address ? (
+    hasMyVote ? (
+      <div
+        className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
+        data-tip="Your vote is encrypted until the blind phase ends. The keeper normally reveals eligible votes afterward, and you can self-reveal if needed."
+      >
+        <span className="text-base font-semibold text-primary">Committed</span>
+        <span className="text-base text-base-content/50">hidden</span>
+      </div>
+    ) : isOwnContent ? (
+      <div
+        className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
+        data-tip="Content submitters cannot vote on their own submissions."
+      >
+        <span className="text-base text-base-content/40">Your submission</span>
+      </div>
+    ) : cooldownActive ? (
+      <div
+        className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
+        data-tip={`You already voted on this content within the last 24 hours. Try again in ${cooldownLabel}.`}
+      >
+        <span className="text-base font-medium text-base-content/55">Cooldown</span>
+        <span className="text-base text-base-content/35">{cooldownLabel}</span>
+      </div>
+    ) : isRoundFull ? (
+      <div
+        className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
+        data-tip="This round has reached the maximum number of voters. A new round will start after resolution."
+      >
+        <span className="text-base text-base-content/40">Round full</span>
+      </div>
+    ) : null
+  ) : null;
+
   return (
     <div
       className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
@@ -92,63 +126,74 @@ export function VotingQuestionCard({
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
           <RatingOrb rating={currentRatingValue} size={190} />
-        </div>
+          <div className="mt-3 flex w-full shrink-0 flex-col items-center gap-2">
+            {phase === "voting" || hasMyVote ? (
+              <div className="flex flex-col items-center gap-2">
+                {phase === "voting" && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="flex -space-x-1">
+                      {Array.from({ length: filledVoteIcons }).map((_, i) => (
+                        <svg
+                          key={`filled-${i}`}
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-3.5 w-3.5 text-primary"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      ))}
+                      {Array.from({ length: emptyVoteIcons }).map((_, i) => (
+                        <svg
+                          key={`empty-${i}`}
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-3.5 w-3.5 text-base-content/20"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      ))}
+                    </span>
+                    <InfoTooltip
+                      text={`${voteCount} vote${voteCount === 1 ? "" : "s"} committed in this round. ${revealedCount} revealed.${pendingRevealCount > 0 ? ` ${pendingRevealCount} commit${pendingRevealCount === 1 ? "" : "s"} still pending reveal.` : ""} ${Math.max(0, minVoters - revealedCount) > 0 ? `${Math.max(0, minVoters - revealedCount)} more revealed vote${Math.max(0, minVoters - revealedCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."}`}
+                      position="bottom"
+                    />
+                  </span>
+                )}
 
-        {/* Committed voter icons */}
-        {(phase === "voting" || hasMyVote) && (
-          <div className="mb-2 flex shrink-0 flex-col items-center gap-2">
-            {phase === "voting" && (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="flex -space-x-1">
-                  {Array.from({ length: filledVoteIcons }).map((_, i) => (
-                    <svg
-                      key={`filled-${i}`}
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-3.5 w-3.5 text-primary"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  ))}
-                  {Array.from({ length: emptyVoteIcons }).map((_, i) => (
-                    <svg
-                      key={`empty-${i}`}
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-3.5 w-3.5 text-base-content/20"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  ))}
-                </span>
-                <InfoTooltip
-                  text={`${voteCount} vote${voteCount === 1 ? "" : "s"} committed in this round. ${revealedCount} revealed.${pendingRevealCount > 0 ? ` ${pendingRevealCount} commit${pendingRevealCount === 1 ? "" : "s"} still pending reveal.` : ""} ${Math.max(0, minVoters - revealedCount) > 0 ? `${Math.max(0, minVoters - revealedCount)} more revealed vote${Math.max(0, minVoters - revealedCount) === 1 ? "" : "s"} needed before settlement can start.` : "Threshold reached. Settlement follows once past-epoch reveal checks clear."}`}
-                  position="bottom"
-                />
-              </span>
-            )}
+                {centerStatusContent}
+              </div>
+            ) : centerStatusContent ? (
+              centerStatusContent
+            ) : null}
 
-            {hasMyVote && (
-              <div
-                className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-                data-tip="Your vote is encrypted until the blind phase ends. The keeper normally reveals eligible votes afterward, and you can self-reveal if needed."
-              >
-                <span className="text-base font-semibold text-primary">Committed</span>
-                <span className="text-base text-base-content/50">hidden</span>
+            {/* Vote error message */}
+            {displayError && <p className="text-center text-base text-error">{displayError}</p>}
+
+            {/* Voting arrows - centered below the rating stack */}
+            {!(address && hasMyVote) && !centerStatusContent && (
+              <div className="flex shrink-0 items-center justify-center gap-2 lg:gap-3">
+                {address ? (
+                  <>
+                    <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
+                    <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
+                  </>
+                ) : (
+                  <RainbowKitCustomConnectButton />
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
 
         <div className="mb-1.5 flex shrink-0 justify-start">
           <RoundProgress snapshot={roundSnapshot} />
@@ -157,47 +202,6 @@ export function VotingQuestionCard({
         <div className="mb-3 flex shrink-0 justify-start">
           <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
         </div>
-
-        {/* Vote error message */}
-        {displayError && <p className="mb-2 text-center text-base text-error">{displayError}</p>}
-
-        {/* Voting arrows - centered below question */}
-        {!(address && hasMyVote) && (
-          <div className="mb-3 flex shrink-0 items-center justify-center gap-2 lg:gap-3">
-            {address ? (
-              isOwnContent ? (
-                <div
-                  className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-                  data-tip="Content submitters cannot vote on their own submissions."
-                >
-                  <span className="text-base text-base-content/40">Your submission</span>
-                </div>
-              ) : cooldownActive ? (
-                <div
-                  className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-                  data-tip={`You already voted on this content within the last 24 hours. Try again in ${cooldownLabel}.`}
-                >
-                  <span className="text-base font-medium text-base-content/55">Cooldown</span>
-                  <span className="text-base text-base-content/35">{cooldownLabel}</span>
-                </div>
-              ) : isRoundFull ? (
-                <div
-                  className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
-                  data-tip="This round has reached the maximum number of voters. A new round will start after resolution."
-                >
-                  <span className="text-base text-base-content/40">Round full</span>
-                </div>
-              ) : (
-                <>
-                  <CuryoVoteButton direction="down" onClick={() => onVote(false)} disabled={isCommitting} />
-                  <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
-                </>
-              )
-            ) : (
-              <RainbowKitCustomConnectButton />
-            )}
-          </div>
-        )}
 
         {/* Rating history chart */}
         <div className="mt-auto shrink-0 pt-1.5 xl:pt-1">
