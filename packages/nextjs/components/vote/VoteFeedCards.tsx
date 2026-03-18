@@ -304,6 +304,7 @@ interface FeedQueueCardProps {
   onNavigate?: (action: "previous" | "next" | "first" | "last", currentId: bigint) => void;
   queuePosition: number;
   queueStatus?: QueueCardStatus | null;
+  hasVoted?: boolean;
   selected: boolean;
 }
 
@@ -313,6 +314,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   onNavigate,
   queuePosition,
   queueStatus,
+  hasVoted = false,
   selected,
 }: FeedQueueCardProps) {
   const platform = detectPlatform(item.url);
@@ -394,13 +396,20 @@ export const FeedQueueCard = memo(function FeedQueueCard({
 
       <div className="flex min-h-[5.5rem] flex-1 flex-col p-2.5">
         <p className="line-clamp-2 text-sm font-medium leading-snug text-base-content/90">{item.title}</p>
-        {queueStatus ? (
+        {queueStatus || hasVoted ? (
           <div className="mt-2 flex flex-wrap gap-1.5">
-            <span
-              className={`inline-flex items-center rounded-full px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] ring-1 ${statusBadgeClassName}`}
-            >
-              {queueStatus.urgencyLabel}
-            </span>
+            {queueStatus ? (
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] ring-1 ${statusBadgeClassName}`}
+              >
+                {queueStatus.urgencyLabel}
+              </span>
+            ) : null}
+            {hasVoted ? (
+              <span className="inline-flex items-center rounded-full bg-success/14 px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] text-success ring-1 ring-success/30">
+                Voted
+              </span>
+            ) : null}
           </div>
         ) : null}
       </div>

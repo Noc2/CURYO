@@ -1374,6 +1374,7 @@ const HomeInner = () => {
                               onNavigate={handleQueueKeyboardNavigate}
                               queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
                               queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
+                              hasVoted={votedContentIds.has(item.id.toString())}
                               selected={item.id === primaryItem?.id}
                             />
                           ))}
@@ -1387,6 +1388,7 @@ const HomeInner = () => {
                           onNavigate={handleQueueKeyboardNavigate}
                           queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
                           queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
+                          hasVoted={votedContentIds.has(item.id.toString())}
                           selected={item.id === primaryItem?.id}
                         />
                       ))}
