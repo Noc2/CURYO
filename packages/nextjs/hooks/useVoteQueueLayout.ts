@@ -19,18 +19,22 @@ export function useVoteQueueLayout(containerElement: HTMLElement | null) {
 
     let animationFrame = 0;
     if (!containerElement) return;
+    const scrollContainer = containerElement.closest("main");
 
     const updateLayout = () => {
       animationFrame = 0;
       const element = containerElement;
+      const scrollContainerRect = scrollContainer?.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
+      const viewportHeight = scrollContainer?.clientHeight ?? window.innerHeight;
+      const availableHeight = Math.max(0, (scrollContainerRect?.bottom ?? window.innerHeight) - rect.top);
 
       const rootFontSize = Number.parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
-      const rect = element.getBoundingClientRect();
       const nextLayout = computeVoteQueueLayout({
         viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
+        viewportHeight,
         containerWidth: element.clientWidth,
-        availableHeight: Math.max(0, window.innerHeight - rect.top),
+        availableHeight,
         rootFontSize,
       });
 
@@ -60,6 +64,9 @@ export function useVoteQueueLayout(containerElement: HTMLElement | null) {
       scheduleUpdate();
     });
     observer.observe(containerElement);
+    if (scrollContainer) {
+      observer.observe(scrollContainer);
+    }
     window.addEventListener("resize", scheduleUpdate);
 
     return () => {

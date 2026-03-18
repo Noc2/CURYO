@@ -20,13 +20,26 @@ test("computeVoteQueueLayout enables two rows only on extra-large viewports with
     viewportWidth: 1440,
     viewportHeight: 980,
     containerWidth: 1024,
-    availableHeight: 390,
+    availableHeight: 460,
     rootFontSize: 16,
   });
 
   assert.equal(layout.rows, 2);
   assert.ok(layout.columns >= 4);
   assert.equal(layout.pageSize, layout.columns * 2);
+});
+
+test("computeVoteQueueLayout keeps one row when a second row would overflow the viewport", () => {
+  const layout = computeVoteQueueLayout({
+    viewportWidth: 1440,
+    viewportHeight: 980,
+    containerWidth: 1024,
+    availableHeight: 390,
+    rootFontSize: 16,
+  });
+
+  assert.equal(layout.rows, 1);
+  assert.equal(layout.pageSize, layout.columns);
 });
 
 test("chunkVoteQueueItems groups items into horizontal pages", () => {
