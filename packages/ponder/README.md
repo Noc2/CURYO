@@ -9,7 +9,7 @@ On-chain event indexer built with [Ponder](https://ponder.sh/). Listens to smart
 cp packages/ponder/.env.example packages/ponder/.env.local
 # Edit packages/ponder/.env.local with your RPC URL, contract addresses, and start blocks
 
-yarn ponder:dev     # Development mode with file watching + auto-recovery
+yarn ponder:dev     # Development mode with file watching + auto-recovery, terminal UI disabled
 yarn ponder:start   # Production mode (no file watching)
 yarn ponder:codegen # Regenerate TypeScript types from schema
 ```
@@ -20,7 +20,7 @@ Requires a running chain (local via `yarn chain` or a configured testnet RPC).
 
 | Command | Description |
 |---|---|
-| `yarn ponder:dev` | Development mode with crash recovery |
+| `yarn ponder:dev` | Development mode with crash recovery and terminal UI disabled |
 | `yarn ponder:start` | Production mode |
 | `yarn ponder:codegen` | Generate types from `ponder.schema.ts` |
 
@@ -28,7 +28,8 @@ Within the package directory, additional scripts are available:
 
 | Command | Description |
 |---|---|
-| `yarn dev:raw` | Development mode without recovery wrapper |
+| `yarn dev:raw` | Development mode without recovery wrapper, terminal UI disabled |
+| `yarn dev:ui` | Development mode with Ponder's live terminal UI enabled |
 | `yarn serve` | Run API only (no indexing) |
 
 ## Configuration

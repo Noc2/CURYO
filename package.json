@@ -55,6 +55,7 @@
     "vercel:yolo": "yarn workspace @curyo/nextjs vercel:yolo",
     "verify": "yarn foundry:verify",
     "ponder:dev": "yarn workspace @curyo/ponder dev",
+    "ponder:dev:ui": "yarn workspace @curyo/ponder dev:ui",
     "ponder:start": "yarn workspace @curyo/ponder start",
     "ponder:codegen": "yarn workspace @curyo/ponder codegen",
     "bot:vote": "yarn workspace @curyo/bot vote",
