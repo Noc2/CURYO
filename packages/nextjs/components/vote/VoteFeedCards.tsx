@@ -132,6 +132,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           <VotingQuestionCard
             contentId={item.id}
             categoryId={item.categoryId}
+            currentRating={item.rating}
             onVote={isUp => onVote(item, isUp)}
             isCommitting={isCommitting}
             address={address}

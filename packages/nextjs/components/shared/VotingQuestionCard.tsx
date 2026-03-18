@@ -15,6 +15,7 @@ import { computeVoteProgressIconCounts } from "~~/lib/vote/voteProgressIcons";
 interface VotingQuestionCardProps {
   contentId: bigint;
   categoryId: bigint;
+  currentRating: number;
   onVote: (isUp: boolean) => void;
   isCommitting: boolean;
   address?: string;
@@ -34,6 +35,7 @@ const RATING_GUIDANCE_TEXT =
 export function VotingQuestionCard({
   contentId,
   categoryId,
+  currentRating,
   onVote,
   isCommitting,
   address,
@@ -42,14 +44,6 @@ export function VotingQuestionCard({
   isOwnContent,
   embedded,
 }: VotingQuestionCardProps) {
-  const { data: currentRating } = useScaffoldReadContract({
-    contractName: "ContentRegistry",
-    functionName: "getRating",
-    args: [contentId],
-  });
-
-  const currentRatingValue = currentRating ? Number(currentRating) : 50;
-
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId);
   const { roundId, isRoundFull, phase, voteCount, revealedCount, minVoters } = roundSnapshot;
@@ -124,7 +118,7 @@ export function VotingQuestionCard({
             <span>Community rating</span>
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
-          <RatingOrb rating={currentRatingValue} size={190} />
+          <RatingOrb rating={currentRating} size={190} />
           <div className="mt-3 flex w-full shrink-0 flex-col items-center gap-2">
             {phase === "voting" || hasMyVote ? (
               <div className="flex flex-col items-center gap-2">
