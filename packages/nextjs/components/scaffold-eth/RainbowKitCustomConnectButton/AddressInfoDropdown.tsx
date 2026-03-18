@@ -41,22 +41,13 @@ function formatCrepAmount(value: bigint | null | undefined) {
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
-function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
+function useWalletSummaryData(address: Address, crepBalance: bigint | undefined) {
   const isPageVisible = usePageVisibility();
-  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
   const { totalSubmissionStake } = useSubmissionStakes(address);
   const { activeStaked: votingStaked } = useVotingStakes(address);
-  const { claimAll, isClaiming, progress } = useClaimAll();
   const { votes: activeVotes, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
   const { readyCount: manualRevealReadyCount } = useManualRevealVotes(address);
   const showManualRevealLink = manualRevealReadyCount > 0;
-
-  const claimableFormatted =
-    totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
-
-  const handleClaimAll = () => {
-    claimAll(claimableItems, () => refetchClaimable());
-  };
 
   const { data: frontendInfo } = useScaffoldReadContract({
     contractName: "FrontendRegistry",
@@ -82,13 +73,46 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
           frontendStakedMicro: frontendInfo?.[1] ?? 0n,
         },
   );
+
+  return { summary, activeVotes, earliestReveal, hasPendingReveals, showManualRevealLink };
+}
+
+function WalletBalanceText({
+  address,
+  crepBalance,
+  className,
+}: {
+  address: Address;
+  crepBalance: bigint | undefined;
+  className?: string;
+}) {
+  const { summary } = useWalletSummaryData(address, crepBalance);
+  const displayBalance = summary?.totalMicro ?? crepBalance;
+
+  return <div className={className}>{formatCrepAmount(displayBalance)} cREP</div>;
+}
+
+function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
+  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
+  const { claimAll, isClaiming, progress } = useClaimAll();
+  const { summary, activeVotes, earliestReveal, hasPendingReveals, showManualRevealLink } = useWalletSummaryData(
+    address,
+    crepBalance,
+  );
   const shouldShowStaked = (summary?.totalStakedMicro ?? 0n) > 0n || activeVotes.length > 0;
+  const displayBalance = summary?.totalMicro ?? crepBalance;
+
+  const claimableFormatted =
+    totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
+
+  const handleClaimAll = () => {
+    claimAll(claimableItems, () => refetchClaimable());
+  };
 
   const stakeParts: string[] = [];
   const submissionStake = Number(summary?.submissionStakedMicro ?? 0n) / 1e6;
   const frontendStake = Number(summary?.frontendStakedMicro ?? 0n) / 1e6;
   const votingStake = Number(summary?.votingStakedMicro ?? 0n) / 1e6;
-  const pendingStake = Number(summary?.pendingStakedMicro ?? 0n) / 1e6;
 
   if (submissionStake > 0) stakeParts.push(`${submissionStake} cREP submissions`);
   if (votingStake > 0) {
@@ -98,14 +122,11 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
     stakeParts.push(votingLabel);
   }
   if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
-  if (pendingStake > 0) stakeParts.push(`${pendingStake} cREP syncing`);
   const stakeTooltip = stakeParts.join(" · ");
 
   return (
     <>
-      <div className="text-base text-base-content text-left px-4 pl-12">
-        {formatCrepAmount(summary?.liquidMicro)} cREP
-      </div>
+      <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(displayBalance)} cREP</div>
       {showManualRevealLink ? (
         <div className="text-left px-4 pl-12">
           <Link
@@ -119,7 +140,7 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
       {shouldShowStaked && (
         <div className="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12">
           {formatCrepAmount(summary?.totalStakedMicro)} Staked
-          <InfoTooltip text={stakeTooltip} position="bottom" />
+          {stakeTooltip ? <InfoTooltip text={stakeTooltip} position="bottom" /> : null}
         </div>
       )}
       {totalClaimable > 0n && (
@@ -209,7 +230,6 @@ export const AddressInfoDropdown = ({
       refetchInterval: isPageVisible ? 60_000 : false,
     },
   });
-  const crepFormatted = crepBalance != null ? formatCrepAmount(crepBalance) : "—";
 
   if (menuItemsOnly) {
     return <MenuItems disconnect={disconnect} connector={connector} showText={true} showFaucet={showFaucet} />;
@@ -225,7 +245,11 @@ export const AddressInfoDropdown = ({
       </div>
       {inlineMenu ? <InlineWalletSummary address={address} crepBalance={crepBalance} /> : null}
       {!inlineMenu ? (
-        <div className="text-base text-base-content text-left px-4 pl-12">{crepFormatted} cREP</div>
+        <WalletBalanceText
+          address={address}
+          crepBalance={crepBalance}
+          className="text-base text-base-content text-left px-4 pl-12"
+        />
       ) : null}
     </div>
   );
@@ -249,7 +273,11 @@ export const AddressInfoDropdown = ({
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      <span className="text-base text-base-content hidden xl:inline xl:px-2">{crepFormatted} cREP</span>
+      <WalletBalanceText
+        address={address}
+        crepBalance={crepBalance}
+        className="text-base text-base-content hidden xl:inline xl:px-2"
+      />
     </div>
   );
 };
