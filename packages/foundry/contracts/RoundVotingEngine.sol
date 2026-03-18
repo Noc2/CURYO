@@ -439,8 +439,9 @@ contract RoundVotingEngine is
         } else {
             RoundLib.Round storage currentRound = rounds[contentId][currentOpenRoundId];
             // If this commit would auto-finalize the stale open round and roll into a fresh round,
-            // re-run the dormancy gate before allowing voting to continue.
+            // finalize it first so the registry can observe that no open round remains.
             if (_canFinalizeRevealFailedRound(contentId, currentOpenRoundId, currentRound)) {
+                _markRoundRevealFailed(contentId, currentOpenRoundId, currentRound);
                 if (registry.isDormancyEligible(contentId)) revert DormancyWindowElapsed();
             }
         }
@@ -554,9 +555,7 @@ contract RoundVotingEngine is
                 existingRound.state == RoundLib.RoundState.Open
                     && _canFinalizeRevealFailedRound(contentId, roundId, existingRound)
             ) {
-                existingRound.state = RoundLib.RoundState.RevealFailed;
-                existingRound.settledAt = block.timestamp;
-                emit RoundRevealFailed(contentId, roundId);
+                _markRoundRevealFailed(contentId, roundId, existingRound);
             }
             if (!RoundLib.isTerminal(existingRound)) {
                 return roundId;
@@ -576,6 +575,12 @@ contract RoundVotingEngine is
         roundRevealGracePeriodSnapshot[contentId][roundId] = revealGracePeriod;
 
         return roundId;
+    }
+
+    function _markRoundRevealFailed(uint256 contentId, uint256 roundId, RoundLib.Round storage round) internal {
+        round.state = RoundLib.RoundState.RevealFailed;
+        round.settledAt = block.timestamp;
+        emit RoundRevealFailed(contentId, roundId);
     }
 
     // =========================================================================
@@ -605,10 +610,7 @@ contract RoundVotingEngine is
         if (round.revealedCount >= roundCfg.minVoters) revert ThresholdReached();
         if (!_canFinalizeRevealFailedRound(contentId, roundId, round)) revert RevealGraceActive();
 
-        round.state = RoundLib.RoundState.RevealFailed;
-        round.settledAt = block.timestamp;
-
-        emit RoundRevealFailed(contentId, roundId);
+        _markRoundRevealFailed(contentId, roundId, round);
     }
 
     // =========================================================================
