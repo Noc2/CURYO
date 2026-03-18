@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type CSSProperties, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { EPOCH_WEIGHT_BPS } from "@curyo/contracts/protocol";
 import { AnimatePresence, motion } from "framer-motion";
@@ -46,7 +46,13 @@ export function StakeSelector({
   const tokenId = voterIdData.tokenId as bigint;
 
   const roundSnapshot = useRoundSnapshot(contentId);
-  const { roundId: currentRoundId, phase, isEpoch1, upPool, downPool } = roundSnapshot;
+  const {
+    roundId: currentRoundId,
+    phase,
+    isEpoch1,
+    upPool,
+    downPool,
+  } = roundSnapshot;
   const effectiveIsBlind = phase !== "voting" || isEpoch1;
 
   const estimateSnapshot = useMemo(
@@ -94,8 +100,11 @@ export function StakeSelector({
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
-  const phaseToneClassName = effectiveIsBlind ? "bg-primary/10" : "bg-warning/10";
-  const phaseHeadlineClassName = effectiveIsBlind ? "text-primary" : "text-warning";
+  const phaseToneClassName = isUp ? (effectiveIsBlind ? "bg-primary/10" : "bg-warning/10") : "bg-error/10";
+  const phaseHeadlineClassName = isUp ? (effectiveIsBlind ? "text-primary" : "text-warning") : "text-error";
+  const selectedPresetClassName = isUp ? "bg-primary text-primary-content" : "bg-error text-primary-content";
+  const sliderClassName = `range ${isUp ? "range-primary" : "range-error"} range-sm w-full`;
+  const sliderStyle = { "--range-thumb": "var(--curyo-warm-white)" } as CSSProperties;
   const weightPercent = Math.round(
     (effectiveIsBlind ? EPOCH_WEIGHT_BPS.blind : EPOCH_WEIGHT_BPS.informed) / 100,
   ).toLocaleString();
@@ -191,7 +200,7 @@ export function StakeSelector({
                   key={preset}
                   onClick={() => setAmount(preset)}
                   className={`rounded-lg px-4 py-2 text-base font-medium transition-colors ${
-                    amount === preset ? "bg-primary text-primary-content" : "pill-inactive-muted"
+                    amount === preset ? selectedPresetClassName : "pill-inactive-muted"
                   }`}
                 >
                   {preset}
@@ -206,7 +215,8 @@ export function StakeSelector({
                 max={sliderMax}
                 value={Math.min(amount, sliderMax)}
                 onChange={e => setAmount(Number(e.target.value))}
-                className="range range-primary range-sm w-full"
+                className={sliderClassName}
+                style={sliderStyle}
                 disabled={maxStake < 1}
                 aria-label="Stake amount"
               />
@@ -272,9 +282,7 @@ export function StakeSelector({
                     <div className="flex items-center justify-between gap-3">
                       <span>Est. return if right</span>
                       <span className="font-semibold tabular-nums">
-                        {openPhaseGrossReturnMicro !== null
-                          ? `${formatCrepAmount(openPhaseGrossReturnMicro)} ${symbol}`
-                          : "Loading"}
+                        {openPhaseGrossReturnMicro !== null ? `${formatCrepAmount(openPhaseGrossReturnMicro)} ${symbol}` : "Loading"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
