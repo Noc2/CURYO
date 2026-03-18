@@ -161,9 +161,9 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
       ) : voteCount >= minVoters ? (
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            Momentum building
+            Waiting for reveals
             <InfoTooltip
-              text="Enough votes are committed for this round to matter. Settlement follows once the reveal threshold and past-epoch checks clear."
+              text="Enough votes are committed. Settlement follows once enough votes are revealed and past-epoch checks clear."
               position="bottom"
             />
           </span>
