@@ -769,7 +769,7 @@ export function GovernanceActionComposer() {
             {formError && <p className="text-base text-error">{formError}</p>}
 
             <button
-              className="btn btn-curyo w-full"
+              className="btn btn-primary w-full"
               disabled={
                 isPending || (selectedTemplate.mode === "proposal" && (!hasGovernorContract || proposalBlocked))
               }

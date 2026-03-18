@@ -177,7 +177,7 @@ export const ProposalCard = ({ proposal, isActing = false, onVote, onQueue, onEx
       )}
 
       {canExecute && (
-        <button className="btn btn-curyo btn-sm w-full" disabled={isActing} onClick={() => onExecute(proposal)}>
+        <button className="btn btn-primary btn-sm w-full" disabled={isActing} onClick={() => onExecute(proposal)}>
           Execute Proposal
         </button>
       )}

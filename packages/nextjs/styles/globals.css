@@ -237,15 +237,15 @@ body {
 
 .btn-submit {
   @apply shadow-sm;
-  color: var(--color-accent-content);
-  background: var(--curyo-ember-deep);
+  color: var(--color-primary-content);
+  background: var(--curyo-ember);
   border: none;
-  box-shadow: 0 14px 30px rgb(179 52 27 / 0.18);
+  box-shadow: 0 14px 30px rgb(242 100 38 / 0.18);
 }
 
 .btn-submit:hover {
-  background: var(--curyo-ember-deep);
-  box-shadow: 0 18px 34px rgb(179 52 27 / 0.24);
+  background: var(--curyo-ember);
+  box-shadow: 0 18px 34px rgb(242 100 38 / 0.24);
 }
 
 .btn-curyo {

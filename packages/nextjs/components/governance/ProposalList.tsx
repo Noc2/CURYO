@@ -104,7 +104,7 @@ export const ProposalList = () => {
               : "Governor unavailable on this network"}
           </p>
         </div>
-        <button className="btn btn-curyo btn-sm gap-2" onClick={scrollToComposer}>
+        <button className="btn btn-primary btn-sm gap-2" onClick={scrollToComposer}>
           <PlusIcon className="w-4 h-4" />
           New Action
         </button>
