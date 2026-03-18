@@ -275,52 +275,52 @@ export function ProfileForm() {
       </div>
 
       <div className="surface-card-nested rounded-2xl p-4 space-y-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-lg font-semibold">Reputation avatar color</h2>
-              <InfoTooltip text="Choose one accent color for your generated Curyo avatar. The rest of the palette is derived automatically from your address and activity." />
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-lg font-semibold">Reputation avatar color</h2>
+          <InfoTooltip text="Choose one accent color for your generated Curyo avatar. The rest of the palette is derived automatically from your address and activity." />
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr),auto] lg:items-center">
+          <div className="space-y-3">
+            <label className="text-base font-medium">Accent color</label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                type="color"
+                aria-label="Avatar accent color picker"
+                className="h-12 w-20 cursor-pointer rounded-xl border border-base-300 bg-base-100 p-1"
+                value={avatarAccentPickerValue}
+                onChange={e => {
+                  setAvatarAccentInput(e.target.value);
+                  setAccentError(null);
+                }}
+                disabled={avatarAccentBusy}
+              />
+              <input
+                type="text"
+                placeholder="#f26426"
+                className={`input input-bordered w-full bg-base-100 sm:max-w-xs ${avatarAccentInputError ? "input-error" : ""}`}
+                value={avatarAccentInput}
+                onChange={e => {
+                  setAvatarAccentInput(e.target.value);
+                  setAccentError(null);
+                }}
+                disabled={avatarAccentBusy}
+              />
             </div>
           </div>
 
-          <ProfileImageLightbox
-            src={generatedAvatarPreviewUrl}
-            fallbackSrc={generatedAvatarPreviewUrl}
-            alt="Generated avatar preview"
-            width={96}
-            height={96}
-            triggerLabel="Open generated avatar preview"
-            modalLabel="Generated avatar preview"
-            buttonClassName="rounded-full"
-            imageClassName="h-24 w-24 rounded-full border-2 border-base-300 object-cover"
-            modalImageClassName="rounded-[2rem]"
-          />
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-[auto,1fr] sm:items-center">
-          <label className="text-base font-medium">Accent color</label>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <input
-              type="color"
-              aria-label="Avatar accent color picker"
-              className="h-12 w-20 cursor-pointer rounded-xl border border-base-300 bg-base-100 p-1"
-              value={avatarAccentPickerValue}
-              onChange={e => {
-                setAvatarAccentInput(e.target.value);
-                setAccentError(null);
-              }}
-              disabled={avatarAccentBusy}
-            />
-            <input
-              type="text"
-              placeholder="#f26426"
-              className={`input input-bordered w-full bg-base-100 sm:max-w-xs ${avatarAccentInputError ? "input-error" : ""}`}
-              value={avatarAccentInput}
-              onChange={e => {
-                setAvatarAccentInput(e.target.value);
-                setAccentError(null);
-              }}
-              disabled={avatarAccentBusy}
+          <div className="flex justify-start lg:justify-end">
+            <ProfileImageLightbox
+              src={generatedAvatarPreviewUrl}
+              fallbackSrc={generatedAvatarPreviewUrl}
+              alt="Generated avatar preview"
+              width={96}
+              height={96}
+              triggerLabel="Open generated avatar preview"
+              modalLabel="Generated avatar preview"
+              buttonClassName="rounded-full"
+              imageClassName="h-24 w-24 rounded-full border-2 border-base-300 object-cover"
+              modalImageClassName="rounded-[2rem]"
             />
           </div>
         </div>
