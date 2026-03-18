@@ -35,7 +35,7 @@ test("getQueueCardStatus shows vote deficit urgency in open phase", () => {
   assert.deepEqual(status, {
     phaseLabel: "Open",
     phaseTone: "open",
-    urgencyLabel: "Needs 2 more votes",
+    urgencyLabel: "Needs 2 more",
     urgencyTone: "warning",
   });
 });

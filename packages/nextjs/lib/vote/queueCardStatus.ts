@@ -70,7 +70,7 @@ export function getQueueCardStatus(snapshot: QueueCardStatusSnapshot): QueueCard
   return {
     phaseLabel: "Open",
     phaseTone: "open",
-    urgencyLabel: `Needs ${votesNeeded} more vote${votesNeeded === 1 ? "" : "s"}`,
+    urgencyLabel: `Needs ${votesNeeded} more`,
     urgencyTone: "warning",
   };
 }

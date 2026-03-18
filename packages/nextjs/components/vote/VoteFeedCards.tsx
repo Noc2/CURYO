@@ -406,7 +406,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
               </span>
             ) : null}
             {hasVoted ? (
-              <span className="inline-flex items-center rounded-full bg-success/14 px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] text-success ring-1 ring-success/30">
+              <span className="inline-flex items-center rounded-full bg-base-content/[0.05] px-2 py-1 text-[0.68rem] font-semibold tracking-[0.04em] text-base-content/70 ring-1 ring-base-content/10">
                 Voted
               </span>
             ) : null}
