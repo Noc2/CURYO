@@ -515,7 +515,8 @@ const SmartContracts: NextPage = () => {
       <h2>ProfileRegistry</h2>
       <p>
         On-chain user profiles with unique names (3&ndash;20 characters), optional profile images, and an optional
-        public rating strategy. Requires Voter ID.
+        public rating strategy. Profile settings also support an on-chain generated avatar color override. Requires
+        Voter ID.
       </p>
       <h3>Key Functions</h3>
       <ul>
@@ -528,6 +529,14 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>getAddressByName(name)</code> &mdash; Reverse lookup: name to owner address.
+        </li>
+        <li>
+          <code>setAvatarAccent(rgb)</code> and <code>clearAvatarAccent()</code> &mdash; Set or remove the generated
+          avatar color override.
+        </li>
+        <li>
+          <code>getAvatarAccent(address)</code> &mdash; Read whether an avatar color override is set and the stored RGB
+          value.
         </li>
       </ul>
 

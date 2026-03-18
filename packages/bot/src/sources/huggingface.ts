@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -53,21 +54,20 @@ export const huggingFaceSource: ContentSource = {
       for (const model of models) {
         const modelId = model.modelId || model.id;
         if (!modelId) continue;
+        const title = truncateContentTitle(modelId);
 
         const pipelineTag = model.pipeline_tag || "";
         const tag = PIPELINE_MAP[pipelineTag] || "Research";
 
         const likes = model.likes || 0;
         const downloads = model.downloads || 0;
-        const description =
-          `${modelId} — ${pipelineTag || "AI model"}. ${likes} likes, ${downloads.toLocaleString()} downloads.`.slice(
-            0,
-            500,
-          );
+        const description = truncateContentDescription(
+          `${modelId} — ${pipelineTag || "AI model"}. ${likes} likes, ${downloads.toLocaleString()} downloads.`,
+        );
 
         items.push({
           url: `https://huggingface.co/${modelId}`,
-          title: modelId,
+          title,
           description,
           tags: tag,
           categoryId: CATEGORY_ID,

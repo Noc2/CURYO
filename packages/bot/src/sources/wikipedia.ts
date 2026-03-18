@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -92,6 +93,7 @@ export const wikipediaSource: ContentSource = {
         if (items.length >= limit) break;
 
         const title = article.article;
+        const normalizedTitle = truncateContentTitle(title.replace(/_/g, " "));
         // Skip special/meta pages
         if (
           title === "Main_Page" ||
@@ -107,14 +109,14 @@ export const wikipediaSource: ContentSource = {
         if (!subcategory) continue;
 
         // Get article summary for description
-        let description = title.replace(/_/g, " ");
+        let description = normalizedTitle;
         try {
           const summaryRes = await fetchWithTimeout(
             `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
           );
           if (summaryRes.ok) {
             const summary = await summaryRes.json();
-            description = (summary.extract || description).slice(0, 500);
+            description = truncateContentDescription(summary.extract || description);
           }
         } catch {
           // Use title as fallback
@@ -122,7 +124,7 @@ export const wikipediaSource: ContentSource = {
 
         items.push({
           url: `https://en.wikipedia.org/wiki/${title}`,
-          title: title.replace(/_/g, " "),
+          title: normalizedTitle,
           description,
           tags: subcategory,
           categoryId: CATEGORY_ID,

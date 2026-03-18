@@ -1,4 +1,5 @@
 import { config, log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -49,11 +50,12 @@ export const youtubeSource: ContentSource = {
         const snippet = video.snippet;
         const categoryNum = parseInt(snippet.categoryId || "0");
         const tag = YOUTUBE_CATEGORY_MAP[categoryNum] || "Entertainment";
+        const title = truncateContentTitle(snippet.title);
 
         items.push({
           url: `https://www.youtube.com/watch?v=${video.id}`,
-          title: snippet.title,
-          description: (snippet.description || snippet.title).slice(0, 500),
+          title,
+          description: truncateContentDescription(snippet.description || title),
           tags: tag,
           categoryId: CATEGORY_ID,
         });

@@ -1,4 +1,5 @@
 import { getTwitterSyndicationTokens } from "@curyo/contracts";
+import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import type { ContentMetadataResult } from "~~/lib/contentMetadata/types";
 import { getTmdbApiKey } from "~~/lib/env/server";
 import { ResponseTooLargeError, readResponseJson, readResponseText } from "~~/utils/fetchBodyLimit";
@@ -13,7 +14,6 @@ export type EmbedResult = ContentMetadataResult;
 const CACHE_OPTIONS = { next: { revalidate: 86400 } }; // 24h cache
 const MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB cap on external API responses
 const MAX_AUTHORS = 3; // Cap author lookups per book (limits amplification)
-const MAX_DESCRIPTION_LENGTH = 500;
 const TWITTER_SYNDICATION_FEATURES = [
   "tfw_timeline_list:",
   "tfw_follower_count_sunset:true",
@@ -102,7 +102,7 @@ async function resolveWikipedia(title: string): Promise<EmbedResult> {
     thumbnailUrl: data?.thumbnail?.source ?? null,
     imageUrl: data?.thumbnail?.source ?? undefined,
     title: data?.title,
-    description: (data?.description ?? data?.extract)?.slice(0, MAX_DESCRIPTION_LENGTH),
+    description: (data?.description ?? data?.extract)?.slice(0, MAX_CONTENT_DESCRIPTION_LENGTH),
   };
 }
 
@@ -121,7 +121,7 @@ async function resolveTmdb(movieId: string): Promise<EmbedResult> {
     thumbnailUrl: posterPath ? `https://image.tmdb.org/t/p/w300${posterPath}` : null,
     imageUrl: posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : undefined,
     title: data?.title,
-    description: data?.overview?.slice(0, MAX_DESCRIPTION_LENGTH),
+    description: data?.overview?.slice(0, MAX_CONTENT_DESCRIPTION_LENGTH),
     releaseYear: data?.release_date ? data.release_date.split("-")[0] : undefined,
   };
 }
@@ -188,7 +188,7 @@ async function resolveOpenLibrary(id: string, metadata?: Record<string, unknown>
     thumbnailUrl,
     imageUrl,
     title: data.title,
-    description: description?.slice(0, MAX_DESCRIPTION_LENGTH),
+    description: description?.slice(0, MAX_CONTENT_DESCRIPTION_LENGTH),
     authors,
   };
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
+import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { db } from "~~/lib/db";
 import { contentMetadata } from "~~/lib/db/schema";
 import { ResponseTooLargeError, readResponseJson } from "~~/utils/fetchBodyLimit";
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
     const data = await readResponseJson<any>(response, MAX_RESPONSE_BYTES);
     const result = {
       name: data.name,
-      description_raw: data.description_raw?.slice(0, 500),
+      description_raw: data.description_raw?.slice(0, MAX_CONTENT_DESCRIPTION_LENGTH),
       background_image: data.background_image,
       metacritic: data.metacritic,
       released: data.released,

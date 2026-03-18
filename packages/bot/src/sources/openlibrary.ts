@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -53,7 +54,7 @@ export const openLibrarySource: ContentSource = {
         const worksKey = work.key; // e.g., "/works/OL123W"
         if (!worksKey) continue;
 
-        const title = work.title || "Untitled";
+        const title = truncateContentTitle(work.title || "Untitled");
         const authors = (work.author_name || []).join(", ");
         const subjects: string[] = work.subject || [];
         const tag = matchSubcategory(subjects);
@@ -66,7 +67,7 @@ export const openLibrarySource: ContentSource = {
         items.push({
           url: `https://openlibrary.org${worksKey}`,
           title,
-          description: description.slice(0, 500),
+          description: truncateContentDescription(description),
           tags: tag,
           categoryId: CATEGORY_ID,
         });

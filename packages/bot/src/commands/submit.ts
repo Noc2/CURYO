@@ -1,6 +1,7 @@
 import { publicClient, getWalletClient, getAccount } from "../client.js";
 import { contractConfig } from "../contracts.js";
 import { config, log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { getAllSources } from "../sources/index.js";
 
 const MIN_SUBMITTER_STAKE = 10_000_000n; // 10 cREP (6 decimals)
@@ -86,6 +87,9 @@ export async function runSubmit() {
       }
 
       try {
+        const title = truncateContentTitle(item.title);
+        const description = truncateContentDescription(item.description);
+
         // Approve cREP for submission stake
         const approveTx = await wallet.writeContract({
           ...contractConfig.token,
@@ -98,7 +102,7 @@ export async function runSubmit() {
         const submitTx = await wallet.writeContract({
           ...contractConfig.registry,
           functionName: "submitContent",
-          args: [item.url, item.title, item.description, item.tags, item.categoryId],
+          args: [item.url, title, description, item.tags, item.categoryId],
         });
         await publicClient.waitForTransactionReceipt({ hash: submitTx });
 

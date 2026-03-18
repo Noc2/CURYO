@@ -14,15 +14,18 @@ import {
   useSetAvatarAccent,
   useSetProfile,
 } from "~~/hooks/useProfileRegistry";
+import {
+  MAX_PROFILE_IMAGE_URL_LENGTH,
+  MAX_PROFILE_STRATEGY_LENGTH,
+  validateProfileImageUrl,
+} from "~~/lib/profile/profileValidation";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
-import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { getProxiedProfileImageUrl, getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 // Validation regex: 3-20 alphanumeric + underscore
 const NAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
-const MAX_STRATEGY_LENGTH = 560;
 const DEFAULT_AVATAR_ACCENT_HEX = "#f26426";
 
 export function ProfileForm() {
@@ -82,9 +85,8 @@ export function ProfileForm() {
 
   const handleSave = async () => {
     if (!address) return;
-    const trimmedImageInput = imageInput.trim();
     const trimmedStrategy = strategyInput.trim();
-    const sanitizedImageUrl = trimmedImageInput ? sanitizeExternalUrl(trimmedImageInput) : null;
+    const { error: imageUrlError, sanitizedImageUrl } = validateProfileImageUrl(imageInput);
 
     // Validate name
     if (!nameInput.trim()) {
@@ -103,14 +105,13 @@ export function ProfileForm() {
       return;
     }
 
-    // Validate image URL
-    if (trimmedImageInput && !sanitizedImageUrl) {
-      setError("Please enter a valid HTTPS URL for the image");
+    if (imageUrlError) {
+      setError(imageUrlError);
       return;
     }
 
-    if (trimmedStrategy.length > MAX_STRATEGY_LENGTH) {
-      setError(`How you rate must be ${MAX_STRATEGY_LENGTH} characters or fewer`);
+    if (trimmedStrategy.length > MAX_PROFILE_STRATEGY_LENGTH) {
+      setError(`How you rate must be ${MAX_PROFILE_STRATEGY_LENGTH} characters or fewer`);
       return;
     }
 
@@ -292,7 +293,7 @@ export function ProfileForm() {
       <div>
         <label className="flex items-center gap-1.5 text-base font-medium mb-2">
           Profile Image URL
-          <InfoTooltip text="Leave empty to use your Curio reputation avatar" />
+          <InfoTooltip text="Leave empty to use your Curyo reputation avatar" />
         </label>
         <input
           type="url"
@@ -300,6 +301,7 @@ export function ProfileForm() {
           className="input input-bordered w-full bg-base-100"
           value={imageInput}
           onChange={e => setImageInput(e.target.value)}
+          maxLength={MAX_PROFILE_IMAGE_URL_LENGTH}
           disabled={isPending}
         />
       </div>
@@ -411,13 +413,13 @@ export function ProfileForm() {
           className="textarea textarea-bordered min-h-36 w-full bg-base-100"
           value={strategyInput}
           onChange={e => setStrategyInput(e.target.value)}
-          maxLength={MAX_STRATEGY_LENGTH}
+          maxLength={MAX_PROFILE_STRATEGY_LENGTH}
           disabled={isPending}
           rows={6}
         />
         <div className="mt-2 flex justify-end">
           <span className="text-sm text-base-content/40">
-            {strategyInput.trim().length}/{MAX_STRATEGY_LENGTH}
+            {strategyInput.trim().length}/{MAX_PROFILE_STRATEGY_LENGTH}
           </span>
         </div>
       </div>
@@ -441,7 +443,12 @@ export function ProfileForm() {
       <button
         onClick={handleSave}
         className="btn btn-submit w-full"
-        disabled={isPending || !nameInput.trim() || nameIsTaken || strategyInput.trim().length > MAX_STRATEGY_LENGTH}
+        disabled={
+          isPending ||
+          !nameInput.trim() ||
+          nameIsTaken ||
+          strategyInput.trim().length > MAX_PROFILE_STRATEGY_LENGTH
+        }
       >
         {isPending ? (
           <span className="flex items-center gap-2">

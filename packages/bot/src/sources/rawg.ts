@@ -1,4 +1,5 @@
 import { config, log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -50,6 +51,7 @@ export const rawgSource: ContentSource = {
       const items: ContentItem[] = [];
 
       for (const game of (data.results ?? []).slice(0, limit)) {
+        const title = truncateContentTitle(game.name);
         let tag = "Action";
         for (const genre of game.genres ?? []) {
           if (GENRE_MAP[genre.name]) {
@@ -60,8 +62,8 @@ export const rawgSource: ContentSource = {
 
         items.push({
           url: `https://rawg.io/games/${game.slug}`,
-          title: game.name,
-          description: game.name.slice(0, 500),
+          title,
+          description: truncateContentDescription(title),
           tags: tag,
           categoryId: CATEGORY_ID,
         });

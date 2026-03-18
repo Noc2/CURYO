@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -50,17 +51,16 @@ export const coinGeckoSource: ContentSource = {
 
       for (const coin of coins) {
         const slug = coin.id;
+        const title = truncateContentTitle(coin.name);
         const marketCap = coin.market_cap
           ? `Market cap: $${(coin.market_cap / 1e9).toFixed(2)}B`
           : "";
         const priceStr = coin.current_price
           ? `Price: $${coin.current_price.toLocaleString()}`
           : "";
-        const description =
-          `${coin.name} (${coin.symbol.toUpperCase()}). ${priceStr}. ${marketCap}. Rank #${coin.market_cap_rank || "N/A"}.`.slice(
-            0,
-            500,
-          );
+        const description = truncateContentDescription(
+          `${coin.name} (${coin.symbol.toUpperCase()}). ${priceStr}. ${marketCap}. Rank #${coin.market_cap_rank || "N/A"}.`,
+        );
 
         // CoinGecko markets endpoint doesn't return categories, so infer from common knowledge
         // For a more accurate mapping, we'd need individual coin detail calls
@@ -68,7 +68,7 @@ export const coinGeckoSource: ContentSource = {
 
         items.push({
           url: `https://www.coingecko.com/en/coins/${slug}`,
-          title: coin.name,
+          title,
           description,
           tags: tag,
           categoryId: CATEGORY_ID,

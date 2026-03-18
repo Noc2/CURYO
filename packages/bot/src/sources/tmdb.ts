@@ -1,4 +1,5 @@
 import { config, log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -49,6 +50,7 @@ export const tmdbSource: ContentSource = {
       const items: ContentItem[] = [];
 
       for (const movie of (data.results ?? []).slice(0, limit)) {
+        const title = truncateContentTitle(movie.title);
         const tags = movie.genre_ids
           .map((id: number) => GENRE_MAP[id])
           .filter(Boolean)
@@ -58,8 +60,8 @@ export const tmdbSource: ContentSource = {
 
         items.push({
           url: `https://www.themoviedb.org/movie/${movie.id}`,
-          title: movie.title,
-          description: (movie.overview || `Popular movie: ${movie.title}`).slice(0, 500),
+          title,
+          description: truncateContentDescription(movie.overview || `Popular movie: ${title}`),
           tags,
           categoryId: CATEGORY_ID,
         });

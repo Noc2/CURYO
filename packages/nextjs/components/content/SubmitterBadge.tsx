@@ -16,7 +16,7 @@ interface SubmitterBadgeProps {
 
 /**
  * Displays a submitter's avatar and name/address.
- * Falls back to the Curio reputation avatar if no custom image or if image fails to load.
+ * Falls back to the Curyo reputation avatar if no custom image or if image fails to load.
  */
 export function SubmitterBadge({
   address,

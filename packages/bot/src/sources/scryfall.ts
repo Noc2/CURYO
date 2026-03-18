@@ -1,4 +1,5 @@
 import { log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -40,14 +41,17 @@ export const scryfallSource: ContentSource = {
         const set = card.set;
         const collectorNumber = card.collector_number;
         const tag = getSubcategory(card.legalities || {});
+        const title = truncateContentTitle(card.name);
 
         const typeLine = card.type_line || "Card";
         const manaCost = card.mana_cost || "";
-        const description = `${card.name} — ${typeLine} ${manaCost}. Set: ${card.set_name || set}.`.slice(0, 500);
+        const description = truncateContentDescription(
+          `${title} — ${typeLine} ${manaCost}. Set: ${card.set_name || set}.`,
+        );
 
         items.push({
           url: `https://scryfall.com/card/${set}/${collectorNumber}/${encodeURIComponent(card.name.toLowerCase().replace(/ /g, "-"))}`,
-          title: card.name,
+          title,
           description,
           tags: tag,
           categoryId: CATEGORY_ID,

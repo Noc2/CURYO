@@ -1,4 +1,5 @@
 import { config, log } from "../config.js";
+import { truncateContentDescription, truncateContentTitle } from "../contentLimits.js";
 import { fetchWithTimeout } from "../utils.js";
 import type { ContentSource, ContentItem } from "./types.js";
 
@@ -74,11 +75,12 @@ export const twitchSource: ContentSource = {
       for (const clip of data.data ?? []) {
         const gameName = clip.game_id ? "Gaming" : "Talk Shows";
         const tag = GAME_TO_SUBCATEGORY[clip.game_id] || gameName;
+        const title = truncateContentTitle(clip.title);
 
         items.push({
           url: clip.url,
-          title: clip.title,
-          description: `${clip.title} — clipped from ${clip.broadcaster_name}`.slice(0, 500),
+          title,
+          description: truncateContentDescription(`${title} — clipped from ${clip.broadcaster_name}`),
           tags: tag,
           categoryId: CATEGORY_ID,
         });
