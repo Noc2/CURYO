@@ -61,7 +61,7 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
         <div className="h-4 w-px bg-base-content/10" />
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            Voters in
+            Voters
             <InfoTooltip
               text={`Number of votes committed on this ${contentLabel} in the current round.`}
               position="bottom"
@@ -74,7 +74,7 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
             <div className="h-4 w-px bg-base-content/10" />
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1">
-                {isEpoch1 ? "Reveals later" : "Reveals pending"}
+                {isEpoch1 ? "Reveals later" : "Pending"}
                 <InfoTooltip
                   text={
                     isEpoch1
