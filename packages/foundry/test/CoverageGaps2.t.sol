@@ -771,8 +771,9 @@ contract ContentRegistryCoverageTest is Test {
     // --- submitContent: title too long ---
 
     function test_SubmitContentTitleTooLongReverts_LegacyShape() public {
-        bytes memory longGoal = new bytes(501);
-        for (uint256 i = 0; i < 501; i++) {
+        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH() + 1;
+        bytes memory longGoal = new bytes(maxTitleLength);
+        for (uint256 i = 0; i < maxTitleLength; i++) {
             longGoal[i] = "b";
         }
         vm.startPrank(submitter);
@@ -799,8 +800,9 @@ contract ContentRegistryCoverageTest is Test {
     }
 
     function test_SubmitContentTitleTooLongReverts() public {
-        bytes memory longTitle = new bytes(501);
-        for (uint256 i = 0; i < 501; i++) {
+        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH() + 1;
+        bytes memory longTitle = new bytes(maxTitleLength);
+        for (uint256 i = 0; i < maxTitleLength; i++) {
             longTitle[i] = "b";
         }
         vm.startPrank(submitter);

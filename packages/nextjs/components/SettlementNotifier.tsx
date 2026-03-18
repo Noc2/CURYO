@@ -9,6 +9,7 @@ import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { useRecentUserVotes } from "~~/hooks/useRecentUserVotes";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
+import { truncateContentTitle } from "~~/lib/contentTitle";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -179,7 +180,7 @@ export function SettlementNotifier() {
         !seenFollowedSubmissionKeysRef.current.has(key)
       ) {
         const displayName = item.profileName || `${item.submitter.slice(0, 6)}...${item.submitter.slice(-4)}`;
-        const shortTitle = item.title.length > 72 ? `${item.title.slice(0, 69)}...` : item.title;
+        const shortTitle = truncateContentTitle(item.title);
         notifyWithLink(
           "success",
           "Followed curator submitted",
@@ -199,7 +200,7 @@ export function SettlementNotifier() {
         !seenFollowedResolutionKeysRef.current.has(key)
       ) {
         const displayName = item.profileName || `${item.voter.slice(0, 6)}...${item.voter.slice(-4)}`;
-        const shortTitle = item.title.length > 72 ? `${item.title.slice(0, 69)}...` : item.title;
+        const shortTitle = truncateContentTitle(item.title);
         const action = item.outcome === "won" ? "won" : item.outcome === "lost" ? "lost" : "resolved";
 
         notifyWithLink(

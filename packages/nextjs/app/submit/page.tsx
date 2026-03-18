@@ -26,6 +26,7 @@ import {
 } from "~~/hooks/useCategoryRegistry";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
@@ -97,11 +98,9 @@ const DEFAULT_URL_CONFIG = {
   urlHint: "Select a platform first, then paste your URL",
 };
 
-const MAX_TITLE_LENGTH = 96;
-
 function getTitleValidationError(value: string): string | null {
-  if (value.length > MAX_TITLE_LENGTH) {
-    return `Title must be ${MAX_TITLE_LENGTH} characters or fewer`;
+  if (value.length > MAX_CONTENT_TITLE_LENGTH) {
+    return `Title must be ${MAX_CONTENT_TITLE_LENGTH} characters or fewer`;
   }
 
   const check = containsBlockedText(value);
@@ -704,13 +703,13 @@ const SubmitPage: NextPage = () => {
                   }`}
                   value={title}
                   onChange={e => handleTitleChange(e.target.value)}
-                  maxLength={MAX_TITLE_LENGTH}
+                  maxLength={MAX_CONTENT_TITLE_LENGTH}
                 />
                 {submitAttempted && !title.trim() && <p className="mt-1 text-base text-error">Title is required.</p>}
                 {titleError && <p className="text-error text-base mt-1">{titleError}</p>}
                 <div className="text-right mt-1">
                   <span className="text-base text-base-content/30">
-                    {title.length}/{MAX_TITLE_LENGTH}
+                    {title.length}/{MAX_CONTENT_TITLE_LENGTH}
                   </span>
                 </div>
               </div>

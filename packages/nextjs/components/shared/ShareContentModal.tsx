@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { truncateContentTitle } from "~~/lib/contentTitle";
 
 interface ShareContentModalProps {
   contentId: bigint;
@@ -23,7 +24,7 @@ export function ShareContentModal({ contentId, title, description, onClose }: Sh
   }, [onClose]);
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/vote?content=${contentId}` : "";
-  const truncatedTitle = title.length > 80 ? `${title.slice(0, 80)}...` : title;
+  const truncatedTitle = truncateContentTitle(title);
 
   const handleCopyLink = async () => {
     try {

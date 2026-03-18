@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { truncateContentTitle } from "~~/lib/contentTitle";
 
 interface ShareModalProps {
   contentId: bigint;
@@ -15,7 +16,7 @@ export function ShareModal({ contentId, title, description, onClose }: ShareModa
   const [copied, setCopied] = useState(false);
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/vote?content=${contentId}` : "";
-  const truncatedTitle = title.length > 50 ? `${title.slice(0, 50)}...` : title;
+  const truncatedTitle = truncateContentTitle(title);
   const tweetText = `I just submitted "${truncatedTitle}" on Curyo! Vote and build your reputation: ${shareUrl}`;
 
   const handleCopyLink = async () => {

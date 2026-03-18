@@ -499,8 +499,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     }
 
     function test_SubmitContent_TitleTooLong_Reverts() public {
-        bytes memory longGoal = new bytes(501);
-        for (uint256 i = 0; i < longGoal.length; i++) {
+        uint256 maxTitleLength = registry.MAX_TITLE_LENGTH() + 1;
+        bytes memory longGoal = new bytes(maxTitleLength);
+        for (uint256 i = 0; i < maxTitleLength; i++) {
             longGoal[i] = "a";
         }
 

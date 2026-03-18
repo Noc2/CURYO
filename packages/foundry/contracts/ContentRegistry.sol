@@ -45,7 +45,7 @@ contract ContentRegistry is
 
     // String length limits (prevent storage bloat)
     uint256 public constant MAX_URL_LENGTH = 2048;
-    uint256 public constant MAX_TITLE_LENGTH = 96;
+    uint256 public constant MAX_TITLE_LENGTH = 72;
     uint256 public constant MAX_DESCRIPTION_LENGTH = 500;
     uint256 public constant MAX_TAGS_LENGTH = 256;
 

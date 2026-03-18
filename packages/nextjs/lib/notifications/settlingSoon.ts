@@ -1,3 +1,5 @@
+import { truncateContentTitle } from "~~/lib/contentTitle";
+
 export interface SettlingSoonCandidate {
   id: string;
   contentId: string;
@@ -17,7 +19,7 @@ export interface SettlingSoonNotificationSummary {
 }
 
 function truncateTitle(title: string) {
-  return title.length > 72 ? `${title.slice(0, 69)}...` : title;
+  return truncateContentTitle(title);
 }
 
 function formatSummaryBody(primaryTitle: string, additionalCount: number, suffix: string) {
