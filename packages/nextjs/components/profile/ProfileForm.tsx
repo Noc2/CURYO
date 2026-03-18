@@ -329,8 +329,6 @@ export function ProfileForm() {
         </div>
 
         <div className="flex flex-col gap-2 text-sm text-base-content/65">
-          <p>Used for your generated reputation avatar everywhere on Curyo.</p>
-          {!avatarAccent?.enabled ? <p>Currently using the default address-based color palette.</p> : null}
           {avatarAccentInputError ? <p className="text-error">Use a valid 6-digit hex color like #f26426.</p> : null}
           {accentError ? <p className="text-error">{accentError}</p> : null}
         </div>
