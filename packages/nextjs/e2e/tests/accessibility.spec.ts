@@ -1,5 +1,6 @@
+import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { setupWallet } from "../helpers/local-storage";
 import { expect, test } from "../fixtures/wallet";
-import { findVoteableContent, waitForFeedLoaded } from "../helpers/wait-helpers";
 
 test.describe("Accessibility basics", () => {
   test("main pages have h1 heading", async ({ connectedPage: page }) => {
@@ -14,34 +15,36 @@ test.describe("Accessibility basics", () => {
     }
   });
 
-  test("interactive elements have accessible names", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+  test("interactive elements have accessible names", async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await setupWallet(page, ANVIL_ACCOUNTS.account8.privateKey);
+
+    await page.goto(`/vote?q=${encodeURIComponent("The Godfather")}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "The Godfather" })).toBeVisible({ timeout: 15_000 });
 
     // Search bar should have an aria-label
     const searchInput = page.getByRole("textbox", { name: "Search content" });
     await expect(searchInput.first()).toBeVisible({ timeout: 10_000 });
 
-    // Vote buttons should have accessible names (if visible)
-    const voteUp = page.getByRole("button", { name: "Vote up" });
-    const voteDown = page.getByRole("button", { name: "Vote down" });
-    const ownContent = page.getByText("Your submission");
-    const cooldown = page.getByText(/Cooldown/);
+    await expect(page.getByRole("button", { name: /^Vote up$/i })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: /^Vote down$/i })).toBeVisible({ timeout: 10_000 });
 
-    // At least one of these states should be present (wallet connected)
-    const anyState = voteUp.or(voteDown).or(ownContent).or(cooldown);
-    await expect(anyState.first()).toBeVisible({ timeout: 10_000 });
+    await context.close();
   });
 
-  test("StakeSelector dialog has ARIA attributes", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+  test("StakeSelector dialog has ARIA attributes", async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await setupWallet(page, ANVIL_ACCOUNTS.account8.privateKey);
 
-    const canVote = await findVoteableContent(page);
-    expect(canVote, "Should find at least one voteable content via thumbnail grid").toBeTruthy();
+    await page.goto(`/vote?q=${encodeURIComponent("The Godfather")}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "The Godfather" })).toBeVisible({ timeout: 15_000 });
+
     // Ponder polling triggers React re-renders that detach/reattach the vote button.
     // Use toPass() retry pattern to handle DOM detachment during click.
-    const voteUpBtn = page.getByRole("button", { name: "Vote up" });
+    const voteUpBtn = page.getByRole("button", { name: /^Vote up$/i });
+    await expect(voteUpBtn).toBeVisible({ timeout: 10_000 });
     await expect(async () => {
       await voteUpBtn.click({ timeout: 5_000 });
     }).toPass({ timeout: 30_000, intervals: [500, 1_000, 2_000] });
@@ -58,6 +61,7 @@ test.describe("Accessibility basics", () => {
     }
 
     await page.keyboard.press("Escape");
+    await context.close();
   });
 
   test("no duplicate element IDs on main pages", async ({ connectedPage: page }) => {
