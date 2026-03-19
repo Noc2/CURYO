@@ -12,7 +12,6 @@ test.describe("Documentation pages", () => {
     "/docs/tokenomics",
     "/docs/governance",
     "/docs/blind-voting",
-    "/docs/delegation",
     "/docs/smart-contracts",
     "/docs/frontend-codes",
     "/docs/security-audit",
@@ -20,7 +19,7 @@ test.describe("Documentation pages", () => {
   ];
 
   test("all doc pages load with h1 heading", async ({ page }) => {
-    test.setTimeout(180_000); // 11 pages, some (security-audit) need up to 20s
+    test.setTimeout(180_000); // 10 pages, some (security-audit) need up to 20s
     const errors: string[] = [];
 
     for (const path of docPages) {

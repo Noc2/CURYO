@@ -31,7 +31,7 @@ const GovernanceDocs: NextPage = () => {
       <p>
         Your own <strong>Profile</strong> tab now lives on the governance page, so you can edit the same public profile
         other curators see and track your balance history plus active stake.{" "}
-        <code className="bg-base-300 px-1 rounded text-base">/settings</code> now focuses on delegation, referrals, and
+        <code className="bg-base-300 px-1 rounded text-base">/settings</code> now focuses on delegation and
         notifications.
       </p>
 

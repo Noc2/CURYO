@@ -22,7 +22,6 @@ export const DOCS_NAV = [
     links: [
       { label: "Smart Contracts", href: "/docs/smart-contracts" },
       { label: "Frontend Codes", href: "/docs/frontend-codes" },
-      { label: "Delegation", href: "/docs/delegation" },
       { label: "Security Audit", href: "/docs/security-audit" },
     ],
   },

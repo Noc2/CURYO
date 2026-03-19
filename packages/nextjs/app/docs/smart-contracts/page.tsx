@@ -195,9 +195,8 @@ const SmartContracts: NextPage = () => {
       <h3>Delegation</h3>
       <p>
         VoterIdNFT supports delegation: an SBT holder (cold wallet) can authorize a delegate (hot wallet) to act on
-        their behalf. The delegate transparently passes all Voter ID checks without holding an SBT. See the{" "}
-        <a href="/docs/delegation">Delegation &amp; Security</a> docs for setup instructions and security
-        recommendations.
+        their behalf. The delegate transparently passes all Voter ID checks without holding an SBT. Setup and security
+        guidance now live in the <code>/settings?tab=delegation</code> flow.
       </p>
       <ul>
         <li>
