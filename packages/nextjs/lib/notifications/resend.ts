@@ -1,5 +1,6 @@
 import "server-only";
 import { getResendConfig } from "~~/lib/env/server";
+import { buildCuryoEmailHtml } from "~~/lib/notifications/emailTemplate";
 
 interface ResendEmailParams {
   to: string;
@@ -42,28 +43,17 @@ export async function sendResendEmail(params: ResendEmailParams) {
 }
 
 export async function sendNotificationVerificationEmail(params: { email: string; verifyUrl: string }) {
-  const safeUrl = params.verifyUrl.replace(/&/g, "&amp;");
-
   await sendResendEmail({
     to: params.email,
     subject: "Verify your Curyo notification email",
     text: `Verify your email for Curyo notifications: ${params.verifyUrl}`,
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.5; color: #f5f5f5; background: #111; padding: 24px;">
-        <h1 style="font-size: 20px; margin-bottom: 12px;">Verify your email</h1>
-        <p style="margin-bottom: 16px;">
-          Confirm this email address to receive Curyo notification emails for watched rounds and curators you follow.
-        </p>
-        <p style="margin-bottom: 20px;">
-          <a href="${safeUrl}" style="display: inline-block; background: #fff; color: #111; padding: 10px 16px; border-radius: 9999px; text-decoration: none; font-weight: 600;">
-            Verify email
-          </a>
-        </p>
-        <p style="font-size: 14px; color: #b3b3b3;">
-          If the button does not work, open this link manually:<br />
-          <a href="${safeUrl}" style="color: #6ec1ff;">${safeUrl}</a>
-        </p>
-      </div>
-    `,
+    html: buildCuryoEmailHtml({
+      eyebrow: "Email verification",
+      title: "Verify your email",
+      body: "Confirm this email address to receive Curyo notification emails for watched rounds and curators you follow.",
+      ctaLabel: "Verify email",
+      ctaHref: params.verifyUrl,
+      footerNote: "This verification link was requested from Curyo notification settings.",
+    }),
   });
 }

@@ -1,0 +1,70 @@
+<svg width="360" height="84" viewBox="0 0 360 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="curyo-orb" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(48 26) rotate(128) scale(46 44)">
+      <stop stop-color="#FFF8F2"/>
+      <stop offset="0.2" stop-color="#F8E1D0"/>
+      <stop offset="0.4" stop-color="#F7B070"/>
+      <stop offset="0.62" stop-color="#F26426"/>
+      <stop offset="0.82" stop-color="#B23C3B"/>
+      <stop offset="1" stop-color="#6A345F"/>
+    </radialGradient>
+    <radialGradient id="curyo-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(46 34) rotate(90) scale(32 32)">
+      <stop stop-color="#FFF8F3" stop-opacity="0.74"/>
+      <stop offset="0.55" stop-color="#FFF8F3" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#FFF8F3" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="curyo-flare" x1="38" y1="10" x2="74" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F45C4D"/>
+      <stop offset="0.28" stop-color="#FF8A5D"/>
+      <stop offset="0.62" stop-color="#FFC37A"/>
+      <stop offset="1" stop-color="#FFF4DB"/>
+    </linearGradient>
+  </defs>
+
+  <g>
+    <circle cx="42" cy="42" r="24" fill="url(#curyo-orb)"/>
+    <ellipse cx="42" cy="42" rx="24" ry="24" fill="url(#curyo-glow)"/>
+    <path
+      d="M20 48C28 36 42 29 57 30C49 34 42 39 33 49C28 54 24 57 20 48Z"
+      fill="#FFF7F0"
+      fill-opacity="0.22"
+    />
+    <path
+      d="M27 57C35 52 43 49 54 48C51 53 47 58 41 62C35 64 30 63 27 57Z"
+      fill="#6B37A5"
+      fill-opacity="0.22"
+    />
+    <path
+      d="M60.5 16.5C67 18.5 72.5 22.5 76 28.5"
+      stroke="url(#curyo-flare)"
+      stroke-width="4.75"
+      stroke-linecap="round"
+    />
+    <circle cx="77.5" cy="31" r="3.5" fill="#FFF4DB"/>
+  </g>
+
+  <g>
+    <text
+      x="96"
+      y="38"
+      fill="#F5F0EB"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="28"
+      font-weight="700"
+      letter-spacing="3.5"
+    >
+      CURYO
+    </text>
+    <text
+      x="96"
+      y="60"
+      fill="#7E8996"
+      font-family="Arial, Helvetica, sans-serif"
+      font-size="12"
+      font-weight="600"
+      letter-spacing="2.4"
+    >
+      A BETTER WEB
+    </text>
+  </g>
+</svg>
