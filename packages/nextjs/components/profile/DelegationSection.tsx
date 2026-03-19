@@ -79,7 +79,7 @@ export function DelegationSection() {
   }
 
   if (!hasVoterId) {
-    return null; // ProfileForm already shows the Voter ID requirement
+    return null;
   }
 
   return (

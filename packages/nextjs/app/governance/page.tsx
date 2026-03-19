@@ -17,15 +17,17 @@ import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
 import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
 import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
 import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
+import { PublicProfileView } from "~~/components/profile/PublicProfileView";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGovernanceContracts } from "~~/hooks/useGovernance";
 
-type GovernanceTab = "leaderboard" | "accuracy" | "governance" | "faucet";
+type GovernanceTab = "leaderboard" | "accuracy" | "governance" | "profile" | "faucet";
 
-const governanceTabs: GovernanceTab[] = ["leaderboard", "accuracy", "governance", "faucet"];
+const governanceTabs: GovernanceTab[] = ["leaderboard", "accuracy", "governance", "profile", "faucet"];
+const zeroBalanceTabs: GovernanceTab[] = ["faucet", "profile"];
 
 function getGovernanceHash(tab: GovernanceTab) {
   return tab === "leaderboard" ? "" : `#${tab}`;
@@ -100,13 +102,14 @@ function GovernancePageInner() {
       return;
     }
 
-    if (hasZeroBalance && activeTab !== "faucet") {
-      selectTab("faucet");
+    const hashTab = normalizeGovernanceHash(window.location.hash.replace(/^#/, ""));
+
+    if (hasZeroBalance && !zeroBalanceTabs.includes(activeTab)) {
+      selectTab(hashTab && zeroBalanceTabs.includes(hashTab) ? hashTab : "faucet");
       return;
     }
 
     if (!hasZeroBalance && activeTab === "faucet") {
-      const hashTab = normalizeGovernanceHash(window.location.hash.replace(/^#/, ""));
       selectTab(hashTab && hashTab !== "faucet" ? hashTab : "leaderboard");
     }
   }, [hasResolvedBalance, hasZeroBalance, activeTab, selectTab]);
@@ -125,14 +128,24 @@ function GovernancePageInner() {
     <AppPageShell contentClassName="space-y-6">
       <div className="flex flex-wrap gap-2">
         {hasZeroBalance ? (
-          <button
-            onClick={() => selectTab("faucet")}
-            className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-              activeTab === "faucet" ? "pill-active" : "pill-inactive"
-            }`}
-          >
-            Faucet
-          </button>
+          <>
+            <button
+              onClick={() => selectTab("faucet")}
+              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+                activeTab === "faucet" ? "pill-active" : "pill-inactive"
+              }`}
+            >
+              Faucet
+            </button>
+            <button
+              onClick={() => selectTab("profile")}
+              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+                activeTab === "profile" ? "pill-active" : "pill-inactive"
+              }`}
+            >
+              Profile
+            </button>
+          </>
         ) : (
           <>
             <button
@@ -158,6 +171,14 @@ function GovernancePageInner() {
               }`}
             >
               Governance
+            </button>
+            <button
+              onClick={() => selectTab("profile")}
+              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+                activeTab === "profile" ? "pill-active" : "pill-inactive"
+              }`}
+            >
+              Profile
             </button>
           </>
         )}
@@ -207,6 +228,8 @@ function GovernancePageInner() {
           <FrontendRegistration />
         </div>
       )}
+
+      {activeTab === "profile" && address && <PublicProfileView address={address as `0x${string}`} embedded />}
     </AppPageShell>
   );
 }

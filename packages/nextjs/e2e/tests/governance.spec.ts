@@ -58,15 +58,20 @@ test.describe("Governance page", () => {
     await expect(page.getByRole("combobox", { name: "Minimum votes" })).toBeVisible({ timeout: 10_000 });
   });
 
-  test("manage profile opens settings", async ({ connectedPage: page }) => {
+  test("own public profile is editable directly", async ({ connectedPage: page }) => {
     await page.goto(`/profiles/${ANVIL_ACCOUNTS.account2.address}`);
 
-    const manageProfileLink = page.getByRole("link", { name: "Manage profile" });
-    await expect(manageProfileLink).toBeVisible({ timeout: 15_000 });
-    await manageProfileLink.click();
+    const profileEditorEntry = page
+      .getByRole("button", { name: "Edit profile", exact: true })
+      .or(page.getByLabel("Profile name"))
+      .or(page.getByRole("link", { name: "Get Voter ID", exact: true }));
+    await expect(profileEditorEntry.first()).toBeVisible({ timeout: 15_000 });
 
-    await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByRole("heading", { name: /your profile|create profile/i })).toBeVisible({ timeout: 15_000 });
+    const editProfileButton = page.getByRole("button", { name: "Edit profile", exact: true });
+    if (await editProfileButton.isVisible()) {
+      await editProfileButton.click();
+      await expect(page.getByLabel("Profile name")).toBeVisible({ timeout: 10_000 });
+    }
   });
 
   test("governance tab shows governance content", async ({ connectedPage: page }) => {

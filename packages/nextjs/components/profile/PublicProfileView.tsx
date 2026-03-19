@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { CategoryBars } from "~~/components/leaderboard/CategoryBars";
 import { WinRateRing } from "~~/components/leaderboard/WinRateRing";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
@@ -15,15 +15,29 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import {
+  useAvatarAccent,
+  useClearAvatarAccent,
+  useIsNameTaken,
+  useProfileRegistry,
+  useSetAvatarAccent,
+  useSetProfile,
+} from "~~/hooks/useProfileRegistry";
 import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
+import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
 import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface PublicProfileViewProps {
   address: `0x${string}`;
+  embedded?: boolean;
 }
+
+const NAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
+const DEFAULT_AVATAR_ACCENT_HEX = "#f26426";
 
 function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -87,7 +101,7 @@ function StatCard({ label, value, tooltip }: { label: string; value: string; too
   );
 }
 
-export function PublicProfileView({ address }: PublicProfileViewProps) {
+export function PublicProfileView({ address, embedded = false }: PublicProfileViewProps) {
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
   const isPageVisible = usePageVisibility();
   const { address: connectedAddress } = useAccount();
@@ -101,6 +115,20 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   });
   const { stats, categories } = useVoterAccuracy(normalizedAddress);
   const { hasVoterId, tokenId, isLoading: voterIdLoading } = useVoterIdNFT(normalizedAddress);
+  const {
+    profile: liveProfile,
+    hasProfile: hasLiveProfile,
+    isLoading: liveProfileLoading,
+    refetch: refetchLiveProfile,
+  } = useProfileRegistry(normalizedAddress);
+  const {
+    avatarAccent,
+    isLoading: avatarAccentLoading,
+    refetch: refetchAvatarAccent,
+  } = useAvatarAccent(normalizedAddress);
+  const { setProfile, isPending: isSavingProfile } = useSetProfile();
+  const { setAvatarAccent, isPending: avatarAccentPending } = useSetAvatarAccent();
+  const { clearAvatarAccent, isPending: clearAvatarAccentPending } = useClearAvatarAccent();
   const { data: balance } = useScaffoldReadContract({
     contractName: "CuryoReputation",
     functionName: "balanceOf",
@@ -134,16 +162,123 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
   const recentVotes = profileDetail?.recentVotes ?? [];
   const recentSubmissions = profileDetail?.recentSubmissions ?? [];
   const ownProfile = connectedAddress?.toLowerCase() === normalizedAddress;
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const [strategyInput, setStrategyInput] = useState("");
+  const [avatarAccentInput, setAvatarAccentInput] = useState("");
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [accentError, setAccentError] = useState<string | null>(null);
+  const [committedName, setCommittedName] = useState("");
+  const [committedStrategy, setCommittedStrategy] = useState("");
+  const [committedAvatarAccentHex, setCommittedAvatarAccentHex] = useState<string | null>(null);
+  const [profileDraftInitialized, setProfileDraftInitialized] = useState(false);
+  const [avatarAccentInitialized, setAvatarAccentInitialized] = useState(false);
+  const [initialEditStateSet, setInitialEditStateSet] = useState(false);
   const following = followedWallets.has(normalizedAddress);
   const pending = isFollowPending(normalizedAddress);
-  const backHref = ownProfile ? "/settings" : "/governance";
-  const fallbackImageUrl = getReputationAvatarUrl(normalizedAddress, 96) || "";
-
-  const displayName = summary?.name || truncateAddress(normalizedAddress);
+  const backHref = ownProfile ? "/governance#profile" : "/governance";
   const totalVotes = profileDetail?.summary.totalVotes ?? 0;
   const totalContent = profileDetail?.summary.totalContent ?? 0;
   const totalRewardsClaimed = profileDetail?.summary.totalRewardsClaimed ?? "0";
-  const strategy = summary?.strategy?.trim() ?? "";
+  const ponderStrategy = summary?.strategy?.trim() ?? "";
+
+  useEffect(() => {
+    setIsEditing(false);
+    setIsAvatarEditorOpen(false);
+    setNameInput("");
+    setStrategyInput("");
+    setAvatarAccentInput("");
+    setProfileError(null);
+    setAccentError(null);
+    setCommittedName("");
+    setCommittedStrategy("");
+    setCommittedAvatarAccentHex(null);
+    setProfileDraftInitialized(false);
+    setAvatarAccentInitialized(false);
+    setInitialEditStateSet(false);
+  }, [normalizedAddress]);
+
+  useEffect(() => {
+    if (profileDraftInitialized || liveProfileLoading) {
+      return;
+    }
+
+    const nextName = liveProfile?.name ?? "";
+    const nextStrategy = liveProfile?.strategy ?? "";
+    setCommittedName(nextName);
+    setCommittedStrategy(nextStrategy);
+    setNameInput(nextName);
+    setStrategyInput(nextStrategy);
+    setProfileDraftInitialized(true);
+
+    if (ownProfile && !initialEditStateSet) {
+      setIsEditing(!hasLiveProfile && hasVoterId);
+      setInitialEditStateSet(true);
+    }
+  }, [
+    liveProfile,
+    hasLiveProfile,
+    hasVoterId,
+    liveProfileLoading,
+    ownProfile,
+    profileDraftInitialized,
+    initialEditStateSet,
+  ]);
+
+  useEffect(() => {
+    if (!profileDraftInitialized || isEditing || liveProfileLoading) {
+      return;
+    }
+
+    const nextName = liveProfile?.name ?? "";
+    const nextStrategy = liveProfile?.strategy ?? "";
+    setCommittedName(nextName);
+    setCommittedStrategy(nextStrategy);
+    setNameInput(nextName);
+    setStrategyInput(nextStrategy);
+  }, [liveProfile, isEditing, liveProfileLoading, profileDraftInitialized]);
+
+  useEffect(() => {
+    if (avatarAccentInitialized || avatarAccentLoading) {
+      return;
+    }
+
+    const nextAccentHex = avatarAccent?.hex ?? null;
+    setCommittedAvatarAccentHex(nextAccentHex);
+    setAvatarAccentInput(nextAccentHex ?? "");
+    setAvatarAccentInitialized(true);
+  }, [avatarAccent, avatarAccentInitialized, avatarAccentLoading]);
+
+  useEffect(() => {
+    if (!avatarAccentInitialized || isAvatarEditorOpen || avatarAccentLoading) {
+      return;
+    }
+
+    const nextAccentHex = avatarAccent?.hex ?? null;
+    setCommittedAvatarAccentHex(nextAccentHex);
+    setAvatarAccentInput(nextAccentHex ?? "");
+  }, [avatarAccent, avatarAccentInitialized, avatarAccentLoading, isAvatarEditorOpen]);
+
+  const { isTaken: isNameTaken, isLoading: nameCheckLoading } = useIsNameTaken(nameInput);
+  const currentName = ownProfile ? committedName || liveProfile?.name || summary?.name || "" : summary?.name || "";
+  const currentStrategy = ownProfile
+    ? committedStrategy || liveProfile?.strategy || summary?.strategy || ""
+    : ponderStrategy;
+  const displayName = currentName || truncateAddress(normalizedAddress);
+  const displayAvatarAccentHex = ownProfile ? (committedAvatarAccentHex ?? avatarAccent?.hex ?? null) : null;
+  const fallbackImageUrl = getReputationAvatarUrl(normalizedAddress, 96, displayAvatarAccentHex) || "";
+  const isOwnName = currentName.length > 0 && currentName.toLowerCase() === nameInput.toLowerCase();
+  const showNameStatus = isEditing && nameInput.length >= 3 && !nameCheckLoading;
+  const nameIsAvailable = showNameStatus && (!isNameTaken || isOwnName);
+  const nameIsUnavailable = showNameStatus && isNameTaken && !isOwnName;
+  const normalizedAvatarAccentInput = normalizeAvatarAccentHex(avatarAccentInput);
+  const avatarAccentInputError = avatarAccentInput.trim().length > 0 && !normalizedAvatarAccentInput;
+  const previewAvatarAccentHex = normalizedAvatarAccentInput ?? committedAvatarAccentHex;
+  const avatarAccentPickerValue = normalizedAvatarAccentInput ?? committedAvatarAccentHex ?? DEFAULT_AVATAR_ACCENT_HEX;
+  const generatedAvatarPreviewUrl = getReputationAvatarUrl(normalizedAddress, 160, previewAvatarAccentHex) || "";
+  const avatarAccentBusy = avatarAccentPending || clearAvatarAccentPending;
+  const hasAvatarAccentChanges = normalizedAvatarAccentInput !== committedAvatarAccentHex;
 
   const streakLabel = useMemo(() => {
     if (!stats) return "0";
@@ -206,35 +341,218 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
     );
   }, [normalizedAddress, openConnectModal, toggleFollow]);
 
+  const openEditMode = useCallback(() => {
+    setNameInput(currentName);
+    setStrategyInput(currentStrategy);
+    setProfileError(null);
+    setIsEditing(true);
+  }, [currentName, currentStrategy]);
+
+  const handleCancelEdit = useCallback(() => {
+    setNameInput(currentName);
+    setStrategyInput(currentStrategy);
+    setProfileError(null);
+    setIsEditing(false);
+  }, [currentName, currentStrategy]);
+
+  const handleSaveProfile = useCallback(async () => {
+    if (!hasVoterId) {
+      notification.info("Get a Voter ID before creating a profile.");
+      return;
+    }
+
+    const trimmedName = nameInput.trim();
+    const trimmedStrategy = strategyInput.trim();
+
+    if (!trimmedName) {
+      setProfileError("Profile name is required");
+      return;
+    }
+
+    if (!NAME_REGEX.test(trimmedName)) {
+      setProfileError("Name must be 3-20 characters (letters, numbers, underscores)");
+      return;
+    }
+
+    if (isNameTaken && !isOwnName) {
+      setProfileError("This name is already taken");
+      return;
+    }
+
+    if (trimmedStrategy.length > MAX_PROFILE_STRATEGY_LENGTH) {
+      setProfileError(`How you rate must be ${MAX_PROFILE_STRATEGY_LENGTH} characters or fewer`);
+      return;
+    }
+
+    setProfileError(null);
+
+    try {
+      await setProfile(trimmedName, trimmedStrategy);
+      setCommittedName(trimmedName);
+      setCommittedStrategy(trimmedStrategy);
+      setNameInput(trimmedName);
+      setStrategyInput(trimmedStrategy);
+      setIsEditing(false);
+      notification.success(hasLiveProfile ? "Profile updated!" : "Profile created!");
+      refetchLiveProfile();
+    } catch (error: any) {
+      console.error("Profile update failed:", error);
+      setProfileError(error?.shortMessage || "Failed to update profile");
+    }
+  }, [hasLiveProfile, hasVoterId, isNameTaken, isOwnName, nameInput, refetchLiveProfile, setProfile, strategyInput]);
+
+  const openAvatarEditor = useCallback(() => {
+    if (!hasVoterId) {
+      notification.info("Get a Voter ID before editing your avatar.");
+      return;
+    }
+
+    setAvatarAccentInput(committedAvatarAccentHex ?? "");
+    setAccentError(null);
+    setIsAvatarEditorOpen(true);
+  }, [committedAvatarAccentHex, hasVoterId]);
+
+  const closeAvatarEditor = useCallback(() => {
+    setAvatarAccentInput(committedAvatarAccentHex ?? "");
+    setAccentError(null);
+    setIsAvatarEditorOpen(false);
+  }, [committedAvatarAccentHex]);
+
+  const handleSaveAvatarAccent = useCallback(async () => {
+    const normalizedAccentHex = normalizeAvatarAccentHex(avatarAccentInput);
+    if (!normalizedAccentHex) {
+      setAccentError("Use a valid 6-digit hex color like #f26426.");
+      return;
+    }
+
+    const rgbValue = avatarAccentHexToRgb(normalizedAccentHex);
+    if (rgbValue === null) {
+      setAccentError("Use a valid 6-digit hex color like #f26426.");
+      return;
+    }
+
+    setAccentError(null);
+
+    try {
+      await setAvatarAccent(rgbValue);
+      setCommittedAvatarAccentHex(normalizedAccentHex);
+      setAvatarAccentInput(normalizedAccentHex);
+      setIsAvatarEditorOpen(false);
+      notification.success("Avatar color updated!");
+      refetchAvatarAccent();
+    } catch (error: any) {
+      console.error("Avatar accent update failed:", error);
+      setAccentError(error?.shortMessage || "Failed to update avatar color");
+    }
+  }, [avatarAccentInput, refetchAvatarAccent, setAvatarAccent]);
+
+  const handleResetAvatarAccent = useCallback(async () => {
+    if (!committedAvatarAccentHex) {
+      setAvatarAccentInput("");
+      setAccentError(null);
+      setIsAvatarEditorOpen(false);
+      return;
+    }
+
+    setAccentError(null);
+
+    try {
+      await clearAvatarAccent();
+      setCommittedAvatarAccentHex(null);
+      setAvatarAccentInput("");
+      setIsAvatarEditorOpen(false);
+      notification.success("Avatar color reset!");
+      refetchAvatarAccent();
+    } catch (error: any) {
+      console.error("Avatar accent reset failed:", error);
+      setAccentError(error?.shortMessage || "Failed to reset avatar color");
+    }
+  }, [clearAvatarAccent, committedAvatarAccentHex, refetchAvatarAccent]);
+
   return (
-    <div className="flex flex-col items-center grow px-4 pt-8 pb-12">
-      <div className="w-full max-w-5xl space-y-6">
-        <Link
-          href={backHref}
-          className="inline-flex items-center gap-2 rounded-full bg-base-200 px-3 py-1.5 text-base font-medium text-white transition-colors hover:bg-base-300"
-        >
-          <ArrowLeftIcon className="h-4 w-4" />
-          Back
-        </Link>
+    <div className={embedded ? "w-full space-y-6" : "flex flex-col items-center grow px-4 pt-8 pb-12"}>
+      <div className={embedded ? "w-full space-y-6" : "w-full max-w-5xl space-y-6"}>
+        {!embedded ? (
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-2 rounded-full bg-base-200 px-3 py-1.5 text-base font-medium text-white transition-colors hover:bg-base-300"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Back
+          </Link>
+        ) : null}
 
         <div className="surface-card rounded-3xl p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-center gap-4 min-w-0">
-              <ProfileImageLightbox
-                src={fallbackImageUrl}
-                fallbackSrc={fallbackImageUrl}
-                alt={`${displayName} avatar`}
-                width={96}
-                height={96}
-                triggerLabel="Open profile avatar"
-                modalLabel={`${displayName} profile avatar`}
-                buttonClassName="shrink-0 rounded-3xl"
-                imageClassName="h-24 w-24 rounded-3xl object-cover shrink-0"
-                modalImageClassName="rounded-[2rem]"
-              />
-              <div className="min-w-0">
-                <h1 className="truncate text-3xl font-semibold">{displayName}</h1>
-                <div className="mt-2 font-mono text-base text-base-content/55 break-all">{normalizedAddress}</div>
+              {ownProfile ? (
+                <button
+                  type="button"
+                  onClick={openAvatarEditor}
+                  aria-label="Edit profile avatar"
+                  className="group relative shrink-0 rounded-3xl transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                >
+                  <img
+                    src={fallbackImageUrl}
+                    width={96}
+                    height={96}
+                    alt={`${displayName} avatar`}
+                    className="h-24 w-24 rounded-3xl object-cover shrink-0"
+                  />
+                  <span className="absolute -bottom-1 -right-1 rounded-full bg-base-200 px-2 py-0.5 text-xs font-medium text-white transition-colors group-hover:bg-base-300">
+                    Edit
+                  </span>
+                </button>
+              ) : (
+                <ProfileImageLightbox
+                  src={fallbackImageUrl}
+                  fallbackSrc={fallbackImageUrl}
+                  alt={`${displayName} avatar`}
+                  width={96}
+                  height={96}
+                  triggerLabel="Open profile avatar"
+                  modalLabel={`${displayName} profile avatar`}
+                  buttonClassName="shrink-0 rounded-3xl"
+                  imageClassName="h-24 w-24 rounded-3xl object-cover shrink-0"
+                  modalImageClassName="rounded-[2rem]"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                {ownProfile && isEditing ? (
+                  <>
+                    <input
+                      type="text"
+                      value={nameInput}
+                      onChange={event => {
+                        setNameInput(event.target.value);
+                        setProfileError(null);
+                      }}
+                      maxLength={20}
+                      aria-label="Profile name"
+                      placeholder="Profile name"
+                      className={`input input-bordered h-auto w-full bg-base-100 px-0 text-3xl font-semibold ${
+                        nameIsUnavailable ? "input-error" : ""
+                      }`}
+                      disabled={isSavingProfile}
+                    />
+                    <div className="mt-2 font-mono text-base text-base-content/55 break-all">{normalizedAddress}</div>
+                    <div className="mt-2 flex items-start justify-between gap-3 text-sm">
+                      <div className="text-base-content/55">
+                        {nameIsUnavailable ? <p className="text-error">Name is already taken</p> : null}
+                        {!showNameStatus && nameInput.length > 0 && nameInput.length < 3 ? (
+                          <p className="text-warning">Min 3 characters</p>
+                        ) : null}
+                        {nameIsAvailable && !isOwnName ? <p className="text-success">Name is available</p> : null}
+                      </div>
+                      <span className="shrink-0 text-base-content/40">{nameInput.length}/20</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h1 className="truncate text-3xl font-semibold">{displayName}</h1>
+                    <div className="mt-2 font-mono text-base text-base-content/55 break-all">{normalizedAddress}</div>
+                  </>
+                )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base text-base-content/60">
                     {profileLoading ? "..." : `${totalVotes} votes`}
@@ -254,12 +572,42 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
             </div>
 
             {ownProfile ? (
-              <Link
-                href="/settings"
-                className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
-              >
-                Manage profile
-              </Link>
+              !hasVoterId ? (
+                <Link
+                  href="/governance#faucet"
+                  className="inline-flex items-center justify-center rounded-full bg-base-200 px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-300"
+                >
+                  Get Voter ID
+                </Link>
+              ) : isEditing ? (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="btn btn-ghost border border-base-300"
+                    disabled={isSavingProfile}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveProfile()}
+                    className="btn btn-submit"
+                    disabled={
+                      isSavingProfile ||
+                      !nameInput.trim() ||
+                      nameIsUnavailable ||
+                      strategyInput.trim().length > MAX_PROFILE_STRATEGY_LENGTH
+                    }
+                  >
+                    {isSavingProfile ? "Saving..." : hasLiveProfile ? "Save changes" : "Create profile"}
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={openEditMode} className="btn btn-submit">
+                  Edit profile
+                </button>
+              )
             ) : (
               <FollowProfileButton
                 following={following}
@@ -272,22 +620,60 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
             )}
           </div>
 
-          {strategy ? (
+          {profileError ? (
+            <div className="mt-4 rounded-2xl bg-error/10 px-4 py-3 text-base text-error">{profileError}</div>
+          ) : null}
+
+          {ownProfile && isEditing ? (
+            <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">How you rate</div>
+              <textarea
+                value={strategyInput}
+                onChange={event => {
+                  setStrategyInput(event.target.value);
+                  setProfileError(null);
+                }}
+                maxLength={MAX_PROFILE_STRATEGY_LENGTH}
+                rows={5}
+                aria-label="How you rate"
+                placeholder="What you look for when rating."
+                className="textarea textarea-bordered mt-3 min-h-32 w-full bg-base-100"
+                disabled={isSavingProfile}
+              />
+              <div className="mt-2 flex justify-end">
+                <span className="text-sm text-base-content/40">
+                  {strategyInput.trim().length}/{MAX_PROFILE_STRATEGY_LENGTH}
+                </span>
+              </div>
+            </div>
+          ) : currentStrategy.trim() ? (
             <div className="mt-6 rounded-2xl bg-base-content/[0.04] px-5 py-4">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">
                 {ownProfile ? "How you rate" : "How they rate"}
               </div>
-              <p className="mt-2 max-w-3xl whitespace-pre-wrap text-base leading-7 text-base-content/75">{strategy}</p>
+              <p className="mt-2 max-w-3xl whitespace-pre-wrap text-base leading-7 text-base-content/75">
+                {currentStrategy.trim()}
+              </p>
             </div>
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">How you rate</div>
-              <Link
-                href="/settings"
-                className="mt-4 inline-flex items-center justify-center rounded-full bg-base-content/[0.06] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-base-content/[0.1]"
-              >
-                Add your rating strategy
-              </Link>
+              {hasVoterId ? (
+                <button
+                  type="button"
+                  onClick={openEditMode}
+                  className="mt-4 inline-flex items-center justify-center rounded-full bg-base-content/[0.06] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-base-content/[0.1]"
+                >
+                  Add how you rate
+                </button>
+              ) : (
+                <Link
+                  href="/governance#faucet"
+                  className="mt-4 inline-flex items-center justify-center rounded-full bg-base-content/[0.06] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-base-content/[0.1]"
+                >
+                  Get Voter ID
+                </Link>
+              )}
             </div>
           ) : null}
         </div>
@@ -327,7 +713,7 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
 
             {!ownProfile && following ? (
               <Link
-                href="/settings"
+                href="/settings?tab=notifications"
                 className="inline-flex items-center justify-center rounded-full bg-base-content/[0.06] px-4 py-2 text-base font-medium text-white transition-colors hover:bg-base-content/[0.1]"
               >
                 Manage alerts
@@ -534,6 +920,104 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
             </div>
           )}
         </div>
+
+        {ownProfile && isAvatarEditorOpen ? (
+          <div
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 px-4 py-6 backdrop-blur-md"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit avatar color"
+            onClick={closeAvatarEditor}
+          >
+            <div
+              className="w-full max-w-xl rounded-3xl bg-base-200 p-6 shadow-2xl"
+              onClick={event => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-semibold">Edit avatar color</h2>
+                  <p className="mt-1 text-base text-base-content/60">Choose one accent color for your public avatar.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeAvatarEditor}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-base-300 text-base-content transition-colors hover:bg-base-300/80"
+                  aria-label="Close avatar editor"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="mt-6 flex justify-center">
+                <img
+                  src={generatedAvatarPreviewUrl}
+                  width={160}
+                  height={160}
+                  alt="Avatar preview"
+                  className="h-40 w-40 rounded-[2rem] object-cover"
+                />
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-[auto,minmax(0,1fr)] sm:items-center">
+                <input
+                  type="color"
+                  aria-label="Avatar accent color picker"
+                  className="h-12 w-20 cursor-pointer rounded-xl border border-base-300 bg-base-100 p-1"
+                  value={avatarAccentPickerValue}
+                  onChange={event => {
+                    setAvatarAccentInput(event.target.value);
+                    setAccentError(null);
+                  }}
+                  disabled={avatarAccentBusy}
+                />
+                <input
+                  type="text"
+                  aria-label="Avatar accent hex"
+                  placeholder="#f26426"
+                  className={`input input-bordered w-full bg-base-100 ${avatarAccentInputError ? "input-error" : ""}`}
+                  value={avatarAccentInput}
+                  onChange={event => {
+                    setAvatarAccentInput(event.target.value);
+                    setAccentError(null);
+                  }}
+                  disabled={avatarAccentBusy}
+                />
+              </div>
+
+              <div className="mt-3 min-h-6 text-sm">
+                {avatarAccentInputError ? (
+                  <p className="text-error">Use a valid 6-digit hex color like #f26426.</p>
+                ) : accentError ? (
+                  <p className="text-error">{accentError}</p>
+                ) : null}
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => void handleSaveAvatarAccent()}
+                  className="btn btn-submit sm:flex-1"
+                  disabled={
+                    avatarAccentBusy ||
+                    !normalizedAvatarAccentInput ||
+                    avatarAccentInputError ||
+                    !hasAvatarAccentChanges
+                  }
+                >
+                  {avatarAccentPending ? "Saving..." : "Save color"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleResetAvatarAccent()}
+                  className="btn btn-ghost border border-base-300 sm:w-auto"
+                  disabled={avatarAccentBusy || (!committedAvatarAccentHex && avatarAccentInput.trim().length === 0)}
+                >
+                  {clearAvatarAccentPending ? "Resetting..." : "Reset"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -30,9 +30,9 @@ const GovernanceDocs: NextPage = () => {
         across all time, rolling windows, and the current season.
       </p>
       <p>
-        Profile editing, delegation, referrals, and notification preferences now live under{" "}
-        <code className="bg-base-300 px-1 rounded text-base">/settings</code>. Governance remains focused on reputation,
-        proposals, and frontend participation rather than account management.
+        Your own <strong>Profile</strong> tab now lives on the governance page, so you can edit the same public profile
+        other curators see. <code className="bg-base-300 px-1 rounded text-base">/settings</code> now focuses on
+        delegation, referrals, and notifications.
       </p>
 
       <h2>Proposal Lifecycle</h2>

@@ -5,24 +5,22 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { ReferralSection } from "~~/components/governance/ReferralSection";
 import { DelegationSection } from "~~/components/profile/DelegationSection";
-import { ProfileForm } from "~~/components/profile/ProfileForm";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 
-type SettingsTab = "profile" | "delegation" | "referrals" | "notifications";
+type SettingsTab = "delegation" | "referrals" | "notifications";
 
-const settingsTabs: SettingsTab[] = ["profile", "delegation", "referrals", "notifications"];
+const settingsTabs: SettingsTab[] = ["delegation", "referrals", "notifications"];
 
 const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
-  profile: "Profile",
   delegation: "Delegation",
   referrals: "Referrals",
   notifications: "Notifications",
 };
 
 function normalizeSettingsTab(value: string | null): SettingsTab {
-  return settingsTabs.includes((value ?? "") as SettingsTab) ? (value as SettingsTab) : "profile";
+  return settingsTabs.includes((value ?? "") as SettingsTab) ? (value as SettingsTab) : "delegation";
 }
 
 function SettingsPageInner() {
@@ -30,7 +28,7 @@ function SettingsPageInner() {
   const router = useRouter();
   const pathname = usePathname() ?? "/settings";
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
+  const [activeTab, setActiveTab] = useState<SettingsTab>("delegation");
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab") ?? null;
@@ -41,7 +39,7 @@ function SettingsPageInner() {
     (tab: SettingsTab) => {
       setActiveTab(tab);
       const nextParams = new URLSearchParams(searchParams?.toString() ?? "");
-      if (tab === "profile") {
+      if (tab === "delegation") {
         nextParams.delete("tab");
       } else {
         nextParams.set("tab", tab);
@@ -78,7 +76,6 @@ function SettingsPageInner() {
         ))}
       </div>
 
-      {activeTab === "profile" && <ProfileForm />}
       {activeTab === "delegation" && <DelegationSection />}
       {activeTab === "referrals" && <ReferralSection />}
       {activeTab === "notifications" && <NotificationSettingsPanel address={address} />}
