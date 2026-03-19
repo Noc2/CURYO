@@ -2,7 +2,6 @@ import { Bebas_Neue, Space_Grotesk } from "next/font/google";
 import "@rainbow-me/rainbowkit/styles.css";
 import "@scaffold-ui/components/styles.css";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
-import { ThemeProvider } from "~~/components/ThemeProvider";
 import "~~/styles/globals.css";
 import "~~/styles/site-background.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
@@ -28,11 +27,13 @@ export const metadata = getMetadata({
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
-    <html suppressHydrationWarning className={`${bebasNeue.variable} ${spaceGrotesk.variable}`}>
-      <body suppressHydrationWarning>
-        <ThemeProvider defaultTheme="dark" forcedTheme="dark">
-          <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
-        </ThemeProvider>
+    <html
+      className={`${bebasNeue.variable} ${spaceGrotesk.variable}`}
+      data-theme="dark"
+      style={{ colorScheme: "dark" }}
+    >
+      <body>
+        <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
       </body>
     </html>
   );
