@@ -282,9 +282,6 @@ export function PublicProfileView({ address }: PublicProfileViewProps) {
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">How you rate</div>
-              <p className="mt-2 max-w-3xl text-base leading-7 text-base-content/60">
-                Add a short note about the signals you trust and what makes you vote up or down.
-              </p>
               <Link
                 href="/settings"
                 className="mt-4 inline-flex items-center justify-center rounded-full bg-base-content/[0.06] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-base-content/[0.1]"

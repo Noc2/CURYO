@@ -11,12 +11,12 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
 const STEPS = [
   {
-    label: "Connect wallet & claim Voter ID",
-    desc: "link your wallet and claim a Voter ID so you can vote, stake, and claim rewards",
+    label: "Connect wallet",
+    desc: "claim a Voter ID to vote, stake, and claim",
   },
-  { label: "Vote", desc: "place your prediction while the vote direction stays hidden" },
+  { label: "Vote", desc: "place your prediction while direction stays hidden" },
   { label: "Stake", desc: "back your prediction with cREP tokens" },
-  { label: "Reveal & Resolve", desc: "votes are revealed after the blind phase, and rounds settle automatically" },
+  { label: "Reveal & Resolve", desc: "votes are revealed, then rounds settle automatically" },
   { label: "Claim", desc: "collect your rewards if your prediction was correct" },
 ];
 
@@ -54,10 +54,6 @@ export function VotingGuide() {
             <XMarkIcon className="w-4 h-4" />
           </button>
           <h3 className="font-bold text-lg leading-snug pr-6">How it works</h3>
-          <p className="mt-2 pr-6 text-sm leading-relaxed text-base-content/65">
-            Getting started takes a bit more effort because Curyo is fully decentralized, but after the initial setup,
-            it gets much easier.
-          </p>
         </div>
 
         {/* Steps */}

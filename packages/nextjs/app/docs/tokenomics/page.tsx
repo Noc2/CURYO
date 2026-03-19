@@ -1,11 +1,8 @@
 "use client";
 
-import { FaucetHalvingChart } from "~~/components/docs/FaucetHalvingChart";
-import { FaucetTierChart } from "~~/components/docs/FaucetTierChart";
-import { RewardSplitChart } from "~~/components/docs/RewardSplitChart";
 import { TokenAllocationChart } from "~~/components/docs/TokenAllocationChart";
 import { protocolCopy } from "~~/lib/docs/protocolCopy";
-import { protocolDocFacts, rewardSplitTableRows } from "~~/lib/docs/protocolFacts";
+import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const Tokenomics = () => {
   return (
@@ -13,12 +10,10 @@ const Tokenomics = () => {
       <h1>Tokenomics</h1>
       <p className="lead text-base-content/60 text-lg">cREP token distribution and point mechanics.</p>
 
-      <h2>Curyo is a reputation token only</h2>
+      <h2>Overview</h2>
       <p>
-        cREP has no monetary value and is not designed as an investment or financial instrument. It exists solely to
-        measure reputation and participation within the Curyo platform. It cannot be purchased &mdash; it is only earned
-        through verified identity claims and active participation. There is no team, no company, and no central issuer
-        behind the token. {protocolCopy.governanceOverview}
+        cREP is a reputation token, not money. It cannot be bought, has no token sale, and is distributed through
+        protocol-controlled pools to verified humans and active participants.
       </p>
 
       <h2>Token Overview</h2>
@@ -45,29 +40,8 @@ const Tokenomics = () => {
         </table>
       </div>
       <p>
-        Fixed supply of <strong>100 million tokens</strong>. Fair launch &mdash; no pre-mine, no VC allocation, no team
-        tokens, and no token sale of any kind. All tokens are distributed exclusively through six system-controlled
-        pools:
+        Supply is fixed at <strong>100 million cREP</strong>, with no pre-mine, team allocation, or token sale.
       </p>
-
-      <h3>Design Principles</h3>
-      <ul>
-        <li>
-          <strong>Reputation, not money.</strong> cREP represents your standing in the community. It is staked to curate
-          and vote, not traded for profit.
-        </li>
-        <li>
-          <strong>No issuer, no sale.</strong> There is no company, foundation, or team that issues, sells, or controls
-          cREP. Distribution is handled entirely by automated system contracts.
-        </li>
-        <li>
-          <strong>Governance-finalized deployments.</strong> {protocolCopy.governanceDesignPrinciple}
-        </li>
-        <li>
-          <strong>Fair distribution (one person, one claim).</strong> Tokens are claimed once per verified human via
-          passport verification, preventing concentration and ensuring broad distribution.
-        </li>
-      </ul>
 
       <hr />
 
@@ -127,14 +101,13 @@ const Tokenomics = () => {
         </table>
       </div>
 
-      <h3>HumanFaucet</h3>
+      <h3>Identity Claim</h3>
       <p>
-        Primary distribution via{" "}
+        Verified humans claim once through{" "}
         <a href="https://self.xyz" target="_blank" rel="noopener noreferrer" className="link link-primary">
           Self.xyz
         </a>{" "}
-        passport verification with age verification (18+). Each passport can claim once. Claim amounts decrease as more
-        users join &mdash; rewarding early adopters who bootstrap the platform with content.
+        passport verification. Claim size falls as adoption grows.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -186,18 +159,7 @@ const Tokenomics = () => {
           </tbody>
         </table>
       </div>
-      <div className="not-prose my-6">
-        <FaucetTierChart />
-      </div>
-      <p>
-        The 51,899,900 cREP faucet pool serves <strong>up to ~41 million users</strong> without referrals (~15M with
-        full referral usage). Referral bonuses scale proportionally at 50% of the claim amount. The first 10 Genesis
-        claimants receive 10,000 cREP each to bootstrap the platform from day one. As the platform grows and becomes
-        more populated, later claimants need fewer tokens since there is already content to engage with. The decreasing
-        schedule also reduces exploitation risk as the platform becomes more visible.
-      </p>
-
-      <h3>Participation Pool</h3>
+      <h3>Participation Rewards</h3>
       <p>{protocolCopy.participationPoolOverview}</p>
       <p>
         Reward formula: <code>reward = stakeAmount &times; currentRate</code>. The rate starts at <strong>90%</strong>{" "}
@@ -253,70 +215,7 @@ const Tokenomics = () => {
           </tbody>
         </table>
       </div>
-      <p>
-        Voter participation rewards are distributed only after a round is resolved &mdash; deferred from vote time to
-        prevent exploitation where attackers could vote, collect immediate rewards, and then have rounds cancel without
-        risk. Submitter participation rewards are paid only when the submitter stake resolves on the healthy path after
-        a settled round. The pool is funded with <strong>34M cREP</strong> and governed by the same timelock as all
-        other protocol contracts.
-      </p>
-      <div className="not-prose my-6">
-        <FaucetHalvingChart />
-      </div>
-
-      <h3>Streak Bonuses (Currently Inactive)</h3>
-      <p>
-        Daily voting streaks are still tracked in the product, but direct on-chain streak bonus claims are currently
-        disabled while the reward model is being redesigned to avoid low-risk farming paths.
-      </p>
-      <p>
-        The milestone table below is kept only as historical tokenomics context. These payouts are not currently
-        claimable on-chain.
-      </p>
-      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
-        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_th]:bg-base-300">
-          <thead>
-            <tr>
-              <th>Milestone</th>
-              <th>Base Bonus</th>
-              <th>Tier 0 (90%)</th>
-              <th>Tier 1 (45%)</th>
-              <th>Tier 2 (22.5%)</th>
-              <th>Tier 3 (11.25%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>7 days</td>
-              <td className="font-mono">10 cREP</td>
-              <td className="font-mono">10 cREP</td>
-              <td className="font-mono">5 cREP</td>
-              <td className="font-mono">2.5 cREP</td>
-              <td className="font-mono">1.25 cREP</td>
-            </tr>
-            <tr>
-              <td>30 days</td>
-              <td className="font-mono">50 cREP</td>
-              <td className="font-mono">50 cREP</td>
-              <td className="font-mono">25 cREP</td>
-              <td className="font-mono">12.5 cREP</td>
-              <td className="font-mono">6.25 cREP</td>
-            </tr>
-            <tr>
-              <td>90 days</td>
-              <td className="font-mono">200 cREP</td>
-              <td className="font-mono">200 cREP</td>
-              <td className="font-mono">100 cREP</td>
-              <td className="font-mono">50 cREP</td>
-              <td className="font-mono">25 cREP</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p>
-        Those milestone values remain useful as design reference points, but they are not currently claimable on-chain.
-        Any future streak reward will need to be coupled to settled participation rather than bare vote commits.
-      </p>
+      <p>Participation rewards are paid only after a round or submitter stake resolves successfully.</p>
 
       <h3>Treasury</h3>
       <p>
@@ -329,44 +228,11 @@ const Tokenomics = () => {
 
       <hr />
 
-      <h2>Point Distribution</h2>
+      <h2>Round Payouts</h2>
       <p>
         When a round is resolved, winners recover their original stake and claim from the content-specific voter pool.
-        Revealed losers can reclaim a fixed rebate, and the remaining losing pool follows the fixed protocol split.
-      </p>
-
-      <h3>Pool Split</h3>
-      <div className="not-prose my-6">
-        <RewardSplitChart />
-      </div>
-      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
-        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
-          <thead>
-            <tr>
-              <th>Recipient</th>
-              <th>Share</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rewardSplitTableRows.map(([recipient, share]) => (
-              <tr key={recipient}>
-                <td>{recipient === "Content-specific voter pool" ? "Voter pool (content-specific)" : recipient}</td>
-                <td className="font-mono">{share}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <p>
-        Revealed losers can reclaim <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of their
-        original stake. The remaining losing pool is split so the {protocolDocFacts.voterPoolShareLabel} voter share
-        goes to a <strong>content-specific pool</strong>, distributed proportionally by{" "}
-        <strong>phase-weighted effective stake</strong> to winning voters on that content. Blind phase voters earn{" "}
-        {protocolDocFacts.earlyVoterAdvantageLabel} more per cREP than open phase voters. An additional{" "}
-        {protocolDocFacts.consensusShareLabel} goes to a consensus subsidy reserve. Because each content item has
-        independent rounds that resolve on their own timeline, rewards are claimable immediately after resolution. The
-        1% treasury fee goes to the governance timelock.
+        Revealed losers can reclaim <strong>{protocolDocFacts.revealedLoserRefundPercentLabel}</strong> of raw stake,
+        and the remaining losing pool is split across voters, submitter, frontend, consensus reserve, and treasury.
       </p>
 
       <hr />

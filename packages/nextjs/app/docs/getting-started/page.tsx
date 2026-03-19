@@ -95,73 +95,6 @@ function VoteIcon() {
   );
 }
 
-function SubmitIcon() {
-  return (
-    <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
-      <rect x="8" y="14" width="48" height="42" rx="6" className="fill-primary/10 stroke-primary" strokeWidth="2.5" />
-      <path d="M32 40V22" className="stroke-primary" strokeWidth="3" strokeLinecap="round" />
-      <path
-        d="M24 30l8-8 8 8"
-        className="stroke-primary"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="M18 48h28" className="stroke-primary/40" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="50" cy="14" r="8" className="fill-warning/20 stroke-warning" strokeWidth="2" />
-      <text x="50" y="18" textAnchor="middle" className="fill-warning" fontSize="11" fontWeight="bold">
-        10
-      </text>
-    </svg>
-  );
-}
-
-function RewardsIcon() {
-  return (
-    <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
-      <circle cx="32" cy="30" r="18" className="fill-warning/15 stroke-warning" strokeWidth="2.5" />
-      <circle cx="32" cy="30" r="12" className="stroke-warning/50" strokeWidth="1.5" />
-      <text x="32" y="35" textAnchor="middle" className="fill-warning" fontSize="16" fontWeight="bold">
-        C
-      </text>
-      <path
-        d="M20 50l-4 10 8-4 4 6 4-6 8 4-4-10"
-        className="fill-error/20 stroke-error/60"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M44 50l4 10-8-4-4 6-4-6-8 4 4-10"
-        className="fill-error/20 stroke-error/60"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function ExploreIcon() {
-  return (
-    <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
-      <circle cx="32" cy="32" r="26" className="fill-secondary/10 stroke-secondary" strokeWidth="2.5" />
-      <circle cx="32" cy="32" r="4" className="fill-secondary" />
-      <path
-        d="M22 22l6 14 14 6-6-14z"
-        className="fill-error/30 stroke-error/70"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M42 42l-6-14-14-6 6 14z"
-        className="fill-info/30 stroke-info/70"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path d="M32 8v4M32 52v4M8 32h4M52 32h4" className="stroke-secondary/40" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 /* ---------- Page ---------- */
 
 const GettingStarted: NextPage = () => {
@@ -175,23 +108,7 @@ const GettingStarted: NextPage = () => {
       </StepIllustration>
       <h2>1. Connect Your Wallet</h2>
       <p>
-        Click <strong>Connect Wallet</strong> in the top-right corner. Curyo supports{" "}
-        <a href="https://walletconnect.com/" target="_blank" rel="noopener noreferrer">
-          WalletConnect
-        </a>
-        ,{" "}
-        <a href="https://metamask.io/" target="_blank" rel="noopener noreferrer">
-          MetaMask
-        </a>
-        ,{" "}
-        <a href="https://www.coinbase.com/wallet" target="_blank" rel="noopener noreferrer">
-          Coinbase Wallet
-        </a>
-        , and{" "}
-        <a href="https://rainbow.me/" target="_blank" rel="noopener noreferrer">
-          Rainbow
-        </a>
-        . Make sure you&apos;re on the correct network.
+        Click <strong>Connect Wallet</strong> and switch to the supported network.
       </p>
 
       <StepIllustration bg="bg-secondary/5">
@@ -199,113 +116,34 @@ const GettingStarted: NextPage = () => {
       </StepIllustration>
       <h2>2. Verify Your Identity & Get Voter ID</h2>
       <p>
-        To participate in cREP, you need a <strong>Voter ID</strong> &mdash; a non-transferable digital ID that proves
-        you&apos;re a verified human. This prevents manipulation through fake accounts and ensures fair voting.
+        Open <strong>Governance</strong> and verify with{" "}
+        <a href="https://self.xyz/" target="_blank" rel="noopener noreferrer">
+          Self.xyz
+        </a>
+        . Verification is 18+ and uses zero-knowledge proofs, so your documents are not published on-chain.
       </p>
       <ul>
-        <li>
-          Go to <strong>Governance</strong> and click &ldquo;Verify with{" "}
-          <a href="https://self.xyz/" target="_blank" rel="noopener noreferrer">
-            Self.xyz
-          </a>
-          &rdquo;
-        </li>
-        <li>
-          Scan your passport using the{" "}
-          <a href="https://self.xyz/" target="_blank" rel="noopener noreferrer">
-            Self.xyz app
-          </a>{" "}
-          (zero-knowledge proof, no personal data stored publicly)
-        </li>
-        <li>
-          You must be <strong>18 or older</strong> to verify &mdash; the zero-knowledge proof confirms your age without
-          revealing your date of birth
-        </li>
-        <li>
-          Once verified, you&apos;ll receive your <strong>Voter ID</strong> and <strong>cREP tokens</strong> (up to
-          10,000 cREP for the first 10 Genesis users, then 1,000, 100, 10, and eventually 1 cREP as more users join)
-        </li>
-        <li>Your Voter ID is non-transferable and tied to your wallet</li>
+        <li>Start the Self.xyz flow from the governance page.</li>
+        <li>Complete passport verification in the Self app.</li>
+        <li>Receive one non-transferable Voter ID and starter cREP.</li>
       </ul>
 
       <StepIllustration bg="bg-accent/5">
         <UnlockIcon />
       </StepIllustration>
-      <h2>3. Your Voter ID Unlocks</h2>
-      <p>With your Voter ID, you can:</p>
-      <ul>
-        <li>
-          <strong>Vote on content</strong> (up to 100 cREP per content per round)
-        </li>
-        <li>
-          <strong>Submit content</strong> to the platform
-        </li>
-        <li>
-          <strong>Create your profile</strong> with a name, optional image, and a short note about how you rate
-        </li>
-        <li>
-          <strong>Propose new platforms</strong>
-        </li>
-        <li>
-          <strong>Refer friends</strong> and receive referral tokens
-        </li>
-      </ul>
+      <h2>3. Start Participating</h2>
+      <p>Your Voter ID unlocks voting, content submission, profiles, and governance participation.</p>
 
       <StepIllustration bg="bg-info/5">
         <VoteIcon />
       </StepIllustration>
-      <h2>4. Vote on Content</h2>
+      <h2>4. Place Your First Vote</h2>
       <p>
-        The <strong>Vote</strong> page shows content cards. For each card, predict whether the rating will go UP or DOWN
-        and choose a stake (1&ndash;100 cREP). Your vote direction is encrypted and hidden until the blind phase ends
-        (~20&nbsp;min). Early (blind phase) voters earn 4x more reward weight. The keeper normally reveals eligible
-        votes after the blind phase ends, and connected users can self-reveal if needed. Resolution occurs after enough
-        votes are revealed.
+        Open <strong>Vote</strong>, choose UP or DOWN, and stake 1&ndash;100 cREP. Your direction stays hidden during
+        the blind phase, and rewards can be claimed after settlement.
       </p>
       <p>
-        <strong>Note:</strong> Each Voter ID can stake a maximum of 100 cREP per content per round. This limit is
-        enforced per verified human, not per wallet, ensuring fair participation. You cannot vote on content you
-        submitted, and there is a <strong>24-hour cooldown</strong> before you can vote on the same content again.
-      </p>
-
-      <StepIllustration bg="bg-primary/5">
-        <SubmitIcon />
-      </StepIllustration>
-      <h2>5. Submit Content</h2>
-      <p>
-        Go to <strong>Submit</strong> to add new content. Submitting requires a <strong>10 cREP</strong> stake as a
-        quality guarantee:
-      </p>
-      <ul>
-        <li>
-          <strong>Returned:</strong> After about 4 days once a settled round confirms rating stays above 25. If no round
-          ever settles, the stake unlocks when the content reaches dormancy after all open rounds have been closed.
-        </li>
-        <li>
-          <strong>Forfeited:</strong> If a settled round establishes a rating below 25 after the 24-hour grace period.
-          100% goes to the treasury.
-        </li>
-      </ul>
-      <p>
-        As a submitter, you receive <strong>10% of the losing stakes</strong> every time a round is resolved on your
-        content.
-      </p>
-
-      <StepIllustration bg="bg-warning/5">
-        <RewardsIcon />
-      </StepIllustration>
-      <h2>6. Claim Rewards</h2>
-      <p>
-        After a round is resolved, check <strong>Portfolio</strong> to see claimable rewards. Click &ldquo;Claim&rdquo;
-        to collect your stake and winnings.
-      </p>
-
-      <StepIllustration bg="bg-secondary/5">
-        <ExploreIcon />
-      </StepIllustration>
-      <h2>7. Discover</h2>
-      <p>
-        The <strong>Discover</strong> page lets you browse all content with search, filtering by platform, and sorting.
+        See <a href="/docs/how-it-works">How It Works</a> for blind voting, rewards, and round settlement details.
       </p>
     </article>
   );
