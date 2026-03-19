@@ -5,7 +5,7 @@ import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RatingOrb } from "~~/components/shared/RatingOrb";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
-import { RoundStats } from "~~/components/shared/RoundStats";
+import { RoundRevealedBreakdown, RoundStats } from "~~/components/shared/RoundStats";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
@@ -185,6 +185,10 @@ export function VotingQuestionCard({
                 )}
               </div>
             )}
+
+            <div className="mt-2 flex shrink-0 justify-center">
+              <RoundRevealedBreakdown snapshot={roundSnapshot} />
+            </div>
           </div>
         </div>
 

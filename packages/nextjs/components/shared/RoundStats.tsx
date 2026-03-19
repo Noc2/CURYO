@@ -9,6 +9,60 @@ interface RoundStatsProps {
   snapshot: RoundSnapshot;
 }
 
+interface RoundRevealedBreakdownProps {
+  snapshot: RoundSnapshot;
+}
+
+export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps) {
+  const { round, isLoading, isEpoch1 } = snapshot;
+
+  if (isLoading) return null;
+
+  const revealedCount = round.revealedCount;
+  if (revealedCount <= 0) return null;
+
+  const upPoolFormatted = Number(round.upPool) / 1e6;
+  const downPoolFormatted = Number(round.downPool) / 1e6;
+  const upCount = Number(round.upCount);
+  const downCount = Number(round.downCount);
+  const higherUpsideSide =
+    !isEpoch1 && upPoolFormatted > 0 && downPoolFormatted > 0 && upPoolFormatted !== downPoolFormatted
+      ? upPoolFormatted < downPoolFormatted
+        ? "up"
+        : "down"
+      : null;
+
+  return (
+    <div className="scrollbar-hide inline-flex max-w-full items-center gap-3 overflow-x-auto rounded-full bg-base-content/[0.05] px-3 py-1.5">
+      <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-error">
+        <span className="font-semibold">DOWN</span>
+        <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
+        <span className="text-xs text-error/70">
+          {downCount} vote{downCount === 1 ? "" : "s"}
+        </span>
+        {higherUpsideSide === "down" ? (
+          <span className="rounded-full bg-error/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-error">
+            Higher upside
+          </span>
+        ) : null}
+      </div>
+      <div className="h-4 w-px shrink-0 bg-base-content/10" />
+      <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-success">
+        <span className="font-semibold">UP</span>
+        <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} cREP</span>
+        <span className="text-xs text-success/70">
+          {upCount} vote{upCount === 1 ? "" : "s"}
+        </span>
+        {higherUpsideSide === "up" ? (
+          <span className="rounded-full bg-success/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-success">
+            Higher upside
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /**
  * Displays stake and vote statistics for the current round on a specific content.
  *
@@ -36,18 +90,6 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
   const voteCount = Number(round.voteCount);
   const revealedCount = round.revealedCount;
   const pendingCount = Math.max(0, voteCount - revealedCount);
-  const upPoolFormatted = Number(round.upPool) / 1e6;
-  const downPoolFormatted = Number(round.downPool) / 1e6;
-  const upCount = Number(round.upCount);
-  const downCount = Number(round.downCount);
-  const hasRevealedVotes = revealedCount > 0;
-  const higherUpsideSide =
-    !isEpoch1 && upPoolFormatted > 0 && downPoolFormatted > 0 && upPoolFormatted !== downPoolFormatted
-      ? upPoolFormatted < downPoolFormatted
-        ? "up"
-        : "down"
-      : null;
-
   return (
     <div className="flex flex-col gap-1.5 text-base text-base-content/60">
       <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap">
@@ -89,36 +131,6 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
           </>
         )}
       </div>
-
-      {hasRevealedVotes && (
-        <div className="scrollbar-hide inline-flex max-w-full items-center gap-3 overflow-x-auto rounded-full bg-base-content/[0.05] px-3 py-1.5">
-          <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-error">
-            <span className="font-semibold">DOWN</span>
-            <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
-            <span className="text-xs text-error/70">
-              {downCount} vote{downCount === 1 ? "" : "s"}
-            </span>
-            {higherUpsideSide === "down" ? (
-              <span className="rounded-full bg-error/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-error">
-                Higher upside
-              </span>
-            ) : null}
-          </div>
-          <div className="h-4 w-px shrink-0 bg-base-content/10" />
-          <div className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-success">
-            <span className="font-semibold">UP</span>
-            <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} cREP</span>
-            <span className="text-xs text-success/70">
-              {upCount} vote{upCount === 1 ? "" : "s"}
-            </span>
-            {higherUpsideSide === "up" ? (
-              <span className="rounded-full bg-success/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-success">
-                Higher upside
-              </span>
-            ) : null}
-          </div>
-        </div>
-      )}
 
       {phase === "voting" && isRoundFull && (
         <div className="flex items-center gap-2">
