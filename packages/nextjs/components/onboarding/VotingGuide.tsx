@@ -48,8 +48,8 @@ export function VotingGuide() {
           </button>
           <h3 className="font-bold text-lg leading-snug pr-6">Here&apos;s how the reputation game works:</h3>
           <p className="mt-2 pr-6 text-sm leading-relaxed text-base-content/65">
-            The hardest part is getting started: connect your wallet and claim your Voter ID once, then the rest of the
-            flow gets much easier. Stick with it.
+            The hardest part is getting started. Because Curyo is a fully decentralized protocol, the first setup has a
+            few extra trustless steps, but after that the flow gets much easier. Stick with it.
           </p>
         </div>
 
