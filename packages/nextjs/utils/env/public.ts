@@ -110,6 +110,7 @@ export const publicEnv = {
   isProduction,
   targetNetworks,
   alchemyApiKey: readEnv("NEXT_PUBLIC_ALCHEMY_API_KEY"),
+  thirdwebClientId: readEnv("NEXT_PUBLIC_THIRDWEB_CLIENT_ID"),
   walletConnectProjectId,
   ponderUrl: requireUrl("NEXT_PUBLIC_PONDER_URL", !isProduction ? "http://localhost:42069" : undefined),
   frontendCode: frontendCode as `0x${string}` | undefined,

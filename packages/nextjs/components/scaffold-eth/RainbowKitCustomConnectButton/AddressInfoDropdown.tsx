@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getAddress } from "viem";
 import { Address } from "viem";
 import { hardhat } from "viem/chains";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount } from "wagmi";
 import { ArrowLeftOnRectangleIcon, Cog6ToothIcon, EyeIcon, GiftIcon } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
@@ -12,6 +12,7 @@ import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
+import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
 import { useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
@@ -222,7 +223,11 @@ function MenuItems({
         </Link>
       </li>
       <li>
-        <button className={`${menuItemClass} text-error hover:text-error`} type="button" onClick={() => disconnect()}>
+        <button
+          className={`${menuItemClass} text-error hover:text-error`}
+          type="button"
+          onClick={() => void disconnect()}
+        >
           <ArrowLeftOnRectangleIcon className="w-6 h-6 shrink-0" />
           <span className={textClass}>Disconnect</span>
         </button>
@@ -239,7 +244,7 @@ export const AddressInfoDropdown = ({
   menuItemsOnly = false,
 }: AddressInfoDropdownProps) => {
   const isPageVisible = usePageVisibility();
-  const { disconnect } = useDisconnect();
+  const disconnect = useCuryoDisconnect();
   const { connector, chain } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const checkSumAddress = getAddress(address);

@@ -1,9 +1,9 @@
 import { NetworkOptions } from "./NetworkOptions";
-import { useDisconnect } from "wagmi";
 import { ArrowLeftOnRectangleIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
 
 export const WrongNetworkDropdown = () => {
-  const { disconnect } = useDisconnect();
+  const disconnect = useCuryoDisconnect();
 
   return (
     <div className="dropdown dropdown-end mr-2">
@@ -20,7 +20,7 @@ export const WrongNetworkDropdown = () => {
           <button
             className="menu-item text-error btn-sm rounded-xl! flex gap-3 py-3"
             type="button"
-            onClick={() => disconnect()}
+            onClick={() => void disconnect()}
           >
             <ArrowLeftOnRectangleIcon className="h-6 w-4 ml-2 sm:ml-0" />
             <span>Disconnect</span>
