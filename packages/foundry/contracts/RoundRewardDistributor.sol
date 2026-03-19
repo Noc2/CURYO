@@ -40,6 +40,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error NoCommit();
     error NoStrandedCrep();
     error TreasuryNotSet();
+    error InvalidParticipationSnapshot();
+    error UnauthorizedCaller();
 
     // --- State ---
     IERC20 public crepToken;
@@ -62,14 +64,14 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // Track participation reward claims: contentId => roundId => voter => claimed/paid
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public participationRewardClaimed;
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public participationRewardPaid;
+    mapping(uint256 => mapping(uint256 => address)) public roundParticipationRewardPool;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardRateBps;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardOwed;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardReserved;
 
     // --- Events ---
     event RewardClaimed(
-        uint256 indexed contentId,
-        uint256 indexed roundId,
-        address indexed voter,
-        uint256 stakeReturned,
-        uint256 reward
+        uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 stakeReturned, uint256 reward
     );
     event LoserNotified(uint256 indexed contentId, uint256 indexed roundId, address indexed voter);
     event SubmitterRewardClaimed(
@@ -80,6 +82,22 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     );
     event ParticipationRewardClaimed(
         uint256 indexed contentId, uint256 indexed roundId, address indexed voter, uint256 amount
+    );
+    event ParticipationRewardSnapshotted(
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        address indexed rewardPool,
+        uint256 rewardRateBps,
+        uint256 totalReward,
+        uint256 reservedReward
+    );
+    event ParticipationRewardBackfilled(
+        uint256 indexed contentId,
+        uint256 indexed roundId,
+        address indexed rewardPool,
+        uint256 rewardRateBps,
+        uint256 totalReward,
+        uint256 reservedReward
     );
     event StrandedCrepSwept(address indexed treasury, uint256 amount);
 
@@ -179,7 +197,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     function claimSubmitterReward(uint256 contentId, uint256 roundId) external nonReentrant {
         require(!submitterRewardClaimed[contentId][roundId], "Already claimed");
 
-        (, , address submitter,,,,,,,,,) = registry.contents(contentId);
+        (,, address submitter,,,,,,,,,) = registry.contents(contentId);
         require(msg.sender == submitter, "Not submitter");
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
@@ -199,6 +217,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     // --- Frontend Fee Claims ---
 
     /// @notice Claim frontend fees for a settled round.
+    /// @dev AUDIT NOTE: This path intentionally crystallizes historical frontend fees against the
+    ///      frontend's current slash/bond status. Permissionless callers can therefore finalize an
+    ///      old round while a frontend is still slashed or underbonded.
     function claimFrontendFee(uint256 contentId, uint256 roundId, address frontend)
         external
         nonReentrant
@@ -236,8 +257,48 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         emit FrontendFeeClaimed(contentId, roundId, frontend, fee);
     }
 
+    /// @notice Snapshot and reserve voter participation rewards for a settled round.
+    /// @dev Called by the voting engine during settlement so claims no longer depend on the pool's
+    ///      future authorization state or on unrelated rounds consuming the same balance first.
+    function snapshotParticipationRewards(
+        uint256 contentId,
+        uint256 roundId,
+        address rewardPool,
+        uint256 rewardRateBps,
+        uint256 winningStake
+    ) external nonReentrant {
+        if (msg.sender != address(votingEngine)) revert UnauthorizedCaller();
+
+        (uint256 totalReward, uint256 reservedReward) =
+            _syncParticipationRewardSnapshot(contentId, roundId, rewardPool, rewardRateBps, winningStake);
+
+        emit ParticipationRewardSnapshotted(contentId, roundId, rewardPool, rewardRateBps, totalReward, reservedReward);
+    }
+
+    /// @notice Backfill or top up participation reward reservations for a settled round.
+    /// @dev Governance can repair legacy rounds or settlements where the snapshot side effect failed.
+    function backfillParticipationRewards(uint256 contentId, uint256 roundId, address rewardPool, uint256 rewardRateBps)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        nonReentrant
+        returns (uint256 reservedReward)
+    {
+        RoundLib.Round memory round = _readRound(contentId, roundId);
+        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+
+        uint256 winningStake = round.upWins ? round.upPool : round.downPool;
+        uint256 totalReward;
+        (totalReward, reservedReward) =
+            _syncParticipationRewardSnapshot(contentId, roundId, rewardPool, rewardRateBps, winningStake);
+
+        emit ParticipationRewardBackfilled(contentId, roundId, rewardPool, rewardRateBps, totalReward, reservedReward);
+    }
+
     /// @notice Claim a participation reward for the caller on a settled round.
-    function claimParticipationReward(uint256 contentId, uint256 roundId) external nonReentrant returns (uint256 paidReward)
+    function claimParticipationReward(uint256 contentId, uint256 roundId)
+        external
+        nonReentrant
+        returns (uint256 paidReward)
     {
         address voter = msg.sender;
         if (participationRewardClaimed[contentId][roundId][voter]) revert AlreadyClaimed();
@@ -245,8 +306,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
 
-        address rewardPoolAddress = votingEngine.roundParticipationPool(contentId, roundId);
-        uint256 rateBps = votingEngine.roundParticipationRateBps(contentId, roundId);
+        address rewardPoolAddress = roundParticipationRewardPool[contentId][roundId];
+        uint256 rateBps = roundParticipationRewardRateBps[contentId][roundId];
+        uint256 totalReward = roundParticipationRewardOwed[contentId][roundId];
+        uint256 reservedReward = roundParticipationRewardReserved[contentId][roundId];
         if (rewardPoolAddress == address(0)) revert NoPool();
 
         RoundLib.Commit memory commit = _findVoterCommit(contentId, roundId, voter);
@@ -263,11 +326,17 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             return 0;
         }
 
-        uint256 alreadyPaid = participationRewardPaid[contentId][roundId][voter];
-        if (alreadyPaid >= reward) revert AlreadyClaimed();
+        uint256 currentlyClaimable = reward;
+        if (reservedReward < totalReward) {
+            currentlyClaimable = (reward * reservedReward) / totalReward;
+        }
+        if (currentlyClaimable == 0) revert PoolDepleted();
 
-        uint256 remainingReward = reward - alreadyPaid;
-        paidReward = IParticipationPool(rewardPoolAddress).distributeReward(voter, remainingReward);
+        uint256 alreadyPaid = participationRewardPaid[contentId][roundId][voter];
+        if (alreadyPaid >= currentlyClaimable) revert AlreadyClaimed();
+
+        uint256 remainingReward = currentlyClaimable - alreadyPaid;
+        paidReward = IParticipationPool(rewardPoolAddress).withdrawReservedReward(voter, remainingReward);
         if (paidReward == 0) revert PoolDepleted();
 
         uint256 totalPaid = alreadyPaid + paidReward;
@@ -342,8 +411,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
 
-        try snapshotRegistry.getFrontendInfo(frontend)
-        returns (address frontendOperator, uint256 stakedAmount, bool, bool slashed) {
+        try snapshotRegistry.getFrontendInfo(frontend) returns (
+            address frontendOperator, uint256 stakedAmount, bool, bool slashed
+        ) {
             if (frontendOperator == address(0)) {
                 votingEngine.transferReward(frontend, fee);
                 return;
@@ -374,10 +444,48 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         votingEngine.addToConsensusReserve(fee);
     }
 
+    function _syncParticipationRewardSnapshot(
+        uint256 contentId,
+        uint256 roundId,
+        address rewardPool,
+        uint256 rewardRateBps,
+        uint256 winningStake
+    ) internal returns (uint256 totalReward, uint256 reservedReward) {
+        if (rewardPool == address(0)) revert NoPool();
+        if (rewardRateBps == 0) revert NoParticipationRate();
+
+        address existingRewardPool = roundParticipationRewardPool[contentId][roundId];
+        if (existingRewardPool != address(0) && existingRewardPool != rewardPool) {
+            revert InvalidParticipationSnapshot();
+        }
+
+        uint256 existingRateBps = roundParticipationRewardRateBps[contentId][roundId];
+        if (existingRateBps != 0 && existingRateBps != rewardRateBps) revert InvalidParticipationSnapshot();
+
+        roundParticipationRewardPool[contentId][roundId] = rewardPool;
+        roundParticipationRewardRateBps[contentId][roundId] = rewardRateBps;
+
+        totalReward = roundParticipationRewardOwed[contentId][roundId];
+        if (totalReward == 0) {
+            totalReward = winningStake * rewardRateBps / 10000;
+            roundParticipationRewardOwed[contentId][roundId] = totalReward;
+        }
+
+        reservedReward = roundParticipationRewardReserved[contentId][roundId];
+        if (reservedReward < totalReward) {
+            uint256 additionalReserved =
+                IParticipationPool(rewardPool).reserveReward(address(this), totalReward - reservedReward);
+            if (additionalReserved > 0) {
+                reservedReward += additionalReserved;
+                roundParticipationRewardReserved[contentId][roundId] = reservedReward;
+            }
+        }
+    }
+
     // --- Admin ---
 
     function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
 
     // --- Storage Gap for UUPS Upgradeability ---
-    uint256[45] private __gap;
+    uint256[41] private __gap;
 }

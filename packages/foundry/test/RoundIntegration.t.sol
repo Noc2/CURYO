@@ -744,7 +744,10 @@ contract RoundIntegrationTest is VotingTestBase {
 
         vm.warp(block.timestamp + 8 days);
         votingEngine.cancelExpiredRound(contentId, round1Id);
-        assertEq(uint256(RoundEngineReadHelpers.round(votingEngine, contentId, round1Id).state), uint256(RoundLib.RoundState.Cancelled));
+        assertEq(
+            uint256(RoundEngineReadHelpers.round(votingEngine, contentId, round1Id).state),
+            uint256(RoundLib.RoundState.Cancelled)
+        );
 
         // New commit after cooldown creates round 2
         vm.warp(block.timestamp + 25 hours);
@@ -1069,7 +1072,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
-        (, , , , , , , , , bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
+        (,,,,,,,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
         assertLt(rating, registry.SLASH_RATING_THRESHOLD(), "round should be slashable");
         assertTrue(submitterStakeReturned, "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter), submitterBalanceBefore, "submitter stake should not be returned");
@@ -1092,7 +1095,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         _settleRoundWith(voters, contentId, dirs, 100e6);
 
-        (, , , , , , , , , bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
+        (,,,,,,,,, bool submitterStakeReturned, uint256 rating,) = registry.contents(contentId);
         assertGe(rating, registry.SLASH_RATING_THRESHOLD(), "round should not be slashable");
         assertTrue(submitterStakeReturned, "submitter stake should be resolved");
         assertEq(crepToken.balanceOf(submitter) - submitterBalanceBefore, 10e6, "submitter stake should be returned");
@@ -1172,9 +1175,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         assertTrue(votingEngine.voterCommitHash(contentId, roundId, voter1) != bytes32(0), "Should have committed");
         assertEq(
-            votingEngine.voterCommitHash(contentId, roundId, voter2),
-            bytes32(0),
-            "Voter2 should not have committed"
+            votingEngine.voterCommitHash(contentId, roundId, voter2), bytes32(0), "Voter2 should not have committed"
         );
     }
 
@@ -1230,14 +1231,20 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
 
         // Revealed count is populated during reveal, not commit
-        assertEq(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).revealedCount, 0, "No voters revealed yet");
+        assertEq(
+            RoundEngineReadHelpers.round(votingEngine, contentId, roundId).revealedCount, 0, "No voters revealed yet"
+        );
 
         vm.warp(block.timestamp + EPOCH_DURATION + 1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), false, s2);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), true, s3);
 
-        assertEq(RoundEngineReadHelpers.round(votingEngine, contentId, roundId).revealedCount, 3, "Should have 3 revealed voters");
+        assertEq(
+            RoundEngineReadHelpers.round(votingEngine, contentId, roundId).revealedCount,
+            3,
+            "Should have 3 revealed voters"
+        );
     }
 
     // =========================================================================
@@ -1850,7 +1857,98 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(crepToken.balanceOf(address(pool2)), pool2Before);
     }
 
-    function test_ClaimParticipationReward_LegacyRoundRequiresBackfill() public {
+    function test_ClaimParticipationReward_ReservedPortionSurvivesPoolDeauthorization() public {
+        ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 1_000_000e6);
+        crepToken.approve(address(pool), 1_000_000e6);
+        pool.depositPool(1_000_000e6);
+        votingEngine.setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+        assertEq(
+            rewardDistributor.roundParticipationRewardReserved(contentId, roundId),
+            9e6,
+            "round should reserve the full winner reward"
+        );
+
+        pool.setAuthorizedCaller(address(rewardDistributor), false);
+
+        uint256 balBefore = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        uint256 balAfter = crepToken.balanceOf(voter1);
+
+        assertEq(balAfter - balBefore, 4_500_000, "reserved participation rewards should remain claimable");
+    }
+
+    function test_ClaimParticipationReward_PartialReservationIsClaimOrderIndependent() public {
+        ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 4e6);
+        crepToken.approve(address(pool), 4e6);
+        pool.depositPool(4e6);
+        votingEngine.setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+        assertEq(
+            rewardDistributor.roundParticipationRewardOwed(contentId, roundId), 9e6, "owed amount should be snapshotted"
+        );
+        assertEq(
+            rewardDistributor.roundParticipationRewardReserved(contentId, roundId),
+            4e6,
+            "only available pool balance should be reserved"
+        );
+
+        pool.setAuthorizedCaller(address(rewardDistributor), false);
+
+        uint256 voter1Before = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        uint256 voter1Delta = crepToken.balanceOf(voter1) - voter1Before;
+
+        uint256 voter2Before = crepToken.balanceOf(voter2);
+        vm.prank(voter2);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        uint256 voter2Delta = crepToken.balanceOf(voter2) - voter2Before;
+
+        assertEq(voter1Delta, 2e6, "first winner should receive a pro-rata reserved share");
+        assertEq(voter2Delta, 2e6, "second winner should receive the same pro-rata reserved share");
+
+        vm.prank(voter1);
+        vm.expectRevert(RoundRewardDistributor.AlreadyClaimed.selector);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+    }
+
+    function test_ClaimParticipationReward_LegacyRoundCanBeBackfilled() public {
         uint256 contentId = _submitContent();
 
         address[] memory voters = new address[](3);
@@ -1868,8 +1966,22 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.expectRevert(RoundRewardDistributor.NoPool.selector);
         rewardDistributor.claimParticipationReward(contentId, roundId);
 
-        // Legacy participation snapshot backfills were removed to cut engine size.
-        // A round that settles without a participation snapshot now remains permanently ineligible.
+        ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 1_000_000e6);
+        crepToken.approve(address(pool), 1_000_000e6);
+        pool.depositPool(1_000_000e6);
+        rewardDistributor.backfillParticipationRewards(contentId, roundId, address(pool), 9000);
+        vm.stopPrank();
+
+        uint256 balBefore = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        uint256 balAfter = crepToken.balanceOf(voter1);
+
+        assertEq(balAfter - balBefore, 4_500_000, "backfill should restore the round's reserved reward");
     }
 
     function test_ClaimParticipationReward_DoubleClaimReverts() public {
@@ -1909,7 +2021,7 @@ contract RoundIntegrationTest is VotingTestBase {
         rewardDistributor.claimParticipationReward(contentId, 1);
     }
 
-    function test_SettlementSideEffectFailure_ParticipationRateSnapshotLeavesRewardsUnclaimable() public {
+    function test_SettlementSideEffectFailure_ParticipationRateSnapshotCanBeBackfilled() public {
         RevertingParticipationPool badPool = new RevertingParticipationPool(address(crepToken));
         vm.prank(owner);
         votingEngine.setParticipationPool(address(badPool));
@@ -1946,8 +2058,25 @@ contract RoundIntegrationTest is VotingTestBase {
 
         assertTrue(foundFailureEvent, "participation rate failure should be logged");
         vm.prank(voter1);
-        vm.expectRevert(RoundRewardDistributor.NoParticipationRate.selector);
+        vm.expectRevert(RoundRewardDistributor.NoPool.selector);
         rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        ParticipationPool repairPool = new ParticipationPool(address(crepToken), owner);
+        repairPool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 1_000_000e6);
+        crepToken.approve(address(repairPool), 1_000_000e6);
+        repairPool.depositPool(1_000_000e6);
+        rewardDistributor.backfillParticipationRewards(contentId, roundId, address(repairPool), 9000);
+        vm.stopPrank();
+
+        uint256 balBefore = crepToken.balanceOf(voter1);
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        uint256 balAfter = crepToken.balanceOf(voter1);
+
+        assertEq(balAfter - balBefore, 4_500_000, "backfill should repair rate snapshot failures");
     }
 
     // =========================================================================

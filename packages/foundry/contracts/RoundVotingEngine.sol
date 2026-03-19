@@ -21,6 +21,7 @@ import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IParticipationPool } from "./interfaces/IParticipationPool.sol";
+import { IRoundRewardDistributor } from "./interfaces/IRoundRewardDistributor.sol";
 
 /// @title RoundVotingEngine
 /// @notice Per-content round-based parimutuel voting with tlock commit-reveal and epoch-weighted rewards.
@@ -207,10 +208,12 @@ contract RoundVotingEngine is
     uint8 internal constant REASON_PARTICIPATION_RATE = 5;
     uint8 internal constant REASON_SUBMITTER_STAKE = 6;
     uint8 internal constant REASON_FORFEITED_TRANSFER = 7;
+    uint8 internal constant REASON_PARTICIPATION_RESERVATION = 8;
 
     // Keeper operation codes
     uint8 internal constant OP_SETTLE = 2;
     uint8 internal constant OP_PROCESS_UNREVEALED = 3;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -408,19 +411,8 @@ contract RoundVotingEngine is
         if (effectiveVoter == registry.getSubmitterIdentity(contentId)) revert SelfVote();
 
         // Content must be active
-        (
-            uint256 existingContentId,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ContentRegistry.ContentStatus contentStatus,
-            ,
-            ,
-            ,
-            ,
-        ) = registry.contents(contentId);
+        (uint256 existingContentId,,,,,, ContentRegistry.ContentStatus contentStatus,,,,,) =
+            registry.contents(contentId);
         if (existingContentId == 0 || contentStatus != ContentRegistry.ContentStatus.Active) revert ContentNotActive();
 
         // Time-based cooldown (24 hours) — per identity when VoterID is configured
@@ -728,7 +720,9 @@ contract RoundVotingEngine is
                 if (categorySubmitterShare > 0) {
                     try CategoryFeeLib.distribute(
                         crepToken, registry, categoryRegistry, contentId, categorySubmitterShare
-                    ) returns (bool paid, uint256 categoryId, address categorySubmitter) {
+                    ) returns (
+                        bool paid, uint256 categoryId, address categorySubmitter
+                    ) {
                         if (paid) {
                             emit CategorySubmitterRewarded(
                                 contentId, categoryId, categorySubmitter, categorySubmitterShare
@@ -795,6 +789,16 @@ contract RoundVotingEngine is
                 catch {
                     emit SettlementSideEffectFailed(contentId, roundId, REASON_PARTICIPATION_RATE);
                 }
+                if (rewardDistributor != address(0)) {
+                    uint256 winningStake = upWins ? round.upPool : round.downPool;
+                    try IRoundRewardDistributor(rewardDistributor)
+                        .snapshotParticipationRewards(
+                            contentId, roundId, address(currentParticipationPool), rate, winningStake
+                        ) { }
+                    catch {
+                        emit SettlementSideEffectFailed(contentId, roundId, REASON_PARTICIPATION_RESERVATION);
+                    }
+                }
             } catch {
                 emit SettlementSideEffectFailed(contentId, roundId, REASON_PARTICIPATION_RATE);
             }
@@ -849,19 +853,8 @@ contract RoundVotingEngine is
     function isSubmitterStakeResolvable(uint256 contentId) external view returns (bool) {
         if (_hasOpenRound(contentId)) return false;
 
-        (
-            uint256 existingContentId,
-            ,
-            ,
-            ,
-            uint256 contentCreatedAt,
-            ,
-            ,
-            ,
-            ,
-            bool submitterStakeReturned,
-            uint256 rating,
-        ) = registry.contents(contentId);
+        (uint256 existingContentId,,,, uint256 contentCreatedAt,,,,, bool submitterStakeReturned, uint256 rating,) =
+            registry.contents(contentId);
         if (existingContentId == 0 || submitterStakeReturned) return false;
 
         uint256 elapsed = block.timestamp - contentCreatedAt;
