@@ -5,9 +5,9 @@ import { notificationEmailDeliveries, notificationEmailSubscriptions, watchedCon
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import { getFollowedWalletAddresses } from "~~/lib/follows/profileFollow";
 import { buildCuryoEmailHtml } from "~~/lib/notifications/emailTemplate";
-import { sendResendEmail } from "~~/lib/notifications/resend";
+import { isResendConfigured, sendResendEmail } from "~~/lib/notifications/resend";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
-import { ponderGet } from "~~/services/ponder/client";
+import { isPonderConfigured, ponderGet } from "~~/services/ponder/client";
 
 type DeliverySubscription = typeof notificationEmailSubscriptions.$inferSelect;
 
@@ -77,6 +77,10 @@ const DELIVERY_LEASE_MS = 2 * 60 * 1000;
 const DELIVERY_STATUS_SENT = "sent";
 const DELIVERY_STATUS_SENDING = "sending";
 type DeliveryStatus = typeof DELIVERY_STATUS_SENT | typeof DELIVERY_STATUS_SENDING;
+
+export function isNotificationEmailDeliveryConfigured(): boolean {
+  return isResendConfigured() && isPonderConfigured();
+}
 
 export async function ensureNotificationEmailDeliveriesTable() {
   if (!ensureNotificationEmailDeliveriesTablePromise) {

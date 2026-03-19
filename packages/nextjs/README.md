@@ -41,7 +41,7 @@ Key environment variables (see `.env.example` for the full list):
 | Variable                                | Description                                                                   |
 | --------------------------------------- | ----------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_ALCHEMY_API_KEY`           | Alchemy RPC provider key                                                      |
-| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID                                                      |
+| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Optional WalletConnect project ID for external wallet discovery               |
 | `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
 | `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata                                   |
 | `DATABASE_URL`                          | SQLite/Turso database URL (required in production)                            |

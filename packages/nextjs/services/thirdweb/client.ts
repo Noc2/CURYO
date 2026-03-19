@@ -111,9 +111,13 @@ export function getThirdwebConnectOptions(chainId?: number): UseConnectModalOpti
     locale: "en_US",
     showThirdwebBranding: false,
     theme: "dark",
-    walletConnect: {
-      projectId: publicEnv.walletConnectProjectId,
-    },
+    ...(publicEnv.walletConnectProjectId
+      ? {
+          walletConnect: {
+            projectId: publicEnv.walletConnectProjectId,
+          },
+        }
+      : {}),
     wallets: getThirdwebWallets(chain.id),
   };
 }

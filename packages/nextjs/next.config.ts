@@ -8,8 +8,8 @@ const ponderUrl = process.env.NEXT_PUBLIC_PONDER_URL ?? (isDev ? "http://localho
 const cspDirectives = [
   "default-src 'self'",
   `script-src 'self' 'wasm-unsafe-eval'${isDev ? " 'unsafe-inline' 'unsafe-eval'" : ""}`,
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data: blob: https:",
   [
     "connect-src 'self'",

@@ -6,7 +6,7 @@ export type BaseConfig = {
   pollingInterval: number;
   alchemyApiKey?: string;
   rpcOverrides?: Record<number, string>;
-  walletConnectProjectId: string;
+  walletConnectProjectId?: string;
   frontendCode?: `0x${string}`; // Frontend operator address for fee distribution
 };
 
@@ -26,7 +26,7 @@ const scaffoldConfig = {
     // Example:
     // [1]: "https://eth-mainnet.g.alchemy.com/v2/your-api-key",
   },
-  // Your WalletConnect project ID — get one at https://cloud.walletconnect.com
+  // Optional WalletConnect project ID for external wallet discovery flows.
   walletConnectProjectId: publicEnv.walletConnectProjectId,
   // Frontend operator address for fee distribution (3% of the remaining post-rebate losing pool)
   // Set via NEXT_PUBLIC_FRONTEND_CODE env var, or leave undefined for no frontend fee

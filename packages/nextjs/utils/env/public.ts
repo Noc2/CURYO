@@ -109,10 +109,6 @@ if (missingDeployments.length > 0) {
 const walletConnectProjectId =
   rawPublicEnv.walletConnectProjectId ?? (!isProduction ? DEV_WALLET_CONNECT_PROJECT_ID : undefined);
 
-if (!walletConnectProjectId) {
-  throw new Error("NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID is required in production.");
-}
-
 const frontendCode = rawPublicEnv.frontendCode;
 if (frontendCode && !isAddress(frontendCode)) {
   throw new Error("NEXT_PUBLIC_FRONTEND_CODE must be a valid address.");

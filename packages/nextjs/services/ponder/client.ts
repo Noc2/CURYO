@@ -2,33 +2,50 @@ import type { RoundState } from "@curyo/contracts/protocol";
 
 const isProduction = process.env.NODE_ENV === "production";
 const NEXT_PUBLIC_PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL?.trim() || undefined;
+const DEV_PONDER_URL = "http://localhost:42069";
 
 function isLocalhostHostname(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
-function getPonderUrl(): string {
-  const rawValue = NEXT_PUBLIC_PONDER_URL ?? (!isProduction ? "http://localhost:42069" : undefined);
+export function resolvePonderUrl(rawValue: string | undefined, production: boolean): string | null {
+  const normalizedRawValue = rawValue?.trim() || undefined;
+  const resolvedValue = normalizedRawValue ?? (!production ? DEV_PONDER_URL : undefined);
 
-  if (!rawValue) {
-    throw new Error("NEXT_PUBLIC_PONDER_URL is required in production.");
+  if (!resolvedValue) {
+    return null;
   }
 
   let url: URL;
   try {
-    url = new URL(rawValue);
+    url = new URL(resolvedValue);
   } catch {
     throw new Error("NEXT_PUBLIC_PONDER_URL must be a valid URL.");
   }
 
-  if (isProduction && isLocalhostHostname(url.hostname)) {
+  if (production && isLocalhostHostname(url.hostname)) {
     throw new Error("NEXT_PUBLIC_PONDER_URL must not point to localhost in production.");
   }
 
   return url.toString().replace(/\/$/, "");
 }
 
-const PONDER_URL = getPonderUrl();
+function getConfiguredPonderUrl(): string | null {
+  return resolvePonderUrl(NEXT_PUBLIC_PONDER_URL, isProduction);
+}
+
+export function isPonderConfigured(): boolean {
+  return getConfiguredPonderUrl() !== null;
+}
+
+function getRequiredPonderUrl(): string {
+  const url = getConfiguredPonderUrl();
+  if (!url) {
+    throw new Error("NEXT_PUBLIC_PONDER_URL is required in production.");
+  }
+
+  return url;
+}
 
 let cachedAvailability: boolean | null = null;
 let cacheExpiry = 0;
@@ -38,6 +55,11 @@ const HEALTH_CHECK_TIMEOUT = 2000;
 const CACHE_DURATION = 30_000;
 
 export async function isPonderAvailable(): Promise<boolean> {
+  const ponderUrl = getConfiguredPonderUrl();
+  if (!ponderUrl) {
+    return false;
+  }
+
   if (cachedAvailability !== null && Date.now() < cacheExpiry) {
     return cachedAvailability;
   }
@@ -48,7 +70,7 @@ export async function isPonderAvailable(): Promise<boolean> {
 
   availabilityPromise = (async () => {
     try {
-      const res = await fetch(`${PONDER_URL}/health`, {
+      const res = await fetch(`${ponderUrl}/health`, {
         signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT),
       });
       cachedAvailability = res.ok;
@@ -72,7 +94,7 @@ export function invalidatePonderCache() {
 }
 
 export async function ponderGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
-  const url = new URL(`${PONDER_URL}${path}`);
+  const url = new URL(`${getRequiredPonderUrl()}${path}`);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) {

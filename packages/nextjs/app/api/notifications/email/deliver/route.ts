@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
 import { getNotificationDeliverySecret } from "~~/lib/env/server";
-import { deliverNotificationEmails } from "~~/lib/notifications/emailDelivery";
+import { deliverNotificationEmails, isNotificationEmailDeliveryConfigured } from "~~/lib/notifications/emailDelivery";
 
 function constantTimeEquals(left: string, right: string): boolean {
   const leftBuffer = Buffer.from(left);
@@ -36,6 +36,10 @@ export async function POST(request: NextRequest) {
       { error: auth.reason === "missing_secret" ? "Notification delivery is not configured" : "Unauthorized" },
       { status: auth.reason === "missing_secret" ? 503 : 401 },
     );
+  }
+
+  if (!isNotificationEmailDeliveryConfigured()) {
+    return NextResponse.json({ error: "Notification delivery is not configured" }, { status: 503 });
   }
 
   try {
