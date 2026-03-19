@@ -79,7 +79,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
-  transpilePackages: ["@curyo/contracts"],
+  transpilePackages: ["@curyo/contracts", "thirdweb", "@thirdweb-dev/wagmi-adapter"],
   typescript: {
     ignoreBuildErrors: process.env.NEXT_PUBLIC_IGNORE_BUILD_ERROR === "true",
   },
