@@ -3,28 +3,24 @@ import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 const STEPS = [
   {
     label: "Vote",
-    badge: "badge-secondary",
     duration: "1–100 cREP",
     description: "Choose UP or DOWN, stake is locked, direction is encrypted",
     icon: "🔒",
   },
   {
     label: "Reveal",
-    badge: "badge-secondary",
     duration: protocolDocFacts.blindPhaseDurationLabel,
     description: "Votes revealed after blind phase ends",
     icon: "🔓",
   },
   {
     label: "Resolve",
-    badge: "badge-secondary",
     duration: "",
     description: `Majority wins after min ${protocolDocFacts.minVotersLabel} voters revealed`,
     icon: "⚖️",
   },
   {
     label: "Claim",
-    badge: "badge-secondary",
     duration: "",
     description: "Winners withdraw stake + rewards",
     icon: "💰",
@@ -37,15 +33,17 @@ export function VotingFlowDiagram() {
       {STEPS.map((step, i) => (
         <div key={step.label} className="flex items-center flex-1 min-w-0">
           <div className="flex flex-col items-center text-center flex-1 min-w-0 px-2">
-            <span className={`badge ${step.badge} badge-sm mb-1.5`}>{step.label}</span>
-            <span className="text-2xl mb-1">{step.icon}</span>
+            <span className="mb-2 inline-flex min-h-8 items-center rounded-full border border-primary/20 bg-primary/15 px-4 text-sm font-medium text-primary">
+              {step.label}
+            </span>
+            <span className="mb-2 inline-flex h-14 w-14 items-center justify-center rounded-full border border-primary/15 bg-primary/10 text-2xl shadow-[0_0_24px_rgba(242,100,38,0.12)]">
+              {step.icon}
+            </span>
             <span className="text-base text-base-content/60 leading-tight">{step.description}</span>
-            {step.duration && <span className="text-sm font-mono text-base-content/40 mt-1">{step.duration}</span>}
+            {step.duration && <span className="mt-1 text-sm font-mono text-primary/70">{step.duration}</span>}
           </div>
-          {i < STEPS.length - 1 && <div className="text-base-content/30 text-lg shrink-0 hidden sm:block">→</div>}
-          {i < STEPS.length - 1 && (
-            <div className="text-base-content/30 text-lg shrink-0 sm:hidden self-center py-1">↓</div>
-          )}
+          {i < STEPS.length - 1 && <div className="hidden shrink-0 text-lg text-primary/35 sm:block">→</div>}
+          {i < STEPS.length - 1 && <div className="shrink-0 self-center py-1 text-lg text-primary/35 sm:hidden">↓</div>}
         </div>
       ))}
     </div>
