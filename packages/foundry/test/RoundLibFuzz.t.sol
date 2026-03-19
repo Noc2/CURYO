@@ -13,8 +13,8 @@ contract RoundLibHarness {
     RoundLib.Commit public commit;
     RoundLib.Round public round;
 
-    function setCommit(uint256 stakeAmount, uint32 epochIndex) external {
-        commit.stakeAmount = stakeAmount;
+    function setCommit(uint256 stakeAmount, uint8 epochIndex) external {
+        commit.stakeAmount = uint64(stakeAmount);
         commit.epochIndex = epochIndex;
     }
 
@@ -23,11 +23,11 @@ contract RoundLibHarness {
     }
 
     function setRound(uint256 startTime) external {
-        round.startTime = startTime;
+        round.startTime = uint48(startTime);
         round.state = RoundLib.RoundState.Open;
     }
 
-    function getComputeEpochIndex(uint256 epochDuration, uint256 commitTimestamp) external view returns (uint32) {
+    function getComputeEpochIndex(uint256 epochDuration, uint256 commitTimestamp) external view returns (uint8) {
         return round.computeEpochIndex(epochDuration, commitTimestamp);
     }
 }
@@ -45,7 +45,7 @@ contract RoundLibFuzz is Test {
     // epochWeightBps
     // =========================================================================
 
-    function testFuzz_epochWeightBps_Bounded(uint32 epochIndex) public pure {
+    function testFuzz_epochWeightBps_Bounded(uint8 epochIndex) public pure {
         uint256 weight = RoundLib.epochWeightBps(epochIndex);
         // Epoch 0 = 10000 (100%), all others = 2500 (25%)
         assertTrue(weight == 10000 || weight == 2500, "unexpected weight value");
@@ -56,7 +56,7 @@ contract RoundLibFuzz is Test {
     // =========================================================================
 
     function testFuzz_effectiveStake_Epoch0FullStake(uint256 stakeAmount) public {
-        stakeAmount = bound(stakeAmount, 0, type(uint128).max);
+        stakeAmount = bound(stakeAmount, 0, type(uint64).max);
 
         harness.setCommit(stakeAmount, 0);
         uint256 effective = harness.getEffectiveStake();
@@ -64,7 +64,7 @@ contract RoundLibFuzz is Test {
     }
 
     function testFuzz_effectiveStake_Epoch1Quarter(uint256 stakeAmount) public {
-        stakeAmount = bound(stakeAmount, 0, type(uint128).max);
+        stakeAmount = bound(stakeAmount, 0, type(uint64).max);
 
         harness.setCommit(stakeAmount, 1);
         uint256 effective = harness.getEffectiveStake();
@@ -81,7 +81,7 @@ contract RoundLibFuzz is Test {
         uint256 offset1,
         uint256 offset2
     ) public {
-        startTime = bound(startTime, 1, type(uint64).max / 2);
+        startTime = bound(startTime, 1, type(uint48).max / 2);
         epochDuration = bound(epochDuration, 60, 7 days); // reasonable range
         offset1 = bound(offset1, 0, 30 days);
         offset2 = bound(offset2, offset1, 30 days);
@@ -91,8 +91,8 @@ contract RoundLibFuzz is Test {
         uint256 t1 = startTime + offset1;
         uint256 t2 = startTime + offset2;
 
-        uint32 idx1 = harness.getComputeEpochIndex(epochDuration, t1);
-        uint32 idx2 = harness.getComputeEpochIndex(epochDuration, t2);
+        uint8 idx1 = harness.getComputeEpochIndex(epochDuration, t1);
+        uint8 idx2 = harness.getComputeEpochIndex(epochDuration, t2);
 
         // Later timestamp should have epoch index >= earlier
         assertGe(idx2, idx1, "epoch index should be monotonically non-decreasing");

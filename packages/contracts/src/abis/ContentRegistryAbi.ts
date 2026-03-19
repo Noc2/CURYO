@@ -283,8 +283,8 @@ export const ContentRegistryAbi = [
     "outputs": [
       {
         "name": "id",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
         "name": "contentHash",
@@ -298,18 +298,18 @@ export const ContentRegistryAbi = [
       },
       {
         "name": "submitterStake",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
         "name": "createdAt",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint48",
+        "internalType": "uint48"
       },
       {
         "name": "lastActivityAt",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint48",
+        "internalType": "uint48"
       },
       {
         "name": "status",
@@ -333,13 +333,13 @@ export const ContentRegistryAbi = [
       },
       {
         "name": "rating",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint8",
+        "internalType": "uint8"
       },
       {
         "name": "categoryId",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint64",
+        "internalType": "uint64"
       }
     ],
     "stateMutability": "view"

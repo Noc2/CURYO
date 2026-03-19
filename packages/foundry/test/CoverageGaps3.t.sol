@@ -44,20 +44,20 @@ contract MockVotingEngine3 is IRoundVotingEngine {
         pure
         override
         returns (
-            uint256,
+            uint48,
             RoundLib.RoundState,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
+            uint16,
+            uint16,
+            uint64,
+            uint64,
+            uint64,
+            uint16,
+            uint16,
             bool,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint48,
+            uint48,
+            uint64,
+            uint64
         )
     {
         return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);
@@ -996,7 +996,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         uint256 contentId = _submitContent();
 
         // Get initial rating
-        (, , , , , , , , , , uint256 ratingBefore,) = registry.contents(contentId);
+        (,,,,,,,,,, uint256 ratingBefore,) = registry.contents(contentId);
 
         _commit(voter1, contentId, true, STAKE);
 
@@ -1007,7 +1007,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         engine.cancelExpiredRound(contentId, roundId);
 
         // Rating should be restored to epoch-start
-        (, , , , , , , , , , uint256 ratingAfterCancel,) = registry.contents(contentId);
+        (,,,,,,,,,, uint256 ratingAfterCancel,) = registry.contents(contentId);
         assertEq(ratingAfterCancel, ratingBefore);
     }
 
@@ -1022,7 +1022,9 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         uint256 rid1 = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         _revealAndSettle(contentId, rid1, ck1r1, true, s1r1, ck2r1, false, s2r1);
 
-        assertEq(uint256(RoundEngineReadHelpers.round(engine, contentId, rid1).state), uint256(RoundLib.RoundState.Settled));
+        assertEq(
+            uint256(RoundEngineReadHelpers.round(engine, contentId, rid1).state), uint256(RoundLib.RoundState.Settled)
+        );
 
         // Wait cooldown
         vm.warp(block.timestamp + 24 hours + 1);
@@ -1033,7 +1035,9 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         uint256 rid2 = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         _revealAndSettle(contentId, rid2, ck2r2, true, s2r2, ck1r2, false, s1r2);
 
-        assertEq(uint256(RoundEngineReadHelpers.round(engine, contentId, rid2).state), uint256(RoundLib.RoundState.Settled));
+        assertEq(
+            uint256(RoundEngineReadHelpers.round(engine, contentId, rid2).state), uint256(RoundLib.RoundState.Settled)
+        );
     }
 
     // --- Asymmetric stakes: winner determined by total stake ---

@@ -45,6 +45,40 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "backfillParticipationRewards",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPool",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "rewardRateBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "reservedReward",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "claimFrontendFee",
     "inputs": [
       {
@@ -462,6 +496,135 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "roundParticipationRewardOwed",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundParticipationRewardPool",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundParticipationRewardRateBps",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundParticipationRewardReserved",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "snapshotParticipationRewards",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPool",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "rewardRateBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "winningStake",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "submitterRewardClaimed",
     "inputs": [
       {
@@ -618,6 +781,49 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "event",
+    "name": "ParticipationRewardBackfilled",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPool",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "rewardRateBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalReward",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reservedReward",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ParticipationRewardClaimed",
     "inputs": [
       {
@@ -640,6 +846,49 @@ export const RoundRewardDistributorAbi = [
       },
       {
         "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ParticipationRewardSnapshotted",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPool",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "rewardRateBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalReward",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reservedReward",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -887,6 +1136,11 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidParticipationSnapshot",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NoApprovedStake",
     "inputs": []
   },
@@ -976,6 +1230,11 @@ export const RoundRewardDistributorAbi = [
         "internalType": "bytes32"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "UnauthorizedCaller",
+    "inputs": []
   },
   {
     "type": "error",

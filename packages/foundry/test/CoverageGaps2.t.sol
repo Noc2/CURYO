@@ -45,20 +45,20 @@ contract MockVotingEngineForFR2 is IRoundVotingEngine {
         pure
         override
         returns (
-            uint256,
+            uint48,
             RoundLib.RoundState,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
+            uint16,
+            uint16,
+            uint64,
+            uint64,
+            uint64,
+            uint16,
+            uint16,
             bool,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint48,
+            uint48,
+            uint64,
+            uint64
         )
     {
         return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);
@@ -697,16 +697,10 @@ contract ContentRegistryCoverageTest is Test {
 
         assertEq(id, 1);
         (
-            ,
-            ,
+            ,,
             address storedSubmitter,
-            uint256 submitterStake,
-            ,
-            ,
-            ContentRegistry.ContentStatus status,
-            ,
-            ,
-            ,
+            uint256 submitterStake,,,
+            ContentRegistry.ContentStatus status,,,,
             uint256 rating,
         ) = registry.contents(1);
         assertEq(storedSubmitter, submitter);
@@ -821,7 +815,8 @@ contract ContentRegistryCoverageTest is Test {
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        uint256 contentId = registry.submitContent("https://example.com/exact-max-title", string(title), "description", "tag1", 0);
+        uint256 contentId =
+            registry.submitContent("https://example.com/exact-max-title", string(title), "description", "tag1", 0);
         vm.stopPrank();
 
         assertEq(contentId, 1);
@@ -850,8 +845,9 @@ contract ContentRegistryCoverageTest is Test {
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        uint256 contentId =
-            registry.submitContent("https://example.com/exact-max-description", "title", string(description), "tag1", 0);
+        uint256 contentId = registry.submitContent(
+            "https://example.com/exact-max-description", "title", string(description), "tag1", 0
+        );
         vm.stopPrank();
 
         assertEq(contentId, 1);
@@ -1058,19 +1054,7 @@ contract ContentRegistryCoverageTest is Test {
         registry.reviveContent(id);
         vm.stopPrank();
 
-        (
-            ,
-            ,
-            ,
-            ,
-            ,
-            ,
-            ContentRegistry.ContentStatus status,
-            uint8 dormantCount,
-            address reviver,
-            ,
-            ,
-        ) = registry.contents(id);
+        (,,,,,, ContentRegistry.ContentStatus status, uint8 dormantCount, address reviver,,,) = registry.contents(id);
         assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Active));
         assertEq(dormantCount, 1);
         assertEq(reviver, other);
@@ -1126,7 +1110,7 @@ contract ContentRegistryCoverageTest is Test {
 
         // Content starts at rating 50. Set to 150 (should cap at 100)
         registry.updateRatingDirect(id, 150);
-        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
         assertEq(rating, 100);
     }
 
@@ -1140,7 +1124,7 @@ contract ContentRegistryCoverageTest is Test {
 
         // Content starts at rating 50. Set directly to 0
         registry.updateRatingDirect(id, 0);
-        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
         assertEq(rating, 0);
     }
 
@@ -1154,7 +1138,7 @@ contract ContentRegistryCoverageTest is Test {
 
         // Set to same rating (50) — should be a no-op
         registry.updateRatingDirect(id, 50);
-        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
         assertEq(rating, 50);
     }
 
@@ -1165,7 +1149,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.prank(admin);
         registry.setVotingEngine(address(this));
         registry.updateRatingDirect(id, 55);
-        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
         assertEq(rating, 55);
     }
 
@@ -1176,7 +1160,7 @@ contract ContentRegistryCoverageTest is Test {
         vm.prank(admin);
         registry.setVotingEngine(address(this));
         registry.updateRatingDirect(id, 45);
-        (, , , , , , , , , , uint256 rating,) = registry.contents(id);
+        (,,,,,,,,,, uint256 rating,) = registry.contents(id);
         assertEq(rating, 45);
     }
 
@@ -1270,28 +1254,28 @@ contract ContentRegistryCoverageTest is Test {
 
     function test_IsActive() public {
         uint256 id = _submitContent(submitter, "https://example.com/active");
-        (uint256 existingId, , , , , , ContentRegistry.ContentStatus status, , , , ,) = registry.contents(id);
+        (uint256 existingId,,,,,, ContentRegistry.ContentStatus status,,,,,) = registry.contents(id);
         assertTrue(existingId != 0 && status == ContentRegistry.ContentStatus.Active);
-        (uint256 missingId, , , , , , ContentRegistry.ContentStatus missingStatus, , , , ,) = registry.contents(999);
+        (uint256 missingId,,,,,, ContentRegistry.ContentStatus missingStatus,,,,,) = registry.contents(999);
         assertFalse(missingId != 0 && missingStatus == ContentRegistry.ContentStatus.Active); // Non-existent
     }
 
     function test_GetSubmitter() public {
         uint256 id = _submitContent(submitter, "https://example.com/getsub");
-        (, , address storedSubmitter,,,,,,,,,) = registry.contents(id);
+        (,, address storedSubmitter,,,,,,,,,) = registry.contents(id);
         assertEq(storedSubmitter, submitter);
     }
 
     function test_GetCreatedAt() public {
         vm.warp(1000);
         uint256 id = _submitContent(submitter, "https://example.com/created");
-        (, , , , uint256 createdAt,,,,,,,) = registry.contents(id);
+        (,,,, uint256 createdAt,,,,,,,) = registry.contents(id);
         assertEq(createdAt, 1000);
     }
 
     function test_GetCategoryId() public {
         uint256 id = _submitContent(submitter, "https://example.com/catid");
-        (, , , , , , , , , , , uint256 categoryId) = registry.contents(id);
+        (,,,,,,,,,,, uint256 categoryId) = registry.contents(id);
         assertEq(categoryId, 1);
     }
 
@@ -1980,7 +1964,9 @@ contract RoundSettlementBranchTest is VotingTestBase {
         contentId = registry.nextContentId();
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        registry.submitContent(string(abi.encodePacked("https://example.com/test-", vm.toString(contentId))), "goal", "goal", "test", 0);
+        registry.submitContent(
+            string(abi.encodePacked("https://example.com/test-", vm.toString(contentId))), "goal", "goal", "test", 0
+        );
         vm.stopPrank();
     }
 

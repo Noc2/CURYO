@@ -57,6 +57,7 @@ contract RoundVotingEngine is
     error CooldownActive();
     error CiphertextTooLarge();
     error InvalidCiphertext();
+    error InvalidCommitHash();
     error RoundNotOpen();
     error ActiveRoundStillOpen();
     error RoundNotAccepting();
@@ -116,9 +117,6 @@ contract RoundVotingEngine is
     // Track commit keys per round for iteration (reveal/settlement)
     mapping(uint256 => mapping(uint256 => bytes32[])) public roundCommitHashes;
 
-    // Prevent double voting: contentId => roundId => voter => committed
-    mapping(uint256 => mapping(uint256 => mapping(address => bool))) internal hasCommitted;
-
     // Time-based cooldown: contentId => voter => timestamp of last vote
     mapping(uint256 => mapping(address => uint256)) internal lastVoteTimestamp;
 
@@ -130,8 +128,8 @@ contract RoundVotingEngine is
     // Cancelled/tied round refund claims: contentId => roundId => voter => claimed
     mapping(uint256 => mapping(uint256 => mapping(address => bool))) public cancelledRoundRefundClaimed;
 
-    // Total lifetime commit count per content (used by ContentRegistry)
-    mapping(uint256 => uint256) public contentCommitCount;
+    // Fast zero/non-zero indicator for content vote history.
+    mapping(uint256 => bool) internal contentHasCommits;
 
     // Sybil resistance
     IVoterIdNFT public voterIdNFT;
@@ -154,9 +152,6 @@ contract RoundVotingEngine is
 
     // Voter to commit hash lookup: contentId => roundId => voter => commitHash (O(1) claim lookups)
     mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) public voterCommitHash;
-
-    // Original public commit hash for a commit key.
-    mapping(uint256 => mapping(uint256 => mapping(bytes32 => bytes32))) internal commitHashByKey;
 
     // Frontend fee aggregation (computed incrementally during revealVote for O(1) settlement)
     mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithApprovedFrontend;
@@ -242,7 +237,12 @@ contract RoundVotingEngine is
         registry = ContentRegistry(_registry);
 
         // Default config: 20-minute epochs, 7-day max, 3 min voters
-        config = RoundLib.RoundConfig({ epochDuration: 20 minutes, maxDuration: 7 days, minVoters: 3, maxVoters: 1000 });
+        config = RoundLib.RoundConfig({
+            epochDuration: uint32(20 minutes),
+            maxDuration: uint32(7 days),
+            minVoters: uint16(3),
+            maxVoters: uint16(1000)
+        });
 
         // Default reveal grace period: 60 minutes (3 epochs)
         revealGracePeriod = 60 minutes;
@@ -317,7 +317,10 @@ contract RoundVotingEngine is
         }
 
         config = RoundLib.RoundConfig({
-            epochDuration: _epochDuration, maxDuration: _maxDuration, minVoters: _minVoters, maxVoters: _maxVoters
+            epochDuration: uint32(_epochDuration),
+            maxDuration: uint32(_maxDuration),
+            minVoters: uint16(_minVoters),
+            maxVoters: uint16(_maxVoters)
         });
 
         emit ConfigUpdated(_epochDuration, _maxDuration, _minVoters, _maxVoters);
@@ -394,6 +397,9 @@ contract RoundVotingEngine is
         if (stakeAmount < MIN_STAKE || stakeAmount > MAX_STAKE) revert InvalidStake();
         if (ciphertext.length == 0) revert InvalidCiphertext();
         if (ciphertext.length > MAX_CIPHERTEXT_SIZE) revert CiphertextTooLarge();
+        if (commitHash == bytes32(0)) revert InvalidCommitHash();
+
+        uint64 stakeAmount64 = uint64(stakeAmount);
 
         // Voter ID check (if configured)
         uint256 voterId;
@@ -446,7 +452,7 @@ contract RoundVotingEngine is
         if (!RoundLib.acceptsVotes(round, roundCfg.maxDuration)) revert RoundNotAccepting();
 
         // One vote per voter per round
-        if (hasCommitted[contentId][roundId][voter]) revert AlreadyCommitted();
+        if (voterCommitHash[contentId][roundId][voter] != bytes32(0)) revert AlreadyCommitted();
 
         // One vote per identity per round (prevents holder + delegate double voting)
         if (address(voterIdNFT) != address(0) && voterId != 0) {
@@ -473,20 +479,19 @@ contract RoundVotingEngine is
 
         // Compute epoch end time and epoch index for this commit
         uint256 epochEnd = RoundLib.computeEpochEnd(round, roundCfg.epochDuration, block.timestamp);
-        uint32 epochIdx = RoundLib.computeEpochIndex(round, roundCfg.epochDuration, block.timestamp);
+        uint8 epochIdx = RoundLib.computeEpochIndex(round, roundCfg.epochDuration, block.timestamp);
 
         // Store commit with epoch index (determines reward weight)
         commits[contentId][roundId][commitKey] = RoundLib.Commit({
             voter: voter,
-            stakeAmount: stakeAmount,
+            stakeAmount: stakeAmount64,
             ciphertext: ciphertext,
             frontend: frontend,
-            revealableAfter: epochEnd,
+            revealableAfter: uint48(epochEnd),
             revealed: false,
             isUp: false,
             epochIndex: epochIdx
         });
-        commitHashByKey[contentId][roundId][commitKey] = commitHash;
 
         if (frontend != address(0) && address(frontendRegistry) != address(0)) {
             try frontendRegistry.isApproved(frontend) returns (bool approved) {
@@ -500,7 +505,6 @@ contract RoundVotingEngine is
 
         // Track for iteration
         roundCommitHashes[contentId][roundId].push(commitKey);
-        hasCommitted[contentId][roundId][voter] = true;
 
         // Track unrevealed count per epoch (selective revelation prevention)
         epochUnrevealedCount[contentId][roundId][epochEnd]++;
@@ -508,7 +512,9 @@ contract RoundVotingEngine is
             lastCommitRevealableAfter[contentId][roundId] = epochEnd;
         }
         voterCommitHash[contentId][roundId][voter] = commitHash;
-        contentCommitCount[contentId]++;
+        if (!contentHasCommits[contentId]) {
+            contentHasCommits[contentId] = true;
+        }
 
         // Mark identity as committed for this round
         if (address(voterIdNFT) != address(0) && voterId != 0) {
@@ -517,7 +523,7 @@ contract RoundVotingEngine is
 
         // Update round counters
         round.voteCount++;
-        round.totalStake += stakeAmount;
+        round.totalStake += stakeAmount64;
 
         // Record stake against Voter ID
         if (address(voterIdNFT) != address(0) && voterId != 0) {
@@ -559,7 +565,7 @@ contract RoundVotingEngine is
         roundId = nextRoundId[contentId];
         currentRoundId[contentId] = roundId;
 
-        rounds[contentId][roundId].startTime = block.timestamp;
+        rounds[contentId][roundId].startTime = uint48(block.timestamp);
         rounds[contentId][roundId].state = RoundLib.RoundState.Open;
 
         // Snapshot config at round creation to prevent mid-round governance changes
@@ -571,7 +577,7 @@ contract RoundVotingEngine is
 
     function _markRoundRevealFailed(uint256 contentId, uint256 roundId, RoundLib.Round storage round) internal {
         round.state = RoundLib.RoundState.RevealFailed;
-        round.settledAt = block.timestamp;
+        round.settledAt = uint48(block.timestamp);
         emit RoundRevealFailed(contentId, roundId);
     }
 
@@ -617,9 +623,7 @@ contract RoundVotingEngine is
         nonReentrant
         whenNotPaused
     {
-        bytes32 commitHash = commitHashByKey[contentId][roundId][commitKey];
-        if (commitHash == bytes32(0)) revert NoCommit();
-        _revealVoteInternal(contentId, roundId, commitKey, commitHash, isUp, salt);
+        _revealVoteInternal(contentId, roundId, commitKey, isUp, salt);
     }
 
     // =========================================================================
@@ -659,7 +663,7 @@ contract RoundVotingEngine is
         // Tie: equal weighted pools, no winners
         if (round.weightedUpPool == round.weightedDownPool) {
             round.state = RoundLib.RoundState.Tied;
-            round.settledAt = block.timestamp;
+            round.settledAt = uint48(block.timestamp);
             emit RoundTied(contentId, roundId);
             return;
         }
@@ -668,7 +672,7 @@ contract RoundVotingEngine is
         bool upWins = round.weightedUpPool > round.weightedDownPool;
         round.upWins = upWins;
         round.state = RoundLib.RoundState.Settled;
-        round.settledAt = block.timestamp;
+        round.settledAt = uint48(block.timestamp);
         contentHasSettledRound[contentId] = true;
 
         // Epoch-weighted winning stake — used for proportional reward distribution
@@ -857,7 +861,7 @@ contract RoundVotingEngine is
             registry.contents(contentId);
         if (existingContentId == 0 || submitterStakeReturned) return false;
 
-        uint256 elapsed = block.timestamp - contentCreatedAt;
+        uint256 elapsed = block.timestamp - uint256(contentCreatedAt);
 
         if (!contentHasSettledRound[contentId]) {
             return elapsed >= registry.DORMANCY_PERIOD();
@@ -997,7 +1001,7 @@ contract RoundVotingEngine is
         uint256 lastRevealableAt = lastCommitRevealableAfter[contentId][roundId];
         if (lastRevealableAt == 0) return 0;
 
-        uint256 votingWindowEnd = round.startTime + roundCfg.maxDuration;
+        uint256 votingWindowEnd = uint256(round.startTime) + roundCfg.maxDuration;
         uint256 revealBase = lastRevealableAt > votingWindowEnd ? lastRevealableAt : votingWindowEnd;
         return revealBase + _getRoundRevealGracePeriod(contentId, roundId);
     }
@@ -1024,14 +1028,9 @@ contract RoundVotingEngine is
         return roundId != 0 && rounds[contentId][roundId].state == RoundLib.RoundState.Open;
     }
 
-    function _revealVoteInternal(
-        uint256 contentId,
-        uint256 roundId,
-        bytes32 commitKey,
-        bytes32 commitHash,
-        bool isUp,
-        bytes32 salt
-    ) internal {
+    function _revealVoteInternal(uint256 contentId, uint256 roundId, bytes32 commitKey, bool isUp, bytes32 salt)
+        internal
+    {
         RoundLib.Round storage round = rounds[contentId][roundId];
 
         if (round.state != RoundLib.RoundState.Open) revert RoundNotOpen();
@@ -1045,7 +1044,7 @@ contract RoundVotingEngine is
 
         // Verify commit hash
         bytes32 expectedHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(commit.ciphertext)));
-        if (commitHash != expectedHash) revert HashMismatch();
+        if (commitKey != _buildCommitKey(commit.voter, expectedHash)) revert HashMismatch();
 
         // Mark as revealed
         commit.revealed = true;
@@ -1068,7 +1067,7 @@ contract RoundVotingEngine is
 
         // Update epoch-weighted pools (used for win condition and reward distribution)
         uint256 w = RoundLib.epochWeightBps(commit.epochIndex);
-        uint256 effectiveStk = (commit.stakeAmount * w) / 10000;
+        uint64 effectiveStk = uint64((uint256(commit.stakeAmount) * w) / 10000);
         if (isUp) {
             round.weightedUpPool += effectiveStk;
         } else {
@@ -1078,7 +1077,7 @@ contract RoundVotingEngine is
         // Track when settlement threshold is first reached
         RoundLib.RoundConfig memory roundCfg = _getRoundConfig(contentId, roundId);
         if (round.revealedCount >= roundCfg.minVoters && round.thresholdReachedAt == 0) {
-            round.thresholdReachedAt = block.timestamp;
+            round.thresholdReachedAt = uint48(block.timestamp);
         }
 
         // Aggregate frontend fee data using commit-time eligibility, not reveal-time status.
@@ -1102,6 +1101,17 @@ contract RoundVotingEngine is
 
     function getRoundCommitCount(uint256 contentId, uint256 roundId) external view returns (uint256) {
         return roundCommitHashes[contentId][roundId].length;
+    }
+
+    function contentCommitCount(uint256 contentId) external view override returns (uint256 totalCommitCount) {
+        if (!contentHasCommits[contentId]) {
+            return 0;
+        }
+
+        uint256 maxRoundId = nextRoundId[contentId];
+        for (uint256 roundId = 1; roundId <= maxRoundId; roundId++) {
+            totalCommitCount += rounds[contentId][roundId].voteCount;
+        }
     }
 
     function getVoteCooldownRemaining(uint256 contentId, address voter) external view returns (uint256) {

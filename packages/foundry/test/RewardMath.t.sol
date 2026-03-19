@@ -43,7 +43,7 @@ contract RewardMathHarness {
         return RewardMath.splitConsensusSubsidy(subsidy);
     }
 
-    function epochWeightBps(uint32 epochIndex) external pure returns (uint256) {
+    function epochWeightBps(uint8 epochIndex) external pure returns (uint256) {
         return RoundLib.epochWeightBps(epochIndex);
     }
 }

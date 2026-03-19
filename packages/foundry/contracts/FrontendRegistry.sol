@@ -41,11 +41,11 @@ contract FrontendRegistry is
     // --- Structs ---
     struct Frontend {
         address operator;
-        uint256 stakedAmount;
-        uint256 crepFees;
+        uint64 stakedAmount;
+        uint64 crepFees;
         bool approved;
         bool slashed;
-        uint256 registeredAt;
+        uint48 registeredAt;
     }
 
     // --- State ---
@@ -108,13 +108,13 @@ contract FrontendRegistry is
     /// @inheritdoc IFrontendRegistry
     function isApproved(address frontend) external view override returns (bool) {
         Frontend storage f = frontends[frontend];
-        return f.approved && !f.slashed && f.stakedAmount == STAKE_AMOUNT;
+        return f.approved && !f.slashed && uint256(f.stakedAmount) == STAKE_AMOUNT;
     }
 
     /// @inheritdoc IFrontendRegistry
     function getAccumulatedFees(address frontend) external view override returns (uint256 crepFees) {
         Frontend storage f = frontends[frontend];
-        return f.crepFees;
+        return uint256(f.crepFees);
     }
 
     /// @inheritdoc IFrontendRegistry
@@ -125,7 +125,7 @@ contract FrontendRegistry is
         returns (address operator, uint256 stakedAmount, bool approved, bool slashed)
     {
         Frontend storage f = frontends[frontend];
-        return (f.operator, f.stakedAmount, f.approved, f.slashed);
+        return (f.operator, uint256(f.stakedAmount), f.approved, f.slashed);
     }
 
     /// @notice Get a paginated slice of the registered frontend addresses
@@ -170,11 +170,11 @@ contract FrontendRegistry is
 
         frontends[msg.sender] = Frontend({
             operator: msg.sender,
-            stakedAmount: STAKE_AMOUNT,
+            stakedAmount: uint64(STAKE_AMOUNT),
             crepFees: 0,
             approved: false,
             slashed: false,
-            registeredAt: block.timestamp
+            registeredAt: uint48(block.timestamp)
         });
 
         registeredFrontends.push(msg.sender);
@@ -197,8 +197,8 @@ contract FrontendRegistry is
         require(availableAt != 0, "Exit not requested");
         require(block.timestamp >= availableAt, "Unbonding period active");
 
-        uint256 refund = f.stakedAmount;
-        uint256 pendingFees = f.crepFees;
+        uint256 refund = uint256(f.stakedAmount);
+        uint256 pendingFees = uint256(f.crepFees);
         f.stakedAmount = 0;
         f.crepFees = 0;
         f.approved = false;
@@ -222,9 +222,9 @@ contract FrontendRegistry is
         Frontend storage f = frontends[msg.sender];
         require(f.operator != address(0), "Not registered");
         require(!f.slashed, "Frontend is slashed");
-        require(f.stakedAmount == STAKE_AMOUNT, "Frontend is underbonded");
+        require(uint256(f.stakedAmount) == STAKE_AMOUNT, "Frontend is underbonded");
 
-        uint256 crepAmount = f.crepFees;
+        uint256 crepAmount = uint256(f.crepFees);
 
         require(crepAmount > 0, "No fees to claim");
 
@@ -245,8 +245,8 @@ contract FrontendRegistry is
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
-        require(f.stakedAmount == STAKE_AMOUNT, "Frontend is underbonded");
-        f.crepFees += crepAmount;
+        require(uint256(f.stakedAmount) == STAKE_AMOUNT, "Frontend is underbonded");
+        f.crepFees += uint64(crepAmount);
         emit FeesCredited(frontend, crepAmount);
     }
 
@@ -257,15 +257,15 @@ contract FrontendRegistry is
         require(f.operator != address(0), "Not registered");
         if (frontendExitAvailableAt[msg.sender] != 0) revert FrontendExitPending();
         require(amount > 0, "Invalid top-up amount");
-        require(f.stakedAmount < STAKE_AMOUNT, "Already fully bonded");
+        require(uint256(f.stakedAmount) < STAKE_AMOUNT, "Already fully bonded");
 
-        uint256 missingStake = STAKE_AMOUNT - f.stakedAmount;
+        uint256 missingStake = STAKE_AMOUNT - uint256(f.stakedAmount);
         require(amount <= missingStake, "Top-up exceeds requirement");
 
         crepToken.safeTransferFrom(msg.sender, address(this), amount);
-        f.stakedAmount += amount;
+        f.stakedAmount += uint64(amount);
 
-        emit FrontendStakeToppedUp(msg.sender, amount, f.stakedAmount);
+        emit FrontendStakeToppedUp(msg.sender, amount, uint256(f.stakedAmount));
     }
 
     // --- Governance Functions ---
@@ -276,7 +276,7 @@ contract FrontendRegistry is
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
-        require(f.stakedAmount == STAKE_AMOUNT, "Frontend is underbonded");
+        require(uint256(f.stakedAmount) == STAKE_AMOUNT, "Frontend is underbonded");
         if (frontendExitAvailableAt[frontend] != 0) revert FrontendExitPending();
 
         f.approved = true;
@@ -304,10 +304,10 @@ contract FrontendRegistry is
         require(address(votingEngine) != address(0), "VotingEngine not set");
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
-        require(f.stakedAmount >= amount, "Slash exceeds stake");
+        require(uint256(f.stakedAmount) >= amount, "Slash exceeds stake");
 
-        uint256 confiscatedFees = f.crepFees;
-        f.stakedAmount -= amount;
+        uint256 confiscatedFees = uint256(f.crepFees);
+        f.stakedAmount -= uint64(amount);
         f.crepFees = 0;
         f.slashed = true;
         f.approved = false;

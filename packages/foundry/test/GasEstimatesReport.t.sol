@@ -47,9 +47,8 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
 
     function testGasEstimate_approveForSubmit_logs() public {
         vm.pauseGasMetering();
-        uint256 gasUsed = _measureCallAs(
-            submitter, address(crepToken), abi.encodeCall(IERC20.approve, (address(registry), 10e6))
-        );
+        uint256 gasUsed =
+            _measureCallAs(submitter, address(crepToken), abi.encodeCall(IERC20.approve, (address(registry), 10e6)));
         console2.log("approve_for_submit_gas", gasUsed);
     }
 
@@ -62,7 +61,9 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         uint256 gasUsed = _measureCallAs(
             submitter,
             address(registry),
-            abi.encodeCall(ContentRegistry.submitContent, ("https://example.com/gas-report", "test goal", "test goal", "test", 0))
+            abi.encodeCall(
+                ContentRegistry.submitContent, ("https://example.com/gas-report", "test goal", "test goal", "test", 0)
+            )
         );
         console2.log("submit_content_gas", gasUsed);
     }
@@ -79,9 +80,7 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         uint256 gasUsed = _measureCallAs(
             voter1,
             address(crepToken),
-            abi.encodeWithSignature(
-                "transferAndCall(address,uint256,bytes)", address(votingEngine), STAKE, payload
-            )
+            abi.encodeWithSignature("transferAndCall(address,uint256,bytes)", address(votingEngine), STAKE, payload)
         );
         console2.log("vote_transferAndCall_gas", gasUsed);
     }
@@ -99,9 +98,7 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         uint256 gasUsed = _measureCallAs(
             voter1,
             address(crepToken),
-            abi.encodeWithSignature(
-                "transferAndCall(address,uint256,bytes)", address(votingEngine), STAKE, payload
-            )
+            abi.encodeWithSignature("transferAndCall(address,uint256,bytes)", address(votingEngine), STAKE, payload)
         );
         console2.log("vote_transferAndCall_with_approved_frontend_gas", gasUsed);
     }
@@ -143,7 +140,8 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         uint256 gasUsed = _measureCall(
             address(votingEngine),
             abi.encodeCall(
-                RoundVotingEngine.revealVoteByCommitKey, (contentId, roundId, _commitKey(voter1, commitHash), true, salt)
+                RoundVotingEngine.revealVoteByCommitKey,
+                (contentId, roundId, _commitKey(voter1, commitHash), true, salt)
             )
         );
         console2.log("reveal_vote_gas", gasUsed);
@@ -264,9 +262,8 @@ contract FrontendTransactionGasEstimatesTest is Test {
 
     function testGasEstimate_frontendApproveStake_logs() public {
         vm.pauseGasMetering();
-        uint256 gasUsed = _measureCallAs(
-            frontend, address(crepToken), abi.encodeCall(IERC20.approve, (address(registry), STAKE))
-        );
+        uint256 gasUsed =
+            _measureCallAs(frontend, address(crepToken), abi.encodeCall(IERC20.approve, (address(registry), STAKE)));
         console2.log("frontend_approve_stake_gas", gasUsed);
     }
 
@@ -338,8 +335,7 @@ contract IdentityTransactionGasEstimatesTest is Test {
         vm.prank(minterAddr);
         voterIdNFT.mint(user1, NULLIFIER_1);
 
-        uint256 gasUsed =
-            _measureCallAs(user1, address(voterIdNFT), abi.encodeCall(VoterIdNFT.setDelegate, (delegate)));
+        uint256 gasUsed = _measureCallAs(user1, address(voterIdNFT), abi.encodeCall(VoterIdNFT.setDelegate, (delegate)));
         console2.log("voter_id_set_delegate_gas", gasUsed);
     }
 }

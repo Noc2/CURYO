@@ -229,13 +229,13 @@ export const FrontendRegistryAbi = [
       },
       {
         "name": "stakedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
         "name": "crepFees",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint64",
+        "internalType": "uint64"
       },
       {
         "name": "approved",
@@ -249,8 +249,8 @@ export const FrontendRegistryAbi = [
       },
       {
         "name": "registeredAt",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "uint48",
+        "internalType": "uint48"
       }
     ],
     "stateMutability": "view"

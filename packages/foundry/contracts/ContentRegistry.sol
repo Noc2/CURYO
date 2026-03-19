@@ -58,18 +58,18 @@ contract ContentRegistry is
 
     // --- Structs ---
     struct Content {
-        uint256 id;
+        uint64 id;
         bytes32 contentHash;
         address submitter;
-        uint256 submitterStake;
-        uint256 createdAt;
-        uint256 lastActivityAt;
+        uint64 submitterStake;
+        uint48 createdAt;
+        uint48 lastActivityAt;
         ContentStatus status;
         uint8 dormantCount;
         address reviver;
         bool submitterStakeReturned;
-        uint256 rating; // 0-100, starts at 50
-        uint256 categoryId; // Reference to approved category
+        uint8 rating; // 0-100, starts at 50
+        uint64 categoryId; // Reference to approved category
     }
 
     // --- State ---
@@ -229,12 +229,7 @@ contract ContentRegistry is
         string calldata description,
         string calldata tags,
         uint256 categoryId
-    )
-        external
-        nonReentrant
-        whenNotPaused
-        returns (uint256)
-    {
+    ) external nonReentrant whenNotPaused returns (uint256) {
         // Require Voter ID if VoterIdNFT is configured
         if (address(voterIdNFT) != address(0)) {
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
@@ -266,18 +261,18 @@ contract ContentRegistry is
         contentSubmissionKey[contentId] = submissionKey;
         contentSubmitterIdentity[contentId] = submitterIdentity;
         contents[contentId] = Content({
-            id: contentId,
+            id: uint64(contentId),
             contentHash: contentHash,
             submitter: msg.sender,
-            submitterStake: MIN_SUBMITTER_STAKE,
-            createdAt: block.timestamp,
-            lastActivityAt: block.timestamp,
+            submitterStake: uint64(MIN_SUBMITTER_STAKE),
+            createdAt: uint48(block.timestamp),
+            lastActivityAt: uint48(block.timestamp),
             status: ContentStatus.Active,
             dormantCount: 0,
             reviver: address(0),
             submitterStakeReturned: false,
             rating: 50,
-            categoryId: resolvedCategoryId
+            categoryId: uint64(resolvedCategoryId)
         });
         dormancyAnchorAt[contentId] = block.timestamp;
 
@@ -391,7 +386,7 @@ contract ContentRegistry is
 
         c.status = ContentStatus.Active;
         c.dormantCount++;
-        c.lastActivityAt = block.timestamp;
+        c.lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
         c.reviver = msg.sender;
 
@@ -404,13 +399,13 @@ contract ContentRegistry is
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
-        contents[contentId].lastActivityAt = block.timestamp;
+        contents[contentId].lastActivityAt = uint48(block.timestamp);
     }
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
-        contents[contentId].lastActivityAt = block.timestamp;
+        contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
     }
 
@@ -421,8 +416,8 @@ contract ContentRegistry is
         require(msg.sender == votingEngine, "Only VotingEngine");
 
         Content storage c = contents[contentId];
-        uint256 oldRating = c.rating;
-        uint256 clampedRating = newRating > 100 ? 100 : uint256(newRating);
+        uint8 oldRating = c.rating;
+        uint8 clampedRating = newRating > 100 ? 100 : uint8(newRating);
 
         if (clampedRating == oldRating) return;
 
@@ -442,7 +437,9 @@ contract ContentRegistry is
     }
 
     /// @notice Called by VotingEngine to snapshot the submitter participation terms at settlement time.
-    function snapshotSubmitterParticipationTerms(uint256 contentId, address rewardPool, uint256 rewardRateBps) external {
+    function snapshotSubmitterParticipationTerms(uint256 contentId, address rewardPool, uint256 rewardRateBps)
+        external
+    {
         require(msg.sender == votingEngine, "Only VotingEngine");
         Content storage c = contents[contentId];
         require(c.id != 0, "Content does not exist");
@@ -485,7 +482,7 @@ contract ContentRegistry is
     function _resolvePendingSubmitterStake(uint256 contentId, Content storage c) internal {
         if (c.submitterStakeReturned) return;
 
-        if (block.timestamp >= c.createdAt + 24 hours && c.rating < SLASH_RATING_THRESHOLD) {
+        if (block.timestamp >= uint256(c.createdAt) + 24 hours && c.rating < SLASH_RATING_THRESHOLD) {
             require(treasury != address(0), "Treasury not set");
             c.submitterStakeReturned = true;
             crepToken.safeTransfer(treasury, c.submitterStake);
@@ -496,7 +493,10 @@ contract ContentRegistry is
         c.submitterStakeReturned = true;
         crepToken.safeTransfer(c.submitter, c.submitterStake);
         _accrueSubmitterParticipationReward(
-            contentId, c, submitterParticipationSnapshotPool[contentId], submitterParticipationSnapshotRateBps[contentId]
+            contentId,
+            c,
+            submitterParticipationSnapshotPool[contentId],
+            submitterParticipationSnapshotRateBps[contentId]
         );
         emit SubmitterStakeReturned(contentId, c.submitterStake);
     }
@@ -542,14 +542,17 @@ contract ContentRegistry is
         uint256 reservedAmount = submitterParticipationRewardReserved[contentId];
         uint256 reservedRemaining = reservedAmount > alreadyPaid ? reservedAmount - alreadyPaid : 0;
         if (reservedRemaining > 0) {
-            uint256 reservedPayout = IParticipationPool(rewardPool).withdrawReservedReward(c.submitter, reservedRemaining);
+            uint256 reservedPayout =
+                IParticipationPool(rewardPool).withdrawReservedReward(c.submitter, reservedRemaining);
             paidAmount += reservedPayout;
             alreadyPaid += reservedPayout;
         }
 
         if (alreadyPaid < totalReward) {
             remainingReward = totalReward - alreadyPaid;
-            try IParticipationPool(rewardPool).distributeReward(c.submitter, remainingReward) returns (uint256 streamedReward) {
+            try IParticipationPool(rewardPool).distributeReward(c.submitter, remainingReward) returns (
+                uint256 streamedReward
+            ) {
                 paidAmount += streamedReward;
                 alreadyPaid += streamedReward;
             } catch { }
@@ -600,8 +603,7 @@ contract ContentRegistry is
         }
 
         try SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, 0) returns (
-            uint256,
-            bytes32 submissionKey
+            uint256, bytes32 submissionKey
         ) {
             return submissionKeyUsed[submissionKey];
         } catch {
@@ -636,7 +638,8 @@ contract ContentRegistry is
         uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
         if (activeRoundId == 0) return false;
 
-        (, RoundLib.RoundState roundState,,,,,,,,,,,,) = IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
+        (, RoundLib.RoundState roundState,,,,,,,,,,,,) =
+            IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
         return roundState == RoundLib.RoundState.Open;
     }
 

@@ -30,20 +30,20 @@ contract MockVotingEngine is IRoundVotingEngine {
         pure
         override
         returns (
-            uint256,
+            uint48,
             RoundLib.RoundState,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
+            uint16,
+            uint16,
+            uint64,
+            uint64,
+            uint64,
+            uint16,
+            uint16,
             bool,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint48,
+            uint48,
+            uint64,
+            uint64
         )
     {
         return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);

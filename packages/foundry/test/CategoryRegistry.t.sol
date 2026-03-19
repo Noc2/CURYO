@@ -70,20 +70,20 @@ contract MockVotingEngine is IRoundVotingEngine {
         pure
         override
         returns (
-            uint256,
+            uint48,
             RoundLib.RoundState,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
-            uint256,
+            uint16,
+            uint16,
+            uint64,
+            uint64,
+            uint64,
+            uint16,
+            uint16,
             bool,
-            uint256,
-            uint256,
-            uint256,
-            uint256
+            uint48,
+            uint48,
+            uint64,
+            uint64
         )
     {
         return (0, RoundLib.RoundState.Open, 0, 0, 0, 0, 0, 0, 0, false, 0, 0, 0, 0);
@@ -775,8 +775,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        uint256 categoryId =
-            registry.addApprovedCategory("Example", "www.example.com", subcategories);
+        uint256 categoryId = registry.addApprovedCategory("Example", "www.example.com", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "example.com");
@@ -800,8 +799,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        uint256 categoryId =
-            registry.addApprovedCategory("Example", "https://example.com", subcategories);
+        uint256 categoryId = registry.addApprovedCategory("Example", "https://example.com", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "example.com");
@@ -812,8 +810,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        uint256 categoryId =
-            registry.addApprovedCategory("Example", "http://example.com", subcategories);
+        uint256 categoryId = registry.addApprovedCategory("Example", "http://example.com", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "example.com");
@@ -824,8 +821,7 @@ contract CategoryRegistryTest is Test {
         subcategories[0] = "General";
 
         vm.prank(admin);
-        uint256 categoryId =
-            registry.addApprovedCategory("YouTube", "youtube.com/channel", subcategories);
+        uint256 categoryId = registry.addApprovedCategory("YouTube", "youtube.com/channel", subcategories);
 
         ICategoryRegistry.Category memory cat = registry.getCategory(categoryId);
         assertEq(cat.domain, "youtube.com");

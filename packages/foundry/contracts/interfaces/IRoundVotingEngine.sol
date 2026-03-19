@@ -20,20 +20,20 @@ interface IRoundVotingEngine {
         external
         view
         returns (
-            uint256 startTime,
+            uint48 startTime,
             RoundLib.RoundState state,
-            uint256 voteCount,
-            uint256 revealedCount,
-            uint256 totalStake,
-            uint256 upPool,
-            uint256 downPool,
-            uint256 upCount,
-            uint256 downCount,
+            uint16 voteCount,
+            uint16 revealedCount,
+            uint64 totalStake,
+            uint64 upPool,
+            uint64 downPool,
+            uint16 upCount,
+            uint16 downCount,
             bool upWins,
-            uint256 settledAt,
-            uint256 thresholdReachedAt,
-            uint256 weightedUpPool,
-            uint256 weightedDownPool
+            uint48 settledAt,
+            uint48 thresholdReachedAt,
+            uint64 weightedUpPool,
+            uint64 weightedDownPool
         );
 
     /// @notice Transfer cREP reward tokens to a recipient. Only callable by RewardDistributor.
