@@ -4,7 +4,7 @@ import { getAddress } from "viem";
 import { Address } from "viem";
 import { hardhat } from "viem/chains";
 import { useAccount } from "wagmi";
-import { ArrowLeftOnRectangleIcon, Cog6ToothIcon, EyeIcon, GiftIcon } from "@heroicons/react/24/outline";
+import { ArrowLeftOnRectangleIcon, Cog6ToothIcon, GiftIcon } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -18,7 +18,6 @@ import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 import { getWalletDisplayLiquidMicro, useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
-import { BURNER_WALLET_ID } from "~~/services/web3/burner";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
 type AddressInfoDropdownProps = {
@@ -182,12 +181,10 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
 
 function MenuItems({
   disconnect,
-  connector,
   showText = false,
   showFaucet,
 }: {
   disconnect: () => void;
-  connector: { id: string } | undefined;
   showText?: boolean;
   showFaucet?: boolean;
 }) {
@@ -195,18 +192,6 @@ function MenuItems({
   const menuItemClass = getMenuItemClass(showText);
   return (
     <>
-      {connector?.id === BURNER_WALLET_ID ? (
-        <li>
-          <label
-            htmlFor="reveal-burner-pk-modal"
-            className={`${menuItemClass} text-error hover:text-error`}
-            onClick={e => e.stopPropagation()}
-          >
-            <EyeIcon className="w-6 h-6 shrink-0" />
-            <span className={textClass}>Reveal Private Key</span>
-          </label>
-        </li>
-      ) : null}
       {showFaucet && (
         <li>
           <label htmlFor="faucet-modal" className={menuItemClass}>
@@ -244,7 +229,7 @@ export const AddressInfoDropdown = ({
 }: AddressInfoDropdownProps) => {
   const isPageVisible = usePageVisibility();
   const disconnect = useCuryoDisconnect();
-  const { connector, chain } = useAccount();
+  const { chain } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const checkSumAddress = getAddress(address);
   const isLocalNetwork = targetNetwork.id === hardhat.id && chain?.id === hardhat.id;
@@ -262,7 +247,7 @@ export const AddressInfoDropdown = ({
   });
 
   if (menuItemsOnly) {
-    return <MenuItems disconnect={disconnect} connector={connector} showText={true} showFaucet={showFaucet} />;
+    return <MenuItems disconnect={disconnect} showText={true} showFaucet={showFaucet} />;
   }
 
   const walletSummary = (
@@ -289,7 +274,7 @@ export const AddressInfoDropdown = ({
       <div className="w-full flex flex-col">
         {walletSummary}
         <ul className="menu menu-vertical p-0 gap-0.5 w-full">
-          <MenuItems disconnect={disconnect} connector={connector} showFaucet={showFaucet} />
+          <MenuItems disconnect={disconnect} showFaucet={showFaucet} />
         </ul>
       </div>
     );

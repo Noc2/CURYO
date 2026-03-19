@@ -2,7 +2,6 @@
 
 // @refresh reset
 import { AddressInfoDropdown } from "./AddressInfoDropdown";
-import { RevealBurnerPKModal } from "./RevealBurnerPKModal";
 import { WrongNetworkDropdown } from "./WrongNetworkDropdown";
 import { useActiveAccount } from "thirdweb/react";
 import { Address } from "viem";
@@ -54,7 +53,6 @@ export const CuryoConnectButton = ({ inlineMenu = false }: { inlineMenu?: boolea
         displayName={`${address?.slice(0, 6)}...${address?.slice(-4)}`}
         inlineMenu={inlineMenu}
       />
-      <RevealBurnerPKModal />
     </>
   );
 };
