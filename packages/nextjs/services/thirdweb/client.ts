@@ -75,13 +75,11 @@ export function getThirdwebWalletExecutionMode(chainId: number) {
 }
 
 export function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
-  const inAppAuthMode = publicEnv.isProduction ? "popup" : "redirect";
-
   return [
     inAppWallet({
       auth: {
         options: ["google", "apple", "email", "passkey"],
-        mode: inAppAuthMode,
+        mode: "popup",
       },
       executionMode: getThirdwebWalletExecutionMode(chainId),
       metadata: {
