@@ -26,13 +26,14 @@ const GovernanceDocs: NextPage = () => {
       <h2>Leaderboards</h2>
       <p>
         The governance page exposes two reputation views: a <strong>Leaderboard</strong> tab for all-time cREP balances
-        plus balance history and stake breakdown, and an <strong>Accuracy</strong> tab for voting performance rankings
-        across all time, rolling windows, and the current season.
+        and an <strong>Accuracy</strong> tab for voting performance rankings across all time, rolling windows, and the
+        current season.
       </p>
       <p>
         Your own <strong>Profile</strong> tab now lives on the governance page, so you can edit the same public profile
-        other curators see. <code className="bg-base-300 px-1 rounded text-base">/settings</code> now focuses on
-        delegation, referrals, and notifications.
+        other curators see and track your balance history plus active stake.{" "}
+        <code className="bg-base-300 px-1 rounded text-base">/settings</code> now focuses on delegation, referrals, and
+        notifications.
       </p>
 
       <h2>Proposal Lifecycle</h2>

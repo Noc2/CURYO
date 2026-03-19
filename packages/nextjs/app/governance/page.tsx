@@ -13,9 +13,7 @@ import { PlatformProposals } from "~~/components/governance/PlatformProposals";
 import { ProposalList } from "~~/components/governance/ProposalList";
 import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
 import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
-import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
 import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
-import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
 import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
 import { PublicProfileView } from "~~/components/profile/PublicProfileView";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
@@ -188,10 +186,6 @@ function GovernancePageInner() {
 
       {activeTab === "leaderboard" && (
         <div className="space-y-6">
-          <div className="grid gap-6 xl:grid-cols-2">
-            <BalanceHistory />
-            <StakeBreakdown />
-          </div>
           <LeaderboardTable />
         </div>
       )}

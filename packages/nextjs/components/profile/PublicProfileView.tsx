@@ -6,7 +6,9 @@ import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { ArrowLeftIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { BalanceHistory } from "~~/components/leaderboard/BalanceHistory";
 import { CategoryBars } from "~~/components/leaderboard/CategoryBars";
+import { StakeBreakdown } from "~~/components/leaderboard/StakeBreakdown";
 import { WinRateRing } from "~~/components/leaderboard/WinRateRing";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
@@ -673,12 +675,17 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
           ) : null}
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            label="Current cREP"
-            value={formatCrepBigInt(balance)}
-            tooltip={ownProfile ? "Your current cREP balance." : "Current cREP balance."}
-          />
+        {ownProfile ? (
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
+            <BalanceHistory address={normalizedAddress} />
+            <StakeBreakdown address={normalizedAddress} showEmpty />
+          </div>
+        ) : null}
+
+        <div className={`grid gap-3 sm:grid-cols-2 ${ownProfile ? "lg:grid-cols-3" : "xl:grid-cols-4"}`}>
+          {!ownProfile ? (
+            <StatCard label="Current cREP" value={formatCrepBigInt(balance)} tooltip="Current cREP balance." />
+          ) : null}
           <StatCard
             label="Resolved votes"
             value={stats ? String(stats.totalSettledVotes) : "0"}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAccount } from "wagmi";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { PonderTokenTransfer, ponderApi } from "~~/services/ponder/client";
 
 const CHART_W = 640;
@@ -15,11 +16,18 @@ const LABEL_AREA = 48; // right side reserved for y-axis labels
  * SVG chart showing the connected user's cREP balance over time,
  * reconstructed from Transfer events indexed by Ponder.
  */
-export function BalanceHistory() {
-  const { address } = useAccount();
+export function BalanceHistory({ address: addressProp }: { address?: `0x${string}` }) {
+  const { address: connectedAddress } = useAccount();
+  const address = addressProp ?? connectedAddress;
   const [transfers, setTransfers] = useState<PonderTokenTransfer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const { data: currentBalanceRaw } = useScaffoldReadContract({
+    contractName: "CuryoReputation",
+    functionName: "balanceOf",
+    args: [address],
+    query: { enabled: !!address },
+  });
 
   useEffect(() => {
     if (!address) {
@@ -83,31 +91,8 @@ export function BalanceHistory() {
 
   if (!address) return null;
 
-  if (isLoading) {
-    return (
-      <div className="h-[160px] flex items-center justify-center">
-        <span className="loading loading-spinner loading-sm text-base-content/20"></span>
-      </div>
-    );
-  }
-
-  if (fetchError) {
-    return (
-      <div className="h-[100px] flex items-center justify-center text-base text-error/60">
-        Failed to load balance history
-      </div>
-    );
-  }
-
-  if (dataPoints.length < 2) {
-    return (
-      <div className="h-[100px] flex items-center justify-center text-base text-base-content/40">
-        No balance history yet
-      </div>
-    );
-  }
-
-  const currentBalance = dataPoints[dataPoints.length - 1].balance;
+  const currentBalance =
+    dataPoints.length > 0 ? dataPoints[dataPoints.length - 1].balance : Number(currentBalanceRaw ?? 0n) / 1e6;
   const currentFormatted = currentBalance.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
   return (
@@ -116,7 +101,21 @@ export function BalanceHistory() {
         <h2 className={surfaceSectionHeadingClassName}>Your cREP balance</h2>
         <span className="text-base tabular-nums text-base-content/60">{currentFormatted} cREP</span>
       </div>
-      <BalanceChart data={dataPoints} />
+      {isLoading ? (
+        <div className="h-[160px] flex items-center justify-center">
+          <span className="loading loading-spinner loading-sm text-base-content/20"></span>
+        </div>
+      ) : fetchError ? (
+        <div className="h-[100px] flex items-center justify-center text-base text-error/60">
+          Failed to load balance history
+        </div>
+      ) : dataPoints.length < 2 ? (
+        <div className="h-[100px] flex items-center justify-center text-base text-base-content/40">
+          Not enough history yet
+        </div>
+      ) : (
+        <BalanceChart data={dataPoints} />
+      )}
     </div>
   );
 }
@@ -203,21 +202,21 @@ function BalanceChart({ data }: { data: ChartPoint[] }) {
         />
 
         {/* Area fill */}
-        <path d={areaPath} fill="#fff" fillOpacity={0.06} />
+        <path d={areaPath} fill="var(--color-primary)" fillOpacity={0.14} />
 
         {/* Line */}
         <path
           d={linePath}
           fill="none"
-          stroke="#fff"
+          stroke="var(--color-primary)"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          strokeOpacity={0.6}
+          strokeOpacity={0.95}
         />
 
         {/* End dot */}
-        <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="#fff" fillOpacity={0.8} />
+        <circle cx={points[n - 1].x} cy={points[n - 1].y} r={3} fill="var(--color-primary)" fillOpacity={1} />
 
         {/* Hover dot */}
         {hoveredIndex !== null && (
@@ -227,11 +226,17 @@ function BalanceChart({ data }: { data: ChartPoint[] }) {
               y1={PADDING_Y}
               x2={points[hoveredIndex].x}
               y2={CHART_H}
-              stroke="#fff"
-              strokeOpacity={0.15}
+              stroke="var(--color-primary)"
+              strokeOpacity={0.22}
               strokeWidth={1}
             />
-            <circle cx={points[hoveredIndex].x} cy={points[hoveredIndex].y} r={4} fill="#fff" fillOpacity={0.9} />
+            <circle
+              cx={points[hoveredIndex].x}
+              cy={points[hoveredIndex].y}
+              r={4}
+              fill="var(--color-primary)"
+              fillOpacity={1}
+            />
           </>
         )}
 
