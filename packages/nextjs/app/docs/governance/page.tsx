@@ -25,9 +25,8 @@ const GovernanceDocs: NextPage = () => {
 
       <h2>Leaderboards</h2>
       <p>
-        The governance page exposes two reputation views: a <strong>Leaderboard</strong> tab for all-time cREP balances
-        and an <strong>Accuracy</strong> tab for voting performance rankings across all time, rolling windows, and the
-        current season.
+        The governance page now opens on your <strong>Profile</strong> by default. The <strong>Leaderboard</strong> tab
+        focuses on voting-performance rankings across all time, rolling windows, and the current season.
       </p>
       <p>
         Your own <strong>Profile</strong> tab now lives on the governance page, so you can edit the same public profile

@@ -140,7 +140,7 @@ export function AccuracyLeaderboard() {
 
   return (
     <div className="surface-card rounded-2xl p-6 space-y-3">
-      <h2 className={surfaceSectionHeadingClassName}>Accuracy leaderboard</h2>
+      <h2 className={surfaceSectionHeadingClassName}>Leaderboard</h2>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">

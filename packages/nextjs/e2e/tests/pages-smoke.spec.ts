@@ -9,7 +9,7 @@ test.describe("Page smoke tests", () => {
     // The landing page may redirect to /governance or /vote if burner wallet
     // auto-connects. Either the hero section or a redirected page is acceptable.
     const heroHeading = page.getByRole("heading", { name: /Curyo/i }).first();
-    const governancePage = page.getByRole("button", { name: /Leaderboard|Faucet/i }).first();
+    const governancePage = page.getByRole("button", { name: /Profile|Leaderboard|Faucet/i }).first();
     const feedPage = page.getByRole("button", { name: "Vote up" });
 
     const landingOrRedirect = heroHeading.or(governancePage).or(feedPage);

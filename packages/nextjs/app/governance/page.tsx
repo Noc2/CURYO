@@ -13,7 +13,6 @@ import { PlatformProposals } from "~~/components/governance/PlatformProposals";
 import { ProposalList } from "~~/components/governance/ProposalList";
 import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
 import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
-import { LeaderboardTable } from "~~/components/leaderboard/LeaderboardTable";
 import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
 import { PublicProfileView } from "~~/components/profile/PublicProfileView";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
@@ -22,23 +21,25 @@ import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHead
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGovernanceContracts } from "~~/hooks/useGovernance";
 
-type GovernanceTab = "leaderboard" | "accuracy" | "governance" | "profile" | "faucet";
+type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet";
 
-const governanceTabs: GovernanceTab[] = ["leaderboard", "accuracy", "governance", "profile", "faucet"];
-const zeroBalanceTabs: GovernanceTab[] = ["faucet", "profile"];
+const governanceTabs: GovernanceTab[] = ["profile", "leaderboard", "governance", "faucet"];
+const zeroBalanceTabs: GovernanceTab[] = ["profile", "faucet"];
 
 function getGovernanceHash(tab: GovernanceTab) {
-  return tab === "leaderboard" ? "" : `#${tab}`;
+  return tab === "profile" ? "" : `#${tab}`;
 }
 
 function normalizeGovernanceHash(hash: string): GovernanceTab | null {
+  if (!hash) return "profile";
+  if (hash === "accuracy") return "leaderboard";
   return governanceTabs.includes(hash as GovernanceTab) ? (hash as GovernanceTab) : null;
 }
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<GovernanceTab>("leaderboard");
+  const [activeTab, setActiveTab] = useState<GovernanceTab>("profile");
   const [referrer, setReferrer] = useState<string | null>(null);
   const { hasGovernorContract } = useGovernanceContracts();
 
@@ -103,12 +104,12 @@ function GovernancePageInner() {
     const hashTab = normalizeGovernanceHash(window.location.hash.replace(/^#/, ""));
 
     if (hasZeroBalance && !zeroBalanceTabs.includes(activeTab)) {
-      selectTab(hashTab && zeroBalanceTabs.includes(hashTab) ? hashTab : "faucet");
+      selectTab(hashTab && zeroBalanceTabs.includes(hashTab) ? hashTab : "profile");
       return;
     }
 
     if (!hasZeroBalance && activeTab === "faucet") {
-      selectTab(hashTab && hashTab !== "faucet" ? hashTab : "leaderboard");
+      selectTab(hashTab && hashTab !== "faucet" ? hashTab : "profile");
     }
   }, [hasResolvedBalance, hasZeroBalance, activeTab, selectTab]);
 
@@ -128,6 +129,14 @@ function GovernancePageInner() {
         {hasZeroBalance ? (
           <>
             <button
+              onClick={() => selectTab("profile")}
+              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
+                activeTab === "profile" ? "pill-active" : "pill-inactive"
+              }`}
+            >
+              Profile
+            </button>
+            <button
               onClick={() => selectTab("faucet")}
               className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
                 activeTab === "faucet" ? "pill-active" : "pill-inactive"
@@ -135,6 +144,9 @@ function GovernancePageInner() {
             >
               Faucet
             </button>
+          </>
+        ) : (
+          <>
             <button
               onClick={() => selectTab("profile")}
               className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
@@ -143,9 +155,6 @@ function GovernancePageInner() {
             >
               Profile
             </button>
-          </>
-        ) : (
-          <>
             <button
               onClick={() => selectTab("leaderboard")}
               className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
@@ -155,14 +164,6 @@ function GovernancePageInner() {
               Leaderboard
             </button>
             <button
-              onClick={() => selectTab("accuracy")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === "accuracy" ? "pill-active" : "pill-inactive"
-              }`}
-            >
-              Accuracy
-            </button>
-            <button
               onClick={() => selectTab("governance")}
               className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
                 activeTab === "governance" ? "pill-active" : "pill-inactive"
@@ -170,27 +171,15 @@ function GovernancePageInner() {
             >
               Governance
             </button>
-            <button
-              onClick={() => selectTab("profile")}
-              className={`px-4 py-1.5 rounded-full text-base font-medium transition-colors ${
-                activeTab === "profile" ? "pill-active" : "pill-inactive"
-              }`}
-            >
-              Profile
-            </button>
           </>
         )}
       </div>
 
+      {activeTab === "profile" && address && <PublicProfileView address={address as `0x${string}`} embedded />}
+
       {activeTab === "faucet" && <FaucetSection referrer={referrer} />}
 
       {activeTab === "leaderboard" && (
-        <div className="space-y-6">
-          <LeaderboardTable />
-        </div>
-      )}
-
-      {activeTab === "accuracy" && (
         <>
           <VoterAccuracyStats />
           <AccuracyLeaderboard />
@@ -222,8 +211,6 @@ function GovernancePageInner() {
           <FrontendRegistration />
         </div>
       )}
-
-      {activeTab === "profile" && address && <PublicProfileView address={address as `0x${string}`} embedded />}
     </AppPageShell>
   );
 }
