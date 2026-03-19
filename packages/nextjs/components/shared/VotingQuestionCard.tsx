@@ -113,7 +113,7 @@ export function VotingQuestionCard({
       />
       {/* Content */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="mb-4 flex shrink-0 flex-col items-center text-center">
+        <div className="flex shrink-0 flex-col items-center text-center">
           <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/45">
             <span>Community rating</span>
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
