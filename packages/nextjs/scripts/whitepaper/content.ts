@@ -267,7 +267,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `A revealed losing vote can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of its original stake. The remaining losing pool then feeds the content-specific reward split: the 82% voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have ${protocolDocFacts.openPhaseWeightLabel} weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The 5% consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool).`,
+            text: `A revealed losing vote can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of its original stake. The remaining losing pool then feeds the content-specific reward split: the ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share goes to winning voters on that content, distributed proportionally by epoch-weighted effective stake. Tier 1 voters (first epoch, blind) have full weight (effectiveStake = rawStake). Tier 2+ voters (subsequent epochs, saw results) have ${protocolDocFacts.openPhaseWeightLabel} weight (effectiveStake = rawStake * 0.25). Because each content item has independent rounds, rewards are calculated and claimable immediately after a round settles  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share accumulates in a reserve that funds rewards for one-sided rounds (see Consensus Subsidy Pool).`,
           },
         ],
       },
@@ -288,7 +288,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "formula",
-            latex: "P_i^{\\mathrm{win}} = s_i + \\frac{e_i}{W_e} \\times 0.82 \\, L",
+            latex: `P_i^{\\mathrm{win}} = s_i + \\frac{e_i}{W_e} \\times ${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\, L`,
           },
           {
             type: "paragraph",
@@ -308,8 +308,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "formula",
-            latex:
-              "E[P_i^{T1}] = s_i \\left[ P(\\mathrm{win}) \\left(1 + \\frac{0.82 \\, L}{W_e}\\right) - P(\\mathrm{lose}) \\right]",
+            latex: `E[P_i^{T1}] = s_i \\left[ P(\\mathrm{win}) \\left(1 + \\frac{${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\, L}{W_e}\\right) - P(\\mathrm{lose}) \\right]`,
           },
           {
             type: "sub_heading",
@@ -329,7 +328,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "formula",
-            latex: "P(\\mathrm{win}) > \\frac{1}{1 + 0.82 \\cdot L/W_e}",
+            latex: `P(\\mathrm{win}) > \\frac{1}{1 + ${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\cdot L/W_e}`,
           },
           {
             type: "paragraph",
@@ -370,7 +369,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38.95 cREP reward pool (82% of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} the reward per cREP compared to each Tier-2 voter, confirming the ${protocolDocFacts.earlyVoterAdvantageLabel} weight ratio. The epoch-weighted win condition test: 1 Tier-1 DOWN voter (100 cREP, effectiveStake 100) beats 3 Tier-2 UP voters (100 cREP each, effectiveStake 25 each = 75 total) -- DOWN wins despite raw majority being UP.`,
+            text: `Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38 cREP reward pool (${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} the reward per cREP compared to each Tier-2 voter, confirming the ${protocolDocFacts.earlyVoterAdvantageLabel} weight ratio. The epoch-weighted win condition test: 1 Tier-1 DOWN voter (100 cREP, effectiveStake 100) beats 3 Tier-2 UP voters (100 cREP each, effectiveStake 25 each = 75 total) -- DOWN wins despite raw majority being UP.`,
           },
           {
             type: "sub_heading",
@@ -533,9 +532,30 @@ export const SECTIONS: Section[] = [
             data: {
               headers: ["Voter", "Direction", "Stake", "Tier", "Effective Stake", "Reward share (UP wins)"],
               rows: [
-                ["Alice (Tier 1)", "UP", "50 cREP", "1", "50 cREP", "50 / W_e of 82% of the post-rebate pool"],
-                ["Bob (Tier 1)", "UP", "50 cREP", "1", "50 cREP", "50 / W_e of 82% of the post-rebate pool"],
-                ["Carol (Tier 2)", "UP", "50 cREP", "2", "12.5 cREP", "12.5 / W_e of 82% of the post-rebate pool"],
+                [
+                  "Alice (Tier 1)",
+                  "UP",
+                  "50 cREP",
+                  "1",
+                  "50 cREP",
+                  `50 / W_e of ${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate pool`,
+                ],
+                [
+                  "Bob (Tier 1)",
+                  "UP",
+                  "50 cREP",
+                  "1",
+                  "50 cREP",
+                  `50 / W_e of ${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate pool`,
+                ],
+                [
+                  "Carol (Tier 2)",
+                  "UP",
+                  "50 cREP",
+                  "2",
+                  "12.5 cREP",
+                  `12.5 / W_e of ${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate pool`,
+                ],
               ],
             },
           },
@@ -838,7 +858,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `A revealed losing vote first recovers a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. The 82% voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (${protocolDocFacts.blindPhaseWeightLabel} of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn ${protocolDocFacts.openPhaseWeightLabel} weight. This ${protocolDocFacts.earlyVoterAdvantageLabel} ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The 5% consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The 1% treasury fee goes to the governance timelock.`,
+            text: `A revealed losing vote first recovers a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. The ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (${protocolDocFacts.blindPhaseWeightLabel} of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn ${protocolDocFacts.openPhaseWeightLabel} weight. This ${protocolDocFacts.earlyVoterAdvantageLabel} ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The ${protocolDocFacts.treasuryNetSharePercentLabel} treasury fee goes to the governance timelock.`,
           },
         ],
       },
@@ -896,11 +916,11 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "For the attack to succeed, the attacker must control the majority stake. If L_honest is the honest voters' stake on the losing side, the attacker's total winning payoff (beyond recovering stakes) is 0.779 x L_honest (82% of the post-rebate losing pool). The total cost is K x c (identity acquisition). The attack is profitable only when:",
+            text: `For the attack to succeed, the attacker must control the majority stake. If L_honest is the honest voters' stake on the losing side, the attacker's total winning payoff (beyond recovering stakes) is ${protocolDocFacts.voterPoolEffectiveRawFactorLabel} x L_honest (${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate losing pool). The total cost is K x c (identity acquisition). The attack is profitable only when:`,
           },
           {
             type: "formula",
-            latex: "K < \\frac{0.82 \\cdot L_{\\mathrm{honest}}}{c}",
+            latex: `K < \\frac{${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\cdot L_{\\mathrm{honest}}}{c}`,
           },
           {
             type: "table",
@@ -1116,11 +1136,11 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "A coalition of C colluders coordinates to vote in the same direction on target content. Each colluder stakes s_c (up to 100 cREP). Their combined stake is S_C = C x s_c. Let S_H denote honest voters' stake on the opposite side. The coalition wins if S_C > S_H. Coalition profit (beyond recovering stakes) is 0.779 x S_H (82% of the post-rebate losing pool), shared among C members. Per-member profit:",
+            text: `A coalition of C colluders coordinates to vote in the same direction on target content. Each colluder stakes s_c (up to 100 cREP). Their combined stake is S_C = C x s_c. Let S_H denote honest voters' stake on the opposite side. The coalition wins if S_C > S_H. Coalition profit (beyond recovering stakes) is ${protocolDocFacts.voterPoolEffectiveRawFactorLabel} x S_H (${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate losing pool), shared among C members. Per-member profit:`,
           },
           {
             type: "formula",
-            latex: "\\mathrm{profit\\;per\\;member} = \\frac{0.82 \\cdot S_H}{C}",
+            latex: `\\mathrm{profit\\;per\\;member} = \\frac{${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\cdot S_H}{C}`,
           },
           {
             type: "sub_heading",
@@ -1132,7 +1152,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "formula",
-            latex: "\\frac{0.82 \\cdot S_H}{C} > k",
+            latex: `\\frac{${protocolDocFacts.voterPoolEffectiveRawFactorLabel} \\cdot S_H}{C} > k`,
           },
           {
             type: "paragraph",

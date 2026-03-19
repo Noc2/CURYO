@@ -231,8 +231,8 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         // Honest strategy (vote 101 cREP UP, no opposition) would yield more.
 
         // Net from opposition = voter pool share of 1 cREP losing pool - 1 cREP lost stake
-        // voter pool share = 82% * 1 * (100/150) = ~0.547 cREP
-        // Net from opposition alone = 0.547 - 1 = -0.453 cREP (LOSS)
+        // voter pool share = 80% * 1 * (100/150) = ~0.533 cREP
+        // Net from opposition alone = 0.533 - 1 = -0.467 cREP (LOSS)
         // The self-opposition is ALWAYS a net loss now.
         // (Participation is earned regardless of whether you also vote the other side)
 
@@ -321,15 +321,15 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
 
         // With the fix, losing-side participation = 0
         // The only "gain" from opposition: voter pool share of the losing pool
-        // voter pool = 82% of stakeLose
+        // voter pool = 80% of stakeLose
         // attacker's share = stakeWin / (stakeWin + 50e6) * voterPool (assuming 50 honest)
-        uint256 voterPool = stakeLose * 8200 / 10000;
+        uint256 voterPool = stakeLose * 8000 / 10000;
         uint256 attackerShare = voterPool * stakeWin / (stakeWin + 50e6);
 
         // Net from opposition = attackerShare - stakeLose
-        // attackerShare < stakeLose because voterPool = 82% of stakeLose < stakeLose
-        // Even if attacker had 100% of voter pool: 0.82 cREP < 1 cREP = loss
-        assert(voterPool < stakeLose); // 0.82 < 1.0 — ALWAYS a loss
+        // attackerShare < stakeLose because voterPool = 80% of stakeLose < stakeLose
+        // Even if attacker had 100% of voter pool: 0.80 cREP < 1 cREP = loss
+        assert(voterPool < stakeLose); // 0.80 < 1.0 — ALWAYS a loss
 
         // The opposition component is guaranteed unprofitable regardless of tier
         assert(attackerShare < stakeLose);

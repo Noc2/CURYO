@@ -658,7 +658,7 @@ contract AdversarialTests is VotingTestBase {
 
         // Winner gets stake + reward, loser loses stake
         // Net = winnerGain - 50e6 (lost stake) - 50e6 (winner's original stake) = reward - loser stake
-        // Due to fees (82% to voters, 18% to protocol), net is always negative
+        // Due to fees (80% to voters, 20% to protocol), net is always negative
         uint256 totalReturned = winnerGain; // winner's stake + reward
         assertLe(totalReturned, 100e6, "Self-opposition should not be profitable");
     }

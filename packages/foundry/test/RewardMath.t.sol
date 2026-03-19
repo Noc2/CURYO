@@ -130,7 +130,7 @@ contract RewardMathTest is Test {
         ) = harness.splitPool(losingPool);
 
         assertEq(submitterShare, (losingPool * 1000) / 10000, "Submitter share must be 10%");
-        assertEq(platformShare, (losingPool * 200) / 10000, "Platform share must be 2%");
+        assertEq(platformShare, (losingPool * 400) / 10000, "Platform share must be 4%");
         assertEq(treasuryShare, (losingPool * 100) / 10000, "Treasury share must be 1%");
         assertEq(consensusShare, (losingPool * 500) / 10000, "Consensus share must be 5%");
         assertEq(
@@ -258,7 +258,7 @@ contract RewardMathTest is Test {
     }
 
     function test_SplitPool_SmallValues() public view {
-        // With 100 tokens: submitter = 10, platform = 2, treasury = 1, consensus = 5, voter = 82
+        // With 100 tokens: submitter = 10, platform = 4, treasury = 1, consensus = 5, voter = 80
         (
             uint256 voterShare,
             uint256 submitterShare,
@@ -268,10 +268,10 @@ contract RewardMathTest is Test {
         ) = harness.splitPool(100);
 
         assertEq(submitterShare, 10);
-        assertEq(platformShare, 2);
+        assertEq(platformShare, 4);
         assertEq(treasuryShare, 1);
         assertEq(consensusShare, 5);
-        assertEq(voterShare, 82);
+        assertEq(voterShare, 80);
     }
 
     function test_SplitPool_One() public view {
@@ -351,16 +351,16 @@ contract RewardMathTest is Test {
     }
 
     function test_SplitConsensusSubsidy_Ratio() public view {
-        // 9200 total (8200 voter + 1000 submitter)
-        // subsidy = 9200 → submitter = 9200 * 1000 / 9200 = 1000, voter = 8200
-        (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(9200);
+        // 9000 total (8000 voter + 1000 submitter)
+        // subsidy = 9000 → submitter = 9000 * 1000 / 9000 = 1000, voter = 8000
+        (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(9000);
 
-        assertEq(submitterShare, 1000, "Submitter should get 1000/9200 of subsidy");
-        assertEq(voterShare, 8200, "Voter should get 8200/9200 of subsidy");
+        assertEq(submitterShare, 1000, "Submitter should get 1000/9000 of subsidy");
+        assertEq(voterShare, 8000, "Voter should get 8000/9000 of subsidy");
     }
 
     function test_SplitConsensusSubsidy_SmallValue() public view {
-        // subsidy = 1 → submitter = 1 * 1000 / 9200 = 0, voter = 1
+        // subsidy = 1 → submitter = 1 * 1000 / 9000 = 0, voter = 1
         (uint256 voterShare, uint256 submitterShare) = harness.splitConsensusSubsidy(1);
 
         assertEq(submitterShare, 0);

@@ -20,7 +20,7 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
 }
 
 /**
- * Static SVG pie chart showing the effective split of the raw losing pool.
+ * Pie chart sized by effective raw losing-pool impact, but labeled by the configured two-step split.
  */
 export function RewardSplitChart() {
   const [hovered, setHovered] = useState<number | null>(null);
@@ -33,11 +33,6 @@ export function RewardSplitChart() {
     currentAngle = endAngle;
     return { ...slice, startAngle, endAngle, index: i };
   });
-
-  const formatValue = (value: number) => {
-    if (Number.isInteger(value)) return `${value}%`;
-    return `${value.toFixed(2).replace(/\.?0+$/, "")}%`;
-  };
 
   return (
     <div className="flex items-center gap-6 my-4">
@@ -68,11 +63,13 @@ export function RewardSplitChart() {
           >
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
             <span className="text-base-content/70">
-              <span className="font-mono font-medium text-base-content/90">{formatValue(slice.value)}</span>{" "}
-              {slice.label}
+              <span className="font-mono font-medium text-base-content/90">{slice.displayValue}</span> {slice.label}
             </span>
           </div>
         ))}
+        <p className="mt-2 max-w-sm text-xs text-base-content/60">
+          After the loser rebate, the remaining pool is split by bucket.
+        </p>
       </div>
     </div>
   );

@@ -83,9 +83,9 @@ contract RewardMathFuzz is Test {
 
         (uint256 voter,,,,) = RewardMath.splitPool(losingPool);
 
-        // Voter share should be >= 82% (gets rounding remainder)
-        uint256 minVoter = (losingPool * 8200) / 10000;
-        assertGe(voter, minVoter, "voter share below 82% floor");
+        // Voter share should be >= 80% (gets rounding remainder)
+        uint256 minVoter = (losingPool * 8000) / 10000;
+        assertGe(voter, minVoter, "voter share below 80% floor");
     }
 
     // =========================================================================

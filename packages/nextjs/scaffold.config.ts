@@ -30,7 +30,7 @@ const scaffoldConfig = {
   // Your WalletConnect project ID — get one at https://cloud.walletconnect.com
   walletConnectProjectId: publicEnv.walletConnectProjectId,
   onlyLocalBurnerWallet: true,
-  // Frontend operator address for fee distribution (1% of losing pool, half of 2% platform fee)
+  // Frontend operator address for fee distribution (3% of the remaining post-rebate losing pool)
   // Set via NEXT_PUBLIC_FRONTEND_CODE env var, or leave undefined for no frontend fee
   frontendCode: publicEnv.frontendCode,
 } as const satisfies ScaffoldConfig;

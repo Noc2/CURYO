@@ -264,7 +264,7 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
 
         _forceSettle(cid);
 
-        // losingPool = 1e6 -> voterPool ~0.82 cREP -> split among 4 colluders proportional to shares
+        // losingPool = 1e6 -> voterPool ~0.8 cREP -> split among 4 colluders proportional to shares
         uint256 totalProfit = 0;
         for (uint256 i = 0; i < 4; i++) {
             uint256 bal = crepToken.balanceOf(v[i]);
@@ -311,8 +311,8 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
         vm.prank(submitter);
         distributor.claimSubmitterReward(cid, rid);
         uint256 submitterReward = crepToken.balanceOf(submitter) - subBal;
-        // submitterShare = 12_500_000 * 1000 / (8200 + 1000) = 1_358_695
-        assertEq(submitterReward, 1_358_695, "Submitter gets ~10.9% of subsidy");
+        // submitterShare = 12_500_000 * 1000 / (8000 + 1000) = 1_388_888
+        assertEq(submitterReward, 1_388_888, "Submitter gets ~11.1% of subsidy");
     }
 
     // ==================== Test 6: Share-Proportional ROI (Early Voter Advantage) ====================
@@ -387,8 +387,8 @@ contract FormalVerification_GameTheoryTest is VotingTestBase {
 
         _forceSettle(cid);
 
-        // losingPool = 4e6, voterPool ~3.28e6 (82% with redirects)
-        // Whale ROI = ~3.28 / 100 ~= 3.28%
+        // losingPool = 4e6, voterPool ~3.2e6 (80% with redirects)
+        // Whale ROI = ~3.2 / 100 ~= 3.2%
         uint256 bal = crepToken.balanceOf(v[0]);
         vm.prank(v[0]);
         distributor.claimReward(cid, rid);

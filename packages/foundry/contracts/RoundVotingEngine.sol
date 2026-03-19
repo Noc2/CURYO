@@ -711,10 +711,10 @@ contract RoundVotingEngine is
                 emit ConsensusReserveFunded(contentId, roundId, consensusShare);
             }
 
-            // Distribute platform fees (1% frontend + 1% category)
+            // Distribute platform fees (3% frontend + 1% category)
             if (platformShare > 0) {
-                uint256 frontendShare = platformShare / 2;
-                uint256 categorySubmitterShare = platformShare - frontendShare;
+                uint256 categorySubmitterShare = platformShare / 4;
+                uint256 frontendShare = platformShare - categorySubmitterShare;
 
                 if (frontendShare > 0) {
                     if (roundStakeWithApprovedFrontend[contentId][roundId] > 0) {

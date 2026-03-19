@@ -390,7 +390,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators
-          claim their proportional share of the 1% frontend fee pool. Pull-based, permissionless. Historical fee shares
+          claim their proportional share of the 3% frontend fee pool. Pull-based, permissionless. Historical fee shares
           still follow the commit-time approval snapshot, but if the frontend is slashed or underbonded at claim time,
           the claim is redirected to the protocol instead of accruing to the operator.
         </li>
@@ -610,7 +610,7 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>splitPoolAfterLoserRefund(losingPool)</code> &mdash; Reserve a 5% rebate for revealed losers, then split
-          the remaining pool into 82% voters / 5% consensus subsidy / 10% submitter / 2% platform (1% frontend + 1%
+          the remaining pool into 80% voters / 5% consensus subsidy / 10% submitter / 4% platform (3% frontend + 1%
           category) / 1% treasury.
         </li>
         <li>

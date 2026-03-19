@@ -32,16 +32,16 @@ export const EPOCH_WEIGHT_BPS = {
   informed: 2_500,
 } as const;
 
-export const REWARD_SPLIT_BPS = {
-  revealedLoserRefund: 500,
-  voter: 8_200,
-  submitter: 1_000,
-  platform: 200,
-  treasury: 100,
-  consensus: 500,
+export const PLATFORM_REWARD_SPLIT_BPS = {
+  frontend: 300,
+  category: 100,
 } as const;
 
-export const PLATFORM_REWARD_SPLIT_BPS = {
-  frontend: REWARD_SPLIT_BPS.platform / 2,
-  category: REWARD_SPLIT_BPS.platform / 2,
+export const REWARD_SPLIT_BPS = {
+  revealedLoserRefund: 500,
+  voter: 8_000,
+  submitter: 1_000,
+  platform: PLATFORM_REWARD_SPLIT_BPS.frontend + PLATFORM_REWARD_SPLIT_BPS.category,
+  treasury: 100,
+  consensus: 500,
 } as const;
