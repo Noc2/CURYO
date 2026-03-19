@@ -6,7 +6,10 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 
 const STEPS = [
-  { label: "Connect wallet", desc: "link your wallet to vote, stake, and claim rewards" },
+  {
+    label: "Connect wallet & claim Voter ID",
+    desc: "link your wallet and claim a Voter ID so you can vote, stake, and claim rewards",
+  },
   { label: "Vote", desc: "place your prediction while the vote direction stays hidden" },
   { label: "Stake", desc: "back your prediction with cREP tokens" },
   { label: "Reveal & Resolve", desc: "votes are revealed after the blind phase, and rounds settle automatically" },
@@ -44,6 +47,10 @@ export function VotingGuide() {
             <XMarkIcon className="w-4 h-4" />
           </button>
           <h3 className="font-bold text-lg leading-snug pr-6">Here&apos;s how the reputation game works:</h3>
+          <p className="mt-2 pr-6 text-sm leading-relaxed text-base-content/65">
+            The hardest part is getting started: connect your wallet and claim your Voter ID once, then the rest of the
+            flow gets much easier. Stick with it.
+          </p>
         </div>
 
         {/* Steps */}
