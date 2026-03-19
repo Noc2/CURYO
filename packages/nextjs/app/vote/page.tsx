@@ -113,6 +113,7 @@ const HomeInner = () => {
   const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
   const [supportsTouchNavigation, setSupportsTouchNavigation] = useState(false);
   const [interactionVersion, setInteractionVersion] = useState(0);
+  const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
   const isSearchMode = searchQuery.trim().length > 0;
   const effectiveSearchSortBy: SearchSortOption = sortBy === "for_you" ? "newest" : sortBy;
   const { categories: websiteCategories, categoryNameToId, isLoading: categoriesLoading } = useCategoryRegistry();
@@ -262,8 +263,37 @@ const HomeInner = () => {
     return cooldowns;
   }, [nowSeconds, votes]);
 
+  useEffect(() => {
+    setOptimisticVotedContentIds(previous => (previous.size === 0 ? previous : new Set()));
+  }, [address]);
+
+  useEffect(() => {
+    if (optimisticVotedContentIds.size === 0) return;
+
+    const fetchedVoteIds = new Set(votes.map(vote => vote.contentId.toString()));
+    setOptimisticVotedContentIds(previous => {
+      let changed = false;
+      const next = new Set<string>();
+
+      previous.forEach(contentId => {
+        if (fetchedVoteIds.has(contentId)) {
+          changed = true;
+          return;
+        }
+        next.add(contentId);
+      });
+
+      return changed ? next : previous;
+    });
+  }, [optimisticVotedContentIds.size, votes]);
+
   // Filter & sort state
-  const votedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
+  const fetchedVotedContentIds = useMemo(() => new Set(votes.map(vote => vote.contentId.toString())), [votes]);
+  const votedContentIds = useMemo(() => {
+    const ids = new Set(fetchedVotedContentIds);
+    optimisticVotedContentIds.forEach(contentId => ids.add(contentId));
+    return ids;
+  }, [fetchedVotedContentIds, optimisticVotedContentIds]);
   const watchedOrderMap = useMemo(() => {
     const order = new Map<string, number>();
     watchedItems.forEach((item, index) => {
@@ -802,6 +832,11 @@ const HomeInner = () => {
       void refetchStakeModalCooldown();
       setStakeModal(prev => ({ ...prev, isOpen: false }));
       if (success) {
+        setOptimisticVotedContentIds(previous => {
+          const next = new Set(previous);
+          next.add(stakeModal.contentId.toString());
+          return next;
+        });
         if (item) {
           markPrimaryInteraction(item.id);
           recordRecommendationSignal(item, "vote_commit", { isUp: stakeModal.isUp });
