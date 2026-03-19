@@ -10,7 +10,7 @@ import { AppPageShell } from "~~/components/shared/AppPageShell";
 
 type SettingsTab = "delegation" | "notifications";
 
-const settingsTabs: SettingsTab[] = ["delegation", "notifications"];
+const settingsTabs: SettingsTab[] = ["notifications", "delegation"];
 
 const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
   delegation: "Delegation",
@@ -18,7 +18,7 @@ const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
 };
 
 function normalizeSettingsTab(value: string | null): SettingsTab {
-  return settingsTabs.includes((value ?? "") as SettingsTab) ? (value as SettingsTab) : "delegation";
+  return settingsTabs.includes((value ?? "") as SettingsTab) ? (value as SettingsTab) : "notifications";
 }
 
 function SettingsPageInner() {
@@ -26,7 +26,7 @@ function SettingsPageInner() {
   const router = useRouter();
   const pathname = usePathname() ?? "/settings";
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("delegation");
+  const [activeTab, setActiveTab] = useState<SettingsTab>("notifications");
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab") ?? null;
@@ -37,7 +37,7 @@ function SettingsPageInner() {
     (tab: SettingsTab) => {
       setActiveTab(tab);
       const nextParams = new URLSearchParams(searchParams?.toString() ?? "");
-      if (tab === "delegation") {
+      if (tab === "notifications") {
         nextParams.delete("tab");
       } else {
         nextParams.set("tab", tab);

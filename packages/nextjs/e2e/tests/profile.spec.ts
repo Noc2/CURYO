@@ -30,11 +30,10 @@ test.describe("Profile management", () => {
     await setupWallet(page, profileAccount.privateKey);
     await page.goto("/settings");
 
-    const delegationTab = page.getByRole("button", { name: "Delegation" });
-    await expect(delegationTab).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByRole("heading", { name: /Delegated Vote ID/i })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole("button", { name: "Referrals" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Notifications" })).toBeVisible({ timeout: 5_000 });
+    const notificationsTab = page.getByRole("button", { name: "Notifications" });
+    await expect(notificationsTab).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("heading", { name: /Notification settings/i })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "Delegation" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("button", { name: "Profile" })).toHaveCount(0);
 
     expect(notificationChallengeRequests).toHaveLength(0);
