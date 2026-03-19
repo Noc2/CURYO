@@ -14,7 +14,7 @@ interface RoundRevealedBreakdownProps {
 }
 
 export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps) {
-  const { round, isLoading, isEpoch1 } = snapshot;
+  const { round, isLoading } = snapshot;
 
   if (isLoading) return null;
 
@@ -25,12 +25,6 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
   const downPoolFormatted = Number(round.downPool) / 1e6;
   const upCount = Number(round.upCount);
   const downCount = Number(round.downCount);
-  const higherUpsideSide =
-    !isEpoch1 && upPoolFormatted > 0 && downPoolFormatted > 0 && upPoolFormatted !== downPoolFormatted
-      ? upPoolFormatted < downPoolFormatted
-        ? "up"
-        : "down"
-      : null;
 
   return (
     <div className="flex w-full max-w-full items-center gap-3 px-1 py-1">
@@ -40,11 +34,6 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
         <span className="text-xs text-error/70">
           {downCount} vote{downCount === 1 ? "" : "s"}
         </span>
-        {higherUpsideSide === "down" ? (
-          <span className="rounded-full bg-error/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-error">
-            Higher upside
-          </span>
-        ) : null}
       </div>
       <div className="h-4 w-px shrink-0 bg-base-content/10" />
       <div className="inline-flex min-w-0 flex-1 items-center justify-end gap-2 whitespace-nowrap text-right text-success">
@@ -53,11 +42,6 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
         <span className="text-xs text-success/70">
           {upCount} vote{upCount === 1 ? "" : "s"}
         </span>
-        {higherUpsideSide === "up" ? (
-          <span className="rounded-full bg-success/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-success">
-            Higher upside
-          </span>
-        ) : null}
       </div>
     </div>
   );
