@@ -78,8 +78,13 @@ export function VotingGuide() {
         {/* Footer */}
         <div className="px-5 pb-4">
           {!address ? (
-            <button type="button" onClick={() => openConnectModal?.()} className="btn btn-primary btn-sm w-full">
-              Connect wallet
+            <button
+              type="button"
+              onClick={() => openConnectModal?.()}
+              className="btn btn-sm btn-curyo border-none w-full"
+              style={{ fontSize: "16px" }}
+            >
+              Connect Wallet
             </button>
           ) : !hasVoterId ? (
             <Link href="/governance" className="btn btn-primary btn-sm w-full">
