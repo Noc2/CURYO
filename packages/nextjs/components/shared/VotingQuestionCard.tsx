@@ -186,7 +186,7 @@ export function VotingQuestionCard({
               </div>
             )}
 
-            <div className="mt-2 flex shrink-0 justify-center">
+            <div className="mt-2 flex w-full shrink-0">
               <RoundRevealedBreakdown snapshot={roundSnapshot} />
             </div>
           </div>
