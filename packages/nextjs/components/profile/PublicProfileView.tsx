@@ -661,22 +661,14 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
           ) : ownProfile ? (
             <div className="mt-6 rounded-2xl border border-dashed border-base-content/15 px-5 py-4">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-primary/80">How you rate</div>
-              {hasVoterId ? (
-                <button
-                  type="button"
-                  onClick={openEditMode}
-                  className="mt-4 inline-flex items-center justify-center rounded-full bg-base-content/[0.06] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-base-content/[0.1]"
-                >
-                  Add how you rate
-                </button>
-              ) : (
+              {!hasVoterId ? (
                 <Link
                   href="/governance#faucet"
                   className="mt-4 inline-flex items-center justify-center rounded-full bg-base-content/[0.06] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-base-content/[0.1]"
                 >
                   Get Voter ID
                 </Link>
-              )}
+              ) : null}
             </div>
           ) : null}
         </div>
