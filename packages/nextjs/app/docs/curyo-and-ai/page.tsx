@@ -113,7 +113,7 @@ const CuryoAndAI: NextPage = () => {
       <p>
         Curyo does not just produce data for AI &mdash; it also uses AI as a participant. Automated voting bots use
         pluggable rating strategies that query external APIs to obtain normalized quality scores for submitted content.
-        The bot votes UP or DOWN based on whether the score meets a configurable threshold.
+        The bot votes up or down based on whether the score meets a configurable threshold.
       </p>
       <p>
         Bot votes use the same public <Link href="/docs/how-it-works">voting mechanism</Link> as human votes &mdash;

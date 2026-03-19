@@ -21,7 +21,7 @@ The web is drowning in clickbait and fake engagement. As AI makes it effortless 
 
 ## Background
 
-Curyo replaces passive likes with **prediction games**. Voters predict whether content's rating will go UP or DOWN and back their predictions with cREP token stakes. The majority side wins the content-specific voter pool: revealed losers can reclaim a fixed rebate, and the remaining losing pool is split across winners and protocol-defined contributor shares.
+Curyo replaces passive likes with **prediction games**. Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. The majority side wins the content-specific voter pool: revealed losers can reclaim a fixed rebate, and the remaining losing pool is split across winners and protocol-defined contributor shares.
 
 - **Skin in the Game** — every vote requires a token stake
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human

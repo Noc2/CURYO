@@ -45,7 +45,7 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go UP or DOWN and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
+    text: `Curyo is a decentralized content curation protocol that replaces passive engagement metrics with stake-weighted prediction games. Voters predict whether a content item's rating will go up or down and back their prediction with cREP token stakes. Votes are encrypted via tlock (time-lock encryption) and hidden until each ${protocolDocFacts.blindPhaseDurationLabel} epoch ends, preventing herding. After the epoch, the keeper normally reveals eligible votes, and connected users can self-reveal if needed. The side with the larger epoch-weighted stake wins -- early (blind) voters earn full reward weight, while later voters who saw epoch-1 results earn ${protocolDocFacts.openPhaseWeightLabel} weight, creating a ${protocolDocFacts.earlyVoterAdvantageLabel} incentive to vote early.`,
   },
   {
     type: "paragraph",
@@ -108,12 +108,12 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: `Voters predict whether content's rating will go UP or DOWN and back their prediction with a cREP stake. Votes are encrypted with tlock and hidden until the epoch ends, preventing herding. Voting early in the epoch earns full reward weight (Tier 1), while voting after seeing epoch-1 results earns only ${protocolDocFacts.openPhaseWeightLabel} weight (Tier 2).`,
+            text: `Voters predict whether content's rating will go up or down and back their prediction with a cREP stake. Votes are encrypted with tlock and hidden until the epoch ends, preventing herding. Voting early in the epoch earns full reward weight (Tier 1), while voting after seeing epoch-1 results earns only ${protocolDocFacts.openPhaseWeightLabel} weight (Tier 2).`,
           },
           {
             type: "ordered",
             items: [
-              "Commit: Choose UP or DOWN, select stake (1-100 cREP per Voter ID). The UI encrypts the vote, encodes (contentId, commitHash, ciphertext, frontendAddress), and submits it through CuryoReputation.transferAndCall(votingEngine, stakeAmount, payload). The vote direction stays hidden until the epoch ends.",
+              "Commit: Choose up or down, select stake (1-100 cREP per Voter ID). The UI encrypts the vote, encodes (contentId, commitHash, ciphertext, frontendAddress), and submits it through CuryoReputation.transferAndCall(votingEngine, stakeAmount, payload). The vote direction stays hidden until the epoch ends.",
               `Accumulate: More voters commit during the ${protocolDocFacts.blindPhaseDurationLabel} epoch. No one can see anyone else's vote direction until the epoch ends.`,
               "Reveal: After the epoch ends, the keeper normally decrypts eligible ciphertexts off-chain and submits reveals on-chain. Connected users can also self-reveal if they know their vote plaintext. The rating does not change yet -- it updates only when the round later settles.",
               `Settle: Once at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone can call settleRound(). The side with the larger epoch-weighted stake wins.`,
@@ -187,7 +187,7 @@ export const SECTIONS: Section[] = [
           {
             type: "ordered",
             items: [
-              "Commit (any time during the round): Choose UP or DOWN. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, commitHash, ciphertext, frontendAddress). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
+              "Commit (any time during the round): Choose up or down. The UI encrypts your direction and submits a single transferAndCall transaction carrying (contentId, commitHash, ciphertext, frontendAddress). Your stake is locked; your direction is hidden on-chain until the epoch ends.",
               `Epoch ends (every ${protocolDocFacts.blindPhaseDurationLabel}): The drand beacon publishes a randomness value. The keeper fetches it, decrypts eligible ciphertexts off-chain, and calls revealVoteByCommitKey() for unrevealed commits.`,
               `Settlement: After at least ${protocolDocFacts.minVotersLabel} votes are revealed and all past-epoch votes are revealed (or the ${protocolDocFacts.revealGracePeriodLabel} reveal grace period expires), anyone may call settleRound(contentId, roundId). The side with the larger epoch-weighted stake wins. The content rating is recalculated at settlement from revealed raw stakes.`,
               `Claim: Winners call claimReward(contentId, roundId) to receive their original stake plus an epoch-weighted share of the remaining losing pool. Revealed losers may also call claimReward(contentId, roundId) to recover a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. Content submitters may claim a separate submitter reward.`,
@@ -276,7 +276,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: `Curyo's parimutuel voting mechanism can be modeled as a game. Let N voters each choose a direction d_i in {UP, DOWN}, a stake s_i in [1, 100], and an epoch tier t_i in {1, 2+}. Each voter has an epoch-weighted effective stake: e_i = s_i when t_i = 1 (Tier 1, blind epoch), or e_i = s_i * 0.25 when t_i >= 2 (Tier 2+, saw prior results). The win condition uses weighted pools: upWins iff sum(e_i : d_i = UP) > sum(e_i : d_i = DOWN). Let W_e denote the total effective stake on the winning side and L the total raw stake on the losing side. Revealed losers reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of L, and the voter pool receives ${protocolDocFacts.voterPoolShareLabel} of L, distributed proportionally by e_i / W_e.`,
+            text: `Curyo's parimutuel voting mechanism can be modeled as a game. Let N voters each choose a direction d_i in {up, down}, a stake s_i in [1, 100], and an epoch tier t_i in {1, 2+}. Each voter has an epoch-weighted effective stake: e_i = s_i when t_i = 1 (Tier 1, blind epoch), or e_i = s_i * 0.25 when t_i >= 2 (Tier 2+, saw prior results). The win condition uses weighted pools: upWins iff sum(e_i : d_i = up) > sum(e_i : d_i = down). Let W_e denote the total effective stake on the winning side and L the total raw stake on the losing side. Revealed losers reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of L, and the voter pool receives ${protocolDocFacts.voterPoolShareLabel} of L, distributed proportionally by e_i / W_e.`,
           },
           {
             type: "sub_heading",
@@ -369,7 +369,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38 cREP reward pool (${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} the reward per cREP compared to each Tier-2 voter, confirming the ${protocolDocFacts.earlyVoterAdvantageLabel} weight ratio. The epoch-weighted win condition test: 1 Tier-1 DOWN voter (100 cREP, effectiveStake 100) beats 3 Tier-2 UP voters (100 cREP each, effectiveStake 25 each = 75 total) -- DOWN wins despite raw majority being UP.`,
+            text: `Numerical tests confirm honest voting profitability: in a 2-vs-1 split with 50 cREP stakes (all Tier 1), each winner receives their stake plus a proportional share of the loser's remaining 38 cREP reward pool (${protocolDocFacts.voterPoolNetSharePercentLabel} of the post-rebate 47.5 cREP) while the revealed loser only recovers the fixed 2.5 cREP rebate. Epoch-weight verification: with 1 Tier-1 voter and 4 Tier-2 voters on the winning side (each 50 cREP), the Tier-1 voter receives approximately ${protocolDocFacts.earlyVoterAdvantageLabel.replace(":1", "x")} the reward per cREP compared to each Tier-2 voter, confirming the ${protocolDocFacts.earlyVoterAdvantageLabel} weight ratio. The epoch-weighted win condition test: 1 Tier-1 down voter (100 cREP, effectiveStake 100) beats 3 Tier-2 up voters (100 cREP each, effectiveStake 25 each = 75 total) -- down wins despite raw majority being up.`,
           },
           {
             type: "sub_heading",
@@ -525,16 +525,16 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The winner is determined by comparing total epoch-weighted stakes: upWins iff sum(e_i : d_i = UP) > sum(e_i : d_i = DOWN). Rewards are distributed proportionally to e_i / W_e among winners, where W_e is the total effective stake on the winning side.",
+            text: "The winner is determined by comparing total epoch-weighted stakes: upWins iff sum(e_i : d_i = up) > sum(e_i : d_i = down). Rewards are distributed proportionally to e_i / W_e among winners, where W_e is the total effective stake on the winning side.",
           },
           {
             type: "table",
             data: {
-              headers: ["Voter", "Direction", "Stake", "Tier", "Effective Stake", "Reward share (UP wins)"],
+              headers: ["Voter", "Direction", "Stake", "Tier", "Effective Stake", "Reward share (up wins)"],
               rows: [
                 [
                   "Alice (Tier 1)",
-                  "UP",
+                  "up",
                   "50 cREP",
                   "1",
                   "50 cREP",
@@ -542,7 +542,7 @@ export const SECTIONS: Section[] = [
                 ],
                 [
                   "Bob (Tier 1)",
-                  "UP",
+                  "up",
                   "50 cREP",
                   "1",
                   "50 cREP",
@@ -550,7 +550,7 @@ export const SECTIONS: Section[] = [
                 ],
                 [
                   "Carol (Tier 2)",
-                  "UP",
+                  "up",
                   "50 cREP",
                   "2",
                   "12.5 cREP",
@@ -594,7 +594,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "One-sided rounds (only UP or only DOWN votes revealed) settle as tied/consensus. All stakes are returned, and voters receive a small reward from the consensus subsidy reserve -- 5% of the total stake (capped at 50 cREP per round), split between voters (~89%) and the content submitter (~11%).",
+            text: "One-sided rounds (only up or only down votes revealed) settle as tied/consensus. All stakes are returned, and voters receive a small reward from the consensus subsidy reserve -- 5% of the total stake (capped at 50 cREP per round), split between voters (~89%) and the content submitter (~11%).",
           },
           {
             type: "paragraph",
@@ -1295,7 +1295,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Curyo incorporates AI as a first-class participant through automated voting bots that use pluggable rating strategies. Each strategy queries an external API to obtain a normalized quality score for submitted content. The bot votes UP or DOWN based on whether the score meets a configurable threshold.",
+            text: "Curyo incorporates AI as a first-class participant through automated voting bots that use pluggable rating strategies. Each strategy queries an external API to obtain a normalized quality score for submitted content. The bot votes up or down based on whether the score meets a configurable threshold.",
           },
           {
             type: "paragraph",

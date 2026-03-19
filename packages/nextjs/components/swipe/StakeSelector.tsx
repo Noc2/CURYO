@@ -157,7 +157,7 @@ export function StakeSelector({
                 >
                   {isUp ? <path d="M4.5 15.75l7.5-7.5 7.5 7.5" /> : <path d="M19.5 8.25l-7.5 7.5-7.5-7.5" />}
                 </svg>
-                {isUp ? "Rating goes UP" : "Rating goes DOWN"}
+                {isUp ? "Rating goes up" : "Rating goes down"}
               </div>
             </div>
 
@@ -296,7 +296,7 @@ export function StakeSelector({
                     <div className="flex items-center justify-between gap-3">
                       <span>Live pools</span>
                       <span className="font-semibold tabular-nums">
-                        UP {formatCrepAmount(upPool, 0)} · DOWN {formatCrepAmount(downPool, 0)}
+                        up {formatCrepAmount(upPool, 0)} · down {formatCrepAmount(downPool, 0)}
                       </span>
                     </div>
                   </>

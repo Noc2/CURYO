@@ -1,7 +1,7 @@
 import { protocolDocFacts } from "./protocolFacts";
 
 export const protocolCopy = {
-  predictionGamesOverview: `Curyo replaces passive likes with prediction games. Voters predict whether content's rating will go UP or DOWN and back their predictions with cREP token stakes. The majority side wins the content-specific voter pool: revealed losers can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of raw stake, and the remaining losing pool is split across winners, submitters, platform fees, consensus reserve, and treasury according to fixed on-chain percentages.`,
+  predictionGamesOverview: `Curyo replaces passive likes with prediction games. Voters predict whether content's rating will go up or down and back their predictions with cREP token stakes. The majority side wins the content-specific voter pool: revealed losers can reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of raw stake, and the remaining losing pool is split across winners, submitters, platform fees, consensus reserve, and treasury according to fixed on-chain percentages.`,
   contributorRewardsOverview: `After a ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate for revealed losers, the remaining losing stake funds the content-specific voter pool plus submitter, category, frontend, consensus, and treasury shares.`,
   participationPoolPurpose:
     "Bootstraps early adoption -- voter rewards become claimable after round settlement, and healthy submitter rewards are snapshotted when submitter stakes return (rate halving schedule).",

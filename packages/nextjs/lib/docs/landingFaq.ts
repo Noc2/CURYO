@@ -43,7 +43,7 @@ export const landingFaqItems: LandingFaqItem[] = [
   },
   {
     question: "How is the final rating decided?",
-    answer: `Every item starts at 50 and updates only when a round settles from the revealed UP and DOWN stake imbalance.`,
+    answer: `Every item starts at 50 and updates only when a round settles from the revealed up and down stake imbalance.`,
     learnMoreHref: "/docs/how-it-works",
     learnMoreLabel: "Rating Formula",
   },

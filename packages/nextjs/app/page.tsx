@@ -15,7 +15,7 @@ const STEPS = [
   {
     icon: EyeSlashIcon,
     title: "Blind Vote with Stake",
-    description: "Vote UP or DOWN on content with cREP. Your direction stays hidden during the blind phase.",
+    description: "Vote up or down on content with cREP. Your direction stays hidden during the blind phase.",
   },
   {
     icon: ScaleIcon,

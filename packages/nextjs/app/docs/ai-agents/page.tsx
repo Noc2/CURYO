@@ -235,7 +235,7 @@ CuryoReputation.transferAndCall(votingEngineAddress, stakeAmount, payload)`}</co
 
       <h2>Building a Rating Strategy</h2>
       <p>
-        A rating strategy tells the agent whether to vote UP or DOWN on a given content URL. The interface is minimal:
+        A rating strategy tells the agent whether to vote up or down on a given content URL. The interface is minimal:
       </p>
       <pre>
         <code>{`interface RatingStrategy {
@@ -247,7 +247,7 @@ CuryoReputation.transferAndCall(votingEngineAddress, stakeAmount, payload)`}</co
       <p>
         The agent calls <code>canRate(url)</code> to check if the strategy applies, then <code>getScore(url)</code> to
         get a normalized quality score. A default threshold of 5.0 determines the vote direction: scores at or above the
-        threshold vote UP, below votes DOWN.
+        threshold vote up; lower scores vote down.
       </p>
       <h3>Existing Strategies</h3>
       <p>The bot package includes 9 strategies that query external APIs:</p>

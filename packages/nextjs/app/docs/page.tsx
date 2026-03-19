@@ -35,7 +35,7 @@ const DocsIntro: NextPage = () => {
 
       <h2>Voting Flow</h2>
       <p>
-        Each content item has its own round. You vote <strong>UP</strong> or <strong>DOWN</strong> with cREP, your
+        Each content item has its own round. You vote <strong>up</strong> or <strong>down</strong> with cREP, your
         direction stays hidden during the blind phase, and early voters earn more reward weight.
       </p>
       <div className="not-prose">
@@ -43,7 +43,7 @@ const DocsIntro: NextPage = () => {
       </div>
       <ol>
         <li>
-          <strong>Vote:</strong> Choose UP or DOWN and stake 1&ndash;100 cREP. Your direction stays hidden.
+          <strong>Vote:</strong> Choose up or down and stake 1&ndash;100 cREP. Your direction stays hidden.
         </li>
         <li>
           <strong>Reveal:</strong> After the blind phase ends, eligible votes are revealed.
@@ -56,7 +56,7 @@ const DocsIntro: NextPage = () => {
       <h2>Content Rating</h2>
       <p>
         Every content item starts at <strong>50</strong>. When a round settles, the rating moves up or down from the
-        final revealed UP and DOWN stake imbalance.
+        final revealed up and down stake imbalance.
       </p>
       <p>
         Illegal content, broken content, and incorrect descriptions should always be downvoted regardless of the current

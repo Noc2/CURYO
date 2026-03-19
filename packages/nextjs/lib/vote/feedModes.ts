@@ -25,7 +25,7 @@ export const DISCOVER_FEED_MODE_OPTIONS: DiscoverFeedModeOption[] = [
   {
     value: "contested",
     label: "Contested",
-    description: "Open rounds with the closest split between UP and DOWN stake.",
+    description: "Open rounds with the closest split between up and down stake.",
   },
   {
     value: "fresh",

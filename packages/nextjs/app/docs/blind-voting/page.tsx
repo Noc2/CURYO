@@ -16,7 +16,7 @@ const BlindVoting: NextPage = () => {
       <p>
         Curyo uses <strong>blind voting</strong> to prevent herding &mdash; the tendency for later voters to copy the
         majority rather than assess quality independently. When you place a vote, your stake amount is visible on-chain,
-        but your <strong>vote direction (UP or DOWN) is encrypted</strong> using time-locked encryption. No one can
+        but your <strong>vote direction (up or down) is encrypted</strong> using time-locked encryption. No one can
         decrypt your vote direction until the blind phase ends.
       </p>
       <p>
@@ -102,7 +102,7 @@ const BlindVoting: NextPage = () => {
 
       <h2>One-Sided Rounds (Consensus)</h2>
       <p>
-        If all revealed voters agree (only UP or only DOWN votes) and the round resolves, an{" "}
+        If all revealed voters agree (only up or only down votes) and the round resolves, an{" "}
         <strong>consensus subsidy</strong> triggers. The system pays a small subsidy from the consensus subsidy reserve
         to reward unanimous agreement, since there are no losing stakes to redistribute. This incentivizes voting on
         uncontroversial content where the &ldquo;correct&rdquo; answer is obvious.

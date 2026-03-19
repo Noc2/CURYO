@@ -271,7 +271,7 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>updateRatingDirect(contentId, newRating)</code> &mdash; Called by RoundVotingEngine after settlement
-          with the new rating computed from the final revealed UP and DOWN stake pools using the protocol&apos;s
+          with the new rating computed from the final revealed up and down stake pools using the protocol&apos;s
           smoothed stake-imbalance formula.
         </li>
       </ul>

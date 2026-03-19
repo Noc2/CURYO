@@ -5,7 +5,7 @@ const STEPS = [
   {
     label: "Vote",
     duration: "1–100 cREP",
-    description: "Choose UP or DOWN, stake is locked, direction is encrypted",
+    description: "Choose up or down, stake is locked, direction is encrypted",
     Icon: LockClosedIcon,
   },
   {

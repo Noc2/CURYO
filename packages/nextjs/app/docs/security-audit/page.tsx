@@ -448,7 +448,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>H-05</td>
               <td>
-                <strong>Zero-cost rating manipulation.</strong> Unopposed DOWN votes update content rating at no cost
+                <strong>Zero-cost rating manipulation.</strong> Unopposed down votes update content rating at no cost
                 (stake returned). Rating now uses a smoothed stake-imbalance formula with a fixed 50 cREP parameter, so
                 low-stake unanimous rounds only move rating slightly and large swings require materially larger revealed
                 stake imbalance.
@@ -1130,7 +1130,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>I-09</td>
               <td>
-                <strong>Vote direction encrypted at commit time.</strong> Vote direction (UP/DOWN) is encrypted via
+                <strong>Vote direction encrypted at commit time.</strong> Vote direction (up/down) is encrypted via
                 tlock at commit time and only revealed after the epoch ends. By design: the commit-reveal model uses
                 tlock encryption and epoch-weighted rewards to incentivize independent assessment. Commit hashes enable
                 double-vote prevention, self-vote prevention, cooldown periods, and sybil stake limits.
@@ -1270,7 +1270,7 @@ const SecurityAudit: NextPage = () => {
           <tbody>
             <tr>
               <td>
-                <strong>Rating manipulation</strong> &mdash; Unopposed DOWN votes move content rating. Rating delta is
+                <strong>Rating manipulation</strong> &mdash; Unopposed down votes move content rating. Rating delta is
                 smoothed by a fixed 50 cREP parameter, so low-stake attacks only nudge rating and larger swings require
                 significantly more revealed stake imbalance.
               </td>

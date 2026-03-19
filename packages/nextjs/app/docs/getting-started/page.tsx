@@ -138,7 +138,7 @@ const GettingStarted: NextPage = () => {
       </StepIllustration>
       <h2>4. Place Your First Vote</h2>
       <p>
-        Open <strong>Vote</strong>, choose UP or DOWN, and stake 1&ndash;100 cREP. Your direction stays hidden during
+        Open <strong>Vote</strong>, choose up or down, and stake 1&ndash;100 cREP. Your direction stays hidden during
         the blind phase, and rewards can be claimed after settlement.
       </p>
       <p>
