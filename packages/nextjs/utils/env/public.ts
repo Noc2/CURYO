@@ -15,9 +15,9 @@ export type SupportedTargetNetwork = (typeof AVAILABLE_TARGET_NETWORKS)[keyof ty
 const DEFAULT_DEV_TARGET_NETWORKS = `${chains.foundry.id},${chains.celoSepolia.id}`;
 const DEV_WALLET_CONNECT_PROJECT_ID = "3a8170812b534d0ff9d794f19a901d64";
 
-function readEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  return value ? value : undefined;
+function optionalEnv(value: string | undefined): string | undefined {
+  const trimmedValue = value?.trim();
+  return trimmedValue ? trimmedValue : undefined;
 }
 
 function isLocalhostUrl(value: string): boolean {
@@ -25,15 +25,27 @@ function isLocalhostUrl(value: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
-function requireUrl(name: string, fallback?: string): string {
-  const value = readEnv(name) ?? fallback;
+// Next only inlines NEXT_PUBLIC_* variables into client bundles when they are
+// accessed with static property reads.
+const rawPublicEnv = {
+  alchemyApiKey: optionalEnv(process.env.NEXT_PUBLIC_ALCHEMY_API_KEY),
+  enableRpcFallback: optionalEnv(process.env.NEXT_PUBLIC_ENABLE_RPC_FALLBACK),
+  frontendCode: optionalEnv(process.env.NEXT_PUBLIC_FRONTEND_CODE),
+  ponderUrl: optionalEnv(process.env.NEXT_PUBLIC_PONDER_URL),
+  targetNetworks: optionalEnv(process.env.NEXT_PUBLIC_TARGET_NETWORKS),
+  thirdwebClientId: optionalEnv(process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID),
+  walletConnectProjectId: optionalEnv(process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID),
+} as const;
 
-  if (!value) {
+function requireUrl(name: string, value: string | undefined, fallback?: string): string {
+  const resolvedValue = value ?? fallback;
+
+  if (!resolvedValue) {
     throw new Error(`${name} is required${isProduction ? " in production" : ""}.`);
   }
 
   try {
-    if (isProduction && isLocalhostUrl(value)) {
+    if (isProduction && isLocalhostUrl(resolvedValue)) {
       throw new Error(`${name} must not point to localhost in production.`);
     }
   } catch (error) {
@@ -44,7 +56,7 @@ function requireUrl(name: string, fallback?: string): string {
     throw new Error(`${name} must be a valid URL.`);
   }
 
-  return value;
+  return resolvedValue;
 }
 
 function parseTargetNetworkIds(value: string): number[] {
@@ -61,7 +73,7 @@ function parseTargetNetworkIds(value: string): number[] {
   return [...new Set(ids)];
 }
 
-const targetNetworkIdsEnv = readEnv("NEXT_PUBLIC_TARGET_NETWORKS");
+const targetNetworkIdsEnv = rawPublicEnv.targetNetworks;
 
 if (isProduction && !targetNetworkIdsEnv) {
   throw new Error("NEXT_PUBLIC_TARGET_NETWORKS is required in production.");
@@ -95,13 +107,13 @@ if (missingDeployments.length > 0) {
 }
 
 const walletConnectProjectId =
-  readEnv("NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID") ?? (!isProduction ? DEV_WALLET_CONNECT_PROJECT_ID : undefined);
+  rawPublicEnv.walletConnectProjectId ?? (!isProduction ? DEV_WALLET_CONNECT_PROJECT_ID : undefined);
 
 if (!walletConnectProjectId) {
   throw new Error("NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID is required in production.");
 }
 
-const frontendCode = readEnv("NEXT_PUBLIC_FRONTEND_CODE");
+const frontendCode = rawPublicEnv.frontendCode;
 if (frontendCode && !isAddress(frontendCode)) {
   throw new Error("NEXT_PUBLIC_FRONTEND_CODE must be a valid address.");
 }
@@ -109,10 +121,14 @@ if (frontendCode && !isAddress(frontendCode)) {
 export const publicEnv = {
   isProduction,
   targetNetworks,
-  alchemyApiKey: readEnv("NEXT_PUBLIC_ALCHEMY_API_KEY"),
-  thirdwebClientId: readEnv("NEXT_PUBLIC_THIRDWEB_CLIENT_ID"),
+  alchemyApiKey: rawPublicEnv.alchemyApiKey,
+  thirdwebClientId: rawPublicEnv.thirdwebClientId,
   walletConnectProjectId,
-  ponderUrl: requireUrl("NEXT_PUBLIC_PONDER_URL", !isProduction ? "http://localhost:42069" : undefined),
+  ponderUrl: requireUrl(
+    "NEXT_PUBLIC_PONDER_URL",
+    rawPublicEnv.ponderUrl,
+    !isProduction ? "http://localhost:42069" : undefined,
+  ),
   frontendCode: frontendCode as `0x${string}` | undefined,
-  rpcFallbackEnabled: !isProduction || process.env.NEXT_PUBLIC_ENABLE_RPC_FALLBACK === "true",
+  rpcFallbackEnabled: !isProduction || rawPublicEnv.enableRpcFallback === "true",
 };

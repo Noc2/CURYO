@@ -1,18 +1,14 @@
 import type { RoundState } from "@curyo/contracts/protocol";
 
 const isProduction = process.env.NODE_ENV === "production";
-
-function readEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  return value ? value : undefined;
-}
+const NEXT_PUBLIC_PONDER_URL = process.env.NEXT_PUBLIC_PONDER_URL?.trim() || undefined;
 
 function isLocalhostHostname(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
 function getPonderUrl(): string {
-  const rawValue = readEnv("NEXT_PUBLIC_PONDER_URL") ?? (!isProduction ? "http://localhost:42069" : undefined);
+  const rawValue = NEXT_PUBLIC_PONDER_URL ?? (!isProduction ? "http://localhost:42069" : undefined);
 
   if (!rawValue) {
     throw new Error("NEXT_PUBLIC_PONDER_URL is required in production.");
