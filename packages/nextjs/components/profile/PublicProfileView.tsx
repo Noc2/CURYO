@@ -617,7 +617,11 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                     Edit profile
                   </button>
                   {hasVoterId ? (
-                    <button type="button" onClick={openReferralModal} className="btn btn-ghost border border-base-300">
+                    <button
+                      type="button"
+                      onClick={openReferralModal}
+                      className="btn border-none bg-error text-primary-content hover:bg-error/90"
+                    >
                       Referrals
                     </button>
                   ) : null}
