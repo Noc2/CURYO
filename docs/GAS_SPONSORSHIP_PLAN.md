@@ -458,6 +458,76 @@ Explicitly verify on `celoSepolia`:
 - WalletConnect wallet that supports fee abstraction
 - at least one Celo-native wallet if you plan to recommend one
 
+## Comparison: 4337-first Curyo
+
+This plan intentionally favors `EOA + Celo fee abstraction + selective sponsorship`, but because Curyo is still pre-deployment it is worth making the alternative explicit.
+
+### What `4337-first Curyo` would mean
+
+A `4337-first` version of Curyo would treat the user's smart account as the primary protocol account from the beginning.
+
+That would usually imply:
+
+- smart account is the wallet that holds `cREP`
+- smart account is the address that owns the Voter ID or acts as the canonical protocol address
+- voting, submission, profile updates, and claims all route through a bundler/paymaster stack
+- gasless UX is a first-class assumption rather than a selective fallback
+
+### Advantages of `4337-first Curyo`
+
+- Cleaner universal gasless UX. Instead of mixing fee-currency support, CELO fallback, and sponsorship rules, the product can present one main transaction path.
+- Better batching potential. Multi-step flows such as approve-and-act or permit-and-act can be wrapped into a more coherent account abstraction pipeline.
+- More future flexibility. Session keys, delegated permissions, automated actions, and richer recovery models fit more naturally into a smart-account world.
+- Less distinction between "supported wallets" and "unsupported wallets" at the product layer if the smart-account stack is consistently adopted.
+- More coherent long-term sponsor architecture if Curyo expects gasless interactions to become the default for most actions.
+
+### Disadvantages of `4337-first Curyo`
+
+- It changes the identity model much earlier. Today Curyo is built around plain addresses across [VoterIdNFT.sol](/Users/davidhawig/source/curyo-release/packages/foundry/contracts/VoterIdNFT.sol), [HumanFaucet.sol](/Users/davidhawig/source/curyo-release/packages/foundry/contracts/HumanFaucet.sol), [ProfileRegistry.sol](/Users/davidhawig/source/curyo-release/packages/foundry/contracts/ProfileRegistry.sol), and [ContentRegistry.sol](/Users/davidhawig/source/curyo-release/packages/foundry/contracts/ContentRegistry.sol). A 4337-first design forces an early decision about whether the smart account is the true user identity.
+- It raises the onboarding design burden. Faucet claims, Voter ID minting, delegation, and profile ownership all become design questions rather than staying aligned with the user's EOA.
+- It adds more moving parts on day one. Bundler reliability, paymaster policy, user operation simulation, and smart-account deployment all become launch-critical infrastructure rather than optional layers.
+- It makes debugging and local development more complex. The current repo already has a straightforward EOA + wagmi + viem model; 4337 would widen the gap between a simple contract write and the production transaction path.
+- It does not actually remove economic complexity. Curyo would still need sponsor budgets, abuse controls, transaction policy, and operations around gas funding.
+- It is harder to keep some flows simple. For example, [HumanFaucet.sol](/Users/davidhawig/source/curyo-release/packages/foundry/contracts/HumanFaucet.sol) currently derives the claimant address directly from the verification output. That is conceptually cleaner in an EOA-first system.
+
+### Why this document still recommends the EOA-first approach
+
+The EOA-first plan wins on `fit with the current protocol design`.
+
+It preserves:
+
+- address-based identity
+- current Voter ID semantics
+- existing delegation assumptions
+- direct wallet compatibility
+- the ability to use Celo-native fee abstraction immediately
+
+It also keeps the architecture layered:
+
+- `fee abstraction` where wallets support it
+- `selective sponsorship` where UX needs it
+- optional future evolution toward richer smart-account patterns later
+
+### When Curyo should reconsider `4337-first`
+
+Revisit a 4337-first architecture if any of these become true:
+
+- Curyo decides the primary UX promise is "gasless by default for nearly everything"
+- the product wants session keys or delegated automation as a core feature
+- sponsor coverage grows so broad that selective sponsorship becomes the default path anyway
+- identity is intentionally redesigned around smart accounts rather than EOAs
+- a future onboarding redesign makes smart-account ownership a better fit for Voter ID and faucet flows
+
+### Summary
+
+`4337-first Curyo` is a valid architecture, especially because the protocol is not deployed yet.
+
+Its main strength is product coherence around gasless UX.
+
+Its main weakness is that it forces Curyo to solve identity, onboarding, and infrastructure complexity all at once.
+
+The `EOA + Celo fee abstraction + selective sponsorship` plan is less elegant in theory, but it is the lower-risk path that matches the current protocol model far better.
+
 ## Open Questions To Resolve During Spike
 
 1. Which wallets should Curyo officially label as supporting `USDC` / `USDT` gas on `celoSepolia` and `celo`?
