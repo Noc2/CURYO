@@ -3,19 +3,17 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
-import { ReferralSection } from "~~/components/governance/ReferralSection";
 import { DelegationSection } from "~~/components/profile/DelegationSection";
 import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 
-type SettingsTab = "delegation" | "referrals" | "notifications";
+type SettingsTab = "delegation" | "notifications";
 
-const settingsTabs: SettingsTab[] = ["delegation", "referrals", "notifications"];
+const settingsTabs: SettingsTab[] = ["delegation", "notifications"];
 
 const SETTINGS_TAB_LABELS: Record<SettingsTab, string> = {
   delegation: "Delegation",
-  referrals: "Referrals",
   notifications: "Notifications",
 };
 
@@ -77,7 +75,6 @@ function SettingsPageInner() {
       </div>
 
       {activeTab === "delegation" && <DelegationSection />}
-      {activeTab === "referrals" && <ReferralSection />}
       {activeTab === "notifications" && <NotificationSettingsPanel address={address} />}
     </AppPageShell>
   );

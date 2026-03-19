@@ -33,7 +33,7 @@ test.describe("Profile management", () => {
     const delegationTab = page.getByRole("button", { name: "Delegation" });
     await expect(delegationTab).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("heading", { name: /Delegated Vote ID/i })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole("button", { name: "Referrals" })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole("button", { name: "Referrals" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Notifications" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("button", { name: "Profile" })).toHaveCount(0);
 
