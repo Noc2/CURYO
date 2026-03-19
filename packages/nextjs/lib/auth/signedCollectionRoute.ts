@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { issueSignedActionChallenge } from "~~/lib/auth/signedActions";
 import { type SignedReadSessionScope, verifySignedReadSession } from "~~/lib/auth/signedReadSessions";
-import { createSignedReadResponse, verifySignedActionChallenge } from "~~/lib/auth/signedRouteHelpers";
+import { verifySignedActionChallenge } from "~~/lib/auth/signedRouteHelpers";
 import {
   type SignedWriteSessionScope,
   getSignedWriteSessionCookie,
@@ -61,25 +61,6 @@ export async function getSignedCollectionSessionStatus(
   return { hasReadSession, hasWriteSession };
 }
 
-export function createSignedCollectionBody<TItem>(items: TItem[]) {
-  return {
-    items,
-    count: items.length,
-  };
-}
-
-export function createSignedCollectionResponse<TItem>(items: TItem[]) {
-  return NextResponse.json(createSignedCollectionBody(items));
-}
-
-export async function createSignedCollectionReadItemsResponse<TItem>(
-  walletAddress: `0x${string}`,
-  scope: SignedReadSessionScope,
-  items: TItem[],
-) {
-  return createSignedReadResponse(walletAddress, scope, createSignedCollectionBody(items));
-}
-
 export async function createSignedCollectionSessionResponse(
   request: NextRequest,
   params: {
@@ -96,27 +77,6 @@ export async function createSignedCollectionSessionResponse(
     hasReadSession,
     hasWriteSession,
   });
-}
-
-export async function ensureSignedCollectionReadSession(
-  request: NextRequest,
-  params: {
-    cookieName: string;
-    walletAddress: `0x${string}`;
-    scope: SignedReadSessionScope;
-  },
-) {
-  const hasSession = await hasSignedCollectionReadSession(
-    request,
-    params.cookieName,
-    params.walletAddress,
-    params.scope,
-  );
-  if (!hasSession) {
-    return NextResponse.json({ error: "Signed read required" }, { status: 401 });
-  }
-
-  return null;
 }
 
 export async function createSignedCollectionChallengeResponse<
