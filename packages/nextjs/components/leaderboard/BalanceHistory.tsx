@@ -98,7 +98,7 @@ export function BalanceHistory({ address: addressProp }: { address?: `0x${string
   return (
     <div className="surface-card rounded-2xl p-6 w-full">
       <div className="mb-4 flex items-start justify-between gap-3">
-        <h2 className={surfaceSectionHeadingClassName}>Your cREP balance</h2>
+        <h2 className={surfaceSectionHeadingClassName}>cREP balance</h2>
         <span className="text-base tabular-nums text-base-content/60">{currentFormatted} cREP</span>
       </div>
       {isLoading ? (

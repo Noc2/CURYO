@@ -61,7 +61,7 @@ export function StakeBreakdown({
   return (
     <div className="surface-card rounded-2xl p-6 space-y-1.5">
       <div className="flex items-start justify-between gap-3">
-        <h2 className={surfaceSectionHeadingClassName}>Your staked cREP</h2>
+        <h2 className={surfaceSectionHeadingClassName}>Staked cREP</h2>
         <span className="text-base tabular-nums text-base-content/60">{format(totalStaked)} cREP</span>
       </div>
       {entries.length > 0 ? (
