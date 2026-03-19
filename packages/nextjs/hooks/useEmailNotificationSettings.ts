@@ -8,6 +8,7 @@ import {
   type EmailNotificationSettingsPayload,
   type EmailNotificationSettingsState,
 } from "~~/lib/notifications/emailShared";
+import { isSignatureRejected } from "~~/utils/signatureErrors";
 
 interface UpdateEmailNotificationSettingsResult {
   ok: boolean;
@@ -15,11 +16,6 @@ interface UpdateEmailNotificationSettingsResult {
   error?: string;
   settings?: EmailNotificationSettingsState;
   verificationSent?: boolean;
-}
-
-function isSignatureRejected(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  return message.includes("rejected") || message.includes("denied") || message.includes("declined");
 }
 
 async function readEmailNotificationSettings(

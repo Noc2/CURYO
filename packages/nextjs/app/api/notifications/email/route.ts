@@ -10,17 +10,10 @@ import {
   normalizeNotificationEmailReadInput,
 } from "~~/lib/auth/notificationEmails";
 import {
-  ensureSignedActionChallengeTable,
-  mapSignedActionError,
-  verifyAndConsumeSignedActionChallenge,
-} from "~~/lib/auth/signedActions";
-import {
   NOTIFICATION_EMAIL_SIGNED_READ_SESSION_COOKIE_NAME,
-  getSignedReadSessionCookie,
-  issueSignedReadSession,
   verifySignedReadSession,
 } from "~~/lib/auth/signedReadSessions";
-import { db } from "~~/lib/db";
+import { createSignedReadResponse, verifySignedActionChallenge } from "~~/lib/auth/signedRouteHelpers";
 import { getOptionalAppUrl } from "~~/lib/env/server";
 import {
   getEmailNotificationSettings,
@@ -87,38 +80,26 @@ export async function POST(request: NextRequest) {
 
     const payload = normalized.payload;
     const payloadHash = hashNotificationEmailReadPayload(payload);
-    await ensureSignedActionChallengeTable();
-
-    try {
-      await db.transaction(async tx => {
-        await verifyAndConsumeSignedActionChallenge(tx, {
-          challengeId: String(body.challengeId),
-          action: READ_NOTIFICATION_EMAIL_ACTION,
-          walletAddress: payload.normalizedAddress,
+    const challengeFailure = await verifySignedActionChallenge({
+      challengeId: String(body.challengeId),
+      action: READ_NOTIFICATION_EMAIL_ACTION,
+      walletAddress: payload.normalizedAddress,
+      payloadHash,
+      signature: body.signature as `0x${string}`,
+      buildMessage: ({ nonce, expiresAt }) =>
+        buildNotificationEmailReadChallengeMessage({
+          address: payload.normalizedAddress,
           payloadHash,
-          signature: body.signature as `0x${string}`,
-          buildMessage: ({ nonce, expiresAt }) =>
-            buildNotificationEmailReadChallengeMessage({
-              address: payload.normalizedAddress,
-              payloadHash,
-              nonce,
-              expiresAt,
-            }),
-        });
-      });
-    } catch (error: unknown) {
-      const mapped = mapSignedActionError(error);
-      if (mapped) {
-        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-      }
-      throw error;
+          nonce,
+          expiresAt,
+        }),
+    });
+    if (challengeFailure) {
+      return challengeFailure;
     }
 
-    const session = await issueSignedReadSession(payload.normalizedAddress, "notification_email");
     const settings = await getEmailNotificationSettings(payload.normalizedAddress);
-    const response = NextResponse.json(settings);
-    response.cookies.set(getSignedReadSessionCookie("notification_email", session));
-    return response;
+    return createSignedReadResponse(payload.normalizedAddress, "notification_email", settings);
   } catch (error) {
     console.error("Error fetching email notification settings:", error);
     return NextResponse.json({ error: "Failed to fetch email notification settings" }, { status: 500 });
@@ -165,31 +146,22 @@ export async function PUT(request: NextRequest) {
     }
 
     const payloadHash = hashNotificationEmailPayload(payload);
-    await ensureSignedActionChallengeTable();
-
-    try {
-      await db.transaction(async tx => {
-        await verifyAndConsumeSignedActionChallenge(tx, {
-          challengeId: String(body.challengeId),
-          action: UPDATE_NOTIFICATION_EMAIL_ACTION,
-          walletAddress: payload.normalizedAddress,
+    const challengeFailure = await verifySignedActionChallenge({
+      challengeId: String(body.challengeId),
+      action: UPDATE_NOTIFICATION_EMAIL_ACTION,
+      walletAddress: payload.normalizedAddress,
+      payloadHash,
+      signature: body.signature as `0x${string}`,
+      buildMessage: ({ nonce, expiresAt }) =>
+        buildNotificationEmailChallengeMessage({
+          address: payload.normalizedAddress,
           payloadHash,
-          signature: body.signature as `0x${string}`,
-          buildMessage: ({ nonce, expiresAt }) =>
-            buildNotificationEmailChallengeMessage({
-              address: payload.normalizedAddress,
-              payloadHash,
-              nonce,
-              expiresAt,
-            }),
-        });
-      });
-    } catch (error: unknown) {
-      const mapped = mapSignedActionError(error);
-      if (mapped) {
-        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-      }
-      throw error;
+          nonce,
+          expiresAt,
+        }),
+    });
+    if (challengeFailure) {
+      return challengeFailure;
     }
 
     try {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { isSignatureRejected } from "~~/utils/signatureErrors";
 
 export interface SignedCollectionResponse<TItem> {
   items: TItem[];
@@ -64,11 +65,6 @@ interface UseSignedCollectionConfig<TItem, TId, TExtraReason extends string = ne
     currentlySelected: boolean,
   ) => Record<string, unknown>;
   validateToggle?: (normalizedId: string, address: string) => TExtraReason | null;
-}
-
-function isSignatureRejected(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  return message.includes("rejected") || message.includes("denied") || message.includes("declined");
 }
 
 async function readResponseBody<T>(response: Response, fallbackError: string): Promise<T> {

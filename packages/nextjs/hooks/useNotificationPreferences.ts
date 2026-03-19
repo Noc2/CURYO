@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSignMessage } from "wagmi";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "~~/lib/notifications/shared";
+import { isSignatureRejected } from "~~/utils/signatureErrors";
 
 export type NotificationPreferences = typeof DEFAULT_NOTIFICATION_PREFERENCES;
 
@@ -16,11 +17,6 @@ interface UpdateNotificationPreferencesResult {
 
 interface UseNotificationPreferencesOptions {
   autoRead?: boolean;
-}
-
-function isSignatureRejected(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : "";
-  return message.includes("rejected") || message.includes("denied") || message.includes("declined");
 }
 
 async function readNotificationPreferences(

@@ -10,17 +10,10 @@ import {
   normalizeNotificationPreferencesReadInput,
 } from "~~/lib/auth/notificationPreferences";
 import {
-  ensureSignedActionChallengeTable,
-  mapSignedActionError,
-  verifyAndConsumeSignedActionChallenge,
-} from "~~/lib/auth/signedActions";
-import {
   NOTIFICATION_PREFERENCES_SIGNED_READ_SESSION_COOKIE_NAME,
-  getSignedReadSessionCookie,
-  issueSignedReadSession,
   verifySignedReadSession,
 } from "~~/lib/auth/signedReadSessions";
-import { db } from "~~/lib/db";
+import { createSignedReadResponse, verifySignedActionChallenge } from "~~/lib/auth/signedRouteHelpers";
 import { getNotificationPreferences, upsertNotificationPreferences } from "~~/lib/notifications/preferences";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -80,38 +73,26 @@ export async function POST(request: NextRequest) {
 
     const payload = normalized.payload;
     const payloadHash = hashNotificationPreferencesReadPayload(payload);
-    await ensureSignedActionChallengeTable();
-
-    try {
-      await db.transaction(async tx => {
-        await verifyAndConsumeSignedActionChallenge(tx, {
-          challengeId: String(body.challengeId),
-          action: READ_NOTIFICATION_PREFERENCES_ACTION,
-          walletAddress: payload.normalizedAddress,
+    const challengeFailure = await verifySignedActionChallenge({
+      challengeId: String(body.challengeId),
+      action: READ_NOTIFICATION_PREFERENCES_ACTION,
+      walletAddress: payload.normalizedAddress,
+      payloadHash,
+      signature: body.signature as `0x${string}`,
+      buildMessage: ({ nonce, expiresAt }) =>
+        buildNotificationPreferencesReadChallengeMessage({
+          address: payload.normalizedAddress,
           payloadHash,
-          signature: body.signature as `0x${string}`,
-          buildMessage: ({ nonce, expiresAt }) =>
-            buildNotificationPreferencesReadChallengeMessage({
-              address: payload.normalizedAddress,
-              payloadHash,
-              nonce,
-              expiresAt,
-            }),
-        });
-      });
-    } catch (error: unknown) {
-      const mapped = mapSignedActionError(error);
-      if (mapped) {
-        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-      }
-      throw error;
+          nonce,
+          expiresAt,
+        }),
+    });
+    if (challengeFailure) {
+      return challengeFailure;
     }
 
-    const session = await issueSignedReadSession(payload.normalizedAddress, "notification_preferences");
     const preferences = await getNotificationPreferences(payload.normalizedAddress);
-    const response = NextResponse.json(preferences);
-    response.cookies.set(getSignedReadSessionCookie("notification_preferences", session));
-    return response;
+    return createSignedReadResponse(payload.normalizedAddress, "notification_preferences", preferences);
   } catch (error) {
     console.error("Error fetching notification preferences:", error);
     return NextResponse.json({ error: "Failed to fetch notification preferences" }, { status: 500 });
@@ -139,31 +120,22 @@ export async function PUT(request: NextRequest) {
 
     const payload = normalized.payload;
     const payloadHash = hashNotificationPreferencesPayload(payload);
-    await ensureSignedActionChallengeTable();
-
-    try {
-      await db.transaction(async tx => {
-        await verifyAndConsumeSignedActionChallenge(tx, {
-          challengeId: String(body.challengeId),
-          action: UPDATE_NOTIFICATION_PREFERENCES_ACTION,
-          walletAddress: payload.normalizedAddress,
+    const challengeFailure = await verifySignedActionChallenge({
+      challengeId: String(body.challengeId),
+      action: UPDATE_NOTIFICATION_PREFERENCES_ACTION,
+      walletAddress: payload.normalizedAddress,
+      payloadHash,
+      signature: body.signature as `0x${string}`,
+      buildMessage: ({ nonce, expiresAt }) =>
+        buildNotificationPreferencesChallengeMessage({
+          address: payload.normalizedAddress,
           payloadHash,
-          signature: body.signature as `0x${string}`,
-          buildMessage: ({ nonce, expiresAt }) =>
-            buildNotificationPreferencesChallengeMessage({
-              address: payload.normalizedAddress,
-              payloadHash,
-              nonce,
-              expiresAt,
-            }),
-        });
-      });
-    } catch (error: unknown) {
-      const mapped = mapSignedActionError(error);
-      if (mapped) {
-        return NextResponse.json({ error: mapped.error }, { status: mapped.status });
-      }
-      throw error;
+          nonce,
+          expiresAt,
+        }),
+    });
+    if (challengeFailure) {
+      return challengeFailure;
     }
 
     const preferences = await upsertNotificationPreferences(payload.normalizedAddress, payload);
