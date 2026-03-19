@@ -14,7 +14,7 @@ export const CuryoConnectButton = ({ inlineMenu = false }: { inlineMenu?: boolea
   const { targetNetwork } = useTargetNetwork();
   const { address, chain } = useAccount();
   const activeThirdwebAccount = useActiveAccount();
-  const { openConnectModal, isConnecting, thirdwebEnabled } = useCuryoConnectModal();
+  const { connectAvailable, openConnectModal, isConnecting } = useCuryoConnectModal();
 
   const syncingThirdwebAccount = Boolean(activeThirdwebAccount && !address);
 
@@ -22,7 +22,7 @@ export const CuryoConnectButton = ({ inlineMenu = false }: { inlineMenu?: boolea
     return (
       <button
         className="btn btn-sm btn-curyo border-none"
-        disabled={!thirdwebEnabled || isConnecting || syncingThirdwebAccount}
+        disabled={!connectAvailable || isConnecting || syncingThirdwebAccount}
         onClick={() => {
           void openConnectModal();
         }}
@@ -30,10 +30,10 @@ export const CuryoConnectButton = ({ inlineMenu = false }: { inlineMenu?: boolea
         style={{ fontSize: "16px" }}
       >
         <span className="sm:hidden">
-          {!thirdwebEnabled ? "Unavailable" : isConnecting || syncingThirdwebAccount ? "..." : "Connect"}
+          {!connectAvailable ? "Unavailable" : isConnecting || syncingThirdwebAccount ? "..." : "Connect"}
         </span>
         <span className="hidden sm:inline">
-          {!thirdwebEnabled
+          {!connectAvailable
             ? "Wallet Unavailable"
             : isConnecting || syncingThirdwebAccount
               ? "Connecting..."
