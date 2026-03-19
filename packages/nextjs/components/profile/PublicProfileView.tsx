@@ -277,6 +277,9 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const previewAvatarAccentHex = normalizedAvatarAccentInput ?? committedAvatarAccentHex;
   const avatarAccentPickerValue = normalizedAvatarAccentInput ?? committedAvatarAccentHex ?? DEFAULT_AVATAR_ACCENT_HEX;
   const generatedAvatarPreviewUrl = getReputationAvatarUrl(normalizedAddress, 160, previewAvatarAccentHex) || "";
+  const generatedAvatarPreviewSrc = generatedAvatarPreviewUrl
+    ? `${generatedAvatarPreviewUrl}&preview=${encodeURIComponent(previewAvatarAccentHex ?? "default")}`
+    : "";
   const avatarAccentBusy = avatarAccentPending || clearAvatarAccentPending;
   const hasAvatarAccentChanges = normalizedAvatarAccentInput !== committedAvatarAccentHex;
 
@@ -950,7 +953,8 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
               <div className="mt-6 flex justify-center">
                 <img
-                  src={generatedAvatarPreviewUrl}
+                  key={generatedAvatarPreviewSrc}
+                  src={generatedAvatarPreviewSrc}
                   width={160}
                   height={160}
                   alt="Avatar preview"
