@@ -82,7 +82,7 @@ The repo already contains size-related hints:
 
 - `packages/foundry/contracts/RoundVotingEngine.sol` says `computeCurrentEpochEnd` was removed "to fit size limit"
 - `packages/foundry/contracts/libraries/SubmitterStakeLib.sol` says it was linked externally to keep the engine below EIP-170
-- local Anvil scripts in `packages/foundry/Makefile` explicitly use `--code-size-limit 30000`
+- local deploys should enforce the same EIP-170 runtime limit as real deployments, so localhost success should not be treated as evidence that oversized bytecode is safe to ship
 
 Local bytecode checks currently show:
 
