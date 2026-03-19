@@ -192,16 +192,11 @@ export function VotingQuestionCard({
           </div>
         </div>
 
-        <div className="mb-1.5 flex shrink-0 justify-start">
+        <div className="mt-3 flex shrink-0 flex-col gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3">
           <RoundProgress snapshot={roundSnapshot} />
-        </div>
-
-        <div className="mb-3 flex shrink-0 justify-start">
           <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-        </div>
 
-        {/* Rating history chart */}
-        <div className="mt-auto shrink-0 pt-1.5 xl:pt-1">
+          {/* Rating history chart */}
           <RatingHistory contentId={contentId} />
         </div>
       </div>
