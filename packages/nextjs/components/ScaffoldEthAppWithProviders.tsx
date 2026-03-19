@@ -1,11 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
-import { useTheme } from "next-themes";
 import { Toaster } from "react-hot-toast";
 import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
@@ -47,10 +45,6 @@ export const queryClient = new QueryClient({
 });
 
 export const ScaffoldEthAppWithProviders = ({ children }: { children: React.ReactNode }) => {
-  const { resolvedTheme } = useTheme();
-  const isDarkMode = resolvedTheme === "dark";
-  const [mounted, setMounted] = useState(false);
-
   const obsidianEmberTheme = darkTheme({
     accentColor: "#F26426",
     accentColorForeground: "#090A0C",
@@ -58,17 +52,10 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
     overlayBlur: "small",
   });
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          avatar={BlockieAvatar}
-          theme={mounted ? (isDarkMode ? obsidianEmberTheme : obsidianEmberTheme) : obsidianEmberTheme}
-        >
+        <RainbowKitProvider avatar={BlockieAvatar} theme={obsidianEmberTheme}>
           <ProgressBar height="3px" color="#F26426" />
           <TermsAcceptanceProvider>
             <OptimisticVoteProvider>

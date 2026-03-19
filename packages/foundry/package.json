@@ -26,8 +26,6 @@
   },
   "dependencies": {
     "dotenv": "~16.3.1",
-    "drand-client": "^1.2.6",
-    "envfile": "~6.18.0",
     "ethers": "~5.7.1",
     "prettier": "~2.8.8",
     "qrcode": "~1.5.3",

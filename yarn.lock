@@ -328,7 +328,7 @@ __metadata:
   resolution: "@curyo/bot@workspace:packages/bot"
   dependencies:
     "@curyo/contracts": "workspace:*"
-    "@types/node": ~18.19.50
+    "@types/node": ^20.10.7
     dotenv: ^16.4.5
     tlock-js: ^0.9.0
     tsx: ^4.19.0
@@ -342,7 +342,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@curyo/contracts@workspace:packages/contracts"
   dependencies:
-    "@types/node": ~18.19.50
+    "@types/node": ^20.10.7
     tlock-js: ^0.9.0
     tsx: ^4.21.0
     typescript: ~5.8.2
@@ -355,8 +355,6 @@ __metadata:
   resolution: "@curyo/foundry@workspace:packages/foundry"
   dependencies:
     dotenv: ~16.3.1
-    drand-client: ^1.2.6
-    envfile: ~6.18.0
     ethers: ~5.7.1
     prettier: ~2.8.8
     qrcode: ~1.5.3
@@ -372,7 +370,7 @@ __metadata:
   resolution: "@curyo/keeper@workspace:packages/keeper"
   dependencies:
     "@curyo/contracts": "workspace:*"
-    "@types/node": ~18.19.50
+    "@types/node": ^20.10.7
     dotenv: ^16.4.5
     tlock-js: ^0.9.0
     tsx: ^4.19.0
@@ -387,7 +385,7 @@ __metadata:
   resolution: "@curyo/mcp-server@workspace:packages/mcp-server"
   dependencies:
     "@modelcontextprotocol/sdk": ^1.27.1
-    "@types/node": ~18.19.50
+    "@types/node": ^20.10.7
     tsx: ^4.19.0
     typescript: ~5.8.2
     vitest: ^4.0.18
@@ -405,7 +403,6 @@ __metadata:
     "@next/bundle-analyzer": ^16.1.6
     "@playwright/test": ^1.58.2
     "@rainbow-me/rainbowkit": 2.2.9
-    "@react-native-async-storage/async-storage": ~2.2.0
     "@react-pdf/renderer": ^4.3.2
     "@scaffold-ui/components": ^0.1.8
     "@scaffold-ui/debug-contracts": ^0.1.7
@@ -415,7 +412,7 @@ __metadata:
     "@tailwindcss/postcss": 4.0.15
     "@tanstack/react-query": ~5.59.15
     "@trivago/prettier-plugin-sort-imports": ~4.3.0
-    "@types/node": ~18.19.50
+    "@types/node": ^20.10.7
     "@types/react": ~19.0.7
     "@xmldom/xmldom": ^0.8.11
     abitype: 1.0.6
@@ -435,10 +432,8 @@ __metadata:
     mathjax-full: ^3.2.2
     next: ~15.5.12
     next-nprogress-bar: ~2.3.13
-    next-themes: ~0.3.0
     postcss: ~8.4.45
     prettier: ~3.5.3
-    qrcode.react: ~4.0.1
     react: ~19.2.3
     react-dom: ~19.2.3
     react-hot-toast: ~2.4.0
@@ -3241,15 +3236,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@kevincharm/noble-bn254-drand@npm:^0.0.1":
-  version: 0.0.1
-  resolution: "@kevincharm/noble-bn254-drand@npm:0.0.1"
-  peerDependencies:
-    "@noble/curves": ^1.6.0
-  checksum: 5f8fdc11871b439f781372edbd82ae527c628dcfa77a9ca5a25d6767ae03a75d3246deb72ab7e95ca5063b9e0b89d94c967e799b83e300966f921ff6931300b1
-  languageName: node
-  linkType: hard
-
 "@keyv/serialize@npm:^1.1.1":
   version: 1.1.1
   resolution: "@keyv/serialize@npm:1.1.1"
@@ -4746,17 +4732,6 @@ __metadata:
     viem: 2.x
     wagmi: ^2.9.0
   checksum: b9c6041026c8fe1677368d7a0bc53d1e156c8c2bddb6bb75242a4fe9243a9cb2fac1386a1dbbb759a8a711f31f193c8d662ec1a74836dbc2c2e4946d6c082f7a
-  languageName: node
-  linkType: hard
-
-"@react-native-async-storage/async-storage@npm:~2.2.0":
-  version: 2.2.0
-  resolution: "@react-native-async-storage/async-storage@npm:2.2.0"
-  dependencies:
-    merge-options: ^3.0.4
-  peerDependencies:
-    react-native: ^0.0.0-0 || >=0.65 <1.0
-  checksum: efbb9c801fb7eecfad1568d6a5e9d247db420b8ba8f1789d5b783e679432567a53cf54c7e7b5e6f315276f33d1df297253549e0cefef2e683539df346d2a1f2d
   languageName: node
   linkType: hard
 
@@ -7112,15 +7087,6 @@ __metadata:
   dependencies:
     undici-types: ~6.21.0
   checksum: 32e80a104b8fcdcacc52a98f0a197a33fd264325501f9af1653cbe9c07fdb6d11130cb0111c65fd353112e6a5af1e5f106714411b1b252d06f0f58760153a1e3
-  languageName: node
-  linkType: hard
-
-"@types/node@npm:~18.19.50":
-  version: 18.19.130
-  resolution: "@types/node@npm:18.19.130"
-  dependencies:
-    undici-types: ~5.26.4
-  checksum: b7032363581c416e721a88cffdc2b47662337cacd20f8294f5619a1abf79615c7fef1521964c2aa9d36ed6aae733e1a03e8c704661bd5a0c2f34b390f41ea395
   languageName: node
   linkType: hard
 
@@ -10800,18 +10766,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"drand-client@npm:^1.2.6":
-  version: 1.4.2
-  resolution: "drand-client@npm:1.4.2"
-  dependencies:
-    "@kevincharm/noble-bn254-drand": ^0.0.1
-    "@noble/curves": ^1.6.0
-    buffer: ^6.0.3
-    isomorphic-fetch: ^3.0.0
-  checksum: 898eb413bf2a9d5647c0e6d79380e25fce53ebddde76588b8ed65eb7fbce3efcb9bc5b2a9703893327696020e32bf2cf2d21b87d20a73dd3648b193ae45f0a50
-  languageName: node
-  linkType: hard
-
 "drizzle-kit@npm:^0.31.8":
   version: 0.31.8
   resolution: "drizzle-kit@npm:0.31.8"
@@ -11252,15 +11206,6 @@ __metadata:
   version: 3.0.0
   resolution: "env-paths@npm:3.0.0"
   checksum: b2b0a0d0d9931a13d279c22ed94d78648a1cc5f408f05d47ff3e0c1616f0aa0c38fb33deec5e5be50497225d500607d57f9c8652c4d39c2f2b7608cd45768128
-  languageName: node
-  linkType: hard
-
-"envfile@npm:~6.18.0":
-  version: 6.18.0
-  resolution: "envfile@npm:6.18.0"
-  bin:
-    envfile: bin.cjs
-  checksum: 3a3762994d7b84ccf0293c1269cdfa5ea8971bdbbf7e3571fb686a6415eee2029e43d3faf36ed4222a83eaaf38fbc4fa37b3f50b77ea417ca35561e0e54059c1
   languageName: node
   linkType: hard
 
@@ -14844,16 +14789,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"isomorphic-fetch@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "isomorphic-fetch@npm:3.0.0"
-  dependencies:
-    node-fetch: ^2.6.1
-    whatwg-fetch: ^3.4.1
-  checksum: e5ab79a56ce5af6ddd21265f59312ad9a4bc5a72cebc98b54797b42cb30441d5c5f8d17c5cd84a99e18101c8af6f90c081ecb8d12fd79e332be1778d58486d75
-  languageName: node
-  linkType: hard
-
 "isomorphic-ws@npm:^4.0.1":
   version: 4.0.1
   resolution: "isomorphic-ws@npm:4.0.1"
@@ -16689,16 +16624,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next-themes@npm:~0.3.0":
-  version: 0.3.0
-  resolution: "next-themes@npm:0.3.0"
-  peerDependencies:
-    react: ^16.8 || ^17 || ^18
-    react-dom: ^16.8 || ^17 || ^18
-  checksum: 4285c4969eac517ad7addd773bcb71e7d14bc6c6e3b24eb97b80a6e06ac03fb6cb345e75dfb448156d14430d06289948eb8cfdeb52402ca7ce786093d01d2878
-  languageName: node
-  linkType: hard
-
 "next@npm:~15.5.12":
   version: 15.5.12
   resolution: "next@npm:15.5.12"
@@ -16818,7 +16743,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-fetch@npm:^2.6.1, node-fetch@npm:^2.6.7, node-fetch@npm:^2.7.0":
+"node-fetch@npm:^2.6.7, node-fetch@npm:^2.7.0":
   version: 2.7.0
   resolution: "node-fetch@npm:2.7.0"
   dependencies:
@@ -18829,15 +18754,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qrcode.react@npm:~4.0.1":
-  version: 4.0.1
-  resolution: "qrcode.react@npm:4.0.1"
-  peerDependencies:
-    react: ^16.8.0 || ^17.0.0 || ^18.0.0
-  checksum: 947728a991a4b7b3e2722c20334d47622f689b482114a2f95a2befe6c985d8205b0a4a0ac68bf35514bdb7c192748a14e0cf7b07df6fcc005032b8db6d342dd9
-  languageName: node
-  linkType: hard
-
 "qrcode@npm:1.5.3":
   version: 1.5.3
   resolution: "qrcode@npm:1.5.3"
@@ -19101,13 +19017,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-spinners@npm:^0.14.1":
+"react-spinners@npm:0.14.1":
   version: 0.14.1
   resolution: "react-spinners@npm:0.14.1"
   peerDependencies:
     react: ^16.0.0 || ^17.0.0 || ^18.0.0
     react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0
   checksum: 42da89561e8ebcd2576f5ea96a6ac6a5288783d271769901edd00f03f66565ea1be79f5519766d6fe576a6f2c6a29bd2ae5bedaf9e90b1765adfd9ea7f30a78e
+  languageName: node
+  linkType: hard
+
+"react-spinners@patch:react-spinners@npm%3A0.14.1#./.yarn/patches/react-spinners-npm-0.14.1-545ddaba3f.patch::locator=curyo%40workspace%3A.":
+  version: 0.14.1
+  resolution: "react-spinners@patch:react-spinners@npm%3A0.14.1#./.yarn/patches/react-spinners-npm-0.14.1-545ddaba3f.patch::version=0.14.1&hash=9a6209&locator=curyo%40workspace%3A."
+  peerDependencies:
+    react: ^16.0.0 || ^17.0.0 || ^18.0.0
+    react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0
+  checksum: b01d79707b7021e8965ed2ffb539d0f43ba0643664f26ddc1d2f206372c6194028fff731ebd411c3515839a798aeed34296fa767f40d315bc2a315789ccfa232
   languageName: node
   linkType: hard
 
@@ -21715,13 +21641,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~5.26.4":
-  version: 5.26.5
-  resolution: "undici-types@npm:5.26.5"
-  checksum: 3192ef6f3fd5df652f2dc1cd782b49d6ff14dc98e5dced492aa8a8c65425227da5da6aafe22523c67f035a272c599bb89cfe803c1db6311e44bed3042fc25487
-  languageName: node
-  linkType: hard
-
 "undici-types@npm:~6.19.2":
   version: 6.19.8
   resolution: "undici-types@npm:6.19.8"
@@ -22708,13 +22627,6 @@ __metadata:
   bin:
     webpack-bundle-analyzer: lib/bin/analyzer.js
   checksum: 77f48f10a493b1cc95674526472978a2de32412ddbf556bd3903738f14890611426f19477352993efe5a9fd6ca16711eb912d986f2221b17ba6eeca1b6f71fb6
-  languageName: node
-  linkType: hard
-
-"whatwg-fetch@npm:^3.4.1":
-  version: 3.6.20
-  resolution: "whatwg-fetch@npm:3.6.20"
-  checksum: c58851ea2c4efe5c2235f13450f426824cf0253c1d45da28f45900290ae602a20aff2ab43346f16ec58917d5562e159cd691efa368354b2e82918c2146a519c5
   languageName: node
   linkType: hard
 
