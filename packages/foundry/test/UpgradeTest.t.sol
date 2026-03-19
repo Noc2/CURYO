@@ -67,11 +67,13 @@ contract UpgradeTest is Test {
     RoundRewardDistributor public rewardDistributor;
     ProfileRegistry public profileRegistry;
     FrontendRegistry public frontendRegistry;
+    ProtocolConfig public protocolConfig;
     ProxyAdmin public contentRegistryAdmin;
     ProxyAdmin public votingEngineAdmin;
     ProxyAdmin public rewardDistributorAdmin;
     ProxyAdmin public profileRegistryAdmin;
     ProxyAdmin public frontendRegistryAdmin;
+    ProxyAdmin public protocolConfigAdmin;
 
     CuryoReputation public crepToken;
     MockVotingEngineForUpgrade public mockVotingEngine;
@@ -100,14 +102,21 @@ contract UpgradeTest is Test {
         );
         contentRegistryAdmin = _proxyAdmin(address(crProxy));
 
+        // --- ProtocolConfig ---
+        ProtocolConfig pcImpl = new ProtocolConfig(address(0));
+        TransparentUpgradeableProxy pcProxy = new TransparentUpgradeableProxy(
+            address(pcImpl), governance, abi.encodeCall(ProtocolConfig.initialize, (admin, governance))
+        );
+        protocolConfig = ProtocolConfig(address(pcProxy));
+        protocolConfigAdmin = _proxyAdmin(address(pcProxy));
+
         // --- RoundVotingEngine ---
         RoundVotingEngine veImpl = new RoundVotingEngine();
         TransparentUpgradeableProxy veProxy = new TransparentUpgradeableProxy(
             address(veImpl),
             governance,
             abi.encodeCall(
-                RoundVotingEngine.initialize,
-                (governance, address(crepToken), address(contentRegistry), address(new ProtocolConfig(governance)))
+                RoundVotingEngine.initialize, (governance, address(crepToken), address(contentRegistry), address(protocolConfig))
             )
         );
         votingEngine = RoundVotingEngine(
@@ -185,6 +194,44 @@ contract UpgradeTest is Test {
         // Verify state preserved
         assertEq(contentRegistryAdmin.owner(), governance);
         assertEq(address(contentRegistry.crepToken()), address(crepToken));
+    }
+
+    // =========================================================================
+    // ProtocolConfig upgrade tests
+    // =========================================================================
+
+    function test_ProtocolConfig_GovernanceCanUpgrade() public {
+        ProtocolConfig newImpl = new ProtocolConfig(address(0));
+        vm.prank(governance);
+        protocolConfigAdmin.upgradeAndCall(_proxy(address(protocolConfig)), address(newImpl), "");
+    }
+
+    function test_ProtocolConfig_UnauthorizedCannotUpgrade() public {
+        ProtocolConfig newImpl = new ProtocolConfig(address(0));
+        vm.prank(attacker);
+        vm.expectRevert();
+        protocolConfigAdmin.upgradeAndCall(_proxy(address(protocolConfig)), address(newImpl), "");
+    }
+
+    function test_ProtocolConfig_CannotReinitialize() public {
+        vm.prank(admin);
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        protocolConfig.initialize(admin, governance);
+    }
+
+    function test_ProtocolConfig_StatePreservedAfterUpgrade() public {
+        vm.prank(governance);
+        protocolConfig.setTreasury(address(1234));
+
+        assertEq(protocolConfigAdmin.owner(), governance);
+        assertEq(protocolConfig.treasury(), address(1234));
+
+        ProtocolConfig newImpl = new ProtocolConfig(address(0));
+        vm.prank(governance);
+        protocolConfigAdmin.upgradeAndCall(_proxy(address(protocolConfig)), address(newImpl), "");
+
+        assertEq(protocolConfigAdmin.owner(), governance);
+        assertEq(protocolConfig.treasury(), address(1234));
     }
 
     // =========================================================================
@@ -371,6 +418,10 @@ contract UpgradeTest is Test {
         FrontendRegistry frImpl = new FrontendRegistry();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         frImpl.initialize(admin, governance, address(crepToken));
+
+        ProtocolConfig pcImpl = new ProtocolConfig(address(0));
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        pcImpl.initialize(admin, governance);
     }
 
     function _proxy(address proxy) internal pure returns (ITransparentUpgradeableProxy) {

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 
 /// @title ProtocolConfig
 /// @notice Governance-controlled configuration and address book for RoundVotingEngine.
-contract ProtocolConfig is AccessControl {
+contract ProtocolConfig is Initializable, AccessControl {
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
 
     error InvalidAddress();
@@ -30,11 +31,27 @@ contract ProtocolConfig is AccessControl {
     event ParticipationPoolUpdated(address participationPool);
     event ConfigUpdated(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters);
 
-    constructor(address governance) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor(address directGovernance) {
+        if (directGovernance != address(0)) {
+            _initialize(directGovernance, directGovernance);
+        }
+        _disableInitializers();
+    }
+
+    function initialize(address admin, address governance) external initializer {
+        _initialize(admin, governance);
+    }
+
+    function _initialize(address admin, address governance) internal {
+        if (admin == address(0)) revert InvalidAddress();
         if (governance == address(0)) revert InvalidAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, governance);
         _grantRole(CONFIG_ROLE, governance);
+        if (admin != governance) {
+            _grantRole(CONFIG_ROLE, admin);
+        }
 
         config = RoundLib.RoundConfig({
             epochDuration: uint32(20 minutes),

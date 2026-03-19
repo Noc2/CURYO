@@ -8012,7 +8012,7 @@ const deployedContracts = {
           type: "constructor",
           inputs: [
             {
-              name: "governance",
+              name: "directGovernance",
               type: "address",
               internalType: "address",
             },
@@ -8159,6 +8159,24 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "initialize",
+          inputs: [
+            {
+              name: "admin",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "governance",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -8458,6 +8476,19 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "Initialized",
+          inputs: [
+            {
+              name: "version",
+              type: "uint64",
+              indexed: false,
+              internalType: "uint64",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "ParticipationPoolUpdated",
           inputs: [
             {
@@ -8625,6 +8656,16 @@ const deployedContracts = {
         {
           type: "error",
           name: "InvalidConfig",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "InvalidInitialization",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotInitializing",
           inputs: [],
         },
       ],

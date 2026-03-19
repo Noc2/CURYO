@@ -102,6 +102,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         RoundRewardDistributor rewardDistributorImpl = new RoundRewardDistributor();
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         ProfileRegistry profileRegistryImpl = new ProfileRegistry();
+        ProtocolConfig protocolConfigImpl = new ProtocolConfig(address(0));
 
         // 5. Deploy transparent proxies with initialization (governance owns each ProxyAdmin)
         TransparentUpgradeableProxy frontendRegistryProxy = new TransparentUpgradeableProxy(
@@ -122,7 +123,11 @@ contract DeployCuryo is ScaffoldETHDeploy {
             abi.encodeCall(ContentRegistry.initialize, (deployer, governance, address(crepToken)))
         );
         ContentRegistry registry = ContentRegistry(address(registryProxy));
-        ProtocolConfig protocolConfig = new ProtocolConfig(governance);
+
+        TransparentUpgradeableProxy protocolConfigProxy = new TransparentUpgradeableProxy(
+            address(protocolConfigImpl), governance, abi.encodeCall(ProtocolConfig.initialize, (deployer, governance))
+        );
+        ProtocolConfig protocolConfig = ProtocolConfig(address(protocolConfigProxy));
 
         TransparentUpgradeableProxy votingEngineProxy = new TransparentUpgradeableProxy(
             address(votingEngineImpl),
@@ -343,6 +348,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
             // Renounce deployer config/admin roles on protocol contracts
             registry.renounceRole(registry.CONFIG_ROLE(), deployer);
+            protocolConfig.renounceRole(protocolConfig.CONFIG_ROLE(), deployer);
 
             // Renounce ADMIN_ROLE on registries
             frontendRegistry.renounceRole(frontendRegistry.ADMIN_ROLE(), deployer);
@@ -390,7 +396,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));
         deployments.push(Deployment("ContentRegistry", address(registryProxy)));
         deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
-        deployments.push(Deployment("ProtocolConfig", address(protocolConfig)));
+        deployments.push(Deployment("ProtocolConfig", address(protocolConfigProxy)));
         deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
         deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
         deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
@@ -472,6 +478,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "ProtocolConfig governance default admin"
         );
         _requireHasRole(address(protocolConfig), protocolConfig.CONFIG_ROLE(), governance, "ProtocolConfig governance config");
+        _requireLacksRole(address(protocolConfig), protocolConfig.CONFIG_ROLE(), deployerAddress, "ProtocolConfig deployer config");
+        _requireProxyAdminOwner(address(protocolConfig), governance, "ProtocolConfig proxy admin owner");
 
         _requireHasRole(
             address(rewardDistributor),

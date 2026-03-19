@@ -3,7 +3,7 @@ export const ProtocolConfigAbi = [
     "type": "constructor",
     "inputs": [
       {
-        "name": "governance",
+        "name": "directGovernance",
         "type": "address",
         "internalType": "address"
       }
@@ -150,6 +150,24 @@ export const ProtocolConfigAbi = [
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "initialize",
+    "inputs": [
+      {
+        "name": "admin",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "governance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -449,6 +467,19 @@ export const ProtocolConfigAbi = [
   },
   {
     "type": "event",
+    "name": "Initialized",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "uint64",
+        "indexed": false,
+        "internalType": "uint64"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ParticipationPoolUpdated",
     "inputs": [
       {
@@ -616,6 +647,16 @@ export const ProtocolConfigAbi = [
   {
     "type": "error",
     "name": "InvalidConfig",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidInitialization",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotInitializing",
     "inputs": []
   }
 ] as const;
