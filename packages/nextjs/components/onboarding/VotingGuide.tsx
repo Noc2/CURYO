@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, motion } from "framer-motion";
+import { useAccount } from "wagmi";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useOnboarding } from "~~/hooks/useOnboarding";
+import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
 const STEPS = [
   {
@@ -22,6 +26,9 @@ const STEPS = [
  */
 export function VotingGuide() {
   const { shouldShowGuide, dismissGuide } = useOnboarding();
+  const { openConnectModal } = useConnectModal();
+  const { address } = useAccount();
+  const { hasVoterId } = useVoterIdNFT(address);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -70,9 +77,19 @@ export function VotingGuide() {
 
         {/* Footer */}
         <div className="px-5 pb-4">
-          <button onClick={dismissGuide} className="btn btn-primary btn-sm w-full">
-            Got it!
-          </button>
+          {!address ? (
+            <button type="button" onClick={() => openConnectModal?.()} className="btn btn-primary btn-sm w-full">
+              Connect wallet
+            </button>
+          ) : !hasVoterId ? (
+            <Link href="/governance" className="btn btn-primary btn-sm w-full">
+              Get Voter ID
+            </Link>
+          ) : (
+            <button type="button" onClick={dismissGuide} className="btn btn-primary btn-sm w-full">
+              Start voting
+            </button>
+          )}
         </div>
       </motion.div>
     </AnimatePresence>
