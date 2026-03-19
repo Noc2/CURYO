@@ -44,5 +44,5 @@ export function useWalletExecutionCapabilities() {
       supportsFeeCurrencyFallback: supportedChain,
       supportsSponsoredCalls: executionMode === "sponsored_7702" || executionMode === "external_send_calls",
     };
-  }, [capabilities, chainId, supportedChain, thirdwebAccount?.sendCalls, wallet, wallet?.id]);
+  }, [capabilities, chainId, supportedChain, thirdwebAccount?.sendCalls, wallet]);
 }
