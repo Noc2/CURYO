@@ -10,6 +10,7 @@ import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVeri
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -32,8 +33,8 @@ contract MockVotingEngineForFR2 is IRoundVotingEngine {
         totalAdded += amount;
     }
 
-    function contentCommitCount(uint256) external pure override returns (uint256) {
-        return 0;
+    function hasCommits(uint256) external pure override returns (bool) {
+        return false;
     }
 
     function currentRoundId(uint256) external pure override returns (uint256) {
@@ -1648,7 +1649,7 @@ contract RoundSettlementBranchTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crep), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -1671,18 +1672,14 @@ contract RoundSettlementBranchTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
         mockCategoryRegistry2.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry2));
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry2));
-        engine.setTreasury(treasury);
-        engine.setConfig(5 minutes, 7 days, 2, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry2));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 2, 200);
 
         crep.mint(owner, 2_000_000e6);
         crep.approve(address(engine), 2_000_000e6);
         engine.addToConsensusReserve(1_000_000e6);
-
-        // Fund keeper rewards
-        engine.setKeeperReward(1e6);
-        engine.fundKeeperRewardPool(100_000e6);
 
         address[3] memory voters = [voter1, voter2, voter3];
         for (uint256 i = 0; i < voters.length; i++) {

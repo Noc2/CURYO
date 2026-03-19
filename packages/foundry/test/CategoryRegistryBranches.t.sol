@@ -6,6 +6,7 @@ import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
@@ -52,12 +53,12 @@ contract CategoryRegistryBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (admin, admin, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (admin, address(crepToken), address(registry), address(new ProtocolConfig(admin))))
                 )
             )
         );
-        votingEngine.setTreasury(address(100));
-        votingEngine.setConfig(1 hours, 7 days, 3, 1000);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(address(100));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
 
         mockVoterIdNFT = new MockVoterIdNFT();
 

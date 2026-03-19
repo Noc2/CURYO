@@ -3,6 +3,7 @@ export { ContentRegistryAbi } from "./ContentRegistryAbi";
 export { CuryoReputationAbi } from "./CuryoReputationAbi";
 export { FrontendRegistryAbi } from "./FrontendRegistryAbi";
 export { ProfileRegistryAbi } from "./ProfileRegistryAbi";
+export { ProtocolConfigAbi } from "./ProtocolConfigAbi";
 export { RoundRewardDistributorAbi } from "./RoundRewardDistributorAbi";
 export { RoundVotingEngineAbi } from "./RoundVotingEngineAbi";
 export { VoterIdNFTAbi } from "./VoterIdNFTAbi";

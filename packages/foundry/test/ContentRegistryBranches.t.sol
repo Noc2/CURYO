@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
@@ -63,7 +64,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -82,15 +83,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         registry.setVotingEngine(address(votingEngine));
         registry.setBonusPool(bonusPool);
         registry.setTreasury(treasury);
-        votingEngine.setRewardDistributor(address(rewardDistributor));
-        votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(1 hours, 7 days, 3, 1000);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
 
         mockVoterIdNFT = new MockVoterIdNFT();
         mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
 
         participationPool = new ParticipationPool(address(crepToken), owner);
         participationPool.setAuthorizedCaller(address(registry), true);
@@ -279,7 +280,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(tinyPool), 4e6);
         tinyPool.depositPool(4e6);
         registry.setParticipationPool(address(tinyPool));
-        votingEngine.setParticipationPool(address(tinyPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(tinyPool));
         vm.stopPrank();
 
         vm.startPrank(submitter);
@@ -319,7 +320,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(shiftingPool), 3_000_000e6);
         shiftingPool.depositPool(3_000_000e6);
         registry.setParticipationPool(address(shiftingPool));
-        votingEngine.setParticipationPool(address(shiftingPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(shiftingPool));
         vm.stopPrank();
 
         vm.startPrank(submitter);
@@ -359,7 +360,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(tinyPool), 4e6);
         tinyPool.depositPool(4e6);
         registry.setParticipationPool(address(tinyPool));
-        votingEngine.setParticipationPool(address(tinyPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(tinyPool));
         vm.stopPrank();
 
         vm.startPrank(submitter);
@@ -389,7 +390,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(tinyPool), 4e6);
         tinyPool.depositPool(4e6);
         registry.setParticipationPool(address(tinyPool));
-        votingEngine.setParticipationPool(address(tinyPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(tinyPool));
         vm.stopPrank();
 
         vm.startPrank(submitter);
@@ -408,7 +409,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
     function test_MarkDormant_PreservesHealthySubmitterParticipationRewardSnapshot() public {
         vm.startPrank(owner);
         registry.setParticipationPool(address(participationPool));
-        votingEngine.setParticipationPool(address(participationPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
         vm.stopPrank();
 
         uint256 submitterBalanceBeforeSubmit = crepToken.balanceOf(submitter);

@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -59,7 +60,7 @@ contract InvariantRating is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -80,10 +81,10 @@ contract InvariantRating is Test {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasury);
-        engine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;

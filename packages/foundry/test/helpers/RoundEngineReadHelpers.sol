@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import { RoundVotingEngine } from "../../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
 import { RoundLib } from "../../contracts/libraries/RoundLib.sol";
 
 library RoundEngineReadHelpers {
@@ -72,7 +73,8 @@ library RoundEngineReadHelpers {
             contentId, roundId
         );
         if (cfg.epochDuration == 0) {
-            (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) = engine.config();
+            (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) =
+                ProtocolConfig(address(engine.protocolConfig())).config();
         }
     }
 
@@ -81,7 +83,8 @@ library RoundEngineReadHelpers {
         view
         returns (bytes32[] memory keys)
     {
-        uint256 count = engine.getRoundCommitCount(contentId, roundId);
+        RoundLib.Round memory r = round(engine, contentId, roundId);
+        uint256 count = r.voteCount;
         keys = new bytes32[](count);
         for (uint256 i = 0; i < count; i++) {
             keys[i] = engine.roundCommitHashes(contentId, roundId, i);

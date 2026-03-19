@@ -6,32 +6,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "ADMIN_ROLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "CONFIG_ROLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "DEFAULT_ADMIN_ROLE",
     "inputs": [],
     "outputs": [
@@ -91,32 +65,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "UPGRADER_ROLE",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "UPGRADE_INTERFACE_VERSION",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "string",
-        "internalType": "string"
       }
     ],
     "stateMutability": "view"
@@ -190,19 +138,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "bool",
         "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "categoryRegistry",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract ICategoryRegistry"
       }
     ],
     "stateMutability": "view"
@@ -324,58 +259,11 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "config",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "epochDuration",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "maxDuration",
-        "type": "uint32",
-        "internalType": "uint32"
-      },
-      {
-        "name": "minVoters",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "maxVoters",
-        "type": "uint16",
-        "internalType": "uint16"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "consensusReserve",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "contentCommitCount",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "totalCommitCount",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -434,32 +322,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "frontendRegistry",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IFrontendRegistry"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "fundKeeperRewardPool",
-    "inputs": [
-      {
-        "name": "amount",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "getRoleAdmin",
     "inputs": [
       {
@@ -473,54 +335,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getRoundCommitCount",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "roundId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getVoteCooldownRemaining",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "voter",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -542,6 +356,25 @@ export const RoundVotingEngineAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "hasCommits",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -601,11 +434,6 @@ export const RoundVotingEngineAbi = [
     "name": "initialize",
     "inputs": [
       {
-        "name": "_admin",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
         "name": "_governance",
         "type": "address",
         "internalType": "address"
@@ -619,55 +447,15 @@ export const RoundVotingEngineAbi = [
         "name": "_registry",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_protocolConfig",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "isSubmitterStakeResolvable",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "keeperReward",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "keeperRewardPool",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -726,19 +514,6 @@ export const RoundVotingEngineAbi = [
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "participationPool",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IParticipationPool"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -814,13 +589,13 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "proxiableUUID",
+    "name": "protocolConfig",
     "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
+        "type": "address",
+        "internalType": "contract ProtocolConfig"
       }
     ],
     "stateMutability": "view"
@@ -868,19 +643,6 @@ export const RoundVotingEngineAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "revealGracePeriod",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1069,54 +831,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "roundParticipationPool",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "roundParticipationRateBps",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1337,138 +1051,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "setCategoryRegistry",
-    "inputs": [
-      {
-        "name": "_categoryRegistry",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setConfig",
-    "inputs": [
-      {
-        "name": "_epochDuration",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_maxDuration",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_minVoters",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "_maxVoters",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setFrontendRegistry",
-    "inputs": [
-      {
-        "name": "_frontendRegistry",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setKeeperReward",
-    "inputs": [
-      {
-        "name": "_keeperReward",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setParticipationPool",
-    "inputs": [
-      {
-        "name": "_participationPool",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setRevealGracePeriod",
-    "inputs": [
-      {
-        "name": "_revealGracePeriod",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setRewardDistributor",
-    "inputs": [
-      {
-        "name": "_rewardDistributor",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setTreasury",
-    "inputs": [
-      {
-        "name": "_treasury",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "setVoterIdNFT",
-    "inputs": [
-      {
-        "name": "_voterIdNFT",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "settleRound",
     "inputs": [
       {
@@ -1524,41 +1106,10 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "treasury",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "unpause",
     "inputs": [],
     "outputs": [],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "upgradeToAndCall",
-    "inputs": [
-      {
-        "name": "newImplementation",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "data",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "payable"
   },
   {
     "type": "function",
@@ -1585,19 +1136,6 @@ export const RoundVotingEngineAbi = [
         "name": "",
         "type": "bytes32",
         "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "voterIdNFT",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IVoterIdNFT"
       }
     ],
     "stateMutability": "view"
@@ -1635,19 +1173,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
-    "name": "CategoryRegistryUpdated",
-    "inputs": [
-      {
-        "name": "categoryRegistry",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "CategorySubmitterRewarded",
     "inputs": [
       {
@@ -1670,37 +1195,6 @@ export const RoundVotingEngineAbi = [
       },
       {
         "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "ConfigUpdated",
-    "inputs": [
-      {
-        "name": "epochDuration",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "maxDuration",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "minVoters",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "maxVoters",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1810,19 +1304,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
-    "name": "FrontendRegistryUpdated",
-    "inputs": [
-      {
-        "name": "frontendRegistry",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "Initialized",
     "inputs": [
       {
@@ -1836,76 +1317,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
-    "name": "KeeperRewardPoolFunded",
-    "inputs": [
-      {
-        "name": "funder",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "KeeperRewardUpdated",
-    "inputs": [
-      {
-        "name": "keeperReward",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "KeeperRewarded",
-    "inputs": [
-      {
-        "name": "keeper",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "amount",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      },
-      {
-        "name": "operation",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "uint8"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "ParticipationPoolUpdated",
-    "inputs": [
-      {
-        "name": "participationPool",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "Paused",
     "inputs": [
       {
@@ -1913,19 +1324,6 @@ export const RoundVotingEngineAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RevealGracePeriodUpdated",
-    "inputs": [
-      {
-        "name": "revealGracePeriod",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -2095,31 +1493,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
-    "name": "SettlementSideEffectFailed",
-    "inputs": [
-      {
-        "name": "contentId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "roundId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      },
-      {
-        "name": "reason",
-        "type": "uint8",
-        "indexed": false,
-        "internalType": "uint8"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "TreasuryFeeDistributed",
     "inputs": [
       {
@@ -2145,38 +1518,12 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "event",
-    "name": "TreasuryUpdated",
-    "inputs": [
-      {
-        "name": "treasury",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "Unpaused",
     "inputs": [
       {
         "name": "account",
         "type": "address",
         "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "Upgraded",
-    "inputs": [
-      {
-        "name": "implementation",
-        "type": "address",
-        "indexed": true,
         "internalType": "address"
       }
     ],
@@ -2251,19 +1598,6 @@ export const RoundVotingEngineAbi = [
     "anonymous": false
   },
   {
-    "type": "event",
-    "name": "VoterIdNFTUpdated",
-    "inputs": [
-      {
-        "name": "voterIdNFT",
-        "type": "address",
-        "indexed": false,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
     "type": "error",
     "name": "AccessControlBadConfirmation",
     "inputs": []
@@ -2288,17 +1622,6 @@ export const RoundVotingEngineAbi = [
     "type": "error",
     "name": "ActiveRoundStillOpen",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "AddressEmptyCode",
-    "inputs": [
-      {
-        "name": "target",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
   },
   {
     "type": "error",
@@ -2337,22 +1660,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "error",
-    "name": "ERC1967InvalidImplementation",
-    "inputs": [
-      {
-        "name": "implementation",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "ERC1967NonPayable",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "EnforcedPause",
     "inputs": []
   },
@@ -2364,11 +1671,6 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "ExpectedPause",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "FailedCall",
     "inputs": []
   },
   {
@@ -2394,11 +1696,6 @@ export const RoundVotingEngineAbi = [
   {
     "type": "error",
     "name": "InvalidCommitHash",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidConfig",
     "inputs": []
   },
   {
@@ -2496,22 +1793,6 @@ export const RoundVotingEngineAbi = [
     "type": "error",
     "name": "ThresholdReached",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "UUPSUnauthorizedCallContext",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "UUPSUnsupportedProxiableUUID",
-    "inputs": [
-      {
-        "name": "slot",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ]
   },
   {
     "type": "error",

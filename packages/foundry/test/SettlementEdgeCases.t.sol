@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -70,7 +71,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -91,12 +92,12 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setRewardDistributor(address(rewardDistributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasury);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
 
         // epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=1000
-        engine.setConfig(1 hours, 7 days, 3, 1000);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
 
         FrontendRegistry frImpl = new FrontendRegistry();
         frontendRegistry = FrontendRegistry(
@@ -108,12 +109,12 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         );
         frontendRegistry.setVotingEngine(address(engine));
         frontendRegistry.addFeeCreditor(address(rewardDistributor));
-        engine.setFrontendRegistry(address(frontendRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
 
         participationPool = new ParticipationPool(address(crepToken), owner);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
         participationPool.setAuthorizedCaller(address(registry), true);
-        engine.setParticipationPool(address(participationPool));
+        ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(participationPool));
 
         crepToken.mint(owner, 2_000_000e6);
         crepToken.approve(address(participationPool), 500_000e6);
@@ -371,7 +372,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     function test_SetTreasury_ZeroAddress_Reverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        engine.setTreasury(address(0));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(address(0));
     }
 
     function test_Settle_TreasuryReceivesFee() public {
@@ -497,10 +498,10 @@ contract SettlementEdgeCasesTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry2.setCategoryRegistry(address(mockCategoryRegistry));
-        engine2.setRewardDistributor(address(dist2));
-        engine2.setCategoryRegistry(address(mockCategoryRegistry));
-        engine2.setTreasury(treasury);
-        engine2.setConfig(1 hours, 7 days, 3, 1000);
+        ProtocolConfig(address(engine2.protocolConfig())).setRewardDistributor(address(dist2));
+        ProtocolConfig(address(engine2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine2.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine2.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
 
         // DO NOT fund consensus reserve — leave at 0
         assertEq(engine2.consensusReserve(), 0);

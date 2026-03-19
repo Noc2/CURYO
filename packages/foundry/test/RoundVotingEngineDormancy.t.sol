@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
@@ -48,7 +49,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -59,7 +60,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
 
-        engine.setConfig(1 hours, 7 days, 3, 1000);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
 
         address[5] memory users = [submitter, voter1, voter2, voter3, voter4];
         for (uint256 i = 0; i < users.length; i++) {
@@ -78,7 +79,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + 7 days + engine.revealGracePeriod() + 1);
+        vm.warp(round.startTime + 7 days + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod() + 1);
 
         _commit(voter4, contentId, true);
 

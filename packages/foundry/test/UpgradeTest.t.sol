@@ -2,8 +2,11 @@
 pragma solidity ^0.8.20;
 
 import { Test } from "forge-std/Test.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    TransparentUpgradeableProxy,
+    ITransparentUpgradeableProxy
+} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
@@ -11,6 +14,7 @@ import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { IProfileRegistry } from "../contracts/interfaces/IProfileRegistry.sol";
 import { IRoundVotingEngine } from "../contracts/interfaces/IRoundVotingEngine.sol";
@@ -20,8 +24,8 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 contract MockVotingEngineForUpgrade is IRoundVotingEngine {
     function addToConsensusReserve(uint256) external override { }
 
-    function contentCommitCount(uint256) external pure override returns (uint256) {
-        return 0;
+    function hasCommits(uint256) external pure override returns (bool) {
+        return false;
     }
 
     function currentRoundId(uint256) external pure override returns (uint256) {
@@ -63,6 +67,11 @@ contract UpgradeTest is Test {
     RoundRewardDistributor public rewardDistributor;
     ProfileRegistry public profileRegistry;
     FrontendRegistry public frontendRegistry;
+    ProxyAdmin public contentRegistryAdmin;
+    ProxyAdmin public votingEngineAdmin;
+    ProxyAdmin public rewardDistributorAdmin;
+    ProxyAdmin public profileRegistryAdmin;
+    ProxyAdmin public frontendRegistryAdmin;
 
     CuryoReputation public crepToken;
     MockVotingEngineForUpgrade public mockVotingEngine;
@@ -71,8 +80,8 @@ contract UpgradeTest is Test {
     address public admin = address(1);
     address public governance = address(2);
     address public attacker = address(999);
-
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 internal constant ERC1967_ADMIN_SLOT =
+        bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
 
     function setUp() public {
         vm.startPrank(admin);
@@ -83,57 +92,61 @@ contract UpgradeTest is Test {
 
         // --- ContentRegistry ---
         ContentRegistry crImpl = new ContentRegistry();
-        contentRegistry = ContentRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(crImpl), abi.encodeCall(ContentRegistry.initialize, (admin, governance, address(crepToken)))
-                )
-            )
+        TransparentUpgradeableProxy crProxy = new TransparentUpgradeableProxy(
+            address(crImpl), governance, abi.encodeCall(ContentRegistry.initialize, (admin, governance, address(crepToken)))
         );
+        contentRegistry = ContentRegistry(
+            address(crProxy)
+        );
+        contentRegistryAdmin = _proxyAdmin(address(crProxy));
 
         // --- RoundVotingEngine ---
         RoundVotingEngine veImpl = new RoundVotingEngine();
-        votingEngine = RoundVotingEngine(
-            address(
-                new ERC1967Proxy(
-                    address(veImpl),
-                    abi.encodeCall(
-                        RoundVotingEngine.initialize, (admin, governance, address(crepToken), address(contentRegistry))
-                    )
-                )
+        TransparentUpgradeableProxy veProxy = new TransparentUpgradeableProxy(
+            address(veImpl),
+            governance,
+            abi.encodeCall(
+                RoundVotingEngine.initialize,
+                (governance, address(crepToken), address(contentRegistry), address(new ProtocolConfig(governance)))
             )
         );
+        votingEngine = RoundVotingEngine(
+            address(veProxy)
+        );
+        votingEngineAdmin = _proxyAdmin(address(veProxy));
 
         // --- RoundRewardDistributor ---
         RoundRewardDistributor rdImpl = new RoundRewardDistributor();
-        rewardDistributor = RoundRewardDistributor(
-            address(
-                new ERC1967Proxy(
-                    address(rdImpl),
-                    abi.encodeCall(
-                        RoundRewardDistributor.initialize,
-                        (governance, address(crepToken), address(votingEngine), address(contentRegistry))
-                    )
-                )
+        TransparentUpgradeableProxy rdProxy = new TransparentUpgradeableProxy(
+            address(rdImpl),
+            governance,
+            abi.encodeCall(
+                RoundRewardDistributor.initialize,
+                (governance, address(crepToken), address(votingEngine), address(contentRegistry))
             )
         );
+        rewardDistributor = RoundRewardDistributor(
+            address(rdProxy)
+        );
+        rewardDistributorAdmin = _proxyAdmin(address(rdProxy));
 
         // --- ProfileRegistry ---
         ProfileRegistry prImpl = new ProfileRegistry();
-        profileRegistry = ProfileRegistry(
-            address(new ERC1967Proxy(address(prImpl), abi.encodeCall(ProfileRegistry.initialize, (admin, governance))))
+        TransparentUpgradeableProxy prProxy = new TransparentUpgradeableProxy(
+            address(prImpl), governance, abi.encodeCall(ProfileRegistry.initialize, (admin, governance))
         );
+        profileRegistry = ProfileRegistry(address(prProxy));
+        profileRegistryAdmin = _proxyAdmin(address(prProxy));
 
         // --- FrontendRegistry ---
         FrontendRegistry frImpl = new FrontendRegistry();
-        frontendRegistry = FrontendRegistry(
-            address(
-                new ERC1967Proxy(
-                    address(frImpl),
-                    abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
-                )
-            )
+        TransparentUpgradeableProxy frProxy = new TransparentUpgradeableProxy(
+            address(frImpl), governance, abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
         );
+        frontendRegistry = FrontendRegistry(
+            address(frProxy)
+        );
+        frontendRegistryAdmin = _proxyAdmin(address(frProxy));
 
         vm.stopPrank();
     }
@@ -145,14 +158,14 @@ contract UpgradeTest is Test {
     function test_ContentRegistry_GovernanceCanUpgrade() public {
         ContentRegistry newImpl = new ContentRegistry();
         vm.prank(governance);
-        UUPSUpgradeable(address(contentRegistry)).upgradeToAndCall(address(newImpl), "");
+        contentRegistryAdmin.upgradeAndCall(_proxy(address(contentRegistry)), address(newImpl), "");
     }
 
     function test_ContentRegistry_UnauthorizedCannotUpgrade() public {
         ContentRegistry newImpl = new ContentRegistry();
         vm.prank(attacker);
         vm.expectRevert();
-        UUPSUpgradeable(address(contentRegistry)).upgradeToAndCall(address(newImpl), "");
+        contentRegistryAdmin.upgradeAndCall(_proxy(address(contentRegistry)), address(newImpl), "");
     }
 
     function test_ContentRegistry_CannotReinitialize() public {
@@ -162,16 +175,15 @@ contract UpgradeTest is Test {
     }
 
     function test_ContentRegistry_StatePreservedAfterUpgrade() public {
-        // Verify UPGRADER_ROLE is set on governance
-        assertTrue(contentRegistry.hasRole(UPGRADER_ROLE, governance));
+        assertEq(contentRegistryAdmin.owner(), governance);
 
         // Upgrade
         ContentRegistry newImpl = new ContentRegistry();
         vm.prank(governance);
-        UUPSUpgradeable(address(contentRegistry)).upgradeToAndCall(address(newImpl), "");
+        contentRegistryAdmin.upgradeAndCall(_proxy(address(contentRegistry)), address(newImpl), "");
 
         // Verify state preserved
-        assertTrue(contentRegistry.hasRole(UPGRADER_ROLE, governance));
+        assertEq(contentRegistryAdmin.owner(), governance);
         assertEq(address(contentRegistry.crepToken()), address(crepToken));
     }
 
@@ -182,31 +194,32 @@ contract UpgradeTest is Test {
     function test_VotingEngine_GovernanceCanUpgrade() public {
         RoundVotingEngine newImpl = new RoundVotingEngine();
         vm.prank(governance);
-        UUPSUpgradeable(address(votingEngine)).upgradeToAndCall(address(newImpl), "");
+        votingEngineAdmin.upgradeAndCall(_proxy(address(votingEngine)), address(newImpl), "");
     }
 
     function test_VotingEngine_UnauthorizedCannotUpgrade() public {
         RoundVotingEngine newImpl = new RoundVotingEngine();
         vm.prank(attacker);
         vm.expectRevert();
-        UUPSUpgradeable(address(votingEngine)).upgradeToAndCall(address(newImpl), "");
+        votingEngineAdmin.upgradeAndCall(_proxy(address(votingEngine)), address(newImpl), "");
     }
 
     function test_VotingEngine_CannotReinitialize() public {
+        address protocolConfigAddress = address(votingEngine.protocolConfig());
         vm.prank(admin);
         vm.expectRevert(Initializable.InvalidInitialization.selector);
-        votingEngine.initialize(admin, governance, address(crepToken), address(contentRegistry));
+        votingEngine.initialize(governance, address(crepToken), address(contentRegistry), protocolConfigAddress);
     }
 
     function test_VotingEngine_StatePreservedAfterUpgrade() public {
-        assertTrue(votingEngine.hasRole(UPGRADER_ROLE, governance));
+        assertEq(votingEngineAdmin.owner(), governance);
         assertEq(address(votingEngine.registry()), address(contentRegistry));
 
         RoundVotingEngine newImpl = new RoundVotingEngine();
         vm.prank(governance);
-        UUPSUpgradeable(address(votingEngine)).upgradeToAndCall(address(newImpl), "");
+        votingEngineAdmin.upgradeAndCall(_proxy(address(votingEngine)), address(newImpl), "");
 
-        assertTrue(votingEngine.hasRole(UPGRADER_ROLE, governance));
+        assertEq(votingEngineAdmin.owner(), governance);
         assertEq(address(votingEngine.registry()), address(contentRegistry));
     }
 
@@ -217,14 +230,14 @@ contract UpgradeTest is Test {
     function test_RewardDistributor_GovernanceCanUpgrade() public {
         RoundRewardDistributor newImpl = new RoundRewardDistributor();
         vm.prank(governance);
-        UUPSUpgradeable(address(rewardDistributor)).upgradeToAndCall(address(newImpl), "");
+        rewardDistributorAdmin.upgradeAndCall(_proxy(address(rewardDistributor)), address(newImpl), "");
     }
 
     function test_RewardDistributor_UnauthorizedCannotUpgrade() public {
         RoundRewardDistributor newImpl = new RoundRewardDistributor();
         vm.prank(attacker);
         vm.expectRevert();
-        UUPSUpgradeable(address(rewardDistributor)).upgradeToAndCall(address(newImpl), "");
+        rewardDistributorAdmin.upgradeAndCall(_proxy(address(rewardDistributor)), address(newImpl), "");
     }
 
     function test_RewardDistributor_CannotReinitialize() public {
@@ -234,14 +247,14 @@ contract UpgradeTest is Test {
     }
 
     function test_RewardDistributor_StatePreservedAfterUpgrade() public {
-        assertTrue(rewardDistributor.hasRole(UPGRADER_ROLE, governance));
+        assertEq(rewardDistributorAdmin.owner(), governance);
         assertEq(address(rewardDistributor.crepToken()), address(crepToken));
 
         RoundRewardDistributor newImpl = new RoundRewardDistributor();
         vm.prank(governance);
-        UUPSUpgradeable(address(rewardDistributor)).upgradeToAndCall(address(newImpl), "");
+        rewardDistributorAdmin.upgradeAndCall(_proxy(address(rewardDistributor)), address(newImpl), "");
 
-        assertTrue(rewardDistributor.hasRole(UPGRADER_ROLE, governance));
+        assertEq(rewardDistributorAdmin.owner(), governance);
         assertEq(address(rewardDistributor.crepToken()), address(crepToken));
     }
 
@@ -252,14 +265,14 @@ contract UpgradeTest is Test {
     function test_ProfileRegistry_GovernanceCanUpgrade() public {
         ProfileRegistry newImpl = new ProfileRegistry();
         vm.prank(governance);
-        UUPSUpgradeable(address(profileRegistry)).upgradeToAndCall(address(newImpl), "");
+        profileRegistryAdmin.upgradeAndCall(_proxy(address(profileRegistry)), address(newImpl), "");
     }
 
     function test_ProfileRegistry_UnauthorizedCannotUpgrade() public {
         ProfileRegistry newImpl = new ProfileRegistry();
         vm.prank(attacker);
         vm.expectRevert();
-        UUPSUpgradeable(address(profileRegistry)).upgradeToAndCall(address(newImpl), "");
+        profileRegistryAdmin.upgradeAndCall(_proxy(address(profileRegistry)), address(newImpl), "");
     }
 
     function test_ProfileRegistry_CannotReinitialize() public {
@@ -276,15 +289,15 @@ contract UpgradeTest is Test {
         vm.prank(address(10));
         profileRegistry.setAvatarAccent(0xF26426);
 
-        assertTrue(profileRegistry.hasRole(UPGRADER_ROLE, governance));
+        assertEq(profileRegistryAdmin.owner(), governance);
         assertTrue(profileRegistry.hasProfile(address(10)));
 
         ProfileRegistry newImpl = new ProfileRegistry();
         vm.prank(governance);
-        UUPSUpgradeable(address(profileRegistry)).upgradeToAndCall(address(newImpl), "");
+        profileRegistryAdmin.upgradeAndCall(_proxy(address(profileRegistry)), address(newImpl), "");
 
         // State preserved
-        assertTrue(profileRegistry.hasRole(UPGRADER_ROLE, governance));
+        assertEq(profileRegistryAdmin.owner(), governance);
         assertTrue(profileRegistry.hasProfile(address(10)));
 
         IProfileRegistry.Profile memory profile = profileRegistry.getProfile(address(10));
@@ -305,14 +318,14 @@ contract UpgradeTest is Test {
     function test_FrontendRegistry_GovernanceCanUpgrade() public {
         FrontendRegistry newImpl = new FrontendRegistry();
         vm.prank(governance);
-        UUPSUpgradeable(address(frontendRegistry)).upgradeToAndCall(address(newImpl), "");
+        frontendRegistryAdmin.upgradeAndCall(_proxy(address(frontendRegistry)), address(newImpl), "");
     }
 
     function test_FrontendRegistry_UnauthorizedCannotUpgrade() public {
         FrontendRegistry newImpl = new FrontendRegistry();
         vm.prank(attacker);
         vm.expectRevert();
-        UUPSUpgradeable(address(frontendRegistry)).upgradeToAndCall(address(newImpl), "");
+        frontendRegistryAdmin.upgradeAndCall(_proxy(address(frontendRegistry)), address(newImpl), "");
     }
 
     function test_FrontendRegistry_CannotReinitialize() public {
@@ -322,14 +335,14 @@ contract UpgradeTest is Test {
     }
 
     function test_FrontendRegistry_StatePreservedAfterUpgrade() public {
-        assertTrue(frontendRegistry.hasRole(UPGRADER_ROLE, governance));
+        assertEq(frontendRegistryAdmin.owner(), governance);
         assertEq(frontendRegistry.STAKE_AMOUNT(), 1000e6);
 
         FrontendRegistry newImpl = new FrontendRegistry();
         vm.prank(governance);
-        UUPSUpgradeable(address(frontendRegistry)).upgradeToAndCall(address(newImpl), "");
+        frontendRegistryAdmin.upgradeAndCall(_proxy(address(frontendRegistry)), address(newImpl), "");
 
-        assertTrue(frontendRegistry.hasRole(UPGRADER_ROLE, governance));
+        assertEq(frontendRegistryAdmin.owner(), governance);
         assertEq(frontendRegistry.STAKE_AMOUNT(), 1000e6);
     }
 
@@ -358,5 +371,13 @@ contract UpgradeTest is Test {
         FrontendRegistry frImpl = new FrontendRegistry();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         frImpl.initialize(admin, governance, address(crepToken));
+    }
+
+    function _proxy(address proxy) internal pure returns (ITransparentUpgradeableProxy) {
+        return ITransparentUpgradeableProxy(payable(proxy));
+    }
+
+    function _proxyAdmin(address proxy) internal view returns (ProxyAdmin) {
+        return ProxyAdmin(address(uint160(uint256(vm.load(proxy, ERC1967_ADMIN_SLOT)))));
     }
 }

@@ -5,6 +5,7 @@ import { Test, console2 } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
@@ -59,7 +60,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -80,12 +81,12 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setTreasury(treasuryAddr);
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasuryAddr);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Config: epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=200
-        engine.setConfig(1 hours, 7 days, 3, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(1 hours, 7 days, 3, 200);
 
         // Fund consensus reserve
         crepToken.mint(owner, 100_000e6);
@@ -102,7 +103,7 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         pool.depositPool(34_000_000e6);
 
         // Connect pool to engine
-        engine.setParticipationPool(address(pool));
+        ProtocolConfig(address(engine.protocolConfig())).setParticipationPool(address(pool));
 
         // Fund participants
         crepToken.mint(submitter, 100_000e6);

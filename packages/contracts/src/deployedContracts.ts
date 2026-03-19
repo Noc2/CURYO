@@ -7,7 +7,7 @@ import type { GenericContractsDeclaration } from "./types";
 const deployedContracts = {
   31337: {
     CategoryFeeLib: {
-      address: "0x8aa1f0beb96f82feabc2fe5cdc76fb898441d3d1",
+      address: "0x08f18f144189bbf7d72318bbbb14c4255e637d4d",
       abi: [
         {
           type: "error",
@@ -43,7 +43,7 @@ const deployedContracts = {
       deployedOnBlock: 2,
     },
     SubmitterStakeLib: {
-      address: "0x14f3021090b496f9b024bcda6f38fcfa4be1ca1b",
+      address: "0xda606dd4a2034e10ae5b2a7173ca02eae32d94cf",
       abi: [
         {
           type: "error",
@@ -1949,32 +1949,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "bonusPool",
           inputs: [],
           outputs: [
@@ -2314,19 +2288,6 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
             },
           ],
           stateMutability: "view",
@@ -2807,24 +2768,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
-        },
-        {
-          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -3209,19 +3152,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "VoterIdNFTUpdated",
           inputs: [
             {
@@ -3256,44 +3186,12 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "EnforcedPause",
           inputs: [],
         },
         {
           type: "error",
           name: "ExpectedPause",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
           inputs: [],
         },
         {
@@ -3322,22 +3220,6 @@ const deployedContracts = {
             },
           ],
         },
-        {
-          type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
@@ -3356,47 +3238,15 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     RoundVotingEngine: {
-      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
+      address: "0x05B4CB126885fb10464fdD12666FEb25E2563B76",
       abi: [
         {
           type: "constructor",
           inputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "ADMIN_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "CONFIG_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -3459,32 +3309,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -3558,19 +3382,6 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "categoryRegistry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract ICategoryRegistry",
             },
           ],
           stateMutability: "view",
@@ -3692,58 +3503,11 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "config",
-          inputs: [],
-          outputs: [
-            {
-              name: "epochDuration",
-              type: "uint32",
-              internalType: "uint32",
-            },
-            {
-              name: "maxDuration",
-              type: "uint32",
-              internalType: "uint32",
-            },
-            {
-              name: "minVoters",
-              type: "uint16",
-              internalType: "uint16",
-            },
-            {
-              name: "maxVoters",
-              type: "uint16",
-              internalType: "uint16",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "consensusReserve",
           inputs: [],
           outputs: [
             {
               name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "contentCommitCount",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "totalCommitCount",
               type: "uint256",
               internalType: "uint256",
             },
@@ -3802,32 +3566,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "frontendRegistry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IFrontendRegistry",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "fundKeeperRewardPool",
-          inputs: [
-            {
-              name: "amount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -3841,54 +3579,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getRoundCommitCount",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getVoteCooldownRemaining",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "voter",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -3910,6 +3600,25 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "hasCommits",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -3969,11 +3678,6 @@ const deployedContracts = {
           name: "initialize",
           inputs: [
             {
-              name: "_admin",
-              type: "address",
-              internalType: "address",
-            },
-            {
               name: "_governance",
               type: "address",
               internalType: "address",
@@ -3988,54 +3692,14 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+            {
+              name: "_protocolConfig",
+              type: "address",
+              internalType: "address",
+            },
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "isSubmitterStakeResolvable",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "keeperReward",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "keeperRewardPool",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -4094,19 +3758,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "participationPool",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IParticipationPool",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -4182,13 +3833,13 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "proxiableUUID",
+          name: "protocolConfig",
           inputs: [],
           outputs: [
             {
               name: "",
-              type: "bytes32",
-              internalType: "bytes32",
+              type: "address",
+              internalType: "contract ProtocolConfig",
             },
           ],
           stateMutability: "view",
@@ -4236,19 +3887,6 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "revealGracePeriod",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -4437,54 +4075,6 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundParticipationPool",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundParticipationRateBps",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -4705,138 +4295,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setCategoryRegistry",
-          inputs: [
-            {
-              name: "_categoryRegistry",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setConfig",
-          inputs: [
-            {
-              name: "_epochDuration",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "_maxDuration",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "_minVoters",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "_maxVoters",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setFrontendRegistry",
-          inputs: [
-            {
-              name: "_frontendRegistry",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setKeeperReward",
-          inputs: [
-            {
-              name: "_keeperReward",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setParticipationPool",
-          inputs: [
-            {
-              name: "_participationPool",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setRevealGracePeriod",
-          inputs: [
-            {
-              name: "_revealGracePeriod",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setRewardDistributor",
-          inputs: [
-            {
-              name: "_rewardDistributor",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setTreasury",
-          inputs: [
-            {
-              name: "_treasury",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setVoterIdNFT",
-          inputs: [
-            {
-              name: "_voterIdNFT",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "settleRound",
           inputs: [
             {
@@ -4892,41 +4350,10 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "treasury",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "unpause",
           inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -4953,19 +4380,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "voterIdNFT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IVoterIdNFT",
             },
           ],
           stateMutability: "view",
@@ -5003,19 +4417,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "CategoryRegistryUpdated",
-          inputs: [
-            {
-              name: "categoryRegistry",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "CategorySubmitterRewarded",
           inputs: [
             {
@@ -5038,37 +4439,6 @@ const deployedContracts = {
             },
             {
               name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "ConfigUpdated",
-          inputs: [
-            {
-              name: "epochDuration",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "maxDuration",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "minVoters",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "maxVoters",
               type: "uint256",
               indexed: false,
               internalType: "uint256",
@@ -5178,19 +4548,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "FrontendRegistryUpdated",
-          inputs: [
-            {
-              name: "frontendRegistry",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "Initialized",
           inputs: [
             {
@@ -5204,76 +4561,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "KeeperRewardPoolFunded",
-          inputs: [
-            {
-              name: "funder",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "KeeperRewardUpdated",
-          inputs: [
-            {
-              name: "keeperReward",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "KeeperRewarded",
-          inputs: [
-            {
-              name: "keeper",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "operation",
-              type: "uint8",
-              indexed: false,
-              internalType: "uint8",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "ParticipationPoolUpdated",
-          inputs: [
-            {
-              name: "participationPool",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "Paused",
           inputs: [
             {
@@ -5281,19 +4568,6 @@ const deployedContracts = {
               type: "address",
               indexed: false,
               internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "RevealGracePeriodUpdated",
-          inputs: [
-            {
-              name: "revealGracePeriod",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -5463,31 +4737,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "SettlementSideEffectFailed",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "reason",
-              type: "uint8",
-              indexed: false,
-              internalType: "uint8",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "TreasuryFeeDistributed",
           inputs: [
             {
@@ -5513,38 +4762,12 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "TreasuryUpdated",
-          inputs: [
-            {
-              name: "treasury",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "Unpaused",
           inputs: [
             {
               name: "account",
               type: "address",
               indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
               internalType: "address",
             },
           ],
@@ -5619,19 +4842,6 @@ const deployedContracts = {
           anonymous: false,
         },
         {
-          type: "event",
-          name: "VoterIdNFTUpdated",
-          inputs: [
-            {
-              name: "voterIdNFT",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -5656,17 +4866,6 @@ const deployedContracts = {
           type: "error",
           name: "ActiveRoundStillOpen",
           inputs: [],
-        },
-        {
-          type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
         },
         {
           type: "error",
@@ -5705,22 +4904,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "EnforcedPause",
           inputs: [],
         },
@@ -5732,11 +4915,6 @@ const deployedContracts = {
         {
           type: "error",
           name: "ExpectedPause",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
           inputs: [],
         },
         {
@@ -5762,11 +4940,6 @@ const deployedContracts = {
         {
           type: "error",
           name: "InvalidCommitHash",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "InvalidConfig",
           inputs: [],
         },
         {
@@ -5867,22 +5040,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "Unauthorized",
           inputs: [],
         },
@@ -5909,8 +5066,8 @@ const deployedContracts = {
       ],
       inheritedFunctions: {
         addToConsensusReserve: "contracts/interfaces/IRoundVotingEngine.sol",
-        contentCommitCount: "contracts/interfaces/IRoundVotingEngine.sol",
         currentRoundId: "contracts/interfaces/IRoundVotingEngine.sol",
+        hasCommits: "contracts/interfaces/IRoundVotingEngine.sol",
         rounds: "contracts/interfaces/IRoundVotingEngine.sol",
         transferReward: "contracts/interfaces/IRoundVotingEngine.sol",
         onTransferReceived:
@@ -5931,16 +5088,10 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     RoundRewardDistributor: {
-      address: "0x05B4CB126885fb10464fdD12666FEb25E2563B76",
+      address: "0x2a264F26859166C5BF3868A54593eE716AeBC848",
       abi: [
         {
           type: "constructor",
@@ -5956,32 +5107,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -6300,19 +5425,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "registry",
           inputs: [],
           outputs: [
@@ -6621,24 +5733,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -7002,19 +6096,6 @@ const deployedContracts = {
           anonymous: false,
         },
         {
-          type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -7037,39 +6118,7 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "AlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
           inputs: [],
         },
         {
@@ -7160,22 +6209,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "UnauthorizedCaller",
           inputs: [],
         },
@@ -7200,12 +6233,6 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     FrontendRegistry: {
@@ -7303,32 +6330,6 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -7654,19 +6655,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "register",
           inputs: [],
           outputs: [],
@@ -7853,24 +6841,6 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -8165,19 +7135,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "VoterIdNFTUpdated",
           inputs: [
             {
@@ -8209,38 +7166,6 @@ const deployedContracts = {
               internalType: "bytes32",
             },
           ],
-        },
-        {
-          type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
-          inputs: [],
         },
         {
           type: "error",
@@ -8278,22 +7203,6 @@ const deployedContracts = {
             },
           ],
         },
-        {
-          type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
       ],
       inheritedFunctions: {
         STAKE_AMOUNT: "contracts/interfaces/IFrontendRegistry.sol",
@@ -8315,12 +7224,6 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     ProfileRegistry: {
@@ -8392,32 +7295,6 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -8661,19 +7538,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "renounceRole",
           inputs: [
             {
@@ -8770,24 +7634,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -8974,12 +7820,764 @@ const deployedContracts = {
         },
         {
           type: "event",
+          name: "VoterIdNFTUpdated",
+          inputs: [
+            {
+              name: "voterIdNFT",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "error",
+          name: "AccessControlBadConfirmation",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "AccessControlUnauthorizedAccount",
+          inputs: [
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "neededRole",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "InvalidInitialization",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "NotInitializing",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {
+        clearAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
+        getAddressByName: "contracts/interfaces/IProfileRegistry.sol",
+        getAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
+        getProfile: "contracts/interfaces/IProfileRegistry.sol",
+        hasProfile: "contracts/interfaces/IProfileRegistry.sol",
+        isNameTaken: "contracts/interfaces/IProfileRegistry.sol",
+        setAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
+        setProfile: "contracts/interfaces/IProfileRegistry.sol",
+        DEFAULT_ADMIN_ROLE:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        getRoleAdmin:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        grantRole:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        hasRole:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        renounceRole:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        revokeRole:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+        supportsInterface:
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+      },
+    },
+    TransparentUpgradeableProxy: {
+      address: "0x12975173b87f7595ee45dffb2ab812ece596bf84",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            {
+              name: "_logic",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "initialOwner",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_data",
+              type: "bytes",
+              internalType: "bytes",
+            },
+          ],
+          stateMutability: "payable",
+        },
+        {
+          type: "fallback",
+          stateMutability: "payable",
+        },
+        {
+          type: "event",
+          name: "AdminChanged",
+          inputs: [
+            {
+              name: "previousAdmin",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+            {
+              name: "newAdmin",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
           name: "Upgraded",
           inputs: [
             {
               name: "implementation",
               type: "address",
               indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "error",
+          name: "AddressEmptyCode",
+          inputs: [
+            {
+              name: "target",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1967InvalidAdmin",
+          inputs: [
+            {
+              name: "admin",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1967InvalidImplementation",
+          inputs: [
+            {
+              name: "implementation",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+        },
+        {
+          type: "error",
+          name: "ERC1967NonPayable",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ERC1967ProxyUninitialized",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "FailedCall",
+          inputs: [],
+        },
+        {
+          type: "error",
+          name: "ProxyDeniedAdminAccess",
+          inputs: [],
+        },
+      ],
+      inheritedFunctions: {},
+      deployedOnBlock: 10,
+    },
+    ProtocolConfig: {
+      address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
+      abi: [
+        {
+          type: "constructor",
+          inputs: [
+            {
+              name: "governance",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "CONFIG_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "DEFAULT_ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "categoryRegistry",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "config",
+          inputs: [],
+          outputs: [
+            {
+              name: "epochDuration",
+              type: "uint32",
+              internalType: "uint32",
+            },
+            {
+              name: "maxDuration",
+              type: "uint32",
+              internalType: "uint32",
+            },
+            {
+              name: "minVoters",
+              type: "uint16",
+              internalType: "uint16",
+            },
+            {
+              name: "maxVoters",
+              type: "uint16",
+              internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "frontendRegistry",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getRoleAdmin",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "grantRole",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "hasRole",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "participationPool",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "renounceRole",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "callerConfirmation",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "revealGracePeriod",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "revokeRole",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "rewardDistributor",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "setCategoryRegistry",
+          inputs: [
+            {
+              name: "value",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setConfig",
+          inputs: [
+            {
+              name: "epochDuration",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxDuration",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "minVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "maxVoters",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setFrontendRegistry",
+          inputs: [
+            {
+              name: "value",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setParticipationPool",
+          inputs: [
+            {
+              name: "value",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setRevealGracePeriod",
+          inputs: [
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setRewardDistributor",
+          inputs: [
+            {
+              name: "value",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setTreasury",
+          inputs: [
+            {
+              name: "value",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "setVoterIdNFT",
+          inputs: [
+            {
+              name: "value",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "supportsInterface",
+          inputs: [
+            {
+              name: "interfaceId",
+              type: "bytes4",
+              internalType: "bytes4",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "treasury",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "voterIdNFT",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "event",
+          name: "CategoryRegistryUpdated",
+          inputs: [
+            {
+              name: "categoryRegistry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "ConfigUpdated",
+          inputs: [
+            {
+              name: "epochDuration",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "maxDuration",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "minVoters",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+            {
+              name: "maxVoters",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "FrontendRegistryUpdated",
+          inputs: [
+            {
+              name: "frontendRegistry",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "ParticipationPoolUpdated",
+          inputs: [
+            {
+              name: "participationPool",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RevealGracePeriodUpdated",
+          inputs: [
+            {
+              name: "revealGracePeriod",
+              type: "uint256",
+              indexed: false,
+              internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RewardDistributorUpdated",
+          inputs: [
+            {
+              name: "rewardDistributor",
+              type: "address",
+              indexed: false,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RoleAdminChanged",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "previousAdminRole",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "newAdminRole",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RoleGranted",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sender",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "RoleRevoked",
+          inputs: [
+            {
+              name: "role",
+              type: "bytes32",
+              indexed: true,
+              internalType: "bytes32",
+            },
+            {
+              name: "account",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+            {
+              name: "sender",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "TreasuryUpdated",
+          inputs: [
+            {
+              name: "treasury",
+              type: "address",
+              indexed: false,
               internalType: "address",
             },
           ],
@@ -9021,173 +8619,34 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
+          name: "InvalidAddress",
           inputs: [],
         },
         {
           type: "error",
-          name: "FailedCall",
+          name: "InvalidConfig",
           inputs: [],
-        },
-        {
-          type: "error",
-          name: "InvalidInitialization",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "NotInitializing",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
         },
       ],
       inheritedFunctions: {
-        clearAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
-        getAddressByName: "contracts/interfaces/IProfileRegistry.sol",
-        getAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
-        getProfile: "contracts/interfaces/IProfileRegistry.sol",
-        hasProfile: "contracts/interfaces/IProfileRegistry.sol",
-        isNameTaken: "contracts/interfaces/IProfileRegistry.sol",
-        setAvatarAccent: "contracts/interfaces/IProfileRegistry.sol",
-        setProfile: "contracts/interfaces/IProfileRegistry.sol",
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         grantRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         hasRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         renounceRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         revokeRole:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
+          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
     },
-    ERC1967Proxy: {
-      address: "0x12975173b87f7595ee45dffb2ab812ece596bf84",
-      abi: [
-        {
-          type: "constructor",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "_data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          stateMutability: "payable",
-        },
-        {
-          type: "fallback",
-          stateMutability: "payable",
-        },
-        {
-          type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "ERC1967ProxyUninitialized",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
-          inputs: [],
-        },
-      ],
-      inheritedFunctions: {},
-      deployedOnBlock: 10,
-    },
     CategoryRegistry: {
-      address: "0x2a264F26859166C5BF3868A54593eE716AeBC848",
+      address: "0xd04fF4A75Edd737A73E92b2F2274Cb887d96E110",
       abi: [
         {
           type: "constructor",
@@ -10272,7 +9731,7 @@ const deployedContracts = {
       },
     },
     VoterIdNFT: {
-      address: "0xd04fF4A75Edd737A73E92b2F2274Cb887d96E110",
+      address: "0xc6B8FBF96CF7bbE45576417EC2163AcecFA88ECC",
       abi: [
         {
           type: "constructor",
@@ -11558,7 +11017,7 @@ const deployedContracts = {
       },
     },
     ParticipationPool: {
-      address: "0x25C74B7124baE93364213a6124a5e45bB0e98889",
+      address: "0xc8c25Aab3eeA991E083d2d0240eE4D693c59bDAC",
       abi: [
         {
           type: "constructor",
@@ -12194,7 +11653,7 @@ const deployedContracts = {
       },
     },
     MockIdentityVerificationHub: {
-      address: "0x49ea5126fd67f877b62ddc0144dbeb42591df7bb",
+      address: "0xc624801dd98bef87c0718ddb43ad3a566cc51ecc",
       abi: [
         {
           type: "function",
@@ -12564,10 +12023,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 64,
+      deployedOnBlock: 61,
     },
     HumanFaucet: {
-      address: "0x2fb5e98f1eFE95aE50F9BecAfCE660701aD8D9be",
+      address: "0x5D1ce2A19Aa885765aBcef89b7590E213422a8b9",
       abi: [
         {
           type: "constructor",
@@ -13729,32 +13188,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "addFeeCreditor",
           inputs: [
             {
@@ -14074,19 +13507,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "register",
           inputs: [],
           outputs: [],
@@ -14273,24 +13693,6 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -14585,19 +13987,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "VoterIdNFTUpdated",
           inputs: [
             {
@@ -14629,38 +14018,6 @@ const deployedContracts = {
               internalType: "bytes32",
             },
           ],
-        },
-        {
-          type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
-          inputs: [],
         },
         {
           type: "error",
@@ -14698,22 +14055,6 @@ const deployedContracts = {
             },
           ],
         },
-        {
-          type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
       ],
       inheritedFunctions: {
         STAKE_AMOUNT: "contracts/interfaces/IFrontendRegistry.sol",
@@ -14735,12 +14076,6 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     RoundVotingEngine: {
@@ -14750,32 +14085,6 @@ const deployedContracts = {
           type: "constructor",
           inputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "ADMIN_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "CONFIG_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -14838,32 +14147,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -14937,19 +14220,6 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "categoryRegistry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract ICategoryRegistry",
             },
           ],
           stateMutability: "view",
@@ -15071,58 +14341,11 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "config",
-          inputs: [],
-          outputs: [
-            {
-              name: "epochDuration",
-              type: "uint32",
-              internalType: "uint32",
-            },
-            {
-              name: "maxDuration",
-              type: "uint32",
-              internalType: "uint32",
-            },
-            {
-              name: "minVoters",
-              type: "uint16",
-              internalType: "uint16",
-            },
-            {
-              name: "maxVoters",
-              type: "uint16",
-              internalType: "uint16",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "consensusReserve",
           inputs: [],
           outputs: [
             {
               name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "contentCommitCount",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "totalCommitCount",
               type: "uint256",
               internalType: "uint256",
             },
@@ -15181,32 +14404,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "frontendRegistry",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IFrontendRegistry",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "fundKeeperRewardPool",
-          inputs: [
-            {
-              name: "amount",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "getRoleAdmin",
           inputs: [
             {
@@ -15220,54 +14417,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getRoundCommitCount",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getVoteCooldownRemaining",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "voter",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -15289,6 +14438,25 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "hasCommits",
+          inputs: [
+            {
+              name: "contentId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bool",
+              internalType: "bool",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -15348,11 +14516,6 @@ const deployedContracts = {
           name: "initialize",
           inputs: [
             {
-              name: "_admin",
-              type: "address",
-              internalType: "address",
-            },
-            {
               name: "_governance",
               type: "address",
               internalType: "address",
@@ -15367,54 +14530,14 @@ const deployedContracts = {
               type: "address",
               internalType: "address",
             },
+            {
+              name: "_protocolConfig",
+              type: "address",
+              internalType: "address",
+            },
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "isSubmitterStakeResolvable",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bool",
-              internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "keeperReward",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "keeperRewardPool",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -15473,19 +14596,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "participationPool",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IParticipationPool",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -15561,13 +14671,13 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "proxiableUUID",
+          name: "protocolConfig",
           inputs: [],
           outputs: [
             {
               name: "",
-              type: "bytes32",
-              internalType: "bytes32",
+              type: "address",
+              internalType: "contract ProtocolConfig",
             },
           ],
           stateMutability: "view",
@@ -15615,19 +14725,6 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "revealGracePeriod",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
         },
         {
           type: "function",
@@ -15816,54 +14913,6 @@ const deployedContracts = {
               name: "",
               type: "address",
               internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundParticipationPool",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "roundParticipationRateBps",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -16084,138 +15133,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "setCategoryRegistry",
-          inputs: [
-            {
-              name: "_categoryRegistry",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setConfig",
-          inputs: [
-            {
-              name: "_epochDuration",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "_maxDuration",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "_minVoters",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "_maxVoters",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setFrontendRegistry",
-          inputs: [
-            {
-              name: "_frontendRegistry",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setKeeperReward",
-          inputs: [
-            {
-              name: "_keeperReward",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setParticipationPool",
-          inputs: [
-            {
-              name: "_participationPool",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setRevealGracePeriod",
-          inputs: [
-            {
-              name: "_revealGracePeriod",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setRewardDistributor",
-          inputs: [
-            {
-              name: "_rewardDistributor",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setTreasury",
-          inputs: [
-            {
-              name: "_treasury",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "setVoterIdNFT",
-          inputs: [
-            {
-              name: "_voterIdNFT",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "settleRound",
           inputs: [
             {
@@ -16271,41 +15188,10 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "treasury",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "unpause",
           inputs: [],
           outputs: [],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -16332,19 +15218,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "voterIdNFT",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "address",
-              internalType: "contract IVoterIdNFT",
             },
           ],
           stateMutability: "view",
@@ -16382,19 +15255,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "CategoryRegistryUpdated",
-          inputs: [
-            {
-              name: "categoryRegistry",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "CategorySubmitterRewarded",
           inputs: [
             {
@@ -16417,37 +15277,6 @@ const deployedContracts = {
             },
             {
               name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "ConfigUpdated",
-          inputs: [
-            {
-              name: "epochDuration",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "maxDuration",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "minVoters",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "maxVoters",
               type: "uint256",
               indexed: false,
               internalType: "uint256",
@@ -16557,19 +15386,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "FrontendRegistryUpdated",
-          inputs: [
-            {
-              name: "frontendRegistry",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "Initialized",
           inputs: [
             {
@@ -16583,76 +15399,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "KeeperRewardPoolFunded",
-          inputs: [
-            {
-              name: "funder",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "KeeperRewardUpdated",
-          inputs: [
-            {
-              name: "keeperReward",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "KeeperRewarded",
-          inputs: [
-            {
-              name: "keeper",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-            {
-              name: "amount",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
-            },
-            {
-              name: "operation",
-              type: "uint8",
-              indexed: false,
-              internalType: "uint8",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "ParticipationPoolUpdated",
-          inputs: [
-            {
-              name: "participationPool",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "Paused",
           inputs: [
             {
@@ -16660,19 +15406,6 @@ const deployedContracts = {
               type: "address",
               indexed: false,
               internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "RevealGracePeriodUpdated",
-          inputs: [
-            {
-              name: "revealGracePeriod",
-              type: "uint256",
-              indexed: false,
-              internalType: "uint256",
             },
           ],
           anonymous: false,
@@ -16842,31 +15575,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "SettlementSideEffectFailed",
-          inputs: [
-            {
-              name: "contentId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "roundId",
-              type: "uint256",
-              indexed: true,
-              internalType: "uint256",
-            },
-            {
-              name: "reason",
-              type: "uint8",
-              indexed: false,
-              internalType: "uint8",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "TreasuryFeeDistributed",
           inputs: [
             {
@@ -16892,38 +15600,12 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "TreasuryUpdated",
-          inputs: [
-            {
-              name: "treasury",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "Unpaused",
           inputs: [
             {
               name: "account",
               type: "address",
               indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
               internalType: "address",
             },
           ],
@@ -16998,19 +15680,6 @@ const deployedContracts = {
           anonymous: false,
         },
         {
-          type: "event",
-          name: "VoterIdNFTUpdated",
-          inputs: [
-            {
-              name: "voterIdNFT",
-              type: "address",
-              indexed: false,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -17035,17 +15704,6 @@ const deployedContracts = {
           type: "error",
           name: "ActiveRoundStillOpen",
           inputs: [],
-        },
-        {
-          type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
         },
         {
           type: "error",
@@ -17084,22 +15742,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "EnforcedPause",
           inputs: [],
         },
@@ -17111,11 +15753,6 @@ const deployedContracts = {
         {
           type: "error",
           name: "ExpectedPause",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
           inputs: [],
         },
         {
@@ -17141,11 +15778,6 @@ const deployedContracts = {
         {
           type: "error",
           name: "InvalidCommitHash",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "InvalidConfig",
           inputs: [],
         },
         {
@@ -17246,22 +15878,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "Unauthorized",
           inputs: [],
         },
@@ -17288,8 +15904,8 @@ const deployedContracts = {
       ],
       inheritedFunctions: {
         addToConsensusReserve: "contracts/interfaces/IRoundVotingEngine.sol",
-        contentCommitCount: "contracts/interfaces/IRoundVotingEngine.sol",
         currentRoundId: "contracts/interfaces/IRoundVotingEngine.sol",
+        hasCommits: "contracts/interfaces/IRoundVotingEngine.sol",
         rounds: "contracts/interfaces/IRoundVotingEngine.sol",
         transferReward: "contracts/interfaces/IRoundVotingEngine.sol",
         onTransferReceived:
@@ -17310,12 +15926,6 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     ParticipationPool: {
@@ -19732,32 +18342,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "clearAvatarAccent",
           inputs: [],
           outputs: [],
@@ -19995,19 +18579,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "renounceRole",
           inputs: [
             {
@@ -20104,24 +18675,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -20308,19 +18861,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "VoterIdNFTUpdated",
           inputs: [
             {
@@ -20355,38 +18895,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "InvalidInitialization",
           inputs: [],
         },
@@ -20394,22 +18902,6 @@ const deployedContracts = {
           type: "error",
           name: "NotInitializing",
           inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
         },
       ],
       inheritedFunctions: {
@@ -20435,12 +18927,6 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     ContentRegistry: {
@@ -20629,32 +19115,6 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -21000,19 +19460,6 @@ const deployedContracts = {
               name: "",
               type: "bool",
               internalType: "bool",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
             },
           ],
           stateMutability: "view",
@@ -21493,24 +19940,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
-        },
-        {
-          type: "function",
           name: "voterIdNFT",
           inputs: [],
           outputs: [
@@ -21895,19 +20324,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "VoterIdNFTUpdated",
           inputs: [
             {
@@ -21942,44 +20358,12 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
           name: "EnforcedPause",
           inputs: [],
         },
         {
           type: "error",
           name: "ExpectedPause",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
           inputs: [],
         },
         {
@@ -22008,22 +20392,6 @@ const deployedContracts = {
             },
           ],
         },
-        {
-          type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
@@ -22042,12 +20410,6 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     RoundRewardDistributor: {
@@ -22067,32 +20429,6 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADER_ROLE",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "UPGRADE_INTERFACE_VERSION",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "string",
-              internalType: "string",
             },
           ],
           stateMutability: "view",
@@ -22411,19 +20747,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "proxiableUUID",
-          inputs: [],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "registry",
           inputs: [],
           outputs: [
@@ -22732,24 +21055,6 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "upgradeToAndCall",
-          inputs: [
-            {
-              name: "newImplementation",
-              type: "address",
-              internalType: "address",
-            },
-            {
-              name: "data",
-              type: "bytes",
-              internalType: "bytes",
-            },
-          ],
-          outputs: [],
-          stateMutability: "payable",
         },
         {
           type: "function",
@@ -23113,19 +21418,6 @@ const deployedContracts = {
           anonymous: false,
         },
         {
-          type: "event",
-          name: "Upgraded",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
           type: "error",
           name: "AccessControlBadConfirmation",
           inputs: [],
@@ -23148,39 +21440,7 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "AddressEmptyCode",
-          inputs: [
-            {
-              name: "target",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "AlreadyClaimed",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "ERC1967InvalidImplementation",
-          inputs: [
-            {
-              name: "implementation",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-        },
-        {
-          type: "error",
-          name: "ERC1967NonPayable",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "FailedCall",
           inputs: [],
         },
         {
@@ -23271,22 +21531,6 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "UUPSUnauthorizedCallContext",
-          inputs: [],
-        },
-        {
-          type: "error",
-          name: "UUPSUnsupportedProxiableUUID",
-          inputs: [
-            {
-              name: "slot",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-        },
-        {
-          type: "error",
           name: "UnauthorizedCaller",
           inputs: [],
         },
@@ -23311,12 +21555,6 @@ const deployedContracts = {
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
-        UPGRADE_INTERFACE_VERSION:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        proxiableUUID:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
-        upgradeToAndCall:
-          "lib/openzeppelin-contracts/contracts/proxy/utils/UUPSUpgradeable.sol",
       },
     },
     CategoryRegistry: {

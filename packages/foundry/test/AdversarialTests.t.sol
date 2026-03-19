@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -62,7 +63,7 @@ contract AdversarialTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -83,10 +84,10 @@ contract AdversarialTests is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasury);
-        engine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
@@ -153,7 +154,7 @@ contract AdversarialTests is VotingTestBase {
     function _settleRound(uint256 contentId, uint256 roundId, bytes32[] memory commitKeys) internal {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         // Warp past epoch + reveal grace period so unrevealed votes don't block settlement
-        vm.warp(round.startTime + EPOCH_DURATION + engine.revealGracePeriod() + 1);
+        vm.warp(round.startTime + EPOCH_DURATION + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod() + 1);
         for (uint256 i = 0; i < commitKeys.length; i++) {
             _reveal(contentId, roundId, commitKeys[i]);
         }
@@ -538,7 +539,7 @@ contract AdversarialTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(new RoundVotingEngine()),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(token2), address(reg2)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(token2), address(reg2), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -558,10 +559,10 @@ contract AdversarialTests is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         reg2.setCategoryRegistry(address(mockCategoryRegistry));
-        eng2.setRewardDistributor(address(dist2));
-        eng2.setCategoryRegistry(address(mockCategoryRegistry));
-        eng2.setTreasury(treasury);
-        eng2.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(eng2.protocolConfig())).setRewardDistributor(address(dist2));
+        ProtocolConfig(address(eng2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(eng2.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(eng2.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         // NO fundConsensusReserve — reserve is zero
 
@@ -717,7 +718,7 @@ contract AdversarialTests is VotingTestBase {
     function test_CooldownBypass_DelegationBlocked() public {
         MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
         vm.prank(owner);
-        engine.setVoterIdNFT(address(voterIdNFT));
+        ProtocolConfig(address(engine.protocolConfig())).setVoterIdNFT(address(voterIdNFT));
 
         address holder = address(0xA1);
         address delegate = address(0xA2);
@@ -771,7 +772,7 @@ contract AdversarialTests is VotingTestBase {
     function test_CooldownBypass_SameTokenAcrossRounds() public {
         MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
         vm.prank(owner);
-        engine.setVoterIdNFT(address(voterIdNFT));
+        ProtocolConfig(address(engine.protocolConfig())).setVoterIdNFT(address(voterIdNFT));
 
         address holder = address(0xA1);
         address delegate = address(0xA2);
@@ -1017,7 +1018,7 @@ contract AdversarialTests is VotingTestBase {
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
 
         uint256 engineBalance = crepToken.balanceOf(address(engine));
-        uint256 obligations = engine.consensusReserve() + engine.keeperRewardPool();
+        uint256 obligations = engine.consensusReserve();
 
         assertGe(engineBalance, obligations, "Engine insolvent after full cycle");
     }

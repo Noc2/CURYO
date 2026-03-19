@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -20,11 +19,8 @@ import { RewardMath } from "./libraries/RewardMath.sol";
 /// @dev NOT pausable — users must always be able to withdraw their funds.
 ///      Rewards are distributed proportional to epoch-weighted effective stake.
 ///      Epoch-1 (blind) voters earn 4× more per cREP than epoch-2+ voters.
-contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, ReentrancyGuardTransient, UUPSUpgradeable {
+contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
-
-    // --- Access Control Roles ---
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     // --- Custom Errors ---
     error RoundNotSettled();
@@ -118,7 +114,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         require(_registry != address(0), "Invalid registry");
 
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
-        _grantRole(UPGRADER_ROLE, _governance);
 
         crepToken = IERC20(_crepToken);
         votingEngine = RoundVotingEngine(_votingEngine);
@@ -482,10 +477,6 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         }
     }
 
-    // --- Admin ---
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
-
-    // --- Storage Gap for UUPS Upgradeability ---
+    // --- Storage Gap for Future Upgrades ---
     uint256[41] private __gap;
 }

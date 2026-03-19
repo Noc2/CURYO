@@ -5,6 +5,7 @@ import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -53,7 +54,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -73,11 +74,11 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setRewardDistributor(address(rewardDistributor));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
         // 4 params: epochDuration, maxDuration, minVoters, maxVoters
-        votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);

@@ -21,8 +21,8 @@ contract MockVotingEngine_FR is IRoundVotingEngine {
         totalAddedToReserve += amount;
     }
 
-    function contentCommitCount(uint256) external pure override returns (uint256) {
-        return 0;
+    function hasCommits(uint256) external pure override returns (bool) {
+        return false;
     }
 
     function currentRoundId(uint256) external pure override returns (uint256) {

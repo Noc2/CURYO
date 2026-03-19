@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -52,7 +53,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -70,13 +71,14 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         );
 
         registry.setVotingEngine(address(votingEngine));
+        registry.setTreasury(owner);
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setRewardDistributor(address(rewardDistributor));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setTreasury(owner);
-        votingEngine.setConfig(1 hours, 7 days, 3, 1000);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(owner);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(1 hours, 7 days, 3, 1000);
 
         crepToken.mint(owner, 500_000e6);
         crepToken.approve(address(votingEngine), 500_000e6);
@@ -113,10 +115,6 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         assertTrue(activeRoundId != 0 && activeRoundId != firstRoundId, "later round should remain open");
 
         vm.warp(T0 + 4 days + 1);
-        assertFalse(
-            votingEngine.isSubmitterStakeResolvable(1),
-            "healthy submitter stake should stay locked while a later round is open"
-        );
         vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
@@ -149,7 +147,6 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         vm.warp(T0 + 7 days + 1 hours + 2);
         votingEngine.cancelExpiredRound(1, laterRoundId);
-        assertTrue(votingEngine.isSubmitterStakeResolvable(1), "healthy submitter stake should unlock once later rounds close");
 
         votingEngine.resolveSubmitterStake(1);
 
@@ -174,10 +171,6 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         assertTrue(activeRoundId != 0, "later round should remain open");
 
         vm.warp(T0 + 31 days);
-        assertFalse(
-            votingEngine.isSubmitterStakeResolvable(1),
-            "dormancy fallback should stay blocked while a later round remains open"
-        );
         vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
@@ -186,7 +179,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         assertEq(crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged");
     }
 
-    function test_IsSubmitterStakeResolvable_DormancyFallbackTurnsTrueAfterOpenRoundCancels() public {
+    function test_ResolveSubmitterStake_DormancyFallbackWorksAfterOpenRoundCancels() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         registry.submitContent("https://example.com/dormancy-ready", "goal", "goal", "tags", 0);
@@ -196,13 +189,17 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, 1);
 
         vm.warp(T0 + 31 days);
-        assertFalse(votingEngine.isSubmitterStakeResolvable(1), "open rounds should block dormancy fallback");
-
+        vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
+        votingEngine.resolveSubmitterStake(1);
         votingEngine.cancelExpiredRound(1, roundId);
-        assertTrue(votingEngine.isSubmitterStakeResolvable(1), "closed rounds should allow dormancy fallback to resolve");
+
+        votingEngine.resolveSubmitterStake(1);
+
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertTrue(submitterStakeReturned, "closed rounds should allow dormancy fallback to resolve");
     }
 
-    function test_IsSubmitterStakeResolvable_SlashPathTurnsTrueAfterGrace() public {
+    function test_ResolveSubmitterStake_SlashPathWorksAfterGrace() public {
         uint256 slashStake = 20e6;
 
         vm.startPrank(submitter);
@@ -222,7 +219,10 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         votingEngine.settleRound(1, roundId);
 
         vm.warp(T0 + 24 hours + 1);
-        assertTrue(votingEngine.isSubmitterStakeResolvable(1), "low ratings should become slash-resolvable after grace");
+        votingEngine.resolveSubmitterStake(1);
+
+        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        assertTrue(submitterStakeReturned, "low ratings should become slash-resolvable after grace");
     }
 
     function _commit(address voter, uint256 contentId, bool isUp) internal returns (bytes32 commitKey, bytes32 salt) {

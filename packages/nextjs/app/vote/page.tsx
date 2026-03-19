@@ -3,18 +3,16 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { RoundVotingEngineAbi } from "@curyo/contracts";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, type PanInfo, type Variants, motion } from "framer-motion";
 import type { NextPage } from "next";
-import { useAccount, useReadContract } from "wagmi";
+import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
 import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
 import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
-import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -45,7 +43,6 @@ import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
 import { notification } from "~~/utils/scaffold-eth";
-import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
 const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").then(m => m.StakeSelector), {
   loading: () => (
@@ -442,7 +439,6 @@ const HomeInner = () => {
     categoryId: bigint;
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
   const { commitVote, isCommitting, error: voteError } = useRoundVote();
-  const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
   // Apply search, category filter, and the selected view before sorting
   const filteredFeed = useMemo(() => {
     let items = filterDiscoverCategoryItems(feed, activeCategory, activeCategoryId);
@@ -651,42 +647,12 @@ const HomeInner = () => {
 
   const canLoadMore = visibleCount < displayFeed.length || hasMoreFeed;
   const getContentCooldownSeconds = useCallback(
-    (contentId: bigint, onChainRemaining?: bigint) => {
-      const indexedRemaining = voteCooldownByContentId.get(contentId.toString()) ?? 0;
-      const onChainSeconds = Number(onChainRemaining ?? 0n);
-      return Math.max(indexedRemaining, onChainSeconds);
-    },
+    (contentId: bigint) => voteCooldownByContentId.get(contentId.toString()) ?? 0,
     [voteCooldownByContentId],
   );
 
-  const primaryItemCooldownQueryEnabled = Boolean(votingEngineInfo?.address && primaryItem && address);
-  const { data: primaryItemCooldownData, refetch: refetchPrimaryItemCooldown } = useReadContract({
-    address: votingEngineInfo?.address,
-    abi: RoundVotingEngineAbi,
-    functionName: "getVoteCooldownRemaining",
-    args: [primaryItem?.id ?? 0n, address ?? ZERO_ADDRESS],
-    query: {
-      enabled: primaryItemCooldownQueryEnabled,
-      refetchInterval: primaryItemCooldownQueryEnabled ? 60_000 : false,
-    },
-  });
-
-  const stakeModalCooldownQueryEnabled = Boolean(votingEngineInfo?.address && stakeModal.isOpen && address);
-  const { data: stakeModalCooldownData, refetch: refetchStakeModalCooldown } = useReadContract({
-    address: votingEngineInfo?.address,
-    abi: RoundVotingEngineAbi,
-    functionName: "getVoteCooldownRemaining",
-    args: [stakeModal.contentId, address ?? ZERO_ADDRESS],
-    query: {
-      enabled: stakeModalCooldownQueryEnabled,
-    },
-  });
-
-  const primaryItemCooldownSeconds = primaryItem
-    ? getContentCooldownSeconds(primaryItem.id, primaryItemCooldownData)
-    : 0;
-  const stakeModalCooldownSeconds =
-    stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId, stakeModalCooldownData) : 0;
+  const primaryItemCooldownSeconds = primaryItem ? getContentCooldownSeconds(primaryItem.id) : 0;
+  const stakeModalCooldownSeconds = stakeModal.contentId > 0n ? getContentCooldownSeconds(stakeModal.contentId) : 0;
 
   // Reset visible count when filters change
   useEffect(() => {
@@ -695,11 +661,7 @@ const HomeInner = () => {
 
   useEffect(() => {
     if (!voteError?.includes("You already voted on this content within the last")) return;
-    void refetchPrimaryItemCooldown();
-    if (stakeModal.isOpen) {
-      void refetchStakeModalCooldown();
-    }
-  }, [refetchPrimaryItemCooldown, refetchStakeModalCooldown, stakeModal.isOpen, voteError]);
+  }, [voteError]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -828,8 +790,6 @@ const HomeInner = () => {
         stakeAmount,
         submitter: item?.submitter,
       });
-      void refetchPrimaryItemCooldown();
-      void refetchStakeModalCooldown();
       setStakeModal(prev => ({ ...prev, isOpen: false }));
       if (success) {
         setOptimisticVotedContentIds(previous => {
@@ -854,8 +814,6 @@ const HomeInner = () => {
       isFirstVote,
       markVoteCompleted,
       markPrimaryInteraction,
-      refetchPrimaryItemCooldown,
-      refetchStakeModalCooldown,
       recordRecommendationSignal,
       stakeModal,
       stakeModalCooldownSeconds,

@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -27,6 +28,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     MockVoterIdNFT public mockVoterIdNFT;
     ParticipationPool public participationPool;
     FrontendRegistry public frontendRegistry;
+    address internal protocolConfigAddress;
 
     address public owner = address(1);
     address public submitter = address(2);
@@ -70,10 +72,11 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
+        protocolConfigAddress = address(engine.protocolConfig());
 
         rewardDistributor = RoundRewardDistributor(
             address(
@@ -91,12 +94,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setRewardDistributor(address(rewardDistributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasury);
+        ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(protocolConfigAddress).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(protocolConfigAddress).setTreasury(treasury);
 
         // epochDuration=1h, maxDuration=7d, minVoters=3, maxVoters=1000
-        engine.setConfig(1 hours, 7 days, 3, 1000);
+        ProtocolConfig(protocolConfigAddress).setConfig(1 hours, 7 days, 3, 1000);
 
         mockVoterIdNFT = new MockVoterIdNFT();
 
@@ -110,12 +113,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         );
         frontendRegistry.setVotingEngine(address(engine));
         frontendRegistry.addFeeCreditor(address(rewardDistributor));
-        engine.setFrontendRegistry(address(frontendRegistry));
+        ProtocolConfig(protocolConfigAddress).setFrontendRegistry(address(frontendRegistry));
 
         participationPool = new ParticipationPool(address(crepToken), owner);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
         participationPool.setAuthorizedCaller(address(registry), true);
-        engine.setParticipationPool(address(participationPool));
+        ProtocolConfig(protocolConfigAddress).setParticipationPool(address(participationPool));
 
         crepToken.mint(owner, 2_000_000e6);
         crepToken.approve(address(participationPool), 500_000e6);
@@ -334,14 +337,15 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertTrue(engine.voterCommitHash(contentId, roundId, voter1) != bytes32(0));
     }
 
-    function test_BasicLifecycle_ContentCommitCountIncrement() public {
+    function test_BasicLifecycle_HasCommitsTurnsTrue() public {
         uint256 contentId = _submitContent();
+        assertFalse(engine.hasCommits(contentId));
 
         _commit(voter1, contentId, true, STAKE);
-        assertEq(engine.contentCommitCount(contentId), 1);
+        assertTrue(engine.hasCommits(contentId));
 
         _commit(voter2, contentId, false, STAKE);
-        assertEq(engine.contentCommitCount(contentId), 2);
+        assertTrue(engine.hasCommits(contentId));
     }
 
     function test_BasicLifecycle_VoterPoolAndWinningStake() public {
@@ -989,7 +993,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // Warp past epoch + reveal grace period (voter1's unrevealed vote no longer blocks settlement)
         RoundLib.Round memory rPU1start = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(rPU1start.startTime + EPOCH + engine.revealGracePeriod() + 1);
+        vm.warp(
+            rPU1start.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1
+        );
 
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -1007,12 +1013,6 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     }
 
     function test_ProcessUnrevealed_RefundsCurrentEpochVotes() public {
-        vm.startPrank(owner);
-        crepToken.approve(address(engine), 100e6);
-        engine.fundKeeperRewardPool(100e6);
-        engine.setKeeperReward(10e6);
-        vm.stopPrank();
-
         uint256 contentId = _submitContent();
 
         (bytes32 ck1, bytes32 s1) = _commit(voter1, contentId, true, STAKE);
@@ -1039,24 +1039,15 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         uint256 voter4BalBefore = crepToken.balanceOf(voter4);
-        uint256 keeperBalBefore = crepToken.balanceOf(keeper);
         vm.prank(keeper);
         engine.processUnrevealedVotes(contentId, roundId, 0, 0);
         uint256 voter4BalAfter = crepToken.balanceOf(voter4);
-        uint256 keeperBalAfter = crepToken.balanceOf(keeper);
 
         // voter4 committed in epoch 3; their epoch hadn't ended at settlement => refunded
         assertEq(voter4BalAfter - voter4BalBefore, STAKE);
-        assertEq(keeperBalAfter, keeperBalBefore, "refund-only cleanup must not pay keeper rewards");
     }
 
     function test_ProcessUnrevealed_ForfeitureRewardPaidOnlyOncePerRound() public {
-        vm.startPrank(owner);
-        crepToken.approve(address(engine), 100e6);
-        engine.fundKeeperRewardPool(100e6);
-        engine.setKeeperReward(10e6);
-        vm.stopPrank();
-
         uint256 contentId = _submitContent();
 
         _commit(voter1, contentId, true, STAKE);
@@ -1067,7 +1058,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + EPOCH + engine.revealGracePeriod() + 1);
+        vm.warp(round.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
         _reveal(contentId, roundId, ck3, true, s3);
         _reveal(contentId, roundId, ck4, true, s4);
         _reveal(contentId, roundId, ck5, false, s5);
@@ -1083,7 +1074,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.processUnrevealedVotes(contentId, roundId, 1, 1);
         uint256 afterSecondBatch = crepToken.balanceOf(keeper);
 
-        assertEq(afterFirstBatch - keeperBalBefore, 10e6, "first forfeiture batch should pay keeper");
+        assertEq(afterFirstBatch, keeperBalBefore, "cleanup should not pay keepers");
         assertEq(afterSecondBatch, afterFirstBatch, "later batches in same round must not repay keeper");
     }
 
@@ -1130,7 +1121,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // Warp past epoch + reveal grace period (voter4's unrevealed vote no longer blocks settlement)
         RoundLib.Round memory rTied = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(rTied.startTime + EPOCH + engine.revealGracePeriod() + 1);
+        vm.warp(rTied.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
         _reveal(contentId, roundId, ck1, true, s1);
         _reveal(contentId, roundId, ck2, false, s2);
         _reveal(contentId, roundId, ck3, true, s3);
@@ -1157,7 +1148,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        uint256 finalDeadline = round.startTime + 7 days + engine.revealGracePeriod();
+        uint256 finalDeadline =
+            round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod();
 
         vm.warp(finalDeadline - 1);
         vm.expectRevert(RoundVotingEngine.RevealGraceActive.selector);
@@ -1191,7 +1183,8 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.warp(round.startTime + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
 
-        uint256 finalDeadline = round.startTime + 7 days + engine.revealGracePeriod() + 1;
+        uint256 finalDeadline =
+            round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1;
         vm.warp(finalDeadline);
         engine.finalizeRevealFailedRound(contentId, roundId);
 
@@ -1219,7 +1212,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(round.startTime + 7 days + engine.revealGracePeriod() + 1);
+        vm.warp(round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
 
         _commit(voter4, contentId, true, STAKE);
 
@@ -1239,7 +1232,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
 
-        vm.warp(round.startTime + EPOCH + engine.revealGracePeriod() + 1);
+        vm.warp(round.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
 
         _commit(voter4, contentId, true, STAKE);
 
@@ -1319,7 +1312,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.prank(owner);
         registry.setVoterIdNFT(address(mockVoterIdNFT));
         vm.prank(owner);
-        engine.setVoterIdNFT(address(mockVoterIdNFT));
+        ProtocolConfig(protocolConfigAddress).setVoterIdNFT(address(mockVoterIdNFT));
 
         mockVoterIdNFT.setHolder(submitter);
         vm.prank(submitter);
@@ -1370,20 +1363,6 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.CooldownActive.selector);
         engine.commitVote(contentId, commitHash, ciphertext, STAKE, address(0));
         vm.stopPrank();
-    }
-
-    function test_GetVoteCooldownRemaining_ReturnsRemainingTime() public {
-        uint256 contentId = _submitContent();
-
-        _commit(voter1, contentId, true, STAKE);
-
-        assertEq(engine.getVoteCooldownRemaining(contentId, voter1), 24 hours);
-
-        vm.warp(block.timestamp + 1 hours);
-        assertEq(engine.getVoteCooldownRemaining(contentId, voter1), 23 hours);
-
-        vm.warp(block.timestamp + 23 hours);
-        assertEq(engine.getVoteCooldownRemaining(contentId, voter1), 0);
     }
 
     function test_Commit_RoundNotAccepting_ExpiredRound_Reverts() public {
@@ -1447,7 +1426,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     function test_Commit_MaxVotersReached_Reverts() public {
         vm.prank(owner);
         // maxVoters=3 — after 3 commits the 4th is rejected
-        engine.setConfig(1 hours, 7 days, 3, 3);
+        ProtocolConfig(protocolConfigAddress).setConfig(1 hours, 7 days, 3, 3);
 
         uint256 contentId = _submitContent();
         _commit(voter1, contentId, true, STAKE);

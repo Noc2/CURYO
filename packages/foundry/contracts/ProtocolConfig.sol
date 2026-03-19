@@ -1,0 +1,147 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { RoundLib } from "./libraries/RoundLib.sol";
+
+/// @title ProtocolConfig
+/// @notice Governance-controlled configuration and address book for RoundVotingEngine.
+contract ProtocolConfig is AccessControl {
+    bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
+
+    error InvalidAddress();
+    error InvalidConfig();
+
+    address public rewardDistributor;
+    address public categoryRegistry;
+    address public frontendRegistry;
+    address public treasury;
+    RoundLib.RoundConfig public config;
+    address public voterIdNFT;
+    address public participationPool;
+    uint256 public revealGracePeriod;
+
+    event RewardDistributorUpdated(address rewardDistributor);
+    event FrontendRegistryUpdated(address frontendRegistry);
+    event CategoryRegistryUpdated(address categoryRegistry);
+    event TreasuryUpdated(address treasury);
+    event RevealGracePeriodUpdated(uint256 revealGracePeriod);
+    event VoterIdNFTUpdated(address voterIdNFT);
+    event ParticipationPoolUpdated(address participationPool);
+    event ConfigUpdated(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters);
+
+    constructor(address governance) {
+        if (governance == address(0)) revert InvalidAddress();
+
+        _grantRole(DEFAULT_ADMIN_ROLE, governance);
+        _grantRole(CONFIG_ROLE, governance);
+
+        config = RoundLib.RoundConfig({
+            epochDuration: uint32(20 minutes),
+            maxDuration: uint32(7 days),
+            minVoters: uint16(3),
+            maxVoters: uint16(1000)
+        });
+        revealGracePeriod = 60 minutes;
+    }
+
+    function setRewardDistributor(address value) external onlyRole(CONFIG_ROLE) {
+        _setRewardDistributor(value);
+    }
+
+    function setFrontendRegistry(address value) external onlyRole(CONFIG_ROLE) {
+        _setFrontendRegistry(value);
+    }
+
+    function setCategoryRegistry(address value) external onlyRole(CONFIG_ROLE) {
+        _setCategoryRegistry(value);
+    }
+
+    function setTreasury(address value) external onlyRole(CONFIG_ROLE) {
+        _setTreasury(value);
+    }
+
+    function setRevealGracePeriod(uint256 value) external onlyRole(CONFIG_ROLE) {
+        _setRevealGracePeriod(value);
+    }
+
+    function setVoterIdNFT(address value) external onlyRole(CONFIG_ROLE) {
+        _setVoterIdNFT(value);
+    }
+
+    function setParticipationPool(address value) external onlyRole(CONFIG_ROLE) {
+        _setParticipationPool(value);
+    }
+
+    function setConfig(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters)
+        external
+        onlyRole(CONFIG_ROLE)
+    {
+        _setConfig(epochDuration, maxDuration, minVoters, maxVoters);
+    }
+
+    function _setRewardDistributor(address value) internal {
+        if (value == address(0)) revert InvalidAddress();
+        if (rewardDistributor != address(0)) revert InvalidConfig();
+        rewardDistributor = value;
+        emit RewardDistributorUpdated(value);
+    }
+
+    function _setFrontendRegistry(address value) internal {
+        if (value == address(0)) revert InvalidAddress();
+        frontendRegistry = value;
+        emit FrontendRegistryUpdated(value);
+    }
+
+    function _setCategoryRegistry(address value) internal {
+        if (value == address(0)) revert InvalidAddress();
+        categoryRegistry = value;
+        emit CategoryRegistryUpdated(value);
+    }
+
+    function _setTreasury(address value) internal {
+        if (value == address(0)) revert InvalidAddress();
+        treasury = value;
+        emit TreasuryUpdated(value);
+    }
+
+    function _setRevealGracePeriod(uint256 value) internal {
+        if (value < config.epochDuration) revert InvalidConfig();
+        revealGracePeriod = value;
+        emit RevealGracePeriodUpdated(value);
+    }
+
+    function _setVoterIdNFT(address value) internal {
+        if (value == address(0)) revert InvalidAddress();
+        voterIdNFT = value;
+        emit VoterIdNFTUpdated(value);
+    }
+
+    function _setParticipationPool(address value) internal {
+        if (value == address(0)) revert InvalidAddress();
+        participationPool = value;
+        emit ParticipationPoolUpdated(value);
+    }
+
+    function _setConfig(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters) internal {
+        if (epochDuration < 5 minutes) revert InvalidConfig();
+        if (maxDuration < 1 days || maxDuration > 30 days) revert InvalidConfig();
+        if (maxDuration / epochDuration > 2016) revert InvalidConfig();
+        if (minVoters < 2) revert InvalidConfig();
+        if (maxVoters < minVoters || maxVoters > 10000) revert InvalidConfig();
+
+        if (revealGracePeriod > 0 && revealGracePeriod < epochDuration) {
+            revealGracePeriod = epochDuration;
+            emit RevealGracePeriodUpdated(epochDuration);
+        }
+
+        config = RoundLib.RoundConfig({
+            epochDuration: uint32(epochDuration),
+            maxDuration: uint32(maxDuration),
+            minVoters: uint16(minVoters),
+            maxVoters: uint16(maxVoters)
+        });
+
+        emit ConfigUpdated(epochDuration, maxDuration, minVoters, maxVoters);
+    }
+}

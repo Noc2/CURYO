@@ -3,7 +3,8 @@ pragma solidity ^0.8.20;
 
 import { ScaffoldETHDeploy } from "./DeployHelpers.s.sol";
 import { console } from "forge-std/console.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { TransparentUpgradeableProxy } from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
 import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
@@ -14,6 +15,7 @@ import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol"
 import { FrontendRegistry } from "../contracts/FrontendRegistry.sol";
 import { CategoryRegistry } from "../contracts/CategoryRegistry.sol";
 import { ProfileRegistry } from "../contracts/ProfileRegistry.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
 import { ParticipationPool } from "../contracts/ParticipationPool.sol";
@@ -22,12 +24,15 @@ import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVeri
 import { IIdentityVerificationHubV2 } from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
 import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
 
-/// @notice Deploy script for all Curyo contracts with UUPS proxies.
+/// @notice Deploy script for all Curyo contracts with transparent proxies.
 /// @dev All protocol operations use cREP token only (no stablecoins).
 ///      Local dev: deployer is governance (all roles go to deployer).
 ///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles.
 contract DeployCuryo is ScaffoldETHDeploy {
     error DeploymentRoleVerificationFailed(string check);
+
+    bytes32 internal constant ERC1967_ADMIN_SLOT =
+        bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
 
     // Timelock delay: 2 days for standard operations
     uint256 public constant TIMELOCK_MIN_DELAY = 2 days;
@@ -98,38 +103,39 @@ contract DeployCuryo is ScaffoldETHDeploy {
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         ProfileRegistry profileRegistryImpl = new ProfileRegistry();
 
-        // 5. Deploy proxies with initialization (governance gets all permanent roles)
-
-        // FrontendRegistry proxy
-        ERC1967Proxy frontendRegistryProxy = new ERC1967Proxy(
+        // 5. Deploy transparent proxies with initialization (governance owns each ProxyAdmin)
+        TransparentUpgradeableProxy frontendRegistryProxy = new TransparentUpgradeableProxy(
             address(frontendRegistryImpl),
+            governance,
             abi.encodeCall(FrontendRegistry.initialize, (deployer, governance, address(crepToken)))
         );
         FrontendRegistry frontendRegistry = FrontendRegistry(address(frontendRegistryProxy));
 
-        // ProfileRegistry proxy
-        ERC1967Proxy profileRegistryProxy = new ERC1967Proxy(
-            address(profileRegistryImpl), abi.encodeCall(ProfileRegistry.initialize, (deployer, governance))
+        TransparentUpgradeableProxy profileRegistryProxy = new TransparentUpgradeableProxy(
+            address(profileRegistryImpl), governance, abi.encodeCall(ProfileRegistry.initialize, (deployer, governance))
         );
         ProfileRegistry profileRegistry = ProfileRegistry(address(profileRegistryProxy));
 
-        // ContentRegistry proxy
-        ERC1967Proxy registryProxy = new ERC1967Proxy(
+        TransparentUpgradeableProxy registryProxy = new TransparentUpgradeableProxy(
             address(registryImpl),
+            governance,
             abi.encodeCall(ContentRegistry.initialize, (deployer, governance, address(crepToken)))
         );
         ContentRegistry registry = ContentRegistry(address(registryProxy));
+        ProtocolConfig protocolConfig = new ProtocolConfig(governance);
 
-        // RoundVotingEngine proxy
-        ERC1967Proxy votingEngineProxy = new ERC1967Proxy(
+        TransparentUpgradeableProxy votingEngineProxy = new TransparentUpgradeableProxy(
             address(votingEngineImpl),
-            abi.encodeCall(RoundVotingEngine.initialize, (deployer, governance, address(crepToken), address(registry)))
+            governance,
+            abi.encodeCall(
+                RoundVotingEngine.initialize, (governance, address(crepToken), address(registry), address(protocolConfig))
+            )
         );
         RoundVotingEngine votingEngine = RoundVotingEngine(address(votingEngineProxy));
 
-        // RoundRewardDistributor proxy (no admin needed — all deps at init)
-        ERC1967Proxy rewardDistributorProxy = new ERC1967Proxy(
+        TransparentUpgradeableProxy rewardDistributorProxy = new TransparentUpgradeableProxy(
             address(rewardDistributorImpl),
+            governance,
             abi.encodeCall(
                 RoundRewardDistributor.initialize,
                 (governance, address(crepToken), address(votingEngine), address(registry))
@@ -150,15 +156,15 @@ contract DeployCuryo is ScaffoldETHDeploy {
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
         voterIdNFT.setStakeRecorder(address(votingEngine));
 
-        // 8. Wire contracts together (deployer uses temporary CONFIG_ROLE/ADMIN_ROLE)
+        // 8. Wire contracts together (deployer uses temporary config/admin roles where needed)
         registry.setVotingEngine(address(votingEngine));
         registry.setCategoryRegistry(address(categoryRegistry));
-        votingEngine.setRewardDistributor(address(rewardDistributor));
-        votingEngine.setFrontendRegistry(address(frontendRegistry));
-        votingEngine.setCategoryRegistry(address(categoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(categoryRegistry));
 
         // Wire VoterIdNFT to all contracts
-        votingEngine.setVoterIdNFT(address(voterIdNFT));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setVoterIdNFT(address(voterIdNFT));
         registry.setVoterIdNFT(address(voterIdNFT));
         categoryRegistry.setVoterIdNFT(address(voterIdNFT));
         frontendRegistry.setVoterIdNFT(address(voterIdNFT));
@@ -177,9 +183,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         // 11. Set treasury, cancellation fee sink, and configure round parameters
         registry.setBonusPool(governance);
         registry.setTreasury(governance);
-        votingEngine.setTreasury(governance);
-        votingEngine.setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters
-        votingEngine.setKeeperReward(0.1e6); // 0.1 cREP per keeper operation
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(governance);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters
 
         // 12. Fund consensus reserve (pre-funded reserve for unanimous round rewards)
         uint256 consensusPoolAmount = 4_000_000 * 1e6; // 4M cREP
@@ -192,13 +197,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
         crepToken.approve(address(votingEngine), consensusPoolAmount);
         votingEngine.addToConsensusReserve(consensusPoolAmount);
         console.log("Funded 4M cREP to consensus reserve");
-
-        // 12a. Fund keeper reward pool (dedicated pool so keeper rewards don't drain user stakes)
-        uint256 keeperPoolAmount = 100_000 * 1e6; // 100K cREP
-        crepToken.mint(deployer, keeperPoolAmount);
-        crepToken.approve(address(votingEngine), keeperPoolAmount);
-        votingEngine.fundKeeperRewardPool(keeperPoolAmount);
-        console.log("Funded 100K cREP to keeper reward pool");
 
         // 12a. Fund treasury (10M cREP to governance timelock)
         uint256 treasuryAmount = 10_000_000 * 1e6; // 10M cREP
@@ -213,7 +211,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         crepToken.mint(deployer, participationAmount);
         crepToken.approve(address(participationPool), participationAmount);
         participationPool.depositPool(participationAmount);
-        votingEngine.setParticipationPool(address(participationPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
         registry.setParticipationPool(address(participationPool));
         if (!isLocalDev) {
             participationPool.transferOwnership(governance);
@@ -343,9 +341,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
             crepToken.renounceRole(crepToken.CONFIG_ROLE(), deployer);
             crepToken.renounceRole(crepToken.DEFAULT_ADMIN_ROLE(), deployer);
 
-            // Renounce CONFIG_ROLE on protocol contracts
+            // Renounce deployer config/admin roles on protocol contracts
             registry.renounceRole(registry.CONFIG_ROLE(), deployer);
-            votingEngine.renounceRole(votingEngine.CONFIG_ROLE(), deployer);
 
             // Renounce ADMIN_ROLE on registries
             frontendRegistry.renounceRole(frontendRegistry.ADMIN_ROLE(), deployer);
@@ -372,6 +369,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 crepToken: crepToken,
                 registry: registry,
                 votingEngine: votingEngine,
+                protocolConfig: protocolConfig,
                 rewardDistributor: rewardDistributor,
                 frontendRegistry: frontendRegistry,
                 profileRegistry: profileRegistry,
@@ -392,6 +390,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         deployments.push(Deployment("ProfileRegistry", address(profileRegistryProxy)));
         deployments.push(Deployment("ContentRegistry", address(registryProxy)));
         deployments.push(Deployment("RoundVotingEngine", address(votingEngineProxy)));
+        deployments.push(Deployment("ProtocolConfig", address(protocolConfig)));
         deployments.push(Deployment("RoundRewardDistributor", address(rewardDistributorProxy)));
         deployments.push(Deployment("CategoryRegistry", address(categoryRegistry)));
         deployments.push(Deployment("VoterIdNFT", address(voterIdNFT)));
@@ -407,6 +406,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         console.log("ProfileRegistry:", address(profileRegistry));
         console.log("ContentRegistry:", address(registry));
         console.log("RoundVotingEngine:", address(votingEngine));
+        console.log("ProtocolConfig:", address(protocolConfig));
         console.log("RoundRewardDistributor:", address(rewardDistributor));
         console.log("CategoryRegistry:", address(categoryRegistry));
         console.log("VoterIdNFT:", address(voterIdNFT));
@@ -430,6 +430,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         CuryoReputation crepToken,
         ContentRegistry registry,
         RoundVotingEngine votingEngine,
+        ProtocolConfig protocolConfig,
         RoundRewardDistributor rewardDistributor,
         FrontendRegistry frontendRegistry,
         ProfileRegistry profileRegistry,
@@ -452,8 +453,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _requireHasRole(address(registry), registry.ADMIN_ROLE(), governance, "ContentRegistry governance admin");
         _requireHasRole(address(registry), registry.CONFIG_ROLE(), governance, "ContentRegistry governance config");
         _requireHasRole(address(registry), registry.PAUSER_ROLE(), governance, "ContentRegistry governance pauser");
-        _requireHasRole(address(registry), registry.UPGRADER_ROLE(), governance, "ContentRegistry governance upgrader");
         _requireLacksRole(address(registry), registry.CONFIG_ROLE(), deployerAddress, "ContentRegistry deployer config");
+        _requireProxyAdminOwner(address(registry), governance, "ContentRegistry proxy admin owner");
 
         _requireHasRole(
             address(votingEngine),
@@ -461,18 +462,16 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             "RoundVotingEngine governance default admin"
         );
+        _requireHasRole(address(votingEngine), votingEngine.PAUSER_ROLE(), governance, "RoundVotingEngine governance pauser");
+        _requireProxyAdminOwner(address(votingEngine), governance, "RoundVotingEngine proxy admin owner");
+
         _requireHasRole(
-            address(votingEngine), votingEngine.ADMIN_ROLE(), governance, "RoundVotingEngine governance admin"
+            address(protocolConfig),
+            protocolConfig.DEFAULT_ADMIN_ROLE(),
+            governance,
+            "ProtocolConfig governance default admin"
         );
-        _requireHasRole(
-            address(votingEngine), votingEngine.CONFIG_ROLE(), governance, "RoundVotingEngine governance config"
-        );
-        _requireHasRole(
-            address(votingEngine), votingEngine.UPGRADER_ROLE(), governance, "RoundVotingEngine governance upgrader"
-        );
-        _requireLacksRole(
-            address(votingEngine), votingEngine.CONFIG_ROLE(), deployerAddress, "RoundVotingEngine deployer config"
-        );
+        _requireHasRole(address(protocolConfig), protocolConfig.CONFIG_ROLE(), governance, "ProtocolConfig governance config");
 
         _requireHasRole(
             address(rewardDistributor),
@@ -480,12 +479,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             "RoundRewardDistributor governance default admin"
         );
-        _requireHasRole(
-            address(rewardDistributor),
-            rewardDistributor.UPGRADER_ROLE(),
-            governance,
-            "RoundRewardDistributor governance upgrader"
-        );
+        _requireProxyAdminOwner(address(rewardDistributor), governance, "RoundRewardDistributor proxy admin owner");
 
         _requireHasRole(
             address(frontendRegistry),
@@ -502,15 +496,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             "FrontendRegistry governance governance-role"
         );
-        _requireHasRole(
-            address(frontendRegistry),
-            frontendRegistry.UPGRADER_ROLE(),
-            governance,
-            "FrontendRegistry governance upgrader"
-        );
         _requireLacksRole(
             address(frontendRegistry), frontendRegistry.ADMIN_ROLE(), deployerAddress, "FrontendRegistry deployer admin"
         );
+        _requireProxyAdminOwner(address(frontendRegistry), governance, "FrontendRegistry proxy admin owner");
 
         _requireHasRole(
             address(profileRegistry),
@@ -521,12 +510,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _requireHasRole(
             address(profileRegistry), profileRegistry.ADMIN_ROLE(), governance, "ProfileRegistry governance admin"
         );
-        _requireHasRole(
-            address(profileRegistry), profileRegistry.UPGRADER_ROLE(), governance, "ProfileRegistry governance upgrader"
-        );
         _requireLacksRole(
             address(profileRegistry), profileRegistry.ADMIN_ROLE(), deployerAddress, "ProfileRegistry deployer admin"
         );
+        _requireProxyAdminOwner(address(profileRegistry), governance, "ProfileRegistry proxy admin owner");
 
         _requireHasRole(
             address(categoryRegistry),
@@ -568,6 +555,17 @@ contract DeployCuryo is ScaffoldETHDeploy {
         if (IAccessControl(target).hasRole(role, account)) {
             revert DeploymentRoleVerificationFailed(check);
         }
+    }
+
+    function _requireProxyAdminOwner(address proxy, address expectedOwner, string memory check) internal view {
+        address proxyAdmin = _proxyAdminAddress(proxy);
+        if (ProxyAdmin(proxyAdmin).owner() != expectedOwner) {
+            revert DeploymentRoleVerificationFailed(check);
+        }
+    }
+
+    function _proxyAdminAddress(address proxy) internal view returns (address) {
+        return address(uint160(uint256(vm.load(proxy, ERC1967_ADMIN_SLOT))));
     }
 
     function _require(bool condition, string memory check) internal pure {

@@ -7,6 +7,7 @@ import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.so
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
@@ -93,7 +94,7 @@ contract SecurityReentrancyTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -102,9 +103,9 @@ contract SecurityReentrancyTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
@@ -246,7 +247,7 @@ contract SecurityTransferAndCallTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -255,9 +256,9 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
@@ -380,7 +381,7 @@ contract SecuritySettlementTimingTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -389,9 +390,9 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
@@ -511,6 +512,7 @@ contract SecurityAccessControlTest is Test {
     CuryoReputation crepToken;
     ContentRegistry registry;
     RoundVotingEngine votingEngine;
+    address protocolConfigAddress;
 
     address owner = address(0xA);
     address treasury = address(0xB);
@@ -546,22 +548,23 @@ contract SecurityAccessControlTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
+        protocolConfigAddress = address(votingEngine.protocolConfig());
 
         registry.setVotingEngine(address(votingEngine));
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setTreasury(treasury);
-        votingEngine.setConfig(5 minutes, 7 days, 2, 200);
+        ProtocolConfig(protocolConfigAddress).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(protocolConfigAddress).setTreasury(treasury);
+        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 2, 200);
 
         vm.stopPrank();
 
-        CONFIG_ROLE_ENGINE = votingEngine.CONFIG_ROLE();
+        CONFIG_ROLE_ENGINE = ProtocolConfig(protocolConfigAddress).CONFIG_ROLE();
         PAUSER_ROLE_ENGINE = votingEngine.PAUSER_ROLE();
         CONFIG_ROLE_REGISTRY = registry.CONFIG_ROLE();
         PAUSER_ROLE_REGISTRY = registry.PAUSER_ROLE();
@@ -578,31 +581,31 @@ contract SecurityAccessControlTest is Test {
     function test_ACL_Engine_setRewardDistributor_Unauthorized() public {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.setRewardDistributor(attacker);
+        ProtocolConfig(protocolConfigAddress).setRewardDistributor(attacker);
     }
 
     function test_ACL_Engine_setFrontendRegistry_Unauthorized() public {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.setFrontendRegistry(attacker);
+        ProtocolConfig(protocolConfigAddress).setFrontendRegistry(attacker);
     }
 
     function test_ACL_Engine_setCategoryRegistry_Unauthorized() public {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.setCategoryRegistry(attacker);
+        ProtocolConfig(protocolConfigAddress).setCategoryRegistry(attacker);
     }
 
     function test_ACL_Engine_setTreasury_Unauthorized() public {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.setTreasury(attacker);
+        ProtocolConfig(protocolConfigAddress).setTreasury(attacker);
     }
 
     function test_ACL_Engine_setConfig_Unauthorized() public {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.setConfig(5 minutes, 7 days, 2, 200);
+        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 2, 200);
     }
 
     function test_ACL_Engine_addToConsensusReserve_IsPermissionless() public {
@@ -613,28 +616,16 @@ contract SecurityAccessControlTest is Test {
         votingEngine.addToConsensusReserve(100);
     }
 
-    function test_ACL_Engine_fundKeeperRewardPool_Unauthorized() public {
-        vm.prank(attacker);
-        _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.fundKeeperRewardPool(100);
-    }
-
-    function test_ACL_Engine_setKeeperReward_Unauthorized() public {
-        vm.prank(attacker);
-        _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.setKeeperReward(100);
-    }
-
     function test_ACL_Engine_setVoterIdNFT_Unauthorized() public {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.setVoterIdNFT(attacker);
+        ProtocolConfig(protocolConfigAddress).setVoterIdNFT(attacker);
     }
 
     function test_ACL_Engine_setParticipationPool_Unauthorized() public {
         vm.prank(attacker);
         _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
-        votingEngine.setParticipationPool(attacker);
+        ProtocolConfig(protocolConfigAddress).setParticipationPool(attacker);
     }
 
     // ── RoundVotingEngine — PAUSER_ROLE (2 tests) ──

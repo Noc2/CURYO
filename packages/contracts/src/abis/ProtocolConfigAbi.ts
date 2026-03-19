@@ -1,12 +1,18 @@
-export const ProfileRegistryAbi = [
+export const ProtocolConfigAbi = [
   {
     "type": "constructor",
-    "inputs": [],
+    "inputs": [
+      {
+        "name": "governance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "ADMIN_ROLE",
+    "name": "CONFIG_ROLE",
     "inputs": [],
     "outputs": [
       {
@@ -32,60 +38,8 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "MAX_NAME_LENGTH",
+    "name": "categoryRegistry",
     "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MAX_STRATEGY_LENGTH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MIN_NAME_LENGTH",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "clearAvatarAccent",
-    "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "getAddressByName",
-    "inputs": [
-      {
-        "name": "name",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
     "outputs": [
       {
         "name": "",
@@ -97,94 +51,41 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "getAvatarAccent",
-    "inputs": [
-      {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
+    "name": "config",
+    "inputs": [],
     "outputs": [
       {
-        "name": "enabled",
-        "type": "bool",
-        "internalType": "bool"
+        "name": "epochDuration",
+        "type": "uint32",
+        "internalType": "uint32"
       },
       {
-        "name": "rgb",
-        "type": "uint24",
-        "internalType": "uint24"
+        "name": "maxDuration",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "minVoters",
+        "type": "uint16",
+        "internalType": "uint16"
+      },
+      {
+        "name": "maxVoters",
+        "type": "uint16",
+        "internalType": "uint16"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "function",
-    "name": "getProfile",
-    "inputs": [
-      {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
+    "name": "frontendRegistry",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "tuple",
-        "internalType": "struct IProfileRegistry.Profile",
-        "components": [
-          {
-            "name": "name",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "strategy",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "createdAt",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "updatedAt",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getRegisteredAddressesPaginated",
-    "inputs": [
-      {
-        "name": "offset",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "limit",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "addresses",
-        "type": "address[]",
-        "internalType": "address[]"
-      },
-      {
-        "name": "total",
-        "type": "uint256",
-        "internalType": "uint256"
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -228,25 +129,6 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "hasProfile",
-    "inputs": [
-      {
-        "name": "user",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "hasRole",
     "inputs": [
       {
@@ -271,37 +153,13 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "initialize",
-    "inputs": [
-      {
-        "name": "_admin",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "_governance",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "isNameTaken",
-    "inputs": [
-      {
-        "name": "name",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
+    "name": "participationPool",
+    "inputs": [],
     "outputs": [
       {
         "name": "",
-        "type": "bool",
-        "internalType": "bool"
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -326,6 +184,19 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "revealGracePeriod",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "revokeRole",
     "inputs": [
       {
@@ -344,12 +215,25 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "setAvatarAccent",
+    "name": "rewardDistributor",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setCategoryRegistry",
     "inputs": [
       {
-        "name": "rgb",
-        "type": "uint24",
-        "internalType": "uint24"
+        "name": "value",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -357,17 +241,92 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "setProfile",
+    "name": "setConfig",
     "inputs": [
       {
-        "name": "name",
-        "type": "string",
-        "internalType": "string"
+        "name": "epochDuration",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        "name": "strategy",
-        "type": "string",
-        "internalType": "string"
+        "name": "maxDuration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "minVoters",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxVoters",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setFrontendRegistry",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setParticipationPool",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setRevealGracePeriod",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setRewardDistributor",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setTreasury",
+    "inputs": [
+      {
+        "name": "value",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -378,7 +337,7 @@ export const ProfileRegistryAbi = [
     "name": "setVoterIdNFT",
     "inputs": [
       {
-        "name": "_voterIdNFT",
+        "name": "value",
         "type": "address",
         "internalType": "address"
       }
@@ -407,25 +366,38 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "treasury",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "voterIdNFT",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract IVoterIdNFT"
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
   },
   {
     "type": "event",
-    "name": "AvatarAccentCleared",
+    "name": "CategoryRegistryUpdated",
     "inputs": [
       {
-        "name": "user",
+        "name": "categoryRegistry",
         "type": "address",
-        "indexed": true,
+        "indexed": false,
         "internalType": "address"
       }
     ],
@@ -433,82 +405,83 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "event",
-    "name": "AvatarAccentUpdated",
+    "name": "ConfigUpdated",
     "inputs": [
       {
-        "name": "user",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        "name": "epochDuration",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       },
       {
-        "name": "rgb",
-        "type": "uint24",
+        "name": "maxDuration",
+        "type": "uint256",
         "indexed": false,
-        "internalType": "uint24"
+        "internalType": "uint256"
+      },
+      {
+        "name": "minVoters",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "maxVoters",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "Initialized",
+    "name": "FrontendRegistryUpdated",
     "inputs": [
       {
-        "name": "version",
-        "type": "uint64",
+        "name": "frontendRegistry",
+        "type": "address",
         "indexed": false,
-        "internalType": "uint64"
+        "internalType": "address"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "ProfileCreated",
+    "name": "ParticipationPoolUpdated",
     "inputs": [
       {
-        "name": "user",
+        "name": "participationPool",
         "type": "address",
-        "indexed": true,
+        "indexed": false,
         "internalType": "address"
-      },
-      {
-        "name": "name",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
-        "name": "strategy",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
       }
     ],
     "anonymous": false
   },
   {
     "type": "event",
-    "name": "ProfileUpdated",
+    "name": "RevealGracePeriodUpdated",
     "inputs": [
       {
-        "name": "user",
+        "name": "revealGracePeriod",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RewardDistributorUpdated",
+    "inputs": [
+      {
+        "name": "rewardDistributor",
         "type": "address",
-        "indexed": true,
+        "indexed": false,
         "internalType": "address"
-      },
-      {
-        "name": "name",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
-        "name": "strategy",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
       }
     ],
     "anonymous": false
@@ -590,6 +563,19 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "event",
+    "name": "TreasuryUpdated",
+    "inputs": [
+      {
+        "name": "treasury",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "VoterIdNFTUpdated",
     "inputs": [
       {
@@ -624,12 +610,12 @@ export const ProfileRegistryAbi = [
   },
   {
     "type": "error",
-    "name": "InvalidInitialization",
+    "name": "InvalidAddress",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "NotInitializing",
+    "name": "InvalidConfig",
     "inputs": []
   }
 ] as const;

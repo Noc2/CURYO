@@ -10,6 +10,7 @@ import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVeri
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -31,8 +32,8 @@ contract MockVotingEngineForFR is IRoundVotingEngine {
         totalAdded += amount;
     }
 
-    function contentCommitCount(uint256) external pure override returns (uint256) {
-        return 0;
+    function hasCommits(uint256) external pure override returns (bool) {
+        return false;
     }
 
     function currentRoundId(uint256) external pure override returns (uint256) {
@@ -524,6 +525,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
     ContentRegistry public registry;
     RoundVotingEngine public engine;
     RoundRewardDistributor public distributor;
+    address internal protocolConfigAddress;
 
     address public owner = address(0xA);
     address public submitter = address(0xB);
@@ -558,10 +560,14 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry)))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crep), address(registry), address(new ProtocolConfig(owner)))
+                    )
                 )
             )
         );
+        protocolConfigAddress = address(engine.protocolConfig());
 
         distributor = RoundRewardDistributor(
             address(
@@ -578,10 +584,10 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasury);
-        engine.setConfig(5 minutes, 7 days, 2, 200);
+        ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(distributor));
+        ProtocolConfig(protocolConfigAddress).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(protocolConfigAddress).setTreasury(treasury);
+        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 2, 200);
 
         crep.mint(owner, 1_000_000e6);
         crep.approve(address(engine), 1_000_000e6);
@@ -600,37 +606,37 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
     function test_SetConfigEpochDurationTooShort() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(4 minutes, 7 days, 2, 200);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(protocolConfigAddress).setConfig(4 minutes, 7 days, 2, 200);
     }
 
     function test_SetConfigMaxDurationTooShort() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(5 minutes, 23 hours, 2, 200);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 23 hours, 2, 200);
     }
 
     function test_SetConfigMinVotersTooLow() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(5 minutes, 7 days, 1, 200);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 1, 200);
     }
 
     function test_SetConfigMaxVotersLessThanMin() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(5 minutes, 7 days, 5, 4);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 5, 4);
     }
 
     function test_SetConfigMaxVotersExceedsLimit() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(5 minutes, 7 days, 2, 10001);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(protocolConfigAddress).setConfig(5 minutes, 7 days, 2, 10001);
     }
 
     function test_SetConfigValidBoundary() public {
         vm.prank(owner);
-        engine.setConfig(1 hours, 14 days, 3, 500);
+        ProtocolConfig(protocolConfigAddress).setConfig(1 hours, 14 days, 3, 500);
     }
 
     // --- Zero amount reverts ---
@@ -646,45 +652,45 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         engine.addToConsensusReserve(0);
     }
 
-    function test_FundKeeperRewardPoolZeroReverts() public {
-        vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.ZeroAmount.selector);
-        engine.fundKeeperRewardPool(0);
-    }
-
     // --- Initialize validation ---
-
-    function test_InitializeZeroAdminReverts() public {
-        RoundVotingEngine impl = new RoundVotingEngine();
-        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        new ERC1967Proxy(
-            address(impl),
-            abi.encodeCall(RoundVotingEngine.initialize, (address(0), owner, address(crep), address(registry)))
-        );
-    }
 
     function test_InitializeZeroGovernanceReverts() public {
         RoundVotingEngine impl = new RoundVotingEngine();
+        address newProtocolConfig = address(new ProtocolConfig(owner));
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
             address(impl),
-            abi.encodeCall(RoundVotingEngine.initialize, (owner, address(0), address(crep), address(registry)))
+            abi.encodeCall(
+                RoundVotingEngine.initialize, (address(0), address(crep), address(registry), newProtocolConfig)
+            )
         );
     }
 
     function test_InitializeZeroTokenReverts() public {
         RoundVotingEngine impl = new RoundVotingEngine();
+        address newProtocolConfig = address(new ProtocolConfig(owner));
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
-            address(impl), abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(0), address(registry)))
+            address(impl),
+            abi.encodeCall(RoundVotingEngine.initialize, (owner, address(0), address(registry), newProtocolConfig))
         );
     }
 
     function test_InitializeZeroRegistryReverts() public {
         RoundVotingEngine impl = new RoundVotingEngine();
+        address newProtocolConfig = address(new ProtocolConfig(owner));
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
-            address(impl), abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(0)))
+            address(impl),
+            abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crep), address(0), newProtocolConfig))
+        );
+    }
+
+    function test_InitializeZeroProtocolConfigReverts() public {
+        RoundVotingEngine impl = new RoundVotingEngine();
+        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
+        new ERC1967Proxy(
+            address(impl), abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crep), address(registry), address(0)))
         );
     }
 
@@ -783,7 +789,10 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl2),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry)))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crep), address(registry), address(new ProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -803,10 +812,10 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         registry.setVotingEngine(address(engine2));
         MockCategoryRegistry mockCategoryRegistry2 = new MockCategoryRegistry();
         mockCategoryRegistry2.seedDefaultTestCategories();
-        engine2.setCategoryRegistry(address(mockCategoryRegistry2));
-        engine2.setRewardDistributor(address(dist2));
-        engine2.setTreasury(treasury);
-        engine2.setConfig(5 minutes, 7 days, 2, 200);
+        ProtocolConfig(address(engine2.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry2));
+        ProtocolConfig(address(engine2.protocolConfig())).setRewardDistributor(address(dist2));
+        ProtocolConfig(address(engine2.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine2.protocolConfig())).setConfig(5 minutes, 7 days, 2, 200);
 
         vm.stopPrank();
 
@@ -857,43 +866,43 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
     function test_SetRewardDistributorZeroReverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        engine.setRewardDistributor(address(0));
+        ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(0));
     }
 
     function test_SetRewardDistributorSecondCallReverts() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setRewardDistributor(address(0xBEEF));
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(protocolConfigAddress).setRewardDistributor(address(0xBEEF));
     }
 
     function test_SetFrontendRegistryZeroReverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        engine.setFrontendRegistry(address(0));
+        ProtocolConfig(protocolConfigAddress).setFrontendRegistry(address(0));
     }
 
     function test_SetCategoryRegistryZeroReverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        engine.setCategoryRegistry(address(0));
+        ProtocolConfig(protocolConfigAddress).setCategoryRegistry(address(0));
     }
 
     function test_SetTreasuryZeroReverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        engine.setTreasury(address(0));
+        ProtocolConfig(protocolConfigAddress).setTreasury(address(0));
     }
 
     function test_SetVoterIdNFTZeroReverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        engine.setVoterIdNFT(address(0));
+        ProtocolConfig(protocolConfigAddress).setVoterIdNFT(address(0));
     }
 
     function test_SetParticipationPoolZeroReverts() public {
         vm.prank(owner);
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        engine.setParticipationPool(address(0));
+        ProtocolConfig(protocolConfigAddress).setParticipationPool(address(0));
     }
 
     // --- TransferReward authorization ---

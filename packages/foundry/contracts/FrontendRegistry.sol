@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IFrontendRegistry } from "./interfaces/IFrontendRegistry.sol";
@@ -18,8 +17,7 @@ contract FrontendRegistry is
     IFrontendRegistry,
     Initializable,
     AccessControlUpgradeable,
-    ReentrancyGuardTransient,
-    UUPSUpgradeable
+    ReentrancyGuardTransient
 {
     using SafeERC20 for IERC20;
 
@@ -27,7 +25,6 @@ contract FrontendRegistry is
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant GOVERNANCE_ROLE = keccak256("GOVERNANCE_ROLE");
     bytes32 public constant FEE_CREDITOR_ROLE = keccak256("FEE_CREDITOR_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /// @notice Maximum cREP that can be credited in a single creditFees() call (10,000 cREP with 6 decimals)
     uint256 public constant MAX_FEE_CREDIT = 10_000e6;
@@ -93,7 +90,6 @@ contract FrontendRegistry is
         _grantRole(DEFAULT_ADMIN_ROLE, _governance);
         _grantRole(ADMIN_ROLE, _governance);
         _grantRole(GOVERNANCE_ROLE, _governance);
-        _grantRole(UPGRADER_ROLE, _governance);
 
         // Admin gets only ADMIN_ROLE for initial cross-contract wiring
         if (_admin != _governance) {
@@ -364,8 +360,6 @@ contract FrontendRegistry is
     function removeFeeCreditor(address creditor) external onlyRole(ADMIN_ROLE) {
         _revokeRole(FEE_CREDITOR_ROLE, creditor);
     }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
 
     function _requestDeregister(address frontend) internal {
         Frontend storage f = frontends[frontend];

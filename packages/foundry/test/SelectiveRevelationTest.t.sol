@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -57,7 +58,7 @@ contract SelectiveRevelationTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -78,11 +79,11 @@ contract SelectiveRevelationTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setRewardDistributor(address(rewardDistributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasury);
-        engine.setConfig(EPOCH, 7 days, 3, 1000);
-        engine.setRevealGracePeriod(GRACE_PERIOD);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH, 7 days, 3, 1000);
+        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(GRACE_PERIOD);
 
         crepToken.mint(owner, 2_000_000e6);
         crepToken.approve(address(engine), 500_000e6);
@@ -333,23 +334,23 @@ contract SelectiveRevelationTest is VotingTestBase {
     /// @notice CONFIG_ROLE can update revealGracePeriod.
     function test_SetRevealGracePeriod_ConfigRole() public {
         vm.prank(owner);
-        engine.setRevealGracePeriod(2 hours);
-        assertEq(engine.revealGracePeriod(), 2 hours);
+        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(2 hours);
+        assertEq(ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod(), 2 hours);
     }
 
     /// @notice revealGracePeriod must be >= epochDuration.
     function test_SetRevealGracePeriod_BelowEpochDuration_Reverts() public {
         // epochDuration is 1 hour; 30 min < 1 hour → revert
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setRevealGracePeriod(30 minutes);
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(30 minutes);
     }
 
     /// @notice Non-CONFIG_ROLE cannot set revealGracePeriod.
     function test_SetRevealGracePeriod_Unauthorized_Reverts() public {
         vm.prank(voters[0]);
         vm.expectRevert();
-        engine.setRevealGracePeriod(2 hours);
+        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(2 hours);
     }
 
     function test_RevealGracePeriodSnapshot_OldRoundKeepsOriginalValue() public {
@@ -368,7 +369,7 @@ contract SelectiveRevelationTest is VotingTestBase {
         assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), GRACE_PERIOD);
 
         vm.prank(owner);
-        engine.setRevealGracePeriod(2 hours);
+        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(2 hours);
 
         vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
 
@@ -384,7 +385,7 @@ contract SelectiveRevelationTest is VotingTestBase {
 
     function test_RevealGracePeriodSnapshot_NewRoundUsesUpdatedValue() public {
         vm.prank(owner);
-        engine.setRevealGracePeriod(2 hours);
+        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(2 hours);
 
         uint256 contentId = _submitContent();
 

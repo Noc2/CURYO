@@ -9,6 +9,7 @@ import { MockIdentityVerificationHub } from "../contracts/mocks/MockIdentityVeri
 import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -31,8 +32,8 @@ contract MockVotingEngine3 is IRoundVotingEngine {
         totalAdded += amount;
     }
 
-    function contentCommitCount(uint256) external pure override returns (uint256) {
-        return 0;
+    function hasCommits(uint256) external pure override returns (bool) {
+        return false;
     }
 
     function currentRoundId(uint256) external pure override returns (uint256) {
@@ -712,7 +713,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crep), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crep), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -732,10 +733,10 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasury);
-        engine.setConfig(5 minutes, 7 days, 2, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 2, 200);
 
         crep.mint(owner, 2_000_000e6);
         crep.approve(address(engine), 1_000_000e6);
@@ -1078,118 +1079,30 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
         assertEq(round.downPool, STAKE);
     }
 
-    // --- Keeper reward pool ---
-
-    function test_KeeperRewardOnSettle() public {
-        vm.startPrank(owner);
-        crep.approve(address(engine), 1000e6);
-        engine.fundKeeperRewardPool(1000e6);
-        engine.setKeeperReward(10e6);
-        vm.stopPrank();
-
-        uint256 contentId = _submitContent();
-        // Use asymmetric stakes so round settles (not ties)
-        _commit(voter1, contentId, true, STAKE * 2);
-        _commit(voter2, contentId, false, STAKE);
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r.startTime + 5 minutes + 1);
-        bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, contentId, roundId);
-        for (uint256 i = 0; i < keys.length; i++) {
-            RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, contentId, roundId, keys[i]);
-            bool isUp = uint8(c.ciphertext[0]) == 1;
-            bytes32 s;
-            bytes memory ct = c.ciphertext;
-            assembly { s := mload(add(ct, 33)) }
-            engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, s);
-        }
-
-        uint256 keeperBefore = crep.balanceOf(keeper);
-        vm.prank(keeper);
-        engine.settleRound(contentId, roundId);
-
-        uint256 keeperAfter = crep.balanceOf(keeper);
-        assertEq(keeperAfter - keeperBefore, 10e6);
-    }
-
-    function test_KeeperRewardOnCancel_IsNotPaid() public {
-        vm.startPrank(owner);
-        crep.approve(address(engine), 1000e6);
-        engine.fundKeeperRewardPool(1000e6);
-        engine.setKeeperReward(10e6);
-        vm.stopPrank();
-
-        uint256 contentId = _submitContent();
-        _commit(voter1, contentId, true, STAKE);
-
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        vm.warp(block.timestamp + 7 days + 1);
-
-        uint256 keeperBefore = crep.balanceOf(keeper);
-        uint256 poolBefore = engine.keeperRewardPool();
-
-        vm.prank(keeper);
-        engine.cancelExpiredRound(contentId, roundId);
-
-        assertEq(crep.balanceOf(keeper) - keeperBefore, 0);
-        assertEq(engine.keeperRewardPool(), poolBefore);
-    }
-
-    // --- Keeper reward when pool empty (no reward paid) ---
-
-    function test_KeeperReward_EmptyPool_NoPayout() public {
-        vm.prank(owner);
-        engine.setKeeperReward(10e6);
-        // Don't fund pool
-
-        uint256 contentId = _submitContent();
-        _commit(voter1, contentId, true, STAKE);
-        _commit(voter2, contentId, false, STAKE);
-        uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
-        RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(r.startTime + 5 minutes + 1);
-        bytes32[] memory keys = RoundEngineReadHelpers.commitKeys(engine, contentId, roundId);
-        for (uint256 i = 0; i < keys.length; i++) {
-            RoundLib.Commit memory c = RoundEngineReadHelpers.commit(engine, contentId, roundId, keys[i]);
-            bool isUp = uint8(c.ciphertext[0]) == 1;
-            bytes32 s;
-            bytes memory ct = c.ciphertext;
-            assembly { s := mload(add(ct, 33)) }
-            engine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, s);
-        }
-
-        uint256 keeperBefore = crep.balanceOf(keeper);
-        vm.prank(keeper);
-        engine.settleRound(contentId, roundId);
-
-        assertEq(crep.balanceOf(keeper), keeperBefore); // no reward
-    }
-
     // --- setConfig boundary validations ---
 
     function test_SetConfig_EpochTooShort_Reverts() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(4 minutes, 7 days, 3, 1000); // epochDuration < 5 minutes
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(4 minutes, 7 days, 3, 1000); // epochDuration < 5 minutes
     }
 
     function test_SetConfig_MaxDurationTooShort_Reverts() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(5 minutes, 12 hours, 3, 1000); // maxDuration < 1 day
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 12 hours, 3, 1000); // maxDuration < 1 day
     }
 
     function test_SetConfig_MinVotersTooLow_Reverts() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(5 minutes, 7 days, 1, 1000); // minVoters < 2
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 1, 1000); // minVoters < 2
     }
 
     function test_SetConfig_MaxVotersLessThanMin_Reverts() public {
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidConfig.selector);
-        engine.setConfig(5 minutes, 7 days, 5, 3); // maxVoters < minVoters
+        vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 5, 3); // maxVoters < minVoters
     }
 
     // --- VoterIdNFT integration ---
@@ -1197,7 +1110,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
     function test_CommitWithVoterIdNFT() public {
         voterNFT = new MockVoterIdNFT();
         vm.prank(owner);
-        engine.setVoterIdNFT(address(voterNFT));
+        ProtocolConfig(address(engine.protocolConfig())).setVoterIdNFT(address(voterNFT));
 
         voterNFT.setHolder(voter1);
         voterNFT.setHolder(voter2);
@@ -1213,7 +1126,7 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
     function test_CommitWithoutVoterId_WhenRequired_Reverts() public {
         voterNFT = new MockVoterIdNFT();
         vm.prank(owner);
-        engine.setVoterIdNFT(address(voterNFT));
+        ProtocolConfig(address(engine.protocolConfig())).setVoterIdNFT(address(voterNFT));
 
         uint256 contentId = _submitContent();
 
@@ -1229,15 +1142,15 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
 
     // --- View functions ---
 
-    function test_GetContentCommitCount() public {
+    function test_HasCommitsReflectsVotingHistory() public {
         uint256 contentId = _submitContent();
-        assertEq(engine.contentCommitCount(contentId), 0);
+        assertFalse(engine.hasCommits(contentId));
 
         _commit(voter1, contentId, true, STAKE);
-        assertEq(engine.contentCommitCount(contentId), 1);
+        assertTrue(engine.hasCommits(contentId));
 
         _commit(voter2, contentId, false, STAKE);
-        assertEq(engine.contentCommitCount(contentId), 2);
+        assertTrue(engine.hasCommits(contentId));
     }
 
     function test_GetRound_ReturnsCorrectData() public {

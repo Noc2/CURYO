@@ -509,6 +509,7 @@ const ABI_TARGETS = [
   { contract: "FrontendRegistry", targets: ["contracts/src/abis"] },
   { contract: "RoundRewardDistributor", targets: ["contracts/src/abis"] },
   { contract: "ProfileRegistry", targets: ["contracts/src/abis"] },
+  { contract: "ProtocolConfig", targets: ["contracts/src/abis"] },
 ];
 
 function generateAbiFiles() {

@@ -5,6 +5,7 @@ import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -64,7 +65,7 @@ contract GameTheoryImprovementsTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -86,12 +87,12 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setTreasury(treasuryAddr);
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasuryAddr);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Override config: 1-hour epochs, 7-day max, minVoters=3, maxVoters=1000
-        engine.setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 1000);
 
         // Fund consensus reserve
         crepToken.mint(owner, 200_000e6);

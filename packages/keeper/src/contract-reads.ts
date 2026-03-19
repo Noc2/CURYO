@@ -1,5 +1,5 @@
 import type { PublicClient } from "viem";
-import { ContentRegistryAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
+import { ContentRegistryAbi, ProtocolConfigAbi, RoundVotingEngineAbi } from "@curyo/contracts/abis";
 import { getRevertReason } from "./revert-utils.js";
 
 export const RoundState = {
@@ -158,9 +158,16 @@ export async function readRoundVotingConfig(
   engineAddr: `0x${string}`,
 ): Promise<RoundVotingConfig> {
   try {
-    const rawConfig = await publicClient.readContract({
+    const protocolConfig = (await publicClient.readContract({
       address: engineAddr,
       abi: RoundVotingEngineAbi,
+      functionName: "protocolConfig",
+      args: [],
+    })) as `0x${string}`;
+
+    const rawConfig = await publicClient.readContract({
+      address: protocolConfig,
+      abi: ProtocolConfigAbi,
       functionName: "config",
       args: [],
     });
@@ -168,7 +175,7 @@ export async function readRoundVotingConfig(
     return parseRoundVotingConfig(rawConfig);
   } catch (err: unknown) {
     throw new Error(
-      `Failed to read RoundVotingEngine.config() at ${engineAddr}: ${getRevertReason(err)}`,
+      `Failed to read RoundVotingEngine protocol config at ${engineAddr}: ${getRevertReason(err)}`,
     );
   }
 }
@@ -274,9 +281,16 @@ export async function readRoundRevealGracePeriod(
     return snapshot;
   }
 
-  return (await publicClient.readContract({
+  const protocolConfig = (await publicClient.readContract({
     address: engineAddr,
     abi: RoundVotingEngineAbi,
+    functionName: "protocolConfig",
+    args: [],
+  })) as `0x${string}`;
+
+  return (await publicClient.readContract({
+    address: protocolConfig,
+    abi: ProtocolConfigAbi,
     functionName: "revealGracePeriod",
     args: [],
   })) as bigint;
@@ -290,12 +304,7 @@ export async function readRoundCommitKeys(
   contentId: bigint,
   roundId: bigint,
 ): Promise<readonly `0x${string}`[]> {
-  const count = (await publicClient.readContract({
-    address: engineAddr,
-    abi: RoundVotingEngineAbi,
-    functionName: "getRoundCommitCount",
-    args: [contentId, roundId],
-  })) as bigint;
+  const count = (await readRound(publicClient, engineAddr, contentId, roundId)).voteCount;
 
   if (count === 0n) {
     return [];

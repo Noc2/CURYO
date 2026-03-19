@@ -5,6 +5,7 @@ import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -65,7 +66,7 @@ contract AuditGapTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -106,24 +107,18 @@ contract AuditGapTests is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setRewardDistributor(address(rewardDistributor));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setTreasury(treasury);
-        votingEngine.setFrontendRegistry(address(frontendRegistry));
-        votingEngine.setParticipationPool(address(participationPool));
-        votingEngine.setConfig(EPOCH_DURATION, 7 days, 3, 200);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 3, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
         crepToken.mint(owner, reserveAmount);
         crepToken.approve(address(votingEngine), reserveAmount);
         votingEngine.addToConsensusReserve(reserveAmount);
-
-        // Fund keeper reward pool
-        crepToken.mint(owner, 10_000e6);
-        crepToken.approve(address(votingEngine), 10_000e6);
-        votingEngine.fundKeeperRewardPool(10_000e6);
-        votingEngine.setKeeperReward(1e6);
 
         // Mint cREP to test users
         address[6] memory users = [submitter, voter1, voter2, voter3, voter4, frontend];
@@ -240,13 +235,11 @@ contract AuditGapTests is VotingTestBase {
         vm.warp(block.timestamp + 7 days + 1);
 
         uint256 keeperBalanceBefore = crepToken.balanceOf(voter4);
-        uint256 keeperPoolBefore = votingEngine.keeperRewardPool();
 
         vm.prank(voter4);
         votingEngine.cancelExpiredRound(contentId, 1);
 
         assertEq(crepToken.balanceOf(voter4), keeperBalanceBefore, "cancel should not pay keeper rewards");
-        assertEq(votingEngine.keeperRewardPool(), keeperPoolBefore, "cancel should not drain keeper pool");
     }
 
     /// @notice Verify processUnrevealedVotes respects whenNotPaused
@@ -606,17 +599,14 @@ contract AuditGapTests is VotingTestBase {
         uint256 engineBalAfter = crepToken.balanceOf(address(votingEngine));
 
         // Engine balance should be >= engineBalStart (consensus reserve grew by 5% of losing pool)
-        // The only remaining funds should be: consensus reserve + keeper pool + any rounding dust
+        // The only remaining funds should be: consensus reserve + any rounding dust
         uint256 consensusReserve = votingEngine.consensusReserve();
-        uint256 keeperPool = votingEngine.keeperRewardPool();
 
-        // Engine should hold at least reserves + keeper pool
-        assertTrue(
-            engineBalAfter >= consensusReserve + keeperPool, "Engine must hold at least consensus reserve + keeper pool"
-        );
+        // Engine should hold at least the remaining reserve.
+        assertTrue(engineBalAfter >= consensusReserve, "Engine must hold at least the consensus reserve");
 
         // Dust should be minimal (at most a few tokens from rounding)
-        uint256 dust = engineBalAfter - consensusReserve - keeperPool;
+        uint256 dust = engineBalAfter - consensusReserve;
         assertTrue(dust < 10, "Dust from rounding should be minimal");
     }
 }

@@ -6,6 +6,7 @@ import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy
 import { Vm } from "forge-std/Test.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -97,7 +98,7 @@ contract RoundIntegrationTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -118,13 +119,13 @@ contract RoundIntegrationTest is VotingTestBase {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setRewardDistributor(address(rewardDistributor));
-        votingEngine.setCategoryRegistry(address(mockCategoryRegistry));
-        votingEngine.setTreasury(treasury);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setRewardDistributor(address(rewardDistributor));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasury);
 
         // setConfig(epochDuration, maxDuration, minVoters, maxVoters)
         // Use short 10-minute epochs for tests, minVoters=2 to keep tests lean
-        votingEngine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
@@ -1134,7 +1135,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         // Change config: increase minVoters to 10
         vm.prank(owner);
-        votingEngine.setConfig(EPOCH_DURATION, 7 days, 10, 200);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 10, 200);
 
         // Snapshot unchanged
         cfg = RoundEngineReadHelpers.roundConfig(votingEngine, contentId, roundId);
@@ -1179,7 +1180,7 @@ contract RoundIntegrationTest is VotingTestBase {
         );
     }
 
-    function test_CommitCountTracking() public {
+    function test_CommitHistoryTracking() public {
         uint256 contentId = _submitContent();
 
         bytes32 s1 = keccak256(abi.encodePacked(voter1, contentId, true, uint256(0)));
@@ -1190,7 +1191,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch1, _testCiphertext(true, s1, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        assertEq(votingEngine.contentCommitCount(contentId), 1, "Content commit count should be 1");
+        assertTrue(votingEngine.hasCommits(contentId), "Content should show commit history after first vote");
 
         bytes32 s2 = keccak256(abi.encodePacked(voter2, contentId, false, uint256(1)));
         bytes32 ch2 = _commitHash(false, s2, contentId);
@@ -1200,7 +1201,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch2, _testCiphertext(false, s2, contentId), STAKE, address(0));
         vm.stopPrank();
 
-        assertEq(votingEngine.contentCommitCount(contentId), 2, "Content commit count should be 2");
+        assertTrue(votingEngine.hasCommits(contentId), "Content should keep commit history after more votes");
     }
 
     function test_RoundVoterCountAfterReveal() public {
@@ -1441,7 +1442,7 @@ contract RoundIntegrationTest is VotingTestBase {
                 )
             )
         );
-        votingEngine.setFrontendRegistry(address(frontendReg));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(frontendReg));
         frontendReg.setVotingEngine(address(votingEngine));
         frontendReg.addFeeCreditor(address(rewardDistributor));
 
@@ -1721,7 +1722,7 @@ contract RoundIntegrationTest is VotingTestBase {
                 )
             )
         );
-        votingEngine.setFrontendRegistry(address(replacementRegistry));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setFrontendRegistry(address(replacementRegistry));
         replacementRegistry.setVotingEngine(address(votingEngine));
         replacementRegistry.addFeeCreditor(address(rewardDistributor));
         vm.stopPrank();
@@ -1784,7 +1785,7 @@ contract RoundIntegrationTest is VotingTestBase {
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(pool), 1_000_000e6);
         pool.depositPool(1_000_000e6);
-        votingEngine.setParticipationPool(address(pool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
         vm.stopPrank();
 
         contentId = _submitContent();
@@ -1827,7 +1828,7 @@ contract RoundIntegrationTest is VotingTestBase {
         crepToken.approve(address(pool2), 1_000_000e6);
         pool2.depositPool(1_000_000e6);
         vm.startPrank(owner);
-        votingEngine.setParticipationPool(address(pool1));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool1));
         vm.stopPrank();
 
         uint256 contentId = _submitContent();
@@ -1844,7 +1845,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
         vm.prank(owner);
-        votingEngine.setParticipationPool(address(pool2));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool2));
 
         uint256 expectedReward = STAKE * 9000 / 10000;
         uint256 pool1Before = crepToken.balanceOf(address(pool1));
@@ -1865,7 +1866,7 @@ contract RoundIntegrationTest is VotingTestBase {
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(pool), 1_000_000e6);
         pool.depositPool(1_000_000e6);
-        votingEngine.setParticipationPool(address(pool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
         vm.stopPrank();
 
         uint256 contentId = _submitContent();
@@ -1904,7 +1905,7 @@ contract RoundIntegrationTest is VotingTestBase {
         crepToken.mint(owner, 4e6);
         crepToken.approve(address(pool), 4e6);
         pool.depositPool(4e6);
-        votingEngine.setParticipationPool(address(pool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
         vm.stopPrank();
 
         uint256 contentId = _submitContent();
@@ -2002,7 +2003,7 @@ contract RoundIntegrationTest is VotingTestBase {
         crepToken.mint(owner, 1_000_000e6);
         crepToken.approve(address(pool), 1_000_000e6);
         pool.depositPool(1_000_000e6);
-        votingEngine.setParticipationPool(address(pool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
         vm.stopPrank();
 
         uint256 contentId = _submitContent();
@@ -2024,7 +2025,7 @@ contract RoundIntegrationTest is VotingTestBase {
     function test_SettlementSideEffectFailure_ParticipationRateSnapshotCanBeBackfilled() public {
         RevertingParticipationPool badPool = new RevertingParticipationPool(address(crepToken));
         vm.prank(owner);
-        votingEngine.setParticipationPool(address(badPool));
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(badPool));
 
         uint256 contentId = _submitContent();
         address[] memory voters = new address[](3);
@@ -2039,24 +2040,7 @@ contract RoundIntegrationTest is VotingTestBase {
         _commitAllThenReveal(voters, contentId, dirs, STAKE);
         uint256 roundId = _getActiveOrLatestRoundId(contentId);
 
-        vm.recordLogs();
         votingEngine.settleRound(contentId, roundId);
-
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 expectedSig = keccak256("SettlementSideEffectFailed(uint256,uint256,uint8)");
-        bool foundFailureEvent = false;
-        for (uint256 i = 0; i < logs.length; i++) {
-            if (
-                logs[i].topics.length == 3 && logs[i].topics[0] == expectedSig
-                    && logs[i].topics[1] == bytes32(contentId) && logs[i].topics[2] == bytes32(roundId)
-                    && abi.decode(logs[i].data, (uint8)) == 5
-            ) {
-                foundFailureEvent = true;
-                break;
-            }
-        }
-
-        assertTrue(foundFailureEvent, "participation rate failure should be logged");
         vm.prank(voter1);
         vm.expectRevert(RoundRewardDistributor.NoPool.selector);
         rewardDistributor.claimParticipationReward(contentId, roundId);
@@ -2088,9 +2072,9 @@ contract RoundIntegrationTest is VotingTestBase {
         address pool2 = address(0xBB);
 
         vm.startPrank(owner);
-        votingEngine.setParticipationPool(pool1);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(pool1);
         // Should NOT revert on second call
-        votingEngine.setParticipationPool(pool2);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(pool2);
         vm.stopPrank();
     }
 

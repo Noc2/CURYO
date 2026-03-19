@@ -4,7 +4,6 @@ pragma solidity ^0.8.24;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -22,8 +21,7 @@ contract ContentRegistry is
     Initializable,
     AccessControlUpgradeable,
     PausableUpgradeable,
-    ReentrancyGuardTransient,
-    UUPSUpgradeable
+    ReentrancyGuardTransient
 {
     using SafeERC20 for IERC20;
 
@@ -31,7 +29,6 @@ contract ContentRegistry is
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     // --- Constants ---
     uint256 public constant MIN_SUBMITTER_STAKE = 10e6; // 10 cREP (6 decimals)
@@ -164,7 +161,6 @@ contract ContentRegistry is
         _grantRole(ADMIN_ROLE, _governance);
         _grantRole(CONFIG_ROLE, _governance);
         _grantRole(PAUSER_ROLE, _governance);
-        _grantRole(UPGRADER_ROLE, _governance);
 
         // Admin gets only CONFIG_ROLE for initial cross-contract wiring
         if (_admin != _governance) {
@@ -289,7 +285,7 @@ contract ContentRegistry is
         require(c.submitter == msg.sender, "Not submitter");
         require(c.status == ContentStatus.Active, "Not active");
         if (votingEngine != address(0)) {
-            require(IRoundVotingEngine(votingEngine).contentCommitCount(contentId) == 0, "Content has votes");
+            require(!IRoundVotingEngine(votingEngine).hasCommits(contentId), "Content has votes");
         }
 
         c.status = ContentStatus.Cancelled;
@@ -653,5 +649,4 @@ contract ContentRegistry is
         _unpause();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyRole(UPGRADER_ROLE) { }
 }

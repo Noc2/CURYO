@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import { RoundIntegrationTest } from "./RoundIntegration.t.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
@@ -159,7 +160,12 @@ contract GasBudgetTest is RoundIntegrationTest {
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter1, ch1), true, s1);
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 
-        vm.warp(round.startTime + EPOCH_DURATION + votingEngine.revealGracePeriod() + 1);
+        vm.warp(
+            round.startTime
+                + EPOCH_DURATION
+                + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod()
+                + 1
+        );
         votingEngine.settleRound(contentId, roundId);
 
         uint256 gasUsed = _measureCall(

@@ -6,10 +6,8 @@ import { RoundLib } from "../libraries/RoundLib.sol";
 /// @title IRoundVotingEngine
 /// @notice Interface for RoundVotingEngine contract used by ContentRegistry and other contracts.
 interface IRoundVotingEngine {
-    /// @notice Get total lifetime commit count for a content item.
-    /// @param contentId The content ID to query.
-    /// @return Total number of commits ever made for this content.
-    function contentCommitCount(uint256 contentId) external view returns (uint256);
+    /// @notice Whether the content item has ever received at least one vote commit.
+    function hasCommits(uint256 contentId) external view returns (bool);
 
     /// @notice Get the current active round ID for a content item.
     /// @param contentId The content ID to query.

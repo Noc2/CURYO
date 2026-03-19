@@ -6,6 +6,7 @@ import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -35,8 +36,6 @@ contract InvariantSolvency is Test {
     uint256[] public contentIds;
 
     uint256 public initialTotalSupply;
-    uint256 public initialKeeperRewardPool;
-
     function setUp() public {
         vm.warp(1000);
         vm.roll(100);
@@ -63,7 +62,7 @@ contract InvariantSolvency is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -84,20 +83,16 @@ contract InvariantSolvency is Test {
         MockCategoryRegistry mockCategoryRegistry = new MockCategoryRegistry();
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasury);
-        engine.setConfig(EPOCH_DURATION, 7 days, 2, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasury);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 2, 200);
 
         // Fund consensus reserve
         uint256 reserveAmount = 1_000_000e6;
-        uint256 keeperPoolAmount = 100_000e6;
-        crepToken.mint(owner, reserveAmount + keeperPoolAmount);
-        crepToken.approve(address(engine), reserveAmount + keeperPoolAmount);
+        crepToken.mint(owner, reserveAmount);
+        crepToken.approve(address(engine), reserveAmount);
         engine.addToConsensusReserve(reserveAmount);
-        engine.setKeeperReward(1e6);
-        engine.fundKeeperRewardPool(keeperPoolAmount);
-        initialKeeperRewardPool = keeperPoolAmount;
 
         // Create voters
         for (uint256 i = 0; i < NUM_VOTERS; i++) {
@@ -164,7 +159,6 @@ contract InvariantSolvency is Test {
     function invariant_C02_TokenConservation() public view {
         // All stake-derived tokens that left the engine = voter claims + submitter claims
         //   + refunds + treasury balance growth.
-        // Keeper rewards are funded from keeperRewardPool and are checked separately below.
         // With rounding dust tolerance
 
         uint256 totalIn = handler.ghost_totalStaked();
@@ -194,7 +188,7 @@ contract InvariantSolvency is Test {
         uint256 engineBalance = crepToken.balanceOf(address(engine));
 
         // Compute minimum obligations: open round stakes + unclaimed rewards + consensus reserve
-        uint256 obligations = engine.consensusReserve() + engine.keeperRewardPool();
+        uint256 obligations = engine.consensusReserve();
 
         // Add open round stakes (committed but not yet settled/refunded)
         uint256 recordCount = handler.getRoundRecordCount();
@@ -232,23 +226,6 @@ contract InvariantSolvency is Test {
         assertGe(engineBalance, obligations, "C-03: engine balance < obligations");
     }
 
-    // =========================================================================
-    // C-04: Keeper rewards — payouts are bounded by funded pool and rewardable operations
-    // =========================================================================
-
-    function invariant_C04_KeeperRewardAccounting() public view {
-        uint256 handlerBalance = crepToken.balanceOf(address(handler));
-        assertEq(handlerBalance, initialKeeperRewardPool - engine.keeperRewardPool(), "keeper payout != pool delta");
-
-        uint256 maxRewardableOps = handler.settleCount() + handler.cancelCount() + handler.cleanupRewardCount();
-        assertLe(
-            handlerBalance,
-            engine.keeperReward() * maxRewardableOps,
-            "keeper paid more than rewardable operations allow"
-        );
-    }
-
-    // =========================================================================
     // NoDoubleClaim — no voter claims the same reward twice
     // =========================================================================
 

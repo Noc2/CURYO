@@ -4,12 +4,12 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { DEFAULT_VOTING_CONFIG, VotingConfig, parseVotingConfig } from "~~/lib/contracts/roundVotingEngine";
 
 /**
- * Shared hook to read RoundVotingEngine.config() once.
+ * Shared hook to read ProtocolConfig.config() once.
  * Handles named-vs-positional tuple detection in one place.
  */
 export function useVotingConfig(): VotingConfig {
   const { data: rawConfig } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine" as any,
+    contractName: "ProtocolConfig" as any,
     functionName: "config" as any,
     watch: false,
     query: {

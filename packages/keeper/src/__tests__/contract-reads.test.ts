@@ -40,7 +40,7 @@ describe("readRoundVotingConfig", () => {
     };
 
     await expect(readRoundVotingConfig(publicClient as any, ENGINE)).rejects.toThrow(
-      `Failed to read RoundVotingEngine.config() at ${ENGINE}: returned no data`,
+      `Failed to read RoundVotingEngine protocol config at ${ENGINE}: returned no data`,
     );
   });
 });
@@ -51,6 +51,7 @@ describe("validateKeeperContracts", () => {
       getCode: vi.fn().mockResolvedValue("0x1234"),
       readContract: vi
         .fn()
+        .mockResolvedValueOnce("0x3333333333333333333333333333333333333333")
         .mockResolvedValueOnce([1200n, 604800n, 3n, 1000n])
         .mockResolvedValueOnce(7n),
     };
@@ -60,10 +61,14 @@ describe("validateKeeperContracts", () => {
     expect(publicClient.getCode).toHaveBeenNthCalledWith(2, { address: REGISTRY });
     expect(publicClient.readContract).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({ address: ENGINE, functionName: "config" }),
+      expect.objectContaining({ address: ENGINE, functionName: "protocolConfig" }),
     );
     expect(publicClient.readContract).toHaveBeenNthCalledWith(
       2,
+      expect.objectContaining({ address: "0x3333333333333333333333333333333333333333", functionName: "config" }),
+    );
+    expect(publicClient.readContract).toHaveBeenNthCalledWith(
+      3,
       expect.objectContaining({ address: REGISTRY, functionName: "nextContentId" }),
     );
   });

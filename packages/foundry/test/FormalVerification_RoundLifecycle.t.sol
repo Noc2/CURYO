@@ -5,6 +5,7 @@ import { Test } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
+import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { RoundRewardDistributor } from "../contracts/RoundRewardDistributor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { RoundLib } from "../contracts/libraries/RoundLib.sol";
@@ -57,7 +58,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, owner, address(crepToken), address(registry)))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
                 )
             )
         );
@@ -78,12 +79,12 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         mockCategoryRegistry.seedDefaultTestCategories();
         registry.setCategoryRegistry(address(mockCategoryRegistry));
         registry.setTreasury(treasuryAddr);
-        engine.setRewardDistributor(address(distributor));
-        engine.setCategoryRegistry(address(mockCategoryRegistry));
-        engine.setTreasury(treasuryAddr);
+        ProtocolConfig(address(engine.protocolConfig())).setRewardDistributor(address(distributor));
+        ProtocolConfig(address(engine.protocolConfig())).setCategoryRegistry(address(mockCategoryRegistry));
+        ProtocolConfig(address(engine.protocolConfig())).setTreasury(treasuryAddr);
 
         // Config: epochDuration=5min, maxDuration=7d, minVoters=2, maxVoters=200
-        engine.setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, MIN_VOTERS, 200);
 
         // Fund consensus reserve
         crepToken.mint(owner, 100_000e6);
@@ -430,7 +431,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     ///         RevealFailed only after maxDuration and the final grace deadline. Revealed votes stay refundable.
     function test_RevealFailed_RefundsOnlyRevealedVotes() public {
         vm.prank(owner);
-        engine.setConfig(EPOCH_DURATION, MAX_DURATION, 3, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, 3, 200);
 
         uint256 cid = _submit();
 
@@ -444,7 +445,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         vm.warp(round.startTime + EPOCH_DURATION + 1);
         engine.revealVoteByCommitKey(cid, rid, ck0, true, s0);
 
-        vm.warp(round.startTime + MAX_DURATION + engine.revealGracePeriod());
+        vm.warp(round.startTime + MAX_DURATION + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod());
         engine.finalizeRevealFailedRound(cid, rid);
 
         RoundLib.Round memory failed = RoundEngineReadHelpers.round(engine, cid, rid);
@@ -497,7 +498,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     /// @notice After cancelling an expired round that stayed below commit quorum, all voters can claim full refunds.
     function test_RefundFlow_CancelledRound() public {
         vm.prank(owner);
-        engine.setConfig(EPOCH_DURATION, MAX_DURATION, 4, 200);
+        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, 4, 200);
 
         uint256 cid = _submit();
 
