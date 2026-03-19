@@ -65,7 +65,7 @@ test.describe("Profile management", () => {
     await nameInput.fill(uniqueName);
 
     const saveBtn = page
-      .getByRole("button", { name: /Create profile/i })
+      .getByRole("button", { name: /Save profile/i })
       .or(page.getByRole("button", { name: /Save changes/i }));
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
@@ -97,7 +97,7 @@ test.describe("Profile management", () => {
 
     const saveBtn = page
       .getByRole("button", { name: /Save changes/i })
-      .or(page.getByRole("button", { name: /Create profile/i }));
+      .or(page.getByRole("button", { name: /Save profile/i }));
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 

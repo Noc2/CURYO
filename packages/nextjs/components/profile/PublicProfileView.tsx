@@ -600,7 +600,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                       strategyInput.trim().length > MAX_PROFILE_STRATEGY_LENGTH
                     }
                   >
-                    {isSavingProfile ? "Saving..." : hasLiveProfile ? "Save changes" : "Create profile"}
+                    {isSavingProfile ? "Saving..." : hasLiveProfile ? "Save changes" : "Save profile"}
                   </button>
                 </div>
               ) : (
