@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { issueSignedActionChallenge } from "~~/lib/auth/signedActions";
+import { createSignedCollectionChallengeResponse } from "~~/lib/auth/signedCollectionRoute";
 import {
   READ_WATCHLIST_ACTION,
   UNWATCH_CONTENT_ACTION,
@@ -27,36 +27,17 @@ export async function POST(request: NextRequest) {
     });
     if (limited) return limited;
 
-    if (body.intent === "read") {
-      const normalizedRead = normalizeWatchlistReadInput(body);
-      if (!normalizedRead.ok) {
-        return NextResponse.json({ error: normalizedRead.error }, { status: 400 });
-      }
-
-      const challenge = await issueSignedActionChallenge({
-        title: WATCHLIST_CHALLENGE_TITLE,
-        action: READ_WATCHLIST_ACTION,
-        walletAddress: normalizedRead.payload.normalizedAddress,
-        payloadHash: hashWatchlistReadPayload(normalizedRead.payload),
-      });
-
-      return NextResponse.json(challenge);
-    }
-
-    const normalized = normalizeWatchlistChallengeInput(body);
-    if (!normalized.ok) {
-      return NextResponse.json({ error: normalized.error }, { status: 400 });
-    }
-
-    const action = body.action === "unwatch" ? UNWATCH_CONTENT_ACTION : WATCH_CONTENT_ACTION;
-    const challenge = await issueSignedActionChallenge({
+    return createSignedCollectionChallengeResponse(body, {
       title: WATCHLIST_CHALLENGE_TITLE,
-      action,
-      walletAddress: normalized.payload.normalizedAddress,
-      payloadHash: hashWatchlistChallengePayload(normalized.payload),
+      readAction: READ_WATCHLIST_ACTION,
+      getWriteAction: challengeBody =>
+        challengeBody.action === "unwatch" ? UNWATCH_CONTENT_ACTION : WATCH_CONTENT_ACTION,
+      isReadRequest: challengeBody => challengeBody.intent === "read",
+      normalizeReadInput: normalizeWatchlistReadInput,
+      hashReadPayload: hashWatchlistReadPayload,
+      normalizeWriteInput: normalizeWatchlistChallengeInput,
+      hashWritePayload: hashWatchlistChallengePayload,
     });
-
-    return NextResponse.json(challenge);
   } catch (error) {
     console.error("Error creating watchlist challenge:", error);
     return NextResponse.json({ error: "Failed to create challenge" }, { status: 500 });

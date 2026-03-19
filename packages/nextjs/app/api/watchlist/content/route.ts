@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  createSignedCollectionReadResponse,
-  hasSignedCollectionReadSession,
-  hasSignedCollectionWriteSession,
+  createSignedCollectionReadItemsResponse,
+  createSignedCollectionResponse,
+  ensureSignedCollectionReadSession,
   maybeIssueSignedCollectionWriteSession,
   verifySignedCollectionChallenge,
+  verifySignedCollectionWriteAccess,
 } from "~~/lib/auth/signedCollectionRoute";
 import { WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME } from "~~/lib/auth/signedReadSessions";
 import { WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME } from "~~/lib/auth/signedWriteSessions";
@@ -19,13 +20,7 @@ import {
   normalizeWatchlistChallengeInput,
   normalizeWatchlistReadInput,
 } from "~~/lib/auth/watchlistChallenge";
-import {
-  addWatchedContent,
-  isValidWalletAddress,
-  listWatchedContent,
-  normalizeWalletAddress,
-  removeWatchedContent,
-} from "~~/lib/watchlist/contentWatch";
+import { addWatchedContent, listWatchedContent, removeWatchedContent } from "~~/lib/watchlist/contentWatch";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
 const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
@@ -39,24 +34,22 @@ export async function GET(request: NextRequest) {
   if (limited) return limited;
 
   try {
-    if (!address || !isValidWalletAddress(address)) {
-      return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
+    const normalized = normalizeWatchlistReadInput({ address: typeof address === "string" ? address : undefined });
+    if (!normalized.ok) {
+      return NextResponse.json({ error: normalized.error }, { status: 400 });
     }
 
-    const normalizedAddress = normalizeWalletAddress(address);
-    const hasSession = await hasSignedCollectionReadSession(
-      request,
-      WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME,
-      normalizedAddress,
-      "watchlist",
-    );
-
-    if (!hasSession) {
-      return NextResponse.json({ error: "Signed read required" }, { status: 401 });
+    const readFailure = await ensureSignedCollectionReadSession(request, {
+      cookieName: WATCHLIST_SIGNED_READ_SESSION_COOKIE_NAME,
+      walletAddress: normalized.payload.normalizedAddress,
+      scope: "watchlist",
+    });
+    if (readFailure) {
+      return readFailure;
     }
 
-    const items = await listWatchedContent(normalizedAddress);
-    return NextResponse.json({ items, count: items.length });
+    const items = await listWatchedContent(normalized.payload.normalizedAddress);
+    return createSignedCollectionResponse(items);
   } catch (error) {
     console.error("Error fetching watched content:", error);
     return NextResponse.json({ error: "Failed to fetch watched content" }, { status: 500 });
@@ -82,16 +75,17 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = normalized.payload;
+    const payloadHash = hashWatchlistReadPayload(payload);
     const challengeFailure = await verifySignedCollectionChallenge({
       challengeId: String(challengeId),
       action: READ_WATCHLIST_ACTION,
       walletAddress: payload.normalizedAddress,
-      payloadHash: hashWatchlistReadPayload(payload),
+      payloadHash,
       signature: signature as `0x${string}`,
       buildMessage: ({ nonce, expiresAt }) =>
         buildWatchlistReadChallengeMessage({
           address: payload.normalizedAddress,
-          payloadHash: hashWatchlistReadPayload(payload),
+          payloadHash,
           nonce,
           expiresAt,
         }),
@@ -101,10 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     const items = await listWatchedContent(payload.normalizedAddress);
-    return createSignedCollectionReadResponse(payload.normalizedAddress, "watchlist", {
-      items,
-      count: items.length,
-    });
+    return createSignedCollectionReadItemsResponse(payload.normalizedAddress, "watchlist", items);
   } catch (error) {
     console.error("Error fetching watched content:", error);
     return NextResponse.json({ error: "Failed to fetch watched content" }, { status: 500 });
@@ -125,43 +116,33 @@ export async function PUT(request: NextRequest) {
     }
 
     const payload = normalized.payload;
-    const hasWriteSession = await hasSignedCollectionWriteSession(
-      request,
-      WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME,
-      payload.normalizedAddress,
-      "watchlist",
-    );
-
-    if (!hasWriteSession) {
-      if (!signature || !challengeId) {
-        return NextResponse.json({ error: "Signed write required" }, { status: 401 });
-      }
-
-      const challengeFailure = await verifySignedCollectionChallenge({
-        challengeId: String(challengeId),
-        action: WATCH_CONTENT_ACTION,
-        walletAddress: payload.normalizedAddress,
-        payloadHash: hashWatchlistChallengePayload(payload),
-        signature: signature as `0x${string}`,
-        buildMessage: ({ nonce, expiresAt }) =>
-          buildWatchlistChallengeMessage({
-            action: WATCH_CONTENT_ACTION,
-            address: payload.normalizedAddress,
-            payloadHash: hashWatchlistChallengePayload(payload),
-            nonce,
-            expiresAt,
-          }),
-      });
-      if (challengeFailure) {
-        return challengeFailure;
-      }
+    const payloadHash = hashWatchlistChallengePayload(payload);
+    const writeAccess = await verifySignedCollectionWriteAccess(request, {
+      cookieName: WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME,
+      walletAddress: payload.normalizedAddress,
+      scope: "watchlist",
+      signature,
+      challengeId: typeof challengeId === "string" ? challengeId : undefined,
+      action: WATCH_CONTENT_ACTION,
+      payloadHash,
+      buildMessage: ({ nonce, expiresAt }) =>
+        buildWatchlistChallengeMessage({
+          action: WATCH_CONTENT_ACTION,
+          address: payload.normalizedAddress,
+          payloadHash,
+          nonce,
+          expiresAt,
+        }),
+    });
+    if (!writeAccess.ok) {
+      return writeAccess.response;
     }
 
     await addWatchedContent(payload.normalizedAddress, payload.contentId);
     return maybeIssueSignedCollectionWriteSession(
       NextResponse.json({ ok: true, watched: true, contentId: payload.contentId }),
       {
-        hasWriteSession,
+        hasWriteSession: writeAccess.hasWriteSession,
         walletAddress: payload.normalizedAddress,
         scope: "watchlist",
       },
@@ -186,43 +167,33 @@ export async function DELETE(request: NextRequest) {
     }
 
     const payload = normalized.payload;
-    const hasWriteSession = await hasSignedCollectionWriteSession(
-      request,
-      WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME,
-      payload.normalizedAddress,
-      "watchlist",
-    );
-
-    if (!hasWriteSession) {
-      if (!signature || !challengeId) {
-        return NextResponse.json({ error: "Signed write required" }, { status: 401 });
-      }
-
-      const challengeFailure = await verifySignedCollectionChallenge({
-        challengeId: String(challengeId),
-        action: UNWATCH_CONTENT_ACTION,
-        walletAddress: payload.normalizedAddress,
-        payloadHash: hashWatchlistChallengePayload(payload),
-        signature: signature as `0x${string}`,
-        buildMessage: ({ nonce, expiresAt }) =>
-          buildWatchlistChallengeMessage({
-            action: UNWATCH_CONTENT_ACTION,
-            address: payload.normalizedAddress,
-            payloadHash: hashWatchlistChallengePayload(payload),
-            nonce,
-            expiresAt,
-          }),
-      });
-      if (challengeFailure) {
-        return challengeFailure;
-      }
+    const payloadHash = hashWatchlistChallengePayload(payload);
+    const writeAccess = await verifySignedCollectionWriteAccess(request, {
+      cookieName: WATCHLIST_SIGNED_WRITE_SESSION_COOKIE_NAME,
+      walletAddress: payload.normalizedAddress,
+      scope: "watchlist",
+      signature,
+      challengeId: typeof challengeId === "string" ? challengeId : undefined,
+      action: UNWATCH_CONTENT_ACTION,
+      payloadHash,
+      buildMessage: ({ nonce, expiresAt }) =>
+        buildWatchlistChallengeMessage({
+          action: UNWATCH_CONTENT_ACTION,
+          address: payload.normalizedAddress,
+          payloadHash,
+          nonce,
+          expiresAt,
+        }),
+    });
+    if (!writeAccess.ok) {
+      return writeAccess.response;
     }
 
     await removeWatchedContent(payload.normalizedAddress, payload.contentId);
     return maybeIssueSignedCollectionWriteSession(
       NextResponse.json({ ok: true, watched: false, contentId: payload.contentId }),
       {
-        hasWriteSession,
+        hasWriteSession: writeAccess.hasWriteSession,
         walletAddress: payload.normalizedAddress,
         scope: "watchlist",
       },
