@@ -48,8 +48,8 @@ export function VotingGuide() {
           </button>
           <h3 className="font-bold text-lg leading-snug pr-6">How it works</h3>
           <p className="mt-2 pr-6 text-sm leading-relaxed text-base-content/65">
-            Getting started takes a bit more effort because Curyo is fully decentralized, but after setup it gets much
-            easier.
+            Getting started takes a bit more effort because Curyo is fully decentralized, but after the initial setup,
+            it gets much easier.
           </p>
         </div>
 
