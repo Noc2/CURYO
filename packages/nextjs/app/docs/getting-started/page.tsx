@@ -33,29 +33,28 @@ function ShieldIdIcon() {
     <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
       <path
         d="M32 4L8 16v16c0 14 10 24 24 28 14-4 24-14 24-28V16L32 4z"
-        className="fill-secondary/15 stroke-secondary"
+        className="fill-primary/12 stroke-primary"
         strokeWidth="3"
         strokeLinejoin="round"
       />
-      <circle cx="32" cy="28" r="7" className="fill-secondary/30 stroke-secondary" strokeWidth="2" />
+      <circle cx="32" cy="28" r="7" className="fill-primary/20 stroke-primary" strokeWidth="2" />
       <path
         d="M22 44c0-5.5 4.5-10 10-10s10 4.5 10 10"
-        className="stroke-secondary"
+        className="stroke-primary"
         strokeWidth="2"
         strokeLinecap="round"
       />
       <path
         d="M28 36l3 3 6-7"
-        className="stroke-secondary"
+        className="stroke-primary"
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity="0"
       />
-      <circle cx="48" cy="12" r="8" className="fill-success/20 stroke-success" strokeWidth="2" />
+      <circle cx="48" cy="12" r="8" className="fill-primary/12 stroke-primary" strokeWidth="2" />
       <path
         d="M44 12l3 3 5-5"
-        className="stroke-success"
+        className="stroke-primary"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -67,12 +66,12 @@ function ShieldIdIcon() {
 function UnlockIcon() {
   return (
     <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
-      <rect x="12" y="28" width="40" height="30" rx="6" className="fill-accent/10 stroke-accent" strokeWidth="3" />
-      <path d="M22 28V18a10 10 0 0 1 20 0" className="stroke-accent/50" strokeWidth="3" strokeLinecap="round" />
-      <circle cx="32" cy="41" r="4" className="fill-accent" />
-      <path d="M32 45v5" className="stroke-accent" strokeWidth="3" strokeLinecap="round" />
-      <path d="M48 10l4-4M52 10l-4-4" className="stroke-warning" strokeWidth="2" strokeLinecap="round" />
-      <path d="M54 18h5" className="stroke-warning" strokeWidth="2" strokeLinecap="round" />
+      <rect x="12" y="28" width="40" height="30" rx="6" className="fill-primary/12 stroke-primary" strokeWidth="3" />
+      <path d="M22 28V18a10 10 0 0 1 20 0" className="stroke-primary/60" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="32" cy="41" r="4" className="fill-primary" />
+      <path d="M32 45v5" className="stroke-primary" strokeWidth="3" strokeLinecap="round" />
+      <path d="M48 10l4-4M52 10l-4-4" className="stroke-primary/60" strokeWidth="2" strokeLinecap="round" />
+      <path d="M54 18h5" className="stroke-primary/60" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -80,17 +79,17 @@ function UnlockIcon() {
 function VoteIcon() {
   return (
     <svg viewBox="0 0 64 64" fill="none" className="w-full h-full">
-      <rect x="14" y="6" width="36" height="46" rx="4" className="fill-info/10 stroke-info" strokeWidth="2.5" />
-      <path d="M24 20h16M24 28h12M24 36h8" className="stroke-info/60" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="44" cy="48" r="14" className="fill-base-100 stroke-success" strokeWidth="2.5" />
+      <rect x="14" y="6" width="36" height="46" rx="4" className="fill-primary/12 stroke-primary" strokeWidth="2.5" />
+      <path d="M24 20h16M24 28h12M24 36h8" className="stroke-primary/60" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="44" cy="48" r="14" className="fill-base-100 stroke-primary" strokeWidth="2.5" />
       <path
         d="M38 48l4 4 8-9"
-        className="stroke-success"
+        className="stroke-primary"
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M32 6V2M24 6V3M40 6V3" className="stroke-info/40" strokeWidth="2" strokeLinecap="round" />
+      <path d="M32 6V2M24 6V3M40 6V3" className="stroke-primary/40" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
