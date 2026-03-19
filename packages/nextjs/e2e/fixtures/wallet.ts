@@ -1,9 +1,9 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { setupWallet } from "../helpers/local-storage";
+import { setupWallet } from "../helpers/wallet-session";
 import { type Browser, type BrowserContext, type Page, test as base, expect } from "@playwright/test";
 
 type WalletFixtures = {
-  /** A page with Account #2 burner wallet pre-connected (1000 cREP + VoterID). */
+  /** A page with Account #2 connected through the localhost thirdweb test wallet bridge. */
   connectedPage: Page;
 };
 

@@ -1,7 +1,7 @@
 import { cancelContent } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
-import { setupWallet } from "../helpers/local-storage";
+import { setupWallet } from "../helpers/wallet-session";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
 import { expect, test } from "@playwright/test";
 

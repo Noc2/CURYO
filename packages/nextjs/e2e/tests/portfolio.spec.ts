@@ -1,6 +1,6 @@
 import { expect, test } from "../fixtures/wallet";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { setupWallet } from "../helpers/local-storage";
+import { setupWallet } from "../helpers/wallet-session";
 
 test.describe("Portfolio page", () => {
   test("shows stats for connected wallet", async ({ connectedPage: page }) => {
@@ -11,7 +11,7 @@ test.describe("Portfolio page", () => {
     await expect(heading).toBeVisible({ timeout: 15_000 });
 
     // Wait for wallet connection to propagate — the page shows a connect prompt
-    // until wagmi's isConnected becomes true (can take a few seconds after localStorage injection)
+    // until the localhost thirdweb test wallet sync finishes.
     const main = page.locator("main");
     const totalVotesLabel = main.getByText("Total Votes");
     const connectPrompt = main.getByText("Connect your wallet");
@@ -20,7 +20,7 @@ test.describe("Portfolio page", () => {
     try {
       await expect(totalVotesLabel).toBeVisible({ timeout: 10_000 });
     } catch {
-      // Wallet not connected yet — reload and retry
+    // Wallet sync still in flight — reload and retry
       await page.reload();
       await expect(heading).toBeVisible({ timeout: 15_000 });
       await expect(totalVotesLabel).toBeVisible({ timeout: 15_000 });
@@ -68,7 +68,7 @@ test.describe("Portfolio page", () => {
     const page = await context.newPage();
     await page.goto("/portfolio");
 
-    // Either "Connect your wallet" prompt or the actual portfolio (if burner auto-connected)
+    // Either "Connect your wallet" prompt or the actual portfolio if a wallet is already connected.
     const connectPrompt = page.getByText(/connect your wallet/i);
     const portfolioHeading = page.getByRole("heading", { name: "Portfolio" });
 

@@ -1,5 +1,5 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { setupWallet } from "../helpers/local-storage";
+import { setupWallet } from "../helpers/wallet-session";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
 import { expect, test } from "@playwright/test";
 
@@ -44,8 +44,8 @@ test.describe("Error states and edge cases", () => {
   });
 
   test("page loads without wallet setup", async ({ browser }) => {
-    // Without setupWallet, the burner wallet may still auto-connect in scaffold-eth.
-    // This test verifies the page loads without errors regardless.
+    // Without setupWallet, no local test wallet session is injected.
+    // This test verifies the page still loads without errors.
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.goto("/vote");

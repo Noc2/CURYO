@@ -1,5 +1,5 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { setupWallet } from "../helpers/local-storage";
+import { setupWallet } from "../helpers/wallet-session";
 import { expect, test } from "../fixtures/wallet";
 
 test.describe("Accessibility basics", () => {

@@ -1,5 +1,5 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { setupWallet } from "../helpers/local-storage";
+import { setupWallet } from "../helpers/wallet-session";
 import { voteOnContent } from "../helpers/vote-helpers";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
 import { expect, test } from "@playwright/test";
