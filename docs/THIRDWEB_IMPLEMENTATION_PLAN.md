@@ -42,6 +42,8 @@ Important consequence:
 
 - We do **not** need a protocol redesign first.
 - The first implementation work is mostly in `provider`, `connect`, and `transaction execution`.
+- This plan intentionally skips a standalone `provider spike`.
+- If the rollout needs to be undone, use normal git rollback to a previous commit instead of maintaining a temporary spike branch in the product code.
 
 ## Architecture
 
@@ -56,6 +58,7 @@ This should be the default onboarding and transaction path.
 `thirdweb external wallet -> EIP-7702 / sendCalls when supported`
 
 This should be treated as a best-effort path, not a guaranteed product promise until validated.
+In particular, do not market `MetaMask on Celo` as gasless until `celoSepolia` validation confirms the expected `sendCalls` / `7702` behavior in Curyo's real flows.
 
 ### Fallback path
 
@@ -92,11 +95,11 @@ Files:
 
 ## Implementation Phases
 
-### Phase 1: Provider Spike
+### Phase 1: Direct Wallet Layer Migration
 
 Goal:
 
-- Add thirdweb to the app without removing wagmi yet.
+- Add thirdweb to the live app tree and immediately switch the primary connect path to it.
 
 Tasks:
 
@@ -104,38 +107,34 @@ Tasks:
    - `packages/nextjs/services/thirdweb/client.ts`
 2. Initialize `createThirdwebClient({ clientId })`
 3. Wrap the app with `ThirdwebProvider`
-4. Keep `WagmiProvider`, `QueryClientProvider`, and the rest of the app tree intact
+4. Build the production connect surface around thirdweb:
+   - `packages/nextjs/components/wallet/ThirdwebConnectButton.tsx`
+5. Replace the primary usage of `RainbowKitCustomConnectButton`
+6. Keep `WagmiProvider`, `QueryClientProvider`, and the rest of the app tree intact for reads during the migration
 
-Primary file:
+Primary files:
 
 - [ScaffoldEthAppWithProviders.tsx](../packages/nextjs/components/ScaffoldEthAppWithProviders.tsx)
+- [RainbowKitCustomConnectButton/index.tsx](../packages/nextjs/components/scaffold-eth/RainbowKitCustomConnectButton/index.tsx)
+- [Header.tsx](../packages/nextjs/components/Header.tsx)
 
 Target outcome:
 
 - thirdweb is available everywhere in the app
+- users connect through thirdweb by default
 - existing wagmi reads still work
 
-### Phase 2: Wallet UX Replacement
+Connect setup:
 
-Goal:
+- `inAppWallet({ executionMode: { mode: "EIP7702", sponsorGas: true } })`
+- external MetaMask option
+- WalletConnect-compatible fallback if needed
+- keep the visible button text and general UI style aligned with the current brand
 
-- Replace RainbowKit as the primary wallet surface
+Files likely touched in this phase:
 
-Tasks:
-
-1. Build a new wallet module:
-   - `packages/nextjs/components/wallet/ThirdwebConnectButton.tsx`
-2. Start with:
-   - `inAppWallet({ executionMode: { mode: "EIP7702", sponsorGas: true } })`
-   - external MetaMask option
-   - WalletConnect-compatible fallback if needed
-3. Replace usages of `RainbowKitCustomConnectButton`
-4. Keep the visible button text and general UI style aligned with the current brand
-
-Files to update:
-
-- [RainbowKitCustomConnectButton/index.tsx](../packages/nextjs/components/scaffold-eth/RainbowKitCustomConnectButton/index.tsx)
 - [Header.tsx](../packages/nextjs/components/Header.tsx)
+- [RainbowKitCustomConnectButton/index.tsx](../packages/nextjs/components/scaffold-eth/RainbowKitCustomConnectButton/index.tsx)
 - [governance/page.tsx](../packages/nextjs/app/governance/page.tsx)
 - [settings/page.tsx](../packages/nextjs/app/settings/page.tsx)
 - [submit/page.tsx](../packages/nextjs/app/submit/page.tsx)
@@ -144,9 +143,9 @@ Files to update:
 
 Migration rule:
 
-- Do not remove RainbowKit internals until the new connect flow reaches feature parity.
+- Do not remove RainbowKit internals yet, but stop treating them as the primary UX.
 
-### Phase 3: Wallet State Bridge
+### Phase 2: Wallet State Bridge
 
 Goal:
 
@@ -171,7 +170,7 @@ Files likely affected:
 - [useScaffoldWriteContract.ts](../packages/nextjs/hooks/scaffold-eth/useScaffoldWriteContract.ts)
 - wallet-aware UI surfaces in `Header`, `governance`, `settings`, and `submit`
 
-### Phase 4: Capability Detection
+### Phase 3: Capability Detection
 
 Goal:
 
@@ -196,7 +195,7 @@ Product rule:
 - If the wallet cannot do sponsored execution, the UI should degrade quietly to fallback mode.
 - Do not show “gasless” copy unless the active capability actually supports it.
 
-### Phase 5: Transaction Executor
+### Phase 4: Transaction Executor
 
 Goal:
 
@@ -217,7 +216,7 @@ Tasks:
 
 This is the key implementation step because it keeps the rest of the app from branching wallet logic everywhere.
 
-### Phase 6: Migrate High-Value Write Flows
+### Phase 5: Migrate High-Value Write Flows
 
 Migrate in this order:
 
@@ -233,7 +232,7 @@ Reason:
 - profile and claim flows are easier validation targets
 - vote commit is the most important path, but it is also the most critical to preserve correctly
 
-### Phase 7: Celo Fee Currency Fallback
+### Phase 6: Celo Fee Currency Fallback
 
 Goal:
 
@@ -250,7 +249,7 @@ Important rule:
 
 - This is fallback-only, not the primary transaction model.
 
-### Phase 8: Cleanup
+### Phase 7: Cleanup
 
 Only after parity is proven:
 
@@ -295,6 +294,7 @@ Run all validation first on `celoSepolia`.
 3. unsupported external-wallet environments fall back cleanly
 4. vote commit still succeeds without contract changes
 5. Self.xyz still verifies the correct address
+6. external wallets are only described as gasless if the validated session actually supports that path
 
 ## Non-Goals
 
@@ -313,12 +313,12 @@ If the thirdweb path fails to cover enough of Curyo, that should be treated as a
 ### Milestone 1
 
 - thirdweb provider added
-- in-app wallet connect works
+- primary connect UX moved to thirdweb
+- existing wagmi reads still work
 - no write flows migrated yet
 
 ### Milestone 2
 
-- primary connect UX moved to thirdweb
 - wallet state bridge in place
 - sponsorship capability detection working
 
@@ -339,19 +339,23 @@ If the thirdweb path fails to cover enough of Curyo, that should be treated as a
 - onboarding copy updated
 - docs updated
 
-## Recommended First PR
+## Recommended First Migration PR
 
-The first PR should stay small.
+The first PR should still stay focused, but it should be a real migration step instead of a temporary spike.
 
-Include only:
+Include:
 
 1. add `thirdweb` dependencies
-2. add `ThirdwebProvider`
-3. add thirdweb client config
-4. add a temporary thirdweb connect button behind a feature flag
-5. keep RainbowKit fully intact
+2. add thirdweb client config
+3. add `ThirdwebProvider` to the live app tree
+4. replace the primary connect surface with the new thirdweb connect flow
+5. keep wagmi reads intact
+6. do not migrate write flows yet
 
-This gives Curyo a safe spike path without committing the whole app to the migration in one shot.
+Rollback rule:
+
+- If this first PR proves unstable, revert to the previous commit.
+- Do not build or maintain a separate provider-spike path just for experimentation.
 
 ## Sources
 
@@ -366,3 +370,5 @@ This gives Curyo a safe spike path without committing the whole app to the migra
 - [EIP-5792 `useSendCalls`](https://portal.thirdweb.com/references/typescript/latest/eip5792/useSendCalls)
 - [EIP-5792 `sendCalls`](https://portal.thirdweb.com/references/typescript/v5/eip5792/sendCalls)
 - [Relayers](https://portal.thirdweb.com/engine/v2/features/relayers)
+- [Celo Fee Abstraction](https://docs.celo.org/tooling/overview/fee-abstraction)
+- [Celo Gas Fees](https://docs.celo.org/home/gas-fees)
