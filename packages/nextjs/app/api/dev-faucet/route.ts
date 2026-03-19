@@ -1,10 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import deployedContracts from "@curyo/contracts/deployedContracts";
-import { createPublicClient, createWalletClient, http, parseUnits } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { hardhat } from "viem/chains";
-import { getKeystoreAccount } from "~~/utils/keystore";
-import { checkRateLimit } from "~~/utils/rateLimit";
 
 // Only available in development on localhost chain
 const DEV_FAUCET_ENABLED = process.env.DEV_FAUCET_ENABLED === "true" && process.env.NODE_ENV === "development";
@@ -49,11 +43,14 @@ const hasVoterIdAbi = [
   },
 ] as const;
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: NextRequest) {
   if (!DEV_FAUCET_ENABLED) {
     return NextResponse.json({ error: "Dev faucet is disabled" }, { status: 403 });
   }
 
+  const [{ checkRateLimit }] = await Promise.all([import("~~/utils/rateLimit")]);
   const limited = await checkRateLimit(request, RATE_LIMIT);
   if (limited) return limited;
 
@@ -71,6 +68,20 @@ export async function POST(request: NextRequest) {
     if (!["mint-crep", "mint-voter-id"].includes(action)) {
       return NextResponse.json({ error: "Invalid action" }, { status: 400 });
     }
+
+    const [
+      { default: deployedContracts },
+      { createPublicClient, createWalletClient, http, parseUnits },
+      { privateKeyToAccount },
+      { hardhat },
+      { getKeystoreAccount },
+    ] = await Promise.all([
+      import("@curyo/contracts/deployedContracts"),
+      import("viem"),
+      import("viem/accounts"),
+      import("viem/chains"),
+      import("~~/utils/keystore"),
+    ]);
 
     // Resolve deployer account: keystore first, then raw private key fallback
     const faucetPrivateKey = process.env.FAUCET_PRIVATE_KEY;
