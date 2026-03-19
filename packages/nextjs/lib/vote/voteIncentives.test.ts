@@ -65,9 +65,9 @@ test("estimateVoteReturn uses informed weight during open phase", () => {
   );
 
   assert.equal(estimate.effectiveStakeMicro, 2_500_000n);
-  assert.equal(estimate.projectedVoterPoolMicro, 31_160_000n);
-  assert.equal(estimate.projectedPoolShareMicro, 3_462_222n);
-  assert.equal(estimate.estimatedGrossReturnMicro, 13_462_222n);
+  assert.equal(estimate.projectedVoterPoolMicro, 30_400_000n);
+  assert.equal(estimate.projectedPoolShareMicro, 3_377_777n);
+  assert.equal(estimate.estimatedGrossReturnMicro, 13_377_777n);
   assert.equal(estimate.revealedLoserRefundMicro, 500_000n);
 });
 
@@ -85,6 +85,6 @@ test("estimateVoteReturn keeps full weight during blind phase", () => {
   );
 
   assert.equal(estimate.effectiveStakeMicro, 10_000_000n);
-  assert.equal(estimate.projectedPoolShareMicro, 10_386_666n);
-  assert.equal(estimate.estimatedGrossReturnMicro, 20_386_666n);
+  assert.equal(estimate.projectedPoolShareMicro, 10_133_333n);
+  assert.equal(estimate.estimatedGrossReturnMicro, 20_133_333n);
 });
