@@ -559,21 +559,6 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   <>
                     <h1 className="truncate text-3xl font-semibold">{displayName}</h1>
                     <div className="mt-2 font-mono text-base text-base-content/55 break-all">{normalizedAddress}</div>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-base-content/55">
-                      <span>
-                        Win rate <span className="font-mono tabular-nums text-base-content/75">{winRateLabel}</span>
-                      </span>
-                      <span className="text-base-content/35">&bull;</span>
-                      <span>{profileLoading ? "..." : `${totalVotes} votes`}</span>
-                      <span className="text-base-content/35">&bull;</span>
-                      <span>
-                        {voterIdLoading
-                          ? "Loading Voter ID..."
-                          : hasVoterId
-                            ? `Voter ID #${tokenId.toString()}`
-                            : "No Voter ID"}
-                      </span>
-                    </div>
                   </>
                 )}
               </div>
@@ -639,6 +624,29 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             )}
           </div>
 
+          {!isEditing ? (
+            <div className="mt-4 flex flex-col gap-2 text-base text-base-content/55 lg:flex-row lg:items-center">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>
+                  Win rate <span className="font-mono tabular-nums text-base-content/75">{winRateLabel}</span>
+                </span>
+                <span className="text-base-content/35">&bull;</span>
+                <span>{profileLoading ? "..." : `${totalVotes} votes`}</span>
+                <span className="text-base-content/35">&bull;</span>
+                <span>
+                  {voterIdLoading
+                    ? "Loading Voter ID..."
+                    : hasVoterId
+                      ? `Voter ID #${tokenId.toString()}`
+                      : "No Voter ID"}
+                </span>
+              </div>
+              <div className="font-medium text-base-content/65 lg:ml-auto">
+                Referrals <span className="font-mono tabular-nums text-base-content/85">{referralCountLabel}</span>
+              </div>
+            </div>
+          ) : null}
+
           {profileError ? (
             <div className="mt-4 rounded-2xl bg-error/10 px-4 py-3 text-base text-error">{profileError}</div>
           ) : null}
@@ -696,7 +704,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
           </div>
         ) : null}
 
-        <div className={`grid gap-3 sm:grid-cols-2 ${ownProfile ? "lg:grid-cols-3" : "xl:grid-cols-4"}`}>
+        <div className={`grid gap-3 sm:grid-cols-2 ${ownProfile ? "lg:grid-cols-2" : "xl:grid-cols-3"}`}>
           {!ownProfile ? (
             <StatCard label="Current cREP" value={formatCrepBigInt(balance)} tooltip="Current cREP balance." />
           ) : null}
@@ -705,7 +713,6 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             value={stats ? String(stats.totalSettledVotes) : "0"}
             tooltip="Settled rounds only."
           />
-          <StatCard label="Referrals" value={referralCountLabel} tooltip="Successful referrals." />
           <StatCard
             label="Best streak"
             value={stats ? `${stats.bestWinStreak}W` : "0"}
