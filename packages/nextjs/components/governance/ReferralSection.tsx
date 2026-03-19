@@ -3,9 +3,8 @@
 import { useAccount } from "wagmi";
 import { CheckIcon, ClipboardDocumentIcon, GiftIcon, LinkIcon, UserGroupIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth/useCopyToClipboard";
-import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { formatReferralAmount, useReferralProgram } from "~~/hooks/useReferralProgram";
 
 interface ReferralSectionProps {
   className?: string;
@@ -14,35 +13,8 @@ interface ReferralSectionProps {
 export function ReferralSection({ className = "" }: ReferralSectionProps) {
   const { address } = useAccount();
   const { copyToClipboard, isCopiedToClipboard } = useCopyToClipboard();
-  const { hasVoterId } = useVoterIdNFT(address);
-
-  // Read referral amounts from HumanFaucet contract
-  const { data: referralAmounts } = useScaffoldReadContract({
-    contractName: "HumanFaucet",
-    functionName: "getCurrentReferralAmounts",
-  });
-
-  // Read referral stats for this user
-  const { data: referralStats } = useScaffoldReadContract({
-    contractName: "HumanFaucet",
-    functionName: "getReferralStats",
-    args: [address],
-  });
-
-  const claimantBonus = referralAmounts?.[0];
-  const referralReward = referralAmounts?.[1];
-  const referralCount = referralStats?.[0] ?? 0n;
-  const totalEarned = referralStats?.[1] ?? 0n;
-
-  // Format token amount (6 decimals)
-  const formatAmount = (amount: bigint | undefined) => {
-    if (!amount) return "0";
-    return (Number(amount) / 1e6).toLocaleString();
-  };
-
-  // Generate referral link
-  const referralLink =
-    typeof window !== "undefined" && address ? `${window.location.origin}/governance?ref=${address}` : "";
+  const { claimantBonus, hasVoterId, referralCount, referralLink, referralReward, totalEarned } =
+    useReferralProgram(address);
 
   const tweetText = `Join Curyo and claim free cREP tokens! Use my referral link to get a bonus: ${referralLink}`;
 
@@ -70,12 +42,13 @@ export function ReferralSection({ className = "" }: ReferralSectionProps) {
           </div>
           <ul className="text-base text-base-content/70 space-y-1 ml-7">
             <li>
-              You receive: <span className="text-primary font-semibold">{formatAmount(referralReward)} cREP</span> per
+              You receive:{" "}
+              <span className="text-primary font-semibold">{formatReferralAmount(referralReward)} cREP</span> per
               referral
             </li>
             <li>
-              Your friend gets: <span className="text-primary font-semibold">{formatAmount(claimantBonus)} cREP</span>{" "}
-              bonus
+              Your friend gets:{" "}
+              <span className="text-primary font-semibold">{formatReferralAmount(claimantBonus)} cREP</span> bonus
             </li>
           </ul>
         </div>
@@ -100,7 +73,7 @@ export function ReferralSection({ className = "" }: ReferralSectionProps) {
         </div>
         <div className="bg-base-200 rounded-xl p-4">
           <p className="text-base text-base-content/60">Total Received</p>
-          <p className="text-2xl font-bold text-primary">{formatAmount(totalEarned)} cREP</p>
+          <p className="text-2xl font-bold text-primary">{formatReferralAmount(totalEarned)} cREP</p>
         </div>
       </div>
 
@@ -112,12 +85,12 @@ export function ReferralSection({ className = "" }: ReferralSectionProps) {
         </div>
         <ul className="text-base text-base-content/70 space-y-1 ml-7">
           <li>
-            You receive: <span className="text-primary font-semibold">{formatAmount(referralReward)} cREP</span> per
-            referral
+            You receive: <span className="text-primary font-semibold">{formatReferralAmount(referralReward)} cREP</span>{" "}
+            per referral
           </li>
           <li>
-            Your friend gets: <span className="text-primary font-semibold">{formatAmount(claimantBonus)} cREP</span>{" "}
-            bonus
+            Your friend gets:{" "}
+            <span className="text-primary font-semibold">{formatReferralAmount(claimantBonus)} cREP</span> bonus
           </li>
         </ul>
       </div>
