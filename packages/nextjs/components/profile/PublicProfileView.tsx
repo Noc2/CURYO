@@ -20,7 +20,7 @@ import { WinRateRing } from "~~/components/leaderboard/WinRateRing";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
-import { useCopyToClipboard, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
@@ -55,11 +55,6 @@ function truncateAddress(address: string) {
 
 function formatCrepString(value: string | null | undefined) {
   if (!value) return "0";
-  return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
-}
-
-function formatCrepBigInt(value: bigint | undefined) {
-  if (value === undefined) return "0";
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
@@ -99,18 +94,6 @@ function getVoteOutcome(vote: PonderVoteItem) {
   return { label: "Open", className: "text-primary" };
 }
 
-function StatCard({ label, value, tooltip }: { label: string; value: string; tooltip?: string }) {
-  return (
-    <div className="surface-card rounded-2xl px-4 py-3">
-      <div className="flex items-center gap-1.5 text-base text-base-content/45">
-        <span>{label}</span>
-        {tooltip ? <InfoTooltip text={tooltip} /> : null}
-      </div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
-    </div>
-  );
-}
-
 export function PublicProfileView({ address, embedded = false }: PublicProfileViewProps) {
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
   const isPageVisible = usePageVisibility();
@@ -142,11 +125,6 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const { clearAvatarAccent, isPending: clearAvatarAccentPending } = useClearAvatarAccent();
   const { claimantBonus, referralCount, referralLink, referralReward, totalEarned } =
     useReferralProgram(normalizedAddress);
-  const { data: balance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
-    functionName: "balanceOf",
-    args: [normalizedAddress],
-  });
 
   const { data: profileResult, isLoading: profileLoading } = usePonderQuery<
     PonderProfileDetailResponse,
@@ -704,20 +682,60 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
           </div>
         ) : null}
 
-        <div className={`grid gap-3 sm:grid-cols-2 ${ownProfile ? "lg:grid-cols-2" : "xl:grid-cols-3"}`}>
-          {!ownProfile ? (
-            <StatCard label="Current cREP" value={formatCrepBigInt(balance)} tooltip="Current cREP balance." />
-          ) : null}
-          <StatCard
-            label="Resolved votes"
-            value={stats ? String(stats.totalSettledVotes) : "0"}
-            tooltip="Settled rounds only."
-          />
-          <StatCard
-            label="Best streak"
-            value={stats ? `${stats.bestWinStreak}W` : "0"}
-            tooltip="Longest win streak. Current streak is shown below."
-          />
+        <div className="surface-card rounded-3xl p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-base font-medium text-base-content/60">Voting performance</span>
+              <InfoTooltip text="Resolved rounds only. Category bars show win and loss ratios by category." />
+            </div>
+            <span className="text-base tabular-nums text-base-content/60">{stats ? stats.totalSettledVotes : 0}</span>
+          </div>
+
+          {stats ? (
+            <div className="space-y-5">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
+                <WinRateRing winRate={stats.winRate} wins={stats.totalWins} losses={stats.totalLosses} />
+
+                <div className="flex flex-1 flex-col gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
+                      <span className="text-base-content/50">Current streak </span>
+                      <span className="font-mono tabular-nums">{streakLabel}</span>
+                    </div>
+                    <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
+                      <span className="text-base-content/50">Best streak </span>
+                      <span className="font-mono tabular-nums">{stats.bestWinStreak}W</span>
+                    </div>
+                    <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
+                      <span className="text-base-content/50">Win rate </span>
+                      <span className="font-mono tabular-nums">{(stats.winRate * 100).toFixed(1)}%</span>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
+                      <div className="text-base text-base-content/45">Stake won</div>
+                      <div className="mt-1 text-xl font-semibold text-success">
+                        {formatCrepString(stats.totalStakeWon)} cREP
+                      </div>
+                    </div>
+                    <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
+                      <div className="text-base text-base-content/45">Stake lost</div>
+                      <div className="mt-1 text-xl font-semibold text-error">
+                        {formatCrepString(stats.totalStakeLost)} cREP
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <CategoryBars categories={categories} />
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/55">
+              No resolved voting history yet.
+            </div>
+          )}
         </div>
 
         <div className="surface-card rounded-3xl p-6">
@@ -772,62 +790,6 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                   </Link>
                 );
               })}
-            </div>
-          )}
-        </div>
-
-        <div className="surface-card rounded-3xl p-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-base font-medium text-base-content/60">Voting performance</span>
-              <InfoTooltip text="Resolved rounds only. Category bars show win and loss ratios by category." />
-            </div>
-            <span className="text-base tabular-nums text-base-content/60">{stats ? stats.totalSettledVotes : 0}</span>
-          </div>
-
-          {stats ? (
-            <div className="space-y-5">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center">
-                <WinRateRing winRate={stats.winRate} wins={stats.totalWins} losses={stats.totalLosses} />
-
-                <div className="flex flex-1 flex-col gap-3">
-                  <div className="flex flex-wrap gap-2">
-                    <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
-                      <span className="text-base-content/50">Current streak </span>
-                      <span className="font-mono tabular-nums">{streakLabel}</span>
-                    </div>
-                    <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
-                      <span className="text-base-content/50">Best streak </span>
-                      <span className="font-mono tabular-nums">{stats.bestWinStreak}W</span>
-                    </div>
-                    <div className="rounded-full bg-base-content/[0.06] px-3 py-1.5 text-base">
-                      <span className="text-base-content/50">Win rate </span>
-                      <span className="font-mono tabular-nums">{(stats.winRate * 100).toFixed(1)}%</span>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
-                      <div className="text-base text-base-content/45">Stake won</div>
-                      <div className="mt-1 text-xl font-semibold text-success">
-                        {formatCrepString(stats.totalStakeWon)} cREP
-                      </div>
-                    </div>
-                    <div className="rounded-2xl bg-base-content/[0.05] px-4 py-3">
-                      <div className="text-base text-base-content/45">Stake lost</div>
-                      <div className="mt-1 text-xl font-semibold text-error">
-                        {formatCrepString(stats.totalStakeLost)} cREP
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <CategoryBars categories={categories} />
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-base-content/[0.04] px-4 py-8 text-center text-base text-base-content/55">
-              No resolved voting history yet.
             </div>
           )}
         </div>
