@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { BellAlertIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
+import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useEmailNotificationSettings } from "~~/hooks/useEmailNotificationSettings";
 import { type NotificationPreferences, useNotificationPreferences } from "~~/hooks/useNotificationPreferences";
 import { type EmailNotificationSettingsPayload } from "~~/lib/notifications/emailShared";
@@ -77,7 +77,7 @@ export function NotificationSettingsPanel({
   address?: string;
   onStatusChange?: () => void;
 }) {
-  const { openConnectModal } = useConnectModal();
+  const { openConnectModal } = useCuryoConnectModal();
   const { preferences, isSaving, isLoading, updatePreference } = useNotificationPreferences(address, {
     autoRead: true,
   });
@@ -145,7 +145,7 @@ export function NotificationSettingsPanel({
 
       if (!result.ok) {
         if (result.reason === "not_connected") {
-          openConnectModal?.();
+          void openConnectModal();
           return;
         }
 
@@ -205,7 +205,7 @@ export function NotificationSettingsPanel({
 
     if (!result.ok) {
       if (result.reason === "not_connected") {
-        openConnectModal?.();
+        void openConnectModal();
         return;
       }
 
@@ -245,7 +245,13 @@ export function NotificationSettingsPanel({
               Connect your wallet to choose which in-app, browser, and email alerts you want to receive.
             </p>
           </div>
-          <button type="button" onClick={openConnectModal} className="btn btn-submit px-6">
+          <button
+            type="button"
+            onClick={() => {
+              void openConnectModal();
+            }}
+            className="btn btn-submit px-6"
+          >
             Connect wallet
           </button>
         </div>

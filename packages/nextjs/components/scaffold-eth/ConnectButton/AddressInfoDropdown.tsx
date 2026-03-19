@@ -18,9 +18,8 @@ import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
 import { getWalletDisplayLiquidMicro, useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
+import { BURNER_WALLET_ID } from "~~/services/web3/burner";
 import { isENS } from "~~/utils/scaffold-eth/common";
-
-const BURNER_WALLET_ID = "burnerWallet";
 
 type AddressInfoDropdownProps = {
   address: Address;

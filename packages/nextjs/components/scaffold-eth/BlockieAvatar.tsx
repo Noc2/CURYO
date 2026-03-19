@@ -1,10 +1,14 @@
 "use client";
 
-import { AvatarComponent } from "@rainbow-me/rainbowkit";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
 
-// Custom Avatar for RainbowKit
-export const BlockieAvatar: AvatarComponent = ({ address, ensImage, size }) => {
+type BlockieAvatarProps = {
+  address: string;
+  ensImage?: string | null;
+  size: number;
+};
+
+export const BlockieAvatar = ({ address, ensImage, size }: BlockieAvatarProps) => {
   const fallbackAvatar = getReputationAvatarUrl(address, size);
 
   return (

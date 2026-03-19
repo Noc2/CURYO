@@ -10,7 +10,7 @@ import { ChevronDownIcon, IdentificationIcon, MagnifyingGlassIcon, XMarkIcon } f
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
 import { FrontendRegistration } from "~~/components/governance/FrontendRegistration";
-import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
@@ -485,7 +485,7 @@ const SubmitPage: NextPage = () => {
           <p className="text-base-content/50 mb-6 text-base">
             Connect your wallet to submit content or propose new categories.
           </p>
-          <RainbowKitCustomConnectButton />
+          <CuryoConnectButton />
         </div>
       </div>
     );

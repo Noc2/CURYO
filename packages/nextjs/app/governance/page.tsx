@@ -15,7 +15,7 @@ import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
 import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
 import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
 import { PublicProfileView } from "~~/components/profile/PublicProfileView";
-import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -118,7 +118,7 @@ function GovernancePageInner() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <p className="text-base-content/60 mb-6 text-center">Connect your wallet to participate</p>
-        <RainbowKitCustomConnectButton />
+        <CuryoConnectButton />
       </div>
     );
   }

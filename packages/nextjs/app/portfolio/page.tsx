@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount } from "wagmi";
-import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { formatTimeRemaining, useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useClaimReward } from "~~/hooks/useClaimReward";
@@ -51,7 +51,7 @@ export default function PortfolioPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <h1 className="text-2xl font-bold mb-4">Portfolio</h1>
         <p className="text-base-content/60 mb-6 text-center">Connect your wallet to view your portfolio</p>
-        <RainbowKitCustomConnectButton />
+        <CuryoConnectButton />
       </div>
     );
   }

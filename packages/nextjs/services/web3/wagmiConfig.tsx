@@ -13,7 +13,7 @@ const mainnetRpcUrls = [rpcOverrides?.[mainnet.id], getAlchemyHttpUrl(mainnet.id
 );
 
 // Only add mainnet automatically when we have an explicit RPC for it.
-// Otherwise RainbowKit/Wagmi will probe viem's public defaults in the browser,
+// Otherwise wallet tooling will probe viem's public defaults in the browser,
 // which can violate CSP or hit unreliable third-party endpoints.
 export const enabledChains = targetHasMainnet
   ? targetNetworks

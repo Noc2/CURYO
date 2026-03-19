@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
+import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
@@ -25,7 +25,7 @@ interface LeaderboardTableProps {
 
 export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
   const { address: connectedAddress } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const { openConnectModal } = useCuryoConnectModal();
   const {
     followedWallets,
     toggleFollow,
@@ -91,7 +91,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
       if (!result.ok) {
         if (result.reason === "not_connected") {
           notification.info("Connect your wallet to follow curators.");
-          openConnectModal?.();
+          void openConnectModal();
           return;
         }
 
@@ -119,7 +119,7 @@ export function LeaderboardTable({ refreshKey }: LeaderboardTableProps) {
       if (!result.ok) {
         if (result.reason === "not_connected") {
           notification.info("Connect your wallet to filter by curators you follow.");
-          openConnectModal?.();
+          void openConnectModal();
           return;
         }
 

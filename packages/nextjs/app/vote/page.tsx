@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, type PanInfo, type Variants, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
@@ -17,6 +16,7 @@ import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import { useContentFeed } from "~~/hooks/useContentFeed";
+import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useDiscoverSignals } from "~~/hooks/useDiscoverSignals";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useInterestProfile } from "~~/hooks/useInterestProfile";
@@ -101,7 +101,7 @@ const HomeInner = () => {
 
   const { address } = useAccount();
   const nowSeconds = useUnixTime(60_000);
-  const { openConnectModal } = useConnectModal();
+  const { openConnectModal } = useCuryoConnectModal();
   const { isFirstVote, markVoteCompleted } = useOnboarding();
   const [activeCategory, setActiveCategory] = useState<string>(ALL_FILTER);
   const [view, setView] = useState<VoteView>("for_you");
@@ -1013,7 +1013,7 @@ const HomeInner = () => {
       if (!result.ok) {
         if (result.reason === "not_connected") {
           notification.info("Connect your wallet to watch content.");
-          openConnectModal?.();
+          void openConnectModal();
           return;
         }
 
@@ -1042,7 +1042,7 @@ const HomeInner = () => {
       if (!result.ok) {
         if (result.reason === "not_connected") {
           notification.info("Connect your wallet to follow curators.");
-          openConnectModal?.();
+          void openConnectModal();
           return;
         }
 
@@ -1080,7 +1080,7 @@ const HomeInner = () => {
         if (!result.ok) {
           if (result.reason === "not_connected") {
             notification.info("Connect your wallet to view your watchlist.");
-            openConnectModal?.();
+            void openConnectModal();
             return;
           }
 
@@ -1103,7 +1103,7 @@ const HomeInner = () => {
       if (!result.ok) {
         if (result.reason === "not_connected") {
           notification.info("Connect your wallet to view curators you follow.");
-          openConnectModal?.();
+          void openConnectModal();
           return;
         }
 

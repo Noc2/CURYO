@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import {
   ArrowLeftIcon,
@@ -21,6 +20,7 @@ import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { ProfileImageLightbox } from "~~/components/shared/ProfileImageLightbox";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
+import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
@@ -98,7 +98,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
   const isPageVisible = usePageVisibility();
   const { address: connectedAddress } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const { openConnectModal } = useCuryoConnectModal();
   const {
     followedWallets,
     toggleFollow,
@@ -290,7 +290,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     if (!result.ok) {
       if (result.reason === "not_connected") {
         notification.info("Connect your wallet to follow curators.");
-        openConnectModal?.();
+        void openConnectModal();
         return;
       }
 

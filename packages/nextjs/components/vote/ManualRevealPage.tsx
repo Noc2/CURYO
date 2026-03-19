@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
-import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { formatTimeRemaining } from "~~/hooks/useActiveVotesWithDeadlines";
 import { ManualRevealVote, useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
@@ -62,7 +62,7 @@ export function ManualRevealPage() {
           <p className="text-base-content/60">
             Hidden fallback for manual reveals. Auto-reveal stays the default path.
           </p>
-          <RainbowKitCustomConnectButton />
+          <CuryoConnectButton />
         </div>
       </div>
     );

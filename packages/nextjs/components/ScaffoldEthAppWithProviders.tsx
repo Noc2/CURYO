@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar";
 import { Toaster } from "react-hot-toast";
@@ -10,7 +9,6 @@ import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
-import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
 import { TermsAcceptanceProvider } from "~~/contexts/TermsAcceptanceContext";
@@ -47,27 +45,18 @@ export const queryClient = new QueryClient({
 });
 
 export const ScaffoldEthAppWithProviders = ({ children }: { children: React.ReactNode }) => {
-  const obsidianEmberTheme = darkTheme({
-    accentColor: "#F26426",
-    accentColorForeground: "#090A0C",
-    borderRadius: "medium",
-    overlayBlur: "small",
-  });
-
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ThirdwebProvider>
-          <RainbowKitProvider avatar={BlockieAvatar} theme={obsidianEmberTheme}>
-            <ThirdwebAutoConnectBridge />
-            <ProgressBar height="3px" color="#F26426" />
-            <TermsAcceptanceProvider>
-              <OptimisticVoteProvider>
-                <ScaffoldEthApp>{children}</ScaffoldEthApp>
-              </OptimisticVoteProvider>
-              <TermsAcceptanceModal />
-            </TermsAcceptanceProvider>
-          </RainbowKitProvider>
+          <ThirdwebAutoConnectBridge />
+          <ProgressBar height="3px" color="#F26426" />
+          <TermsAcceptanceProvider>
+            <OptimisticVoteProvider>
+              <ScaffoldEthApp>{children}</ScaffoldEthApp>
+            </OptimisticVoteProvider>
+            <TermsAcceptanceModal />
+          </TermsAcceptanceProvider>
         </ThirdwebProvider>
       </QueryClientProvider>
     </WagmiProvider>

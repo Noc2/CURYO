@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { DelegationSection } from "~~/components/profile/DelegationSection";
-import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { NotificationSettingsPanel } from "~~/components/settings/NotificationSettingsPanel";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 
@@ -53,7 +53,7 @@ function SettingsPageInner() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <p className="text-base-content/60 mb-6 text-center">Connect your wallet to manage your settings</p>
-        <RainbowKitCustomConnectButton />
+        <CuryoConnectButton />
       </div>
     );
   }

@@ -19,11 +19,12 @@ const cspDirectives = [
     // drand (tlock encryption)
     "https://api.drand.sh",
     "https://mainnet.drand.sh",
-    // WalletConnect / RainbowKit
+    // Wallet connections
     "wss://*.walletconnect.com",
     "https://*.walletconnect.com",
     "https://*.walletconnect.org",
     "https://api.web3modal.org",
+    "https://*.thirdweb.com",
     // Coinbase Wallet SDK
     "https://cca-lite.coinbase.com",
     // Content metadata APIs (platform handlers)
@@ -46,6 +47,7 @@ const cspDirectives = [
     .join(" "),
   [
     "frame-src 'self'",
+    "https://embedded-wallet.thirdweb.com",
     "https://www.youtube-nocookie.com",
     "https://youtube.com",
     "https://clips.twitch.tv",

@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useAccount } from "wagmi";
 import { FollowScopeToggle } from "~~/components/leaderboard/FollowScopeToggle";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
+import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { PonderAccuracyLeaderboardItem, PonderAccuracyLeaderboardWindow, ponderApi } from "~~/services/ponder/client";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
@@ -19,7 +19,7 @@ type WindowOption = PonderAccuracyLeaderboardWindow;
 
 export function AccuracyLeaderboard() {
   const { address: connectedAddress } = useAccount();
-  const { openConnectModal } = useConnectModal();
+  const { openConnectModal } = useCuryoConnectModal();
   const { categories } = useCategoryRegistry();
   const {
     followedWallets,
@@ -95,7 +95,7 @@ export function AccuracyLeaderboard() {
       if (!result.ok) {
         if (result.reason === "not_connected") {
           notification.info("Connect your wallet to follow curators.");
-          openConnectModal?.();
+          void openConnectModal();
           return;
         }
 
@@ -123,7 +123,7 @@ export function AccuracyLeaderboard() {
       if (!result.ok) {
         if (result.reason === "not_connected") {
           notification.info("Connect your wallet to filter by curators you follow.");
-          openConnectModal?.();
+          void openConnectModal();
           return;
         }
 

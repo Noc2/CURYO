@@ -17,8 +17,8 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { CuryoLogo } from "~~/components/CuryoLogo";
-import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
-import { AddressInfoDropdown } from "~~/components/scaffold-eth/RainbowKitCustomConnectButton/AddressInfoDropdown";
+import { CuryoConnectButton } from "~~/components/scaffold-eth";
+import { AddressInfoDropdown } from "~~/components/scaffold-eth/ConnectButton/AddressInfoDropdown";
 import { DOCS_NAV } from "~~/constants/docsNav";
 import { useOutsideClick, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { useVoteSearch } from "~~/hooks/useVoteSearch";
@@ -380,7 +380,7 @@ export const Header = () => {
                 <Suspense>
                   <HeaderSearchBar />
                 </Suspense>
-                <RainbowKitCustomConnectButton />
+                <CuryoConnectButton />
               </div>
             </>
           )}
@@ -402,7 +402,7 @@ export const Header = () => {
         </nav>
         <div className="flex flex-col items-stretch gap-2 pt-4 border-t border-base-300 mt-auto shrink-0 w-full px-3">
           <div className="w-full flex justify-stretch">
-            <RainbowKitCustomConnectButton inlineMenu />
+            <CuryoConnectButton inlineMenu />
           </div>
         </div>
       </aside>

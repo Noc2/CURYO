@@ -1,24 +1,25 @@
 "use client";
 
+import { useMemo } from "react";
 import { AutoConnect } from "thirdweb/react";
 import type { Wallet } from "thirdweb/wallets";
 import { useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
-import { thirdwebConnectOptions } from "~~/services/thirdweb/client";
+import { getThirdwebAutoConnectOptions } from "~~/services/thirdweb/client";
 
 export function ThirdwebAutoConnectBridge() {
   const { syncWalletToWagmi } = useThirdwebWagmiSync();
+  const autoConnectOptions = useMemo(() => getThirdwebAutoConnectOptions(), []);
 
-  if (!thirdwebConnectOptions) {
+  if (!autoConnectOptions) {
     return null;
   }
 
   return (
     <AutoConnect
-      {...thirdwebConnectOptions}
+      {...autoConnectOptions}
       onConnect={(wallet: Wallet) => {
         void syncWalletToWagmi(wallet);
       }}
-      timeout={15_000}
     />
   );
 }

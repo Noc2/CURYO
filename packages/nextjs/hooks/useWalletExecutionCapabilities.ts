@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useActiveAccount, useActiveWallet, useCapabilities } from "thirdweb/react";
 import { useAccount } from "wagmi";
-import { isThirdwebWalletChain } from "~~/services/thirdweb/client";
+import { supportsThirdwebExecutionCapabilities } from "~~/services/thirdweb/client";
 
 export type WalletExecutionMode = "sponsored_7702" | "external_send_calls" | "fee_currency" | "direct_celo";
 
@@ -11,7 +11,7 @@ export function useWalletExecutionCapabilities() {
   const wallet = useActiveWallet();
   const thirdwebAccount = useActiveAccount();
   const { chainId } = useAccount();
-  const supportedChain = isThirdwebWalletChain(chainId);
+  const supportedChain = supportsThirdwebExecutionCapabilities(chainId);
   const { data: capabilities } = useCapabilities({
     chainId,
     queryOptions: {

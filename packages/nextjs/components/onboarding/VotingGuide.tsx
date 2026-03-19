@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAccount } from "wagmi";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
@@ -26,7 +26,7 @@ const STEPS = [
  */
 export function VotingGuide() {
   const { shouldShowGuide, dismissGuide } = useOnboarding();
-  const { openConnectModal } = useConnectModal();
+  const { openConnectModal } = useCuryoConnectModal();
   const { address } = useAccount();
   const { hasVoterId } = useVoterIdNFT(address);
   const [mounted, setMounted] = useState(false);
@@ -76,7 +76,9 @@ export function VotingGuide() {
           {!address ? (
             <button
               type="button"
-              onClick={() => openConnectModal?.()}
+              onClick={() => {
+                void openConnectModal();
+              }}
               className="btn btn-sm btn-curyo border-none w-full"
               style={{ fontSize: "16px" }}
             >

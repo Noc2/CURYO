@@ -1,6 +1,6 @@
 "use client";
 
-import { RainbowKitCustomConnectButton } from "~~/components/scaffold-eth";
+import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RatingOrb } from "~~/components/shared/RatingOrb";
@@ -181,7 +181,7 @@ export function VotingQuestionCard({
                     <CuryoVoteButton direction="up" onClick={() => onVote(true)} disabled={isCommitting} />
                   </>
                 ) : (
-                  <RainbowKitCustomConnectButton />
+                  <CuryoConnectButton />
                 )}
               </div>
             )}

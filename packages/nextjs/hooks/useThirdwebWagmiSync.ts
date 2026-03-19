@@ -3,13 +3,15 @@
 import { useCallback } from "react";
 import type { Wallet } from "thirdweb/wallets";
 import { useConnect } from "wagmi";
-import { thirdwebClient, thirdwebDefaultChain } from "~~/services/thirdweb/client";
+import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { thirdwebClient } from "~~/services/thirdweb/client";
 
 export function useThirdwebWagmiSync() {
   const { connectAsync, connectors } = useConnect();
+  const { targetNetwork } = useTargetNetwork();
 
   const syncWalletToWagmi = useCallback(
-    async (wallet: Wallet) => {
+    async (wallet: Wallet, fallbackChainId: number = targetNetwork.id) => {
       if (!thirdwebClient) {
         return;
       }
@@ -20,12 +22,12 @@ export function useThirdwebWagmiSync() {
       }
 
       await connectAsync({
-        chainId: wallet.getChain()?.id ?? thirdwebDefaultChain.id,
+        chainId: wallet.getChain()?.id ?? fallbackChainId,
         connector,
         wallet,
       } as any);
     },
-    [connectAsync, connectors],
+    [connectAsync, connectors, targetNetwork.id],
   );
 
   return {
