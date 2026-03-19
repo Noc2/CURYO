@@ -38,6 +38,7 @@ export const menuLinks: HeaderMenuLink[] = [
 ];
 
 type HeaderNavLinkProps = {
+  className?: string;
   compact?: boolean;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -50,6 +51,7 @@ const navIndicatorClassName =
   "absolute right-2 top-2 bottom-2 w-1 rounded-full bg-linear-to-b from-[#F5F0EB] via-[#F26426] to-[#B3341B] shadow-[0_0_18px_rgba(242,100,38,0.45)]";
 
 const HeaderNavLink = ({
+  className,
   compact = false,
   href,
   icon: Icon,
@@ -62,9 +64,9 @@ const HeaderNavLink = ({
   return (
     <Link
       href={href}
-      className={`group relative flex items-center gap-3 overflow-hidden rounded-xl ${
+      className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl ${
         compact ? "px-3 py-2.5" : "px-4 py-3"
-      } transition-colors duration-200 ${
+      } ${className ?? ""} transition-colors duration-200 ${
         isActive ? "text-base-content" : "text-base-content/60 hover:bg-base-content/[0.04] hover:text-base-content"
       }`}
     >
@@ -101,16 +103,15 @@ export const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "
         if (isDocs && isDocsPage) {
           return (
             <li key={href} className="w-full">
-              <div className="mb-2">
-                <HeaderNavLink
-                  compact={compact}
-                  href={href}
-                  icon={Icon}
-                  indicatorLayoutId={indicatorLayoutId}
-                  isActive
-                  label="Docs"
-                />
-              </div>
+              <HeaderNavLink
+                className="mb-2"
+                compact={compact}
+                href={href}
+                icon={Icon}
+                indicatorLayoutId={indicatorLayoutId}
+                isActive
+                label="Docs"
+              />
               {/* Docs submenu - single column, explicitly block layout */}
               <div className="flex flex-col space-y-4 w-full">
                 {DOCS_NAV.map(group => (
