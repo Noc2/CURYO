@@ -46,10 +46,10 @@ export function VotingGuide() {
           >
             <XMarkIcon className="w-4 h-4" />
           </button>
-          <h3 className="font-bold text-lg leading-snug pr-6">Here&apos;s how the reputation game works:</h3>
+          <h3 className="font-bold text-lg leading-snug pr-6">How it works</h3>
           <p className="mt-2 pr-6 text-sm leading-relaxed text-base-content/65">
-            The hardest part is getting started. Because Curyo is a fully decentralized protocol, the first setup has a
-            few extra trustless steps, but after that the flow gets much easier. Stick with it.
+            Getting started takes a bit more effort because Curyo is fully decentralized, but after setup it gets much
+            easier.
           </p>
         </div>
 
