@@ -1,4 +1,8 @@
-import { buildWalletDisplaySummary, reconcileWalletDisplaySummary } from "./useWalletDisplaySummary";
+import {
+  buildWalletDisplaySummary,
+  getWalletDisplayLiquidMicro,
+  reconcileWalletDisplaySummary,
+} from "./useWalletDisplaySummary";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -105,4 +109,44 @@ test("reconcileWalletDisplaySummary keeps the previous coherent snapshot when li
 
   const reconciled = reconcileWalletDisplaySummary(current, raw, 6_100);
   assert.equal(reconciled, current);
+});
+
+test("reconcileWalletDisplaySummary keeps the previous coherent snapshot when stake rises before liquid catches up", () => {
+  const current = buildWalletDisplaySummary(
+    {
+      liquidMicro: 900n * MICRO,
+      votingStakedMicro: 100n * MICRO,
+      submissionStakedMicro: 0n,
+      frontendStakedMicro: 0n,
+    },
+    { updatedAt: 7_000 },
+  );
+
+  const raw = buildWalletDisplaySummary(
+    {
+      liquidMicro: 900n * MICRO,
+      votingStakedMicro: 150n * MICRO,
+      submissionStakedMicro: 0n,
+      frontendStakedMicro: 0n,
+    },
+    { updatedAt: 8_000 },
+  );
+
+  const reconciled = reconcileWalletDisplaySummary(current, raw, 8_100);
+  assert.equal(reconciled, current);
+});
+
+test("getWalletDisplayLiquidMicro prefers the reconciled snapshot over a raw balance", () => {
+  const summary = buildWalletDisplaySummary(
+    {
+      liquidMicro: 850n * MICRO,
+      votingStakedMicro: 150n * MICRO,
+      submissionStakedMicro: 0n,
+      frontendStakedMicro: 0n,
+    },
+    { updatedAt: 9_000 },
+  );
+
+  assert.equal(getWalletDisplayLiquidMicro(summary, 900n * MICRO), 850n * MICRO);
+  assert.equal(getWalletDisplayLiquidMicro(null, 900n * MICRO), 900n * MICRO);
 });

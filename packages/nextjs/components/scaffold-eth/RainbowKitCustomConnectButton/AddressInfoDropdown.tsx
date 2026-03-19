@@ -16,7 +16,7 @@ import { useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
 import { useVotingStakes } from "~~/hooks/useVotingStakes";
-import { useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
+import { getWalletDisplayLiquidMicro, useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
 const BURNER_WALLET_ID = "burnerWallet";
@@ -95,8 +95,16 @@ function useWalletSummaryData(address: Address, crepBalance: bigint | undefined)
           frontendStakedMicro: frontendInfo?.[1] ?? 0n,
         },
   );
+  const displayLiquidBalance = getWalletDisplayLiquidMicro(summary, liquidBalance);
 
-  return { summary, liquidBalance, activeVotes, earliestReveal, hasPendingReveals, showManualRevealLink };
+  return {
+    summary,
+    liquidBalance: displayLiquidBalance,
+    activeVotes,
+    earliestReveal,
+    hasPendingReveals,
+    showManualRevealLink,
+  };
 }
 
 function WalletBalanceText({

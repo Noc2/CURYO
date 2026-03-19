@@ -177,6 +177,13 @@ export function reconcileWalletDisplaySummary(
   return current;
 }
 
+export function getWalletDisplayLiquidMicro(
+  summary: WalletDisplaySummary | null,
+  fallbackLiquidMicro: bigint | undefined,
+) {
+  return summary?.liquidMicro ?? fallbackLiquidMicro;
+}
+
 export function useWalletDisplaySummary(address: string | undefined, input: WalletDisplaySummaryInput | null) {
   const queryClient = useQueryClient();
   const normalizedAddress = address?.toLowerCase();
