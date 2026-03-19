@@ -4,7 +4,7 @@ Verified on March 19, 2026.
 
 This document reviews whether Curyo's smart contracts can reduce gas costs further, with special focus on the vote path on Celo.
 
-Bottom line: yes, there is still room to reduce gas, especially in `RoundVotingEngine._commitVote(...)`, but the remaining wins are mostly contract-design wins rather than compiler-flag wins. The strongest near-term opportunities are removing redundant vote-path state writes. The biggest submit-path wins require product tradeoffs around URL canonicalization and metadata logging.
+Bottom line after a second pass: yes, there is still room to reduce gas, and because these contracts are not deployed yet, some of the best opportunities are now pre-launch structural changes that do not change the user-facing UX. The biggest practical wins are still in `RoundVotingEngine._commitVote(...)`, but storage packing and bytecode-size cleanup are now higher priority than the first draft suggested.
 
 This document mixes:
 
@@ -15,16 +15,16 @@ This document mixes:
 ## Executive summary
 
 - The main recurring user cost is still voting: about `677,802` gas without frontend attribution and `715,068` gas with an approved frontend.
-- The compiler-level low-hanging fruit is already mostly taken. The repo already uses `via_ir = true`, `optimizer = true`, `optimizer_runs = 100`, `evm_version = "cancun"`, custom errors, and `ReentrancyGuardTransient`.
-- The best remaining vote optimizations are likely in redundant storage writes and duplicated bookkeeping:
+- The compiler-level low-hanging fruit is only partially taken. The repo already uses `via_ir = true`, `optimizer = true`, `optimizer_runs = 100`, `evm_version = "cancun"`, and `ReentrancyGuardTransient`, but there is still room in optimizer tuning, remaining revert strings, and especially storage layout.
+- The best remaining vote optimizations that preserve the current one-transaction voting UX are:
+  - pre-launch storage packing of `Round`, `Commit`, and `RoundConfig`
   - `hasCommitted`
   - `commitHashByKey`
   - `contentCommitCount`
   - Voter ID per-round stake tracking
-- The best remaining submit optimizations are likely:
-  - moving more canonicalization off-chain
-  - reducing the `ContentSubmitted` event payload
-- A realistic near-term goal is to shave tens of thousands of gas from votes without changing the product model. Larger savings are possible, but they require meaningful product or upgradeability tradeoffs.
+- The best remaining submit optimizations that do not change product behavior are pre-launch storage packing plus converting hot-path revert strings to custom errors.
+- The biggest submit-only wins from off-chain canonicalization and smaller event payloads are real, but they do change data-flow and indexer assumptions, so they should not be the first moves if the goal is "make it cheaper without changing anything."
+- A realistic near-term goal is to reduce vote gas by tens of thousands through storage and bookkeeping cleanup while preserving the current frontend flow.
 
 ## Current hotspots
 
@@ -49,12 +49,85 @@ Supporting local signals:
 
 The key takeaway is that vote and submit are still the places where extra engineering effort has the best payoff.
 
+## Second-Pass Findings
+
+The first draft was directionally right, but the second pass changed the priority order in a few important ways.
+
+### 1. Pre-launch storage packing is now a top recommendation, not a future migration idea
+
+Because the contracts are not deployed yet, storage layout is not frozen. That materially changes the tradeoff.
+
+Local `forge inspect ... storage-layout --json` output shows the current struct sizes are still large:
+
+| Struct | Current size | Current slots | Why it matters |
+| --- | ---: | ---: | --- |
+| `RoundLib.Round` | `448` bytes | `14` slots | Touched by commit, reveal, and settle |
+| `RoundLib.Commit` | `192` bytes | `6` slots | Written on every vote |
+| `RoundLib.RoundConfig` | `128` bytes | `4` slots | Read in hot paths and snapshotted per round |
+| `ContentRegistry.Content` | `288` bytes | `9` slots | Written on submit and updated during lifecycle changes |
+| `FrontendRegistry.Frontend` | `160` bytes | `5` slots | Written on register, claim, slash, and deregister |
+
+The codebase already gives strong bounds for packing:
+
+- `CuryoReputation.MAX_SUPPLY = 100_000_000e6`, so total token quantities fit comfortably inside `uint64`
+- `RoundVotingEngine.MAX_STAKE = 100e6`
+- `setConfig(...)` caps `maxVoters` at `10,000`, so round counters do not need `uint256`
+- timestamps fit comfortably inside `uint48`
+
+That means several hot structs can be shrunk aggressively before launch without changing the user-facing protocol behavior.
+
+### 2. `RoundVotingEngine` code size now looks like a pre-launch issue
+
+The repo already contains size-related hints:
+
+- `packages/foundry/contracts/RoundVotingEngine.sol` says `computeCurrentEpochEnd` was removed "to fit size limit"
+- `packages/foundry/contracts/libraries/SubmitterStakeLib.sol` says it was linked externally to keep the engine below EIP-170
+- local Anvil scripts in `packages/foundry/Makefile` explicitly use `--code-size-limit 30000`
+
+Local bytecode checks currently show:
+
+- `RoundVotingEngine` deployed bytecode at `optimizer_runs = 100`: about `26,508` bytes
+- `RoundVotingEngine` deployed bytecode at `optimizer_runs = 10,000`: about `31,421` bytes
+- `ContentRegistry` deployed bytecode at `optimizer_runs = 100`: about `15,369` bytes
+
+EIP-170's runtime code limit is `24,576` bytes, so the engine appears to be above the normal EVM contract-size ceiling in its current shape. That makes structural cleanup more urgent than the first draft suggested.
+
+### 3. Higher `optimizer_runs` helps a little, but not enough to be the first move
+
+Sample benchmark results from the current codebase:
+
+| Test | `optimizer_runs = 100` | `optimizer_runs = 10,000` | Delta |
+| --- | ---: | ---: | ---: |
+| `commitVote` | `659,947` | `659,435` | `-512` |
+| `submitContent` | `491,419` | `487,571` | `-3,848` |
+| `revealVoteByCommitKey` | `94,457` | `94,271` | `-186` |
+| `settleRound` | `312,243` | `311,546` | `-697` |
+
+That is a real improvement, but it is small compared with the likely savings from packing and redundant-write removal, and it worsens the engine's runtime size.
+
+### 4. `commitHashByKey` is more removable than the first draft implied
+
+The first draft said the reveal path could recover the stored hash from other state.
+
+After re-checking `RoundVotingEngine._revealVoteInternal(...)`, the cleaner version is:
+
+- compute `expectedHash = keccak256(abi.encodePacked(isUp, salt, contentId, keccak256(commit.ciphertext)))`
+- verify `commitKey == keccak256(abi.encodePacked(commit.voter, expectedHash))`
+
+That means `commitHashByKey` can likely be removed without relying on `voterCommitHash` for the reveal path at all.
+
+### 5. Custom errors are only partially adopted in the hot contracts
+
+`RoundVotingEngine` already uses custom errors heavily, but `ContentRegistry` and `FrontendRegistry` still contain many revert strings, including in hot or semi-hot paths.
+
+Because Solidity now supports custom errors as a gas-efficient pattern, converting remaining revert strings in hot code is still a worthwhile secondary cleanup, especially for bytecode size.
+
 ## What Is Already Optimized
 
 Several standard gas levers are already in place:
 
 - `packages/foundry/foundry.toml` already enables `via_ir`, the optimizer, and `cancun`.
-- The contracts already use custom errors in many hot paths.
+- `RoundVotingEngine` already uses custom errors in many hot paths, even though the broader codebase still has remaining revert strings.
 - The upgradeable contracts already use `ReentrancyGuardTransient`, which OpenZeppelin documents as the transient-storage variant of `ReentrancyGuard`.
 - `ContentRegistry` already avoids storing full user metadata on-chain in state. It stores `contentHash` and emits metadata in events instead.
 - The frontend vote flow already uses a one-transaction `transferAndCall(...)` path instead of `approve + commitVote`.
@@ -62,6 +135,45 @@ Several standard gas levers are already in place:
 Because of that, further savings probably will not come from generic "turn on optimizer" advice. They will come from removing state writes, external calls, or log bytes.
 
 ## Prioritized Opportunities
+
+### Highest leverage: Pack hot structs before deployment
+
+Because the contracts are not deployed yet, storage packing is no longer a migration-risk item. It is one of the strongest no-UX-change optimizations available.
+
+The current bounds support much smaller types:
+
+- timestamps: `uint48`
+- voter counters: `uint16` or `uint32`
+- token amounts: `uint64`
+- config values like `epochDuration`, `maxDuration`, `minVoters`, `maxVoters`: small fixed-width integers
+
+The best packing targets are:
+
+- `RoundLib.Round`
+- `RoundLib.Commit`
+- `RoundLib.RoundConfig`
+- `ContentRegistry.Content`
+- `FrontendRegistry.Frontend`
+
+Why it likely helps:
+
+- these structs dominate hot-path storage reads and writes
+- `Round` and `Commit` are on the vote, reveal, and settle path
+- this also helps with the engine's current code-size pressure because smaller field widths and simpler layouts tend to reduce surrounding logic
+
+Expected impact:
+
+- high
+- likely the largest single no-UX-change gas lever remaining before launch
+
+Risk and caveat:
+
+- this is still real engineering work because autogenerated getters, tests, TypeScript ABIs, and any tuple decoders must be updated
+- bounds should be documented in comments so future governance changes do not silently overflow packed fields
+
+Assessment:
+
+- top recommendation before deployment
 
 ### 1. Remove `hasCommitted` and use `voterCommitHash != 0`
 
@@ -100,7 +212,12 @@ Current behavior:
 - commit writes `commitHashByKey[contentId][roundId][commitKey] = commitHash`
 - `revealVoteByCommitKey(...)` appears to be the only consumer of that mapping
 
-Because each stored `Commit` already contains `voter`, and the engine already stores `voterCommitHash[contentId][roundId][voter]`, the reveal path may be able to recover the same commit hash without a dedicated `commitHashByKey` write.
+Because each stored `Commit` already contains `voter` and `ciphertext`, the reveal path can likely:
+
+- recompute `expectedHash` from `(isUp, salt, contentId, keccak256(ciphertext))`
+- verify that `commitKey == keccak256(abi.encodePacked(commit.voter, expectedHash))`
+
+That makes a dedicated `commitHashByKey` mapping look unnecessary.
 
 Why it likely helps:
 
@@ -115,7 +232,7 @@ Expected impact:
 Risk and caveat:
 
 - reveal becomes slightly more expensive
-- the implementation must check that the retrieved commit really exists before trusting the recovered hash
+- the implementation must check that the retrieved commit really exists before trusting the recomputed hash
 
 Assessment:
 
@@ -309,16 +426,16 @@ Assessment:
 - attractive if submit gas becomes a real UX concern
 - probably unnecessary if the current submit cost is already acceptable
 
-### 9. Repack `Round` and `Content` storage only as a v2 migration project
+### 9. If packing is deferred past launch, it becomes a migration project
 
-At a raw storage level, `RoundLib.Round` and `ContentRegistry.Content` still have room for packing and reshaping. In a fresh deployment, that could reduce some slot writes.
+At a raw storage level, `RoundLib.Round` and `ContentRegistry.Content` still have room for packing and reshaping. Before launch, that is a normal optimization task. After launch, it becomes much harder.
 
 Why this is not a normal optimization task:
 
 - these are UUPS-upgradeable contracts
 - OpenZeppelin's upgrade docs explicitly warn that changing state-variable order or type can break storage compatibility
 
-That means a simple "reorder fields and use smaller ints" upgrade is risky. Any serious packing change should be treated as a migration project with explicit storage planning, not as a routine gas cleanup.
+That means the same "reorder fields and use smaller ints" change is reasonable now, but risky later. If it is deferred until after deployment, it should be treated as a migration project with explicit storage planning, not as a routine cleanup.
 
 Expected impact:
 
@@ -332,15 +449,17 @@ Risk and caveat:
 
 Assessment:
 
-- real upside, but not the right first move
+- do it before launch if the team wants the benefit
+- do not leave it for "later" unless there is a strong reason
 
-### 10. Compiler upgrade is worth benchmarking, but expect incremental gains
+### 10. Compiler and optimizer tuning are worth benchmarking, but only after size cleanup
 
 Current state:
 
 - the repo compiles with Solc `0.8.28`
 - `via_ir` is enabled
 - Solidity `0.8.34` fixes a `via-ir` transient-storage clearing bug affecting `0.8.28` through `0.8.33`
+- increasing `optimizer_runs` from `100` to `10,000` slightly improved sampled runtime gas, but made `RoundVotingEngine` even larger
 
 Local code search did not find `delete` on transient state, so this project does not appear to match the bug pattern directly. Still, a compiler upgrade is worth considering for safety and for minor optimizer improvements.
 
@@ -352,37 +471,73 @@ Expected impact:
 Risk and caveat:
 
 - requires a full test pass and bytecode review
-- good hygiene, but not the main lever for reducing vote gas
+- do not treat higher `optimizer_runs` as a free gas win while the engine is already above the normal EIP-170 limit
 
 Assessment:
 
-- benchmark it
+- benchmark it after structural size reductions land
 - do not expect it to replace contract-level optimization work
+
+### 11. Reconsider UUPS proxies if upgradeability is not a launch requirement
+
+This codebase currently deploys the major contracts behind `ERC1967Proxy` and keeps `_authorizeUpgrade(...)` hooks across the core system.
+
+If Curyo is still pre-launch and governance is comfortable shipping immutable v1 contracts, removing the proxy layer is one of the few no-UX-change architectural changes that can reduce runtime gas on every call.
+
+Why it likely helps:
+
+- every proxied external call pays delegatecall and fallback overhead
+- implementation contracts also carry upgrade-related code and storage scaffolding
+
+Expected impact:
+
+- medium
+- not likely as large as storage packing, but larger than most micro-optimizations
+
+Risk and caveat:
+
+- this is an operational and governance choice, not a pure gas choice
+- it removes the easiest upgrade path
+- the project would need stronger deployment confidence and a cleaner migration story for future versions
+
+Assessment:
+
+- worth an explicit pre-launch decision
+- not the first optimization patch, but too important to ignore
 
 ## Recommended Order Of Work
 
-If the goal is "reduce gas with the best risk-adjusted payoff", the order I would use is:
+If the goal is "reduce gas without changing the user-facing flow", the order I would use is:
 
-1. Prototype removal of `hasCommitted`.
-2. Prototype removal of `commitHashByKey`.
-3. Replace `contentCommitCount` with a boolean or derived check.
-4. Decide whether Voter ID stake tracking is still required as on-chain state.
-5. Decide whether `updateActivity` should stay on-chain.
-6. Revisit frontend attribution only if product is willing to trade off fee accounting for lower vote gas.
-7. Revisit canonicalization and metadata logging only if submit gas becomes a real UX problem.
-8. Treat storage repacking as a separate migration roadmap, not as a small optimization patch.
+1. Pack `Round`, `Commit`, `RoundConfig`, `Content`, and `Frontend` before deployment.
+2. Remove `commitHashByKey`.
+3. Remove `hasCommitted` by consolidating on existing commit state.
+4. Replace `contentCommitCount` with a zero/non-zero signal or derived check.
+5. Convert remaining hot-path revert strings to custom errors.
+6. Re-check bytecode size against EIP-170 after steps 1 through 5.
+7. Only then benchmark higher `optimizer_runs` or a compiler upgrade.
+8. Revisit Voter ID stake tracking if the product does not truly need it on-chain.
+9. Revisit proxy removal only if governance is comfortable with a non-upgradeable v1.
+10. Leave off-chain canonicalization, metadata-log slimming, and frontend-attribution changes for later unless the team is willing to change data-flow or business semantics.
 
 ## Practical Recommendation For Curyo
 
-The best next step is not a broad refactor. It is a focused benchmark branch that tries the three cleanest vote-path simplifications first:
+Because the contracts are not deployed yet, the best next step is now a pre-launch optimization branch, not just a tiny cleanup patch.
 
-- remove `hasCommitted`
-- remove `commitHashByKey`
-- replace `contentCommitCount` with a zero/non-zero flag or derived check
+The clearest next steps are:
 
-If those three changes produce the expected savings, Curyo likely gets the largest low-risk reduction available today without changing the product model.
+1. Do a storage-packing pass first.
+   Focus on `RoundLib.Round`, `RoundLib.Commit`, `RoundLib.RoundConfig`, `ContentRegistry.Content`, and `FrontendRegistry.Frontend`. This is the biggest no-UX-change gas lever and also the best answer to the current engine bytecode-size problem.
+2. In the same branch, remove the three cleanest redundant writes.
+   Remove `commitHashByKey`, collapse `hasCommitted`, and replace `contentCommitCount` with a zero/non-zero design.
+3. Convert remaining hot-path revert strings to custom errors.
+   This is most relevant in `ContentRegistry` and `FrontendRegistry`. The win is smaller, but it also helps bytecode size.
+4. Re-run gas and bytecode-size benchmarks after those structural changes.
+   At that point, re-check whether higher `optimizer_runs` is now worth locking in.
 
-After that, the biggest single remaining question is whether the Voter ID stake accumulator is still worth its gas cost. If the answer is no, that change is probably the next best step.
+If Curyo wants to preserve the current one-transaction vote UX and current product behavior, those four steps are the best path I see.
+
+I would not start with off-chain canonicalization, smaller metadata events, or dropping frontend attribution. Those can help, but they change more than the internal optimizations above do.
 
 ## Sources
 
@@ -391,17 +546,24 @@ Repo-local sources:
 - [`docs/celo-gas-cost-estimates-2026-03-19.md`](./celo-gas-cost-estimates-2026-03-19.md)
 - [`packages/foundry/test/GasEstimatesReport.t.sol`](../packages/foundry/test/GasEstimatesReport.t.sol)
 - [`packages/foundry/test/GasBudget.t.sol`](../packages/foundry/test/GasBudget.t.sol)
+- [`packages/foundry/Makefile`](../packages/foundry/Makefile)
+- [`packages/foundry/contracts/CuryoReputation.sol`](../packages/foundry/contracts/CuryoReputation.sol)
 - [`packages/foundry/contracts/RoundVotingEngine.sol`](../packages/foundry/contracts/RoundVotingEngine.sol)
 - [`packages/foundry/contracts/ContentRegistry.sol`](../packages/foundry/contracts/ContentRegistry.sol)
+- [`packages/foundry/contracts/FrontendRegistry.sol`](../packages/foundry/contracts/FrontendRegistry.sol)
 - [`packages/foundry/contracts/SubmissionCanonicalizer.sol`](../packages/foundry/contracts/SubmissionCanonicalizer.sol)
 - [`packages/foundry/contracts/VoterIdNFT.sol`](../packages/foundry/contracts/VoterIdNFT.sol)
 - [`packages/nextjs/hooks/useVoterIdNFT.ts`](../packages/nextjs/hooks/useVoterIdNFT.ts)
 
 Official references:
 
+- [EIP-170: Contract code size limit (`24576` bytes)](https://eips.ethereum.org/EIPS/eip-170)
 - [Solidity docs: Data location (`calldata` avoids copies)](https://docs.soliditylang.org/en/latest/types.html#data-location)
+- [Solidity docs: Layout of state variables in storage](https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html)
+- [Solidity docs: Custom errors](https://docs.soliditylang.org/en/latest/contracts.html#custom-errors)
 - [Solidity blog: A closer look at via-IR](https://soliditylang.org/blog/2024/07/12/a-closer-look-at-via-ir/)
 - [Solidity docs: Contracts, transient storage, constants, and immutables](https://docs.soliditylang.org/en/latest/contracts.html)
+- [Solidity 0.8.26 release announcement](https://soliditylang.org/blog/2024/05/21/solidity-0.8.26-release-announcement/)
 - [Solidity 0.8.34 release announcement](https://www.soliditylang.org/blog/2026/02/18/solidity-0.8.34-release-announcement/)
 - [OpenZeppelin docs: `ReentrancyGuardTransient`](https://docs.openzeppelin.com/contracts/5.x/api/utils)
 - [OpenZeppelin docs: Writing upgradeable contracts](https://docs.openzeppelin.com/upgrades-plugins/writing-upgradeable)
