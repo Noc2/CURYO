@@ -490,6 +490,15 @@ That would usually imply:
 - It does not actually remove economic complexity. Curyo would still need sponsor budgets, abuse controls, transaction policy, and operations around gas funding.
 - It is harder to keep some flows simple. For example, [HumanFaucet.sol](/Users/davidhawig/source/curyo-release/packages/foundry/contracts/HumanFaucet.sol) currently derives the claimant address directly from the verification output. That is conceptually cleaner in an EOA-first system.
 
+### Clarifications on signatures and ownership in `4337-first Curyo`
+
+- `4337-first` does not automatically mean more user confirmations. A vote can still feel like a single user action if the smart account itself holds `cREP` and the user signs one `UserOperation`.
+- In fact, selective sponsorship in an EOA-first system can require more signatures for some sponsored stake-moving actions, for example `permit + relayed call`. A 4337-first design can collapse that back into one signed operation.
+- If `cREP`, Voter ID, and profile state are minted or registered to the smart account, then the smart account becomes the on-chain owner and canonical protocol identity. The user's EOA becomes a controller or signer for that account rather than the identity that directly owns the assets.
+- For a truly soulbound token like [VoterIdNFT.sol](/Users/davidhawig/source/curyo-release/packages/foundry/contracts/VoterIdNFT.sol), this does not make the NFT transferable. The contract blocks transfers and approvals at the token level, so the smart account could not simply transfer the Voter ID away.
+- The real design question is account control, not ERC-721 transferability. If the smart account supports signer rotation, recovery, or owner changes, then control over the identity can move to a different human even though the soulbound NFT itself never transfers on-chain.
+- That is why onboarding becomes a design problem in a 4337-first world: Curyo must decide whether "the human" is represented by the initial EOA signer, the smart account address, or the current controller set of that smart account.
+
 ### Why this document still recommends the EOA-first approach
 
 The EOA-first plan wins on `fit with the current protocol design`.
