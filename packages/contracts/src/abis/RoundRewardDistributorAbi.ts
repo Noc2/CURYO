@@ -155,6 +155,30 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "finalizeParticipationRewards",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "releasedDust",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "frontendFeeClaimed",
     "inputs": [
       {
@@ -457,7 +481,79 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "function",
+    "name": "roundParticipationRewardFinalized",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundParticipationRewardFullyClaimedCount",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "roundParticipationRewardOwed",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundParticipationRewardPaidTotal",
     "inputs": [
       {
         "name": "",
@@ -798,6 +894,37 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "event",
+    "name": "ParticipationRewardFinalized",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "roundId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "rewardPool",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "releasedDust",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "ParticipationRewardSnapshotted",
     "inputs": [
       {
@@ -1075,6 +1202,16 @@ export const RoundRewardDistributorAbi = [
   {
     "type": "error",
     "name": "NotWinningSide",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ParticipationRewardsAlreadyFinalized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ParticipationRewardsOutstanding",
     "inputs": []
   },
   {
