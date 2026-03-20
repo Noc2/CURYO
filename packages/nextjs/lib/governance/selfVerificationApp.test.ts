@@ -1,0 +1,62 @@
+import {
+  SELF_MINIMUM_AGE,
+  SELF_VERIFICATION_SCOPE,
+  buildSelfVerificationAppConfig,
+  getSelfVerificationWebsocketUrl,
+  isSelfVerificationSupportedChain,
+} from "./selfVerificationApp";
+import assert from "node:assert/strict";
+import test from "node:test";
+
+const address = "0x1234567890abcdef1234567890abcdef12345678";
+const contractAddress = "0xABCDEFabcdefABCDEFabcdefABCDEFabcdefABCD";
+
+test("buildSelfVerificationAppConfig enables dev mode for Celo Sepolia", () => {
+  const config = buildSelfVerificationAppConfig({
+    address,
+    contractAddress,
+    chainId: 11142220,
+  });
+
+  assert.ok(config);
+  assert.equal(config.scope, SELF_VERIFICATION_SCOPE);
+  assert.equal(config.endpointType, "staging_celo");
+  assert.equal(config.endpoint, contractAddress.toLowerCase());
+  assert.equal(config.userId, address);
+  assert.equal(config.userIdType, "hex");
+  assert.equal(config.devMode, true);
+  assert.equal(config.version, 2);
+  assert.equal(config.disclosures.minimumAge, SELF_MINIMUM_AGE);
+});
+
+test("buildSelfVerificationAppConfig keeps production mode on Celo mainnet", () => {
+  const config = buildSelfVerificationAppConfig({
+    address,
+    contractAddress,
+    chainId: 42220,
+  });
+
+  assert.ok(config);
+  assert.equal(config.endpointType, "celo");
+  assert.equal(config.devMode, false);
+  assert.equal(config.disclosures.minimumAge, 18);
+});
+
+test("unsupported chains do not build a Self verification app config", () => {
+  assert.equal(
+    buildSelfVerificationAppConfig({
+      address,
+      contractAddress,
+      chainId: 1,
+    }),
+    null,
+  );
+  assert.equal(isSelfVerificationSupportedChain(1), false);
+  assert.equal(getSelfVerificationWebsocketUrl(1), null);
+});
+
+test("supported chains map to the expected websocket endpoints", () => {
+  assert.equal(isSelfVerificationSupportedChain(42220), true);
+  assert.equal(getSelfVerificationWebsocketUrl(42220), "wss://websocket.self.xyz");
+  assert.equal(getSelfVerificationWebsocketUrl(11142220), "wss://websocket.staging.self.xyz");
+});

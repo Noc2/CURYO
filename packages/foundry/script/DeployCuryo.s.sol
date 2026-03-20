@@ -40,6 +40,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
     address constant CELO_SEPOLIA_HUB = 0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74;
+    uint256 constant SELF_FACET_MINIMUM_AGE = 18;
 
     function run() external ScaffoldEthDeployerRunner {
         // Detect local dev: anvil/hardhat chain IDs
@@ -257,8 +258,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 // Set verification config
                 if (!isFaucetMock) {
                     SelfStructs.VerificationConfigV2 memory config = SelfStructs.VerificationConfigV2({
-                        olderThanEnabled: false,
-                        olderThan: 0,
+                        olderThanEnabled: true,
+                        olderThan: SELF_FACET_MINIMUM_AGE,
                         forbiddenCountriesEnabled: false,
                         forbiddenCountriesListPacked: [uint256(0), uint256(0), uint256(0), uint256(0)],
                         ofacEnabled: [true, true, true]
