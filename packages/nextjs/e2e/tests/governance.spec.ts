@@ -4,6 +4,7 @@ import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 test.describe("Governance page", () => {
   test("page loads and shows tabs", async ({ connectedPage: page }) => {
     await page.goto("/governance", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/governance(?:#.*)?$/);
     // Wait for main content to render before checking tabs
     await expect(page.locator("main")).toBeVisible({ timeout: 15_000 });
 

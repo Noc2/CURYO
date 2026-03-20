@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
@@ -39,11 +39,9 @@ function normalizeGovernanceHash(hash: string): GovernanceTab | null {
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("profile");
   const [hashInitialized, setHashInitialized] = useState(false);
-  const [hasExplicitHash, setHasExplicitHash] = useState(false);
   const [referrer, setReferrer] = useState<string | null>(null);
   const autoSelectedEntryAddressRef = useRef<string | null>(null);
   const { hasGovernorContract } = useGovernanceContracts();
@@ -59,7 +57,6 @@ function GovernancePageInner() {
     const applyHash = () => {
       const rawHash = window.location.hash.replace(/^#/, "");
       const nextTab = normalizeGovernanceHash(rawHash);
-      setHasExplicitHash(rawHash.length > 0);
       setHashInitialized(true);
 
       if (nextTab) {
@@ -104,8 +101,6 @@ function GovernancePageInner() {
   const hasZeroBalance = hasResolvedBalance && crepBalance === 0n;
   const addressKey = address?.toLowerCase() ?? null;
   const shouldWaitForEntryRouting = Boolean(address) && (!hashInitialized || voterIdLoading);
-  const shouldRedirectToDiscover =
-    Boolean(address) && hashInitialized && !hasExplicitHash && !voterIdLoading && hasVoterId;
   const faucetOnly = Boolean(address) && hashInitialized && !voterIdLoading && !hasVoterId;
 
   useEffect(() => {
@@ -113,7 +108,7 @@ function GovernancePageInner() {
   }, [addressKey]);
 
   useEffect(() => {
-    if (!addressKey || !hashInitialized || !hasResolvedBalance || voterIdLoading || shouldRedirectToDiscover) {
+    if (!addressKey || !hashInitialized || !hasResolvedBalance || voterIdLoading) {
       return;
     }
 
@@ -133,27 +128,11 @@ function GovernancePageInner() {
     }
 
     autoSelectedEntryAddressRef.current = addressKey;
-  }, [
-    addressKey,
-    faucetOnly,
-    hasResolvedBalance,
-    hashInitialized,
-    selectTab,
-    shouldRedirectToDiscover,
-    voterIdLoading,
-  ]);
-
-  useEffect(() => {
-    if (!shouldRedirectToDiscover) {
-      return;
-    }
-
-    router.replace("/vote");
-  }, [router, shouldRedirectToDiscover]);
+  }, [addressKey, faucetOnly, hasResolvedBalance, hashInitialized, selectTab, voterIdLoading]);
 
   // Update tab when balance changes
   useEffect(() => {
-    if (!hashInitialized || shouldRedirectToDiscover) {
+    if (!hashInitialized) {
       return;
     }
 
@@ -178,7 +157,7 @@ function GovernancePageInner() {
     if (!hasZeroBalance && activeTab === "faucet") {
       selectTab(hashTab && hashTab !== "faucet" ? hashTab : "profile");
     }
-  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, hashInitialized, selectTab, shouldRedirectToDiscover]);
+  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, hashInitialized, selectTab]);
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
@@ -190,14 +169,12 @@ function GovernancePageInner() {
     );
   }
 
-  if (shouldWaitForEntryRouting || shouldRedirectToDiscover) {
+  if (shouldWaitForEntryRouting) {
     return (
       <AppPageShell contentClassName="space-y-6">
         <div className="flex min-h-[40vh] flex-col items-center justify-center px-4 text-center">
           <span className="loading loading-spinner loading-lg text-primary" />
-          <p className="mt-4 text-sm text-base-content/60">
-            {shouldRedirectToDiscover ? "Opening Discover..." : "Checking Voter ID..."}
-          </p>
+          <p className="mt-4 text-sm text-base-content/60">Checking Voter ID...</p>
         </div>
       </AppPageShell>
     );
