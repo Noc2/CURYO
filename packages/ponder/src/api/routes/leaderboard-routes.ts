@@ -2,14 +2,55 @@ import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { and, asc, desc, eq, gte, lt, notInArray, sql } from "ponder";
 import { db } from "ponder:api";
 import { content, profile, round, tokenHolder, vote, voterCategoryStats, voterStats } from "ponder:schema";
-import {
-  resolveAccuracyLeaderboardWindow,
-  sortAccuracyLeaderboardItems,
-  type AccuracyLeaderboardSortBy,
-} from "../leaderboard-utils.js";
+import { resolveAccuracyLeaderboardWindow, type AccuracyLeaderboardSortBy } from "../leaderboard-utils.js";
 import type { ApiApp } from "../shared.js";
 import { jsonBig } from "../shared.js";
 import { safeBigInt, safeLimit, safeOffset } from "../utils.js";
+
+type OrderableExpression = Parameters<typeof desc>[0];
+
+function getAccuracyLeaderboardOrderByExpressions(
+  sortBy: AccuracyLeaderboardSortBy,
+  metrics: {
+    totalSettledVotes: OrderableExpression;
+    totalWins: OrderableExpression;
+    totalStakeWon: OrderableExpression;
+    winRate: OrderableExpression;
+    voter: OrderableExpression;
+  },
+) {
+  const orderByExpressions = [];
+
+  switch (sortBy) {
+    case "settledVotes":
+      orderByExpressions.push(desc(metrics.totalSettledVotes));
+      break;
+    case "wins":
+      orderByExpressions.push(desc(metrics.totalWins));
+      break;
+    case "stakeWon":
+      orderByExpressions.push(desc(metrics.totalStakeWon));
+      break;
+    case "winRate":
+    default:
+      break;
+  }
+
+  orderByExpressions.push(desc(metrics.winRate));
+
+  if (sortBy !== "wins") {
+    orderByExpressions.push(desc(metrics.totalWins));
+  }
+  if (sortBy !== "settledVotes") {
+    orderByExpressions.push(desc(metrics.totalSettledVotes));
+  }
+  if (sortBy !== "stakeWon") {
+    orderByExpressions.push(desc(metrics.totalStakeWon));
+  }
+
+  orderByExpressions.push(asc(metrics.voter));
+  return orderByExpressions;
+}
 
 export function registerLeaderboardRoutes(app: ApiApp) {
   app.get("/leaderboard", async (c) => {
@@ -112,41 +153,49 @@ export function registerLeaderboardRoutes(app: ApiApp) {
     const categoryId = categoryIdParam ? safeBigInt(categoryIdParam) : null;
     if (categoryIdParam && categoryId === null) return c.json({ error: "Invalid categoryId" }, 400);
 
-    let orderByExpr;
-    switch (sortBy) {
-      case "settledVotes":
-        orderByExpr = categoryIdParam
-          ? desc(voterCategoryStats.totalSettledVotes)
-          : desc(voterStats.totalSettledVotes);
-        break;
-      case "wins":
-        orderByExpr = categoryIdParam
-          ? desc(voterCategoryStats.totalWins)
-          : desc(voterStats.totalWins);
-        break;
-      case "stakeWon":
-        orderByExpr = categoryIdParam
-          ? desc(voterCategoryStats.totalStakeWon)
-          : desc(voterStats.totalStakeWon);
-        break;
-      case "winRate":
-      default:
-        orderByExpr = categoryIdParam
-          ? desc(sql`CAST(${voterCategoryStats.totalWins} AS FLOAT) / ${voterCategoryStats.totalSettledVotes}`)
-          : desc(sql`CAST(${voterStats.totalWins} AS FLOAT) / ${voterStats.totalSettledVotes}`);
-        break;
-    }
+    const categoryWinRateExpr = sql<number>`CAST(${voterCategoryStats.totalWins} AS FLOAT) / ${voterCategoryStats.totalSettledVotes}`;
+    const categoryOrderByExprs = getAccuracyLeaderboardOrderByExpressions(sortBy, {
+      totalSettledVotes: voterCategoryStats.totalSettledVotes,
+      totalWins: voterCategoryStats.totalWins,
+      totalStakeWon: voterCategoryStats.totalStakeWon,
+      winRate: categoryWinRateExpr,
+      voter: voterCategoryStats.voter,
+    });
+    const overallWinRateExpr = sql<number>`CAST(${voterStats.totalWins} AS FLOAT) / ${voterStats.totalSettledVotes}`;
+    const overallOrderByExprs = getAccuracyLeaderboardOrderByExpressions(sortBy, {
+      totalSettledVotes: voterStats.totalSettledVotes,
+      totalWins: voterStats.totalWins,
+      totalStakeWon: voterStats.totalStakeWon,
+      winRate: overallWinRateExpr,
+      voter: voterStats.voter,
+    });
 
     if (windowBounds.window !== "all" && windowBounds.startsAt !== null && windowBounds.endsAt !== null) {
+      const aggregateTotalSettledVotes = sql<number>`count(*)`;
+      const aggregateTotalWins = sql<number>`sum(case when ${vote.isUp} = ${round.upWins} then 1 else 0 end)`;
+      const aggregateTotalLosses = sql<number>`sum(case when ${vote.isUp} = ${round.upWins} then 0 else 1 end)`;
+      const aggregateTotalStakeWon =
+        sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then ${vote.stake} else 0 end), 0)`;
+      const aggregateTotalStakeLost =
+        sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then 0 else ${vote.stake} end), 0)`;
+      const aggregateWinRate = sql<number>`CAST(${aggregateTotalWins} AS FLOAT) / ${aggregateTotalSettledVotes}`;
       const aggregateSelection = {
         voter: vote.voter,
-        totalSettledVotes: sql<number>`count(*)`,
-        totalWins: sql<number>`sum(case when ${vote.isUp} = ${round.upWins} then 1 else 0 end)`,
-        totalLosses: sql<number>`sum(case when ${vote.isUp} = ${round.upWins} then 0 else 1 end)`,
-        totalStakeWon: sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then ${vote.stake} else 0 end), 0)`,
-        totalStakeLost: sql<bigint>`coalesce(sum(case when ${vote.isUp} = ${round.upWins} then 0 else ${vote.stake} end), 0)`,
+        totalSettledVotes: aggregateTotalSettledVotes,
+        totalWins: aggregateTotalWins,
+        totalLosses: aggregateTotalLosses,
+        totalStakeWon: aggregateTotalStakeWon,
+        totalStakeLost: aggregateTotalStakeLost,
+        winRate: aggregateWinRate,
         profileName: profile.name,
       };
+      const windowedOrderByExprs = getAccuracyLeaderboardOrderByExpressions(sortBy, {
+        totalSettledVotes: aggregateTotalSettledVotes,
+        totalWins: aggregateTotalWins,
+        totalStakeWon: aggregateTotalStakeWon,
+        winRate: aggregateWinRate,
+        voter: vote.voter,
+      });
 
       const baseConditions = [
         eq(vote.revealed, true),
@@ -168,7 +217,9 @@ export function registerLeaderboardRoutes(app: ApiApp) {
             .where(and(...baseConditions, eq(content.categoryId, categoryId)))
             .groupBy(vote.voter, profile.name)
             .having(sql`count(*) >= ${minVotes}`)
-            .limit(1000)
+            .orderBy(...windowedOrderByExprs)
+            .limit(limit)
+            .offset(offset)
         : await db
             .select(aggregateSelection)
             .from(vote)
@@ -180,25 +231,20 @@ export function registerLeaderboardRoutes(app: ApiApp) {
             .where(and(...baseConditions))
             .groupBy(vote.voter, profile.name)
             .having(sql`count(*) >= ${minVotes}`)
-            .limit(1000);
+            .orderBy(...windowedOrderByExprs)
+            .limit(limit)
+            .offset(offset);
 
-      const normalized = rows
-        .map((row) => ({
-          voter: row.voter,
-          totalSettledVotes: Number(row.totalSettledVotes),
-          totalWins: Number(row.totalWins),
-          totalLosses: Number(row.totalLosses),
-          totalStakeWon: typeof row.totalStakeWon === "bigint" ? row.totalStakeWon : BigInt(row.totalStakeWon ?? 0),
-          totalStakeLost: typeof row.totalStakeLost === "bigint" ? row.totalStakeLost : BigInt(row.totalStakeLost ?? 0),
-          profileName: row.profileName,
-          winRate: Number(row.totalSettledVotes) > 0 ? Number(row.totalWins) / Number(row.totalSettledVotes) : 0,
-        }))
-        .filter(row => row.totalSettledVotes >= minVotes);
-
-      const items = sortAccuracyLeaderboardItems(normalized, sortBy as AccuracyLeaderboardSortBy).slice(
-        offset,
-        offset + limit,
-      );
+      const items = rows.map((row) => ({
+        voter: row.voter,
+        totalSettledVotes: Number(row.totalSettledVotes),
+        totalWins: Number(row.totalWins),
+        totalLosses: Number(row.totalLosses),
+        totalStakeWon: typeof row.totalStakeWon === "bigint" ? row.totalStakeWon : BigInt(row.totalStakeWon ?? 0),
+        totalStakeLost: typeof row.totalStakeLost === "bigint" ? row.totalStakeLost : BigInt(row.totalStakeLost ?? 0),
+        profileName: row.profileName,
+        winRate: Number(row.winRate),
+      }));
 
       return jsonBig(c, {
         items,
@@ -228,7 +274,7 @@ export function registerLeaderboardRoutes(app: ApiApp) {
             gte(voterCategoryStats.totalSettledVotes, minVotes),
           ),
         )
-        .orderBy(orderByExpr)
+        .orderBy(...categoryOrderByExprs)
         .limit(limit)
         .offset(offset);
 
@@ -261,7 +307,7 @@ export function registerLeaderboardRoutes(app: ApiApp) {
       .from(voterStats)
       .leftJoin(profile, eq(voterStats.voter, profile.address))
       .where(gte(voterStats.totalSettledVotes, minVotes))
-      .orderBy(orderByExpr)
+      .orderBy(...overallOrderByExprs)
       .limit(limit)
       .offset(offset);
 

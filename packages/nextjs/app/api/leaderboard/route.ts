@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
+import { buildVoterLeaderboardEntries, rankVoterLeaderboardAddresses } from "~~/lib/governance/voterLeaderboard";
 import { readCRepBalances, readProfileRegistryProfiles } from "~~/lib/profileRegistry/server";
 import { isPonderAvailable, ponderApi } from "~~/services/ponder/client";
 import { checkRateLimit } from "~~/utils/rateLimit";
@@ -78,34 +79,24 @@ export async function GET(request: NextRequest) {
 
     const normalizedAddresses = [...new Set(candidateAddresses.map(address => address.toLowerCase()))];
     const balances = await readCRepBalances(normalizedAddresses);
-
-    const rankedAddresses = normalizedAddresses
-      .filter(address => address === includeAddress || (balances[address] ?? 0n) > 0n)
-      .sort((left, right) => {
-        const leftBalance = balances[left] ?? 0n;
-        const rightBalance = balances[right] ?? 0n;
-        if (rightBalance > leftBalance) return 1;
-        if (rightBalance < leftBalance) return -1;
-        return left.localeCompare(right);
-      });
-
-    const selectedAddresses = rankedAddresses.slice(0, limit);
-    if (includeAddress && !selectedAddresses.includes(includeAddress) && rankedAddresses.includes(includeAddress)) {
-      selectedAddresses.push(includeAddress);
-    }
+    const { rankedAddresses, selectedAddresses, totalCount } = rankVoterLeaderboardAddresses({
+      candidateAddresses: normalizedAddresses,
+      balances,
+      limit,
+      includeAddress,
+    });
 
     const profiles = await readProfileRegistryProfiles(selectedAddresses);
-    const ranks = new Map(rankedAddresses.map((address, index) => [address, index + 1]));
-    const entries = selectedAddresses.map(address => ({
-      rank: ranks.get(address) ?? 0,
-      address,
-      username: profiles[address]?.username ?? null,
-      balance: (balances[address] ?? 0n).toString(),
-    }));
+    const { entries } = buildVoterLeaderboardEntries({
+      rankedAddresses,
+      selectedAddresses,
+      balances,
+      profiles,
+    });
 
     return NextResponse.json({
       entries,
-      totalCount: entries.length,
+      totalCount,
       source: "ponder",
       type: "voters",
     });

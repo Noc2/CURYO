@@ -19,7 +19,9 @@ export function registerContentRoutes(app: ApiApp) {
 
     const conditions = [];
     if (status !== "all") {
-      conditions.push(eq(content.status, parseInt(status)));
+      const parsed = parseInt(status);
+      if (isNaN(parsed)) return c.json({ error: "Invalid status filter" }, 400);
+      conditions.push(eq(content.status, parsed));
     }
     if (categoryId) {
       const parsed = safeBigInt(categoryId);
