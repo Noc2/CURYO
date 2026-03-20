@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
@@ -20,6 +20,7 @@ import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useGovernanceContracts } from "~~/hooks/useGovernance";
+import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
 type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet";
 
@@ -41,6 +42,7 @@ function GovernancePageInner() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("profile");
   const [referrer, setReferrer] = useState<string | null>(null);
+  const autoSelectedEntryAddressRef = useRef<string | null>(null);
   const { hasGovernorContract } = useGovernanceContracts();
 
   // Sync tab with URL hash (e.g. /governance#governance)
@@ -91,9 +93,38 @@ function GovernancePageInner() {
     args: [address],
     query: { enabled: !!address },
   });
+  const { hasVoterId, isLoading: voterIdLoading } = useVoterIdNFT(address);
 
   const hasResolvedBalance = !!address && !crepBalanceLoading && crepBalance !== undefined;
   const hasZeroBalance = hasResolvedBalance && crepBalance === 0n;
+  const addressKey = address?.toLowerCase() ?? null;
+
+  useEffect(() => {
+    autoSelectedEntryAddressRef.current = null;
+  }, [addressKey]);
+
+  useEffect(() => {
+    if (!addressKey || !hasResolvedBalance || voterIdLoading) {
+      return;
+    }
+
+    if (window.location.hash) {
+      autoSelectedEntryAddressRef.current = addressKey;
+      return;
+    }
+
+    if (autoSelectedEntryAddressRef.current === addressKey) {
+      return;
+    }
+
+    if (hasZeroBalance && !hasVoterId) {
+      selectTab("faucet");
+    } else {
+      selectTab("profile");
+    }
+
+    autoSelectedEntryAddressRef.current = addressKey;
+  }, [addressKey, hasResolvedBalance, hasZeroBalance, hasVoterId, selectTab, voterIdLoading]);
 
   // Update tab when balance changes
   useEffect(() => {
