@@ -5,7 +5,7 @@ import type { GenericContract, GenericContractsDeclaration } from "./types";
 const sharedDeployments = deployedContracts as GenericContractsDeclaration;
 
 function isValidStartBlock(value: number | undefined): value is number {
-  return Number.isInteger(value) && value >= 0;
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
 export function getSharedDeployment(chainId: number, contractName: string): GenericContract | undefined {

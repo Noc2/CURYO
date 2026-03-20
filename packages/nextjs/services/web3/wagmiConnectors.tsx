@@ -6,6 +6,8 @@ import {
   thirdwebClient,
 } from "~~/services/thirdweb/client";
 
+const CURYO_THIRDWEB_ICON = "/curyo-thirdweb-logo.png";
+
 /**
  * wagmi connectors for the wagmi context
  */
@@ -26,7 +28,7 @@ export const wagmiConnectors = () => {
         client: thirdwebClient,
         executionMode: getThirdwebWalletExecutionMode(preferredChainId),
         metadata: {
-          icon: "/favicon.png",
+          icon: CURYO_THIRDWEB_ICON,
           name: "Curyo Wallet",
         },
       }),

@@ -10,6 +10,8 @@ import { publicEnv } from "~~/utils/env/public";
 const THIRDWEB_CONNECT_CHAIN_IDS = new Set([31337, 42220, 11142220]);
 const THIRDWEB_EXECUTION_CHAIN_IDS = new Set([42220, 11142220]);
 const THIRDWEB_ACTIVE_CHAIN_KEY = "thirdweb:active-chain";
+const CURYO_THIRDWEB_ICON = "/curyo-thirdweb-logo.png";
+const CURYO_THIRDWEB_WORDMARK = "/curyo-email-logo.svg";
 
 export function isThirdwebWalletChain(chainId: number | null | undefined): boolean {
   return typeof chainId === "number" && THIRDWEB_CONNECT_CHAIN_IDS.has(chainId);
@@ -81,6 +83,12 @@ export function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
       auth: getThirdwebWalletAuthConfig(),
       executionMode: getThirdwebWalletExecutionMode(chainId),
       metadata: {
+        image: {
+          alt: "Curyo",
+          height: 44,
+          src: CURYO_THIRDWEB_WORDMARK,
+          width: 188,
+        },
         name: "Curyo Wallet",
       },
     }),
@@ -102,6 +110,7 @@ export function getThirdwebConnectOptions(chainId?: number): UseConnectModalOpti
   return {
     appMetadata: {
       name: "Curyo",
+      logoUrl: CURYO_THIRDWEB_ICON,
     },
     chain,
     chains: thirdwebSupportedChains,
@@ -109,6 +118,8 @@ export function getThirdwebConnectOptions(chainId?: number): UseConnectModalOpti
     locale: "en_US",
     showThirdwebBranding: false,
     theme: "dark",
+    title: "Curyo",
+    titleIcon: CURYO_THIRDWEB_ICON,
     ...(publicEnv.walletConnectProjectId
       ? {
           walletConnect: {
@@ -131,6 +142,7 @@ export function getThirdwebAutoConnectOptions(): AutoConnectProps | null {
   return {
     appMetadata: {
       name: "Curyo",
+      logoUrl: CURYO_THIRDWEB_ICON,
     },
     chain,
     client: thirdwebClient,
