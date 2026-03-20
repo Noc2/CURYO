@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import {
@@ -33,6 +34,7 @@ const POLL_TIMEOUT_MS = 120_000;
 
 export function FaucetSection({ referrer }: FaucetSectionProps) {
   const { address } = useAccount();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { hasVoterId, tokenId, isLoading: voterIdLoading } = useVoterIdNFT(address);
   const { isAccepted, requireAcceptance } = useTermsAcceptance();
@@ -85,12 +87,13 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         setVerificationPending(false);
         // Invalidate all queries so navbar balance updates immediately
         queryClient.invalidateQueries();
+        router.replace("/vote");
       } else if (Date.now() - pollStart.current > POLL_TIMEOUT_MS) {
         stopPolling();
         setVerificationPending(false);
       }
     }, POLL_INTERVAL_MS);
-  }, [refetchClaimed, stopPolling, queryClient]);
+  }, [refetchClaimed, stopPolling, queryClient, router]);
 
   // Clean up polling on unmount
   useEffect(() => stopPolling, [stopPolling]);
