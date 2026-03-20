@@ -15,12 +15,14 @@ export const metadata = getMetadata({
   description: "A Better Web, Guided by Human Reputation.",
 });
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
     <html data-theme="dark" style={{ colorScheme: "dark" }}>
       <body>
         <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
-        <Script src="https://scripts.simpleanalyticscdn.com/latest.js" />
+        {isProduction ? <Script src="https://scripts.simpleanalyticscdn.com/latest.js" /> : null}
       </body>
     </html>
   );
