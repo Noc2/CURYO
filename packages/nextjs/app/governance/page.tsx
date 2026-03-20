@@ -98,6 +98,7 @@ function GovernancePageInner() {
   const hasResolvedBalance = !!address && !crepBalanceLoading && crepBalance !== undefined;
   const hasZeroBalance = hasResolvedBalance && crepBalance === 0n;
   const addressKey = address?.toLowerCase() ?? null;
+  const faucetOnly = Boolean(address) && !voterIdLoading && !hasVoterId;
 
   useEffect(() => {
     autoSelectedEntryAddressRef.current = null;
@@ -117,17 +118,24 @@ function GovernancePageInner() {
       return;
     }
 
-    if (hasZeroBalance && !hasVoterId) {
+    if (faucetOnly) {
       selectTab("faucet");
     } else {
       selectTab("profile");
     }
 
     autoSelectedEntryAddressRef.current = addressKey;
-  }, [addressKey, hasResolvedBalance, hasZeroBalance, hasVoterId, selectTab, voterIdLoading]);
+  }, [addressKey, faucetOnly, hasResolvedBalance, selectTab, voterIdLoading]);
 
   // Update tab when balance changes
   useEffect(() => {
+    if (faucetOnly) {
+      if (activeTab !== "faucet") {
+        selectTab("faucet");
+      }
+      return;
+    }
+
     if (!hasResolvedBalance) {
       return;
     }
@@ -142,7 +150,7 @@ function GovernancePageInner() {
     if (!hasZeroBalance && activeTab === "faucet") {
       selectTab(hashTab && hashTab !== "faucet" ? hashTab : "profile");
     }
-  }, [hasResolvedBalance, hasZeroBalance, activeTab, selectTab]);
+  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, selectTab]);
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
@@ -151,6 +159,14 @@ function GovernancePageInner() {
         <p className="text-base-content/60 mb-6 text-center">Connect your wallet to participate</p>
         <CuryoConnectButton />
       </div>
+    );
+  }
+
+  if (faucetOnly) {
+    return (
+      <AppPageShell contentClassName="space-y-6">
+        <FaucetSection referrer={referrer} />
+      </AppPageShell>
     );
   }
 
