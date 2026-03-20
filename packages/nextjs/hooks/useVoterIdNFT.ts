@@ -2,6 +2,24 @@
 
 import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
+export function isInitialQueryPending({
+  isError,
+  isFetched,
+  isFetching,
+  isLoading,
+}: {
+  isLoading: boolean;
+  isFetching: boolean;
+  isFetched: boolean;
+  isError: boolean;
+}) {
+  if (isError || isFetched) {
+    return false;
+  }
+
+  return isLoading || isFetching;
+}
+
 /**
  * Hook to check if an address has a Voter ID NFT.
  */
@@ -52,14 +70,22 @@ export function useVoterIdNFT(address?: string) {
   const voterIdCheckPending =
     hasAddress &&
     !contractUnavailable &&
-    !hasVoterIdError &&
-    (!hasVoterIdFetched || hasVoterIdLoading || hasVoterIdFetching);
+    isInitialQueryPending({
+      isLoading: hasVoterIdLoading,
+      isFetching: hasVoterIdFetching,
+      isFetched: hasVoterIdFetched,
+      isError: hasVoterIdError,
+    });
   const tokenIdCheckPending =
     hasAddress &&
     resolvedHasVoterId &&
     !contractUnavailable &&
-    !tokenIdError &&
-    (!tokenIdFetched || tokenIdLoading || tokenIdFetching);
+    isInitialQueryPending({
+      isLoading: tokenIdLoading,
+      isFetching: tokenIdFetching,
+      isFetched: tokenIdFetched,
+      isError: tokenIdError,
+    });
   const isResolved = !hasAddress || contractUnavailable || (!voterIdCheckPending && !tokenIdCheckPending);
 
   return {
