@@ -13,6 +13,15 @@ const THIRDWEB_ACTIVE_CHAIN_KEY = "thirdweb:active-chain";
 const CURYO_THIRDWEB_ICON = "/favicon.svg";
 const CURYO_THIRDWEB_WORDMARK = "/curyo-thirdweb-lockup.svg";
 
+type ThirdwebWalletExecutionMode =
+  | {
+      mode: "EOA";
+    }
+  | {
+      mode: "EIP7702";
+      sponsorGas: true;
+    };
+
 export function isThirdwebWalletChain(chainId: number | null | undefined): boolean {
   return typeof chainId === "number" && THIRDWEB_CONNECT_CHAIN_IDS.has(chainId);
 }
@@ -77,11 +86,12 @@ export function getPreferredThirdwebChainId(requestedChainId?: number): number {
   return thirdwebDefaultChain.id;
 }
 
-export function getThirdwebWalletExecutionMode(chainId: number) {
+export function getThirdwebWalletExecutionMode(chainId: number): ThirdwebWalletExecutionMode {
   if (supportsThirdwebExecutionCapabilities(chainId)) {
+    // Social in-app wallets currently fail to sign 7702 authorizations on Celo
+    // with "No auth token found when signing message", so keep them in EOA mode.
     return {
-      mode: "EIP7702" as const,
-      sponsorGas: true,
+      mode: "EOA" as const,
     };
   }
 

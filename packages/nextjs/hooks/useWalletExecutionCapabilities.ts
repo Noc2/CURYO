@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useActiveAccount, useActiveWallet, useCapabilities } from "thirdweb/react";
 import { useAccount } from "wagmi";
-import { supportsThirdwebExecutionCapabilities } from "~~/services/thirdweb/client";
+import { getThirdwebWalletExecutionMode, supportsThirdwebExecutionCapabilities } from "~~/services/thirdweb/client";
 
 export type WalletExecutionMode = "sponsored_7702" | "external_send_calls" | "fee_currency" | "direct_celo";
 
@@ -25,10 +25,12 @@ export function useWalletExecutionCapabilities() {
       typeof chainId === "number" && capabilities && chainId in capabilities ? capabilities[chainId] : undefined;
     const hasSendCalls = Boolean(thirdwebAccount?.sendCalls);
     const isThirdwebInApp = wallet?.id === "inApp";
+    const thirdwebExecutionMode =
+      typeof chainId === "number" && isThirdwebInApp ? getThirdwebWalletExecutionMode(chainId).mode : null;
 
     let executionMode: WalletExecutionMode = "direct_celo";
 
-    if (supportedChain && isThirdwebInApp) {
+    if (supportedChain && isThirdwebInApp && thirdwebExecutionMode === "EIP7702") {
       executionMode = "sponsored_7702";
     } else if (supportedChain && hasSendCalls && wallet) {
       executionMode = "external_send_calls";
