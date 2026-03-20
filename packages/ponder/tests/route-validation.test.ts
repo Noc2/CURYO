@@ -136,7 +136,7 @@ afterEach(() => {
 describe("registerContentRoutes", () => {
   it("rejects invalid content status filters before querying the database", async () => {
     const { db } = mockPonderModules([]);
-    const { registerContentRoutes } = await import("../api/routes/content-routes.js");
+    const { registerContentRoutes } = await import("../src/api/routes/content-routes.js");
 
     const app = new Hono();
     registerContentRoutes(app);
@@ -152,7 +152,7 @@ describe("registerContentRoutes", () => {
 describe("registerLeaderboardRoutes", () => {
   it("pages bounded-window accuracy leaderboards at the database layer", async () => {
     const { queryBuilder } = mockPonderModules([]);
-    const { registerLeaderboardRoutes } = await import("../api/routes/leaderboard-routes.js");
+    const { registerLeaderboardRoutes } = await import("../src/api/routes/leaderboard-routes.js");
 
     const app = new Hono();
     registerLeaderboardRoutes(app);
