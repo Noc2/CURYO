@@ -6,7 +6,7 @@ import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
 import { FaucetSection } from "~~/components/governance/FaucetSection";
-import { FrontendRegistration } from "~~/components/governance/FrontendRegistration";
+import { FrontendApprovalCard } from "~~/components/governance/FrontendApprovalCard";
 import { GovernanceActionComposer } from "~~/components/governance/GovernanceActionComposer";
 import { GovernanceStats } from "~~/components/governance/GovernanceStats";
 import { PlatformProposals } from "~~/components/governance/PlatformProposals";
@@ -273,7 +273,7 @@ function GovernancePageInner() {
               </div>
             )}
           </div>
-          <FrontendRegistration />
+          <FrontendApprovalCard />
         </div>
       )}
     </AppPageShell>
