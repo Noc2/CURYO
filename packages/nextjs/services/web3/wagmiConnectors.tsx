@@ -6,7 +6,7 @@ import {
   thirdwebClient,
 } from "~~/services/thirdweb/client";
 
-const CURYO_THIRDWEB_ICON = "/curyo-thirdweb-logo.png";
+const CURYO_THIRDWEB_ICON = "/favicon.svg";
 
 /**
  * wagmi connectors for the wagmi context

@@ -10,8 +10,8 @@ import { publicEnv } from "~~/utils/env/public";
 const THIRDWEB_CONNECT_CHAIN_IDS = new Set([31337, 42220, 11142220]);
 const THIRDWEB_EXECUTION_CHAIN_IDS = new Set([42220, 11142220]);
 const THIRDWEB_ACTIVE_CHAIN_KEY = "thirdweb:active-chain";
-const CURYO_THIRDWEB_ICON = "/curyo-thirdweb-logo.png";
-const CURYO_THIRDWEB_WORDMARK = "/curyo-email-logo.svg";
+const CURYO_THIRDWEB_ICON = "/favicon.svg";
+const CURYO_THIRDWEB_WORDMARK = "/curyo-thirdweb-lockup.svg";
 
 export function isThirdwebWalletChain(chainId: number | null | undefined): boolean {
   return typeof chainId === "number" && THIRDWEB_CONNECT_CHAIN_IDS.has(chainId);
@@ -85,9 +85,9 @@ export function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
       metadata: {
         image: {
           alt: "Curyo",
-          height: 44,
+          height: 100,
           src: CURYO_THIRDWEB_WORDMARK,
-          width: 188,
+          width: 320,
         },
         name: "Curyo Wallet",
       },
