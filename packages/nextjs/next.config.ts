@@ -31,7 +31,7 @@ const ponderUrl = process.env.NEXT_PUBLIC_PONDER_URL ?? (isDev ? "http://localho
 const cspDirectives = [
   "default-src 'self'",
   // Static CSP headers need inline bootstrap scripts for Next's production app shell.
-  `script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' https://scripts.simpleanalyticscdn.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
   "img-src 'self' data: blob: https:",
@@ -53,6 +53,8 @@ const cspDirectives = [
     "https://*.walletconnect.org",
     "https://api.web3modal.org",
     "https://*.thirdweb.com",
+    // Simple Analytics
+    "https://queue.simpleanalyticscdn.com",
     // Coinbase Wallet SDK
     "https://cca-lite.coinbase.com",
     // Content metadata APIs (platform handlers)

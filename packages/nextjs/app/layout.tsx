@@ -1,3 +1,4 @@
+import Script from "next/script";
 import "@fontsource/bebas-neue/latin-400.css";
 import "@fontsource/space-grotesk/latin-400.css";
 import "@fontsource/space-grotesk/latin-500.css";
@@ -19,6 +20,7 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
     <html data-theme="dark" style={{ colorScheme: "dark" }}>
       <body>
         <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
+        <Script src="https://scripts.simpleanalyticscdn.com/latest.js" />
       </body>
     </html>
   );
