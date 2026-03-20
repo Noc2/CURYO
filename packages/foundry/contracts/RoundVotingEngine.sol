@@ -251,17 +251,19 @@ contract RoundVotingEngine is
 
         uint64 stakeAmount64 = uint64(stakeAmount);
         IVoterIdNFT currentVoterIdNft = _getVoterIdNft();
+        bool hasVoterIdNft = address(currentVoterIdNft) != address(0);
 
         // Voter ID check (if configured)
         uint256 voterId;
-        if (address(currentVoterIdNft) != address(0)) {
+        if (hasVoterIdNft) {
             if (!currentVoterIdNft.hasVoterId(voter)) revert VoterIdRequired();
             voterId = currentVoterIdNft.getTokenId(voter);
         }
+        bool useTokenIdentity = hasVoterIdNft && voterId != 0;
 
         // Prevent submitter from voting on own content
         address effectiveVoter = voter;
-        if (address(currentVoterIdNft) != address(0)) {
+        if (hasVoterIdNft) {
             address resolved = currentVoterIdNft.resolveHolder(voter);
             if (resolved != address(0)) effectiveVoter = resolved;
         }
@@ -273,7 +275,7 @@ contract RoundVotingEngine is
         if (existingContentId == 0 || contentStatus != ContentRegistry.ContentStatus.Active) revert ContentNotActive();
 
         // Time-based cooldown (24 hours) — per identity when VoterID is configured
-        if (address(currentVoterIdNft) != address(0) && voterId != 0) {
+        if (useTokenIdentity) {
             uint256 lastVote = lastVoteTimestampByToken[contentId][voterId];
             if (lastVote > 0 && block.timestamp < lastVote + VOTE_COOLDOWN) revert CooldownActive();
         } else {
@@ -306,7 +308,7 @@ contract RoundVotingEngine is
         if (voterCommitHash[contentId][roundId][voter] != bytes32(0)) revert AlreadyCommitted();
 
         // One vote per identity per round (prevents holder + delegate double voting)
-        if (address(currentVoterIdNft) != address(0) && voterId != 0) {
+        if (useTokenIdentity) {
             if (hasTokenIdCommitted[contentId][roundId][voterId]) revert AlreadyCommitted();
         }
 
@@ -318,7 +320,7 @@ contract RoundVotingEngine is
         if (commits[contentId][roundId][commitKey].voter != address(0)) revert AlreadyCommitted();
 
         // Check MAX_STAKE per Voter ID per content per round
-        if (address(currentVoterIdNft) != address(0) && voterId != 0) {
+        if (useTokenIdentity) {
             uint256 currentStake = currentVoterIdNft.getEpochContentStake(contentId, roundId, voterId);
             if (currentStake + stakeAmount > MAX_STAKE) revert InvalidStake();
         }
@@ -369,7 +371,7 @@ contract RoundVotingEngine is
         }
 
         // Mark identity as committed for this round
-        if (address(currentVoterIdNft) != address(0) && voterId != 0) {
+        if (useTokenIdentity) {
             hasTokenIdCommitted[contentId][roundId][voterId] = true;
         }
 
@@ -378,13 +380,13 @@ contract RoundVotingEngine is
         round.totalStake += stakeAmount64;
 
         // Record stake against Voter ID
-        if (address(currentVoterIdNft) != address(0) && voterId != 0) {
+        if (useTokenIdentity) {
             currentVoterIdNft.recordStake(contentId, roundId, voterId, stakeAmount);
         }
 
         // Record cooldown (per identity + per address)
         lastVoteTimestamp[contentId][voter] = block.timestamp;
-        if (address(currentVoterIdNft) != address(0) && voterId != 0) {
+        if (useTokenIdentity) {
             lastVoteTimestampByToken[contentId][voterId] = block.timestamp;
         }
 
