@@ -22,7 +22,7 @@ const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
  */
 export function FrontendRegistration() {
   const { address } = useAccount();
-  const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
+  const { isMissingGasBalance, nativeTokenSymbol, supportsSponsoredCalls } = useGasBalanceStatus();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
@@ -140,14 +140,14 @@ export function FrontendRegistration() {
       return true;
     }
 
-    notification.error(getGasBalanceErrorMessage(nativeTokenSymbol));
+    notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls }));
     return false;
   };
 
   const notifyTransactionError = (error: unknown, fallback: string) => {
     notification.error(
       isInsufficientFundsError(error)
-        ? getGasBalanceErrorMessage(nativeTokenSymbol)
+        ? getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls })
         : (error as { shortMessage?: string } | undefined)?.shortMessage || fallback,
     );
   };

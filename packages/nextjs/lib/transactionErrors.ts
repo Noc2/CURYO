@@ -37,6 +37,10 @@ export function isInsufficientFundsError(error: unknown) {
   );
 }
 
-export function getGasBalanceErrorMessage(nativeTokenSymbol: string) {
+export function getGasBalanceErrorMessage(nativeTokenSymbol: string, options?: { supportsSponsoredCalls?: boolean }) {
+  if (options?.supportsSponsoredCalls) {
+    return `Gas is usually sponsored for this wallet. If it still fails, add some ${nativeTokenSymbol} and retry.`;
+  }
+
   return `Add some ${nativeTokenSymbol} for gas, then retry.`;
 }

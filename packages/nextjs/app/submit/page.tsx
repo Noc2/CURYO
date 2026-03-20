@@ -138,7 +138,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 const SubmitPage: NextPage = () => {
   const { address } = useAccount();
   const { hasVoterId, isResolved: voterIdResolved } = useVoterIdNFT(address);
-  const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
+  const { isMissingGasBalance, nativeTokenSymbol, supportsSponsoredCalls } = useGasBalanceStatus();
   const { ratePercent, calculateBonus } = useParticipationRate();
   const submissionBonus = calculateBonus(10);
   const { requireAcceptance } = useTermsAcceptance();
@@ -382,7 +382,7 @@ const SubmitPage: NextPage = () => {
     if (!address || !registryInfo?.address) return;
 
     if (isMissingGasBalance) {
-      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol));
+      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls }));
       return;
     }
 
@@ -478,7 +478,9 @@ const SubmitPage: NextPage = () => {
     } catch (e: unknown) {
       console.error("Submit failed:", e);
       notification.error(
-        isInsufficientFundsError(e) ? getGasBalanceErrorMessage(nativeTokenSymbol) : "Failed to submit content",
+        isInsufficientFundsError(e)
+          ? getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls })
+          : "Failed to submit content",
       );
     } finally {
       setIsSubmitting(false);

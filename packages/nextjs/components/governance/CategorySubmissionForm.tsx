@@ -31,7 +31,7 @@ export const CategorySubmissionForm = () => {
   const { address } = useAccount();
   const wagmiConfig = useConfig();
   const { requireAcceptance } = useTermsAcceptance();
-  const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
+  const { isMissingGasBalance, nativeTokenSymbol, supportsSponsoredCalls } = useGasBalanceStatus();
   const { governorAddress, hasGovernorContract } = useGovernanceContracts();
   const { proposalThreshold } = useGovernanceStats();
   const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
@@ -109,7 +109,7 @@ export const CategorySubmissionForm = () => {
     if (!address || !categoryRegistryInfo?.address) return;
 
     if (isMissingGasBalance) {
-      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol));
+      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls }));
       return;
     }
 
@@ -240,7 +240,7 @@ export const CategorySubmissionForm = () => {
       } else {
         notification.error(
           isInsufficientFundsError(e)
-            ? getGasBalanceErrorMessage(nativeTokenSymbol)
+            ? getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls })
             : e?.shortMessage || "Failed to submit category",
         );
       }
