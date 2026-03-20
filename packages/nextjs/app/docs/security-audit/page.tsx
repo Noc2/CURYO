@@ -7,28 +7,70 @@ const SecurityAudit: NextPage = () => {
       <p className="lead text-base-content/60 text-lg">
         Consolidated internal security audit of all Curyo smart contracts covering static analysis, manual review,
         storage layout verification, and economic attack analysis. Consolidated from 5 prior review rounds (V1&ndash;V5,
-        Feb 2025&ndash;Feb 2026), with a full follow-up contract review and full-suite test rerun on March 11, 2026.
+        Feb 2025&ndash;Feb 2026), with a historical full follow-up contract review and full-suite test rerun on March
+        11, 2026, plus a current-branch refresh on March 20, 2026.
       </p>
 
       <h2>Executive Summary</h2>
       <p>
-        The March 4 consolidated audit below captures the historical finding inventory across the earlier review rounds.
-        A follow-up full-contract review on <strong>March 11, 2026</strong> found{" "}
-        <strong>no new critical or high-severity issues</strong>. The residual follow-up items from that review, plus
-        the final remediation sweep that followed, have now been addressed on the current branch and are covered by
-        regression tests.
+        The March 4 consolidated audit below captures the historical finding inventory across the earlier review rounds,
+        and the March 11, 2026 follow-up remains the latest full manual review captured in this document. Since then the
+        production contract surface has continued to change, so the current branch should be read as a historical audit
+        baseline plus the current-branch addendum and validation updates below, not as a frozen March 11 snapshot.
       </p>
       <p>
-        The latest follow-up section below summarizes both the March 11 review and the additional fixes that landed
-        immediately afterward.
+        The refresh on <strong>March 20, 2026</strong> updates this page for the current deployment surface, transparent
+        proxy architecture, post-March-11 contract changes, and the final H-14 hardening change in{" "}
+        <code>HumanFaucet._decodeReferrer()</code>.
       </p>
 
-      <h2>Latest Follow-Up Review (March 11, 2026)</h2>
+      <h2>Current Branch Addendum (March 20, 2026)</h2>
       <p>
-        The latest review re-ran the full Foundry suite, performed a fresh manual audit of the production contracts, and
-        drove a final remediation pass for the remaining medium/low findings. A short follow-on hardening pass then
-        landed governance-migration hooks, live-balance enforcement for governance locks, and registry pagination
-        cleanup. The reviewed branch passed the full Foundry suite cleanly at the time of that follow-up review.
+        The contract surface changed materially after the March 11 follow-up review. The current branch now includes a
+        separate <code>ProtocolConfig</code> proxy, proxy-admin-governed configuration wiring, storage and gas
+        optimizations across the round system, and post-settlement reward reservation fixes that touched reward
+        accounting and upgrade layouts.
+      </p>
+      <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
+        <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Current Branch Update</th>
+              <th>Why It Matters</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="font-mono text-primary">ProtocolConfig</td>
+              <td>Introduced as a transparent proxy and wired into RoundVotingEngine.</td>
+              <td>Expands the production contract surface and adds a new upgradeable configuration address book.</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-primary">Proxy architecture</td>
+              <td>The deployment flow is transparent-proxy + ProxyAdmin based, not UUPS based.</td>
+              <td>Upgrade authorization and storage-layout claims must match the actual deployment model.</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-primary">Reward accounting</td>
+              <td>Submitter/participation reward reservation and distribution logic changed after March 11.</td>
+              <td>These paths hold value and therefore deserve fresh targeted testing and static analysis.</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-primary">HumanFaucet</td>
+              <td>The H-14 referrer-decoding hardening is now implemented on the current branch.</td>
+              <td>The historical “fragile” assembly path is no longer present in production code.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Historical Follow-Up Review (March 11, 2026)</h2>
+      <p>
+        The March 11 review re-ran the full Foundry suite, performed a fresh manual audit of the then-current production
+        contracts, and drove a remediation pass for the remaining medium/low findings on that branch. A short follow-on
+        hardening pass then landed governance-migration hooks, live-balance enforcement for governance locks, and
+        registry pagination cleanup.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -114,7 +156,7 @@ const SecurityAudit: NextPage = () => {
       </ol>
       <p className="text-base-content/60 text-sm">
         The table below remains the historical March 4, 2026 consolidated finding inventory from review rounds
-        V1&ndash;V5.
+        V1&ndash;V5, with statuses updated where the current branch has since addressed the original issue.
       </p>
 
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -135,7 +177,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>High</td>
               <td>16</td>
-              <td>11 resolved, 3 verified, 1 design, 1 fragile</td>
+              <td>12 resolved, 3 verified, 1 design</td>
             </tr>
             <tr>
               <td>Medium</td>
@@ -158,8 +200,8 @@ const SecurityAudit: NextPage = () => {
 
       <h2>Scope</h2>
       <p>
-        The audit covers the current production contract surface: 12 deployed contracts and 5 supporting libraries. Mock
-        and test contracts are excluded.
+        The current production contract surface includes 13 deployed contracts and 5 supporting libraries. Six contracts
+        are deployed behind transparent proxies with governance-owned ProxyAdmins; mock and test contracts are excluded.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -174,7 +216,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
-                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">Transparent proxy</span>
               </td>
               <td>
                 Core voting: tlock commit-reveal, epoch-weighted rewards, deterministic settlement, consensus subsidy
@@ -183,28 +225,35 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td className="font-mono text-primary">RoundRewardDistributor</td>
               <td>
-                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">Transparent proxy</span>
               </td>
               <td>Pull-based reward claiming</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">ContentRegistry</td>
               <td>
-                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">Transparent proxy</span>
               </td>
               <td>Content lifecycle, submitter stakes, ratings</td>
             </tr>
             <tr>
+              <td className="font-mono text-primary">ProtocolConfig</td>
+              <td>
+                <span className="badge badge-secondary whitespace-nowrap">Transparent proxy</span>
+              </td>
+              <td>Governance-controlled protocol address book, round config, reveal grace period</td>
+            </tr>
+            <tr>
               <td className="font-mono text-primary">FrontendRegistry</td>
               <td>
-                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">Transparent proxy</span>
               </td>
               <td>Frontend operator staking and fee distribution</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">ProfileRegistry</td>
               <td>
-                <span className="badge badge-secondary whitespace-nowrap">UUPS</span>
+                <span className="badge badge-secondary whitespace-nowrap">Transparent proxy</span>
               </td>
               <td>User profiles and name uniqueness</td>
             </tr>
@@ -296,7 +345,7 @@ const SecurityAudit: NextPage = () => {
         </table>
       </div>
 
-      <h2>Methodology</h2>
+      <h2>Historical Methodology</h2>
       <ul>
         <li>
           <strong>Static analysis</strong> &mdash; Slither on all contracts with dependency filtering. Summary: 1 high,
@@ -307,8 +356,8 @@ const SecurityAudit: NextPage = () => {
           token flows, state transitions, access control, and upgrade safety.
         </li>
         <li>
-          <strong>Storage layout verification</strong> &mdash; <code>forge inspect</code> on all 5 UUPS contracts to
-          verify gap correctness and no collisions.
+          <strong>Storage layout verification</strong> &mdash; <code>forge inspect</code> on all proxy-backed contracts
+          to verify append-only layouts, reserved gaps, and no collisions.
         </li>
         <li>
           <strong>Economic analysis</strong> &mdash; Game-theoretic attack scenarios against the parimutuel voting
@@ -326,7 +375,7 @@ const SecurityAudit: NextPage = () => {
 
       <hr />
 
-      <h2>Findings</h2>
+      <h2>Historical Findings</h2>
 
       <h3>Critical</h3>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
@@ -436,7 +485,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>H-04</td>
               <td>
-                <strong>Missing __gap on 3 UUPS contracts.</strong> ContentRegistry, FrontendRegistry, and
+                <strong>Missing __gap on 3 proxy-backed contracts.</strong> ContentRegistry, FrontendRegistry, and
                 ProfileRegistry lacked storage gap variables, risking storage collisions on future upgrades. All three
                 contracts now include <code>uint256[50] private __gap</code>.
               </td>
@@ -562,25 +611,25 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>H-14</td>
               <td>
-                <strong>Assembly in _decodeReferrer().</strong> <code>mload(add(userData, 20))</code> reads 32 bytes
-                from offset 20. For <code>bytes memory</code>, bytes 0&ndash;31 are the length field. Works because
-                length is always small (&lt; 2^96), so high bytes of length field are zero. Fragile but correct in
-                practice. Consider replacing with <code>abi.decode</code> for clarity.
+                <strong>Fragile referrer decoding in _decodeReferrer().</strong> The legacy implementation relied on
+                inline assembly to read packed address payloads. The current branch now left-pads the first 20 bytes
+                into a 32-byte ABI word and decodes via <code>abi.decode</code>, preserving packed-input compatibility
+                without the assembly path.
               </td>
               <td className="font-mono text-primary">HumanFaucet</td>
               <td>
-                <span className="badge badge-info whitespace-nowrap">Fragile</span>
+                <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
             </tr>
             <tr>
               <td>H-15</td>
               <td>
-                <strong>Non-upgradeable ReentrancyGuard in UUPS contracts.</strong> Contracts use{" "}
-                <code>@openzeppelin/contracts/utils/ReentrancyGuard.sol</code> (non-upgradeable version). In OZ v5.x,
-                this uses ERC-7201 namespaced storage (fixed slot), which is safe for UUPS proxies. Uninitialized proxy
-                storage (0) does not conflict with the guard&apos;s check pattern (slot == 2 means entered).
+                <strong>Proxy-safe guard usage in proxy-backed runtime contracts.</strong> The current runtime contracts
+                use OpenZeppelin&apos;s <code>ReentrancyGuardTransient</code>, which stores the lock in transient
+                storage rather than a normal persistent storage slot. That avoids layout collisions with transparent
+                proxy state while still blocking same-transaction reentrancy.
               </td>
-              <td className="font-mono text-primary">All UUPS contracts</td>
+              <td className="font-mono text-primary">Proxy-backed runtime contracts</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Verified</span>
               </td>
@@ -665,11 +714,11 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>M-05</td>
               <td>
-                <strong>UUPS upgrade tests added.</strong> All 5 UUPS contracts now have upgrade path tests covering
-                authorization, reinitialization prevention, state preservation after upgrade, and implementation
-                direct-initialization protection.
+                <strong>Transparent proxy upgrade tests added.</strong> All 6 proxy-backed contracts now have upgrade
+                path tests covering governance-owned ProxyAdmin authorization, reinitialization prevention, state
+                preservation after upgrade, and implementation direct-initialization protection.
               </td>
-              <td className="font-mono text-primary">All UUPS contracts</td>
+              <td className="font-mono text-primary">All proxy-backed contracts</td>
               <td>
                 <span className="badge badge-success whitespace-nowrap">Resolved</span>
               </td>
@@ -817,8 +866,8 @@ const SecurityAudit: NextPage = () => {
               <td>
                 <strong>initializeV2/V3 visibility.</strong> Both are <code>public</code> with{" "}
                 <code>reinitializer(n)</code>. While publicly callable, the <code>reinitializer</code> modifier ensures
-                each can only execute once. Standard UUPS upgrade flow (upgrade + initialize in one transaction)
-                prevents front-running.
+                each can only execute once. Standard transparent-proxy upgrade flow (upgrade + initialize in one
+                transaction via ProxyAdmin) prevents front-running.
               </td>
               <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>
@@ -1161,7 +1210,7 @@ const SecurityAudit: NextPage = () => {
 
       <h2>Upgrade Safety</h2>
       <p>
-        Storage layouts verified via <code>forge inspect</code> for all 5 UUPS contracts:
+        Storage layouts verified via <code>forge inspect</code> for all 6 transparent-proxy-backed contracts:
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">
@@ -1176,39 +1225,47 @@ const SecurityAudit: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono text-primary">ContentRegistry</td>
-              <td>0&ndash;10 (11 slots)</td>
-              <td>__gap[49]</td>
+              <td>0&ndash;18 (19 slots)</td>
+              <td>__gap[42]</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
             <tr>
               <td className="font-mono text-primary">RoundVotingEngine</td>
-              <td>0&ndash;43 (44 slots)</td>
-              <td>__gap[25]</td>
+              <td>0&ndash;28 (29 slots)</td>
+              <td>__gap[50]</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
             <tr>
               <td className="font-mono text-primary">RoundRewardDistributor</td>
-              <td>0&ndash;4 (5 slots)</td>
-              <td>__gap[50]</td>
+              <td>0&ndash;13 (14 slots)</td>
+              <td>__gap[41]</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
             <tr>
               <td className="font-mono text-primary">FrontendRegistry</td>
-              <td>0&ndash;5 (6 slots)</td>
-              <td>__gap[50]</td>
+              <td>0&ndash;6 (7 slots)</td>
+              <td>__gap[49]</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Pass</span>
               </td>
             </tr>
             <tr>
               <td className="font-mono text-primary">ProfileRegistry</td>
-              <td>0&ndash;3 (4 slots)</td>
+              <td>0&ndash;4 (5 slots)</td>
+              <td>__gap[49]</td>
+              <td>
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span>
+              </td>
+            </tr>
+            <tr>
+              <td className="font-mono text-primary">ProtocolConfig</td>
+              <td>0&ndash;8 (9 slots)</td>
               <td>__gap[50]</td>
               <td>
                 <span className="badge badge-secondary whitespace-nowrap">Pass</span>
@@ -1227,22 +1284,25 @@ const SecurityAudit: NextPage = () => {
           </thead>
           <tbody>
             <tr>
-              <td>_disableInitializers() in constructor</td>
+              <td>_disableInitializers() in implementation constructor</td>
               <td>
-                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; All 5 UUPS contracts
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; All 6 proxy-backed
+                contracts
               </td>
             </tr>
             <tr>
-              <td>_authorizeUpgrade requires UPGRADER_ROLE</td>
+              <td>ProxyAdmin owner is governance</td>
               <td>
-                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; All 5 UUPS contracts
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; UpgradeTest covers
+                authorized and unauthorized upgrades across all 6 proxy-backed contracts
               </td>
             </tr>
             <tr>
               <td>ReentrancyGuard under proxy</td>
               <td>
-                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; OZ v5.5.0 uses ERC-7201
-                storage slot with check == ENTERED (2). Uninitialized proxy storage (0) is safe.
+                <span className="badge badge-secondary whitespace-nowrap">Pass</span> &mdash; Proxy-backed runtime
+                contracts use <code>ReentrancyGuardTransient</code>, so the lock lives in transient storage rather than
+                the normal persistent layout.
               </td>
             </tr>
           </tbody>
@@ -1573,14 +1633,17 @@ const SecurityAudit: NextPage = () => {
           RoundRewardDistributor.
         </li>
         <li>
-          <strong>UUPS authorization:</strong> All _authorizeUpgrade functions require UPGRADER_ROLE.
+          <strong>Proxy admin ownership:</strong> Governance-owned ProxyAdmins control upgrades for all 6 transparent
+          proxies.
         </li>
         <li>
-          <strong>Initializer protection:</strong> All UUPS constructors call _disableInitializers().
+          <strong>Initializer protection:</strong> All proxy-backed implementations call _disableInitializers() in their
+          constructors.
         </li>
         <li>
-          <strong>ReentrancyGuard proxy safety:</strong> OZ v5.5.0 check (slot == 2) is safe with uninitialized proxy
-          storage (0).
+          <strong>ReentrancyGuard proxy safety:</strong> Proxy-backed runtime contracts use{" "}
+          <code>ReentrancyGuardTransient</code>, so the lock lives in transient storage rather than the persistent proxy
+          layout.
         </li>
         <li>
           <strong>Gas-bounded settlement:</strong> Round voters capped per content (enforced at vote time); O(1)
@@ -1738,8 +1801,8 @@ const SecurityAudit: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono text-primary">UpgradeTest</td>
-              <td>21</td>
-              <td>UUPS upgrade auth, reinitialization, state preservation</td>
+              <td>25</td>
+              <td>Transparent proxy auth, reinitialization, state preservation</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">HumanFaucetCoverageTest (CoverageGaps)</td>
@@ -1971,8 +2034,8 @@ const SecurityAudit: NextPage = () => {
       <h3>Short-Term</h3>
       <ol>
         <li>
-          <strong>Replace assembly in _decodeReferrer</strong> (H-14) with <code>abi.decode</code> for clarity and
-          safety.
+          <del>Replace assembly in _decodeReferrer</del> (H-14) &mdash; <span className="text-success">Done.</span>{" "}
+          Packed referrer payloads are now left-padded and decoded via <code>abi.decode</code>.
         </li>
         <li>
           <del>Review referrer validation</del> (M-11) &mdash; <span className="text-success">Done.</span> Revoked
@@ -1984,7 +2047,8 @@ const SecurityAudit: NextPage = () => {
 
       <p className="text-base-content/60 text-sm">
         This is an internal AI-assisted security review, not a professional third-party audit. Historical consolidated
-        audit: March 4, 2026. Latest follow-up review: March 11, 2026.
+        audit: March 4, 2026. Historical follow-up review: March 11, 2026. Current-branch refresh and final H-14
+        hardening: March 20, 2026.
       </p>
     </article>
   );

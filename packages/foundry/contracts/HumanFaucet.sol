@@ -471,10 +471,12 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
         if (userData.length == 32) return abi.decode(userData, (address));
         if (userData.length < 20) return address(0);
 
-        address referrer;
-        assembly {
-            referrer := shr(96, mload(add(userData, 32)))
+        // Legacy callers may still send abi.encodePacked(address), so left-pad the first 20 bytes
+        // into a standard 32-byte ABI word before decoding.
+        bytes memory padded = new bytes(32);
+        for (uint256 i = 0; i < 20; ++i) {
+            padded[12 + i] = userData[i];
         }
-        return referrer;
+        return abi.decode(padded, (address));
     }
 }

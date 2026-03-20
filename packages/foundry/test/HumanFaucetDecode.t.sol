@@ -12,16 +12,16 @@ contract DecodeReferrerHarness {
         if (userData.length == 32) return abi.decode(userData, (address));
         if (userData.length < 20) return address(0);
 
-        address referrer;
-        assembly {
-            referrer := shr(96, mload(add(userData, 32)))
+        bytes memory padded = new bytes(32);
+        for (uint256 i = 0; i < 20; ++i) {
+            padded[12 + i] = userData[i];
         }
-        return referrer;
+        return abi.decode(padded, (address));
     }
 }
 
 /// @title HumanFaucetDecodeTest
-/// @notice Unit + fuzz tests for the _decodeReferrer assembly fix (H-14).
+/// @notice Unit + fuzz tests for the _decodeReferrer hardening (H-14).
 contract HumanFaucetDecodeTest is Test {
     DecodeReferrerHarness public harness;
 

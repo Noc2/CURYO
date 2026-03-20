@@ -59,7 +59,7 @@ contract MockVotingEngineForUpgrade is IRoundVotingEngine {
     function transferReward(address, uint256) external override { }
 }
 
-/// @title UUPS Upgrade Tests for all upgradeable contracts
+/// @title Transparent Proxy Upgrade Tests for all proxy-backed contracts
 contract UpgradeTest is Test {
     // Contracts
     ContentRegistry public contentRegistry;

@@ -22,6 +22,9 @@ contract ProtocolConfig is Initializable, AccessControl {
     address public participationPool;
     uint256 public revealGracePeriod;
 
+    /// @dev Reserved storage gap for future proxy-safe upgrades.
+    uint256[50] private __gap;
+
     event RewardDistributorUpdated(address rewardDistributor);
     event FrontendRegistryUpdated(address frontendRegistry);
     event CategoryRegistryUpdated(address categoryRegistry);
