@@ -145,6 +145,7 @@ const SubmitPage: NextPage = () => {
 
   // Submission type tab
   const [submissionType, setSubmissionType] = useState<SubmissionType>("content");
+  const requiresPageLevelVoterId = submissionType !== "frontend";
 
   // Sync tab with URL hash (e.g. /submit#category)
   const selectTab = useCallback((tab: SubmissionType) => {
@@ -502,7 +503,7 @@ const SubmitPage: NextPage = () => {
     );
   }
 
-  if (!voterIdResolved) {
+  if (requiresPageLevelVoterId && !voterIdResolved) {
     return (
       <div className="flex flex-col items-center justify-center grow px-6 pt-20">
         <div className="surface-card rounded-2xl p-8 text-center max-w-sm">
@@ -513,7 +514,7 @@ const SubmitPage: NextPage = () => {
     );
   }
 
-  if (!hasVoterId) {
+  if (requiresPageLevelVoterId && !hasVoterId) {
     return (
       <div className="flex flex-col items-center justify-center grow px-6 pt-20">
         <div className="surface-card rounded-2xl p-8 text-center max-w-md space-y-4">

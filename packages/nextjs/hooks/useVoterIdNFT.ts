@@ -1,16 +1,20 @@
 "use client";
 
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 /**
  * Hook to check if an address has a Voter ID NFT.
  */
 export function useVoterIdNFT(address?: string) {
+  const { data: voterIdContract, isLoading: voterIdContractLoading } = useDeployedContractInfo({
+    contractName: "VoterIdNFT" as any,
+  });
   const {
     data: hasVoterId,
     isLoading: hasVoterIdLoading,
     isFetching: hasVoterIdFetching,
     isFetched: hasVoterIdFetched,
+    isError: hasVoterIdError,
     refetch: refetchHasVoterId,
   } = useScaffoldReadContract({
     contractName: "VoterIdNFT" as any,
@@ -26,13 +30,14 @@ export function useVoterIdNFT(address?: string) {
     isLoading: tokenIdLoading,
     isFetching: tokenIdFetching,
     isFetched: tokenIdFetched,
+    isError: tokenIdError,
     refetch: refetchTokenId,
   } = useScaffoldReadContract({
     contractName: "VoterIdNFT" as any,
     functionName: "getTokenId",
     args: [address],
     query: {
-      enabled: !!address,
+      enabled: !!address && hasVoterId === true,
     },
   } as any);
 
@@ -42,11 +47,20 @@ export function useVoterIdNFT(address?: string) {
   };
 
   const hasAddress = Boolean(address);
+  const contractUnavailable = hasAddress && !voterIdContractLoading && !voterIdContract;
   const resolvedHasVoterId = hasVoterId ?? false;
-  const voterIdCheckPending = hasAddress && (!hasVoterIdFetched || hasVoterIdLoading || hasVoterIdFetching);
+  const voterIdCheckPending =
+    hasAddress &&
+    !contractUnavailable &&
+    !hasVoterIdError &&
+    (!hasVoterIdFetched || hasVoterIdLoading || hasVoterIdFetching);
   const tokenIdCheckPending =
-    hasAddress && resolvedHasVoterId && (!tokenIdFetched || tokenIdLoading || tokenIdFetching);
-  const isResolved = !voterIdCheckPending && !tokenIdCheckPending;
+    hasAddress &&
+    resolvedHasVoterId &&
+    !contractUnavailable &&
+    !tokenIdError &&
+    (!tokenIdFetched || tokenIdLoading || tokenIdFetching);
+  const isResolved = !hasAddress || contractUnavailable || (!voterIdCheckPending && !tokenIdCheckPending);
 
   return {
     hasVoterId: resolvedHasVoterId,
