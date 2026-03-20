@@ -3,7 +3,7 @@
 // @refresh reset
 import { AddressInfoDropdown } from "./AddressInfoDropdown";
 import { WrongNetworkDropdown } from "./WrongNetworkDropdown";
-import { useActiveAccount } from "thirdweb/react";
+import { useActiveAccount, useActiveWalletChain } from "thirdweb/react";
 import { Address } from "viem";
 import { useAccount } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -13,11 +13,13 @@ export const CuryoConnectButton = ({ inlineMenu = false }: { inlineMenu?: boolea
   const { targetNetwork } = useTargetNetwork();
   const { address, chain } = useAccount();
   const activeThirdwebAccount = useActiveAccount();
+  const activeThirdwebChain = useActiveWalletChain();
   const { openConnectModal, isConnecting, thirdwebEnabled } = useCuryoConnectModal();
+  const resolvedChain = chain ?? activeThirdwebChain;
 
-  const syncingThirdwebAccount = Boolean(activeThirdwebAccount && !address);
+  const syncingThirdwebAccount = Boolean(activeThirdwebAccount && (!address || !resolvedChain));
 
-  if (!address || !chain) {
+  if (!address || !resolvedChain) {
     return (
       <button
         className="btn btn-sm btn-curyo border-none"
@@ -42,7 +44,7 @@ export const CuryoConnectButton = ({ inlineMenu = false }: { inlineMenu?: boolea
     );
   }
 
-  if (chain.id !== targetNetwork.id) {
+  if (resolvedChain.id !== targetNetwork.id) {
     return <WrongNetworkDropdown />;
   }
 
