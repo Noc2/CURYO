@@ -44,6 +44,9 @@ const cspDirectives = [
     // drand (tlock encryption)
     "https://api.drand.sh",
     "https://mainnet.drand.sh",
+    // Self.xyz verification
+    "wss://websocket.self.xyz",
+    "wss://websocket.staging.self.xyz",
     // Wallet connections
     "wss://*.walletconnect.com",
     "https://*.walletconnect.com",

@@ -26,6 +26,11 @@ const ENDPOINT_TYPES: Record<number, "celo" | "staging_celo"> = {
   11142220: "staging_celo",
 };
 
+const SELF_WEBSOCKET_URLS: Record<number, string> = {
+  42220: "wss://websocket.self.xyz",
+  11142220: "wss://websocket.staging.self.xyz",
+};
+
 export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
   const { address, chain } = useAccount();
   const { data: contractInfo } = useDeployedContractInfo({ contractName: "HumanFaucet" });
@@ -110,6 +115,7 @@ export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
     <div className="flex flex-col items-center gap-4">
       <SelfQRcodeWrapper
         selfApp={selfApp}
+        websocketUrl={SELF_WEBSOCKET_URLS[chain.id]}
         onSuccess={onSuccess}
         onError={(error: any) => {
           console.error("Self.xyz verification error:", error);
