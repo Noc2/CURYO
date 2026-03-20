@@ -1,7 +1,30 @@
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
+import { RPC_OVERRIDES } from "./config/shared";
+import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "./utils/env/targetNetworks";
 
 const isDev = process.env.NODE_ENV === "development";
+const targetNetworks = resolveTargetNetworks(process.env.NEXT_PUBLIC_TARGET_NETWORKS, {
+  production: !isDev,
+  fallback: isDev ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
+});
+
+function toOrigin(value: string): string | undefined {
+  try {
+    return new URL(value).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+const rpcUrls = [
+  ...targetNetworks.flatMap(network => network.rpcUrls.default.http),
+  ...Object.values(RPC_OVERRIDES as Partial<Record<number, string>>).filter((value): value is string => Boolean(value)),
+] as const;
+
+const rpcOrigins = rpcUrls
+  .map(toOrigin)
+  .filter((value, index, values): value is string => Boolean(value) && values.indexOf(value) === index);
 
 // Build CSP directives. Production Ponder URL comes from env at build time.
 const ponderUrl = process.env.NEXT_PUBLIC_PONDER_URL ?? (isDev ? "http://localhost:42069" : "");
@@ -16,6 +39,7 @@ const cspDirectives = [
     ponderUrl,
     // RPC & blockchain
     "https://*.g.alchemy.com",
+    ...rpcOrigins,
     // drand (tlock encryption)
     "https://api.drand.sh",
     "https://mainnet.drand.sh",
