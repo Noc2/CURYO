@@ -110,19 +110,6 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "approveFrontend",
-    "inputs": [
-      {
-        "name": "frontend",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "claimFees",
     "inputs": [],
     "outputs": [],
@@ -212,11 +199,6 @@ export const FrontendRegistryAbi = [
         "internalType": "uint64"
       },
       {
-        "name": "approved",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
         "name": "slashed",
         "type": "bool",
         "internalType": "bool"
@@ -270,7 +252,7 @@ export const FrontendRegistryAbi = [
         "internalType": "uint256"
       },
       {
-        "name": "approved",
+        "name": "eligible",
         "type": "bool",
         "internalType": "bool"
       },
@@ -397,7 +379,7 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "function",
-    "name": "isApproved",
+    "name": "isEligible",
     "inputs": [
       {
         "name": "frontend",
@@ -475,19 +457,6 @@ export const FrontendRegistryAbi = [
     "type": "function",
     "name": "requestDeregister",
     "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "revokeFrontend",
-    "inputs": [
-      {
-        "name": "frontend",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -688,19 +657,6 @@ export const FrontendRegistryAbi = [
   },
   {
     "type": "event",
-    "name": "FrontendApproved",
-    "inputs": [
-      {
-        "name": "frontend",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "FrontendDeregistered",
     "inputs": [
       {
@@ -802,6 +758,19 @@ export const FrontendRegistryAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "FrontendUnslashed",
+    "inputs": [
+      {
+        "name": "frontend",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       }
     ],
     "anonymous": false

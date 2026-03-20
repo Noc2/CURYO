@@ -133,10 +133,10 @@ contract RoundVotingEngine is
     mapping(uint256 => mapping(uint256 => mapping(address => bytes32))) public voterCommitHash;
 
     // Frontend fee aggregation (computed incrementally during revealVote for O(1) settlement)
-    mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithApprovedFrontend;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundStakeWithEligibleFrontend;
     mapping(uint256 => mapping(uint256 => mapping(address => uint256))) public roundPerFrontendStake;
     mapping(uint256 => mapping(uint256 => uint256)) public roundFrontendPool;
-    mapping(uint256 => mapping(uint256 => uint256)) public roundApprovedFrontendCount;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundEligibleFrontendCount;
 
     // --- Events ---
     event VoteCommitted(
@@ -346,8 +346,8 @@ contract RoundVotingEngine is
 
         IFrontendRegistry currentFrontendRegistry = _getFrontendRegistry();
         if (frontend != address(0) && address(currentFrontendRegistry) != address(0)) {
-            try currentFrontendRegistry.isApproved(frontend) returns (bool approved) {
-                if (approved) {
+            try currentFrontendRegistry.isEligible(frontend) returns (bool eligible) {
+                if (eligible) {
                     frontendEligibleAtCommit[contentId][roundId][commitKey] = true;
                 }
             } catch {
@@ -570,7 +570,7 @@ contract RoundVotingEngine is
                 uint256 frontendShare = platformShare - categorySubmitterShare;
 
                 if (frontendShare > 0) {
-                    if (roundStakeWithApprovedFrontend[contentId][roundId] > 0) {
+                    if (roundStakeWithEligibleFrontend[contentId][roundId] > 0) {
                         roundFrontendPool[contentId][roundId] = frontendShare;
                         roundFrontendRegistrySnapshot[contentId][roundId] = address(currentFrontendRegistry);
                     } else {
@@ -904,9 +904,9 @@ contract RoundVotingEngine is
 
         // Aggregate frontend fee data using commit-time eligibility, not reveal-time status.
         if (commit.frontend != address(0) && frontendEligibleAtCommit[contentId][roundId][commitKey]) {
-            roundStakeWithApprovedFrontend[contentId][roundId] += commit.stakeAmount;
+            roundStakeWithEligibleFrontend[contentId][roundId] += commit.stakeAmount;
             if (roundPerFrontendStake[contentId][roundId][commit.frontend] == 0) {
-                roundApprovedFrontendCount[contentId][roundId]++;
+                roundEligibleFrontendCount[contentId][roundId]++;
             }
             roundPerFrontendStake[contentId][roundId][commit.frontend] += commit.stakeAmount;
         }
@@ -955,7 +955,7 @@ contract RoundVotingEngine is
     // Latest revealableAfter timestamp among all commits in a round.
     mapping(uint256 => mapping(uint256 => uint256)) public lastCommitRevealableAfter;
 
-    // Commit-time frontend approval snapshot to prevent retroactive fee eligibility changes.
+    // Commit-time frontend eligibility snapshot to prevent retroactive fee eligibility changes.
     mapping(uint256 => mapping(uint256 => mapping(bytes32 => bool))) internal frontendEligibleAtCommit;
 
     // Frontend registry snapshot per round so historical fee claims do not depend on live registry replacement.

@@ -323,10 +323,9 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
-    function test_CreditFees_ToUnapprovedFrontend_Succeeds() public {
-        // Register but don't approve
+    function test_CreditFees_ToRegisteredFrontend_Succeeds() public {
         _registerFrontend(frontend1);
-        // creditFees does NOT check approval
+
         vm.prank(feeCreditor);
         registry.creditFees(frontend1, 100e6);
 
@@ -392,17 +391,14 @@ contract FrontendRegistryCoverageTest is Test {
         registry.slashFrontend(frontend1, 100e6, "unauthorized");
     }
 
-    function test_Slash_SetsApprovedToFalse() public {
+    function test_Slash_SetsEligibilityToFalse() public {
         _registerFrontend(frontend1);
+        assertTrue(registry.isEligible(frontend1));
 
         vm.prank(admin);
-        registry.approveFrontend(frontend1);
-        assertTrue(registry.isApproved(frontend1));
+        registry.slashFrontend(frontend1, 100e6, "slash eligible");
 
-        vm.prank(admin);
-        registry.slashFrontend(frontend1, 100e6, "slash approved");
-
-        assertFalse(registry.isApproved(frontend1));
+        assertFalse(registry.isEligible(frontend1));
     }
 
     // =========================================================================
@@ -445,72 +441,7 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     // =========================================================================
-    // 7. REVOKE EDGE CASES
-    // =========================================================================
-
-    function test_Revoke_NotRegistered_Reverts() public {
-        vm.prank(admin);
-        vm.expectRevert("Frontend not registered");
-        registry.revokeFrontend(frontend1);
-    }
-
-    function test_Revoke_AlreadyRevoked_Idempotent() public {
-        _registerFrontend(frontend1);
-
-        vm.startPrank(admin);
-        registry.approveFrontend(frontend1);
-        registry.revokeFrontend(frontend1);
-        // Revoking again should not revert
-        registry.revokeFrontend(frontend1);
-        vm.stopPrank();
-
-        assertFalse(registry.isApproved(frontend1));
-    }
-
-    function test_Revoke_SlashedFrontend_Succeeds() public {
-        _registerFrontend(frontend1);
-
-        vm.startPrank(admin);
-        registry.slashFrontend(frontend1, 100e6, "test");
-        // Revoke should work even if slashed
-        registry.revokeFrontend(frontend1);
-        vm.stopPrank();
-    }
-
-    function test_Revoke_NonGovernance_Reverts() public {
-        _registerFrontend(frontend1);
-
-        vm.prank(nonAdmin);
-        vm.expectRevert();
-        registry.revokeFrontend(frontend1);
-    }
-
-    // =========================================================================
-    // 8. APPROVE EDGE CASES
-    // =========================================================================
-
-    function test_Approve_AlreadyApproved_Idempotent() public {
-        _registerFrontend(frontend1);
-
-        vm.startPrank(admin);
-        registry.approveFrontend(frontend1);
-        // Approving again should not revert
-        registry.approveFrontend(frontend1);
-        vm.stopPrank();
-
-        assertTrue(registry.isApproved(frontend1));
-    }
-
-    function test_Approve_NonGovernance_Reverts() public {
-        _registerFrontend(frontend1);
-
-        vm.prank(nonAdmin);
-        vm.expectRevert();
-        registry.approveFrontend(frontend1);
-    }
-
-    // =========================================================================
-    // 9. UNSLASH EDGE CASES
+    // 7. UNSLASH EDGE CASES
     // =========================================================================
 
     function test_Unslash_NotRegistered_Reverts() public {
@@ -531,36 +462,41 @@ contract FrontendRegistryCoverageTest is Test {
         registry.unslashFrontend(frontend1);
     }
 
-    function test_Unslash_DoesNotAutoApprove() public {
-        _registerFrontend(frontend1);
-
-        vm.startPrank(admin);
-        registry.approveFrontend(frontend1);
-        registry.slashFrontend(frontend1, 100e6, "test");
-        registry.unslashFrontend(frontend1);
-        vm.stopPrank();
-
-        // Should NOT be approved after unslash
-        assertFalse(registry.isApproved(frontend1));
-    }
-
-    function test_Approve_AfterUnslashRequiresFullBond() public {
+    function test_Unslash_DoesNotRestoreEligibility() public {
         _registerFrontend(frontend1);
 
         vm.startPrank(admin);
         registry.slashFrontend(frontend1, 100e6, "test");
         registry.unslashFrontend(frontend1);
-        vm.expectRevert("Frontend is underbonded");
-        registry.approveFrontend(frontend1);
         vm.stopPrank();
+
+        assertFalse(registry.isEligible(frontend1));
+    }
+
+    function test_TopUp_AfterUnslashRestoresEligibility() public {
+        _registerFrontend(frontend1);
+
+        vm.startPrank(admin);
+        registry.slashFrontend(frontend1, 100e6, "test");
+        registry.unslashFrontend(frontend1);
+        vm.stopPrank();
+
+        assertFalse(registry.isEligible(frontend1));
+
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), 100e6);
+        registry.topUpStake(100e6);
+        vm.stopPrank();
+
+        assertTrue(registry.isEligible(frontend1));
     }
 
     // =========================================================================
-    // 10. VIEW FUNCTIONS FOR UNREGISTERED ADDRESSES
+    // 8. VIEW FUNCTIONS FOR UNREGISTERED ADDRESSES
     // =========================================================================
 
-    function test_IsApproved_Unregistered_ReturnsFalse() public view {
-        assertFalse(registry.isApproved(frontend1));
+    function test_IsEligible_Unregistered_ReturnsFalse() public view {
+        assertFalse(registry.isEligible(frontend1));
     }
 
     function test_GetAccumulatedFees_Unregistered_ReturnsZero() public view {
@@ -568,10 +504,10 @@ contract FrontendRegistryCoverageTest is Test {
     }
 
     function test_GetFrontendInfo_Unregistered_ReturnsDefaults() public view {
-        (address operator, uint256 stakedAmount, bool approved, bool slashed) = registry.getFrontendInfo(frontend1);
+        (address operator, uint256 stakedAmount, bool eligible, bool slashed) = registry.getFrontendInfo(frontend1);
         assertEq(operator, address(0));
         assertEq(stakedAmount, 0);
-        assertFalse(approved);
+        assertFalse(eligible);
         assertFalse(slashed);
     }
 

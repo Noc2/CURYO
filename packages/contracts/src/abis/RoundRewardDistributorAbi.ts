@@ -1166,12 +1166,12 @@ export const RoundRewardDistributorAbi = [
   },
   {
     "type": "error",
-    "name": "NoApprovedStake",
+    "name": "NoCommit",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "NoCommit",
+    "name": "NoEligibleStake",
     "inputs": []
   },
   {

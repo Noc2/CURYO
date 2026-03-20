@@ -1461,9 +1461,6 @@ contract RoundIntegrationTest is VotingTestBase {
         crepToken.approve(address(frontendReg), 1000e6);
         frontendReg.register();
         vm.stopPrank();
-
-        vm.prank(owner);
-        frontendReg.approveFrontend(frontendOp);
     }
 
     /// @dev Helper: commit 3 votes (2 up, 1 down) with a specific frontend, reveal, settle.
@@ -1566,7 +1563,7 @@ contract RoundIntegrationTest is VotingTestBase {
         );
     }
 
-    function test_ClaimFrontendFee_SucceedsAfterFrontendReregistersWithoutReapproval() public {
+    function test_ClaimFrontendFee_SucceedsAfterFrontendReregisters() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
@@ -1589,7 +1586,7 @@ contract RoundIntegrationTest is VotingTestBase {
             0,
             "Re-registered frontend should still receive fees"
         );
-        assertFalse(frontendReg.isApproved(frontendOp), "Re-registration should not silently restore approval");
+        assertTrue(frontendReg.isEligible(frontendOp), "Re-registration should restore eligibility");
     }
 
     function test_ClaimFrontendFee_SucceedsAfterFrontendIsRebonded() public {
@@ -1614,10 +1611,10 @@ contract RoundIntegrationTest is VotingTestBase {
             0,
             "Rebonded frontend should receive preserved fees"
         );
-        assertFalse(frontendReg.isApproved(frontendOp), "Rebonding should not silently restore approval");
+        assertTrue(frontendReg.isEligible(frontendOp), "Rebonding should restore eligibility");
     }
 
-    function test_ClaimFrontendFee_UsesCommitTimeApprovalSnapshot() public {
+    function test_ClaimFrontendFee_UsesCommitTimeEligibilitySnapshot() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
         uint256 contentId = _submitContent();
 
@@ -1643,8 +1640,8 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, frontendOp);
         vm.stopPrank();
 
-        vm.prank(owner);
-        frontendReg.revokeFrontend(frontendOp);
+        vm.prank(frontendOp);
+        frontendReg.requestDeregister();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
@@ -1656,13 +1653,15 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.settleRound(contentId, roundId);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
 
-        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "commit-time approval should remain eligible");
+        assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "commit-time eligibility should remain preserved");
     }
 
-    function test_ClaimFrontendFee_IgnoresFrontendApprovedAfterCommit() public {
+    function test_ClaimFrontendFee_IgnoresFrontendEligibleAfterCommit() public {
         (FrontendRegistry frontendReg, address frontendOp) = _setupFrontendRegistry();
-        vm.prank(owner);
-        frontendReg.revokeFrontend(frontendOp);
+        vm.startPrank(owner);
+        frontendReg.slashFrontend(frontendOp, 100e6, "test");
+        frontendReg.unslashFrontend(frontendOp);
+        vm.stopPrank();
 
         uint256 contentId = _submitContent();
 
@@ -1688,8 +1687,10 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.commitVote(contentId, ch3, _testCiphertext(false, s3, contentId), STAKE, frontendOp);
         vm.stopPrank();
 
-        vm.prank(owner);
-        frontendReg.approveFrontend(frontendOp);
+        vm.startPrank(frontendOp);
+        crepToken.approve(address(frontendReg), 100e6);
+        frontendReg.topUpStake(100e6);
+        vm.stopPrank();
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(votingEngine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
@@ -1700,7 +1701,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         votingEngine.settleRound(contentId, roundId);
         vm.expectRevert(RoundRewardDistributor.NoPool.selector);
-        rewardDistributor.claimFrontendFee(contentId, roundId, address(0xBEEF));
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
     }
 
     function test_FrontendTracking_KeepsCommitKeysAccessible() public {
@@ -1751,7 +1752,7 @@ contract RoundIntegrationTest is VotingTestBase {
         );
     }
 
-    function test_ClaimFrontendFee_NoApprovedFrontendRedirectsToVoterPool() public {
+    function test_ClaimFrontendFee_NoEligibleFrontendRedirectsToVoterPool() public {
         // No frontend registry set — 3 voters (2 up, 1 down) to avoid tie
         uint256 contentId = _submitContent();
 

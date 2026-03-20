@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { FaucetSection } from "~~/components/governance/FaucetSection";
-import { FrontendApprovalCard } from "~~/components/governance/FrontendApprovalCard";
 import { GovernanceActionComposer } from "~~/components/governance/GovernanceActionComposer";
 import { GovernanceStats } from "~~/components/governance/GovernanceStats";
 import { PlatformProposals } from "~~/components/governance/PlatformProposals";
@@ -255,10 +254,7 @@ function GovernancePageInner() {
           </div>
           <GovernanceActionComposer />
           <ProposalList />
-          <div className="grid gap-6 xl:grid-cols-2">
-            <PlatformProposals />
-            <FrontendApprovalCard />
-          </div>
+          <PlatformProposals />
         </div>
       )}
     </AppPageShell>

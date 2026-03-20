@@ -109,73 +109,33 @@ contract FrontendRegistryBranchTest is Test {
         vm.stopPrank();
     }
 
-    // --- Slash → Unslash → Re-approve workflow ---
+    // --- Slash → Unslash → Top up restores eligibility ---
 
-    function test_SlashUnslashReapproveWorkflow() public {
+    function test_SlashUnslashTopUpRestoresEligibility() public {
         _registerFrontend(frontend1);
-        vm.prank(admin);
-        reg.approveFrontend(frontend1);
-        assertTrue(reg.isApproved(frontend1));
+        assertTrue(reg.isEligible(frontend1));
 
         // Slash
         vm.prank(admin);
         reg.slashFrontend(frontend1, 500e6, "Misbehavior");
-        assertFalse(reg.isApproved(frontend1));
+        assertFalse(reg.isEligible(frontend1));
         (, uint256 staked,, bool slashed) = reg.getFrontendInfo(frontend1);
         assertEq(staked, 500e6);
         assertTrue(slashed);
-
-        // Approve slashed should revert
-        vm.prank(admin);
-        vm.expectRevert("Frontend is slashed");
-        reg.approveFrontend(frontend1);
 
         // Unslash
         vm.prank(admin);
         reg.unslashFrontend(frontend1);
         (,,, slashed) = reg.getFrontendInfo(frontend1);
         assertFalse(slashed);
-        // Still not approved until explicitly re-approved
-        assertFalse(reg.isApproved(frontend1));
-
-        // Re-approve requires restoring the full bond first
-        vm.prank(admin);
-        vm.expectRevert("Frontend is underbonded");
-        reg.approveFrontend(frontend1);
+        assertFalse(reg.isEligible(frontend1));
 
         vm.startPrank(frontend1);
         crep.approve(address(reg), 500e6);
         reg.topUpStake(500e6);
         vm.stopPrank();
 
-        vm.prank(admin);
-        reg.approveFrontend(frontend1);
-        assertTrue(reg.isApproved(frontend1));
-    }
-
-    // --- Revoke already unapproved (idempotent) ---
-
-    function test_RevokeUnapprovedFrontend() public {
-        _registerFrontend(frontend1);
-        // Frontend starts unapproved
-        assertFalse(reg.isApproved(frontend1));
-        // Revoke should succeed even if already unapproved
-        vm.prank(admin);
-        reg.revokeFrontend(frontend1);
-        assertFalse(reg.isApproved(frontend1));
-    }
-
-    // --- Approve already approved (idempotent) ---
-
-    function test_ApproveAlreadyApproved() public {
-        _registerFrontend(frontend1);
-        vm.prank(admin);
-        reg.approveFrontend(frontend1);
-        assertTrue(reg.isApproved(frontend1));
-        // Approve again should not revert
-        vm.prank(admin);
-        reg.approveFrontend(frontend1);
-        assertTrue(reg.isApproved(frontend1));
+        assertTrue(reg.isEligible(frontend1));
     }
 
     // --- Re-register after deregister ---
@@ -319,18 +279,15 @@ contract FrontendRegistryBranchTest is Test {
         assertEq(total, 1);
     }
 
-    // --- isApproved: approved && slashed returns false ---
+    // --- isEligible: registered && slashed returns false ---
 
-    function test_IsApprovedSlashedReturnsFalse() public {
+    function test_IsEligibleSlashedReturnsFalse() public {
         _registerFrontend(frontend1);
-        vm.prank(admin);
-        reg.approveFrontend(frontend1);
-        assertTrue(reg.isApproved(frontend1));
+        assertTrue(reg.isEligible(frontend1));
 
         vm.prank(admin);
         reg.slashFrontend(frontend1, 100e6, "Bad");
-        // approved=true but slashed=true → isApproved() returns false
-        assertFalse(reg.isApproved(frontend1));
+        assertFalse(reg.isEligible(frontend1));
     }
 
     // --- Initialize validation ---

@@ -45,7 +45,7 @@ export interface ClaimableFrontendFeeRound {
   claimableFee: string;
   totalFrontendPool: string;
   frontendStake: string;
-  totalApprovedStake: string;
+  totalEligibleStake: string;
   totalFrontendClaimants: number;
 }
 
@@ -64,7 +64,7 @@ function normalizeFrontendAddress(frontend: string): `0x${string}` {
 function isClaimableSnapshot(
   totalFrontendPool: bigint,
   frontendStake: bigint,
-  totalApprovedStake: bigint,
+  totalEligibleStake: bigint,
   totalFrontendClaimants: bigint,
   alreadyClaimed: boolean,
 ) {
@@ -72,7 +72,7 @@ function isClaimableSnapshot(
     !alreadyClaimed &&
     totalFrontendPool > 0n &&
     frontendStake > 0n &&
-    totalApprovedStake > 0n &&
+    totalEligibleStake > 0n &&
     totalFrontendClaimants > 0n
   );
 }
@@ -80,7 +80,7 @@ function isClaimableSnapshot(
 function calculateClaimableFee(
   totalFrontendPool: bigint,
   frontendStake: bigint,
-  totalApprovedStake: bigint,
+  totalEligibleStake: bigint,
   totalFrontendClaimants: bigint,
   claimedCount: bigint,
   claimedAmount: bigint,
@@ -89,7 +89,7 @@ function calculateClaimableFee(
     return totalFrontendPool - claimedAmount;
   }
 
-  return (totalFrontendPool * frontendStake) / totalApprovedStake;
+  return (totalFrontendPool * frontendStake) / totalEligibleStake;
 }
 
 async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRoundItem[]) {
@@ -97,7 +97,7 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
     return rounds.map(() => ({
       totalFrontendPool: 0n,
       frontendStake: 0n,
-      totalApprovedStake: 0n,
+      totalEligibleStake: 0n,
       totalFrontendClaimants: 0n,
       alreadyClaimed: false,
       claimedCount: 0n,
@@ -125,13 +125,13 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
       {
         address: votingEngine.address,
         abi: votingEngine.abi,
-        functionName: "roundStakeWithApprovedFrontend" as const,
+        functionName: "roundStakeWithEligibleFrontend" as const,
         args: [contentId, roundId],
       },
       {
         address: votingEngine.address,
         abi: votingEngine.abi,
-        functionName: "roundApprovedFrontendCount" as const,
+        functionName: "roundEligibleFrontendCount" as const,
         args: [contentId, roundId],
       },
       {
@@ -158,7 +158,7 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
   const emptyRow = {
     totalFrontendPool: 0n,
     frontendStake: 0n,
-    totalApprovedStake: 0n,
+    totalEligibleStake: 0n,
     totalFrontendClaimants: 0n,
     alreadyClaimed: false,
     claimedCount: 0n,
@@ -174,7 +174,7 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
     return rounds.map((_, index) => {
       const totalFrontendPoolResult = results[index * 7];
       const frontendStakeResult = results[index * 7 + 1];
-      const totalApprovedStakeResult = results[index * 7 + 2];
+      const totalEligibleStakeResult = results[index * 7 + 2];
       const totalFrontendClaimantsResult = results[index * 7 + 3];
       const claimedResult = results[index * 7 + 4];
       const claimedCountResult = results[index * 7 + 5];
@@ -189,9 +189,9 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
           frontendStakeResult?.status === "success" && typeof frontendStakeResult.result === "bigint"
             ? frontendStakeResult.result
             : 0n,
-        totalApprovedStake:
-          totalApprovedStakeResult?.status === "success" && typeof totalApprovedStakeResult.result === "bigint"
-            ? totalApprovedStakeResult.result
+        totalEligibleStake:
+          totalEligibleStakeResult?.status === "success" && typeof totalEligibleStakeResult.result === "bigint"
+            ? totalEligibleStakeResult.result
             : 0n,
         totalFrontendClaimants:
           totalFrontendClaimantsResult?.status === "success" && typeof totalFrontendClaimantsResult.result === "bigint"
@@ -219,7 +219,7 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
         const [
           totalFrontendPool,
           frontendStake,
-          totalApprovedStake,
+          totalEligibleStake,
           totalFrontendClaimants,
           alreadyClaimed,
           claimedCount,
@@ -240,13 +240,13 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
           publicClient.readContract({
             address: votingEngine.address,
             abi: votingEngine.abi,
-            functionName: "roundStakeWithApprovedFrontend",
+            functionName: "roundStakeWithEligibleFrontend",
             args: [contentId, roundId],
           }) as Promise<bigint>,
           publicClient.readContract({
             address: votingEngine.address,
             abi: votingEngine.abi,
-            functionName: "roundApprovedFrontendCount",
+            functionName: "roundEligibleFrontendCount",
             args: [contentId, roundId],
           }) as Promise<bigint>,
           publicClient.readContract({
@@ -272,7 +272,7 @@ async function readFrontendFeeBatch(frontend: `0x${string}`, rounds: PonderRound
         rows.push({
           totalFrontendPool,
           frontendStake,
-          totalApprovedStake,
+          totalEligibleStake,
           totalFrontendClaimants,
           alreadyClaimed,
           claimedCount,
@@ -345,7 +345,7 @@ export async function listClaimableFrontendFeeRounds(
         !isClaimableSnapshot(
           row.totalFrontendPool,
           row.frontendStake,
-          row.totalApprovedStake,
+          row.totalEligibleStake,
           row.totalFrontendClaimants,
           row.alreadyClaimed,
         )
@@ -357,7 +357,7 @@ export async function listClaimableFrontendFeeRounds(
       const claimableFee = calculateClaimableFee(
         row.totalFrontendPool,
         row.frontendStake,
-        row.totalApprovedStake,
+        row.totalEligibleStake,
         row.totalFrontendClaimants,
         row.claimedCount,
         row.claimedAmount,
@@ -378,7 +378,7 @@ export async function listClaimableFrontendFeeRounds(
         claimableFee: claimableFee.toString(),
         totalFrontendPool: row.totalFrontendPool.toString(),
         frontendStake: row.frontendStake.toString(),
-        totalApprovedStake: row.totalApprovedStake.toString(),
+        totalEligibleStake: row.totalEligibleStake.toString(),
         totalFrontendClaimants: Number(row.totalFrontendClaimants),
       });
 

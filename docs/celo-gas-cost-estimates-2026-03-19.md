@@ -8,7 +8,7 @@ The most important result is that the optimized vote path is still cheap in abso
 
 ## Executive summary
 
-- A normal Curyo vote is now about `489k` gas without a frontend code and about `506k` gas with an approved frontend code.
+- A normal Curyo vote is now about `489k` gas without a frontend code and about `506k` gas with frontend attribution.
 - At the pricing snapshot used here, that is about `$0.00143` to `$0.00148` per vote.
 - Versus the earlier March 19 baseline, vote gas is down about `27.9%` without frontend attribution and `29.2%` with frontend attribution.
 - The current content submit flow is still two transactions today, but it fell from `534,006` gas to `466,689` gas total for `approve + submitContent`.
@@ -69,7 +69,7 @@ These rows compare the original March 19 baseline with the optimized contracts n
 | Submit content | `506,661` | `439,344` | `-67,317` | `-13.29%` | `$0.00148569` | `$0.00128830` | `-$0.00019740` |
 | Submit content total | `534,006` | `466,689` | `-67,317` | `-12.61%` | `$0.00156588` | `$0.00136848` | `-$0.00019740` |
 | Vote | `677,802` | `488,624` | `-189,178` | `-27.91%` | `$0.00198754` | `$0.00143280` | `-$0.00055473` |
-| Vote with approved frontend code | `715,068` | `506,014` | `-209,054` | `-29.24%` | `$0.00209681` | `$0.00148380` | `-$0.00061301` |
+| Vote with frontend attribution | `715,068` | `506,014` | `-209,054` | `-29.24%` | `$0.00209681` | `$0.00148380` | `-$0.00061301` |
 | Reveal vote | `117,593` | `54,108` | `-63,485` | `-53.99%` | `$0.00034482` | `$0.00015866` | `-$0.00018616` |
 | Settle round | `308,359` | `248,898` | `-59,461` | `-19.28%` | `$0.00090421` | `$0.00072985` | `-$0.00017436` |
 
@@ -85,7 +85,7 @@ These are the post-optimization estimates for the current repo state. Rows that 
 | Submit content | `ContentRegistry.submitContent(...)` | `439,344` | `0.01098360` | `$0.00128830` | Second half of current submit UX after optimization |
 | Submit content total | `approve + submitContent` | `466,689` | `0.01166722` | `$0.00136848` | Best estimate for the current frontend submit flow |
 | Vote | `cREP.transferAndCall(...)` | `488,624` | `0.01221560` | `$0.00143280` | Current frontend vote flow without frontend fee attribution |
-| Vote with approved frontend code | `cREP.transferAndCall(...)` | `506,014` | `0.01265035` | `$0.00148380` | Better estimate for production if Curyo routes votes through an approved frontend |
+| Vote with frontend attribution | `cREP.transferAndCall(...)` | `506,014` | `0.01265035` | `$0.00148380` | Better estimate for production if Curyo routes votes through a registered frontend |
 | Claim voter reward | `RoundRewardDistributor.claimReward(...)` | `68,614` | `0.00171535` | `$0.00020120` | Earlier March 19 snapshot; not rerun in this update |
 | Claim submitter reward | `RoundRewardDistributor.claimSubmitterReward(...)` | `63,896` | `0.00159740` | `$0.00018736` | Earlier March 19 snapshot; not rerun in this update |
 
@@ -114,12 +114,12 @@ These are not typical end-user actions, but they matter for operating cost.
 Using the optimized frontend path:
 
 - vote without frontend code: `488,624` gas
-- vote with approved frontend code: `506,014` gas
+- vote with frontend attribution: `506,014` gas
 
 At the snapshot used here:
 
 - vote without frontend code: about `$0.00143`
-- vote with approved frontend code: about `$0.00148`
+- vote with frontend attribution: about `$0.00148`
 
 Voting is still the heaviest recurring user action, but it is now much closer to the current submit flow than it was before optimization.
 
@@ -128,7 +128,7 @@ Voting is still the heaviest recurring user action, but it is now much closer to
 Compared with the earlier March 19 baseline:
 
 - vote without frontend attribution fell by `189,178` gas, about `27.9%`
-- vote with approved frontend attribution fell by `209,054` gas, about `29.2%`
+- vote with frontend attribution fell by `209,054` gas, about `29.2%`
 - submit flow fell by `67,317` gas, about `12.6%`
 - reveal fell by `63,485` gas, about `54.0%`
 - settle fell by `59,461` gas, about `19.3%`
@@ -137,7 +137,7 @@ These savings are small in dollar terms on Celo, but they are real and worth tak
 
 ### 3. Frontend attribution still adds some cost, but less than before
 
-Adding an approved frontend code increased the vote benchmark by:
+Adding frontend attribution increased the vote benchmark by:
 
 - `17,390` gas
 - `0.00043475 CELO`
@@ -169,7 +169,7 @@ At the pricing snapshot used here, that overhead is about:
 Examples with the optimized measurements:
 
 - vote without frontend code plus fee-currency overhead: about `538,624` gas, `0.01346560 CELO`, `$0.00157942`
-- vote with approved frontend code plus fee-currency overhead: about `556,014` gas, `0.01390035 CELO`, `$0.00163041`
+- vote with frontend attribution plus fee-currency overhead: about `556,014` gas, `0.01390035 CELO`, `$0.00163041`
 - current submit flow if both `approve` and `submitContent` pay via fee currency: about `566,689` gas, `0.01416722 CELO`, `$0.00166172`
 
 So fee-currency support does increase gas, but the dollar impact is still small.
@@ -181,7 +181,7 @@ So fee-currency support does increase gas, but the dollar impact is still small.
 - The vote path is still the most important cost to watch because it is both frequent and the heaviest recurring user action.
 - The current submit flow should still be optimized mainly to remove the second transaction, not because the gas bill is large.
 - Reward claims and frontend fee claims remain very cheap, so sponsoring them would still be inexpensive if Curyo chooses to.
-- If Curyo uses approved frontend codes in production, the realistic current vote estimate is now closer to `506k` gas than `715k`.
+- If Curyo uses frontend attribution in production, the realistic current vote estimate is now closer to `506k` gas than `715k`.
 
 ## Sources
 

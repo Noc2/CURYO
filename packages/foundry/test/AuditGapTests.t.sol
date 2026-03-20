@@ -126,14 +126,12 @@ contract AuditGapTests is VotingTestBase {
             crepToken.mint(users[i], 100_000e6);
         }
 
-        // Register and approve frontend
+        // Register frontend
         vm.stopPrank();
         vm.startPrank(frontend);
         crepToken.approve(address(frontendRegistry), 1_000e6);
         frontendRegistry.register();
         vm.stopPrank();
-        vm.prank(owner);
-        frontendRegistry.approveFrontend(frontend);
 
         vm.stopPrank();
     }

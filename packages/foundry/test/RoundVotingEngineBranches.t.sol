@@ -205,14 +205,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         return registry.nextContentId() - 1;
     }
 
-    /// @dev Register and approve a frontend operator.
+    /// @dev Register a frontend operator.
     function _registerFrontend(address fe) internal {
         vm.startPrank(fe);
         crepToken.approve(address(frontendRegistry), 1000e6);
         frontendRegistry.register();
         vm.stopPrank();
-        vm.prank(owner);
-        frontendRegistry.approveFrontend(fe);
     }
 
     /// @dev Full 3-voter round lifecycle: commit all epoch-1, warp past epoch, reveal all, warp settle delay, settle.
@@ -857,7 +855,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     // 9. FRONTEND FEE CLAIMING
     // =========================================================================
 
-    function test_FrontendFee_ApprovedFrontend_FeeAccumulated() public {
+    function test_FrontendFee_EligibleFrontend_FeeAccumulated() public {
         _registerFrontend(frontend1);
 
         uint256 contentId = _submitContent();
@@ -931,11 +929,12 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
     }
 
-    function test_FrontendFee_UnapprovedFrontend_NotTracked() public {
-        // Register but do NOT approve
+    function test_FrontendFee_IneligibleFrontend_NotTracked() public {
+        // Register, then start exit so the frontend is ineligible at commit time
         vm.startPrank(frontend1);
         crepToken.approve(address(frontendRegistry), 1000e6);
         frontendRegistry.register();
+        frontendRegistry.requestDeregister();
         vm.stopPrank();
 
         uint256 contentId = _submitContent();
@@ -969,7 +968,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         (uint256 contentId, uint256 roundId,,,,,,) = _setupThreeVoterRound(true, true, false);
         engine.settleRound(contentId, roundId);
 
-        // No frontend pool (no approved frontends were used)
+        // No frontend pool (no eligible frontends were used)
         vm.expectRevert(RoundRewardDistributor.NoPool.selector);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
     }

@@ -10,10 +10,10 @@ interface IFrontendRegistry {
     /// @notice Fixed cREP stake required for frontend registration
     function STAKE_AMOUNT() external view returns (uint256);
 
-    /// @notice Check if a frontend address is approved to earn fees
+    /// @notice Check if a frontend address is eligible to earn fees
     /// @param frontend The frontend address to check
-    /// @return True if the frontend is approved and not slashed
-    function isApproved(address frontend) external view returns (bool);
+    /// @return True if the frontend is fully bonded, not slashed, and not exiting
+    function isEligible(address frontend) external view returns (bool);
 
     /// @notice Credit cREP fees to a frontend operator (called by RoundVotingEngine)
     /// @param frontend The frontend address to credit
@@ -29,10 +29,10 @@ interface IFrontendRegistry {
     /// @param frontend The frontend address
     /// @return operator The operator address
     /// @return stakedAmount Amount of cREP staked
-    /// @return approved Whether the frontend is approved
+    /// @return eligible Whether the frontend is currently eligible to earn fees
     /// @return slashed Whether the frontend has been slashed
     function getFrontendInfo(address frontend)
         external
         view
-        returns (address operator, uint256 stakedAmount, bool approved, bool slashed);
+        returns (address operator, uint256 stakedAmount, bool eligible, bool slashed);
 }

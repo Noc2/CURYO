@@ -697,30 +697,6 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "roundApprovedFrontendCount",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "roundCommitHashes",
     "inputs": [
       {
@@ -783,6 +759,30 @@ export const RoundVotingEngineAbi = [
         "name": "maxVoters",
         "type": "uint16",
         "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "roundEligibleFrontendCount",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -890,7 +890,7 @@ export const RoundVotingEngineAbi = [
   },
   {
     "type": "function",
-    "name": "roundStakeWithApprovedFrontend",
+    "name": "roundStakeWithEligibleFrontend",
     "inputs": [
       {
         "name": "",

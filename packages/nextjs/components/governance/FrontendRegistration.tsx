@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
-import { encodeFunctionData } from "viem";
 import { useAccount } from "wagmi";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
@@ -11,7 +10,6 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
-import { governorAbi, useGovernanceContracts, useGovernanceStats, useGovernanceWrite } from "~~/hooks/useGovernance";
 import { getGasBalanceErrorMessage, isInsufficientFundsError } from "~~/lib/transactionErrors";
 import scaffoldConfig from "~~/scaffold.config";
 import { notification } from "~~/utils/scaffold-eth";
@@ -25,9 +23,6 @@ const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
 export function FrontendRegistration() {
   const { address } = useAccount();
   const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
-  const { governorAddress, hasGovernorContract } = useGovernanceContracts();
-  const { proposalThreshold } = useGovernanceStats();
-  const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
@@ -92,13 +87,6 @@ export function FrontendRegistration() {
     args: [address],
   });
 
-  const { data: votingPowerRaw } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
-    functionName: "getVotes" as any,
-    args: [address],
-    query: { enabled: !!address },
-  });
-
   // Write contracts
   const { writeContractAsync: writeCRep } = useScaffoldWriteContract({ contractName: "CuryoReputation" });
   const { writeContractAsync: writeFrontendRegistry } = useScaffoldWriteContract({ contractName: "FrontendRegistry" });
@@ -112,7 +100,7 @@ export function FrontendRegistration() {
   // Parse frontend info
   const isRegistered = frontendInfo && frontendInfo[1] > 0n; // stakedAmount > 0
   const stakedAmount = frontendInfo ? Number(frontendInfo[1]) / 1e6 : 0;
-  const isApproved = frontendInfo ? frontendInfo[2] : false;
+  const isEligible = frontendInfo ? frontendInfo[2] : false;
   const isSlashed = frontendInfo ? frontendInfo[3] : false;
   const exitAvailableAt = exitAvailableAtRaw ? Number(exitAvailableAtRaw) : 0;
   const isExitPending = exitAvailableAt > 0;
@@ -128,15 +116,6 @@ export function FrontendRegistration() {
 
   // cREP balance
   const crepFormatted = crepBalance ? Number(crepBalance) / 1e6 : 0;
-  const votingPower = votingPowerRaw as bigint | undefined;
-  const canAutoCreateApprovalProposal =
-    !!address &&
-    hasGovernorContract &&
-    !!governorAddress &&
-    proposalThreshold !== undefined &&
-    votingPower !== undefined &&
-    votingPower >= proposalThreshold;
-
   const {
     items: claimableRoundFees,
     totalClaimable: totalClaimableRoundFees,
@@ -188,7 +167,6 @@ export function FrontendRegistration() {
     }
 
     setIsRegistering(true);
-    let frontendRegistered = false;
     try {
       const amountWei = BigInt(STAKE_AMOUNT * 1e6);
 
@@ -208,37 +186,13 @@ export function FrontendRegistration() {
       await writeFrontendRegistryNoSim({
         functionName: "register",
       });
-      frontendRegistered = true;
-
-      if (canAutoCreateApprovalProposal && governorAddress) {
-        const proposalDescription = `Approve frontend ${address}`;
-        const approvalCalldata = encodeFunctionData({
-          abi: frontendRegistryInfo.abi,
-          functionName: "approveFrontend",
-          args: [address],
-        } as any);
-
-        await writeGovernanceContract({
-          address: governorAddress,
-          abi: governorAbi,
-          functionName: "propose",
-          args: [[frontendRegistryInfo.address], [0n], [approvalCalldata], proposalDescription],
-        });
-
-        notification.success("Registered and proposed for approval.");
-      } else {
-        notification.success("Registered. Create approval proposal next.");
-      }
+      notification.success("Registered.");
 
       refetchFrontendInfo();
       refetchCuryo();
     } catch (e: any) {
       console.error("Registration failed:", e);
-      if (frontendRegistered) {
-        notification.warning("Registered, but approval proposal was not created.");
-      } else {
-        notifyTransactionError(e, "Failed to register");
-      }
+      notifyTransactionError(e, "Failed to register");
     } finally {
       setIsRegistering(false);
     }
@@ -251,10 +205,10 @@ export function FrontendRegistration() {
     setIsDeregistering(true);
     try {
       await writeFrontendRegistry({
-        functionName: "deregister",
+        functionName: "requestDeregister",
       });
 
-      notification.success("Deregistration started. Complete it after the 14-day unbonding period.");
+      notification.success("Exit started.");
       refetchFrontendInfo();
       refetchExitAvailableAt();
       refetchFees();
@@ -376,15 +330,11 @@ export function FrontendRegistration() {
     if (isExitPending) {
       return <span className="px-2 py-0.5 rounded-full text-base font-medium bg-info/20 text-info">Exit Pending</span>;
     }
-    if (isApproved) {
-      return (
-        <span className="px-2 py-0.5 rounded-full text-base font-medium bg-success/20 text-success">Approved</span>
-      );
+    if (isEligible) {
+      return <span className="px-2 py-0.5 rounded-full text-base font-medium bg-success/20 text-success">Active</span>;
     }
     return (
-      <span className="px-2 py-0.5 rounded-full text-base font-medium bg-warning/20 text-warning">
-        Pending Approval
-      </span>
+      <span className="px-2 py-0.5 rounded-full text-base font-medium bg-warning/20 text-warning">Underbonded</span>
     );
   };
 
@@ -392,11 +342,11 @@ export function FrontendRegistration() {
     <div className="surface-card rounded-2xl p-6 space-y-5">
       <div className="flex items-center gap-2">
         <h2 className={surfaceSectionHeadingClassName}>Frontend Registration</h2>
-        <InfoTooltip text="Register as a frontend operator to receive 1% of the losing stakes from votes through your interface" />
+        <InfoTooltip text="Stake 1,000 cREP to earn frontend fees from votes through your interface." />
       </div>
 
       <p className="text-base text-base-content/60">
-        Build frontends or integrations for Curyo and earn frontend fees.{" "}
+        Stake 1,000 cREP and earn frontend fees.{" "}
         <Link href="/docs/frontend-codes" className="link link-primary">
           Learn more →
         </Link>
@@ -465,13 +415,6 @@ export function FrontendRegistration() {
                 <span className="text-xl font-bold text-base-content">{STAKE_AMOUNT.toLocaleString()} cREP</span>
               </div>
             </div>
-            {hasGovernorContract && (
-              <p className="mt-2 text-sm text-base-content/60">
-                {canAutoCreateApprovalProposal
-                  ? "Approval proposal will be created automatically."
-                  : "Approval proposal comes next."}
-              </p>
-            )}
           </div>
 
           <button

@@ -86,7 +86,7 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         console2.log("vote_transferAndCall_gas", gasUsed);
     }
 
-    function testGasEstimate_voteTransferAndCallWithApprovedFrontend_logs() public {
+    function testGasEstimate_voteTransferAndCallWithEligibleFrontend_logs() public {
         vm.pauseGasMetering();
         (, address frontendOp) = _setupFrontendRegistry();
         uint256 contentId = _submitContent();
@@ -101,7 +101,7 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
             address(crepToken),
             abi.encodeWithSignature("transferAndCall(address,uint256,bytes)", address(votingEngine), STAKE, payload)
         );
-        console2.log("vote_transferAndCall_with_approved_frontend_gas", gasUsed);
+        console2.log("vote_transferAndCall_with_eligible_frontend_gas", gasUsed);
     }
 
     function testGasEstimate_voteApprovePlusCommit_logs() public {

@@ -373,12 +373,14 @@ export function registerDataRoutes(app: ApiApp) {
     const statusFilter = c.req.query("status") ?? "all";
 
     let where;
-    if (statusFilter === "approved") {
-      where = eq(frontend.approved, true);
+    if (statusFilter === "active" || statusFilter === "eligible" || statusFilter === "approved") {
+      where = eq(frontend.eligible, true);
     } else if (statusFilter === "slashed") {
       where = eq(frontend.slashed, true);
-    } else if (statusFilter === "pending") {
-      where = and(eq(frontend.approved, false), eq(frontend.slashed, false));
+    } else if (statusFilter === "exiting") {
+      where = sql`${frontend.exitAvailableAt} is not null`;
+    } else if (statusFilter === "inactive" || statusFilter === "pending") {
+      where = and(eq(frontend.eligible, false), eq(frontend.slashed, false), sql`${frontend.exitAvailableAt} is null`);
     }
 
     const items = await db

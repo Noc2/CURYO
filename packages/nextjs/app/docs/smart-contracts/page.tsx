@@ -390,8 +390,8 @@ const SmartContracts: NextPage = () => {
         <li>
           <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> &mdash; Frontend operators
           claim their proportional share of the 3% frontend fee pool. Pull-based, permissionless. Historical fee shares
-          still follow the commit-time approval snapshot, but if the frontend is slashed or underbonded at claim time,
-          the claim is redirected to the protocol instead of accruing to the operator.
+          still follow the commit-time eligibility snapshot, but if the frontend is slashed or underbonded at claim
+          time, the claim is redirected to the protocol instead of accruing to the operator.
         </li>
         <li>
           <code>RoundRewardDistributor.claimParticipationReward(contentId, roundId)</code> &mdash; Voters claim
@@ -455,12 +455,8 @@ const SmartContracts: NextPage = () => {
           withdraw stake + pending fees after the unbonding window elapses.
         </li>
         <li>
-          <code>topUpStake(amount)</code> &mdash; Restore the fixed 1,000 cREP bond after a partial slash so governance
-          can approve the frontend again.
-        </li>
-        <li>
-          <code>approveFrontend(address)</code> / <code>revokeFrontend(address)</code> &mdash; Governance controls
-          approval. Approval requires the full bond to be restored.
+          <code>topUpStake(amount)</code> &mdash; Restore the fixed 1,000 cREP bond after a partial slash so the
+          frontend becomes fee-eligible again.
         </li>
         <li>
           <code>claimFees()</code> &mdash; Claim accumulated platform fees while healthy, fully bonded, and not exiting.

@@ -889,7 +889,7 @@ export const SECTIONS: Section[] = [
                   "10 cREP",
                   "Returned after a healthy settled round once no later round remains open, or at dormancy if no round ever settles",
                 ],
-                ["Register as frontend", "1,000 cREP", "Requires governance approval"],
+                ["Register as frontend", "1,000 cREP", "Returned on exit unless slashed"],
               ],
             },
           },

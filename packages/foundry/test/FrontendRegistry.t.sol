@@ -123,10 +123,10 @@ contract FrontendRegistryTest is Test {
         registry.register();
         vm.stopPrank();
 
-        (address operator, uint256 stakedAmount, bool approved, bool slashed) = registry.getFrontendInfo(frontend1);
+        (address operator, uint256 stakedAmount, bool eligible, bool slashed) = registry.getFrontendInfo(frontend1);
         assertEq(operator, frontend1);
         assertEq(stakedAmount, STAKE);
-        assertFalse(approved);
+        assertTrue(eligible);
         assertFalse(slashed);
 
         (address[] memory frontends, uint256 total) = registry.getRegisteredFrontendsPaginated(0, 10);
@@ -165,10 +165,10 @@ contract FrontendRegistryTest is Test {
         uint256 balanceAfter = crepToken.balanceOf(frontend1);
         assertEq(balanceAfter - balanceBefore, STAKE);
 
-        (address operator, uint256 stakedAmount, bool approved,) = registry.getFrontendInfo(frontend1);
+        (address operator, uint256 stakedAmount, bool eligible,) = registry.getFrontendInfo(frontend1);
         assertEq(operator, address(0));
         assertEq(stakedAmount, 0);
-        assertFalse(approved);
+        assertFalse(eligible);
     }
 
     function test_RevertDeregisterNotRegistered() public {
@@ -328,32 +328,47 @@ contract FrontendRegistryTest is Test {
         assertEq(balanceAfter - balanceBefore, 500e6);
     }
 
-    // --- Approval Tests ---
+    // --- Eligibility Tests ---
 
-    function test_ApproveFrontend() public {
+    function test_RegisterFrontendBecomesEligible() public {
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
         vm.stopPrank();
 
-        assertFalse(registry.isApproved(frontend1));
+        assertTrue(registry.isEligible(frontend1));
 
-        vm.prank(admin);
-        registry.approveFrontend(frontend1);
-
-        assertTrue(registry.isApproved(frontend1));
-
-        (,, bool approved,) = registry.getFrontendInfo(frontend1);
-        assertTrue(approved);
+        (,, bool eligible,) = registry.getFrontendInfo(frontend1);
+        assertTrue(eligible);
     }
 
-    function test_RevertApproveFrontendNotRegistered() public {
-        vm.prank(admin);
-        vm.expectRevert("Frontend not registered");
-        registry.approveFrontend(frontend1);
+    function test_UnregisteredFrontendIsNotEligible() public view {
+        assertFalse(registry.isEligible(frontend1));
     }
 
-    function test_RevertApproveFrontendSlashed() public {
+    function test_SlashedFrontendIsNotEligible() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        vm.stopPrank();
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, STAKE / 2, "Test");
+
+        assertFalse(registry.isEligible(frontend1));
+    }
+
+    function test_ExitPendingFrontendIsNotEligible() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        registry.requestDeregister();
+        vm.stopPrank();
+
+        assertFalse(registry.isEligible(frontend1));
+    }
+
+    function test_UnderbondedFrontendIsNotEligibleAfterUnslash() public {
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
@@ -361,39 +376,10 @@ contract FrontendRegistryTest is Test {
 
         vm.startPrank(admin);
         registry.slashFrontend(frontend1, STAKE / 2, "Test");
-
-        vm.expectRevert("Frontend is slashed");
-        registry.approveFrontend(frontend1);
-        vm.stopPrank();
-    }
-
-    function test_RevertApproveFrontendWhileExitPending() public {
-        vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
-        registry.register();
+        registry.unslashFrontend(frontend1);
         vm.stopPrank();
 
-        vm.prank(frontend1);
-        registry.requestDeregister();
-
-        vm.prank(admin);
-        vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);
-        registry.approveFrontend(frontend1);
-    }
-
-    function test_RevokeFrontend() public {
-        vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
-        registry.register();
-        vm.stopPrank();
-
-        vm.startPrank(admin);
-        registry.approveFrontend(frontend1);
-        assertTrue(registry.isApproved(frontend1));
-
-        registry.revokeFrontend(frontend1);
-        assertFalse(registry.isApproved(frontend1));
-        vm.stopPrank();
+        assertFalse(registry.isEligible(frontend1));
     }
 
     // --- Slash Tests ---
@@ -410,9 +396,9 @@ contract FrontendRegistryTest is Test {
         vm.prank(admin);
         registry.slashFrontend(frontend1, slashAmount, "Malicious behavior");
 
-        (, uint256 stakedAmount, bool approved, bool slashed) = registry.getFrontendInfo(frontend1);
+        (, uint256 stakedAmount, bool eligible, bool slashed) = registry.getFrontendInfo(frontend1);
         assertEq(stakedAmount, STAKE - slashAmount);
-        assertFalse(approved);
+        assertFalse(eligible);
         assertTrue(slashed);
 
         // Slashed amount goes to voter pool
@@ -435,22 +421,7 @@ contract FrontendRegistryTest is Test {
 
         (,,, slashed) = registry.getFrontendInfo(frontend1);
         assertFalse(slashed);
-        assertFalse(registry.isApproved(frontend1));
-        vm.stopPrank();
-    }
-
-    function test_RevertApproveFrontendUnderbondedAfterUnslash() public {
-        vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
-        registry.register();
-        vm.stopPrank();
-
-        vm.startPrank(admin);
-        registry.slashFrontend(frontend1, STAKE / 2, "Test");
-        registry.unslashFrontend(frontend1);
-
-        vm.expectRevert("Frontend is underbonded");
-        registry.approveFrontend(frontend1);
+        assertFalse(registry.isEligible(frontend1));
         vm.stopPrank();
     }
 
@@ -583,22 +554,7 @@ contract FrontendRegistryTest is Test {
         vm.stopPrank();
     }
 
-    // --- isApproved Tests ---
-
-    function test_IsApprovedChecksSlashed() public {
-        vm.startPrank(frontend1);
-        crepToken.approve(address(registry), STAKE);
-        registry.register();
-        vm.stopPrank();
-
-        vm.startPrank(admin);
-        registry.approveFrontend(frontend1);
-        assertTrue(registry.isApproved(frontend1));
-
-        registry.slashFrontend(frontend1, 1, "Test");
-        assertFalse(registry.isApproved(frontend1));
-        vm.stopPrank();
-    }
+    // --- Eligibility Tests ---
 
     function test_TopUpStakeRestoresFullBond() public {
         vm.startPrank(frontend1);
@@ -618,10 +574,7 @@ contract FrontendRegistryTest is Test {
         (, uint256 stakedAmount,, bool slashed) = registry.getFrontendInfo(frontend1);
         assertEq(stakedAmount, STAKE);
         assertFalse(slashed);
-
-        vm.prank(admin);
-        registry.approveFrontend(frontend1);
-        assertTrue(registry.isApproved(frontend1));
+        assertTrue(registry.isEligible(frontend1));
     }
 
     function test_SlashFrontendConfiscatesAccruedFees() public {

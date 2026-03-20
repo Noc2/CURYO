@@ -202,12 +202,10 @@ contract FrontendRegistryCoverageTest is Test {
         assertTrue(slashed);
     }
 
-    // --- Revoke/unslash on unregistered ---
+    // --- Eligibility/unslash on unregistered ---
 
-    function test_RevokeUnregisteredReverts() public {
-        vm.prank(admin);
-        vm.expectRevert("Frontend not registered");
-        reg.revokeFrontend(frontend1);
+    function test_IsEligibleUnregisteredReturnsFalse() public view {
+        assertFalse(reg.isEligible(frontend1));
     }
 
     function test_UnslashUnregisteredReverts() public {
@@ -222,30 +220,19 @@ contract FrontendRegistryCoverageTest is Test {
         reg.slashFrontend(frontend1, 100e6, "Not registered");
     }
 
-    // --- Deregister clears approval ---
+    // --- Deregister clears eligibility ---
 
-    function test_DeregisterClearsApproval() public {
+    function test_DeregisterClearsEligibility() public {
         _registerFrontend(frontend1);
-
-        vm.prank(admin);
-        reg.approveFrontend(frontend1);
-        assertTrue(reg.isApproved(frontend1));
+        assertTrue(reg.isEligible(frontend1));
 
         vm.prank(frontend1);
         reg.requestDeregister();
 
-        assertFalse(reg.isApproved(frontend1));
+        assertFalse(reg.isEligible(frontend1));
     }
 
     // --- Access control ---
-
-    function test_OnlyGovernanceCanApprove() public {
-        _registerFrontend(frontend1);
-
-        vm.prank(frontend1);
-        vm.expectRevert();
-        reg.approveFrontend(frontend1);
-    }
 
     function test_OnlyGovernanceCanSlash() public {
         _registerFrontend(frontend1);

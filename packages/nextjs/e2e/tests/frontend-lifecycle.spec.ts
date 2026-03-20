@@ -1,6 +1,5 @@
 import {
   approveCREP,
-  approveFrontend,
   completeDeregisterFrontend,
   deregisterFrontend,
   evmIncreaseTime,
@@ -18,14 +17,14 @@ import { expect, test } from "@playwright/test";
 
 /**
  * Frontend lifecycle tests (contract-level).
- * Triggers Ponder events: FrontendRegistered, FrontendApproved, FrontendSlashed,
- * FrontendDeregistered.
+ * Triggers Ponder events: FrontendRegistered, FrontendSlashed, FrontendUnslashed,
+ * FrontendExitRequested, FrontendDeregistered.
  *
  * Account allocation:
  * - Account #8 (VoterID #106, unlocked on Anvil) — registers as frontend operator
  * - Account #9 (deployer = governance in local dev) — funds, approves, slashes
  *
- * Flow: cleanup prior state → register → approve → slash → deregister.
+ * Flow: cleanup prior state → register → slash → deregister.
  * Idempotent: if already registered from a prior run, deregisters first.
  */
 test.describe("Frontend lifecycle", () => {
@@ -35,7 +34,6 @@ test.describe("Frontend lifecycle", () => {
   const CREP_TOKEN = CONTRACT_ADDRESSES.CuryoReputation;
   const OPERATOR = ANVIL_ACCOUNTS.account8.address;
   let registered = false;
-  let approved = false;
   let slashed = false;
 
   test("register frontend and verify in Ponder", async () => {
@@ -85,37 +83,33 @@ test.describe("Frontend lifecycle", () => {
     expect(indexed, "Ponder should index the frontend registration").toBe(true);
 
     const { frontend } = await getFrontend(OPERATOR);
-    expect(frontend.approved).toBe(false);
+    expect(frontend.eligible).toBe(true);
     expect(frontend.slashed).toBe(false);
     expect(BigInt(frontend.stakedAmount)).toBeGreaterThan(0n);
     registered = true;
   });
 
-  test("admin approves frontend and Ponder indexes approval", async () => {
+  test("registered frontend is eligible immediately", async () => {
     test.skip(!registered, "Frontend not registered in previous test");
-    test.setTimeout(60_000);
-
-    const success = await approveFrontend(OPERATOR, DEPLOYER.address, FRONTEND_REGISTRY);
-    expect(success).toBe(true);
+    test.setTimeout(30_000);
 
     const indexed = await waitForPonderIndexed(async () => {
       try {
         const { frontend } = await getFrontend(OPERATOR);
-        return frontend.approved === true;
+        return frontend.eligible === true;
       } catch {
         return false;
       }
     });
-    expect(indexed, "Ponder should index the frontend approval").toBe(true);
+    expect(indexed, "Ponder should index the eligible frontend").toBe(true);
 
     const { frontend } = await getFrontend(OPERATOR);
-    expect(frontend.approved).toBe(true);
+    expect(frontend.eligible).toBe(true);
     expect(frontend.slashed).toBe(false);
-    approved = true;
   });
 
   test("governance slashes frontend and Ponder indexes slash", async () => {
-    test.skip(!approved, "Frontend not approved in previous test");
+    test.skip(!registered, "Frontend not registered in previous test");
     test.setTimeout(60_000);
 
     // Slash 500 cREP
@@ -140,7 +134,7 @@ test.describe("Frontend lifecycle", () => {
 
     const { frontend } = await getFrontend(OPERATOR);
     expect(frontend.slashed).toBe(true);
-    expect(frontend.approved).toBe(false);
+    expect(frontend.eligible).toBe(false);
     // Stake reduced by 500 cREP (500e6)
     expect(BigInt(frontend.stakedAmount)).toBe(BigInt(500e6));
     slashed = true;

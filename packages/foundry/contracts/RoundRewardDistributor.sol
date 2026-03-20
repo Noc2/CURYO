@@ -27,7 +27,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error AlreadyClaimed();
     error NoPool();
     error NoStake();
-    error NoApprovedStake();
+    error NoEligibleStake();
     error PoolExhausted();
     error PoolDepleted();
     error VoteNotRevealed();
@@ -234,12 +234,12 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
         uint256 frontendStake = votingEngine.roundPerFrontendStake(contentId, roundId, frontend);
-        uint256 totalApprovedStake = votingEngine.roundStakeWithApprovedFrontend(contentId, roundId);
-        uint256 totalFrontendClaimants = votingEngine.roundApprovedFrontendCount(contentId, roundId);
+        uint256 totalEligibleStake = votingEngine.roundStakeWithEligibleFrontend(contentId, roundId);
+        uint256 totalFrontendClaimants = votingEngine.roundEligibleFrontendCount(contentId, roundId);
 
         if (totalFrontendPool == 0) revert NoPool();
         if (frontendStake == 0) revert NoStake();
-        if (totalApprovedStake == 0) revert NoApprovedStake();
+        if (totalEligibleStake == 0) revert NoEligibleStake();
         if (totalFrontendClaimants == 0) revert NoPool();
 
         uint256 claimedCount = roundFrontendClaimedCount[contentId][roundId];
@@ -249,7 +249,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         if (claimedCount + 1 == totalFrontendClaimants) {
             fee = totalFrontendPool - claimedAmount;
         } else {
-            fee = (totalFrontendPool * frontendStake) / totalApprovedStake;
+            fee = (totalFrontendPool * frontendStake) / totalEligibleStake;
         }
 
         frontendFeeClaimed[contentId][roundId][frontend] = true;

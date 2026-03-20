@@ -14,7 +14,7 @@ export interface FrontendClaimableFeeItem {
   claimableFee: string;
   totalFrontendPool: string;
   frontendStake: string;
-  totalApprovedStake: string;
+  totalEligibleStake: string;
   totalFrontendClaimants: number;
 }
 

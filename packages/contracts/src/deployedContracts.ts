@@ -3941,30 +3941,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "roundApprovedFrontendCount",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "roundCommitHashes",
           inputs: [
             {
@@ -4027,6 +4003,30 @@ const deployedContracts = {
               name: "maxVoters",
               type: "uint16",
               internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundEligibleFrontendCount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -4134,7 +4134,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "roundStakeWithApprovedFrontend",
+          name: "roundStakeWithEligibleFrontend",
           inputs: [
             {
               name: "",
@@ -6260,12 +6260,12 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "NoApprovedStake",
+          name: "NoCommit",
           inputs: [],
         },
         {
           type: "error",
-          name: "NoCommit",
+          name: "NoEligibleStake",
           inputs: [],
         },
         {
@@ -6486,19 +6486,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "approveFrontend",
-          inputs: [
-            {
-              name: "frontend",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "claimFees",
           inputs: [],
           outputs: [],
@@ -6588,11 +6575,6 @@ const deployedContracts = {
               internalType: "uint64",
             },
             {
-              name: "approved",
-              type: "bool",
-              internalType: "bool",
-            },
-            {
               name: "slashed",
               type: "bool",
               internalType: "bool",
@@ -6646,7 +6628,7 @@ const deployedContracts = {
               internalType: "uint256",
             },
             {
-              name: "approved",
+              name: "eligible",
               type: "bool",
               internalType: "bool",
             },
@@ -6773,7 +6755,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isApproved",
+          name: "isEligible",
           inputs: [
             {
               name: "frontend",
@@ -6851,19 +6833,6 @@ const deployedContracts = {
           type: "function",
           name: "requestDeregister",
           inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "revokeFrontend",
-          inputs: [
-            {
-              name: "frontend",
-              type: "address",
-              internalType: "address",
-            },
-          ],
           outputs: [],
           stateMutability: "nonpayable",
         },
@@ -7064,19 +7033,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "FrontendApproved",
-          inputs: [
-            {
-              name: "frontend",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "FrontendDeregistered",
           inputs: [
             {
@@ -7178,6 +7134,19 @@ const deployedContracts = {
               type: "uint256",
               indexed: false,
               internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "FrontendUnslashed",
+          inputs: [
+            {
+              name: "frontend",
+              type: "address",
+              indexed: true,
+              internalType: "address",
             },
           ],
           anonymous: false,
@@ -7346,7 +7315,7 @@ const deployedContracts = {
         creditFees: "contracts/interfaces/IFrontendRegistry.sol",
         getAccumulatedFees: "contracts/interfaces/IFrontendRegistry.sol",
         getFrontendInfo: "contracts/interfaces/IFrontendRegistry.sol",
-        isApproved: "contracts/interfaces/IFrontendRegistry.sol",
+        isEligible: "contracts/interfaces/IFrontendRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         getRoleAdmin:
@@ -20197,30 +20166,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "roundApprovedFrontendCount",
-          inputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "roundCommitHashes",
           inputs: [
             {
@@ -20283,6 +20228,30 @@ const deployedContracts = {
               name: "maxVoters",
               type: "uint16",
               internalType: "uint16",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "roundEligibleFrontendCount",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -20390,7 +20359,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "roundStakeWithApprovedFrontend",
+          name: "roundStakeWithEligibleFrontend",
           inputs: [
             {
               name: "",
@@ -22516,12 +22485,12 @@ const deployedContracts = {
         },
         {
           type: "error",
-          name: "NoApprovedStake",
+          name: "NoCommit",
           inputs: [],
         },
         {
           type: "error",
-          name: "NoCommit",
+          name: "NoEligibleStake",
           inputs: [],
         },
         {
@@ -22742,19 +22711,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "approveFrontend",
-          inputs: [
-            {
-              name: "frontend",
-              type: "address",
-              internalType: "address",
-            },
-          ],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
           name: "claimFees",
           inputs: [],
           outputs: [],
@@ -22844,11 +22800,6 @@ const deployedContracts = {
               internalType: "uint64",
             },
             {
-              name: "approved",
-              type: "bool",
-              internalType: "bool",
-            },
-            {
               name: "slashed",
               type: "bool",
               internalType: "bool",
@@ -22902,7 +22853,7 @@ const deployedContracts = {
               internalType: "uint256",
             },
             {
-              name: "approved",
+              name: "eligible",
               type: "bool",
               internalType: "bool",
             },
@@ -23029,7 +22980,7 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "isApproved",
+          name: "isEligible",
           inputs: [
             {
               name: "frontend",
@@ -23107,19 +23058,6 @@ const deployedContracts = {
           type: "function",
           name: "requestDeregister",
           inputs: [],
-          outputs: [],
-          stateMutability: "nonpayable",
-        },
-        {
-          type: "function",
-          name: "revokeFrontend",
-          inputs: [
-            {
-              name: "frontend",
-              type: "address",
-              internalType: "address",
-            },
-          ],
           outputs: [],
           stateMutability: "nonpayable",
         },
@@ -23320,19 +23258,6 @@ const deployedContracts = {
         },
         {
           type: "event",
-          name: "FrontendApproved",
-          inputs: [
-            {
-              name: "frontend",
-              type: "address",
-              indexed: true,
-              internalType: "address",
-            },
-          ],
-          anonymous: false,
-        },
-        {
-          type: "event",
           name: "FrontendDeregistered",
           inputs: [
             {
@@ -23434,6 +23359,19 @@ const deployedContracts = {
               type: "uint256",
               indexed: false,
               internalType: "uint256",
+            },
+          ],
+          anonymous: false,
+        },
+        {
+          type: "event",
+          name: "FrontendUnslashed",
+          inputs: [
+            {
+              name: "frontend",
+              type: "address",
+              indexed: true,
+              internalType: "address",
             },
           ],
           anonymous: false,
@@ -23602,7 +23540,7 @@ const deployedContracts = {
         creditFees: "contracts/interfaces/IFrontendRegistry.sol",
         getAccumulatedFees: "contracts/interfaces/IFrontendRegistry.sol",
         getFrontendInfo: "contracts/interfaces/IFrontendRegistry.sol",
-        isApproved: "contracts/interfaces/IFrontendRegistry.sol",
+        isEligible: "contracts/interfaces/IFrontendRegistry.sol",
         DEFAULT_ADMIN_ROLE:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         getRoleAdmin:

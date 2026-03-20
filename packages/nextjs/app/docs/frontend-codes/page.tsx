@@ -22,9 +22,6 @@ const FrontendCodes: NextPage = () => {
           <strong>Stake 1,000 cREP</strong> to the FrontendRegistry contract.
         </li>
         <li>
-          <strong>Await governance approval</strong> before you can start earning frontend fees.
-        </li>
-        <li>
           <strong>Integrate:</strong> Include your registered address in the vote payload sent through{" "}
           <code>CuryoReputation.transferAndCall()</code>.
         </li>
@@ -163,18 +160,12 @@ const FrontendCodes: NextPage = () => {
       <p>Frontend operators are subject to governance control:</p>
       <ul>
         <li>
-          <strong>Approval required</strong> before earning frontend fees.
-        </li>
-        <li>
           <strong>Slashing</strong> &mdash; Governance can slash staked cREP for abuse and confiscate already accrued
           frontend fees.
         </li>
         <li>
-          <strong>Revocation</strong> &mdash; Governance can revoke approval at any time.
-        </li>
-        <li>
           <strong>Rebonding required</strong> &mdash; After a partial slash, operators must top back up to the full
-          1,000 cREP stake before governance can approve them again.
+          1,000 cREP stake before frontend fees can accrue again.
         </li>
       </ul>
     </article>

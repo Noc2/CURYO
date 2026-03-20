@@ -12,8 +12,9 @@ ponder.on(
         address: addr,
         operator,
         stakedAmount,
-        approved: false,
+        eligible: true,
         slashed: false,
+        exitAvailableAt: null,
         totalFeesCredited: 0n,
         totalFeesClaimed: 0n,
         registeredAt: event.block.timestamp,
@@ -21,20 +22,21 @@ ponder.on(
       .onConflictDoUpdate({
         operator,
         stakedAmount,
-        approved: false,
+        eligible: true,
         slashed: false,
+        exitAvailableAt: null,
         registeredAt: event.block.timestamp,
       });
   },
 );
 
 ponder.on(
-  "FrontendRegistry:FrontendApproved",
+  "FrontendRegistry:FrontendExitRequested",
   async ({ event, context }) => {
-    const { frontend: addr } = event.args;
+    const { frontend: addr, availableAt } = event.args;
     await context.db
       .update(frontend, { address: addr })
-      .set({ approved: true });
+      .set({ eligible: false, exitAvailableAt: availableAt });
   },
 );
 
@@ -46,8 +48,34 @@ ponder.on(
       .update(frontend, { address: addr })
       .set((row) => ({
         slashed: true,
-        approved: false,
+        eligible: false,
         stakedAmount: row.stakedAmount - amount,
+      }));
+  },
+);
+
+ponder.on(
+  "FrontendRegistry:FrontendUnslashed",
+  async ({ event, context }) => {
+    const { frontend: addr } = event.args;
+    await context.db
+      .update(frontend, { address: addr })
+      .set((row) => ({
+        slashed: false,
+        eligible: row.stakedAmount === 1000_000000n && row.exitAvailableAt === null,
+      }));
+  },
+);
+
+ponder.on(
+  "FrontendRegistry:FrontendStakeToppedUp",
+  async ({ event, context }) => {
+    const { frontend: addr, newStakedAmount } = event.args;
+    await context.db
+      .update(frontend, { address: addr })
+      .set((row) => ({
+        stakedAmount: newStakedAmount,
+        eligible: !row.slashed && newStakedAmount === 1000_000000n && row.exitAvailableAt === null,
       }));
   },
 );
@@ -58,7 +86,7 @@ ponder.on(
     const { frontend: addr } = event.args;
     await context.db
       .update(frontend, { address: addr })
-      .set({ approved: false, stakedAmount: 0n });
+      .set({ eligible: false, stakedAmount: 0n, exitAvailableAt: null });
   },
 );
 

@@ -169,7 +169,7 @@ export type FrontendItem = {
   address: string;
   operator: string;
   stakedAmount: string;
-  approved: boolean;
+  eligible: boolean;
   slashed: boolean;
   totalFeesCredited: string;
   totalFeesClaimed: string;

@@ -265,7 +265,7 @@ const Tokenomics = () => {
             <tr>
               <td>Register as frontend</td>
               <td className="font-mono">1,000 cREP</td>
-              <td>Requires governance approval</td>
+              <td>Returned on exit unless slashed</td>
             </tr>
           </tbody>
         </table>

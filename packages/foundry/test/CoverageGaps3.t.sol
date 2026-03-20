@@ -260,9 +260,6 @@ contract FrontendRegistryEdgeCaseTest is Test {
         vm.prank(creditor);
         reg.creditFees(frontend1, 200e6);
 
-        vm.prank(admin);
-        reg.approveFrontend(frontend1);
-
         vm.prank(frontend1);
         reg.requestDeregister();
         _completeDeregister(frontend1);
@@ -273,9 +270,9 @@ contract FrontendRegistryEdgeCaseTest is Test {
         reg.register();
         vm.stopPrank();
 
-        // State should be fresh: no fees, not approved
+        // State should be fresh: no fees, eligible again
         assertEq(reg.getAccumulatedFees(frontend1), 0);
-        assertFalse(reg.isApproved(frontend1));
+        assertTrue(reg.isEligible(frontend1));
     }
 
     // --- Multiple frontends registration ---
@@ -318,21 +315,10 @@ contract FrontendRegistryEdgeCaseTest is Test {
         assertEq(reg.getAccumulatedFees(frontend1), 0);
     }
 
-    // --- revokeFrontend on non-approved frontend (idempotent) ---
+    // --- isEligible returns false for unregistered address ---
 
-    function test_RevokeFrontendNotApproved() public {
-        _registerFrontend(frontend1);
-
-        vm.prank(admin);
-        reg.revokeFrontend(frontend1);
-
-        assertFalse(reg.isApproved(frontend1));
-    }
-
-    // --- isApproved returns false for unregistered address ---
-
-    function test_IsApproved_UnregisteredReturnsFalse() public view {
-        assertFalse(reg.isApproved(address(0xDEAD)));
+    function test_IsEligible_UnregisteredReturnsFalse() public view {
+        assertFalse(reg.isEligible(address(0xDEAD)));
     }
 
     // --- getAccumulatedFees for unregistered returns 0 ---
@@ -344,10 +330,10 @@ contract FrontendRegistryEdgeCaseTest is Test {
     // --- getFrontendInfo for unregistered returns zeros ---
 
     function test_GetFrontendInfo_UnregisteredReturnsDefaults() public view {
-        (address op, uint256 staked, bool approved, bool slashed) = reg.getFrontendInfo(address(0xDEAD));
+        (address op, uint256 staked, bool eligible, bool slashed) = reg.getFrontendInfo(address(0xDEAD));
         assertEq(op, address(0));
         assertEq(staked, 0);
-        assertFalse(approved);
+        assertFalse(eligible);
         assertFalse(slashed);
     }
 
@@ -367,10 +353,10 @@ contract FrontendRegistryEdgeCaseTest is Test {
     }
 
     function _getFrontendFull(address fe) internal view returns (address, uint256, bool, bool, uint256) {
-        (address op, uint256 staked, bool approved, bool slashed) = reg.getFrontendInfo(fe);
+        (address op, uint256 staked, bool eligible, bool slashed) = reg.getFrontendInfo(fe);
         // Access registeredAt via direct mapping read
-        (,,,,, uint256 registeredAt) = reg.frontends(fe);
-        return (op, staked, approved, slashed, registeredAt);
+        (,,,, uint256 registeredAt) = reg.frontends(fe);
+        return (op, staked, eligible, slashed, registeredAt);
     }
 }
 

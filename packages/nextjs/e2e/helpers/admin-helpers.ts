@@ -156,33 +156,6 @@ export async function registerFrontend(fromAddress: string, contractAddress: str
 }
 
 /**
- * Approve a registered frontend to start earning fees.
- * Calls FrontendRegistry.approveFrontend(address frontend).
- * Requires GOVERNANCE_ROLE (deployer has it in local dev).
- */
-export async function approveFrontend(
-  frontendAddr: string,
-  fromAddress: string,
-  contractAddress: string,
-): Promise<boolean> {
-  const { encodeFunctionData } = await import("viem");
-  const data = encodeFunctionData({
-    abi: [
-      {
-        name: "approveFrontend",
-        type: "function",
-        inputs: [{ name: "frontend", type: "address" }],
-        outputs: [],
-        stateMutability: "nonpayable",
-      },
-    ],
-    functionName: "approveFrontend",
-    args: [frontendAddr as `0x${string}`],
-  });
-  return sendTx(fromAddress, contractAddress, data);
-}
-
-/**
  * Submit content directly via contract call.
  * Caller must have approved MIN_SUBMITTER_STAKE (10 cREP = 10e6) to ContentRegistry.
  * Returns the transaction hash on success, or null on failure.
@@ -699,7 +672,7 @@ export async function hasVoterIdOnChain(holderAddress: string, contractAddress: 
 export async function getFrontendInfoOnChain(
   frontendAddr: string,
   contractAddress: string,
-): Promise<{ registered: boolean; stakedAmount: bigint; approved: boolean; slashed: boolean }> {
+): Promise<{ registered: boolean; stakedAmount: bigint; eligible: boolean; slashed: boolean }> {
   const { encodeFunctionData, decodeFunctionResult } = await import("viem");
   const abi = [
     {
@@ -709,7 +682,7 @@ export async function getFrontendInfoOnChain(
       outputs: [
         { name: "operator", type: "address" },
         { name: "stakedAmount", type: "uint256" },
-        { name: "approved", type: "bool" },
+        { name: "eligible", type: "bool" },
         { name: "slashed", type: "bool" },
       ],
       stateMutability: "view",
@@ -731,8 +704,8 @@ export async function getFrontendInfoOnChain(
     }),
   });
   const json = await res.json();
-  if (json.error || !json.result) return { registered: false, stakedAmount: 0n, approved: false, slashed: false };
-  const [operator, stakedAmount, approved, slashed] = decodeFunctionResult({
+  if (json.error || !json.result) return { registered: false, stakedAmount: 0n, eligible: false, slashed: false };
+  const [operator, stakedAmount, eligible, slashed] = decodeFunctionResult({
     abi,
     functionName: "getFrontendInfo",
     data: json.result,
@@ -740,7 +713,7 @@ export async function getFrontendInfoOnChain(
   return {
     registered: operator !== "0x0000000000000000000000000000000000000000",
     stakedAmount,
-    approved,
+    eligible,
     slashed,
   };
 }

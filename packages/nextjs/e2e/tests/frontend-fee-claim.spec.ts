@@ -1,6 +1,5 @@
 import {
   approveCREP,
-  approveFrontend,
   claimFrontendFee,
   claimFrontendFees,
   commitVoteDirect,
@@ -54,7 +53,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     return `0x${seed.toString(16).padStart(40, "0")}` as `0x${string}`;
   }
 
-  async function setupApprovedFrontend(frontendAddress: `0x${string}`, nullifier: bigint): Promise<void> {
+  async function setupFrontend(frontendAddress: `0x${string}`, nullifier: bigint): Promise<void> {
     // Fund the impersonated frontend address with ETH for gas
     await fetch("http://localhost:8545", {
       method: "POST",
@@ -78,9 +77,6 @@ test.describe("Frontend fee claim lifecycle", () => {
 
     const registered = await registerFrontend(frontendAddress, FRONTEND_REGISTRY);
     expect(registered, `Failed to register frontend ${frontendAddress}`).toBe(true);
-
-    const governanceApproved = await approveFrontend(frontendAddress, DEPLOYER.address, FRONTEND_REGISTRY);
-    expect(governanceApproved, `Failed to approve frontend ${frontendAddress}`).toBe(true);
   }
 
   async function settleRoundWithFrontend(
@@ -172,12 +168,12 @@ test.describe("Frontend fee claim lifecycle", () => {
     return { contentId: contentId!, roundId };
   }
 
-  test("approved frontend accrues claimable fees after settlement", async () => {
+  test("registered frontend accrues claimable fees after settlement", async () => {
     test.setTimeout(180_000);
 
     const uniqueId = Date.now();
     const frontendAddress = frontendAddressFor(uniqueId);
-    await setupApprovedFrontend(frontendAddress, BigInt(uniqueId));
+    await setupFrontend(frontendAddress, BigInt(uniqueId));
 
     const { contentId, roundId } = await settleRoundWithFrontend(frontendAddress, uniqueId);
 
@@ -189,7 +185,7 @@ test.describe("Frontend fee claim lifecycle", () => {
       DEPLOYER.address,
       REWARD_DISTRIBUTOR,
     );
-    expect(claimed, "Frontend fee claim should succeed for an approved frontend").toBe(true);
+    expect(claimed, "Frontend fee claim should succeed for an eligible frontend").toBe(true);
 
     const feesAfter = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
     expect(feesAfter).toBeGreaterThan(feesBefore);
@@ -212,7 +208,7 @@ test.describe("Frontend fee claim lifecycle", () => {
 
     const uniqueId = Date.now() + 1;
     const frontendAddress = frontendAddressFor(uniqueId);
-    await setupApprovedFrontend(frontendAddress, BigInt(uniqueId));
+    await setupFrontend(frontendAddress, BigInt(uniqueId));
 
     const { contentId, roundId } = await settleRoundWithFrontend(frontendAddress, uniqueId);
 
@@ -250,7 +246,7 @@ test.describe("Frontend fee claim lifecycle", () => {
     const walletBefore = await readTokenBalance(frontendAddress, CREP_TOKEN);
 
     const withdrawn = await claimFrontendFees(frontendAddress, FRONTEND_REGISTRY);
-    expect(withdrawn, "claimFees() should succeed for approved frontend with fees").toBe(true);
+    expect(withdrawn, "claimFees() should succeed for eligible frontend with fees").toBe(true);
 
     // Accumulated fees should be zeroed after withdrawal
     const accumulatedAfter = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);

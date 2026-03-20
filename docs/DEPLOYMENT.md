@@ -330,15 +330,7 @@ cast send <FrontendRegistry> "register()" \
   --rpc-url https://forno.celo.org
 ```
 
-### 5d. Get governance approval
-
-On mainnet, the deployer has renounced all roles. Frontend approval requires a governance proposal:
-
-1. Create a proposal via the CuryoGovernor to call `FrontendRegistry.approveFrontend(<server-address>)`
-2. cREP holders vote on the proposal
-3. After passing + timelock delay (2 days), execute the proposal
-
-### 5e. Update frontend config
+### 5d. Update frontend config
 
 Set `NEXT_PUBLIC_FRONTEND_CODE=<server-address>` in your Vercel environment variables and redeploy. All votes through your frontend will now credit fees to your address.
 
@@ -668,7 +660,7 @@ Set up two cron schedules in the Railway dashboard:
 
 - [ ] All admin roles have been renounced by deployer and transferred to governance (TimelockController)
 - [ ] All transparent proxy admins are owned by governance only (`ProxyAdmin.owner() == TimelockController`)
-- [ ] Frontend operators require governance approval — no self-approval on mainnet
+- [ ] Frontend operators are permissionless but remain slashable by governance
 - [ ] HumanFaucet requires Self.xyz identity verification (one person, one vote)
 - [ ] TimelockController enforces 2-day delay on all governance actions
 
@@ -789,7 +781,7 @@ This keeps the approval scope minimal and avoids leaving a large standing allowa
 4.  Verify contracts on Blockscout
 5.  Deploy Ponder indexer to Railway (with volume for PGlite persistence)
 6.  Deploy frontend to Vercel (with Ponder URL, contract addresses)
-7.  Register frontend in FrontendRegistry (1,000 cREP stake + governance proposal)
+7.  Register frontend in FrontendRegistry (1,000 cREP stake)
 8.  Set up bot identities on cold wallets (Voter ID + cREP via Self.xyz / HumanFaucet)
 9.  Set delegation: cold wallets → bot hot wallets (setDelegate)
 10. Fund bot hot wallets with operational cREP + gas

@@ -14,7 +14,7 @@ This document mixes:
 
 ## Executive summary
 
-- The main recurring user cost is still voting: about `677,802` gas without frontend attribution and `715,068` gas with an approved frontend.
+- The main recurring user cost is still voting: about `677,802` gas without frontend attribution and `715,068` gas with frontend attribution.
 - The compiler-level low-hanging fruit is only partially taken. The repo already uses `via_ir = true`, `optimizer = true`, `optimizer_runs = 100`, `evm_version = "cancun"`, and `ReentrancyGuardTransient`, but there is still room in optimizer tuning, remaining revert strings, and especially storage layout.
 - The best remaining vote optimizations that preserve the current one-transaction voting UX are:
   - pre-launch storage packing of `Round`, `Commit`, and `RoundConfig`
@@ -31,7 +31,7 @@ This document mixes:
 Measured from the current repo:
 
 - Vote via `transferAndCall(...)`: `677,802` gas
-- Vote with approved frontend attribution: `715,068` gas
+- Vote with frontend attribution: `715,068` gas
 - Submit flow total: `534,006` gas
 - `submitContent(...)` itself: `506,661` gas
 - Reveal: `117,593` gas
@@ -337,7 +337,7 @@ Assessment:
 
 Measured fact:
 
-- approved frontend attribution currently adds about `37,266` gas to a vote
+- frontend attribution currently adds about `37,266` gas to a vote
 
 That is not huge in dollar terms on Celo, but it is large enough to matter if the goal is specifically to reduce raw vote gas.
 

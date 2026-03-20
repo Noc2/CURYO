@@ -12,7 +12,7 @@ import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title FrontendRegistry
 /// @notice Manages frontend operator registration (fixed 1,000 cREP stake) and fee distribution.
-/// @dev Frontend operators stake cREP, get approved via governance, and earn cREP fees from votes using their code.
+/// @dev Frontend operators stake cREP, can be slashed by governance, and earn cREP fees from votes using their code.
 contract FrontendRegistry is
     IFrontendRegistry,
     Initializable,
@@ -40,7 +40,6 @@ contract FrontendRegistry is
         address operator;
         uint64 stakedAmount;
         uint64 crepFees;
-        bool approved;
         bool slashed;
         uint48 registeredAt;
     }
@@ -60,8 +59,8 @@ contract FrontendRegistry is
 
     // --- Events ---
     event FrontendRegistered(address indexed frontend, address indexed operator, uint256 stakedAmount);
-    event FrontendApproved(address indexed frontend);
     event FrontendSlashed(address indexed frontend, uint256 amount, string reason);
+    event FrontendUnslashed(address indexed frontend);
     event FrontendExitRequested(address indexed frontend, uint256 availableAt);
     event FrontendDeregistered(address indexed frontend);
     event FrontendStakeToppedUp(address indexed frontend, uint256 amount, uint256 newStakedAmount);
@@ -102,9 +101,9 @@ contract FrontendRegistry is
     // --- View Functions ---
 
     /// @inheritdoc IFrontendRegistry
-    function isApproved(address frontend) external view override returns (bool) {
+    function isEligible(address frontend) external view override returns (bool) {
         Frontend storage f = frontends[frontend];
-        return f.approved && !f.slashed && uint256(f.stakedAmount) == STAKE_AMOUNT;
+        return _isEligible(frontend, f);
     }
 
     /// @inheritdoc IFrontendRegistry
@@ -118,10 +117,10 @@ contract FrontendRegistry is
         external
         view
         override
-        returns (address operator, uint256 stakedAmount, bool approved, bool slashed)
+        returns (address operator, uint256 stakedAmount, bool eligible, bool slashed)
     {
         Frontend storage f = frontends[frontend];
-        return (f.operator, uint256(f.stakedAmount), f.approved, f.slashed);
+        return (f.operator, uint256(f.stakedAmount), _isEligible(frontend, f), f.slashed);
     }
 
     /// @notice Get a paginated slice of the registered frontend addresses
@@ -152,7 +151,7 @@ contract FrontendRegistry is
     // --- Registration Functions ---
 
     /// @notice Register as a frontend operator by staking 1,000 cREP
-    /// @dev After registration, governance must approve before earning fees
+    /// @dev Fully bonded, unslashed frontends can earn fees immediately after registration.
     function register() external nonReentrant {
         // Require Voter ID if VoterIdNFT is configured
         if (address(voterIdNFT) != address(0)) {
@@ -168,7 +167,6 @@ contract FrontendRegistry is
             operator: msg.sender,
             stakedAmount: uint64(STAKE_AMOUNT),
             crepFees: 0,
-            approved: false,
             slashed: false,
             registeredAt: uint48(block.timestamp)
         });
@@ -197,7 +195,6 @@ contract FrontendRegistry is
         uint256 pendingFees = uint256(f.crepFees);
         f.stakedAmount = 0;
         f.crepFees = 0;
-        f.approved = false;
         f.operator = address(0); // Allow re-registration
         delete frontendExitAvailableAt[msg.sender];
         _removeRegisteredFrontend(msg.sender);
@@ -235,7 +232,7 @@ contract FrontendRegistry is
     // --- Fee Crediting (called by RoundVotingEngine) ---
 
     /// @inheritdoc IFrontendRegistry
-    /// @dev No approval check here — commit-time approval is snapshotted in RoundVotingEngine.
+    /// @dev No eligibility check here — commit-time eligibility is snapshotted in RoundVotingEngine.
     ///      Slashed or underbonded frontends cannot accrue newly claimed historical fees.
     function creditFees(address frontend, uint256 crepAmount) external override onlyRole(FEE_CREDITOR_ROLE) {
         require(crepAmount <= MAX_FEE_CREDIT, "Fee credit too large");
@@ -247,7 +244,7 @@ contract FrontendRegistry is
         emit FeesCredited(frontend, crepAmount);
     }
 
-    /// @notice Restore stake after a partial slash so governance can approve the frontend again.
+    /// @notice Restore stake after a partial slash so the frontend can earn fees again.
     /// @param amount Additional cREP to bond.
     function topUpStake(uint256 amount) external nonReentrant {
         Frontend storage f = frontends[msg.sender];
@@ -267,29 +264,6 @@ contract FrontendRegistry is
 
     // --- Governance Functions ---
 
-    /// @notice Approve a frontend to start earning fees
-    /// @param frontend The frontend address to approve
-    function approveFrontend(address frontend) external onlyRole(GOVERNANCE_ROLE) {
-        Frontend storage f = frontends[frontend];
-        require(f.operator != address(0), "Frontend not registered");
-        require(!f.slashed, "Frontend is slashed");
-        require(uint256(f.stakedAmount) == STAKE_AMOUNT, "Frontend is underbonded");
-        if (frontendExitAvailableAt[frontend] != 0) revert FrontendExitPending();
-
-        f.approved = true;
-
-        emit FrontendApproved(frontend);
-    }
-
-    /// @notice Revoke approval for a frontend
-    /// @param frontend The frontend address to revoke
-    function revokeFrontend(address frontend) external onlyRole(GOVERNANCE_ROLE) {
-        Frontend storage f = frontends[frontend];
-        require(f.operator != address(0), "Frontend not registered");
-
-        f.approved = false;
-    }
-
     /// @notice Slash a frontend's stake (partial or full)
     /// @param frontend The frontend address to slash
     /// @param amount Amount of cREP to slash
@@ -307,7 +281,6 @@ contract FrontendRegistry is
         f.stakedAmount -= uint64(amount);
         f.crepFees = 0;
         f.slashed = true;
-        f.approved = false;
 
         uint256 totalToReserve = amount + confiscatedFees;
         if (totalToReserve > 0) {
@@ -330,7 +303,7 @@ contract FrontendRegistry is
         require(f.slashed, "Frontend not slashed");
 
         f.slashed = false;
-        // Frontend must be re-approved separately
+        emit FrontendUnslashed(frontend);
     }
 
     // --- Admin Functions ---
@@ -368,8 +341,6 @@ contract FrontendRegistry is
         require(!f.slashed, "Frontend is slashed");
         if (frontendExitAvailableAt[frontend] != 0) revert FrontendExitPending();
 
-        f.approved = false;
-
         uint256 availableAt = block.timestamp + UNBONDING_PERIOD;
         frontendExitAvailableAt[frontend] = availableAt;
 
@@ -393,5 +364,11 @@ contract FrontendRegistry is
 
         registeredFrontends.pop();
         delete registeredFrontendIndexPlusOne[frontend];
+    }
+
+    function _isEligible(address frontend, Frontend storage f) internal view returns (bool) {
+        return
+            f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) == STAKE_AMOUNT
+                && frontendExitAvailableAt[frontend] == 0;
     }
 }
