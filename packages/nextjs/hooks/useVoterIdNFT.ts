@@ -9,6 +9,8 @@ export function useVoterIdNFT(address?: string) {
   const {
     data: hasVoterId,
     isLoading: hasVoterIdLoading,
+    isFetching: hasVoterIdFetching,
+    isFetched: hasVoterIdFetched,
     refetch: refetchHasVoterId,
   } = useScaffoldReadContract({
     contractName: "VoterIdNFT" as any,
@@ -22,6 +24,8 @@ export function useVoterIdNFT(address?: string) {
   const {
     data: tokenId,
     isLoading: tokenIdLoading,
+    isFetching: tokenIdFetching,
+    isFetched: tokenIdFetched,
     refetch: refetchTokenId,
   } = useScaffoldReadContract({
     contractName: "VoterIdNFT" as any,
@@ -37,10 +41,18 @@ export function useVoterIdNFT(address?: string) {
     refetchTokenId();
   };
 
+  const hasAddress = Boolean(address);
+  const resolvedHasVoterId = hasVoterId ?? false;
+  const voterIdCheckPending = hasAddress && (!hasVoterIdFetched || hasVoterIdLoading || hasVoterIdFetching);
+  const tokenIdCheckPending =
+    hasAddress && resolvedHasVoterId && (!tokenIdFetched || tokenIdLoading || tokenIdFetching);
+  const isResolved = !voterIdCheckPending && !tokenIdCheckPending;
+
   return {
-    hasVoterId: hasVoterId ?? false,
+    hasVoterId: resolvedHasVoterId,
     tokenId: tokenId ?? 0n,
-    isLoading: hasVoterIdLoading || tokenIdLoading,
+    isLoading: !isResolved,
+    isResolved,
     refetch,
   };
 }

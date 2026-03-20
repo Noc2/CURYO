@@ -137,7 +137,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 
 const SubmitPage: NextPage = () => {
   const { address } = useAccount();
-  const { hasVoterId, isLoading: voterIdLoading } = useVoterIdNFT(address);
+  const { hasVoterId, isResolved: voterIdResolved } = useVoterIdNFT(address);
   const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
   const { ratePercent, calculateBonus } = useParticipationRate();
   const submissionBonus = calculateBonus(10);
@@ -502,7 +502,7 @@ const SubmitPage: NextPage = () => {
     );
   }
 
-  if (voterIdLoading) {
+  if (!voterIdResolved) {
     return (
       <div className="flex flex-col items-center justify-center grow px-6 pt-20">
         <div className="surface-card rounded-2xl p-8 text-center max-w-sm">

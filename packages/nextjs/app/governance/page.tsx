@@ -95,20 +95,20 @@ function GovernancePageInner() {
     args: [address],
     query: { enabled: !!address },
   });
-  const { hasVoterId, isLoading: voterIdLoading } = useVoterIdNFT(address);
+  const { hasVoterId, isResolved: voterIdResolved } = useVoterIdNFT(address);
 
   const hasResolvedBalance = !!address && !crepBalanceLoading && crepBalance !== undefined;
   const hasZeroBalance = hasResolvedBalance && crepBalance === 0n;
   const addressKey = address?.toLowerCase() ?? null;
-  const shouldWaitForEntryRouting = Boolean(address) && (!hashInitialized || voterIdLoading);
-  const faucetOnly = Boolean(address) && hashInitialized && !voterIdLoading && !hasVoterId;
+  const shouldWaitForEntryRouting = Boolean(address) && (!hashInitialized || !voterIdResolved);
+  const faucetOnly = Boolean(address) && hashInitialized && voterIdResolved && !hasVoterId;
 
   useEffect(() => {
     autoSelectedEntryAddressRef.current = null;
   }, [addressKey]);
 
   useEffect(() => {
-    if (!addressKey || !hashInitialized || !hasResolvedBalance || voterIdLoading) {
+    if (!addressKey || !hashInitialized || !hasResolvedBalance || !voterIdResolved) {
       return;
     }
 
@@ -128,7 +128,7 @@ function GovernancePageInner() {
     }
 
     autoSelectedEntryAddressRef.current = addressKey;
-  }, [addressKey, faucetOnly, hasResolvedBalance, hashInitialized, selectTab, voterIdLoading]);
+  }, [addressKey, faucetOnly, hasResolvedBalance, hashInitialized, selectTab, voterIdResolved]);
 
   // Update tab when balance changes
   useEffect(() => {
