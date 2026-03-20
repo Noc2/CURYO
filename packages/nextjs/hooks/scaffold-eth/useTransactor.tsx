@@ -59,7 +59,7 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
         throw new Error("Public client not available for this chain");
       }
 
-      notificationId = notification.loading(<TxnNotification message="Awaiting for user confirmation" />);
+      notificationId = notification.loading(<TxnNotification message="Waiting for confirmation" />);
       if (typeof tx === "function") {
         // Tx is already prepared by the caller
         const result = await tx();
