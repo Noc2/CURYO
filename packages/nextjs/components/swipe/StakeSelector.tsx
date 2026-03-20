@@ -46,13 +46,7 @@ export function StakeSelector({
   const tokenId = voterIdData.tokenId as bigint;
 
   const roundSnapshot = useRoundSnapshot(contentId);
-  const {
-    roundId: currentRoundId,
-    phase,
-    isEpoch1,
-    upPool,
-    downPool,
-  } = roundSnapshot;
+  const { roundId: currentRoundId, phase, isEpoch1, upPool, downPool } = roundSnapshot;
   const effectiveIsBlind = phase !== "voting" || isEpoch1;
 
   const estimateSnapshot = useMemo(
@@ -282,7 +276,9 @@ export function StakeSelector({
                     <div className="flex items-center justify-between gap-3">
                       <span>Est. return if right</span>
                       <span className="font-semibold tabular-nums">
-                        {openPhaseGrossReturnMicro !== null ? `${formatCrepAmount(openPhaseGrossReturnMicro)} ${symbol}` : "Loading"}
+                        {openPhaseGrossReturnMicro !== null
+                          ? `${formatCrepAmount(openPhaseGrossReturnMicro)} ${symbol}`
+                          : "Loading"}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
