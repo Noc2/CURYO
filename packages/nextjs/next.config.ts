@@ -54,6 +54,7 @@ const cspDirectives = [
     "https://api.web3modal.org",
     "https://*.thirdweb.com",
     // Simple Analytics
+    "https://scripts.simpleanalyticscdn.com",
     "https://queue.simpleanalyticscdn.com",
     // Coinbase Wallet SDK
     "https://cca-lite.coinbase.com",
