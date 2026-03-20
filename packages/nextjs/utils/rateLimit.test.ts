@@ -11,6 +11,7 @@ const env = process.env as Record<string, string | undefined>;
 const originalDatabaseUrl = process.env.DATABASE_URL;
 const originalNodeEnv = process.env.NODE_ENV;
 const originalTrustedHeaders = process.env.RATE_LIMIT_TRUSTED_IP_HEADERS;
+const originalVercel = process.env.VERCEL;
 
 env.DATABASE_URL = `file:${dbPath}`;
 
@@ -44,6 +45,7 @@ before(async () => {
 beforeEach(async () => {
   env.NODE_ENV = "production";
   delete env.RATE_LIMIT_TRUSTED_IP_HEADERS;
+  delete env.VERCEL;
   await dbModule.dbClient.execute("DELETE FROM api_rate_limits");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limit_maintenance");
 });
@@ -67,6 +69,12 @@ after(() => {
     env.RATE_LIMIT_TRUSTED_IP_HEADERS = originalTrustedHeaders;
   }
 
+  if (originalVercel === undefined) {
+    delete env.VERCEL;
+  } else {
+    env.VERCEL = originalVercel;
+  }
+
   rmSync(tempDir, { recursive: true, force: true });
 });
 
@@ -81,6 +89,19 @@ test("resolveRateLimitSubject trusts configured proxy IP headers in production",
   );
 
   assert.equal(subject, "ip:203.0.113.5");
+});
+
+test("resolveRateLimitSubject trusts Vercel forwarded IP headers by default", () => {
+  env.VERCEL = "1";
+
+  const subject = rateLimit.resolveRateLimitSubject(
+    makeRequest("/api/watchlist/content", "POST", {
+      "x-forwarded-for": "198.51.100.44, 10.0.0.1",
+      "user-agent": "test-agent",
+    }),
+  );
+
+  assert.equal(subject, "ip:198.51.100.44");
 });
 
 test("resolveRateLimitSubject falls back to a request fingerprint when no trusted IP is available", () => {
@@ -108,6 +129,20 @@ test("checkRateLimit fails closed in production when no trusted client IP can be
 
   assert.equal(response?.status, 503);
   assert.deepEqual(await response?.json(), { error: "Rate limiting is misconfigured" });
+});
+
+test("checkRateLimit accepts Vercel forwarded IP headers without extra env config", async () => {
+  env.VERCEL = "1";
+
+  const response = await rateLimit.checkRateLimit(
+    makeRequest("/api/watchlist/content", "GET", {
+      "x-forwarded-for": "203.0.113.99, 10.0.0.1",
+      "user-agent": "test-agent",
+    }),
+    { limit: 10, windowMs: 60_000 },
+  );
+
+  assert.equal(response, null);
 });
 
 test("resolveRateLimitSubject uses x-forwarded-for automatically in development", () => {

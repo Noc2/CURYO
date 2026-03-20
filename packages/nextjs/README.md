@@ -58,7 +58,7 @@ Key environment variables (see `.env.example` for the full list):
 Notes:
 
 - Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or `rpcOverrides[1]`. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
-- On Next.js 15, `NextRequest.ip` is not reliably populated. In production you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Otherwise protected API routes fail closed with `503 Rate limiting is misconfigured`.
+- On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-forwarded-for` and `x-real-ip`. Protected API routes still fail closed when no trusted client IP can be derived.
 
 ## Project Structure
 

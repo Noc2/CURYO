@@ -30,6 +30,8 @@ let lastCleanup = 0;
 const DEV_FALLBACK_IP = "127.0.0.1";
 const FORWARDED_FOR_HEADER = "x-forwarded-for";
 const FORWARDED_HEADER = "forwarded";
+const REAL_IP_HEADER = "x-real-ip";
+const DEFAULT_VERCEL_TRUSTED_IP_HEADERS = [FORWARDED_FOR_HEADER, REAL_IP_HEADER] as const;
 const FALLBACK_FINGERPRINT_HEADERS = [
   "user-agent",
   "accept-language",
@@ -74,11 +76,25 @@ function hashIdentifier(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function isVercelDeployment(): boolean {
+  return process.env.VERCEL === "1" || process.env.VERCEL === "true";
+}
+
 function getTrustedRateLimitHeaders(): string[] {
-  return (process.env.RATE_LIMIT_TRUSTED_IP_HEADERS ?? "")
+  const configuredHeaders = (process.env.RATE_LIMIT_TRUSTED_IP_HEADERS ?? "")
     .split(",")
     .map(header => header.trim().toLowerCase())
     .filter(Boolean);
+
+  if (configuredHeaders.length > 0) {
+    return configuredHeaders;
+  }
+
+  if (isVercelDeployment()) {
+    return [...DEFAULT_VERCEL_TRUSTED_IP_HEADERS];
+  }
+
+  return [];
 }
 
 function normalizeExtraKeyPart(value: string | number | bigint | null | undefined): string | null {
@@ -122,7 +138,7 @@ function getTrustedClientIp(request: NextRequest): string | null {
   if (process.env.NODE_ENV === "development") {
     return (
       extractIpFromHeader(FORWARDED_FOR_HEADER, request.headers.get(FORWARDED_FOR_HEADER)) ??
-      extractIpFromHeader("x-real-ip", request.headers.get("x-real-ip")) ??
+      extractIpFromHeader(REAL_IP_HEADER, request.headers.get(REAL_IP_HEADER)) ??
       DEV_FALLBACK_IP
     );
   }
