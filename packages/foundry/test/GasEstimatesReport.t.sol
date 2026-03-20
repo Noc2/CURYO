@@ -261,11 +261,11 @@ contract FrontendTransactionGasEstimatesTest is Test {
         assertTrue(success, "measured pranked call reverted");
     }
 
-    function testGasEstimate_frontendApproveStake_logs() public {
+    function testGasEstimate_frontendApproveStakeAllowance_logs() public {
         vm.pauseGasMetering();
         uint256 gasUsed =
             _measureCallAs(frontend, address(crepToken), abi.encodeCall(IERC20.approve, (address(registry), STAKE)));
-        console2.log("frontend_approve_stake_gas", gasUsed);
+        console2.log("frontend_approve_stake_allowance_gas", gasUsed);
     }
 
     function testGasEstimate_frontendRegister_logs() public {

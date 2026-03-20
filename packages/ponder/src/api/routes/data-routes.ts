@@ -373,7 +373,7 @@ export function registerDataRoutes(app: ApiApp) {
     const statusFilter = c.req.query("status") ?? "all";
 
     let where;
-    if (statusFilter === "active" || statusFilter === "eligible" || statusFilter === "approved") {
+    if (statusFilter === "active" || statusFilter === "eligible") {
       where = eq(frontend.eligible, true);
     } else if (statusFilter === "slashed") {
       where = eq(frontend.slashed, true);
