@@ -203,7 +203,7 @@ function GovernancePageInner() {
                 activeTab === "faucet" ? "pill-active" : "pill-inactive"
               }`}
             >
-              Faucet
+              Voter ID
             </button>
           </>
         ) : (
