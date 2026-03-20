@@ -18,6 +18,7 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { notification } from "~~/utils/scaffold-eth";
 
 interface FaucetSectionProps {
   referrer?: string | null;
@@ -101,8 +102,11 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
   const { isAccepted, requireAcceptance } = useTermsAcceptance();
   const [termsOk, setTermsOk] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
+  const [verificationConfirmed, setVerificationConfirmed] = useState(false);
   const pollTimer = useRef<ReturnType<typeof setInterval>>(null);
   const pollStart = useRef<number>(0);
+  const completionHandled = useRef(false);
+  const statusToastId = useRef<string | null>(null);
 
   // Read tier info from HumanFaucet contract
   const { data: tierInfo, isLoading: tierLoading } = useScaffoldReadContract({
@@ -121,6 +125,13 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     args: [address],
   });
 
+  const { refetch: refetchCrepBalance } = useScaffoldReadContract({
+    contractName: "CuryoReputation",
+    functionName: "balanceOf",
+    args: [address],
+    query: { enabled: !!address },
+  });
+
   // Check if referrer is valid (has a Voter ID)
   const { data: isValidReferrer } = useScaffoldReadContract({
     contractName: "HumanFaucet",
@@ -137,14 +148,51 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     }
   }, []);
 
-  const finishVerification = useCallback(() => {
+  const clearStatusToast = useCallback(() => {
+    if (statusToastId.current) {
+      notification.remove(statusToastId.current);
+      statusToastId.current = null;
+    }
+  }, []);
+
+  const showStatusToast = useCallback(
+    (message: string) => {
+      clearStatusToast();
+      statusToastId.current = notification.loading(message);
+    },
+    [clearStatusToast],
+  );
+
+  const finishVerification = useCallback(async () => {
+    if (completionHandled.current) {
+      return;
+    }
+
+    completionHandled.current = true;
     clearPendingSelfVerificationSession();
     stopPolling();
     setVerificationPending(false);
+    setVerificationConfirmed(false);
+    clearStatusToast();
+
+    if (address) {
+      try {
+        const balanceResult = await refetchCrepBalance();
+        if (balanceResult.data !== undefined) {
+          queryClient.setQueryData(["wallet-crep-balance", address.toLowerCase()], balanceResult.data);
+        }
+      } catch {
+        // Fall back to invalidation-only refresh if the direct balance read fails.
+      }
+
+      void queryClient.invalidateQueries({ queryKey: ["wallet-crep-balance", address.toLowerCase()] });
+    }
+
     // Invalidate all queries so navbar balance updates immediately
     void queryClient.invalidateQueries();
+    notification.success("cREP sent. Your wallet balance may take a few seconds to refresh.", { duration: 6000 });
     router.replace("/vote");
-  }, [queryClient, router, stopPolling]);
+  }, [address, clearStatusToast, queryClient, refetchCrepBalance, router, stopPolling]);
 
   const startPolling = useCallback(() => {
     const activeSession = address ? beginPendingSelfVerificationSession(address) : null;
@@ -154,13 +202,13 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
 
     const pollClaimStatus = async () => {
       if (hasVoterId) {
-        finishVerification();
+        await finishVerification();
         return true;
       }
 
       const result = await refetchClaimed();
       if (result.data === true) {
-        finishVerification();
+        await finishVerification();
         return true;
       }
 
@@ -168,6 +216,8 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         clearPendingSelfVerificationSession();
         stopPolling();
         setVerificationPending(false);
+        setVerificationConfirmed(false);
+        clearStatusToast();
         return true;
       }
 
@@ -183,15 +233,34 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
         void pollClaimStatus();
       }, POLL_INTERVAL_MS);
     });
-  }, [address, finishVerification, hasVoterId, refetchClaimed, stopPolling]);
+  }, [address, clearStatusToast, finishVerification, hasVoterId, refetchClaimed, stopPolling]);
 
   // Clean up polling on unmount
-  useEffect(() => stopPolling, [stopPolling]);
+  useEffect(
+    () => () => {
+      clearStatusToast();
+      stopPolling();
+    },
+    [clearStatusToast, stopPolling],
+  );
+
+  useEffect(() => {
+    completionHandled.current = false;
+    clearStatusToast();
+    setVerificationConfirmed(false);
+
+    if (!address) {
+      stopPolling();
+      setVerificationPending(false);
+    }
+  }, [address, clearStatusToast, stopPolling]);
 
   useEffect(() => {
     if (!address) {
       stopPolling();
       setVerificationPending(false);
+      setVerificationConfirmed(false);
+      clearStatusToast();
       return;
     }
 
@@ -201,14 +270,23 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     }
 
     if (hasClaimed === true || hasVoterId) {
-      finishVerification();
+      void finishVerification();
       return;
     }
 
     if (!verificationPending) {
       startPolling();
     }
-  }, [address, finishVerification, hasClaimed, hasVoterId, startPolling, stopPolling, verificationPending]);
+  }, [
+    address,
+    clearStatusToast,
+    finishVerification,
+    hasClaimed,
+    hasVoterId,
+    startPolling,
+    stopPolling,
+    verificationPending,
+  ]);
 
   useEffect(() => {
     if (!address) {
@@ -222,7 +300,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       }
 
       if (hasClaimed === true || hasVoterId) {
-        finishVerification();
+        void finishVerification();
         return;
       }
 
@@ -245,6 +323,22 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [address, finishVerification, hasClaimed, hasVoterId, startPolling, verificationPending]);
+
+  const handleVerificationStarted = useCallback(() => {
+    completionHandled.current = false;
+    setVerificationConfirmed(false);
+    notification.info("Finish verification in Self. We'll complete your faucet claim when you return.", {
+      duration: 5000,
+    });
+    startPolling();
+  }, [startPolling]);
+
+  const handleVerificationSuccess = useCallback(() => {
+    completionHandled.current = false;
+    setVerificationConfirmed(true);
+    showStatusToast("Verification received. Finalizing your cREP faucet claim...");
+    startPolling();
+  }, [showStatusToast, startPolling]);
 
   // Sync terms acceptance from context (already accepted via localStorage)
   useEffect(() => {
@@ -370,9 +464,13 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <div className="flex flex-col items-center gap-4 py-4">
             <ArrowPathIcon className="w-12 h-12 text-primary animate-spin" />
             <div className="text-center space-y-2">
-              <p className="text-lg font-semibold">Verifying...</p>
+              <p className="text-lg font-semibold">
+                {verificationConfirmed ? "Finalizing claim..." : "Waiting for Self..."}
+              </p>
               <p className="text-base-content/60 text-base">
-                Your proof has been submitted. Verification may take a moment.
+                {verificationConfirmed
+                  ? "Self verification succeeded. Your cREP claim is being finalized. Your wallet balance can lag briefly."
+                  : "Complete verification in Self. We'll continue the faucet claim when you come back."}
               </p>
             </div>
             <div className="flex gap-2 mt-2">
@@ -399,7 +497,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
               <p className="text-base-content/60 text-base">Use a passport or biometric ID card.</p>
             </div>
 
-            <SelfVerifyButton onStart={startPolling} onSuccess={startPolling} />
+            <SelfVerifyButton onStart={handleVerificationStarted} onSuccess={handleVerificationSuccess} />
           </>
         ) : (
           <div className="flex flex-col items-center gap-4 text-center">
