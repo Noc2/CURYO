@@ -94,6 +94,6 @@
   "license": "MIT",
   "packageManager": "yarn@3.2.3",
   "engines": {
-    "node": ">=20.18.3 <21"
+    "node": ">=24 <25"
   }
 }

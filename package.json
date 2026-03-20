@@ -80,7 +80,7 @@
   "packageManager": "yarn@3.2.3",
   "license": "MIT",
   "engines": {
-    "node": ">=20.18.3 <21"
+    "node": ">=24 <25"
   },
   "resolutions": {
     "react-spinners@^0.14.1": "patch:react-spinners@npm%3A0.14.1#./.yarn/patches/react-spinners-npm-0.14.1-545ddaba3f.patch"
