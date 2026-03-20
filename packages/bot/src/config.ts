@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { getSharedDeploymentAddress as getSharedArtifactAddress } from "@curyo/contracts/deployments";
 import { isAddress } from "viem";
 
 export type BotRole = "submit" | "rate";
@@ -71,21 +72,85 @@ function requireAddressEnv(name: string, errors: string[]): `0x${string}` {
   return value as `0x${string}`;
 }
 
+function resolveContractAddress(params: {
+  chainId: number;
+  envName: string;
+  contractName: string;
+  errors: string[];
+  warnings: string[];
+}): `0x${string}` {
+  const { chainId, envName, contractName, errors, warnings } = params;
+  const sharedAddress = getSharedArtifactAddress(chainId, contractName);
+  const envValue = readEnv(envName);
+
+  if (sharedAddress) {
+    if (envValue) {
+      if (isAddress(envValue)) {
+        if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+          warnings.push(
+            `Ignoring ${envName}=${envValue} for chain ${chainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+          );
+        }
+      } else {
+        warnings.push(
+          `Ignoring invalid ${envName} value for chain ${chainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+        );
+      }
+    }
+
+    return sharedAddress;
+  }
+
+  return requireAddressEnv(envName, errors);
+}
+
 function loadConfig() {
   const errors: string[] = [];
+  const warnings: string[] = [];
+  const chainId = requireIntEnv("CHAIN_ID", errors);
 
   const loadedConfig = {
     // Network
     rpcUrl: requireUrlEnv("RPC_URL", errors),
-    chainId: requireIntEnv("CHAIN_ID", errors),
+    chainId,
 
     // Contracts
     contracts: {
-      crepToken: requireAddressEnv("CREP_TOKEN_ADDRESS", errors),
-      contentRegistry: requireAddressEnv("CONTENT_REGISTRY_ADDRESS", errors),
-      votingEngine: requireAddressEnv("VOTING_ENGINE_ADDRESS", errors),
-      voterIdNFT: requireAddressEnv("VOTER_ID_NFT_ADDRESS", errors),
-      categoryRegistry: requireAddressEnv("CATEGORY_REGISTRY_ADDRESS", errors),
+      crepToken: resolveContractAddress({
+        chainId,
+        envName: "CREP_TOKEN_ADDRESS",
+        contractName: "CuryoReputation",
+        errors,
+        warnings,
+      }),
+      contentRegistry: resolveContractAddress({
+        chainId,
+        envName: "CONTENT_REGISTRY_ADDRESS",
+        contractName: "ContentRegistry",
+        errors,
+        warnings,
+      }),
+      votingEngine: resolveContractAddress({
+        chainId,
+        envName: "VOTING_ENGINE_ADDRESS",
+        contractName: "RoundVotingEngine",
+        errors,
+        warnings,
+      }),
+      voterIdNFT: resolveContractAddress({
+        chainId,
+        envName: "VOTER_ID_NFT_ADDRESS",
+        contractName: "VoterIdNFT",
+        errors,
+        warnings,
+      }),
+      categoryRegistry: resolveContractAddress({
+        chainId,
+        envName: "CATEGORY_REGISTRY_ADDRESS",
+        contractName: "CategoryRegistry",
+        errors,
+        warnings,
+      }),
     },
 
     // Bot identities
@@ -122,6 +187,10 @@ function loadConfig() {
 
   if (errors.length > 0) {
     throw new Error(`Invalid bot configuration:\n- ${errors.join("\n- ")}`);
+  }
+
+  for (const warning of warnings) {
+    console.warn(`[Bot] WARN: ${warning}`);
   }
 
   const hasApiKey =

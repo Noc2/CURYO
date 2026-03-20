@@ -12,6 +12,10 @@ import {
   RoundVotingEngineAbi,
   VoterIdNFTAbi,
 } from "@curyo/contracts/abis";
+import {
+  getSharedDeploymentAddress as getSharedArtifactAddress,
+  getSharedDeploymentStartBlock as getSharedArtifactStartBlock,
+} from "@curyo/contracts/deployments";
 
 type PonderNetworkName = "celoSepolia" | "hardhat" | "celo";
 
@@ -65,6 +69,12 @@ function getActiveNetwork(): PonderNetworkName {
 }
 
 const activeNetwork = getActiveNetwork();
+const activeChainId = NETWORKS[activeNetwork].chainId;
+
+function readEnv(key: string): string | undefined {
+  const value = process.env[key]?.trim();
+  return value ? value : undefined;
+}
 
 function getRpcUrl(network: PonderNetworkName): string {
   const { chainId, defaultRpcUrl } = NETWORKS[network];
@@ -96,25 +106,66 @@ function getRpcUrl(network: PonderNetworkName): string {
   return value;
 }
 
-function getAddress(key: string): `0x${string}` {
-  const value = process.env[key];
-  if (!value) {
-    throw new Error(`Missing ${key}. Run \`yarn deploy --network <network>\` to sync Ponder addresses for ${activeNetwork}.`);
+function resolveAddress(key: string, contractName: string): `0x${string}` {
+  const sharedAddress = getSharedArtifactAddress(activeChainId, contractName);
+  const envValue = readEnv(key);
+
+  if (sharedAddress) {
+    if (envValue) {
+      if (isAddress(envValue)) {
+        if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+          console.warn(
+            `[ponder config] Ignoring ${key}=${envValue} for chain ${activeChainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+          );
+        }
+      } else {
+        console.warn(
+          `[ponder config] Ignoring invalid ${key} value for chain ${activeChainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+        );
+      }
+    }
+
+    return sharedAddress;
   }
 
-  if (!isAddress(value)) {
+  if (!envValue) {
+    throw new Error(
+      `Missing ${key}. Run \`yarn deploy --network <network>\` to sync Ponder addresses for ${activeNetwork}.`,
+    );
+  }
+
+  if (!isAddress(envValue)) {
     throw new Error(`${key} must be a valid address.`);
   }
 
-  return value as `0x${string}`;
+  return envValue as `0x${string}`;
 }
 
-function getStartBlock(key: string): number {
-  const value = process.env[key];
-  if (!value) return 0;
+function resolveStartBlock(key: string, contractName: string): number {
+  const sharedStartBlock = getSharedArtifactStartBlock(activeChainId, contractName);
+  const envValue = readEnv(key);
 
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  if (sharedStartBlock !== undefined) {
+    if (envValue) {
+      const parsedEnvValue = Number(envValue);
+      if (!Number.isFinite(parsedEnvValue) || !Number.isInteger(parsedEnvValue) || parsedEnvValue < 0) {
+        console.warn(
+          `[ponder config] Ignoring invalid ${key} value for chain ${activeChainId}; using ${contractName} start block from shared deployment artifacts (${sharedStartBlock}).`,
+        );
+      } else if (parsedEnvValue !== sharedStartBlock) {
+        console.warn(
+          `[ponder config] Ignoring ${key}=${envValue} for chain ${activeChainId}; using ${contractName} start block from shared deployment artifacts (${sharedStartBlock}).`,
+        );
+      }
+    }
+
+    return sharedStartBlock;
+  }
+
+  if (!envValue) return 0;
+
+  const parsed = Number(envValue);
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) {
     throw new Error(`${key} must be a non-negative integer.`);
   }
 
@@ -122,25 +173,25 @@ function getStartBlock(key: string): number {
 }
 
 const addresses = {
-  contentRegistry: getAddress("PONDER_CONTENT_REGISTRY_ADDRESS"),
-  roundVotingEngine: getAddress("PONDER_ROUND_VOTING_ENGINE_ADDRESS"),
-  roundRewardDistributor: getAddress("PONDER_ROUND_REWARD_DISTRIBUTOR_ADDRESS"),
-  categoryRegistry: getAddress("PONDER_CATEGORY_REGISTRY_ADDRESS"),
-  profileRegistry: getAddress("PONDER_PROFILE_REGISTRY_ADDRESS"),
-  frontendRegistry: getAddress("PONDER_FRONTEND_REGISTRY_ADDRESS"),
-  voterIdNFT: getAddress("PONDER_VOTER_ID_NFT_ADDRESS"),
-  curyoReputation: getAddress("PONDER_CREP_ADDRESS"),
+  contentRegistry: resolveAddress("PONDER_CONTENT_REGISTRY_ADDRESS", "ContentRegistry"),
+  roundVotingEngine: resolveAddress("PONDER_ROUND_VOTING_ENGINE_ADDRESS", "RoundVotingEngine"),
+  roundRewardDistributor: resolveAddress("PONDER_ROUND_REWARD_DISTRIBUTOR_ADDRESS", "RoundRewardDistributor"),
+  categoryRegistry: resolveAddress("PONDER_CATEGORY_REGISTRY_ADDRESS", "CategoryRegistry"),
+  profileRegistry: resolveAddress("PONDER_PROFILE_REGISTRY_ADDRESS", "ProfileRegistry"),
+  frontendRegistry: resolveAddress("PONDER_FRONTEND_REGISTRY_ADDRESS", "FrontendRegistry"),
+  voterIdNFT: resolveAddress("PONDER_VOTER_ID_NFT_ADDRESS", "VoterIdNFT"),
+  curyoReputation: resolveAddress("PONDER_CREP_ADDRESS", "CuryoReputation"),
 };
 
 const startBlocks = {
-  contentRegistry: getStartBlock("PONDER_CONTENT_REGISTRY_START_BLOCK"),
-  roundVotingEngine: getStartBlock("PONDER_ROUND_VOTING_ENGINE_START_BLOCK"),
-  roundRewardDistributor: getStartBlock("PONDER_ROUND_REWARD_DISTRIBUTOR_START_BLOCK"),
-  categoryRegistry: getStartBlock("PONDER_CATEGORY_REGISTRY_START_BLOCK"),
-  profileRegistry: getStartBlock("PONDER_PROFILE_REGISTRY_START_BLOCK"),
-  frontendRegistry: getStartBlock("PONDER_FRONTEND_REGISTRY_START_BLOCK"),
-  voterIdNFT: getStartBlock("PONDER_VOTER_ID_NFT_START_BLOCK"),
-  curyoReputation: getStartBlock("PONDER_CREP_START_BLOCK"),
+  contentRegistry: resolveStartBlock("PONDER_CONTENT_REGISTRY_START_BLOCK", "ContentRegistry"),
+  roundVotingEngine: resolveStartBlock("PONDER_ROUND_VOTING_ENGINE_START_BLOCK", "RoundVotingEngine"),
+  roundRewardDistributor: resolveStartBlock("PONDER_ROUND_REWARD_DISTRIBUTOR_START_BLOCK", "RoundRewardDistributor"),
+  categoryRegistry: resolveStartBlock("PONDER_CATEGORY_REGISTRY_START_BLOCK", "CategoryRegistry"),
+  profileRegistry: resolveStartBlock("PONDER_PROFILE_REGISTRY_START_BLOCK", "ProfileRegistry"),
+  frontendRegistry: resolveStartBlock("PONDER_FRONTEND_REGISTRY_START_BLOCK", "FrontendRegistry"),
+  voterIdNFT: resolveStartBlock("PONDER_VOTER_ID_NFT_START_BLOCK", "VoterIdNFT"),
+  curyoReputation: resolveStartBlock("PONDER_CREP_START_BLOCK", "CuryoReputation"),
 };
 
 function contractOnActiveNetwork(address: `0x${string}`, startBlock: number) {

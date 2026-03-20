@@ -7,7 +7,7 @@ On-chain event indexer built with [Ponder](https://ponder.sh/). Listens to smart
 ```bash
 # From the monorepo root:
 cp packages/ponder/.env.example packages/ponder/.env.local
-# Edit packages/ponder/.env.local with your RPC URL, contract addresses, and start blocks
+# Edit packages/ponder/.env.local with your RPC URL and network selection
 
 yarn ponder:dev     # Development mode with file watching + auto-recovery, terminal UI disabled
 yarn ponder:start   # Production mode (no file watching)
@@ -40,10 +40,13 @@ Within the package directory, additional scripts are available:
 | `PONDER_RPC_URL_31337` | RPC URL for local Hardhat/Anvil chain |
 | `PONDER_RPC_URL_11142220` | RPC URL for Celo Sepolia |
 | `PONDER_RPC_URL_42220` | RPC URL for Celo mainnet |
-| `PONDER_CONTENT_REGISTRY_ADDRESS` etc. | Deployed contract addresses for the selected network |
-| `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Start blocks for each indexed contract |
+| `PONDER_CONTENT_REGISTRY_ADDRESS` etc. | Optional override contract addresses; supported chains fall back to `@curyo/contracts` |
+| `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Optional override start blocks; supported chains fall back to shared deployment metadata |
 | `CORS_ORIGIN` | Allowed origins (comma-separated; required in production) |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS` | Comma-separated proxy IP headers to trust for API rate limiting in production |
+
+After `yarn deploy --network celoSepolia --keystore <name>`, the Foundry deployment script refreshes `packages/ponder/.env.local`
+with the latest address and start-block values for that network.
 
 ## Project Structure
 

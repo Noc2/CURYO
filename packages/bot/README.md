@@ -27,7 +27,7 @@ Public submission sources still work without third-party API keys, but source co
 Copy `.env.example` to `.env` in the package directory and fill in the deployed network details. The required minimum is:
 
 - one wallet for the role you want to run
-- `RPC_URL`, `CHAIN_ID`, and the deployed contract addresses
+- `RPC_URL`, `CHAIN_ID`, and the deployed contract addresses if your chain is not present in `@curyo/contracts`
 - `PONDER_URL`
 
 **Wallet (one of):**
@@ -45,11 +45,11 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 |---|---|---|
 | `RPC_URL` | — | Blockchain RPC endpoint |
 | `CHAIN_ID` | — | Network chain ID |
-| `CREP_TOKEN_ADDRESS` | — | Deployed cREP token address |
-| `CONTENT_REGISTRY_ADDRESS` | — | Deployed ContentRegistry address |
-| `VOTING_ENGINE_ADDRESS` | — | Deployed RoundVotingEngine address |
-| `VOTER_ID_NFT_ADDRESS` | — | Deployed VoterIdNFT address |
-| `CATEGORY_REGISTRY_ADDRESS` | — | Deployed CategoryRegistry address |
+| `CREP_TOKEN_ADDRESS` | Auto-derived for supported chains | Fallback cREP token address |
+| `CONTENT_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback ContentRegistry address |
+| `VOTING_ENGINE_ADDRESS` | Auto-derived for supported chains | Fallback RoundVotingEngine address |
+| `VOTER_ID_NFT_ADDRESS` | Auto-derived for supported chains | Fallback VoterIdNFT address |
+| `CATEGORY_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback CategoryRegistry address |
 | `PONDER_URL` | — | Ponder indexer URL |
 
 **Optional External API Keys:**

@@ -1,4 +1,4 @@
-import deployedContracts from "@curyo/contracts/deployedContracts";
+import { getSharedDeploymentAddress as getSharedArtifactAddress } from "@curyo/contracts/deployments";
 import { config as loadDotenv } from "dotenv";
 import { isAddress } from "viem";
 
@@ -13,8 +13,6 @@ const CHAIN_NAMES: Record<number, string> = {
 
 const isProduction = process.env.NODE_ENV === "production";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const sharedDeployments = deployedContracts as Record<number, Record<string, { address?: string }>>;
-
 function readEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;
@@ -97,15 +95,6 @@ function requireAddressEnv(name: string, errors: string[]): `0x${string}` {
   return value as `0x${string}`;
 }
 
-function getSharedDeploymentAddress(chainId: number, contractName: string): `0x${string}` | undefined {
-  const address = sharedDeployments[chainId]?.[contractName]?.address;
-  if (!address || !isAddress(address)) {
-    return undefined;
-  }
-
-  return address as `0x${string}`;
-}
-
 function resolveContractAddress(params: {
   chainId: number;
   envName: string;
@@ -114,7 +103,7 @@ function resolveContractAddress(params: {
   warnings: string[];
 }): `0x${string}` {
   const { chainId, envName, contractName, errors, warnings } = params;
-  const sharedAddress = getSharedDeploymentAddress(chainId, contractName);
+  const sharedAddress = getSharedArtifactAddress(chainId, contractName);
   const envValue = readEnv(envName);
 
   if (sharedAddress) {

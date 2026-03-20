@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./abis": "./src/abis/index.ts",
+    "./deployments": "./src/deployments.ts",
     "./deployedContracts": "./src/deployedContracts.ts",
     "./protocol": "./src/protocol.ts",
     "./twitterSyndication": "./src/twitterSyndication.ts",
