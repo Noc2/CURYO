@@ -463,7 +463,7 @@ const SmartContracts: NextPage = () => {
           approval. Approval requires the full bond to be restored.
         </li>
         <li>
-          <code>claimFees()</code> &mdash; Claim accumulated platform fees while healthy and fully bonded.
+          <code>claimFees()</code> &mdash; Claim accumulated platform fees while healthy, fully bonded, and not exiting.
         </li>
         <li>
           <code>slashFrontend(address, amount, reason)</code> &mdash; Slash frontend stake (governance). Any already

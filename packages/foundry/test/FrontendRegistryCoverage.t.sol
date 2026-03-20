@@ -645,6 +645,22 @@ contract FrontendRegistryCoverageTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
+    function test_ClaimFees_WhileExitPending_Reverts() public {
+        _registerFrontend(frontend1);
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 500e6);
+
+        vm.prank(frontend1);
+        registry.requestDeregister();
+
+        vm.prank(frontend1);
+        vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);
+        registry.claimFees();
+
+        assertEq(registry.getAccumulatedFees(frontend1), 500e6);
+    }
+
     // =========================================================================
     // 13. SET VOTING ENGINE ACCESS CONTROL
     // =========================================================================

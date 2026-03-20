@@ -215,7 +215,7 @@ contract FrontendRegistryTest is Test {
         assertEq(registry.getAccumulatedFees(frontend1), 0);
     }
 
-    function test_ClaimFeesWhileExitPending() public {
+    function test_RevertClaimFeesWhileExitPending() public {
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
@@ -227,13 +227,11 @@ contract FrontendRegistryTest is Test {
         vm.prank(frontend1);
         registry.requestDeregister();
 
-        uint256 balanceBefore = crepToken.balanceOf(frontend1);
-
         vm.prank(frontend1);
+        vm.expectRevert(IFrontendRegistry.FrontendExitPending.selector);
         registry.claimFees();
 
-        assertEq(crepToken.balanceOf(frontend1) - balanceBefore, 100e6);
-        assertEq(registry.getAccumulatedFees(frontend1), 0);
+        assertEq(registry.getAccumulatedFees(frontend1), 100e6);
     }
 
     function test_ReregisterAfterDeregister() public {
@@ -630,6 +628,25 @@ contract FrontendRegistryTest is Test {
         vm.startPrank(frontend1);
         crepToken.approve(address(registry), STAKE);
         registry.register();
+        vm.stopPrank();
+
+        vm.prank(feeCreditor);
+        registry.creditFees(frontend1, 200e6);
+
+        uint256 reserveBefore = votingEngine.totalAddedToReserve();
+
+        vm.prank(admin);
+        registry.slashFrontend(frontend1, 100e6, "Malicious behavior");
+
+        assertEq(registry.getAccumulatedFees(frontend1), 0);
+        assertEq(votingEngine.totalAddedToReserve(), reserveBefore + 300e6);
+    }
+
+    function test_SlashFrontendConfiscatesAccruedFeesWhileExitPending() public {
+        vm.startPrank(frontend1);
+        crepToken.approve(address(registry), STAKE);
+        registry.register();
+        registry.requestDeregister();
         vm.stopPrank();
 
         vm.prank(feeCreditor);

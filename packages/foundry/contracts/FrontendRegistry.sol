@@ -218,6 +218,7 @@ contract FrontendRegistry is
         Frontend storage f = frontends[msg.sender];
         require(f.operator != address(0), "Not registered");
         require(!f.slashed, "Frontend is slashed");
+        if (frontendExitAvailableAt[msg.sender] != 0) revert FrontendExitPending();
         require(uint256(f.stakedAmount) == STAKE_AMOUNT, "Frontend is underbonded");
 
         uint256 crepAmount = uint256(f.crepFees);
