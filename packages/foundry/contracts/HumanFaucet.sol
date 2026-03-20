@@ -10,9 +10,9 @@ import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/I
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title HumanFaucet
-/// @notice Allows verified humans (via Self.xyz passport scan) to claim cREP tokens once.
-/// @dev Uses Self.xyz zero-knowledge passport verification for sybil resistance.
-///      One claim per passport nullifier (same passport can't claim twice).
+/// @notice Allows verified humans (via Self.xyz passport or biometric ID card verification) to claim cREP tokens once.
+/// @dev Uses Self.xyz zero-knowledge identity verification for sybil resistance.
+///      One claim per document nullifier (the same passport or biometric ID card can't claim twice).
 ///      This contract holds a pre-minted supply of 52M cREP for distribution.
 contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     using SafeERC20 for IERC20;
@@ -39,6 +39,10 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     /// @notice Minimum age required for verification (defense-in-depth, hub also enforces)
     uint256 public constant MINIMUM_AGE = 18;
+
+    /// @notice Allowed Self.xyz attestation IDs
+    bytes32 public constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
+    bytes32 public constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
 
     // --- State ---
 
@@ -125,6 +129,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
 
     /// @notice Thrown when the user does not meet the minimum age requirement (18+)
     error AgeTooYoung();
+
+    /// @notice Thrown when the proof was generated from an unsupported document type
+    error UnsupportedDocumentType();
 
     // --- Constructor ---
 
@@ -372,6 +379,11 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             revert InvalidUserIdentifier();
         }
 
+        // Defense-in-depth: allow only passports and biometric ID cards.
+        if (!_isSupportedAttestation(output.attestationId)) {
+            revert UnsupportedDocumentType();
+        }
+
         // Defense-in-depth: verify age (hub already enforces this, but double-check for legal safety)
         if (output.olderThan < MINIMUM_AGE) {
             revert AgeTooYoung();
@@ -478,5 +490,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
             padded[12 + i] = userData[i];
         }
         return abi.decode(padded, (address));
+    }
+
+    function _isSupportedAttestation(bytes32 attestationId) internal pure returns (bool) {
+        return attestationId == PASSPORT_ATTESTATION_ID || attestationId == BIOMETRIC_ID_CARD_ATTESTATION_ID;
     }
 }

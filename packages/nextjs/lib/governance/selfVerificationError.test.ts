@@ -2,6 +2,16 @@ import { resolveSelfVerificationErrorMessage } from "./selfVerificationError";
 import assert from "node:assert/strict";
 import test from "node:test";
 
+test("resolveSelfVerificationErrorMessage explains unsupported document types", () => {
+  assert.equal(
+    resolveSelfVerificationErrorMessage({
+      error_code: "UnsupportedDocumentType()",
+      reason: "Transaction failed with error: UnsupportedDocumentType()",
+    }),
+    "Use a passport or biometric ID card in Self.",
+  );
+});
+
 test("resolveSelfVerificationErrorMessage shows a clear underage message", () => {
   assert.equal(
     resolveSelfVerificationErrorMessage({
@@ -18,7 +28,7 @@ test("resolveSelfVerificationErrorMessage keeps the existing passport reuse guid
       error_code: "NullifierAlreadyUsed()",
       reason: "Transaction failed with error: NullifierAlreadyUsed()",
     }),
-    "This passport has already been used to verify. Each passport can only be used once.",
+    "This document has already been used to verify. Each passport or biometric ID card can only be used once.",
   );
 });
 

@@ -6,6 +6,11 @@ import { SelfAppBuilder } from "@selfxyz/qrcode";
 import type { SelfApp } from "@selfxyz/qrcode";
 import { useAccount } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import {
+  buildSelfVerificationAppConfig,
+  getSelfVerificationWebsocketUrl,
+  isSelfVerificationSupportedChain,
+} from "~~/lib/governance/selfVerificationApp";
 import { resolveSelfVerificationErrorMessage } from "~~/lib/governance/selfVerificationError";
 
 // Dynamically import SelfQRcodeWrapper to avoid SSR issues (it uses WebSocket + browser APIs)
@@ -22,16 +27,6 @@ interface SelfVerifyButtonProps {
   onSuccess: () => void;
 }
 
-const ENDPOINT_TYPES: Record<number, "celo" | "staging_celo"> = {
-  42220: "celo",
-  11142220: "staging_celo",
-};
-
-const SELF_WEBSOCKET_URLS: Record<number, string> = {
-  42220: "wss://websocket.self.xyz",
-  11142220: "wss://websocket.staging.self.xyz",
-};
-
 export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
   const { address, chain } = useAccount();
   const { data: contractInfo } = useDeployedContractInfo({ contractName: "HumanFaucet" });
@@ -44,36 +39,21 @@ export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
   }, []);
 
   useEffect(() => {
-    if (!address || !contractInfo?.address || !chain?.id) return;
+    if (!address || !contractInfo?.address || !chain?.id) {
+      setSelfApp(null);
+      return;
+    }
 
-    const endpointType = ENDPOINT_TYPES[chain.id];
-    if (!endpointType) return;
+    const appConfig = buildSelfVerificationAppConfig({
+      address,
+      contractAddress: contractInfo.address,
+      chainId: chain.id,
+    });
 
-    const app = new SelfAppBuilder({
-      appName: "Curyo",
-      scope: "curyo-faucet",
-      endpoint: contractInfo.address.toLowerCase(),
-      endpointType,
-      userId: address,
-      userIdType: "hex",
-      disclosures: {
-        minimumAge: 18,
-        ofac: true,
-        excludedCountries: [],
-        issuing_state: false,
-        name: false,
-        passport_number: false,
-        nationality: false,
-        date_of_birth: false,
-        gender: false,
-        expiry_date: false,
-      },
-    }).build();
-
-    setSelfApp(app);
+    setSelfApp(appConfig ? new SelfAppBuilder(appConfig).build() : null);
   }, [address, contractInfo?.address, chain?.id]);
 
-  if (!chain?.id || !ENDPOINT_TYPES[chain.id]) {
+  if (!isSelfVerificationSupportedChain(chain?.id)) {
     return (
       <div className="bg-error/10 border border-error/20 rounded-xl p-4 text-center">
         <p className="text-error font-medium">Unsupported network</p>
@@ -82,6 +62,11 @@ export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
         </p>
       </div>
     );
+  }
+
+  const websocketUrl = getSelfVerificationWebsocketUrl(chain.id);
+  if (!websocketUrl) {
+    return null;
   }
 
   if (!address) {
@@ -107,7 +92,7 @@ export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
         >
           Open Self App
         </a>
-        <p className="text-base text-base-content/60">Tap to open the Self app and verify your identity</p>
+        <p className="text-base text-base-content/60">Use a passport or biometric ID card in Self.</p>
       </div>
     );
   }
@@ -116,7 +101,7 @@ export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
     <div className="flex flex-col items-center gap-4">
       <SelfQRcodeWrapper
         selfApp={selfApp}
-        websocketUrl={SELF_WEBSOCKET_URLS[chain.id]}
+        websocketUrl={websocketUrl}
         onSuccess={onSuccess}
         onError={(error: any) => {
           console.error("Self.xyz verification error:", error);
@@ -130,7 +115,7 @@ export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
           <p className="text-error text-base">{errorMessage}</p>
         </div>
       )}
-      <p className="text-base text-base-content/60 text-center">Scan this QR code with the Self app on your phone</p>
+      <p className="text-base text-base-content/60 text-center">Use a passport or biometric ID card in Self.</p>
     </div>
   );
 }

@@ -168,7 +168,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       <div className="flex items-center gap-2">
         <GiftIcon className="w-6 h-6 text-primary" />
         <h2 className={surfaceSectionHeadingClassName}>cREP Faucet</h2>
-        <InfoTooltip text="Claim free cREP tokens by verifying your identity with Self.xyz passport scan" />
+        <InfoTooltip text="Claim free cREP with a Self.xyz passport or biometric ID card proof" />
       </div>
 
       {/* Referral Badge */}
@@ -245,6 +245,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
                 </a>{" "}
                 that you are a human
               </p>
+              <p className="text-base-content/60 text-base">Use a passport or biometric ID card.</p>
             </div>
 
             <SelfVerifyButton onSuccess={startPolling} />
@@ -276,7 +277,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       <div className="space-y-3">
         <h3 className="font-semibold">How it works</h3>
         <ol className="list-decimal list-inside space-y-2 text-base text-base-content/70">
-          <li>Install the Self app and scan your passport&apos;s NFC chip</li>
+          <li>Install the Self app and scan your passport or biometric ID card</li>
           <li>Scan the QR code above with the Self app</li>
           <li>Self generates a zero-knowledge proof — no personal data is shared</li>
           <li>The proof is verified on the blockchain and you receive your cREP + Voter ID</li>
@@ -287,9 +288,8 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       {/* Security note */}
       <div className="bg-warning/10 rounded-lg p-4 text-base text-base-content/60">
         <p>
-          <strong>Security &amp; Privacy:</strong> Your passport data never leaves your device. The Self.xyz app
-          processes everything locally on your phone to generate a zero-knowledge proof of human — only this
-          cryptographic proof is shared, not your personal information.
+          <strong>Security &amp; Privacy:</strong> Your document data never leaves your device. The Self.xyz app
+          processes everything locally on your phone to generate a zero-knowledge proof of human.
         </p>
       </div>
     </div>

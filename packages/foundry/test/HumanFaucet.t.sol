@@ -10,6 +10,10 @@ import { ISelfVerificationRoot } from "@selfxyz/contracts/contracts/interfaces/I
 
 /// @title HumanFaucet Test Suite
 contract HumanFaucetTest is Test {
+    bytes32 internal constant PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
+    bytes32 internal constant BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
+    bytes32 internal constant UNSUPPORTED_ATTESTATION_ID = bytes32(uint256(99));
+
     HumanFaucet public faucet;
     MockIdentityVerificationHub public mockHub;
     CuryoReputation public crepToken;
@@ -266,6 +270,7 @@ contract HumanFaucetTest is Test {
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
 
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user2));
         output.nullifier = nullifier;
         output.olderThan = 18;
@@ -276,6 +281,7 @@ contract HumanFaucetTest is Test {
 
     function test_Claim_RevertInvalidUserIdentifier() public {
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = 0;
         output.nullifier = 99999;
 
@@ -285,6 +291,7 @@ contract HumanFaucetTest is Test {
 
     function test_Claim_RevertUnauthorizedCaller() public {
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 12345;
 
@@ -422,11 +429,36 @@ contract HumanFaucetTest is Test {
 
     function test_Claim_RevertAgeTooYoung_ViaCustomOutput() public {
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user1));
         output.nullifier = 99999;
         output.olderThan = 15;
 
         vm.expectRevert(HumanFaucet.AgeTooYoung.selector);
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+    }
+
+    function test_Claim_SuccessWithBiometricIdCard() public {
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = BIOMETRIC_ID_CARD_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 77777;
+        output.olderThan = 18;
+
+        mockHub.simulateVerificationWithOutput(address(faucet), output);
+
+        assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
+        assertTrue(faucet.hasClaimed(user1));
+    }
+
+    function test_Claim_RevertUnsupportedDocumentType() public {
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
+        output.attestationId = UNSUPPORTED_ATTESTATION_ID;
+        output.userIdentifier = uint256(uint160(user1));
+        output.nullifier = 88888;
+        output.olderThan = 18;
+
+        vm.expectRevert(HumanFaucet.UnsupportedDocumentType.selector);
         mockHub.simulateVerificationWithOutput(address(faucet), output);
     }
 

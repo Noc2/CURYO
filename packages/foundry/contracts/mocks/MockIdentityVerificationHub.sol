@@ -7,11 +7,13 @@ import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.
 
 /// @title MockIdentityVerificationHub
 /// @notice Mock implementation of Self.xyz IdentityVerificationHub for local testing
-/// @dev Allows simulating passport verification without actual ZK proofs
+/// @dev Allows simulating passport or biometric ID card verification without actual ZK proofs
 contract MockIdentityVerificationHub {
     // --- Constants ---
 
     bytes32 public constant MOCK_CONFIG_ID = keccak256("mock-config");
+    bytes32 public constant MOCK_PASSPORT_ATTESTATION_ID = bytes32(uint256(1));
+    bytes32 public constant MOCK_BIOMETRIC_ID_CARD_ATTESTATION_ID = bytes32(uint256(2));
 
     // --- State ---
 
@@ -104,7 +106,7 @@ contract MockIdentityVerificationHub {
 
         // Build the GenericDiscloseOutputV2 output
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
-        output.attestationId = bytes32(0);
+        output.attestationId = MOCK_PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user));
         output.nullifier = userNullifiers[user];
         output.olderThan = 18; // Default to adult (18+) for standard test flow
@@ -141,7 +143,7 @@ contract MockIdentityVerificationHub {
 
         // Build the GenericDiscloseOutputV2 output
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
-        output.attestationId = bytes32(0);
+        output.attestationId = MOCK_PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user));
         output.nullifier = userNullifiers[user];
         output.olderThan = 18; // Default to adult (18+) for standard test flow
@@ -165,7 +167,7 @@ contract MockIdentityVerificationHub {
 
         // Build the GenericDiscloseOutputV2 output
         ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
-        output.attestationId = bytes32(0);
+        output.attestationId = MOCK_PASSPORT_ATTESTATION_ID;
         output.userIdentifier = uint256(uint160(user));
         output.nullifier = userNullifiers[user];
         output.olderThan = age;

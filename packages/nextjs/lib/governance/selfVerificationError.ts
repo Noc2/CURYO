@@ -10,12 +10,16 @@ function getSelfVerificationErrorCode(error: SelfVerificationError | null | unde
 export function resolveSelfVerificationErrorMessage(error: SelfVerificationError | null | undefined): string {
   const code = getSelfVerificationErrorCode(error);
 
+  if (code.includes("UnsupportedDocumentType")) {
+    return "Use a passport or biometric ID card in Self.";
+  }
+
   if (code.includes("AgeTooYoung")) {
     return "You must be at least 18 to claim from the faucet.";
   }
 
   if (code.includes("NullifierAlreadyUsed")) {
-    return "This passport has already been used to verify. Each passport can only be used once.";
+    return "This document has already been used to verify. Each passport or biometric ID card can only be used once.";
   }
 
   if (code.includes("InvalidUserIdentifier")) {
