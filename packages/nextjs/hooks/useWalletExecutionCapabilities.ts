@@ -1,21 +1,38 @@
 "use client";
 
 import { useMemo } from "react";
-import { useActiveAccount, useActiveWallet, useCapabilities } from "thirdweb/react";
+import { useActiveAccount, useActiveWallet, useActiveWalletChain, useCapabilities } from "thirdweb/react";
 import { useAccount } from "wagmi";
 import { getThirdwebWalletExecutionMode, supportsThirdwebExecutionCapabilities } from "~~/services/thirdweb/client";
 
 export type WalletExecutionMode = "sponsored_7702" | "external_send_calls" | "fee_currency" | "direct_celo";
 
+export function resolveWalletExecutionChainId(
+  wagmiChainId: number | null | undefined,
+  thirdwebChainId: number | null | undefined,
+) {
+  if (typeof wagmiChainId === "number") {
+    return wagmiChainId;
+  }
+
+  if (typeof thirdwebChainId === "number") {
+    return thirdwebChainId;
+  }
+
+  return undefined;
+}
+
 export function useWalletExecutionCapabilities() {
   const wallet = useActiveWallet();
   const thirdwebAccount = useActiveAccount();
-  const { chainId } = useAccount();
+  const activeWalletChain = useActiveWalletChain();
+  const { chainId: wagmiChainId } = useAccount();
+  const chainId = resolveWalletExecutionChainId(wagmiChainId, activeWalletChain?.id);
   const supportedChain = supportsThirdwebExecutionCapabilities(chainId);
   const { data: capabilities } = useCapabilities({
     chainId,
     queryOptions: {
-      enabled: Boolean(wallet) && supportedChain,
+      enabled: Boolean(wallet) && typeof chainId === "number" && supportedChain,
       retry: 0,
     },
   });
@@ -46,5 +63,5 @@ export function useWalletExecutionCapabilities() {
       supportsFeeCurrencyFallback: supportedChain,
       supportsSponsoredCalls: executionMode === "sponsored_7702" || executionMode === "external_send_calls",
     };
-  }, [capabilities, chainId, supportedChain, thirdwebAccount?.sendCalls, wallet]);
+  }, [activeWalletChain?.id, capabilities, chainId, supportedChain, thirdwebAccount?.sendCalls, wallet, wagmiChainId]);
 }

@@ -88,10 +88,9 @@ export function getPreferredThirdwebChainId(requestedChainId?: number): number {
 
 export function getThirdwebWalletExecutionMode(chainId: number): ThirdwebWalletExecutionMode {
   if (supportsThirdwebExecutionCapabilities(chainId)) {
-    // Social in-app wallets currently fail to sign 7702 authorizations on Celo
-    // with "No auth token found when signing message", so keep them in EOA mode.
     return {
-      mode: "EOA" as const,
+      mode: "EIP7702" as const,
+      sponsorGas: true,
     };
   }
 
