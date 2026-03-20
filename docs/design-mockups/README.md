@@ -48,5 +48,6 @@ This keeps the raster previews in sync with the editable SVG artwork.
 ## Notes
 
 - These are mock-ups only.
-- The canonical artwork for brand/banner use is `ai-sphere-obsidian-ember-fold-with-flare.svg`.
+- The canonical standalone brand artwork is `ai-sphere-obsidian-ember-fold-with-flare.svg`.
+- The composite README banner lives at `packages/nextjs/public/banner.svg`.
 - The other retained SVGs are archive references, not the primary brand asset.
