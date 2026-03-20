@@ -12,6 +12,7 @@ import { CategorySubmissionForm } from "~~/components/governance/CategorySubmiss
 import { FrontendRegistration } from "~~/components/governance/FrontendRegistration";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
+import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { serializeTags } from "~~/constants/categories";
@@ -24,11 +25,13 @@ import {
   resolveCanonicalDomain,
   useCategoryRegistry,
 } from "~~/hooks/useCategoryRegistry";
+import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
+import { getGasBalanceErrorMessage, isInsufficientFundsError } from "~~/lib/transactionErrors";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
@@ -135,6 +138,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 const SubmitPage: NextPage = () => {
   const { address } = useAccount();
   const { hasVoterId, isLoading: voterIdLoading } = useVoterIdNFT(address);
+  const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
   const { ratePercent, calculateBonus } = useParticipationRate();
   const submissionBonus = calculateBonus(10);
   const { requireAcceptance } = useTermsAcceptance();
@@ -376,6 +380,11 @@ const SubmitPage: NextPage = () => {
     setSubmitAttempted(true);
     if (!address || !registryInfo?.address) return;
 
+    if (isMissingGasBalance) {
+      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol));
+      return;
+    }
+
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
     const nextUrlError = getUrlValidationError(url);
@@ -467,7 +476,9 @@ const SubmitPage: NextPage = () => {
       setSubmitAttempted(false);
     } catch (e: unknown) {
       console.error("Submit failed:", e);
-      notification.error("Failed to submit content");
+      notification.error(
+        isInsufficientFundsError(e) ? getGasBalanceErrorMessage(nativeTokenSymbol) : "Failed to submit content",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -889,10 +900,12 @@ const SubmitPage: NextPage = () => {
                 )}
               </div>
 
+              {isMissingGasBalance && <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} />}
+
               <button
                 type="submit"
                 className="btn btn-submit w-full"
-                disabled={isSubmitting || isUrlAlreadySubmitted || urlCategoryMismatch}
+                disabled={isSubmitting || isUrlAlreadySubmitted || urlCategoryMismatch || isMissingGasBalance}
               >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">

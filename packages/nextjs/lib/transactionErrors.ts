@@ -1,0 +1,42 @@
+function collectErrorText(value: unknown, seen: Set<unknown>): string[] {
+  if (value === null || value === undefined) return [];
+
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return [String(value)];
+  }
+
+  if (typeof value !== "object") return [];
+  if (seen.has(value)) return [];
+  seen.add(value);
+
+  const parts: string[] = [];
+
+  if (value instanceof Error) {
+    parts.push(value.name, value.message);
+  }
+
+  for (const nested of Object.values(value as Record<string, unknown>)) {
+    parts.push(...collectErrorText(nested, seen));
+  }
+
+  return parts;
+}
+
+export function isInsufficientFundsError(error: unknown) {
+  const haystack = collectErrorText(error, new Set()).join(" ").toLowerCase();
+
+  return (
+    haystack.includes("insufficient funds") ||
+    haystack.includes("exceeds the balance of the account") ||
+    haystack.includes("gas * gas fee + value")
+  );
+}
+
+export function getGasBalanceErrorMessage(nativeTokenSymbol: string) {
+  return `Add some ${nativeTokenSymbol} for gas, then retry.`;
+}

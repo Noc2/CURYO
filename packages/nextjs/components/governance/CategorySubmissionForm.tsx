@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
+import { getGasBalanceErrorMessage, isInsufficientFundsError } from "~~/lib/transactionErrors";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -20,6 +23,7 @@ export const CategorySubmissionForm = () => {
   const { address } = useAccount();
   const wagmiConfig = useConfig();
   const { requireAcceptance } = useTermsAcceptance();
+  const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
 
   // Form state
   const [name, setName] = useState("");
@@ -71,6 +75,11 @@ export const CategorySubmissionForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!address || !categoryRegistryInfo?.address) return;
+
+    if (isMissingGasBalance) {
+      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol));
+      return;
+    }
 
     // Validate inputs
     if (!name.trim() || !domain.trim()) {
@@ -140,7 +149,11 @@ export const CategorySubmissionForm = () => {
       setSubcategories([""]);
     } catch (e: any) {
       console.error("Category submission failed:", e);
-      notification.error(e?.shortMessage || "Failed to submit category");
+      notification.error(
+        isInsufficientFundsError(e)
+          ? getGasBalanceErrorMessage(nativeTokenSymbol)
+          : e?.shortMessage || "Failed to submit category",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -287,12 +300,15 @@ export const CategorySubmissionForm = () => {
             </div>
           </div>
 
+          {isMissingGasBalance && <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} />}
+
           {/* Submit */}
           <button
             type="submit"
             className="btn btn-submit w-full"
             disabled={
               isSubmitting ||
+              isMissingGasBalance ||
               !hasEnoughBalance ||
               !!isDomainRegistered ||
               !name.trim() ||

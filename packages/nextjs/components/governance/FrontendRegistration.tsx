@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
 import { useAccount } from "wagmi";
+import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
+import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
+import { getGasBalanceErrorMessage, isInsufficientFundsError } from "~~/lib/transactionErrors";
 import scaffoldConfig from "~~/scaffold.config";
 import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
@@ -19,6 +22,7 @@ const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
  */
 export function FrontendRegistration() {
   const { address } = useAccount();
+  const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
@@ -132,8 +136,26 @@ export function FrontendRegistration() {
     return () => window.clearInterval(timer);
   }, [isExitPending]);
 
+  const ensureGasBalance = () => {
+    if (!isMissingGasBalance) {
+      return true;
+    }
+
+    notification.error(getGasBalanceErrorMessage(nativeTokenSymbol));
+    return false;
+  };
+
+  const notifyTransactionError = (error: unknown, fallback: string) => {
+    notification.error(
+      isInsufficientFundsError(error)
+        ? getGasBalanceErrorMessage(nativeTokenSymbol)
+        : (error as { shortMessage?: string } | undefined)?.shortMessage || fallback,
+    );
+  };
+
   const handleRegister = async () => {
     if (!address || !frontendRegistryInfo?.address) return;
+    if (!ensureGasBalance()) return;
 
     if (!canRegisterWithCurrentAddress) {
       notification.error("This wallet must hold a Voter ID directly before it can register as a frontend.");
@@ -171,7 +193,7 @@ export function FrontendRegistration() {
       refetchCuryo();
     } catch (e: any) {
       console.error("Registration failed:", e);
-      notification.error(e?.shortMessage || "Failed to register");
+      notifyTransactionError(e, "Failed to register");
     } finally {
       setIsRegistering(false);
     }
@@ -179,6 +201,7 @@ export function FrontendRegistration() {
 
   const handleDeregister = async () => {
     if (!address) return;
+    if (!ensureGasBalance()) return;
 
     setIsDeregistering(true);
     try {
@@ -193,7 +216,7 @@ export function FrontendRegistration() {
       refetchCuryo();
     } catch (e: any) {
       console.error("Deregister failed:", e);
-      notification.error(e?.shortMessage || "Failed to deregister");
+      notifyTransactionError(e, "Failed to deregister");
     } finally {
       setIsDeregistering(false);
     }
@@ -201,6 +224,7 @@ export function FrontendRegistration() {
 
   const handleCompleteDeregister = async () => {
     if (!address) return;
+    if (!ensureGasBalance()) return;
 
     setIsCompletingDeregister(true);
     try {
@@ -215,7 +239,7 @@ export function FrontendRegistration() {
       refetchCuryo();
     } catch (e: any) {
       console.error("Complete deregister failed:", e);
-      notification.error(e?.shortMessage || "Failed to complete deregistration");
+      notifyTransactionError(e, "Failed to complete deregistration");
     } finally {
       setIsCompletingDeregister(false);
     }
@@ -223,6 +247,7 @@ export function FrontendRegistration() {
 
   const handleClaimFees = async () => {
     if (!address || !hasFees) return;
+    if (!ensureGasBalance()) return;
 
     setIsClaiming(true);
     try {
@@ -234,7 +259,7 @@ export function FrontendRegistration() {
       refetchFees();
     } catch (e: any) {
       console.error("Claim failed:", e);
-      notification.error(e?.shortMessage || "Failed to claim fees");
+      notifyTransactionError(e, "Failed to claim fees");
     } finally {
       setIsClaiming(false);
     }
@@ -242,6 +267,7 @@ export function FrontendRegistration() {
 
   const handleClaimRoundFee = async (contentId: string, roundId: string, claimableFee: string) => {
     if (!address) return;
+    if (!ensureGasBalance()) return;
 
     const roundKey = `${contentId}-${roundId}`;
     setClaimingRoundKey(roundKey);
@@ -255,7 +281,7 @@ export function FrontendRegistration() {
       await Promise.all([refetchClaimableRoundFees(), refetchFees()]);
     } catch (e: any) {
       console.error("Frontend round fee claim failed:", e);
-      notification.error(e?.shortMessage || "Failed to credit round fee");
+      notifyTransactionError(e, "Failed to credit round fee");
     } finally {
       setClaimingRoundKey(current => (current === roundKey ? null : current));
     }
@@ -263,6 +289,7 @@ export function FrontendRegistration() {
 
   const handleClaimAllRoundFees = async () => {
     if (!address || claimableRoundFees.length === 0) return;
+    if (!ensureGasBalance()) return;
 
     setIsClaimingAllRoundFees(true);
     let claimedCount = 0;
@@ -330,6 +357,8 @@ export function FrontendRegistration() {
         </Link>
       </p>
 
+      {isMissingGasBalance && <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} />}
+
       <div className="rounded-2xl bg-base-300 p-4 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <p className="font-medium">This deployment&apos;s frontend code</p>
@@ -396,7 +425,9 @@ export function FrontendRegistration() {
           <button
             className="btn btn-submit w-full"
             onClick={handleRegister}
-            disabled={isRegistering || crepFormatted < STAKE_AMOUNT || !canRegisterWithCurrentAddress}
+            disabled={
+              isRegistering || isMissingGasBalance || crepFormatted < STAKE_AMOUNT || !canRegisterWithCurrentAddress
+            }
           >
             {isRegistering ? (
               <span className="flex items-center gap-2">
@@ -459,7 +490,7 @@ export function FrontendRegistration() {
                 <button
                   className="btn btn-submit btn-sm w-full"
                   onClick={handleClaimAllRoundFees}
-                  disabled={isClaimingAllRoundFees || isSlashed}
+                  disabled={isClaimingAllRoundFees || isMissingGasBalance || isSlashed}
                 >
                   {isClaimingAllRoundFees ? (
                     <span className="flex items-center gap-2">
@@ -502,7 +533,7 @@ export function FrontendRegistration() {
                           <button
                             className="btn btn-outline btn-primary btn-sm"
                             onClick={() => handleClaimRoundFee(item.contentId, item.roundId, item.claimableFee)}
-                            disabled={isClaimingRound || isClaimingAllRoundFees || isSlashed}
+                            disabled={isClaimingRound || isClaimingAllRoundFees || isMissingGasBalance || isSlashed}
                           >
                             {isClaimingRound ? <span className="loading loading-spinner loading-xs" /> : "Claim round"}
                           </button>
@@ -543,7 +574,7 @@ export function FrontendRegistration() {
               <button
                 className="btn btn-submit btn-sm"
                 onClick={handleClaimFees}
-                disabled={isClaiming || !hasFees || isExitPending}
+                disabled={isClaiming || isMissingGasBalance || !hasFees || isExitPending}
               >
                 {isClaiming ? <span className="loading loading-spinner loading-xs" /> : "Claim"}
               </button>
@@ -561,7 +592,7 @@ export function FrontendRegistration() {
                   <button
                     className="btn btn-outline btn-error btn-sm w-full"
                     onClick={handleCompleteDeregister}
-                    disabled={isCompletingDeregister || !canCompleteDeregister}
+                    disabled={isCompletingDeregister || isMissingGasBalance || !canCompleteDeregister}
                   >
                     {isCompletingDeregister ? (
                       <span className="loading loading-spinner loading-xs" />
@@ -580,7 +611,7 @@ export function FrontendRegistration() {
                   <button
                     className="btn btn-outline btn-error btn-sm w-full"
                     onClick={handleDeregister}
-                    disabled={isDeregistering}
+                    disabled={isDeregistering || isMissingGasBalance}
                   >
                     {isDeregistering ? <span className="loading loading-spinner loading-xs" /> : "Start Deregistration"}
                   </button>
