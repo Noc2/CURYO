@@ -47,7 +47,10 @@ export function createSignedSessionStore<Scope extends string>(config: SignedSes
           CREATE INDEX IF NOT EXISTS ${config.indexName}
           ON ${config.tableName} (wallet_address, scope, expires_at)
         `);
-      })();
+      })().catch(error => {
+        ensureTablePromise = null;
+        throw error;
+      });
     }
 
     await ensureTablePromise;
@@ -85,23 +88,28 @@ export function createSignedSessionStore<Scope extends string>(config: SignedSes
   async function verifySession(token: string | undefined, walletAddress: `0x${string}`, scope: Scope) {
     if (!token) return false;
 
-    await ensureTable();
+    try {
+      await ensureTable();
 
-    const now = Date.now();
-    const result = await dbClient.execute({
-      sql: `
-        SELECT token_hash
-        FROM ${config.tableName}
-        WHERE token_hash = ?
-          AND wallet_address = ?
-          AND scope = ?
-          AND expires_at > ?
-        LIMIT 1
-      `,
-      args: [hashSessionToken(token), walletAddress, scope, now],
-    });
+      const now = Date.now();
+      const result = await dbClient.execute({
+        sql: `
+          SELECT token_hash
+          FROM ${config.tableName}
+          WHERE token_hash = ?
+            AND wallet_address = ?
+            AND scope = ?
+            AND expires_at > ?
+          LIMIT 1
+        `,
+        args: [hashSessionToken(token), walletAddress, scope, now],
+      });
 
-    return result.rows.length > 0;
+      return result.rows.length > 0;
+    } catch (error) {
+      console.warn(`[signed-session] failed to verify ${config.tableName} session`, error);
+      return false;
+    }
   }
 
   function getSessionCookie(scope: Scope, session: SessionValue): SessionCookie {

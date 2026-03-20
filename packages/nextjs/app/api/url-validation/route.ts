@@ -18,6 +18,8 @@ interface ValidationResult {
   checkedAt: string;
 }
 
+type UrlValidationRow = typeof urlValidations.$inferSelect;
+
 function isNonNullString(value: string | null): value is string {
   return value !== null;
 }
@@ -70,7 +72,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ results: {} });
   }
 
-  const rows = await db.select().from(urlValidations).where(inArray(urlValidations.url, urls));
+  let rows: UrlValidationRow[] = [];
+  try {
+    rows = await db.select().from(urlValidations).where(inArray(urlValidations.url, urls));
+  } catch (error) {
+    console.warn("[url-validation] cache read failed, returning uncached results:", error);
+  }
 
   const results: Record<string, ValidationResult | null> = {};
   const rowMap = new Map(rows.map(r => [r.url, r]));
@@ -126,7 +133,12 @@ export async function POST(request: NextRequest) {
   const urls = normalizedUrls.filter(isNonNullString);
 
   // Fetch existing results
-  const existing = await db.select().from(urlValidations).where(inArray(urlValidations.url, urls));
+  let existing: UrlValidationRow[] = [];
+  try {
+    existing = await db.select().from(urlValidations).where(inArray(urlValidations.url, urls));
+  } catch (error) {
+    console.warn("[url-validation] cache read failed, validating without cache:", error);
+  }
   const existingMap = new Map(existing.map(r => [r.url, r]));
 
   const now = new Date();
@@ -155,23 +167,27 @@ export async function POST(request: NextRequest) {
   }
 
   // Upsert results into DB
-  for (const [url, isValid] of newResults) {
-    const info = detectPlatform(url);
-    const existingRow = existingMap.get(url);
+  try {
+    for (const [url, isValid] of newResults) {
+      const info = detectPlatform(url);
+      const existingRow = existingMap.get(url);
 
-    if (existingRow) {
-      await db
-        .update(urlValidations)
-        .set({ isValid, checkedAt: now, platform: info.type })
-        .where(eq(urlValidations.id, existingRow.id));
-    } else {
-      await db.insert(urlValidations).values({
-        url,
-        isValid,
-        platform: info.type,
-        checkedAt: now,
-      });
+      if (existingRow) {
+        await db
+          .update(urlValidations)
+          .set({ isValid, checkedAt: now, platform: info.type })
+          .where(eq(urlValidations.id, existingRow.id));
+      } else {
+        await db.insert(urlValidations).values({
+          url,
+          isValid,
+          platform: info.type,
+          checkedAt: now,
+        });
+      }
     }
+  } catch (error) {
+    console.warn("[url-validation] cache write failed, returning uncached results:", error);
   }
 
   // Build response

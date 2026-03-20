@@ -44,10 +44,20 @@ const FALLBACK_FINGERPRINT_HEADERS = [
   "cookie",
 ] as const;
 
+type RateLimitStore = Pick<typeof dbClient, "execute">;
+
+let rateLimitStore: RateLimitStore = dbClient;
+
+export function __setRateLimitStoreForTests(store: RateLimitStore | null) {
+  rateLimitStore = store ?? dbClient;
+  initPromise = null;
+  lastCleanup = 0;
+}
+
 async function ensureRateLimitTable() {
   if (!initPromise) {
     initPromise = (async () => {
-      await dbClient.execute(`
+      await rateLimitStore.execute(`
         CREATE TABLE IF NOT EXISTS api_rate_limits (
           key TEXT PRIMARY KEY,
           request_count INTEGER NOT NULL,
@@ -55,18 +65,21 @@ async function ensureRateLimitTable() {
           expires_at INTEGER NOT NULL
         )
       `);
-      await dbClient.execute(`
+      await rateLimitStore.execute(`
         CREATE INDEX IF NOT EXISTS api_rate_limits_expires_at_idx
         ON api_rate_limits (expires_at)
       `);
-      await dbClient.execute(`
+      await rateLimitStore.execute(`
         CREATE TABLE IF NOT EXISTS api_rate_limit_maintenance (
           name TEXT PRIMARY KEY,
           last_cleanup_started_at INTEGER NOT NULL,
           lease_expires_at INTEGER NOT NULL
         )
       `);
-    })();
+    })().catch(error => {
+      initPromise = null;
+      throw error;
+    });
   }
 
   await initPromise;
@@ -173,7 +186,7 @@ async function cleanupExpiredEntries(now: number) {
   lastCleanup = now;
 
   const leaseExpiresAt = now + CLEANUP_LEASE_MS;
-  const cleanupLease = await dbClient.execute({
+  const cleanupLease = await rateLimitStore.execute({
     sql: `
       INSERT INTO api_rate_limit_maintenance (name, last_cleanup_started_at, lease_expires_at)
       VALUES (?, ?, ?)
@@ -189,7 +202,7 @@ async function cleanupExpiredEntries(now: number) {
 
   if (cleanupLease.rows.length === 0) return;
 
-  await dbClient.execute({
+  await rateLimitStore.execute({
     sql: "DELETE FROM api_rate_limits WHERE expires_at <= ?",
     args: [now],
   });
@@ -220,26 +233,33 @@ export async function checkRateLimit(
     `${request.nextUrl.pathname}:${request.method.toUpperCase()}:${windowStartedAt}:${subject}`,
   );
 
-  await ensureRateLimitTable();
-  await cleanupExpiredEntries(now);
+  try {
+    await ensureRateLimitTable();
+    await cleanupExpiredEntries(now);
 
-  const result = await dbClient.execute({
-    sql: `
-      INSERT INTO api_rate_limits (key, request_count, window_started_at, expires_at)
-      VALUES (?, 1, ?, ?)
-      ON CONFLICT(key) DO UPDATE SET request_count = request_count + 1
-      RETURNING request_count
-    `,
-    args: [key, windowStartedAt, expiresAt],
-  });
+    const result = await rateLimitStore.execute({
+      sql: `
+        INSERT INTO api_rate_limits (key, request_count, window_started_at, expires_at)
+        VALUES (?, 1, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET request_count = request_count + 1
+        RETURNING request_count
+      `,
+      args: [key, windowStartedAt, expiresAt],
+    });
 
-  const requestCount = Number(result.rows[0]?.request_count ?? 0);
-  if (requestCount > config.limit) {
-    const retryAfter = Math.max(1, Math.ceil((expiresAt - now) / 1000));
+    const requestCount = Number(result.rows[0]?.request_count ?? 0);
+    if (requestCount > config.limit) {
+      const retryAfter = Math.max(1, Math.ceil((expiresAt - now) / 1000));
 
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
+  } catch (error) {
+    console.warn(
+      `[rate-limit] backing store unavailable for ${request.method.toUpperCase()} ${request.nextUrl.pathname}; allowing request`,
+      error,
     );
   }
 

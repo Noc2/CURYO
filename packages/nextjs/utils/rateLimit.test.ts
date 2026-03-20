@@ -46,6 +46,7 @@ beforeEach(async () => {
   env.NODE_ENV = "production";
   delete env.RATE_LIMIT_TRUSTED_IP_HEADERS;
   delete env.VERCEL;
+  rateLimit.__setRateLimitStoreForTests(null);
   await dbModule.dbClient.execute("DELETE FROM api_rate_limits");
   await dbModule.dbClient.execute("DELETE FROM api_rate_limit_maintenance");
 });
@@ -170,4 +171,22 @@ test("checkRateLimit scopes counters by HTTP method on the same path", async () 
 
   const limited = await rateLimit.checkRateLimit(getRequest, config);
   assert.equal(limited?.status, 429);
+});
+
+test("checkRateLimit fails open when the backing store is unavailable", async () => {
+  env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
+  rateLimit.__setRateLimitStoreForTests({
+    execute: async () => {
+      throw new Error("database offline");
+    },
+  });
+
+  const response = await rateLimit.checkRateLimit(
+    makeRequest("/api/image-proxy", "GET", {
+      "x-forwarded-for": "203.0.113.77",
+    }),
+    { limit: 1, windowMs: 60_000 },
+  );
+
+  assert.equal(response, null);
 });
