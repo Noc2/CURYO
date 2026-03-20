@@ -4,12 +4,14 @@ import { createThirdwebClient, defineChain } from "thirdweb";
 import type { AutoConnectProps } from "thirdweb/react";
 import type { UseConnectModalOptions } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
+import type { Wallet } from "thirdweb/wallets";
 import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
 import { publicEnv } from "~~/utils/env/public";
 
 const THIRDWEB_CONNECT_CHAIN_IDS = new Set([31337, 42220, 11142220]);
 const THIRDWEB_EXECUTION_CHAIN_IDS = new Set([42220, 11142220]);
 const THIRDWEB_ACTIVE_CHAIN_KEY = "thirdweb:active-chain";
+const THIRDWEB_SPONSORSHIP_MODE_KEY = "thirdweb:sponsorship-mode";
 const CURYO_THIRDWEB_ICON = "/favicon.svg";
 const CURYO_THIRDWEB_WORDMARK = "/curyo-thirdweb-lockup.svg";
 
@@ -19,8 +21,10 @@ type ThirdwebWalletExecutionMode =
     }
   | {
       mode: "EIP7702";
-      sponsorGas: true;
+      sponsorGas?: boolean;
     };
+
+type ThirdwebSponsorshipMode = "sponsored" | "self-funded";
 
 export function isThirdwebWalletChain(chainId: number | null | undefined): boolean {
   return typeof chainId === "number" && THIRDWEB_CONNECT_CHAIN_IDS.has(chainId);
@@ -86,11 +90,45 @@ export function getPreferredThirdwebChainId(requestedChainId?: number): number {
   return thirdwebDefaultChain.id;
 }
 
-export function getThirdwebWalletExecutionMode(chainId: number): ThirdwebWalletExecutionMode {
+export function getStoredThirdwebSponsorshipMode(): ThirdwebSponsorshipMode | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(THIRDWEB_SPONSORSHIP_MODE_KEY);
+    return rawValue === "sponsored" || rawValue === "self-funded" ? rawValue : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredThirdwebSponsorshipMode(mode: ThirdwebSponsorshipMode | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    if (!mode) {
+      window.localStorage.removeItem(THIRDWEB_SPONSORSHIP_MODE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(THIRDWEB_SPONSORSHIP_MODE_KEY, mode);
+  } catch {
+    // Ignore storage failures in private browsing / restricted environments.
+  }
+}
+
+export function getThirdwebWalletExecutionMode(
+  chainId: number,
+  options?: { sponsorshipMode?: ThirdwebSponsorshipMode | null },
+): ThirdwebWalletExecutionMode {
   if (supportsThirdwebExecutionCapabilities(chainId)) {
+    const sponsorshipMode = options?.sponsorshipMode ?? getStoredThirdwebSponsorshipMode() ?? "sponsored";
     return {
       mode: "EIP7702" as const,
-      sponsorGas: true,
+      ...(sponsorshipMode === "sponsored" ? { sponsorGas: true } : {}),
     };
   }
 
@@ -99,21 +137,41 @@ export function getThirdwebWalletExecutionMode(chainId: number): ThirdwebWalletE
   };
 }
 
+export function getThirdwebWalletSponsorshipMode(wallet: Wallet | null | undefined): ThirdwebSponsorshipMode | null {
+  if (!wallet || wallet.id !== "inApp") {
+    return null;
+  }
+
+  const walletConfig = wallet.getConfig() as { executionMode?: { mode?: string; sponsorGas?: boolean } } | undefined;
+  if (walletConfig?.executionMode?.mode === "EIP7702") {
+    return walletConfig.executionMode.sponsorGas ? "sponsored" : "self-funded";
+  }
+
+  return null;
+}
+
+export function createThirdwebInAppWallet(
+  chainId: number,
+  options?: { sponsorshipMode?: ThirdwebSponsorshipMode | null },
+) {
+  return inAppWallet({
+    auth: getThirdwebWalletAuthConfig(),
+    executionMode: getThirdwebWalletExecutionMode(chainId, options),
+    metadata: {
+      image: {
+        alt: "Curyo",
+        height: 100,
+        src: CURYO_THIRDWEB_WORDMARK,
+        width: 320,
+      },
+      name: "Curyo Wallet",
+    },
+  });
+}
+
 export function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
   return [
-    inAppWallet({
-      auth: getThirdwebWalletAuthConfig(),
-      executionMode: getThirdwebWalletExecutionMode(chainId),
-      metadata: {
-        image: {
-          alt: "Curyo",
-          height: 100,
-          src: CURYO_THIRDWEB_WORDMARK,
-          width: 320,
-        },
-        name: "Curyo Wallet",
-      },
-    }),
+    createThirdwebInAppWallet(chainId),
     createWallet("io.metamask"),
     createWallet("com.coinbase.wallet"),
     createWallet("me.rainbow"),

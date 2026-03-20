@@ -62,6 +62,10 @@ export function getPrimaryServerTargetNetwork(): SupportedTargetNetwork | null {
   return getServerTargetNetworks()?.[0] ?? null;
 }
 
+export function getServerTargetNetworkById(chainId: number): SupportedTargetNetwork | null {
+  return getServerTargetNetworks()?.find(network => network.id === chainId) ?? null;
+}
+
 export function getServerRpcOverrides(): Partial<Record<number, string>> {
   return RPC_OVERRIDES;
 }
@@ -97,4 +101,33 @@ export function getResendConfig() {
 
 export function getNotificationDeliverySecret(): string | undefined {
   return readEnv("NOTIFICATION_DELIVERY_SECRET");
+}
+
+export function getThirdwebClientId(): string | undefined {
+  return readEnv("NEXT_PUBLIC_THIRDWEB_CLIENT_ID");
+}
+
+export function getThirdwebServerVerifierSecret(): string | undefined {
+  return readEnv("THIRDWEB_SERVER_VERIFIER_SECRET");
+}
+
+export function getFreeTransactionLimit(): number {
+  const rawValue = readEnv("FREE_TRANSACTION_LIMIT");
+  const parsedValue = rawValue ? Number.parseInt(rawValue, 10) : Number.NaN;
+
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return 25;
+  }
+
+  return parsedValue;
+}
+
+export function getServerEnvironmentScope(): string {
+  return (
+    readEnv("APP_ENV") ??
+    readEnv("VERCEL_ENV") ??
+    readEnv("RAILWAY_ENVIRONMENT_NAME") ??
+    process.env.NODE_ENV ??
+    "development"
+  );
 }

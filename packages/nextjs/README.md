@@ -42,6 +42,7 @@ Key environment variables (see `.env.example` for the full list):
 | --------------------------------------- | ----------------------------------------------------------------------------- |
 | `NEXT_PUBLIC_ALCHEMY_API_KEY`           | Alchemy RPC provider key                                                      |
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Optional WalletConnect project ID for external wallet discovery               |
+| `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`        | thirdweb client ID for in-app wallets and sponsored transactions              |
 | `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
 | `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata                                   |
 | `DATABASE_URL`                          | SQLite/Turso database URL (required in production)                            |
@@ -51,6 +52,8 @@ Key environment variables (see `.env.example` for the full list):
 | `APP_URL`                               | Public app URL used in verification and email links                           |
 | `NOTIFICATION_DELIVERY_SECRET`          | Secret for the email delivery cron endpoint                                   |
 | `NEXT_PUBLIC_PONDER_URL`                | Public Ponder indexer URL (required in production)                            |
+| `THIRDWEB_SERVER_VERIFIER_SECRET`       | Shared secret used by the thirdweb server verifier webhook                    |
+| `FREE_TRANSACTION_LIMIT`                | Free sponsored app transactions per verified Voter ID (defaults to `25`)      |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
 | `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                                          |
 | `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                                                 |
@@ -59,6 +62,7 @@ Notes:
 
 - Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or `rpcOverrides[1]`. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-forwarded-for` and `x-real-ip`. Protected API routes still fail closed when no trusted client IP can be derived.
+- The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
 
 ## Project Structure
 

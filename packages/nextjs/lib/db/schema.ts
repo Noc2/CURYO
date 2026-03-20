@@ -146,3 +146,30 @@ export const apiRateLimits = sqliteTable("api_rate_limits", {
 });
 
 export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
+
+export const freeTransactionQuotas = sqliteTable(
+  "free_transaction_quotas",
+  {
+    identityKey: text("identity_key").primaryKey(),
+    voterIdTokenId: text("voter_id_token_id").notNull(),
+    chainId: integer("chain_id").notNull(),
+    environment: text("environment").notNull(),
+    lastWalletAddress: text("last_wallet_address").notNull(),
+    freeTxLimit: integer("free_tx_limit").notNull(),
+    freeTxUsed: integer("free_tx_used").notNull(),
+    exhaustedAt: integer("exhausted_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  table => ({
+    tokenChainEnvUnique: uniqueIndex("free_transaction_quotas_token_chain_env_unique").on(
+      table.voterIdTokenId,
+      table.chainId,
+      table.environment,
+    ),
+    chainUpdatedAtIdx: index("free_transaction_quotas_chain_updated_at_idx").on(table.chainId, table.updatedAt),
+  }),
+);
+
+export type FreeTransactionQuota = typeof freeTransactionQuotas.$inferSelect;
+export type NewFreeTransactionQuota = typeof freeTransactionQuotas.$inferInsert;

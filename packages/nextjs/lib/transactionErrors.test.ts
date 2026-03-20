@@ -1,4 +1,8 @@
-import { getGasBalanceErrorMessage, isInsufficientFundsError } from "./transactionErrors";
+import {
+  getGasBalanceErrorMessage,
+  isFreeTransactionExhaustedError,
+  isInsufficientFundsError,
+} from "./transactionErrors";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -25,7 +29,15 @@ test("formats a short gas guidance message", () => {
 
 test("formats sponsored-wallet gas guidance", () => {
   assert.equal(
-    getGasBalanceErrorMessage("CELO", { supportsSponsoredCalls: true }),
-    "Gas is usually sponsored for this wallet. If it still fails, add some CELO and retry.",
+    getGasBalanceErrorMessage("CELO", { canSponsorTransactions: true }),
+    "Gas is sponsored for now. If it still fails, add some CELO and retry.",
   );
+});
+
+test("detects exhausted free transaction verifier errors", () => {
+  const error = {
+    details: "Free transactions used up. Add CELO to continue.",
+  };
+
+  assert.equal(isFreeTransactionExhaustedError(error), true);
 });

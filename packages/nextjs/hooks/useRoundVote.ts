@@ -17,6 +17,7 @@ import {
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
 import { buildCommitVoteParams } from "~~/lib/contracts/roundVotingEngine";
+import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import { VOTE_COOLDOWN_SECONDS } from "~~/lib/vote/cooldown";
 import scaffoldConfig from "~~/scaffold.config";
 import { getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
@@ -30,6 +31,9 @@ interface RoundVoteParams {
 }
 
 function normalizeRoundVoteError(message: string) {
+  if (message.toLowerCase().includes("free transactions used up")) {
+    return "Free transactions used up. Add CELO to continue.";
+  }
   if (message.includes("CooldownActive")) {
     return `You already voted on this content within the last ${Math.round(VOTE_COOLDOWN_SECONDS / 3600)} hours. Try again after the cooldown ends.`;
   }
@@ -191,6 +195,10 @@ export function useRoundVote() {
       return true;
     } catch (e: any) {
       console.error("Round vote commit failed:", e);
+      if (isFreeTransactionExhaustedError(e)) {
+        setError("Free transactions used up. Add CELO to continue.");
+        return false;
+      }
       const parsedError = getParsedErrorWithAllAbis(e, targetNetwork.id as any);
       setError(normalizeRoundVoteError(parsedError || e?.shortMessage || e?.message || "Failed to submit vote"));
       return false;

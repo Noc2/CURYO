@@ -31,7 +31,11 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
-import { getGasBalanceErrorMessage, isInsufficientFundsError } from "~~/lib/transactionErrors";
+import {
+  getGasBalanceErrorMessage,
+  isFreeTransactionExhaustedError,
+  isInsufficientFundsError,
+} from "~~/lib/transactionErrors";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
 import { canonicalizeUrl, isSupportedVideoPlatform } from "~~/utils/platforms";
@@ -138,7 +142,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 const SubmitPage: NextPage = () => {
   const { address } = useAccount();
   const { hasVoterId, isResolved: voterIdResolved } = useVoterIdNFT(address);
-  const { isMissingGasBalance, nativeTokenSymbol, supportsSponsoredCalls } = useGasBalanceStatus();
+  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
   const { ratePercent, calculateBonus } = useParticipationRate();
   const submissionBonus = calculateBonus(10);
   const { requireAcceptance } = useTermsAcceptance();
@@ -382,7 +386,7 @@ const SubmitPage: NextPage = () => {
     if (!address || !registryInfo?.address) return;
 
     if (isMissingGasBalance) {
-      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls }));
+      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
       return;
     }
 
@@ -478,8 +482,8 @@ const SubmitPage: NextPage = () => {
     } catch (e: unknown) {
       console.error("Submit failed:", e);
       notification.error(
-        isInsufficientFundsError(e)
-          ? getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls })
+        isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)
+          ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
           : "Failed to submit content",
       );
     } finally {

@@ -11,7 +11,7 @@ export function useThirdwebWagmiSync() {
   const { targetNetwork } = useTargetNetwork();
 
   const syncWalletToWagmi = useCallback(
-    async (wallet: Wallet, fallbackChainId: number = targetNetwork.id) => {
+    async (wallet: Wallet, fallbackChainId: number = targetNetwork.id, options?: { reconnect?: boolean }) => {
       if (!thirdwebClient) {
         return;
       }
@@ -24,6 +24,7 @@ export function useThirdwebWagmiSync() {
       await connectAsync({
         chainId: wallet.getChain()?.id ?? fallbackChainId,
         connector,
+        isReconnecting: options?.reconnect,
         wallet,
       } as any);
     },

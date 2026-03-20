@@ -4,6 +4,7 @@ export const DOCS_NAV = [
     links: [
       { label: "Introduction", href: "/docs" },
       { label: "Getting Started", href: "/docs/getting-started" },
+      { label: "Funding Your Wallet", href: "/docs/funding-wallet" },
       { label: "Whitepaper", href: "/docs/whitepaper" },
     ],
   },

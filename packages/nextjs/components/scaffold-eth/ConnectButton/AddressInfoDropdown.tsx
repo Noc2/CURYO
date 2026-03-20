@@ -13,6 +13,7 @@ import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadline
 import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
 import { useClaimAll } from "~~/hooks/useClaimAll";
 import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
+import { useFreeTransactionAllowance } from "~~/hooks/useFreeTransactionAllowance";
 import { useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
@@ -120,6 +121,21 @@ function WalletBalanceText({
   return <div className={className}>{formatCrepAmount(liquidBalance)} cREP</div>;
 }
 
+function FreeTransactionAllowanceText({ className }: { className?: string }) {
+  const { isResolved, limit, remaining, verified } = useFreeTransactionAllowance();
+
+  if (!isResolved || !verified) {
+    return null;
+  }
+
+  return (
+    <div className={`flex items-center gap-1 text-xs text-base-content/50 ${className ?? ""}`}>
+      <span>{remaining} free tx</span>
+      <InfoTooltip text={`Verified wallets get ${limit} free app transactions. Add CELO for gas after that.`} />
+    </div>
+  );
+}
+
 function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
   const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
   const { claimAll, isClaiming, progress } = useClaimAll();
@@ -152,6 +168,7 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
   return (
     <>
       <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(liquidBalance)} cREP</div>
+      <FreeTransactionAllowanceText className="px-4 pl-12 text-left" />
       {showManualRevealLink ? (
         <div className="text-left px-4 pl-12">
           <Link
@@ -260,11 +277,14 @@ export const AddressInfoDropdown = ({
       </div>
       {inlineMenu ? <InlineWalletSummary address={address} crepBalance={crepBalance} /> : null}
       {!inlineMenu ? (
-        <WalletBalanceText
-          address={address}
-          crepBalance={crepBalance}
-          className="text-base text-base-content text-left px-4 pl-12"
-        />
+        <>
+          <WalletBalanceText
+            address={address}
+            crepBalance={crepBalance}
+            className="text-base text-base-content text-left px-4 pl-12"
+          />
+          <FreeTransactionAllowanceText className="px-4 pl-12 text-left" />
+        </>
       ) : null}
     </div>
   );
@@ -293,6 +313,7 @@ export const AddressInfoDropdown = ({
         crepBalance={crepBalance}
         className="text-base text-base-content hidden xl:inline xl:px-2"
       />
+      <FreeTransactionAllowanceText className="hidden xl:flex xl:px-2" />
     </div>
   );
 };

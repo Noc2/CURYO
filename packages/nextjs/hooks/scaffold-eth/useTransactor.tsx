@@ -1,7 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Hash, SendTransactionParameters, TransactionReceipt, WalletClient } from "viem";
 import { Config, useConfig, useWalletClient } from "wagmi";
 import { getPublicClient } from "wagmi/actions";
 import { SendTransactionMutate } from "wagmi/query";
+import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
 import scaffoldConfig from "~~/scaffold.config";
 import { AllowedChainIds, getBlockExplorerTxLink, notification } from "~~/utils/scaffold-eth";
 import { TransactorFuncOptions, getParsedErrorWithAllAbis } from "~~/utils/scaffold-eth/contract";
@@ -36,6 +38,7 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
   let walletClient = _walletClient;
   const { data } = useWalletClient();
   const runtimeConfig = useConfig();
+  const queryClient = useQueryClient();
   if (walletClient === undefined && data) {
     walletClient = data;
   }
@@ -78,6 +81,7 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
       // unreliable on local chains due to publicClient transport issues.
       if (chainId === 31337) {
         notification.remove(notificationId);
+        void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
         notification.success(
           <TxnNotification message="Transaction completed successfully!" blockExplorerLink={blockExplorerTxURL} />,
           {
@@ -106,6 +110,8 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
         },
       );
 
+      void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
+
       if (options?.onBlockConfirmation) options.onBlockConfirmation(transactionReceipt);
     } catch (error: any) {
       if (notificationId) {
@@ -120,6 +126,7 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
       }
 
       notification.error(message);
+      void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
       throw error;
     }
 

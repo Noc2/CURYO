@@ -10,7 +10,11 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
-import { getGasBalanceErrorMessage, isInsufficientFundsError } from "~~/lib/transactionErrors";
+import {
+  getGasBalanceErrorMessage,
+  isFreeTransactionExhaustedError,
+  isInsufficientFundsError,
+} from "~~/lib/transactionErrors";
 import scaffoldConfig from "~~/scaffold.config";
 import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
@@ -22,7 +26,7 @@ const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
  */
 export function FrontendRegistration() {
   const { address } = useAccount();
-  const { isMissingGasBalance, nativeTokenSymbol, supportsSponsoredCalls } = useGasBalanceStatus();
+  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
@@ -140,14 +144,14 @@ export function FrontendRegistration() {
       return true;
     }
 
-    notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls }));
+    notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
     return false;
   };
 
   const notifyTransactionError = (error: unknown, fallback: string) => {
     notification.error(
-      isInsufficientFundsError(error)
-        ? getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls })
+      isFreeTransactionExhaustedError(error) || isInsufficientFundsError(error)
+        ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
         : (error as { shortMessage?: string } | undefined)?.shortMessage || fallback,
     );
   };

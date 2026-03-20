@@ -37,9 +37,17 @@ export function isInsufficientFundsError(error: unknown) {
   );
 }
 
-export function getGasBalanceErrorMessage(nativeTokenSymbol: string, options?: { supportsSponsoredCalls?: boolean }) {
-  if (options?.supportsSponsoredCalls) {
-    return `Gas is usually sponsored for this wallet. If it still fails, add some ${nativeTokenSymbol} and retry.`;
+export function isFreeTransactionExhaustedError(error: unknown) {
+  const haystack = collectErrorText(error, new Set()).join(" ").toLowerCase();
+
+  return (
+    haystack.includes("free transactions used up") || haystack.includes("transactions are not sponsored right now")
+  );
+}
+
+export function getGasBalanceErrorMessage(nativeTokenSymbol: string, options?: { canSponsorTransactions?: boolean }) {
+  if (options?.canSponsorTransactions) {
+    return `Gas is sponsored for now. If it still fails, add some ${nativeTokenSymbol} and retry.`;
   }
 
   return `Add some ${nativeTokenSymbol} for gas, then retry.`;

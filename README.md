@@ -196,6 +196,7 @@ CI runs the smoke, lifecycle, and keeper-backed E2E suites separately, so `yarn 
 In-app documentation is available at `/docs` when running the frontend, covering:
 
 - Getting Started
+- Funding Your Wallet
 - How It Works
 - Tokenomics
 - Governance

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { NextPage } from "next";
 
 /* ---------- Reusable illustration wrapper ---------- */
@@ -142,7 +143,11 @@ const GettingStarted: NextPage = () => {
         the blind phase, and rewards can be claimed after settlement.
       </p>
       <p>
-        See <a href="/docs/how-it-works">How It Works</a> for blind voting, rewards, and round settlement details.
+        Verified wallets start with a limited number of free app transactions. After that, add CELO for gas. See{" "}
+        <Link href="/docs/funding-wallet">Funding Your Wallet</Link>.
+      </p>
+      <p>
+        See <Link href="/docs/how-it-works">How It Works</Link> for blind voting, rewards, and round settlement details.
       </p>
     </article>
   );

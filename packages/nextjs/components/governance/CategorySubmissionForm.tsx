@@ -18,7 +18,11 @@ import {
   useGovernanceStats,
   useGovernanceWrite,
 } from "~~/hooks/useGovernance";
-import { getGasBalanceErrorMessage, isInsufficientFundsError } from "~~/lib/transactionErrors";
+import {
+  getGasBalanceErrorMessage,
+  isFreeTransactionExhaustedError,
+  isInsufficientFundsError,
+} from "~~/lib/transactionErrors";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -31,7 +35,7 @@ export const CategorySubmissionForm = () => {
   const { address } = useAccount();
   const wagmiConfig = useConfig();
   const { requireAcceptance } = useTermsAcceptance();
-  const { isMissingGasBalance, nativeTokenSymbol, supportsSponsoredCalls } = useGasBalanceStatus();
+  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
   const { governorAddress, hasGovernorContract } = useGovernanceContracts();
   const { proposalThreshold } = useGovernanceStats();
   const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
@@ -109,7 +113,7 @@ export const CategorySubmissionForm = () => {
     if (!address || !categoryRegistryInfo?.address) return;
 
     if (isMissingGasBalance) {
-      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls }));
+      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
       return;
     }
 
@@ -239,8 +243,8 @@ export const CategorySubmissionForm = () => {
         }
       } else {
         notification.error(
-          isInsufficientFundsError(e)
-            ? getGasBalanceErrorMessage(nativeTokenSymbol, { supportsSponsoredCalls })
+          isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)
+            ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
             : e?.shortMessage || "Failed to submit category",
         );
       }

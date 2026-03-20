@@ -17,6 +17,7 @@ import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHead
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { notification } from "~~/utils/scaffold-eth";
 
@@ -188,6 +189,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
       void queryClient.invalidateQueries({ queryKey: ["wallet-crep-balance", address.toLowerCase()] });
     }
 
+    void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
     // Invalidate all queries so navbar balance updates immediately
     void queryClient.invalidateQueries();
     notification.success("cREP sent. Your wallet balance may take a few seconds to refresh.", { duration: 6000 });
