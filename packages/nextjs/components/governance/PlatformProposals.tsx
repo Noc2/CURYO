@@ -34,7 +34,7 @@ interface Category {
 }
 
 /**
- * Platform Proposals section showing pending platform submissions
+ * Platform approval surface for submitted platforms.
  */
 export function PlatformProposals() {
   const [filter, setFilter] = useState<FilterState>("all");
@@ -88,8 +88,14 @@ export function PlatformProposals() {
 
   return (
     <div className="surface-card rounded-2xl p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <h2 className={surfaceSectionHeadingClassName}>Platform Proposals</h2>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+        <div className="space-y-1">
+          <h2 className={surfaceSectionHeadingClassName}>Platform Approval</h2>
+          <p className="text-base text-base-content/60">Submit on Submit. Approve and vote here.</p>
+        </div>
+        <Link href="/submit#category" className="btn btn-ghost btn-sm">
+          Open Submit
+        </Link>
       </div>
 
       {/* Filter Tabs */}
@@ -132,9 +138,9 @@ export function PlatformProposals() {
       ) : !proposalsLoading && !error ? (
         <div className="text-center py-8">
           <GlobeAltIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
-          <p className="text-base-content/60 mb-2">No platform proposals yet</p>
+          <p className="text-base-content/60 mb-2">No platform submissions yet</p>
           <p className="text-base text-base-content/40">
-            <Link href="/submit?tab=category" className="link link-primary">
+            <Link href="/submit#category" className="link link-primary">
               Submit a new platform →
             </Link>
           </p>
@@ -143,18 +149,12 @@ export function PlatformProposals() {
 
       {/* Info Box */}
       <div className="mt-6 p-4 bg-base-200 rounded-xl">
-        <h3 className="text-base font-medium mb-2">How Platform Proposals Work</h3>
+        <h3 className="text-base font-medium mb-2">How It Works</h3>
         <ol className="text-base text-base-content/60 space-y-1 list-decimal list-inside">
-          <li>Submit a platform on the Submit page (100 cREP stake)</li>
-          <li>Sponsor an approval proposal from the Governance composer</li>
-          <li>The original submitter links the sponsored proposal from the same wallet that posted the stake</li>
-          <li>Community votes for 1 week (4% circulating supply quorum required)</li>
-          <li>If approved, stake is returned and platform is added</li>
-          <li>If rejected, stake is sent to the consensus reserve</li>
-          <li>
-            If the sponsor proposal is canceled or expires, the submitter can clear it, retry within 7 days, or cancel
-            and reclaim the stake after 7 days
-          </li>
+          <li>Submit a new platform on the Submit page.</li>
+          <li>Create or vote on the approval proposal here.</li>
+          <li>If approved, the stake is returned and the platform is added.</li>
+          <li>If rejected, the stake goes to the consensus reserve.</li>
         </ol>
       </div>
     </div>

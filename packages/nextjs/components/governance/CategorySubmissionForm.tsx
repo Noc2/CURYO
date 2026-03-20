@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { decodeEventLog, encodeFunctionData } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -10,6 +11,13 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
+import {
+  getProposalDescriptionHash,
+  governorAbi,
+  useGovernanceContracts,
+  useGovernanceStats,
+  useGovernanceWrite,
+} from "~~/hooks/useGovernance";
 import { getGasBalanceErrorMessage, isInsufficientFundsError } from "~~/lib/transactionErrors";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
@@ -24,6 +32,9 @@ export const CategorySubmissionForm = () => {
   const wagmiConfig = useConfig();
   const { requireAcceptance } = useTermsAcceptance();
   const { isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
+  const { governorAddress, hasGovernorContract } = useGovernanceContracts();
+  const { proposalThreshold } = useGovernanceStats();
+  const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
 
   // Form state
   const [name, setName] = useState("");
@@ -33,6 +44,8 @@ export const CategorySubmissionForm = () => {
 
   // Contract hooks
   const { data: categoryRegistryInfo } = useDeployedContractInfo({ contractName: "CategoryRegistry" });
+
+  const isCategoryRegistryDeployed = !!categoryRegistryInfo?.address;
 
   const { writeContractAsync: writeCRep } = useScaffoldWriteContract({ contractName: "CuryoReputation" });
   const { writeContractAsync: writeRegistry } = useScaffoldWriteContract({ contractName: "CategoryRegistry" });
@@ -44,6 +57,19 @@ export const CategorySubmissionForm = () => {
     args: [address],
   });
 
+  const { data: votingPowerRaw } = useScaffoldReadContract({
+    contractName: "CuryoReputation",
+    functionName: "getVotes" as any,
+    args: [address],
+    query: { enabled: !!address },
+  });
+
+  const { data: nextCategoryId, refetch: refetchNextCategoryId } = useScaffoldReadContract({
+    contractName: "CategoryRegistry",
+    functionName: "nextCategoryId" as any,
+    query: { enabled: isCategoryRegistryDeployed },
+  });
+
   // Check if domain is already registered
   const { data: isDomainRegistered } = useScaffoldReadContract({
     contractName: "CategoryRegistry",
@@ -52,7 +78,13 @@ export const CategorySubmissionForm = () => {
   });
 
   const hasEnoughBalance = crepBalance && crepBalance >= CATEGORY_STAKE;
-  const isCategoryRegistryDeployed = !!categoryRegistryInfo?.address;
+  const votingPower = votingPowerRaw as bigint | undefined;
+  const canAutoCreateProposal =
+    hasGovernorContract &&
+    !!governorAddress &&
+    proposalThreshold !== undefined &&
+    votingPower !== undefined &&
+    votingPower >= proposalThreshold;
 
   const addSubcategory = () => {
     if (subcategories.length < MAX_SUBCATEGORIES) {
@@ -113,6 +145,9 @@ export const CategorySubmissionForm = () => {
     if (!accepted) return;
 
     setIsSubmitting(true);
+    let categoryId = nextCategoryId ?? 1n;
+    let categorySubmitted = false;
+    let proposalCreated = false;
     try {
       // 1. Approve cREP spend
       const approveTxHash = await writeCRep({
@@ -134,14 +169,61 @@ export const CategorySubmissionForm = () => {
       }
 
       // 2. Submit category
-      await writeRegistry({
+      const submitTxHash = await writeRegistry({
         functionName: "submitCategory",
         args: [name.trim(), domain.trim().toLowerCase(), validSubcats],
       });
+      categorySubmitted = true;
+      if (submitTxHash) {
+        const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
+        const submittedLog = submitReceipt.logs.find(log => {
+          if (log.address.toLowerCase() !== categoryRegistryInfo.address.toLowerCase()) {
+            return false;
+          }
 
-      notification.success(
-        "Platform submitted. Next: have a sponsor create an approval proposal, then link it from this same wallet. If no proposal is linked within 7 days, you can cancel and reclaim your stake.",
-      );
+          try {
+            const decoded = decodeEventLog({
+              abi: categoryRegistryInfo.abi,
+              data: log.data,
+              topics: log.topics,
+            });
+            return decoded.eventName === "CategorySubmitted";
+          } catch {
+            return false;
+          }
+        });
+
+        if (submittedLog?.topics[1]) {
+          categoryId = BigInt(submittedLog.topics[1]);
+        }
+      }
+      await refetchNextCategoryId();
+
+      if (canAutoCreateProposal && governorAddress) {
+        const proposalDescription = `Approve category #${categoryId}`;
+        const approvalCalldata = encodeFunctionData({
+          abi: categoryRegistryInfo.abi,
+          functionName: "approveCategory",
+          args: [categoryId],
+        } as any);
+
+        await writeGovernanceContract({
+          address: governorAddress,
+          abi: governorAbi,
+          functionName: "propose",
+          args: [[categoryRegistryInfo.address], [0n], [approvalCalldata], proposalDescription],
+        });
+        proposalCreated = true;
+
+        await writeRegistry({
+          functionName: "linkApprovalProposal",
+          args: [categoryId, getProposalDescriptionHash(proposalDescription)],
+        });
+
+        notification.success("Platform submitted and proposal created.");
+      } else {
+        notification.success("Platform submitted. Create approval proposal next.");
+      }
 
       // Reset form
       setName("");
@@ -149,11 +231,19 @@ export const CategorySubmissionForm = () => {
       setSubcategories([""]);
     } catch (e: any) {
       console.error("Category submission failed:", e);
-      notification.error(
-        isInsufficientFundsError(e)
-          ? getGasBalanceErrorMessage(nativeTokenSymbol)
-          : e?.shortMessage || "Failed to submit category",
-      );
+      if (categorySubmitted) {
+        if (proposalCreated) {
+          notification.warning(`Platform submitted, but linking failed for category #${categoryId.toString()}.`);
+        } else {
+          notification.warning("Platform submitted. Approval proposal still needs to be created.");
+        }
+      } else {
+        notification.error(
+          isInsufficientFundsError(e)
+            ? getGasBalanceErrorMessage(nativeTokenSymbol)
+            : e?.shortMessage || "Failed to submit category",
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -298,6 +388,13 @@ export const CategorySubmissionForm = () => {
                 <span className="ml-1 text-base text-base-content/60">cREP</span>
               </div>
             </div>
+            {hasGovernorContract && (
+              <p className="text-sm text-base-content/60">
+                {canAutoCreateProposal
+                  ? "Approval proposal will be created automatically."
+                  : "Approval proposal comes next."}
+              </p>
+            )}
           </div>
 
           {isMissingGasBalance && <GasBalanceWarning nativeTokenSymbol={nativeTokenSymbol} />}

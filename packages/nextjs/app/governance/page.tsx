@@ -4,7 +4,6 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
-import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
 import { FaucetSection } from "~~/components/governance/FaucetSection";
 import { FrontendApprovalCard } from "~~/components/governance/FrontendApprovalCard";
 import { GovernanceActionComposer } from "~~/components/governance/GovernanceActionComposer";
@@ -17,9 +16,7 @@ import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats
 import { PublicProfileView } from "~~/components/profile/PublicProfileView";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
-import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { useGovernanceContracts } from "~~/hooks/useGovernance";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
 type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet";
@@ -44,7 +41,6 @@ function GovernancePageInner() {
   const [hashInitialized, setHashInitialized] = useState(false);
   const [referrer, setReferrer] = useState<string | null>(null);
   const autoSelectedEntryAddressRef = useRef<string | null>(null);
-  const { hasGovernorContract } = useGovernanceContracts();
 
   // Sync tab with URL hash (e.g. /governance#governance)
   const selectTab = useCallback((tab: GovernanceTab) => {
@@ -261,19 +257,8 @@ function GovernancePageInner() {
           <ProposalList />
           <div className="grid gap-6 xl:grid-cols-2">
             <PlatformProposals />
-            {hasGovernorContract ? (
-              <CategorySubmissionForm />
-            ) : (
-              <div className="surface-card rounded-2xl p-6">
-                <h2 className={`${surfaceSectionHeadingClassName} mb-2`}>Category Submission</h2>
-                <p className="text-base text-base-content/60">
-                  Category submissions are disabled on this network because they create a live governance proposal under
-                  the hood, and no deployed <code>CuryoGovernor</code> was detected.
-                </p>
-              </div>
-            )}
+            <FrontendApprovalCard />
           </div>
-          <FrontendApprovalCard />
         </div>
       )}
     </AppPageShell>
