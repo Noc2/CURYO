@@ -24,11 +24,11 @@ const TermsAcceptanceModal = dynamic(
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
     <>
-      <div className="flex h-[100dvh] flex-col overflow-hidden">
+      <div className="flex min-h-screen flex-col">
         <Header />
         {/* Main content: offset by left sidebar on desktop (224px at xl) */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden xl:pl-56">
-          <main className="relative flex flex-col flex-1 min-h-0 overflow-x-hidden overflow-y-auto">{children}</main>
+        <div className="flex flex-1 flex-col xl:pl-56">
+          <main className="relative flex flex-1 flex-col overflow-x-hidden">{children}</main>
           <Footer />
         </div>
       </div>
