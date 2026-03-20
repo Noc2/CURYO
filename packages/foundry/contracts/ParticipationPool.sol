@@ -76,6 +76,9 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Emitted when reserved rewards are withdrawn.
     event ReservedRewardWithdrawn(address indexed beneficiary, address indexed recipient, uint256 amount);
 
+    /// @notice Emitted when reserved rewards are released back into the pool.
+    event ReservedRewardReleased(address indexed beneficiary, uint256 amount, uint256 totalDistributedAfter);
+
     // --- Modifiers ---
 
     modifier onlyAuthorized() {
@@ -242,6 +245,21 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
         crepToken.safeTransfer(recipient, paidAmount);
 
         emit ReservedRewardWithdrawn(msg.sender, recipient, paidAmount);
+    }
+
+    /// @inheritdoc IParticipationPool
+    function releaseReservedReward(uint256 amount) external nonReentrant returns (uint256 releasedAmount) {
+        uint256 reservedForBeneficiary = reservedRewards[msg.sender];
+        require(amount <= reservedForBeneficiary, "Insufficient reserved reward");
+        if (amount == 0) return 0;
+
+        reservedRewards[msg.sender] = reservedForBeneficiary - amount;
+        reservedBalance -= amount;
+        poolBalance += amount;
+        totalDistributed -= amount;
+
+        emit ReservedRewardReleased(msg.sender, amount, totalDistributed);
+        return amount;
     }
 
     /// @dev Internal distribution logic — caps at remaining pool balance

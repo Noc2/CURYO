@@ -190,6 +190,13 @@ contract RoundIntegrationTest is VotingTestBase {
         returns (bytes32 ch, bytes32 ck)
     {
         bytes32 salt = keccak256(abi.encodePacked(voter, contentId, isUp, block.timestamp));
+        return _commitWithSalt(voter, contentId, isUp, stakeAmount, salt);
+    }
+
+    function _commitWithSalt(address voter, uint256 contentId, bool isUp, uint256 stakeAmount, bytes32 salt)
+        internal
+        returns (bytes32 ch, bytes32 ck)
+    {
         ch = _commitHash(isUp, salt, contentId);
         bytes memory ct = _testCiphertext(isUp, salt, contentId);
 
@@ -1947,6 +1954,135 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.prank(voter1);
         vm.expectRevert(RoundRewardDistributor.AlreadyClaimed.selector);
         rewardDistributor.claimParticipationReward(contentId, roundId);
+    }
+
+    function test_FinalizeParticipationRewards_ReleasesRoundingDust() public {
+        ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 1_000_000e6);
+        crepToken.approve(address(pool), 1_000_000e6);
+        pool.depositPool(1_000_000e6);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+        bytes32 salt1 = keccak256("dust-voter1");
+        bytes32 salt2 = keccak256("dust-voter2");
+        bytes32 salt3 = keccak256("dust-voter3");
+
+        (, bytes32 commitKey1) = _commitWithSalt(voter1, contentId, true, 1_000_001, salt1);
+        (, bytes32 commitKey2) = _commitWithSalt(voter2, contentId, true, 1_000_001, salt2);
+        (, bytes32 commitKey3) = _commitWithSalt(voter3, contentId, false, 1_000_000, salt3);
+
+        uint256 roundId = _getActiveOrLatestRoundId(contentId);
+
+        vm.warp(block.timestamp + EPOCH_DURATION + 1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey1, true, salt1);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey2, true, salt2);
+        votingEngine.revealVoteByCommitKey(contentId, roundId, commitKey3, false, salt3);
+        votingEngine.settleRound(contentId, roundId);
+
+        assertEq(
+            rewardDistributor.roundParticipationRewardReserved(contentId, roundId),
+            1_800_001,
+            "round should reserve the floored aggregate reward"
+        );
+
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        vm.prank(voter2);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        assertEq(pool.reservedRewards(address(rewardDistributor)), 1, "one dust unit should remain reserved");
+        assertEq(
+            rewardDistributor.roundParticipationRewardPaidTotal(contentId, roundId),
+            1_800_000,
+            "paid total should equal the sum of per-voter rewards"
+        );
+
+        uint256 poolBalanceBeforeFinalize = pool.poolBalance();
+        uint256 totalDistributedBeforeFinalize = pool.totalDistributed();
+
+        uint256 releasedDust = rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+
+        assertEq(releasedDust, 1, "finalization should release the rounding dust");
+        assertEq(pool.reservedRewards(address(rewardDistributor)), 0, "released dust should no longer stay reserved");
+        assertEq(pool.reservedBalance(), 0, "all reserved rewards should now be withdrawn or released");
+        assertEq(pool.poolBalance(), poolBalanceBeforeFinalize + 1, "released dust should return to the pool");
+        assertEq(
+            pool.totalDistributed(),
+            totalDistributedBeforeFinalize - 1,
+            "released dust should no longer count as distributed"
+        );
+        assertEq(
+            rewardDistributor.roundParticipationRewardReserved(contentId, roundId),
+            1_800_000,
+            "round snapshot should drop the released dust"
+        );
+        assertTrue(
+            rewardDistributor.roundParticipationRewardFinalized(contentId, roundId),
+            "round should be marked finalized after dust release"
+        );
+    }
+
+    function test_FinalizeParticipationRewards_RevertsUntilWinnersFullyPaid() public {
+        ParticipationPool pool = new ParticipationPool(address(crepToken), owner);
+        pool.setAuthorizedCaller(address(rewardDistributor), true);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 4e6);
+        crepToken.approve(address(pool), 4e6);
+        pool.depositPool(4e6);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool));
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](3);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        voters[2] = voter3;
+        bool[] memory dirs = new bool[](3);
+        dirs[0] = true;
+        dirs[1] = true;
+        dirs[2] = false;
+
+        uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
+
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        vm.prank(voter2);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        vm.expectRevert(RoundRewardDistributor.ParticipationRewardsOutstanding.selector);
+        rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+
+        vm.startPrank(owner);
+        crepToken.mint(owner, 5e6);
+        crepToken.approve(address(pool), 5e6);
+        pool.depositPool(5e6);
+        rewardDistributor.backfillParticipationRewards(contentId, roundId, address(pool), 9000);
+        vm.stopPrank();
+
+        vm.prank(voter1);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+        vm.prank(voter2);
+        rewardDistributor.claimParticipationReward(contentId, roundId);
+
+        uint256 releasedDust = rewardDistributor.finalizeParticipationRewards(contentId, roundId);
+
+        assertEq(releasedDust, 0, "no dust should be released when reservations equal total claims");
+        assertEq(
+            rewardDistributor.roundParticipationRewardFullyClaimedCount(contentId, roundId),
+            2,
+            "finalization should only unlock after both winners are fully paid"
+        );
+        assertTrue(
+            rewardDistributor.roundParticipationRewardFinalized(contentId, roundId),
+            "round should still be finalizable when the released dust is zero"
+        );
     }
 
     function test_ClaimParticipationReward_LegacyRoundCanBeBackfilled() public {

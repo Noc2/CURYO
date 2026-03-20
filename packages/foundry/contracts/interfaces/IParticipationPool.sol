@@ -38,4 +38,10 @@ interface IParticipationPool {
     /// @param amount The amount to withdraw.
     /// @return paidAmount The amount withdrawn.
     function withdrawReservedReward(address recipient, uint256 amount) external returns (uint256 paidAmount);
+
+    /// @notice Release part of the caller's reserved reward back into the pool.
+    /// @dev Used when snapshotted rewards include unclaimable rounding dust.
+    /// @param amount The amount to release.
+    /// @return releasedAmount The amount released back into the pool.
+    function releaseReservedReward(uint256 amount) external returns (uint256 releasedAmount);
 }

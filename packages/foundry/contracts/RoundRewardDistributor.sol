@@ -38,6 +38,8 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error TreasuryNotSet();
     error InvalidParticipationSnapshot();
     error UnauthorizedCaller();
+    error ParticipationRewardsOutstanding();
+    error ParticipationRewardsAlreadyFinalized();
 
     // --- State ---
     IERC20 public crepToken;
@@ -64,6 +66,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardRateBps;
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardOwed;
     mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardReserved;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardPaidTotal;
+    mapping(uint256 => mapping(uint256 => uint256)) public roundParticipationRewardFullyClaimedCount;
+    mapping(uint256 => mapping(uint256 => bool)) public roundParticipationRewardFinalized;
 
     // --- Events ---
     event RewardClaimed(
@@ -94,6 +99,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 rewardRateBps,
         uint256 totalReward,
         uint256 reservedReward
+    );
+    event ParticipationRewardFinalized(
+        uint256 indexed contentId, uint256 indexed roundId, address indexed rewardPool, uint256 releasedDust
     );
     event StrandedCrepSwept(address indexed treasury, uint256 amount);
 
@@ -318,6 +326,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 reward = commit.stakeAmount * rateBps / 10000;
         if (reward == 0) {
             participationRewardClaimed[contentId][roundId][voter] = true;
+            roundParticipationRewardFullyClaimedCount[contentId][roundId] += 1;
             return 0;
         }
 
@@ -336,11 +345,46 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         uint256 totalPaid = alreadyPaid + paidReward;
         participationRewardPaid[contentId][roundId][voter] = totalPaid;
+        roundParticipationRewardPaidTotal[contentId][roundId] += paidReward;
         if (totalPaid == reward) {
             participationRewardClaimed[contentId][roundId][voter] = true;
+            roundParticipationRewardFullyClaimedCount[contentId][roundId] += 1;
         }
 
         emit ParticipationRewardClaimed(contentId, roundId, voter, paidReward);
+    }
+
+    /// @notice Release any unclaimable participation-reward dust after every winning voter is fully paid.
+    /// @dev Permissionless so old rounds can be cleaned up without admin intervention.
+    function finalizeParticipationRewards(uint256 contentId, uint256 roundId)
+        external
+        nonReentrant
+        returns (uint256 releasedDust)
+    {
+        if (roundParticipationRewardFinalized[contentId][roundId]) revert ParticipationRewardsAlreadyFinalized();
+
+        RoundLib.Round memory round = _readRound(contentId, roundId);
+        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+
+        uint256 winnerCount = round.upWins ? round.upCount : round.downCount;
+        if (roundParticipationRewardFullyClaimedCount[contentId][roundId] != winnerCount) {
+            revert ParticipationRewardsOutstanding();
+        }
+
+        address rewardPoolAddress = roundParticipationRewardPool[contentId][roundId];
+        if (rewardPoolAddress == address(0)) revert NoPool();
+
+        uint256 reservedReward = roundParticipationRewardReserved[contentId][roundId];
+        uint256 paidTotal = roundParticipationRewardPaidTotal[contentId][roundId];
+        releasedDust = reservedReward > paidTotal ? reservedReward - paidTotal : 0;
+
+        roundParticipationRewardFinalized[contentId][roundId] = true;
+        if (releasedDust > 0) {
+            IParticipationPool(rewardPoolAddress).releaseReservedReward(releasedDust);
+            roundParticipationRewardReserved[contentId][roundId] = reservedReward - releasedDust;
+        }
+
+        emit ParticipationRewardFinalized(contentId, roundId, rewardPoolAddress, releasedDust);
     }
 
     // --- Internal ---
@@ -448,6 +492,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     ) internal returns (uint256 totalReward, uint256 reservedReward) {
         if (rewardPool == address(0)) revert NoPool();
         if (rewardRateBps == 0) revert NoParticipationRate();
+        if (roundParticipationRewardFinalized[contentId][roundId]) revert InvalidParticipationSnapshot();
 
         address existingRewardPool = roundParticipationRewardPool[contentId][roundId];
         if (existingRewardPool != address(0) && existingRewardPool != rewardPool) {
@@ -478,5 +523,5 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     }
 
     // --- Storage Gap for Future Upgrades ---
-    uint256[41] private __gap;
+    uint256[38] private __gap;
 }

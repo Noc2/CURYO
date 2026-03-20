@@ -155,6 +155,23 @@ contract ParticipationPoolBranchesTest is Test {
         assertEq(pool.reservedBalance(), 2e6);
     }
 
+    function test_ReleaseReservedReward_RestoresPoolAccounting() public {
+        vm.prank(authorizedCaller);
+        pool.reserveReward(authorizedCaller, 5e6);
+
+        uint256 poolBalanceBeforeRelease = pool.poolBalance();
+        uint256 totalDistributedBeforeRelease = pool.totalDistributed();
+
+        vm.prank(authorizedCaller);
+        uint256 released = pool.releaseReservedReward(2e6);
+
+        assertEq(released, 2e6);
+        assertEq(pool.reservedRewards(authorizedCaller), 3e6);
+        assertEq(pool.reservedBalance(), 3e6);
+        assertEq(pool.poolBalance(), poolBalanceBeforeRelease + 2e6);
+        assertEq(pool.totalDistributed(), totalDistributedBeforeRelease - 2e6);
+    }
+
     // =========================================================================
     // Authorization / ownership
     // =========================================================================
