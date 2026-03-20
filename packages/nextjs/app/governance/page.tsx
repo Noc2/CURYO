@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { CategorySubmissionForm } from "~~/components/governance/CategorySubmissionForm";
@@ -39,8 +39,11 @@ function normalizeGovernanceHash(hash: string): GovernanceTab | null {
 
 function GovernancePageInner() {
   const { isConnected, address } = useAccount();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<GovernanceTab>("profile");
+  const [hashInitialized, setHashInitialized] = useState(false);
+  const [hasExplicitHash, setHasExplicitHash] = useState(false);
   const [referrer, setReferrer] = useState<string | null>(null);
   const autoSelectedEntryAddressRef = useRef<string | null>(null);
   const { hasGovernorContract } = useGovernanceContracts();
@@ -56,6 +59,8 @@ function GovernancePageInner() {
     const applyHash = () => {
       const rawHash = window.location.hash.replace(/^#/, "");
       const nextTab = normalizeGovernanceHash(rawHash);
+      setHasExplicitHash(rawHash.length > 0);
+      setHashInitialized(true);
 
       if (nextTab) {
         setActiveTab(nextTab);
@@ -98,14 +103,17 @@ function GovernancePageInner() {
   const hasResolvedBalance = !!address && !crepBalanceLoading && crepBalance !== undefined;
   const hasZeroBalance = hasResolvedBalance && crepBalance === 0n;
   const addressKey = address?.toLowerCase() ?? null;
-  const faucetOnly = Boolean(address) && !voterIdLoading && !hasVoterId;
+  const shouldWaitForEntryRouting = Boolean(address) && (!hashInitialized || voterIdLoading);
+  const shouldRedirectToDiscover =
+    Boolean(address) && hashInitialized && !hasExplicitHash && !voterIdLoading && hasVoterId;
+  const faucetOnly = Boolean(address) && hashInitialized && !voterIdLoading && !hasVoterId;
 
   useEffect(() => {
     autoSelectedEntryAddressRef.current = null;
   }, [addressKey]);
 
   useEffect(() => {
-    if (!addressKey || !hasResolvedBalance || voterIdLoading) {
+    if (!addressKey || !hashInitialized || !hasResolvedBalance || voterIdLoading || shouldRedirectToDiscover) {
       return;
     }
 
@@ -125,10 +133,30 @@ function GovernancePageInner() {
     }
 
     autoSelectedEntryAddressRef.current = addressKey;
-  }, [addressKey, faucetOnly, hasResolvedBalance, selectTab, voterIdLoading]);
+  }, [
+    addressKey,
+    faucetOnly,
+    hasResolvedBalance,
+    hashInitialized,
+    selectTab,
+    shouldRedirectToDiscover,
+    voterIdLoading,
+  ]);
+
+  useEffect(() => {
+    if (!shouldRedirectToDiscover) {
+      return;
+    }
+
+    router.replace("/vote");
+  }, [router, shouldRedirectToDiscover]);
 
   // Update tab when balance changes
   useEffect(() => {
+    if (!hashInitialized || shouldRedirectToDiscover) {
+      return;
+    }
+
     if (faucetOnly) {
       if (activeTab !== "faucet") {
         selectTab("faucet");
@@ -150,7 +178,7 @@ function GovernancePageInner() {
     if (!hasZeroBalance && activeTab === "faucet") {
       selectTab(hashTab && hashTab !== "faucet" ? hashTab : "profile");
     }
-  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, selectTab]);
+  }, [faucetOnly, hasResolvedBalance, hasZeroBalance, activeTab, hashInitialized, selectTab, shouldRedirectToDiscover]);
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
@@ -159,6 +187,19 @@ function GovernancePageInner() {
         <p className="text-base-content/60 mb-6 text-center">Connect your wallet to participate</p>
         <CuryoConnectButton />
       </div>
+    );
+  }
+
+  if (shouldWaitForEntryRouting || shouldRedirectToDiscover) {
+    return (
+      <AppPageShell contentClassName="space-y-6">
+        <div className="flex min-h-[40vh] flex-col items-center justify-center px-4 text-center">
+          <span className="loading loading-spinner loading-lg text-primary" />
+          <p className="mt-4 text-sm text-base-content/60">
+            {shouldRedirectToDiscover ? "Opening Discover..." : "Checking Voter ID..."}
+          </p>
+        </div>
+      </AppPageShell>
     );
   }
 
