@@ -1,12 +1,35 @@
 import { NetworkOptions } from "./NetworkOptions";
+import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
 import { ArrowLeftOnRectangleIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
+import { useCuryoSwitchNetwork } from "~~/hooks/useCuryoSwitchNetwork";
+import { getTargetNetworks } from "~~/utils/scaffold-eth";
 
 export const WrongNetworkDropdown = () => {
   const disconnect = useCuryoDisconnect();
+  const { switchToChain, switchingChainId } = useCuryoSwitchNetwork();
+  const allowedNetworks = getTargetNetworks();
+
+  if (allowedNetworks.length === 1) {
+    const [targetNetwork] = allowedNetworks;
+
+    return (
+      <button
+        className="btn btn-error btn-sm mr-2 gap-2"
+        disabled={switchingChainId === targetNetwork.id}
+        onClick={() => {
+          void switchToChain(targetNetwork.id);
+        }}
+        type="button"
+      >
+        <ArrowsRightLeftIcon className="h-5 w-5" />
+        <span>{switchingChainId === targetNetwork.id ? "Switching..." : "Switch network"}</span>
+      </button>
+    );
+  }
 
   return (
-    <div className="dropdown dropdown-end mr-2">
+    <div className="dropdown dropdown-top dropdown-end mr-2">
       <label tabIndex={0} className="btn btn-error btn-sm dropdown-toggle gap-1">
         <span>Wrong network</span>
         <ChevronDownIcon className="h-6 w-4 ml-2 sm:ml-0" />

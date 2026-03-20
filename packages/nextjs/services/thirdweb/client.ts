@@ -30,8 +30,13 @@ export const thirdwebClient = publicEnv.thirdwebClientId
 export const thirdwebSupportedChains = publicEnv.targetNetworks
   .filter(network => isThirdwebWalletChain(network.id))
   .map(network => defineChain(network));
+const thirdwebSupportedChainIds = new Set(thirdwebSupportedChains.map(chain => chain.id));
 
 export const thirdwebDefaultChain = thirdwebSupportedChains[0] ?? defineChain(publicEnv.targetNetworks[0]);
+
+function isConfiguredThirdwebWalletChain(chainId: number | null | undefined): chainId is number {
+  return typeof chainId === "number" && thirdwebSupportedChainIds.has(chainId);
+}
 
 function getStoredThirdwebChainId() {
   if (typeof window === "undefined") {
@@ -45,19 +50,27 @@ function getStoredThirdwebChainId() {
     }
 
     const parsedValue = JSON.parse(rawValue) as { id?: number };
-    return typeof parsedValue.id === "number" ? parsedValue.id : undefined;
+    if (isConfiguredThirdwebWalletChain(parsedValue.id)) {
+      return parsedValue.id;
+    }
+
+    if (typeof parsedValue.id === "number") {
+      window.localStorage.removeItem(THIRDWEB_ACTIVE_CHAIN_KEY);
+    }
+
+    return undefined;
   } catch {
     return undefined;
   }
 }
 
 export function getPreferredThirdwebChainId(requestedChainId?: number): number {
-  if (isThirdwebWalletChain(requestedChainId)) {
+  if (isConfiguredThirdwebWalletChain(requestedChainId)) {
     return requestedChainId as number;
   }
 
   const storedChainId = getStoredThirdwebChainId();
-  if (isThirdwebWalletChain(storedChainId)) {
+  if (isConfiguredThirdwebWalletChain(storedChainId)) {
     return storedChainId as number;
   }
 
