@@ -6,6 +6,7 @@ import { SelfAppBuilder } from "@selfxyz/qrcode";
 import type { SelfApp } from "@selfxyz/qrcode";
 import { useAccount } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+import { resolveSelfVerificationErrorMessage } from "~~/lib/governance/selfVerificationError";
 
 // Dynamically import SelfQRcodeWrapper to avoid SSR issues (it uses WebSocket + browser APIs)
 const SelfQRcodeWrapper = dynamic(() => import("@selfxyz/qrcode").then(mod => mod.SelfQRcodeWrapper), {
@@ -119,16 +120,7 @@ export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
         onSuccess={onSuccess}
         onError={(error: any) => {
           console.error("Self.xyz verification error:", error);
-          const code = error?.error_code || error?.reason || "";
-          if (code.includes("NullifierAlreadyUsed")) {
-            setErrorMessage("This passport has already been used to verify. Each passport can only be used once.");
-          } else if (code.includes("InvalidUserIdentifier")) {
-            setErrorMessage("Wallet address mismatch. Make sure you're connected with the correct wallet.");
-          } else if (code.includes("InsufficientFaucetBalance")) {
-            setErrorMessage("The faucet is currently empty. Please try again later.");
-          } else {
-            setErrorMessage(error?.reason || "Verification failed. Please try again.");
-          }
+          setErrorMessage(resolveSelfVerificationErrorMessage(error));
         }}
         size={250}
         darkMode={true}
