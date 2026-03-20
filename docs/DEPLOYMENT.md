@@ -144,13 +144,13 @@ yarn deploy --network celo --keystore deployer
 This will:
 1. Deploy `TimelockController` (2-day delay) + `CuryoGovernor`
 2. Deploy `CuryoReputation` (cREP token, 100M max supply)
-3. Deploy all UUPS proxy contracts (ContentRegistry, RoundVotingEngine, RoundRewardDistributor, ProfileRegistry, FrontendRegistry) and non-upgradeable contracts (CategoryRegistry, VoterIdNFT, ParticipationPool, HumanFaucet)
-4. Deploy the stateless `SubmissionCanonicalizer` helper used by `ContentRegistry` URL canonicalization
+3. Deploy all transparent-proxy contracts (`ContentRegistry`, `RoundVotingEngine`, `RoundRewardDistributor`, `ProfileRegistry`, `FrontendRegistry`, `ProtocolConfig`) plus non-upgradeable contracts (`CategoryRegistry`, `VoterIdNFT`, `ParticipationPool`, `HumanFaucet`)
+4. Initialize governance-owned proxy admins and deploy the stateless `SubmissionCanonicalizer` helper used internally by `ContentRegistry` URL canonicalization
 5. Wire cross-contract references
 6. Seed 12 content categories with their approved domains and subcategories
 7. Mint token allocations: 51,899,900→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 100K→KeeperRewardPool, 10M→Treasury
 8. **Renounce deployer's temporary admin roles** — governance transfers fully to TimelockController
-9. **Automatically verify** that governance owns the expected roles and the deployer retained none
+9. **Automatically verify** that governance owns the expected roles and proxy admins and the deployer retained none
 
 ### 2c. Verify contracts on Blockscout
 
@@ -667,7 +667,7 @@ Set up two cron schedules in the Railway dashboard:
 ### 9d. Contract security
 
 - [ ] All admin roles have been renounced by deployer and transferred to governance (TimelockController)
-- [ ] UUPS upgrade authority is held by governance only (`UPGRADER_ROLE`)
+- [ ] All transparent proxy admins are owned by governance only (`ProxyAdmin.owner() == TimelockController`)
 - [ ] Frontend operators require governance approval — no self-approval on mainnet
 - [ ] HumanFaucet requires Self.xyz identity verification (one person, one vote)
 - [ ] TimelockController enforces 2-day delay on all governance actions
