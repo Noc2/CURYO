@@ -4,17 +4,11 @@ const baseUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   : `http://localhost:${process.env.PORT || 3000}`;
 const titleTemplate = "%s | Curyo";
+const socialImageAlt = "Curyo brand banner with the tagline A Better Web, Guided by Human Reputation.";
 
-export const getMetadata = ({
-  title,
-  description,
-  imageRelativePath = "/og-image.png",
-}: {
-  title: string;
-  description: string;
-  imageRelativePath?: string;
-}): Metadata => {
-  const imageUrl = `${baseUrl}${imageRelativePath}`;
+export const getMetadata = ({ title, description }: { title: string; description: string }): Metadata => {
+  const openGraphImageUrl = `${baseUrl}/og-image.png`;
+  const twitterImageUrl = `${baseUrl}/twitter-image.png`;
 
   return {
     metadataBase: new URL(baseUrl),
@@ -31,10 +25,10 @@ export const getMetadata = ({
       description: description,
       images: [
         {
-          url: imageUrl,
-          width: 1600,
-          height: 520,
-          alt: title,
+          url: openGraphImageUrl,
+          width: 1200,
+          height: 630,
+          alt: socialImageAlt,
         },
       ],
     },
@@ -45,7 +39,14 @@ export const getMetadata = ({
         template: titleTemplate,
       },
       description: description,
-      images: [imageUrl],
+      images: [
+        {
+          url: twitterImageUrl,
+          width: 1200,
+          height: 600,
+          alt: socialImageAlt,
+        },
+      ],
     },
     icons: {
       icon: [
