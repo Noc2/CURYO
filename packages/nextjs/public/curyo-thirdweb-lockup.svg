@@ -1,5 +1,5 @@
 <svg width="640" height="200" viewBox="0 0 640 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <svg x="16" y="20" width="148" height="148" viewBox="0 0 1400 1400" fill="none">
+  <svg x="40" y="20" width="148" height="148" viewBox="0 0 1400 1400" fill="none">
     <defs>
       <radialGradient id="thirdweb-lockup-orb-base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(856 450) rotate(136) scale(720 702)">
         <stop stop-color="#FFF8F2"/>
@@ -88,7 +88,7 @@
   </svg>
 
   <text
-    x="194"
+    x="218"
     y="113"
     fill="#F5F0EB"
     font-family="Arial, Helvetica, sans-serif"
