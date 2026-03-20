@@ -306,7 +306,7 @@ test("accuracy of zero removes the flare entirely", () => {
   assert.equal(model.flare, null);
 });
 
-test("unclaimed wallets render an empty shell instead of an orb", () => {
+test("unclaimed wallets render a simple empty orb without a flare", () => {
   const model = buildOrbitalAvatarModel(
     buildPayload({
       voterId: null,
@@ -321,6 +321,22 @@ test("unclaimed wallets render an empty shell instead of an orb", () => {
   assert.equal(model.orbit, null);
   assert.equal(model.flare, null);
   assert.ok(model.shellOrbit);
+});
+
+test("renderer returns svg markup for the empty orb fallback", () => {
+  const svg = renderOrbitalAvatarSvg(
+    buildPayload({
+      voterId: null,
+      stats: null,
+      categories90d: [],
+      balance: "0",
+    }),
+    { nowSeconds: NOW_SECONDS, size: 64 },
+  );
+
+  assert.match(svg, /orbital-avatar-empty-body/);
+  assert.match(svg, /orbital-avatar-empty-highlight/);
+  assert.doesNotMatch(svg, /orbital-avatar-flare-/);
 });
 
 test("renderer returns svg markup for the orb-flare avatar", () => {

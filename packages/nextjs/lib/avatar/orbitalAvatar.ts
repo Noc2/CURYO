@@ -347,18 +347,11 @@ function renderOrbitTrack(orbit: OrbitalAvatarOrbit) {
 }
 
 function renderShellOrbit(shellOrbit: OrbitalAvatarShell) {
-  const shells = shellOrbit.orbitRadii
-    .map((radius, index) => {
-      const strokeWidth = Math.max(4, shellOrbit.strokeWidth - index * 2);
-      const opacity = Math.max(0.06, shellOrbit.orbitOpacity - index * 0.04);
-      return `<circle cx="${CENTER}" cy="${CENTER}" r="${radius.toFixed(2)}" fill="none" stroke="${shellOrbit.orbitStroke}" stroke-width="${strokeWidth.toFixed(2)}" stroke-opacity="${opacity.toFixed(3)}"/>`;
-    })
-    .join("");
-
   return `
-    ${shells}
-    <circle cx="${CENTER}" cy="${CENTER}" r="${shellOrbit.planetRadius.toFixed(2)}" fill="none" stroke="${shellOrbit.planetStroke}" stroke-width="10" stroke-opacity="0.75"/>
-    <circle cx="${CENTER}" cy="${CENTER}" r="${(shellOrbit.planetRadius - 14).toFixed(2)}" fill="none" stroke="#FFFFFF" stroke-width="1.4" stroke-opacity="0.08"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${shellOrbit.planetRadius.toFixed(2)}" fill="url(#orbital-avatar-empty-body)"/>
+    <ellipse cx="${(CENTER - 28).toFixed(2)}" cy="${(CENTER - 34).toFixed(2)}" rx="${(shellOrbit.planetRadius * 0.48).toFixed(2)}" ry="${(shellOrbit.planetRadius * 0.36).toFixed(2)}" fill="url(#orbital-avatar-empty-highlight)"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${shellOrbit.planetRadius.toFixed(2)}" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-opacity="0.3"/>
+    <circle cx="${CENTER}" cy="${CENTER}" r="${(shellOrbit.planetRadius - 12).toFixed(2)}" fill="none" stroke="#D7DEE7" stroke-width="1.2" stroke-opacity="0.24"/>
   `;
 }
 
@@ -420,6 +413,22 @@ function renderOrbitalDefs(hashHex: string, model: OrbitalAvatarModel) {
   const defs: string[] = [
     `<filter id="orbital-avatar-band-blur-${hashHex}" x="0" y="0" width="${VIEWBOX_SIZE}" height="${VIEWBOX_SIZE}" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="${model.planet ? Math.max(8, scaleReferenceValue(40, model.planet.radius)).toFixed(2) : "14"}"/></filter>`,
   ];
+
+  if (model.shellOrbit) {
+    defs.push(
+      `<radialGradient id="orbital-avatar-empty-body" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${(CENTER - 22).toFixed(2)} ${(CENTER - 26).toFixed(2)}) rotate(132) scale(${(model.shellOrbit.planetRadius * 1.08).toFixed(2)} ${(model.shellOrbit.planetRadius * 1.02).toFixed(2)})">
+        <stop stop-color="#FFFFFF"/>
+        <stop offset="0.38" stop-color="#F5F7FA"/>
+        <stop offset="1" stop-color="#D4DCE5"/>
+      </radialGradient>`,
+    );
+    defs.push(
+      `<radialGradient id="orbital-avatar-empty-highlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(${(CENTER - 34).toFixed(2)} ${(CENTER - 48).toFixed(2)}) rotate(136) scale(${(model.shellOrbit.planetRadius * 0.62).toFixed(2)} ${(model.shellOrbit.planetRadius * 0.52).toFixed(2)})">
+        <stop stop-color="#FFFFFF" stop-opacity="0.92"/>
+        <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+      </radialGradient>`,
+    );
+  }
 
   if (model.planet) {
     defs.push(
