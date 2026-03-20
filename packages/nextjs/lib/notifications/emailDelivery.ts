@@ -7,7 +7,7 @@ import { getFollowedWalletAddresses } from "~~/lib/follows/profileFollow";
 import { buildCuryoEmailHtml } from "~~/lib/notifications/emailTemplate";
 import { isResendConfigured, sendResendEmail } from "~~/lib/notifications/resend";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
-import { isPonderConfigured, ponderGet } from "~~/services/ponder/client";
+import { isPonderAvailable, isPonderConfigured, ponderGet } from "~~/services/ponder/client";
 
 type DeliverySubscription = typeof notificationEmailSubscriptions.$inferSelect;
 
@@ -78,8 +78,40 @@ const DELIVERY_STATUS_SENT = "sent";
 const DELIVERY_STATUS_SENDING = "sending";
 type DeliveryStatus = typeof DELIVERY_STATUS_SENT | typeof DELIVERY_STATUS_SENDING;
 
-export function isNotificationEmailDeliveryConfigured(): boolean {
-  return isResendConfigured() && isPonderConfigured();
+export function resolveNotificationEmailDeliveryStatus(args: {
+  resendConfigured: boolean;
+  ponderConfigured: boolean;
+  ponderAvailable: boolean;
+}) {
+  if (!args.resendConfigured || !args.ponderConfigured) {
+    return {
+      ok: false as const,
+      error: "Notification delivery is not configured",
+    };
+  }
+
+  if (!args.ponderAvailable) {
+    return {
+      ok: false as const,
+      error: "Notification delivery is unavailable while the indexer is offline",
+    };
+  }
+
+  return {
+    ok: true as const,
+  };
+}
+
+export async function getNotificationEmailDeliveryStatus() {
+  const resendConfigured = isResendConfigured();
+  const ponderConfigured = isPonderConfigured();
+  const ponderAvailable = ponderConfigured ? await isPonderAvailable() : false;
+
+  return resolveNotificationEmailDeliveryStatus({
+    resendConfigured,
+    ponderConfigured,
+    ponderAvailable,
+  });
 }
 
 export async function ensureNotificationEmailDeliveriesTable() {

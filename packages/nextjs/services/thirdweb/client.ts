@@ -4,6 +4,7 @@ import { createThirdwebClient, defineChain } from "thirdweb";
 import type { AutoConnectProps } from "thirdweb/react";
 import type { UseConnectModalOptions } from "thirdweb/react";
 import { createWallet, inAppWallet } from "thirdweb/wallets";
+import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
 import { publicEnv } from "~~/utils/env/public";
 
 const THIRDWEB_CONNECT_CHAIN_IDS = new Set([31337, 42220, 11142220]);
@@ -77,10 +78,7 @@ export function getThirdwebWalletExecutionMode(chainId: number) {
 export function getThirdwebWallets(chainId: number = thirdwebDefaultChain.id) {
   return [
     inAppWallet({
-      auth: {
-        options: ["google", "apple", "email", "passkey"],
-        mode: "popup",
-      },
+      auth: getThirdwebWalletAuthConfig(),
       executionMode: getThirdwebWalletExecutionMode(chainId),
       metadata: {
         name: "Curyo Wallet",

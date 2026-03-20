@@ -3,6 +3,7 @@ import { EyeSlashIcon, ScaleIcon, ShieldCheckIcon } from "@heroicons/react/24/ou
 import { CuryoAnimation } from "~~/components/home/CuryoAnimation";
 import { LandingFaq } from "~~/components/home/LandingFaq";
 import { LandingPageActions } from "~~/components/home/LandingPageActions";
+import { getOptionalPonderUrl } from "~~/lib/env/server";
 
 const LANDING_STATS_REVALIDATE_SECONDS = 300;
 
@@ -30,25 +31,6 @@ const FALLBACK_SOCIAL_PROOF_STATS = {
   totalRoundsSettled: 912,
 };
 
-function readEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  return value ? value : undefined;
-}
-
-function getPonderUrl(): string | null {
-  const rawValue =
-    readEnv("NEXT_PUBLIC_PONDER_URL") ?? (process.env.NODE_ENV !== "production" ? "http://localhost:42069" : undefined);
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    return new URL(rawValue).toString().replace(/\/$/, "");
-  } catch {
-    return null;
-  }
-}
-
 async function getLandingPageSocialProofItems() {
   const fallbackItems = [
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "stake-backed votes" },
@@ -56,7 +38,7 @@ async function getLandingPageSocialProofItems() {
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalRoundsSettled.toLocaleString("en-US"), label: "rounds settled" },
   ];
 
-  const ponderUrl = getPonderUrl();
+  const ponderUrl = getOptionalPonderUrl();
   if (!ponderUrl) {
     return fallbackItems;
   }

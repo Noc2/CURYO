@@ -1,8 +1,8 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
 import { type Abi, type Address, createPublicClient, http, isAddress } from "viem";
-import scaffoldConfig from "~~/scaffold.config";
-import { type PonderRoundItem, ponderApi } from "~~/services/ponder/client";
+import { getPrimaryServerTargetNetwork, getServerRpcOverrides } from "~~/lib/env/server";
+import { type PonderRoundItem, isPonderAvailable, ponderApi } from "~~/services/ponder/client";
 
 type DeployedContractsMap = Record<
   number,
@@ -18,15 +18,17 @@ type DeployedContractsMap = Record<
 const MAX_SCAN_BATCH = 100;
 const MAX_SCAN_ROUNDS = 1000;
 
-const targetNetwork = scaffoldConfig.targetNetworks[0];
-const contractsForChain = (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id];
+const targetNetwork = getPrimaryServerTargetNetwork();
+const contractsForChain = targetNetwork
+  ? (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id]
+  : undefined;
 const votingEngine = contractsForChain?.RoundVotingEngine;
 const rewardDistributor = contractsForChain?.RoundRewardDistributor;
-const rpcOverrides = scaffoldConfig.rpcOverrides as Partial<Record<number, string>> | undefined;
-const rpcUrl = rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0];
+const rpcOverrides = getServerRpcOverrides();
+const rpcUrl = targetNetwork ? (rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0]) : undefined;
 
 const publicClient =
-  votingEngine && rewardDistributor
+  targetNetwork && votingEngine && rewardDistributor && rpcUrl
     ? createPublicClient({
         chain: targetNetwork,
         transport: http(rpcUrl),
@@ -293,6 +295,16 @@ export async function listClaimableFrontendFeeRounds(
   const initialOffset = Math.max(params.offset ?? 0, 0);
 
   if (!isAddress(frontend) || !publicClient || !votingEngine || !rewardDistributor) {
+    return {
+      items: [],
+      hasMore: false,
+      nextOffset: initialOffset,
+      scannedRounds: 0,
+      totalRounds: 0,
+    };
+  }
+
+  if (!(await isPonderAvailable())) {
     return {
       items: [],
       hasMore: false,

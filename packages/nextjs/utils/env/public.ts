@@ -1,18 +1,9 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { isAddress } from "viem";
-import * as chains from "viem/chains";
+import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "~~/utils/env/targetNetworks";
 
 const isProduction = process.env.NODE_ENV === "production";
-
-const AVAILABLE_TARGET_NETWORKS = {
-  [chains.foundry.id]: chains.foundry,
-  [chains.celoSepolia.id]: chains.celoSepolia,
-  [chains.celo.id]: chains.celo,
-} as const satisfies Record<number, chains.Chain>;
-
-export type SupportedTargetNetwork = (typeof AVAILABLE_TARGET_NETWORKS)[keyof typeof AVAILABLE_TARGET_NETWORKS];
-
-const DEFAULT_DEV_TARGET_NETWORKS = `${chains.foundry.id},${chains.celoSepolia.id}`;
+export type { SupportedTargetNetwork } from "~~/utils/env/targetNetworks";
 const DEV_WALLET_CONNECT_PROJECT_ID = "3a8170812b534d0ff9d794f19a901d64";
 
 function optionalEnv(value: string | undefined): string | undefined {
@@ -59,43 +50,11 @@ function requireUrl(name: string, value: string | undefined, fallback?: string):
   return resolvedValue;
 }
 
-function parseTargetNetworkIds(value: string): number[] {
-  const ids = value
-    .split(",")
-    .map(item => item.trim())
-    .filter(Boolean)
-    .map(item => Number.parseInt(item, 10));
-
-  if (ids.length === 0 || ids.some(id => !Number.isInteger(id))) {
-    throw new Error("NEXT_PUBLIC_TARGET_NETWORKS must be a comma-separated list of numeric chain IDs.");
-  }
-
-  return [...new Set(ids)];
-}
-
-const targetNetworkIdsEnv = rawPublicEnv.targetNetworks;
-
-if (isProduction && !targetNetworkIdsEnv) {
-  throw new Error("NEXT_PUBLIC_TARGET_NETWORKS is required in production.");
-}
-
-const targetNetworkIds = parseTargetNetworkIds(targetNetworkIdsEnv ?? DEFAULT_DEV_TARGET_NETWORKS);
-
-if (isProduction && targetNetworkIds.includes(chains.foundry.id)) {
-  throw new Error("NEXT_PUBLIC_TARGET_NETWORKS must not include the local Foundry chain in production.");
-}
-
-const targetNetworks = targetNetworkIds.map(chainId => {
-  const network = AVAILABLE_TARGET_NETWORKS[chainId as keyof typeof AVAILABLE_TARGET_NETWORKS];
-
-  if (!network) {
-    throw new Error(
-      `Unsupported target network ${chainId}. Supported chains: ${Object.keys(AVAILABLE_TARGET_NETWORKS).join(", ")}.`,
-    );
-  }
-
-  return network;
-}) as unknown as [SupportedTargetNetwork, ...SupportedTargetNetwork[]];
+const targetNetworks = resolveTargetNetworks(rawPublicEnv.targetNetworks, {
+  production: isProduction,
+  fallback: !isProduction ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
+});
+const targetNetworkIds = targetNetworks.map(network => network.id);
 
 const deployedContractsByChain = deployedContracts as Record<number, unknown>;
 const missingDeployments = targetNetworkIds.filter(chainId => deployedContractsByChain[chainId] === undefined);
@@ -120,11 +79,13 @@ export const publicEnv = {
   alchemyApiKey: rawPublicEnv.alchemyApiKey,
   thirdwebClientId: rawPublicEnv.thirdwebClientId,
   walletConnectProjectId,
-  ponderUrl: requireUrl(
-    "NEXT_PUBLIC_PONDER_URL",
-    rawPublicEnv.ponderUrl,
-    !isProduction ? "http://localhost:42069" : undefined,
-  ),
+  get ponderUrl() {
+    return requireUrl(
+      "NEXT_PUBLIC_PONDER_URL",
+      rawPublicEnv.ponderUrl,
+      !isProduction ? "http://localhost:42069" : undefined,
+    );
+  },
   frontendCode: frontendCode as `0x${string}` | undefined,
   rpcFallbackEnabled: !isProduction || rawPublicEnv.enableRpcFallback === "true",
 };

@@ -16,8 +16,8 @@ test("resolvePonderUrl normalizes valid production URLs", () => {
 
 test("resolvePonderUrl rejects invalid production URLs", () => {
   assert.throws(() => resolvePonderUrl("not-a-url", true), /NEXT_PUBLIC_PONDER_URL must be a valid URL/);
-  assert.throws(
-    () => resolvePonderUrl("http://localhost:42069", true),
-    /NEXT_PUBLIC_PONDER_URL must not point to localhost in production/,
-  );
+});
+
+test("resolvePonderUrl disables localhost URLs in production without crashing module evaluation", () => {
+  assert.equal(resolvePonderUrl("http://localhost:42069", true), null);
 });

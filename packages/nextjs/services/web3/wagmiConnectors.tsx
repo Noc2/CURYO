@@ -1,4 +1,5 @@
 import { inAppWalletConnector } from "@thirdweb-dev/wagmi-adapter";
+import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
 import {
   getPreferredThirdwebChainId,
   getThirdwebWalletExecutionMode,
@@ -21,10 +22,7 @@ export const wagmiConnectors = () => {
 
     connectors.push(
       inAppWalletConnector({
-        auth: {
-          options: ["google", "apple", "email", "passkey"],
-          mode: "popup",
-        },
+        auth: getThirdwebWalletAuthConfig(),
         client: thirdwebClient,
         executionMode: getThirdwebWalletExecutionMode(preferredChainId),
         metadata: {

@@ -1,7 +1,7 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { type Abi, type Address, createPublicClient, http, isAddress } from "viem";
 import { avatarAccentRgbToHex } from "~~/lib/avatar/avatarAccent";
-import scaffoldConfig from "~~/scaffold.config";
+import { getPrimaryServerTargetNetwork, getServerRpcOverrides } from "~~/lib/env/server";
 
 export interface ProfileRegistryProfile {
   username: string | null;
@@ -38,19 +38,22 @@ const EMPTY_AVATAR_ACCENT: ProfileRegistryAvatarAccent = {
 };
 const MULTICALL_BATCH_SIZE = 200;
 
-const targetNetwork = scaffoldConfig.targetNetworks[0];
-const contractsForChain = (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id];
+const targetNetwork = getPrimaryServerTargetNetwork();
+const contractsForChain = targetNetwork
+  ? (deployedContracts as unknown as Partial<DeployedContractsMap>)[targetNetwork.id]
+  : undefined;
 const profileRegistry = contractsForChain?.ProfileRegistry;
 const crepToken = contractsForChain?.CuryoReputation;
-const rpcOverrides = scaffoldConfig.rpcOverrides as Partial<Record<number, string>> | undefined;
-const rpcUrl = rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0];
+const rpcOverrides = getServerRpcOverrides();
+const rpcUrl = targetNetwork ? (rpcOverrides?.[targetNetwork.id] ?? targetNetwork.rpcUrls.default.http[0]) : undefined;
 
-const publicClient = profileRegistry
-  ? createPublicClient({
-      chain: targetNetwork,
-      transport: http(rpcUrl),
-    })
-  : null;
+const publicClient =
+  targetNetwork && profileRegistry && rpcUrl
+    ? createPublicClient({
+        chain: targetNetwork,
+        transport: http(rpcUrl),
+      })
+    : null;
 
 function normalizeAddress(address: string): `0x${string}` {
   return address.toLowerCase() as `0x${string}`;

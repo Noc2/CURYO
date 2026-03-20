@@ -1,3 +1,4 @@
+import { DEFAULT_POLLING_INTERVAL, RPC_OVERRIDES } from "~~/config/shared";
 import { publicEnv } from "~~/utils/env/public";
 import type { SupportedTargetNetwork } from "~~/utils/env/public";
 
@@ -16,16 +17,13 @@ const scaffoldConfig = {
   // The networks on which your DApp is live
   targetNetworks: publicEnv.targetNetworks,
   // The interval at which your front-end polls the RPC servers for new data (it has no effect if you only target the local network (default is 4000))
-  pollingInterval: 30000,
+  pollingInterval: DEFAULT_POLLING_INTERVAL,
   // Your Alchemy API key — get one at https://dashboard.alchemyapi.io
   // Optional on Celo because public RPCs are available.
   alchemyApiKey: publicEnv.alchemyApiKey,
   // If you want to use a different RPC for a specific network, you can add it here.
   // The key is the chain ID, and the value is the HTTP RPC URL
-  rpcOverrides: {
-    // Example:
-    // [1]: "https://eth-mainnet.g.alchemy.com/v2/your-api-key",
-  },
+  rpcOverrides: RPC_OVERRIDES,
   // Optional WalletConnect project ID for external wallet discovery flows.
   walletConnectProjectId: publicEnv.walletConnectProjectId,
   // Frontend operator address for fee distribution (3% of the remaining post-rebate losing pool)

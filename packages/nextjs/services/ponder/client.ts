@@ -24,7 +24,7 @@ export function resolvePonderUrl(rawValue: string | undefined, production: boole
   }
 
   if (production && isLocalhostHostname(url.hostname)) {
-    throw new Error("NEXT_PUBLIC_PONDER_URL must not point to localhost in production.");
+    return null;
   }
 
   return url.toString().replace(/\/$/, "");

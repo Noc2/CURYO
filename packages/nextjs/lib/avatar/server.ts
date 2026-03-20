@@ -1,44 +1,14 @@
 import "server-only";
 import { isAddress } from "viem";
 import type { ReputationAvatarPayload } from "~~/lib/avatar/avatarPayload";
+import { getOptionalPonderUrl } from "~~/lib/env/server";
 import { readCRepBalances, readProfileRegistryAvatarAccent } from "~~/lib/profileRegistry/server";
 
 type ReputationAvatarApiResponse = Omit<ReputationAvatarPayload, "balance" | "avatarAccentHex"> & {
   avatarAccentHex?: string | null;
 };
 
-const isProduction = process.env.NODE_ENV === "production";
 const AVATAR_REVALIDATE_SECONDS = 300;
-
-function readEnv(name: string): string | undefined {
-  const value = process.env[name]?.trim();
-  return value ? value : undefined;
-}
-
-function isLocalhostHostname(hostname: string): boolean {
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-}
-
-function getPonderUrl(): string | null {
-  const rawValue = readEnv("NEXT_PUBLIC_PONDER_URL") ?? (!isProduction ? "http://localhost:42069" : undefined);
-
-  if (!rawValue) {
-    return null;
-  }
-
-  let url: URL;
-  try {
-    url = new URL(rawValue);
-  } catch {
-    return null;
-  }
-
-  if (isProduction && isLocalhostHostname(url.hostname)) {
-    return null;
-  }
-
-  return url.toString().replace(/\/$/, "");
-}
 
 export function createEmptyReputationAvatarPayload(address: string): ReputationAvatarPayload {
   const normalizedAddress = isAddress(address) ? (address.toLowerCase() as `0x${string}`) : address;
@@ -67,7 +37,7 @@ export async function getReputationAvatarPayload(address: string): Promise<Reput
 
   const normalizedAddress = address.toLowerCase() as `0x${string}`;
   const fallbackPayload = createEmptyReputationAvatarPayload(normalizedAddress);
-  const ponderUrl = getPonderUrl();
+  const ponderUrl = getOptionalPonderUrl();
 
   const [apiPayload, balances, avatarAccent] = await Promise.all([
     ponderUrl
