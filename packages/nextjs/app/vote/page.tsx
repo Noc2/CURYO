@@ -715,19 +715,29 @@ const HomeInner = () => {
     image.src = nextThumbnailSrc;
   }, [nextThumbnailSrc]);
 
-  useEffect(() => {
+  const scrollQueueThumbnailIntoView = useCallback((contentId: bigint | null, behavior: ScrollBehavior = "smooth") => {
+    if (contentId === null) return;
+
     const rail = queueRailRef.current;
-    if (!rail || !primaryItem) return;
+    if (!rail) return;
 
-    const selectedThumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${primaryItem.id.toString()}"]`);
-    if (!selectedThumbnail) return;
+    const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
+    if (!thumbnail) return;
 
-    selectedThumbnail.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center",
-    });
-  }, [primaryItem]);
+    const railRect = rail.getBoundingClientRect();
+    const thumbnailRect = thumbnail.getBoundingClientRect();
+    const centeredScrollLeft =
+      rail.scrollLeft + (thumbnailRect.left - railRect.left) - (rail.clientWidth - thumbnailRect.width) / 2;
+    const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth);
+    const nextScrollLeft = Math.min(Math.max(0, centeredScrollLeft), maxScrollLeft);
+
+    rail.scrollTo({ left: nextScrollLeft, behavior });
+  }, []);
+
+  useEffect(() => {
+    if (!primaryItem) return;
+    scrollQueueThumbnailIntoView(primaryItem.id);
+  }, [primaryItem, scrollQueueThumbnailIntoView]);
 
   // Infinite scroll with Intersection Observer
   useEffect(() => {
@@ -834,17 +844,21 @@ const HomeInner = () => {
     history.replaceState(null, "", url.toString());
   }, []);
 
-  const focusQueueThumbnail = useCallback((contentId: bigint | null) => {
-    if (contentId === null || typeof window === "undefined") return;
+  const focusQueueThumbnail = useCallback(
+    (contentId: bigint | null) => {
+      if (contentId === null || typeof window === "undefined") return;
 
-    window.requestAnimationFrame(() => {
-      const rail = queueRailRef.current;
-      if (!rail) return;
+      window.requestAnimationFrame(() => {
+        const rail = queueRailRef.current;
+        if (!rail) return;
 
-      const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
-      thumbnail?.focus({ preventScroll: true });
-    });
-  }, []);
+        scrollQueueThumbnailIntoView(contentId, "auto");
+        const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
+        thumbnail?.focus({ preventScroll: true });
+      });
+    },
+    [scrollQueueThumbnailIntoView],
+  );
 
   const handleSelectByIndex = useCallback(
     (targetIndex: number, options?: { focusQueue?: boolean }) => {
