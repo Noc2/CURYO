@@ -1,7 +1,7 @@
-import withBundleAnalyzer from "@next/bundle-analyzer";
-import type { NextConfig } from "next";
 import { RPC_OVERRIDES } from "./config/shared";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "./utils/env/targetNetworks";
+import withBundleAnalyzer from "@next/bundle-analyzer";
+import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 const targetNetworks = resolveTargetNetworks(process.env.NEXT_PUBLIC_TARGET_NETWORKS, {
@@ -30,7 +30,8 @@ const rpcOrigins = rpcUrls
 const ponderUrl = process.env.NEXT_PUBLIC_PONDER_URL ?? (isDev ? "http://localhost:42069" : "");
 const cspDirectives = [
   "default-src 'self'",
-  `script-src 'self' 'wasm-unsafe-eval'${isDev ? " 'unsafe-inline' 'unsafe-eval'" : ""}`,
+  // Static CSP headers need inline bootstrap scripts for Next's production app shell.
+  `script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
   "img-src 'self' data: blob: https:",
