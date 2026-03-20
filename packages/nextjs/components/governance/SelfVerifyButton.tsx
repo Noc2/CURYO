@@ -24,10 +24,11 @@ const SelfQRcodeWrapper = dynamic(() => import("@selfxyz/qrcode").then(mod => mo
 });
 
 interface SelfVerifyButtonProps {
+  onStart?: () => void;
   onSuccess: () => void;
 }
 
-export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
+export function SelfVerifyButton({ onStart, onSuccess }: SelfVerifyButtonProps) {
   const { address, chain } = useAccount();
   const { data: contractInfo } = useDeployedContractInfo({ contractName: "HumanFaucet" });
   const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
@@ -89,6 +90,7 @@ export function SelfVerifyButton({ onSuccess }: SelfVerifyButtonProps) {
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-curyo btn-lg inline-flex"
+          onClick={() => onStart?.()}
         >
           Open Self App
         </a>

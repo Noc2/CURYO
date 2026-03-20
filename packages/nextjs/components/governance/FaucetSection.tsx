@@ -29,8 +29,69 @@ const TIER_LABELS = ["Genesis", "Early Adopter", "Pioneer", "Explorer", "Settler
  * FaucetSection - Claim cREP tokens using Self.xyz identity verification
  * Reads live data from the deployed HumanFaucet contract.
  */
+const SELF_VERIFICATION_SESSION_KEY = "curyo_self_verification_session";
 const POLL_INTERVAL_MS = 4000;
-const POLL_TIMEOUT_MS = 120_000;
+const POLL_TIMEOUT_MS = 600_000;
+
+type PendingSelfVerificationSession = {
+  address: string;
+  startedAt: number;
+};
+
+function readPendingSelfVerificationSession(): PendingSelfVerificationSession | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawSession = sessionStorage.getItem(SELF_VERIFICATION_SESSION_KEY);
+  if (!rawSession) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawSession) as Partial<PendingSelfVerificationSession>;
+    if (typeof parsed.address !== "string" || typeof parsed.startedAt !== "number") {
+      sessionStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
+      return null;
+    }
+
+    if (Date.now() - parsed.startedAt > POLL_TIMEOUT_MS) {
+      sessionStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
+      return null;
+    }
+
+    return {
+      address: parsed.address.toLowerCase(),
+      startedAt: parsed.startedAt,
+    };
+  } catch {
+    sessionStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
+    return null;
+  }
+}
+
+function beginPendingSelfVerificationSession(address: string): PendingSelfVerificationSession {
+  const normalizedAddress = address.toLowerCase();
+  const existingSession = readPendingSelfVerificationSession();
+  if (existingSession?.address === normalizedAddress) {
+    return existingSession;
+  }
+
+  const nextSession = {
+    address: normalizedAddress,
+    startedAt: Date.now(),
+  };
+  sessionStorage.setItem(SELF_VERIFICATION_SESSION_KEY, JSON.stringify(nextSession));
+  return nextSession;
+}
+
+function clearPendingSelfVerificationSession() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  sessionStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
+}
 
 export function FaucetSection({ referrer }: FaucetSectionProps) {
   const { address } = useAccount();
@@ -76,27 +137,114 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     }
   }, []);
 
-  const startPolling = useCallback(() => {
-    setVerificationPending(true);
-    pollStart.current = Date.now();
+  const finishVerification = useCallback(() => {
+    clearPendingSelfVerificationSession();
     stopPolling();
-    pollTimer.current = setInterval(async () => {
+    setVerificationPending(false);
+    // Invalidate all queries so navbar balance updates immediately
+    void queryClient.invalidateQueries();
+    router.replace("/vote");
+  }, [queryClient, router, stopPolling]);
+
+  const startPolling = useCallback(() => {
+    const activeSession = address ? beginPendingSelfVerificationSession(address) : null;
+    setVerificationPending(true);
+    pollStart.current = activeSession?.startedAt ?? Date.now();
+    stopPolling();
+
+    const pollClaimStatus = async () => {
+      if (hasVoterId) {
+        finishVerification();
+        return true;
+      }
+
       const result = await refetchClaimed();
       if (result.data === true) {
-        stopPolling();
-        setVerificationPending(false);
-        // Invalidate all queries so navbar balance updates immediately
-        queryClient.invalidateQueries();
-        router.replace("/vote");
-      } else if (Date.now() - pollStart.current > POLL_TIMEOUT_MS) {
-        stopPolling();
-        setVerificationPending(false);
+        finishVerification();
+        return true;
       }
-    }, POLL_INTERVAL_MS);
-  }, [refetchClaimed, stopPolling, queryClient, router]);
+
+      if (Date.now() - pollStart.current > POLL_TIMEOUT_MS) {
+        clearPendingSelfVerificationSession();
+        stopPolling();
+        setVerificationPending(false);
+        return true;
+      }
+
+      return false;
+    };
+
+    void pollClaimStatus().then(completed => {
+      if (completed) {
+        return;
+      }
+
+      pollTimer.current = setInterval(() => {
+        void pollClaimStatus();
+      }, POLL_INTERVAL_MS);
+    });
+  }, [address, finishVerification, hasVoterId, refetchClaimed, stopPolling]);
 
   // Clean up polling on unmount
   useEffect(() => stopPolling, [stopPolling]);
+
+  useEffect(() => {
+    if (!address) {
+      stopPolling();
+      setVerificationPending(false);
+      return;
+    }
+
+    const activeSession = readPendingSelfVerificationSession();
+    if (activeSession?.address !== address.toLowerCase()) {
+      return;
+    }
+
+    if (hasClaimed === true || hasVoterId) {
+      finishVerification();
+      return;
+    }
+
+    if (!verificationPending) {
+      startPolling();
+    }
+  }, [address, finishVerification, hasClaimed, hasVoterId, startPolling, stopPolling, verificationPending]);
+
+  useEffect(() => {
+    if (!address) {
+      return;
+    }
+
+    const resumeVerificationTracking = () => {
+      const activeSession = readPendingSelfVerificationSession();
+      if (activeSession?.address !== address.toLowerCase()) {
+        return;
+      }
+
+      if (hasClaimed === true || hasVoterId) {
+        finishVerification();
+        return;
+      }
+
+      if (!verificationPending) {
+        startPolling();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        resumeVerificationTracking();
+      }
+    };
+
+    window.addEventListener("focus", resumeVerificationTracking);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", resumeVerificationTracking);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [address, finishVerification, hasClaimed, hasVoterId, startPolling, verificationPending]);
 
   // Sync terms acceptance from context (already accepted via localStorage)
   useEffect(() => {
@@ -251,7 +399,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
               <p className="text-base-content/60 text-base">Use a passport or biometric ID card.</p>
             </div>
 
-            <SelfVerifyButton onSuccess={startPolling} />
+            <SelfVerifyButton onStart={startPolling} onSuccess={startPolling} />
           </>
         ) : (
           <div className="flex flex-col items-center gap-4 text-center">
