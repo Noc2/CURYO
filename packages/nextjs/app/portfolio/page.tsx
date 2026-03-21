@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useAccount } from "wagmi";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -39,11 +40,13 @@ export default function PortfolioPage() {
 
   const { votes: activeVotesWithDeadlines } = useActiveVotesWithDeadlines(address);
 
-  // Build a lookup map for countdown display: "contentId-roundId" -> timeRemaining
-  const deadlineMap = new Map<string, number>();
-  for (const v of activeVotesWithDeadlines) {
-    deadlineMap.set(`${v.contentId}-${v.roundId}`, v.timeRemaining);
-  }
+  const deadlineMap = useMemo(() => {
+    const next = new Map<string, number>();
+    for (const vote of activeVotesWithDeadlines) {
+      next.set(`${vote.contentId}-${vote.roundId}`, vote.timeRemaining);
+    }
+    return next;
+  }, [activeVotesWithDeadlines]);
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
