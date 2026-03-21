@@ -54,7 +54,7 @@ export function NetworkEnvironmentBanner() {
   }
 
   return (
-    <div className="bg-primary/10 px-4 py-3 sm:px-6">
+    <div className="border-b border-primary/20 bg-primary/10 px-4 py-3 sm:px-6">
       <div className="mx-auto flex w-full max-w-5xl items-start gap-3">
         <div className="mt-0.5 rounded-full bg-primary/15 p-2 text-primary">
           <BeakerIcon className="h-5 w-5" />
