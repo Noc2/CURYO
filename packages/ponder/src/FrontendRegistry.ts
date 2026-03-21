@@ -1,6 +1,9 @@
 import { ponder } from "ponder:registry";
 import { frontend } from "ponder:schema";
 
+/** Must match FrontendRegistry.STAKE_AMOUNT (1000 cREP with 6 decimals). */
+const STAKE_AMOUNT = 1000_000000n;
+
 ponder.on(
   "FrontendRegistry:FrontendRegistered",
   async ({ event, context }) => {
@@ -62,7 +65,7 @@ ponder.on(
       .update(frontend, { address: addr })
       .set((row) => ({
         slashed: false,
-        eligible: row.stakedAmount === 1000_000000n && row.exitAvailableAt === null,
+        eligible: row.stakedAmount === STAKE_AMOUNT && row.exitAvailableAt === null,
       }));
   },
 );
@@ -75,7 +78,7 @@ ponder.on(
       .update(frontend, { address: addr })
       .set((row) => ({
         stakedAmount: newStakedAmount,
-        eligible: !row.slashed && newStakedAmount === 1000_000000n && row.exitAvailableAt === null,
+        eligible: !row.slashed && newStakedAmount === STAKE_AMOUNT && row.exitAvailableAt === null,
       }));
   },
 );
