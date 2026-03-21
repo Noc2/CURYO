@@ -4,7 +4,6 @@ export * from "./useDeployedContractInfo";
 export * from "./useFetchBlocks";
 export * from "./useNetworkColor";
 export * from "./useOutsideClick";
-export * from "./useScaffoldContract";
 export * from "./useScaffoldEventHistory";
 export * from "./useScaffoldReadContract";
 export * from "./useScaffoldWatchContractEvent";
