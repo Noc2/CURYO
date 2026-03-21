@@ -54,18 +54,18 @@ export function NetworkEnvironmentBanner() {
   }
 
   return (
-    <div className="border-b border-warning/20 bg-warning/10 px-4 py-3 sm:px-6">
+    <div className="bg-primary/10 px-4 py-3 sm:px-6">
       <div className="mx-auto flex w-full max-w-5xl items-start gap-3">
-        <div className="mt-0.5 rounded-full bg-warning/15 p-2 text-warning">
+        <div className="mt-0.5 rounded-full bg-primary/15 p-2 text-primary">
           <BeakerIcon className="h-5 w-5" />
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-warning/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-warning">
+            <span className="rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
               {isLocalNetwork ? "Local Preview" : "Testnet Preview"}
             </span>
-            <p className="text-sm font-semibold text-base-content">Not live yet</p>
+            <p className="text-sm font-semibold text-primary/90">Not live yet</p>
           </div>
 
           <p className="mt-1 text-sm text-base-content/70">{getBannerMessage(targetNetwork.name, isLocalNetwork)}</p>
