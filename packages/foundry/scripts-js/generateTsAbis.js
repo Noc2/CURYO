@@ -510,6 +510,9 @@ const ABI_TARGETS = [
   { contract: "RoundRewardDistributor", targets: ["contracts/src/abis"] },
   { contract: "ProfileRegistry", targets: ["contracts/src/abis"] },
   { contract: "ProtocolConfig", targets: ["contracts/src/abis"] },
+  { contract: "HumanFaucet", targets: ["contracts/src/abis"] },
+  { contract: "ParticipationPool", targets: ["contracts/src/abis"] },
+  { contract: "TimelockController", targets: ["contracts/src/abis"] },
 ];
 
 function generateAbiFiles() {
@@ -544,6 +547,16 @@ function generateAbiFiles() {
       0
     )} shared targets`
   );
+
+  // Drift detection: warn if a contract has Ponder env mapping but no ABI target
+  const abiContractNames = new Set(ABI_TARGETS.map((t) => t.contract));
+  for (const contractName of Object.keys(PONDER_CONTRACT_ENV_KEYS)) {
+    if (!abiContractNames.has(contractName)) {
+      console.warn(
+        `⚠️  Contract "${contractName}" has Ponder env mapping but no ABI target — add it to ABI_TARGETS to generate ABI files.`
+      );
+    }
+  }
 }
 
 try {

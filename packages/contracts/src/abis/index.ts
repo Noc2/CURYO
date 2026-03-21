@@ -7,3 +7,6 @@ export { ProtocolConfigAbi } from "./ProtocolConfigAbi";
 export { RoundRewardDistributorAbi } from "./RoundRewardDistributorAbi";
 export { RoundVotingEngineAbi } from "./RoundVotingEngineAbi";
 export { VoterIdNFTAbi } from "./VoterIdNFTAbi";
+export { HumanFaucetAbi } from "./HumanFaucetAbi";
+export { ParticipationPoolAbi } from "./ParticipationPoolAbi";
+export { TimelockControllerAbi } from "./TimelockControllerAbi";

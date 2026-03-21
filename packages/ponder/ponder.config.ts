@@ -7,6 +7,8 @@ import {
   ContentRegistryAbi,
   CuryoReputationAbi,
   FrontendRegistryAbi,
+  HumanFaucetAbi,
+  ParticipationPoolAbi,
   ProfileRegistryAbi,
   RoundRewardDistributorAbi,
   RoundVotingEngineAbi,
@@ -181,6 +183,8 @@ const addresses = {
   frontendRegistry: resolveAddress("PONDER_FRONTEND_REGISTRY_ADDRESS", "FrontendRegistry"),
   voterIdNFT: resolveAddress("PONDER_VOTER_ID_NFT_ADDRESS", "VoterIdNFT"),
   curyoReputation: resolveAddress("PONDER_CREP_ADDRESS", "CuryoReputation"),
+  humanFaucet: resolveAddress("PONDER_HUMAN_FAUCET_ADDRESS", "HumanFaucet"),
+  participationPool: resolveAddress("PONDER_PARTICIPATION_POOL_ADDRESS", "ParticipationPool"),
 };
 
 const startBlocks = {
@@ -192,6 +196,8 @@ const startBlocks = {
   frontendRegistry: resolveStartBlock("PONDER_FRONTEND_REGISTRY_START_BLOCK", "FrontendRegistry"),
   voterIdNFT: resolveStartBlock("PONDER_VOTER_ID_NFT_START_BLOCK", "VoterIdNFT"),
   curyoReputation: resolveStartBlock("PONDER_CREP_START_BLOCK", "CuryoReputation"),
+  humanFaucet: resolveStartBlock("PONDER_HUMAN_FAUCET_START_BLOCK", "HumanFaucet"),
+  participationPool: resolveStartBlock("PONDER_PARTICIPATION_POOL_START_BLOCK", "ParticipationPool"),
 };
 
 function contractOnActiveNetwork(address: `0x${string}`, startBlock: number) {
@@ -244,6 +250,14 @@ export default createConfig({
     CuryoReputation: {
       abi: CuryoReputationAbi,
       network: contractOnActiveNetwork(addresses.curyoReputation, startBlocks.curyoReputation),
+    },
+    HumanFaucet: {
+      abi: HumanFaucetAbi,
+      network: contractOnActiveNetwork(addresses.humanFaucet, startBlocks.humanFaucet),
+    },
+    ParticipationPool: {
+      abi: ParticipationPoolAbi,
+      network: contractOnActiveNetwork(addresses.participationPool, startBlocks.participationPool),
     },
   },
 });
