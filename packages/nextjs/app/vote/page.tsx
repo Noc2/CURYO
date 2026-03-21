@@ -3,15 +3,12 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { AnimatePresence, type PanInfo, type Variants, motion } from "framer-motion";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { CategoryFilter } from "~~/components/CategoryFilter";
-import { VotingGuide } from "~~/components/onboarding/VotingGuide";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { StreakCounter } from "~~/components/shared/StreakCounter";
 import { FeedScopeFilter } from "~~/components/vote/FeedScopeFilter";
-import { FeedQueueCard, FeedVoteCard, getVoteFeedThumbnailSrc } from "~~/components/vote/VoteFeedCards";
 import { useCategoryPopularity } from "~~/hooks/useCategoryPopularity";
 import { useCategoryRegistry } from "~~/hooks/useCategoryRegistry";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -22,13 +19,11 @@ import { useFollowedProfiles } from "~~/hooks/useFollowedProfiles";
 import { useInterestProfile } from "~~/hooks/useInterestProfile";
 import { useOnboarding } from "~~/hooks/useOnboarding";
 import { useQueueCardStatusMap } from "~~/hooks/useQueueCardStatusMap";
-import { useQueueNavigation } from "~~/hooks/useQueueNavigation";
 import { useRoundVote } from "~~/hooks/useRoundVote";
 import { SubmitterProfile, useSubmitterProfiles } from "~~/hooks/useSubmitterProfiles";
 import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVoteFeedStage } from "~~/hooks/useVoteFeedStage";
 import { useVoteHistoryQuery } from "~~/hooks/useVoteHistoryQuery";
-import { useVoteQueueLayout } from "~~/hooks/useVoteQueueLayout";
 import { useVoterAccuracyBatch } from "~~/hooks/useVoterAccuracyBatch";
 import { useWatchedContent } from "~~/hooks/useWatchedContent";
 import { formatVoteCooldownRemaining, getVoteCooldownRemainingSeconds } from "~~/lib/vote/cooldown";
@@ -39,11 +34,18 @@ import {
 } from "~~/lib/vote/discoverFeedFilter";
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
-import { chunkVoteQueueItems } from "~~/lib/vote/queueLayout";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
 import { notification } from "~~/utils/scaffold-eth";
 
+const VotingGuide = dynamic(() => import("~~/components/onboarding/VotingGuide").then(m => m.VotingGuide), {
+  ssr: false,
+  loading: () => null,
+});
+const VoteFeedStage = dynamic(() => import("~~/components/vote/VoteFeedStage").then(m => m.VoteFeedStage), {
+  ssr: false,
+  loading: () => <VoteStageLoading />,
+});
 const StakeSelector = dynamic(() => import("~~/components/swipe/StakeSelector").then(m => m.StakeSelector), {
   loading: () => (
     <div className="flex items-center justify-center h-96">
@@ -66,33 +68,21 @@ const SEARCH_SORT_OPTIONS: { value: SearchSortOption; label: string }[] = [
 ];
 const FEED_PAGE_SIZE = 20;
 const FEED_PREFETCH_BUFFER = 20;
-const CARD_SWIPE_THRESHOLD = 96;
-const VOTE_CARD_TRANSITION_EASE = [0.22, 1, 0.36, 1] as const;
 
 function getVoteCooldownMessage(seconds: number) {
   return `You already voted on this content recently. Try again in ${formatVoteCooldownRemaining(seconds)}.`;
 }
 
-const voteCardVariants: Variants = {
-  enter: (direction: "previous" | "next") => ({
-    opacity: 0.38,
-    x: direction === "next" ? 22 : -22,
-    y: 10,
-    scale: 0.992,
-  }),
-  center: {
-    opacity: 1,
-    x: 0,
-    y: 0,
-    scale: 1,
-  },
-  exit: (direction: "previous" | "next") => ({
-    opacity: 0.72,
-    x: direction === "next" ? -14 : 14,
-    y: 4,
-    scale: 0.997,
-  }),
-};
+function VoteStageLoading() {
+  return (
+    <div className="surface-card rounded-2xl p-6">
+      <div className="flex items-center gap-3 text-base-content/50">
+        <span className="loading loading-spinner loading-sm text-primary" />
+        <span>Loading...</span>
+      </div>
+    </div>
+  );
+}
 
 const HomeInner = () => {
   const searchParams = useSearchParams();
@@ -108,7 +98,6 @@ const HomeInner = () => {
   const [sortBy, setSortBy] = useState<SortOption>("for_you");
   const [visibleCount, setVisibleCount] = useState(FEED_PAGE_SIZE);
   const [navigationDirection, setNavigationDirection] = useState<"previous" | "next">("next");
-  const [supportsTouchNavigation, setSupportsTouchNavigation] = useState(false);
   const [interactionVersion, setInteractionVersion] = useState(0);
   const [optimisticVotedContentIds, setOptimisticVotedContentIds] = useState<Set<string>>(() => new Set());
   const isSearchMode = searchQuery.trim().length > 0;
@@ -367,15 +356,11 @@ const HomeInner = () => {
     }
   }, [contentParam]);
 
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  const queueRailRef = useRef<HTMLDivElement>(null);
   const displayFeedRef = useRef<ContentItem[]>([]);
   const activeViewSessionRef = useRef<{ contentId: string; startedAt: number; hasPositiveInteraction: boolean } | null>(
     null,
   );
   const isMountedRef = useRef(true);
-  const [queueRailElement, setQueueRailElement] = useState<HTMLDivElement | null>(null);
-  const queueLayout = useVoteQueueLayout(queueRailElement);
   const persistRecommendationSignal = useCallback(
     (
       item: Pick<ContentItem, "id" | "categoryId" | "url" | "submitter" | "tags">,
@@ -566,13 +551,9 @@ const HomeInner = () => {
   } = useVoteFeedStage(displayFeed, {
     visibleCount,
     requestedActiveId,
-    windowSize: queueLayout.rows === 2 ? Math.max(8, queueLayout.pageSize) : 7,
+    windowSize: 8,
   });
   const queueStatusByContentId = useQueueCardStatusMap(visibleFeedItems, feedSource, nowSeconds);
-  const nextThumbnailSrc = useMemo(() => {
-    const selectedNextItem = activeSourceIndex >= 0 ? (displayFeed[activeSourceIndex + 1] ?? null) : null;
-    return selectedNextItem ? getVoteFeedThumbnailSrc(selectedNextItem) : null;
-  }, [activeSourceIndex, displayFeed]);
 
   useEffect(() => {
     return () => {
@@ -611,21 +592,6 @@ const HomeInner = () => {
     });
     return positions;
   }, [displayFeed]);
-  const queuePages = useMemo(() => {
-    if (queueLayout.rows === 1) {
-      return [visibleFeedItems];
-    }
-
-    return chunkVoteQueueItems(visibleFeedItems, queueLayout.pageSize);
-  }, [queueLayout.pageSize, queueLayout.rows, visibleFeedItems]);
-  const queueGridTemplateColumns = useMemo(() => {
-    if (queueLayout.rows !== 2) return undefined;
-    return `repeat(${queueLayout.columns}, minmax(0, ${queueLayout.cardWidthPx}px))`;
-  }, [queueLayout.cardWidthPx, queueLayout.columns, queueLayout.rows]);
-  const queuePageWidth = useMemo(() => {
-    if (queueLayout.rows !== 2) return undefined;
-    return queueLayout.columns * queueLayout.cardWidthPx + (queueLayout.columns - 1) * queueLayout.gapPx;
-  }, [queueLayout]);
 
   const { profiles: submitterProfiles } = useSubmitterProfiles(submitterAddresses);
 
@@ -662,105 +628,6 @@ const HomeInner = () => {
   useEffect(() => {
     if (!voteError?.includes("You already voted on this content within the last")) return;
   }, [voteError]);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-
-    const mediaQuery = window.matchMedia("(pointer: coarse), (hover: none)");
-    const updatePointerMode = () => {
-      setSupportsTouchNavigation(mediaQuery.matches);
-    };
-
-    updatePointerMode();
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", updatePointerMode);
-      return () => {
-        mediaQuery.removeEventListener("change", updatePointerMode);
-      };
-    }
-
-    mediaQuery.addListener(updatePointerMode);
-    return () => {
-      mediaQuery.removeListener(updatePointerMode);
-    };
-  }, []);
-
-  const lastQueuePrefetchVisibleCountRef = useRef<number | null>(null);
-  const lastPreloadedThumbnailRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    const remainingLoadedItems = displayFeed.length - (activeSourceIndex + 1);
-    const shouldPrefetchQueue = remainingLoadedItems < 8 && (visibleCount < displayFeed.length || hasMoreFeed);
-
-    if (!shouldPrefetchQueue) {
-      lastQueuePrefetchVisibleCountRef.current = null;
-      return;
-    }
-
-    if (lastQueuePrefetchVisibleCountRef.current === visibleCount) {
-      return;
-    }
-
-    lastQueuePrefetchVisibleCountRef.current = visibleCount;
-    setVisibleCount(prev => prev + FEED_PAGE_SIZE);
-  }, [activeSourceIndex, displayFeed.length, hasMoreFeed, visibleCount]);
-
-  useEffect(() => {
-    if (!nextThumbnailSrc) return;
-    if (lastPreloadedThumbnailRef.current === nextThumbnailSrc) return;
-
-    lastPreloadedThumbnailRef.current = nextThumbnailSrc;
-    const image = new window.Image();
-    image.decoding = "async";
-    image.src = nextThumbnailSrc;
-  }, [nextThumbnailSrc]);
-
-  const scrollQueueThumbnailIntoView = useCallback((contentId: bigint | null, behavior: ScrollBehavior = "smooth") => {
-    if (contentId === null) return;
-
-    const rail = queueRailRef.current;
-    if (!rail) return;
-
-    const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
-    if (!thumbnail) return;
-
-    const railRect = rail.getBoundingClientRect();
-    const thumbnailRect = thumbnail.getBoundingClientRect();
-    const centeredScrollLeft =
-      rail.scrollLeft + (thumbnailRect.left - railRect.left) - (rail.clientWidth - thumbnailRect.width) / 2;
-    const maxScrollLeft = Math.max(0, rail.scrollWidth - rail.clientWidth);
-    const nextScrollLeft = Math.min(Math.max(0, centeredScrollLeft), maxScrollLeft);
-
-    rail.scrollTo({ left: nextScrollLeft, behavior });
-  }, []);
-
-  useEffect(() => {
-    if (!primaryItem) return;
-    scrollQueueThumbnailIntoView(primaryItem.id);
-  }, [primaryItem, scrollQueueThumbnailIntoView]);
-
-  // Infinite scroll with Intersection Observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting && canLoadMore) {
-          setVisibleCount(prev => prev + FEED_PAGE_SIZE);
-        }
-      },
-      { threshold: 0.1 },
-    );
-
-    const currentRef = loadMoreRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, [canLoadMore]);
 
   const handleButtonVote = useCallback(
     (item: ContentItem, isUp: boolean) => {
@@ -844,33 +711,14 @@ const HomeInner = () => {
     history.replaceState(null, "", url.toString());
   }, []);
 
-  const focusQueueThumbnail = useCallback(
-    (contentId: bigint | null) => {
-      if (contentId === null || typeof window === "undefined") return;
-
-      window.requestAnimationFrame(() => {
-        const rail = queueRailRef.current;
-        if (!rail) return;
-
-        scrollQueueThumbnailIntoView(contentId, "auto");
-        const thumbnail = rail.querySelector<HTMLElement>(`[data-thumbnail-id="${contentId.toString()}"]`);
-        thumbnail?.focus({ preventScroll: true });
-      });
-    },
-    [scrollQueueThumbnailIntoView],
-  );
-
   const handleSelectByIndex = useCallback(
-    (targetIndex: number, options?: { focusQueue?: boolean }) => {
+    (targetIndex: number) => {
       if (targetIndex < 0 || targetIndex >= displayFeed.length) return false;
 
       const targetItem = displayFeed[targetIndex];
       if (!targetItem) return false;
 
       if (activeSourceIndex !== -1 && targetIndex === activeSourceIndex) {
-        if (options?.focusQueue) {
-          focusQueueThumbnail(targetItem.id);
-        }
         return false;
       }
 
@@ -882,20 +730,9 @@ const HomeInner = () => {
       selectContent(targetItem.id);
       replaceContentQueryParam(targetItem.id);
 
-      if (options?.focusQueue) {
-        focusQueueThumbnail(targetItem.id);
-      }
-
       return true;
     },
-    [
-      activeSourceIndex,
-      displayFeed,
-      flushActiveViewSession,
-      focusQueueThumbnail,
-      replaceContentQueryParam,
-      selectContent,
-    ],
+    [activeSourceIndex, displayFeed, flushActiveViewSession, replaceContentQueryParam, selectContent],
   );
 
   const handleSelectCard = useCallback(
@@ -912,112 +749,14 @@ const HomeInner = () => {
   );
 
   const handleNavigateSelection = useCallback(
-    (direction: "previous" | "next", options?: { focusQueue?: boolean }) => {
+    (direction: "previous" | "next") => {
       if (displayFeed.length === 0 || activeSourceIndex === -1) return false;
 
       const delta = direction === "next" ? 1 : -1;
       const nextIndex = Math.min(Math.max(activeSourceIndex + delta, 0), displayFeed.length - 1);
-      return handleSelectByIndex(nextIndex, options);
+      return handleSelectByIndex(nextIndex);
     },
     [activeSourceIndex, displayFeed.length, handleSelectByIndex],
-  );
-
-  const handleSelectPrevious = useCallback(() => {
-    handleNavigateSelection("previous");
-  }, [handleNavigateSelection]);
-
-  const handleSelectNext = useCallback(() => {
-    handleNavigateSelection("next");
-  }, [handleNavigateSelection]);
-
-  const handleQueueKeyboardNavigate = useCallback(
-    (action: "previous" | "next" | "first" | "last", currentId: bigint) => {
-      if (displayFeed.length === 0) return;
-
-      if (action === "first") {
-        handleSelectByIndex(0, { focusQueue: true });
-        return;
-      }
-
-      if (action === "last") {
-        handleSelectByIndex(displayFeed.length - 1, { focusQueue: true });
-        return;
-      }
-
-      const currentIndex = displayFeed.findIndex(item => item.id === currentId);
-      if (currentIndex === -1) return;
-
-      const nextIndex = Math.min(Math.max(currentIndex + (action === "next" ? 1 : -1), 0), displayFeed.length - 1);
-      handleSelectByIndex(nextIndex, { focusQueue: true });
-    },
-    [displayFeed, handleSelectByIndex],
-  );
-
-  const canNavigateCards = displayFeed.length > 1 && !isCommitting && !stakeModal.isOpen;
-  const canSwipeNavigate = supportsTouchNavigation && canNavigateCards;
-  const canWheelNavigate = !supportsTouchNavigation && canNavigateCards;
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (stakeModal.isOpen) return;
-
-    const handleWindowKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-
-      const target = event.target as HTMLElement | null;
-      if (
-        target?.closest(
-          "input,textarea,select,button,[contenteditable='true'],[role='textbox'],[role='searchbox'],[data-disable-queue-wheel='true']",
-        )
-      ) {
-        return;
-      }
-
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        handleNavigateSelection("previous");
-        return;
-      }
-
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        handleNavigateSelection("next");
-        return;
-      }
-
-      if (event.key === "Home" || event.key === "PageUp") {
-        event.preventDefault();
-        handleSelectByIndex(0);
-        return;
-      }
-
-      if (event.key === "End" || event.key === "PageDown") {
-        event.preventDefault();
-        handleSelectByIndex(displayFeed.length - 1);
-      }
-    };
-
-    window.addEventListener("keydown", handleWindowKeyDown);
-    return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [displayFeed.length, handleNavigateSelection, handleSelectByIndex, stakeModal.isOpen]);
-
-  const handleCardDragEnd = useCallback(
-    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      if (!canSwipeNavigate) return;
-
-      const offsetX = info.offset.x;
-      const velocityX = info.velocity.x;
-
-      if (offsetX <= -CARD_SWIPE_THRESHOLD || velocityX <= -500) {
-        handleNavigateSelection("next");
-        return;
-      }
-
-      if (offsetX >= CARD_SWIPE_THRESHOLD || velocityX >= 500) {
-        handleNavigateSelection("previous");
-      }
-    },
-    [canSwipeNavigate, handleNavigateSelection],
   );
 
   const handleToggleWatch = useCallback(
@@ -1218,17 +957,6 @@ const HomeInner = () => {
     return `No content found in "${activeCategory}".`;
   }, [activeCategory, activeFeedMode, activeScope, address, searchQuery]);
 
-  const activeCardRegionRef = useQueueNavigation<HTMLDivElement>({
-    enabled: Boolean(primaryItem && canNavigateCards),
-    enableWheel: canWheelNavigate,
-    onNavigate: handleNavigateSelection,
-  });
-
-  const handleQueueRailRef = useCallback((node: HTMLDivElement | null) => {
-    queueRailRef.current = node;
-    setQueueRailElement(node);
-  }, []);
-
   return (
     <AppPageShell>
       <VotingGuide />
@@ -1289,139 +1017,52 @@ const HomeInner = () => {
         ) : displayFeed.length === 0 ? (
           <div className="py-16 text-center text-base text-base-content/30 xl:py-10">{emptyStateMessage}</div>
         ) : (
-          <div ref={activeCardRegionRef} className="flex min-h-0 flex-col gap-5 xl:gap-4">
-            {isCommitting ? (
-              <div className="flex shrink-0 items-center justify-center">
-                <span className="text-base text-base-content/50">
-                  <span className="loading loading-spinner loading-xs mr-1.5"></span>
-                  Committing...
-                </span>
-              </div>
-            ) : null}
-
-            {primaryItem ? (
-              <div className="min-h-0">
-                <AnimatePresence initial={false} mode="wait" custom={navigationDirection}>
-                  <motion.div
-                    key={primaryItem.id.toString()}
-                    custom={navigationDirection}
-                    className="touch-pan-y"
-                    variants={voteCardVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{
-                      duration: 0.24,
-                      ease: VOTE_CARD_TRANSITION_EASE,
-                    }}
-                    drag={canSwipeNavigate ? "x" : false}
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.12}
-                    dragMomentum={false}
-                    onDragEnd={handleCardDragEnd}
-                  >
-                    <FeedVoteCard
-                      item={primaryItem}
-                      submitterProfile={enrichedProfiles[primaryItem.submitter.toLowerCase()]}
-                      onExternalOpen={handleExternalOpen}
-                      onVote={handleButtonVote}
-                      onToggleWatch={handleToggleWatch}
-                      onToggleFollow={handleToggleFollow}
-                      watched={watchedContentIds.has(primaryItem.id.toString())}
-                      watchPending={isWatchPending(primaryItem.id)}
-                      following={followedWallets.has(primaryItem.submitter.toLowerCase())}
-                      followPending={isFollowPending(primaryItem.submitter)}
-                      normalizedAddress={normalizedAddress}
-                      isCommitting={isCommitting}
-                      voteError={voteError}
-                      cooldownSecondsRemaining={primaryItemCooldownSeconds}
-                      address={address}
-                      onPrevious={handleSelectPrevious}
-                      onNext={handleSelectNext}
-                      canPrevious={activeSourceIndex > 0}
-                      canNext={activeSourceIndex >= 0 && activeSourceIndex < displayFeed.length - 1}
-                    />
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            ) : null}
-
-            {visibleFeedItems.length > 0 ? (
-              <motion.section
-                key={primaryItem?.id.toString() ?? "queue-empty"}
-                className="shrink-0"
-                aria-label="Up next queue"
-                initial={{ opacity: 0.82, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.18, ease: VOTE_CARD_TRANSITION_EASE }}
-              >
-                <div
-                  ref={handleQueueRailRef}
-                  data-disable-queue-wheel="true"
-                  className={`scrollbar-hide min-w-0 overflow-x-auto snap-x snap-mandatory ${
-                    queueLayout.rows === 2 ? "flex items-start gap-4 xl:gap-3" : "flex items-stretch gap-3 xl:gap-2.5"
-                  }`}
-                  aria-label="Content queue"
-                >
-                  {queueLayout.rows === 2
-                    ? queuePages.map((pageItems, pageIndex) => (
-                        <div
-                          key={`queue-page-${pageIndex}`}
-                          className="grid shrink-0 content-start gap-3 snap-start xl:gap-2.5"
-                          style={{
-                            gridTemplateColumns: queueGridTemplateColumns,
-                            width: queuePageWidth,
-                          }}
-                        >
-                          {pageItems.map(item => (
-                            <FeedQueueCard
-                              key={item.id.toString()}
-                              item={item}
-                              onSelect={handleSelectCard}
-                              onNavigate={handleQueueKeyboardNavigate}
-                              queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                              queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
-                              hasVoted={votedContentIds.has(item.id.toString())}
-                              selected={item.id === primaryItem?.id}
-                            />
-                          ))}
-                        </div>
-                      ))
-                    : visibleFeedItems.map(item => (
-                        <FeedQueueCard
-                          key={item.id.toString()}
-                          item={item}
-                          onSelect={handleSelectCard}
-                          onNavigate={handleQueueKeyboardNavigate}
-                          queuePosition={queuePositionMap.get(item.id.toString()) ?? 0}
-                          queueStatus={queueStatusByContentId.get(item.id.toString()) ?? null}
-                          hasVoted={votedContentIds.has(item.id.toString())}
-                          selected={item.id === primaryItem?.id}
-                        />
-                      ))}
-                </div>
-              </motion.section>
-            ) : null}
-
-            {canLoadMore ? (
-              <div ref={loadMoreRef} className="flex justify-center py-8 xl:hidden">
-                <span className="loading loading-spinner loading-md text-primary"></span>
-              </div>
-            ) : null}
-          </div>
+          <VoteFeedStage
+            primaryItem={primaryItem}
+            displayFeed={displayFeed}
+            visibleFeedItems={visibleFeedItems}
+            navigationDirection={navigationDirection}
+            activeSourceIndex={activeSourceIndex}
+            loadedCount={visibleCount}
+            canLoadMore={canLoadMore}
+            queueStatusByContentId={queueStatusByContentId}
+            queuePositionMap={queuePositionMap}
+            enrichedProfiles={enrichedProfiles}
+            watchedContentIds={watchedContentIds}
+            votedContentIds={votedContentIds}
+            followedWallets={followedWallets}
+            normalizedAddress={normalizedAddress}
+            address={address}
+            isCommitting={isCommitting}
+            voteError={voteError}
+            primaryItemCooldownSeconds={primaryItemCooldownSeconds}
+            navigationLocked={stakeModal.isOpen}
+            isWatchPending={isWatchPending}
+            isFollowPending={isFollowPending}
+            onLoadMore={() => setVisibleCount(prev => prev + FEED_PAGE_SIZE)}
+            onNavigateSelection={handleNavigateSelection}
+            onSelectByIndex={handleSelectByIndex}
+            onSelectCard={handleSelectCard}
+            onVote={handleButtonVote}
+            onExternalOpen={handleExternalOpen}
+            onToggleWatch={handleToggleWatch}
+            onToggleFollow={handleToggleFollow}
+          />
         )}
       </div>
 
       {/* Stake selector modal */}
-      <StakeSelector
-        isOpen={stakeModal.isOpen}
-        isUp={stakeModal.isUp}
-        contentId={stakeModal.contentId}
-        categoryId={stakeModal.categoryId}
-        cooldownSecondsRemaining={stakeModalCooldownSeconds}
-        onConfirm={handleConfirmStake}
-        onCancel={handleCancelStake}
-      />
+      {stakeModal.isOpen ? (
+        <StakeSelector
+          isOpen={stakeModal.isOpen}
+          isUp={stakeModal.isUp}
+          contentId={stakeModal.contentId}
+          categoryId={stakeModal.categoryId}
+          cooldownSecondsRemaining={stakeModalCooldownSeconds}
+          onConfirm={handleConfirmStake}
+          onCancel={handleCancelStake}
+        />
+      ) : null}
     </AppPageShell>
   );
 };
