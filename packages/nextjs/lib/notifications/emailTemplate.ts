@@ -20,12 +20,13 @@ function escapeHtml(value: string) {
 }
 
 function getAbsoluteAppUrl() {
-  const appUrl = getOptionalAppUrl() ?? "http://localhost:3000";
-  return appUrl.replace(/\/+$/, "");
+  const appUrl = getOptionalAppUrl();
+  return appUrl ? appUrl.replace(/\/+$/, "") : null;
 }
 
 function getEmailLogoUrl() {
-  return `${getAbsoluteAppUrl()}/curyo-email-logo.svg`;
+  const appUrl = getAbsoluteAppUrl();
+  return appUrl ? `${appUrl}/curyo-email-logo.svg` : null;
 }
 
 export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
@@ -38,7 +39,8 @@ export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
     params.footerNote ?? "You are receiving this email because you signed up for Curyo email notifications.",
   );
   const safeLinkIntro = escapeHtml(params.linkIntro ?? "If the button does not work, open this link manually:");
-  const safeLogoUrl = escapeHtml(getEmailLogoUrl());
+  const logoUrl = getEmailLogoUrl();
+  const safeLogoUrl = logoUrl ? escapeHtml(logoUrl) : null;
 
   return `
     <div style="margin:0; padding:32px 16px; background:#090a0c; color:#f5f0eb;">
@@ -46,6 +48,9 @@ export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
         <tr>
           <td align="center">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; width:100%; max-width:640px;">
+              ${
+                safeLogoUrl
+                  ? `
               <tr>
                 <td style="padding:0 0 16px 0;">
                   <img
@@ -56,6 +61,9 @@ export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
                   />
                 </td>
               </tr>
+              `
+                  : ""
+              }
               <tr>
                 <td
                   style="

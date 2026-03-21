@@ -13,6 +13,7 @@ describe("createServer", () => {
       httpHost: "127.0.0.1",
       httpPort: 3334,
       httpPath: "/mcp",
+      httpPublicBaseUrl: null,
       httpCorsOrigin: "*",
       httpAuth: {
         mode: "none",
@@ -42,6 +43,7 @@ describe("createServer", () => {
         httpHost: "127.0.0.1",
         httpPort: 3334,
         httpPath: "/mcp",
+        httpPublicBaseUrl: null,
         httpCorsOrigin: "*",
         httpAuth: {
           mode: "none",

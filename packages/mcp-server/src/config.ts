@@ -9,6 +9,7 @@ export interface ServerConfig {
   httpHost: string;
   httpPort: number;
   httpPath: string;
+  httpPublicBaseUrl: string | null;
   httpCorsOrigin: string;
   httpAuth: HttpAuthConfig;
 }
@@ -47,6 +48,11 @@ export function normalizeBaseUrl(value: string): string {
 export function normalizeHttpPath(value: string): string {
   const withLeadingSlash = value.startsWith("/") ? value : `/${value}`;
   return withLeadingSlash === "/" ? withLeadingSlash : withLeadingSlash.replace(/\/+$/, "");
+}
+
+export function normalizeOptionalBaseUrl(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? normalizeBaseUrl(trimmed) : null;
 }
 
 function parseIntegerEnv(value: string | undefined, fallback: number, label: string, minimum: number): number {
@@ -124,6 +130,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpHost: env.CURYO_MCP_HTTP_HOST ?? DEFAULT_HTTP_HOST,
     httpPort: parseIntegerEnv(env.CURYO_MCP_HTTP_PORT, DEFAULT_HTTP_PORT, "CURYO_MCP_HTTP_PORT", 0),
     httpPath: normalizeHttpPath(env.CURYO_MCP_HTTP_PATH ?? DEFAULT_HTTP_PATH),
+    httpPublicBaseUrl: normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL),
     httpCorsOrigin: env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN,
     httpAuth: loadHttpAuthConfig(env),
   };

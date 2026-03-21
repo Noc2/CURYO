@@ -82,8 +82,9 @@ export function resolveNotificationEmailDeliveryStatus(args: {
   resendConfigured: boolean;
   ponderConfigured: boolean;
   ponderAvailable: boolean;
+  appUrlConfigured: boolean;
 }) {
-  if (!args.resendConfigured || !args.ponderConfigured) {
+  if (!args.resendConfigured || !args.ponderConfigured || !args.appUrlConfigured) {
     return {
       ok: false as const,
       error: "Notification delivery is not configured",
@@ -106,12 +107,22 @@ export async function getNotificationEmailDeliveryStatus() {
   const resendConfigured = isResendConfigured();
   const ponderConfigured = isPonderConfigured();
   const ponderAvailable = ponderConfigured ? await isPonderAvailable() : false;
+  const appUrlConfigured = Boolean(getOptionalAppUrl());
 
   return resolveNotificationEmailDeliveryStatus({
     resendConfigured,
     ponderConfigured,
     ponderAvailable,
+    appUrlConfigured,
   });
+}
+
+function getRequiredNotificationAppUrl() {
+  const appUrl = getOptionalAppUrl();
+  if (!appUrl) {
+    throw new Error("Notification delivery is not configured");
+  }
+  return appUrl;
 }
 
 export async function ensureNotificationEmailDeliveriesTable() {
@@ -193,25 +204,29 @@ function getDisplayName(address: string, profileName: string | null) {
   return profileName || `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-function getAbsoluteVoteUrl(contentId: string) {
-  const appUrl = getOptionalAppUrl();
-  const base = appUrl ?? "http://localhost:3000";
-  const url = new URL("/vote", base);
+function getAbsoluteVoteUrl(contentId: string, appUrl: string) {
+  const url = new URL("/vote", appUrl);
   url.searchParams.set("content", contentId);
   return url.toString();
 }
 
-function getAbsoluteGovernanceUrl() {
-  const appUrl = getOptionalAppUrl();
-  const base = appUrl ?? "http://localhost:3000";
-  return new URL("/governance", base).toString();
+function getAbsoluteGovernanceUrl(appUrl: string) {
+  return new URL("/governance", appUrl).toString();
 }
 
-function getAbsoluteRoundResolvedUrl(contentId: string, source: NotificationEventResolutionItem["source"]) {
-  return source === "watched" ? getAbsoluteVoteUrl(contentId) : getAbsoluteGovernanceUrl();
+function getAbsoluteRoundResolvedUrl(
+  contentId: string,
+  source: NotificationEventResolutionItem["source"],
+  appUrl: string,
+) {
+  return source === "watched" ? getAbsoluteVoteUrl(contentId, appUrl) : getAbsoluteGovernanceUrl(appUrl);
 }
 
-function buildCandidates(subscription: DeliverySubscription, events: NotificationEventResponse): EmailCandidate[] {
+function buildCandidates(
+  subscription: DeliverySubscription,
+  events: NotificationEventResponse,
+  appUrl: string,
+): EmailCandidate[] {
   const candidates = new Map<string, EmailCandidate>();
   const nowSeconds = Math.floor(Date.now() / 1000);
 
@@ -225,7 +240,7 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
           : source === "watched_voted"
             ? "A round you watched and voted on resolved"
             : "A round you voted on resolved";
-      const href = getAbsoluteRoundResolvedUrl(item.contentId, source);
+      const href = getAbsoluteRoundResolvedUrl(item.contentId, source, appUrl);
       const body =
         source === "watched"
           ? `${bodyPrefix}: "${item.title}".`
@@ -266,7 +281,7 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
           ? "A tracked round is settling within the hour"
           : "A tracked round looks likely to settle today",
       body: settlingSoonSummary.body,
-      href: getAbsoluteVoteUrl(settlingSoonSummary.contentId),
+      href: getAbsoluteVoteUrl(settlingSoonSummary.contentId, appUrl),
     });
   }
 
@@ -282,7 +297,7 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
         contentId: item.contentId,
         subject: `${displayName} submitted something new on Curyo`,
         body: `${displayName} just submitted "${item.title}".`,
-        href: getAbsoluteVoteUrl(item.contentId),
+        href: getAbsoluteVoteUrl(item.contentId, appUrl),
       });
     }
   }
@@ -300,7 +315,7 @@ function buildCandidates(subscription: DeliverySubscription, events: Notificatio
         contentId: item.contentId,
         subject: `${displayName} ${action} a Curyo call`,
         body: `${displayName} ${action} a call on "${item.title}".`,
-        href: getAbsoluteVoteUrl(item.contentId),
+        href: getAbsoluteVoteUrl(item.contentId, appUrl),
       });
     }
   }
@@ -317,6 +332,21 @@ async function getDeliveryState(eventKey: string): Promise<DeliveryStatus | null
 
   if (!row) return null;
   return row.status === DELIVERY_STATUS_SENDING ? DELIVERY_STATUS_SENDING : DELIVERY_STATUS_SENT;
+}
+
+export function resolveNotificationEmailDeliveryAttempt(args: {
+  deliveryState: "sent" | "sending" | null;
+  leaseAcquired: boolean;
+}) {
+  if (args.deliveryState === DELIVERY_STATUS_SENT) {
+    return "skip-sent" as const;
+  }
+
+  if (!args.leaseAcquired) {
+    return "skip-lease" as const;
+  }
+
+  return "send" as const;
 }
 
 async function reservePendingDelivery(candidate: EmailCandidate) {
@@ -414,6 +444,7 @@ async function sendCandidate(candidate: EmailCandidate) {
 
 export async function deliverNotificationEmails() {
   await ensureNotificationEmailDeliveriesTable();
+  const appUrl = getRequiredNotificationAppUrl();
 
   const subscriptions = await getActiveSubscriptions();
   const result = {
@@ -428,7 +459,7 @@ export async function deliverNotificationEmails() {
     let candidates: EmailCandidate[];
     try {
       const events = await getNotificationEvents(subscription.walletAddress);
-      candidates = buildCandidates(subscription, events);
+      candidates = buildCandidates(subscription, events, appUrl);
     } catch (error) {
       console.error("Failed to prepare notification email candidates:", subscription.walletAddress, error);
       result.failed += 1;
@@ -439,13 +470,13 @@ export async function deliverNotificationEmails() {
       result.attempted += 1;
 
       const deliveryState = await getDeliveryState(candidate.eventKey);
-      if (deliveryState === DELIVERY_STATUS_SENT || deliveryState === DELIVERY_STATUS_SENDING) {
-        result.skipped += 1;
-        continue;
-      }
-
       const leaseAcquired = await acquireDeliveryLease(candidate.eventKey, Date.now());
-      if (!leaseAcquired) {
+      const attempt = resolveNotificationEmailDeliveryAttempt({
+        deliveryState,
+        leaseAcquired,
+      });
+
+      if (attempt === "skip-sent" || attempt === "skip-lease") {
         result.skipped += 1;
         continue;
       }

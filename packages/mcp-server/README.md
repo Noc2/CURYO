@@ -43,6 +43,7 @@ The server reads from the environment at startup.
 | `CURYO_MCP_HTTP_HOST` | `127.0.0.1` | Bind host for Streamable HTTP mode |
 | `CURYO_MCP_HTTP_PORT` | `3334` | Bind port for Streamable HTTP mode |
 | `CURYO_MCP_HTTP_PATH` | `/mcp` | MCP HTTP endpoint path |
+| `CURYO_MCP_PUBLIC_BASE_URL` | — | Optional public base URL used in startup logs when binding to wildcard hosts |
 | `CURYO_MCP_HTTP_CORS_ORIGIN` | `http://localhost:3000` | CORS allow-origin header for Streamable HTTP mode |
 | `CURYO_MCP_HTTP_AUTH_MODE` | `none` | HTTP auth mode: `none` or `bearer` |
 | `CURYO_MCP_HTTP_BEARER_TOKEN` | — | Single bearer token for HTTP mode |
@@ -59,6 +60,7 @@ CURYO_MCP_TRANSPORT=streamable-http
 CURYO_MCP_HTTP_HOST=0.0.0.0
 CURYO_MCP_HTTP_PORT=3334
 CURYO_MCP_HTTP_PATH=/mcp
+CURYO_MCP_PUBLIC_BASE_URL=https://mcp.example.com
 CURYO_MCP_HTTP_AUTH_MODE=bearer
 CURYO_MCP_HTTP_BEARER_TOKEN=replace-me
 ```

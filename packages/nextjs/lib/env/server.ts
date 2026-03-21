@@ -17,6 +17,27 @@ function isLocalhostHostname(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
+export function resolveAppUrl(rawValue: string | undefined, production: boolean): string | null {
+  const resolvedValue = rawValue?.trim() || (!production ? "http://localhost:3000" : undefined);
+
+  if (!resolvedValue) {
+    return null;
+  }
+
+  try {
+    const url = new URL(resolvedValue);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+    if (production && isLocalhostHostname(url.hostname)) {
+      return null;
+    }
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
 export function resolveServerPonderUrl(rawValue: string | undefined, production: boolean): string | null {
   const resolvedValue = rawValue?.trim() || (!production ? "http://localhost:42069" : undefined);
 
@@ -88,7 +109,7 @@ export function getTmdbApiKey(): string | undefined {
 }
 
 export function getOptionalAppUrl(): string | undefined {
-  return readEnv("APP_URL") ?? readEnv("NEXT_PUBLIC_APP_URL") ?? (!isProduction ? "http://localhost:3000" : undefined);
+  return resolveAppUrl(readEnv("APP_URL") ?? readEnv("NEXT_PUBLIC_APP_URL"), isProduction) ?? undefined;
 }
 
 export function getResendConfig() {

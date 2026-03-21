@@ -10,16 +10,25 @@ async function main() {
   if (config.transport === "streamable-http") {
     const runningServer = await startStreamableHttpServer(config);
     logEvent("info", "mcp_http_server_started", {
-      endpointUrl: runningServer.endpointUrl,
-      healthUrl: new URL("/healthz", runningServer.endpointUrl).toString(),
-      readinessUrl: new URL("/readyz", runningServer.endpointUrl).toString(),
+      ...(runningServer.endpointUrl
+        ? {
+            endpointUrl: runningServer.endpointUrl,
+            healthUrl: runningServer.healthUrl,
+            readinessUrl: runningServer.readinessUrl,
+          }
+        : {}),
+      listenAddress: runningServer.listenAddress,
+      listenPort: runningServer.listenPort,
+      httpPath: config.httpPath,
       ponderBaseUrl: config.ponderBaseUrl,
       httpAuthMode: config.httpAuth.mode,
     });
 
     registerShutdownHandlers(async () => {
       logEvent("info", "mcp_http_server_stopping", {
-        endpointUrl: runningServer.endpointUrl,
+        ...(runningServer.endpointUrl ? { endpointUrl: runningServer.endpointUrl } : {}),
+        listenAddress: runningServer.listenAddress,
+        listenPort: runningServer.listenPort,
       });
       await runningServer.close();
     });

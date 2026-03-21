@@ -8,7 +8,11 @@ import { logEvent, serializeError } from "./lib/logging.js";
 import { createServer as createMcpServer } from "./server.js";
 
 export interface RunningHttpServer {
-  endpointUrl: string;
+  endpointUrl: string | null;
+  healthUrl: string | null;
+  readinessUrl: string | null;
+  listenAddress: string;
+  listenPort: number;
   server: HttpServer;
   close: () => Promise<void>;
 }
@@ -18,6 +22,31 @@ const CORS_ALLOW_HEADERS = "Accept, Authorization, Content-Type, Last-Event-ID, 
 const HEALTH_PATH = "/healthz";
 const READINESS_PATH = "/readyz";
 type AuthenticatedIncomingMessage = IncomingMessage & { auth?: AuthInfo };
+
+function isWildcardAddress(address: string): boolean {
+  return address === "0.0.0.0" || address === "::";
+}
+
+function buildPublicUrl(baseUrl: string, path: string): string {
+  return new URL(path.replace(/^\/+/, ""), `${baseUrl.replace(/\/+$/, "")}/`).toString();
+}
+
+export function resolveAdvertisedHttpUrl(params: {
+  listenAddress: string;
+  listenPort: number;
+  path: string;
+  publicBaseUrl: string | null;
+}): string | null {
+  if (params.publicBaseUrl) {
+    return buildPublicUrl(params.publicBaseUrl, params.path);
+  }
+
+  if (isWildcardAddress(params.listenAddress)) {
+    return null;
+  }
+
+  return new URL(params.path, `http://${params.listenAddress}:${params.listenPort}`).toString();
+}
 
 export async function startStreamableHttpServer(config: ServerConfig): Promise<RunningHttpServer> {
   const ponderClient = new PonderClient({
@@ -41,11 +70,31 @@ export async function startStreamableHttpServer(config: ServerConfig): Promise<R
     throw new Error("Failed to resolve MCP HTTP server address");
   }
 
-  const host = address.address === "::" ? "127.0.0.1" : address.address;
-  const endpointUrl = new URL(config.httpPath, `http://${host}:${address.port}`).toString();
+  const endpointUrl = resolveAdvertisedHttpUrl({
+    listenAddress: address.address,
+    listenPort: address.port,
+    path: config.httpPath,
+    publicBaseUrl: config.httpPublicBaseUrl,
+  });
+  const healthUrl = resolveAdvertisedHttpUrl({
+    listenAddress: address.address,
+    listenPort: address.port,
+    path: HEALTH_PATH,
+    publicBaseUrl: config.httpPublicBaseUrl,
+  });
+  const readinessUrl = resolveAdvertisedHttpUrl({
+    listenAddress: address.address,
+    listenPort: address.port,
+    path: READINESS_PATH,
+    publicBaseUrl: config.httpPublicBaseUrl,
+  });
 
   return {
     endpointUrl,
+    healthUrl,
+    readinessUrl,
+    listenAddress: address.address,
+    listenPort: address.port,
     server,
     close: () =>
       new Promise<void>((resolve, reject) => {

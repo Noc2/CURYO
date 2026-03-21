@@ -1,6 +1,18 @@
-import { resolveServerPonderUrl, resolveServerTargetNetworks } from "./server";
+import { resolveAppUrl, resolveServerPonderUrl, resolveServerTargetNetworks } from "./server";
 import assert from "node:assert/strict";
 import { test } from "node:test";
+
+test("resolveAppUrl keeps the local default outside production", () => {
+  assert.equal(resolveAppUrl(undefined, false), "http://localhost:3000");
+});
+
+test("resolveAppUrl rejects localhost in production", () => {
+  assert.equal(resolveAppUrl("http://localhost:3000", true), null);
+});
+
+test("resolveAppUrl normalizes valid public app URLs", () => {
+  assert.equal(resolveAppUrl("https://curyo.xyz/", true), "https://curyo.xyz");
+});
 
 test("resolveServerPonderUrl keeps the local default outside production", () => {
   assert.equal(resolveServerPonderUrl(undefined, false), "http://localhost:42069");

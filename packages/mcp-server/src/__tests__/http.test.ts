@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { PonderClient } from "../clients/ponder.js";
-import { handleStreamableHttpRequest } from "../http.js";
+import { handleStreamableHttpRequest, resolveAdvertisedHttpUrl } from "../http.js";
 
 interface MockResponse {
   headers: Record<string, string>;
@@ -52,6 +52,7 @@ describe("handleStreamableHttpRequest", () => {
     httpHost: "127.0.0.1",
     httpPort: 3334,
     httpPath: "/mcp",
+    httpPublicBaseUrl: null,
     httpCorsOrigin: "*",
     httpAuth: {
       mode: "none" as const,
@@ -180,5 +181,29 @@ describe("handleStreamableHttpRequest", () => {
     expect(JSON.parse(response.body)).toEqual({
       error: "Missing bearer token",
     });
+  });
+});
+
+describe("resolveAdvertisedHttpUrl", () => {
+  it("omits a connect URL for wildcard bind addresses without a public base URL", () => {
+    expect(
+      resolveAdvertisedHttpUrl({
+        listenAddress: "0.0.0.0",
+        listenPort: 3334,
+        path: "/mcp",
+        publicBaseUrl: null,
+      }),
+    ).toBe(null);
+  });
+
+  it("uses the configured public base URL when provided", () => {
+    expect(
+      resolveAdvertisedHttpUrl({
+        listenAddress: "0.0.0.0",
+        listenPort: 3334,
+        path: "/mcp",
+        publicBaseUrl: "https://mcp.curyo.xyz/base",
+      }),
+    ).toBe("https://mcp.curyo.xyz/base/mcp");
   });
 });

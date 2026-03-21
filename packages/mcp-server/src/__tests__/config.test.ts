@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadConfig, normalizeBaseUrl, normalizeHttpPath } from "../config.js";
+import { loadConfig, normalizeBaseUrl, normalizeHttpPath, normalizeOptionalBaseUrl } from "../config.js";
 
 describe("normalizeBaseUrl", () => {
   it("strips trailing slashes", () => {
@@ -29,6 +29,7 @@ describe("loadConfig", () => {
       httpHost: "127.0.0.1",
       httpPort: 3334,
       httpPath: "/mcp",
+      httpPublicBaseUrl: null,
       httpCorsOrigin: "http://localhost:3000",
       httpAuth: {
         mode: "none",
@@ -53,9 +54,19 @@ describe("loadConfig", () => {
     expect(config.httpHost).toBe("0.0.0.0");
     expect(config.httpPort).toBe(4444);
     expect(config.httpPath).toBe("/rpc");
+    expect(config.httpPublicBaseUrl).toBe(null);
     expect(config.httpCorsOrigin).toBe("https://chatgpt.com");
     expect(config.ponderTimeoutMs).toBe(2500);
     expect(config.httpAuth.mode).toBe("none");
+  });
+
+  it("normalizes an optional public base URL", () => {
+    const config = loadConfig({
+      CURYO_MCP_TRANSPORT: "streamable-http",
+      CURYO_MCP_PUBLIC_BASE_URL: "https://mcp.curyo.xyz/base/",
+    });
+
+    expect(config.httpPublicBaseUrl).toBe("https://mcp.curyo.xyz/base");
   });
 
   it("loads static bearer auth config", () => {
@@ -86,5 +97,12 @@ describe("normalizeHttpPath", () => {
     expect(normalizeHttpPath("mcp")).toBe("/mcp");
     expect(normalizeHttpPath("/mcp/")).toBe("/mcp");
     expect(normalizeHttpPath("/")).toBe("/");
+  });
+});
+
+describe("normalizeOptionalBaseUrl", () => {
+  it("returns null for empty values and normalizes valid URLs", () => {
+    expect(normalizeOptionalBaseUrl(undefined)).toBe(null);
+    expect(normalizeOptionalBaseUrl(" https://mcp.curyo.xyz/ ")).toBe("https://mcp.curyo.xyz");
   });
 });
