@@ -67,7 +67,7 @@ export function useWalletExecutionCapabilities() {
       hasSendCalls,
       isThirdwebInApp,
       supportsFeeCurrencyFallback: supportedChain,
-      supportsSponsoredCalls: executionMode === "sponsored_7702" || executionMode === "external_send_calls",
+      supportsSponsoredCalls: executionMode === "sponsored_7702",
     };
   }, [capabilities, chainId, supportedChain, thirdwebAccount?.sendCalls, wallet]);
 }

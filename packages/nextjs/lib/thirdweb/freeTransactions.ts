@@ -253,34 +253,39 @@ function extractTargetAddresses(body: ThirdwebVerifierRequest) {
 export async function ensureFreeTransactionQuotaTable() {
   if (!ensureFreeTransactionQuotaTablePromise) {
     ensureFreeTransactionQuotaTablePromise = (async () => {
-      await db.run(
-        sql.raw(`
-          CREATE TABLE IF NOT EXISTS free_transaction_quotas (
-            identity_key TEXT PRIMARY KEY NOT NULL,
-            voter_id_token_id TEXT NOT NULL,
-            chain_id INTEGER NOT NULL,
-            environment TEXT NOT NULL,
-            last_wallet_address TEXT NOT NULL,
-            free_tx_limit INTEGER NOT NULL,
-            free_tx_used INTEGER NOT NULL,
-            exhausted_at INTEGER,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
-          )
-        `),
-      );
-      await db.run(
-        sql.raw(`
-          CREATE UNIQUE INDEX IF NOT EXISTS free_transaction_quotas_token_chain_env_unique
-          ON free_transaction_quotas (voter_id_token_id, chain_id, environment)
-        `),
-      );
-      await db.run(
-        sql.raw(`
-          CREATE INDEX IF NOT EXISTS free_transaction_quotas_chain_updated_at_idx
-          ON free_transaction_quotas (chain_id, updated_at)
-        `),
-      );
+      try {
+        await db.run(
+          sql.raw(`
+            CREATE TABLE IF NOT EXISTS free_transaction_quotas (
+              identity_key TEXT PRIMARY KEY NOT NULL,
+              voter_id_token_id TEXT NOT NULL,
+              chain_id INTEGER NOT NULL,
+              environment TEXT NOT NULL,
+              last_wallet_address TEXT NOT NULL,
+              free_tx_limit INTEGER NOT NULL,
+              free_tx_used INTEGER NOT NULL,
+              exhausted_at INTEGER,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL
+            )
+          `),
+        );
+        await db.run(
+          sql.raw(`
+            CREATE UNIQUE INDEX IF NOT EXISTS free_transaction_quotas_token_chain_env_unique
+            ON free_transaction_quotas (voter_id_token_id, chain_id, environment)
+          `),
+        );
+        await db.run(
+          sql.raw(`
+            CREATE INDEX IF NOT EXISTS free_transaction_quotas_chain_updated_at_idx
+            ON free_transaction_quotas (chain_id, updated_at)
+          `),
+        );
+      } catch (err) {
+        ensureFreeTransactionQuotaTablePromise = null;
+        throw err;
+      }
     })();
   }
 

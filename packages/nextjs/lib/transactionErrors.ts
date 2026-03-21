@@ -1,4 +1,5 @@
-function collectErrorText(value: unknown, seen: Set<unknown>): string[] {
+function collectErrorText(value: unknown, seen: Set<unknown>, depth = 0): string[] {
+  if (depth > 10) return [];
   if (value === null || value === undefined) return [];
 
   if (
@@ -21,7 +22,7 @@ function collectErrorText(value: unknown, seen: Set<unknown>): string[] {
   }
 
   for (const nested of Object.values(value as Record<string, unknown>)) {
-    parts.push(...collectErrorText(nested, seen));
+    parts.push(...collectErrorText(nested, seen, depth + 1));
   }
 
   return parts;

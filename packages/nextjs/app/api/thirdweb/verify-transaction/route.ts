@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { getThirdwebClientId, getThirdwebServerVerifierSecret } from "~~/lib/env/server";
 import {
   type FreeTransactionAllowanceDecision,
@@ -21,7 +22,11 @@ export async function POST(request: NextRequest) {
     return createDeniedResponse("Transactions are not sponsored right now.");
   }
 
-  if (!providedSecret || providedSecret !== configuredSecret) {
+  if (
+    !providedSecret ||
+    providedSecret.length !== configuredSecret.length ||
+    !timingSafeEqual(Buffer.from(providedSecret), Buffer.from(configuredSecret))
+  ) {
     return createDeniedResponse("Unauthorized");
   }
 
