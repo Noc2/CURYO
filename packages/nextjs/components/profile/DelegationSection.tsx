@@ -1,60 +1,121 @@
 "use client";
 
-import { useState } from "react";
-import { isAddress } from "viem";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatUnits, isAddress, parseUnits } from "viem";
 import { useAccount } from "wagmi";
-import { ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { ArrowsRightLeftIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useDelegation } from "~~/hooks/useDelegation";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { formatCrepAmount } from "~~/lib/vote/voteIncentives";
 import { notification } from "~~/utils/scaffold-eth";
+import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
+
+const CREP_DECIMALS = 6;
+
+function parseCrepAmount(value: string): bigint | null {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  try {
+    return parseUnits(trimmedValue, CREP_DECIMALS);
+  } catch {
+    return null;
+  }
+}
 
 export function DelegationSection() {
   const { address } = useAccount();
+  const queryClient = useQueryClient();
   const { hasVoterId, isLoading: voterIdLoading } = useVoterIdNFT(address);
-  const { delegateTo, hasDelegate, isDelegate, delegateOf, isLoading, isPending, writeContractAsync, refetch } =
-    useDelegation(address);
+  const {
+    delegateTo,
+    hasDelegate,
+    isDelegate,
+    delegateOf,
+    isLoading,
+    isPending: isDelegationPending,
+    writeContractAsync,
+    refetch,
+  } = useDelegation(address);
+  const { data: crepBalance, refetch: refetchCrepBalance } = useScaffoldReadContract({
+    contractName: "CuryoReputation",
+    functionName: "balanceOf",
+    args: [address],
+    query: { enabled: !!address },
+  });
+  const { writeContractAsync: writeCrepContractAsync, isPending: isTransferPending } = useScaffoldWriteContract({
+    contractName: "CuryoReputation",
+  });
 
   const [delegateInput, setDelegateInput] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [transferAddressInput, setTransferAddressInput] = useState("");
+  const [transferAmountInput, setTransferAmountInput] = useState("");
+  const [delegationError, setDelegationError] = useState<string | null>(null);
+  const [transferError, setTransferError] = useState<string | null>(null);
 
-  const isValidAddress = delegateInput.length > 0 && isAddress(delegateInput);
-  const isSelfAddress = delegateInput.toLowerCase() === address?.toLowerCase();
+  const normalizedDelegateInput = delegateInput.trim();
+  const isValidAddress = normalizedDelegateInput.length > 0 && isAddress(normalizedDelegateInput);
+  const isSelfAddress = normalizedDelegateInput.toLowerCase() === address?.toLowerCase();
+  const crepBalanceMicro = typeof crepBalance === "bigint" ? crepBalance : 0n;
+  const formattedBalance = formatCrepAmount(crepBalanceMicro, 6);
+
+  const normalizedTransferAddress = transferAddressInput.trim();
+  const parsedTransferAmount = useMemo(() => parseCrepAmount(transferAmountInput), [transferAmountInput]);
+  const hasTransferAmount = transferAmountInput.trim().length > 0;
+  const isValidTransferAddress = normalizedTransferAddress.length > 0 && isAddress(normalizedTransferAddress);
+  const isTransferSelfAddress = normalizedTransferAddress.toLowerCase() === address?.toLowerCase();
+  const isTransferZeroAddress = normalizedTransferAddress.toLowerCase() === ZERO_ADDRESS.toLowerCase();
+  const isValidTransferAmount = parsedTransferAmount !== null && parsedTransferAmount > 0n;
+  const exceedsTransferBalance = parsedTransferAmount !== null && parsedTransferAmount > crepBalanceMicro;
+  const canSubmitTransfer =
+    isValidTransferAddress &&
+    !isTransferZeroAddress &&
+    !isTransferSelfAddress &&
+    isValidTransferAmount &&
+    !exceedsTransferBalance;
 
   const handleSetDelegate = async () => {
     if (!isValidAddress) {
-      setError("Please enter a valid Ethereum address");
+      setDelegationError("Enter a valid address");
       return;
     }
     if (isSelfAddress) {
-      setError("Cannot delegate to yourself");
+      setDelegationError("Cannot delegate to yourself");
       return;
     }
-    setError(null);
+    setDelegationError(null);
 
     try {
       await (writeContractAsync as any)({
         functionName: "setDelegate",
-        args: [delegateInput],
+        args: [normalizedDelegateInput],
       });
       notification.success("Delegate set successfully!");
       setDelegateInput("");
+      setTransferAddressInput(currentValue =>
+        currentValue.trim().length > 0 ? currentValue : normalizedDelegateInput,
+      );
       refetch();
     } catch (e: any) {
       console.error("Set delegate failed:", e);
       const msg = e?.shortMessage || e?.message || "Failed to set delegate";
       if (msg.includes("DelegateIsHolder")) {
-        setError("That address already has its own Voter ID and cannot be a delegate");
+        setDelegationError("That address already has its own Voter ID");
       } else if (msg.includes("DelegateAlreadyAssigned")) {
-        setError("That address is already a delegate for another holder");
+        setDelegationError("That address is already delegated");
       } else {
-        setError(msg);
+        setDelegationError(msg);
       }
     }
   };
 
   const handleRemoveDelegate = async () => {
-    setError(null);
+    setDelegationError(null);
     try {
       await (writeContractAsync as any)({
         functionName: "removeDelegate",
@@ -63,7 +124,46 @@ export function DelegationSection() {
       refetch();
     } catch (e: any) {
       console.error("Remove delegate failed:", e);
-      setError(e?.shortMessage || "Failed to remove delegate");
+      setDelegationError(e?.shortMessage || "Failed to remove delegate");
+    }
+  };
+
+  const handleTransfer = async () => {
+    if (!isValidTransferAddress) {
+      setTransferError("Enter a valid address");
+      return;
+    }
+    if (isTransferZeroAddress) {
+      setTransferError("Cannot send to the zero address");
+      return;
+    }
+    if (isTransferSelfAddress) {
+      setTransferError("Cannot send to yourself");
+      return;
+    }
+    if (!isValidTransferAmount || parsedTransferAmount === null) {
+      setTransferError("Enter a valid amount");
+      return;
+    }
+    if (exceedsTransferBalance) {
+      setTransferError("Amount exceeds your balance");
+      return;
+    }
+
+    setTransferError(null);
+
+    try {
+      await writeCrepContractAsync({
+        functionName: "transfer",
+        args: [normalizedTransferAddress as `0x${string}`, parsedTransferAmount],
+      });
+      notification.success(`Sent ${formatCrepAmount(parsedTransferAmount, 6)} cREP`);
+      setTransferAmountInput("");
+      await refetchCrepBalance();
+      void queryClient.invalidateQueries();
+    } catch (e: any) {
+      console.error("Transfer cREP failed:", e);
+      setTransferError(e?.shortMessage || e?.message || "Failed to transfer cREP");
     }
   };
 
@@ -106,8 +206,12 @@ export function DelegationSection() {
         <div className="bg-success/10 border border-success/20 rounded-xl p-4 space-y-3">
           <p className="text-base font-medium text-success">Active delegate</p>
           <p className="text-base font-mono break-all">{delegateTo}</p>
-          <button onClick={handleRemoveDelegate} className="btn btn-outline btn-error btn-sm" disabled={isPending}>
-            {isPending ? (
+          <button
+            onClick={handleRemoveDelegate}
+            className="btn btn-outline btn-error btn-sm"
+            disabled={isDelegationPending}
+          >
+            {isDelegationPending ? (
               <span className="flex items-center gap-2">
                 <span className="loading loading-spinner loading-xs"></span>
                 Removing...
@@ -135,13 +239,19 @@ export function DelegationSection() {
           </label>
           <input
             type="text"
+            aria-label="Delegate address"
             placeholder="0x..."
             className={`input input-bordered w-full bg-base-100 font-mono ${
               delegateInput.length > 0 && !isValidAddress ? "input-error" : ""
             }`}
             value={delegateInput}
-            onChange={e => setDelegateInput(e.target.value)}
-            disabled={isPending}
+            onChange={e => {
+              setDelegateInput(e.target.value);
+              if (delegationError) {
+                setDelegationError(null);
+              }
+            }}
+            disabled={isDelegationPending}
           />
           {delegateInput.length > 0 && !isValidAddress && (
             <p className="text-error text-base">Enter a valid Ethereum address</p>
@@ -151,9 +261,9 @@ export function DelegationSection() {
           <button
             onClick={handleSetDelegate}
             className="btn btn-submit w-full"
-            disabled={isPending || !isValidAddress || isSelfAddress}
+            disabled={isDelegationPending || !isValidAddress || isSelfAddress}
           >
-            {isPending ? (
+            {isDelegationPending ? (
               <span className="flex items-center gap-2">
                 <span className="loading loading-spinner loading-sm"></span>
                 Setting delegate...
@@ -165,12 +275,126 @@ export function DelegationSection() {
         </div>
       )}
 
-      {/* Error */}
-      {error && (
+      {delegationError && (
         <div className="bg-error/10 rounded-lg p-4">
-          <p className="text-error text-base">{error}</p>
+          <p className="text-error text-base">{delegationError}</p>
         </div>
       )}
+
+      <div className="border-t border-base-300 pt-5 space-y-4">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <ArrowsRightLeftIcon className="w-5 h-5" />
+          Transfer cREP
+          <InfoTooltip text="Send cREP to your delegate or any other address." />
+        </h3>
+
+        <p className="text-base text-base-content/60">Balance {formattedBalance} cREP</p>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-base font-medium">Recipient</label>
+            {hasDelegate && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs"
+                onClick={() => {
+                  setTransferAddressInput(delegateTo);
+                  if (transferError) {
+                    setTransferError(null);
+                  }
+                }}
+                disabled={isTransferPending}
+              >
+                Use delegate
+              </button>
+            )}
+          </div>
+          <input
+            type="text"
+            aria-label="Transfer recipient"
+            inputMode="text"
+            placeholder="0x..."
+            className={`input input-bordered w-full bg-base-100 font-mono ${
+              normalizedTransferAddress.length > 0 && !isValidTransferAddress ? "input-error" : ""
+            }`}
+            value={transferAddressInput}
+            onChange={e => {
+              setTransferAddressInput(e.target.value);
+              if (transferError) {
+                setTransferError(null);
+              }
+            }}
+            disabled={isTransferPending}
+          />
+          {normalizedTransferAddress.length > 0 && !isValidTransferAddress && (
+            <p className="text-error text-base">Enter a valid address</p>
+          )}
+          {isValidTransferAddress && isTransferZeroAddress && (
+            <p className="text-warning text-base">Cannot send to the zero address</p>
+          )}
+          {isTransferSelfAddress && <p className="text-warning text-base">Cannot send to yourself</p>}
+
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-base font-medium">Amount</label>
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs"
+              onClick={() => {
+                setTransferAmountInput(formatUnits(crepBalanceMicro, CREP_DECIMALS));
+                if (transferError) {
+                  setTransferError(null);
+                }
+              }}
+              disabled={isTransferPending || crepBalanceMicro === 0n}
+            >
+              Max
+            </button>
+          </div>
+          <input
+            type="text"
+            aria-label="Transfer amount"
+            inputMode="decimal"
+            placeholder="0.0"
+            className={`input input-bordered w-full bg-base-100 font-mono ${
+              hasTransferAmount && !isValidTransferAmount ? "input-error" : ""
+            }`}
+            value={transferAmountInput}
+            onChange={e => {
+              setTransferAmountInput(e.target.value);
+              if (transferError) {
+                setTransferError(null);
+              }
+            }}
+            disabled={isTransferPending}
+          />
+          {hasTransferAmount && parsedTransferAmount === null && (
+            <p className="text-error text-base">Enter a valid amount</p>
+          )}
+          {parsedTransferAmount === 0n && <p className="text-warning text-base">Amount must be greater than 0</p>}
+          {exceedsTransferBalance && <p className="text-warning text-base">Amount exceeds your balance</p>}
+
+          <button
+            onClick={handleTransfer}
+            className="btn btn-submit w-full"
+            disabled={isTransferPending || !canSubmitTransfer}
+          >
+            {isTransferPending ? (
+              <span className="flex items-center gap-2">
+                <span className="loading loading-spinner loading-sm"></span>
+                Sending...
+              </span>
+            ) : (
+              "Send cREP"
+            )}
+          </button>
+        </div>
+
+        {transferError && (
+          <div className="bg-error/10 rounded-lg p-4">
+            <p className="text-error text-base">{transferError}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
