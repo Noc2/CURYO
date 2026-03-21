@@ -16,7 +16,7 @@ export function useQueueCardStatusMap(items: ContentItem[], source: FeedSource, 
   const isPageVisible = usePageVisibility();
   const { data: roundVotingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" as any });
   const needsRpcSnapshot = source === "rpc" && !!roundVotingEngineInfo?.address && items.length > 0;
-  const refetchInterval = isPageVisible ? 10_000 : false;
+  const refetchInterval = isPageVisible ? 30_000 : false;
 
   const currentRoundContracts = useMemo(() => {
     if (!needsRpcSnapshot || !roundVotingEngineInfo) return [];

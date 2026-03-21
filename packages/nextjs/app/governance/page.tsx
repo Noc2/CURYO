@@ -1,18 +1,10 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
-import { FaucetSection } from "~~/components/governance/FaucetSection";
-import { GovernanceActionComposer } from "~~/components/governance/GovernanceActionComposer";
-import { GovernanceStats } from "~~/components/governance/GovernanceStats";
-import { PlatformProposals } from "~~/components/governance/PlatformProposals";
-import { ProposalList } from "~~/components/governance/ProposalList";
-import { TreasuryBalance } from "~~/components/governance/TreasuryBalance";
-import { AccuracyLeaderboard } from "~~/components/leaderboard/AccuracyLeaderboard";
-import { VoterAccuracyStats } from "~~/components/leaderboard/VoterAccuracyStats";
-import { PublicProfileView } from "~~/components/profile/PublicProfileView";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -22,6 +14,52 @@ type GovernanceTab = "profile" | "leaderboard" | "governance" | "faucet";
 
 const governanceTabs: GovernanceTab[] = ["profile", "leaderboard", "governance", "faucet"];
 const zeroBalanceTabs: GovernanceTab[] = ["profile", "faucet"];
+
+function GovernanceSectionLoading() {
+  return (
+    <div className="surface-card rounded-2xl p-6">
+      <div className="flex items-center gap-3 text-base-content/50">
+        <span className="loading loading-spinner loading-sm text-primary" />
+        <span>Loading...</span>
+      </div>
+    </div>
+  );
+}
+
+const PublicProfileView = dynamic(
+  () => import("~~/components/profile/PublicProfileView").then(mod => mod.PublicProfileView),
+  { loading: GovernanceSectionLoading },
+);
+const FaucetSection = dynamic(() => import("~~/components/governance/FaucetSection").then(mod => mod.FaucetSection), {
+  loading: GovernanceSectionLoading,
+});
+const VoterAccuracyStats = dynamic(
+  () => import("~~/components/leaderboard/VoterAccuracyStats").then(mod => mod.VoterAccuracyStats),
+  { loading: GovernanceSectionLoading },
+);
+const AccuracyLeaderboard = dynamic(
+  () => import("~~/components/leaderboard/AccuracyLeaderboard").then(mod => mod.AccuracyLeaderboard),
+  { loading: GovernanceSectionLoading },
+);
+const TreasuryBalance = dynamic(
+  () => import("~~/components/governance/TreasuryBalance").then(mod => mod.TreasuryBalance),
+  { loading: GovernanceSectionLoading },
+);
+const GovernanceStats = dynamic(
+  () => import("~~/components/governance/GovernanceStats").then(mod => mod.GovernanceStats),
+  { loading: GovernanceSectionLoading },
+);
+const GovernanceActionComposer = dynamic(
+  () => import("~~/components/governance/GovernanceActionComposer").then(mod => mod.GovernanceActionComposer),
+  { loading: GovernanceSectionLoading },
+);
+const ProposalList = dynamic(() => import("~~/components/governance/ProposalList").then(mod => mod.ProposalList), {
+  loading: GovernanceSectionLoading,
+});
+const PlatformProposals = dynamic(
+  () => import("~~/components/governance/PlatformProposals").then(mod => mod.PlatformProposals),
+  { loading: GovernanceSectionLoading },
+);
 
 function getGovernanceHash(tab: GovernanceTab) {
   return tab === "profile" ? "" : `#${tab}`;

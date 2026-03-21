@@ -32,6 +32,7 @@ export function useDiscoverSignals(address?: string, options?: UseDiscoverSignal
   });
   const watchedItems = options?.watchedItems ?? hookWatchedItems;
   const followedItems = options?.followedItems ?? hookFollowedItems;
+  const hasTrackedSignals = watchedItems.length > 0 || followedItems.length > 0;
 
   const watchedParam = useMemo(() => watchedItems.map(item => item.contentId).join(","), [watchedItems]);
   const followedParam = useMemo(
@@ -41,7 +42,7 @@ export function useDiscoverSignals(address?: string, options?: UseDiscoverSignal
 
   const { data, isLoading } = usePonderQuery<PonderDiscoverSignalsResponse, PonderDiscoverSignalsResponse>({
     queryKey: ["discoverSignals", address, watchedParam, followedParam],
-    enabled: Boolean(address),
+    enabled: Boolean(address) && hasTrackedSignals,
     ponderFn: async () => {
       if (!address) return EMPTY_DISCOVER_SIGNALS;
 
@@ -60,6 +61,7 @@ export function useDiscoverSignals(address?: string, options?: UseDiscoverSignal
     discoverSignals: data?.data ?? EMPTY_DISCOVER_SIGNALS,
     isLoading:
       Boolean(address) &&
+      hasTrackedSignals &&
       (isLoading ||
         (options?.watchedItems ? false : watchedLoading) ||
         (options?.followedItems ? false : followedLoading)),

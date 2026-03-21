@@ -1,5 +1,6 @@
+import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
 import { getAddress } from "viem";
 import { Address } from "viem";
 import { hardhat } from "viem/chains";
@@ -9,16 +10,9 @@ import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
-import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
-import { useAllClaimableRewards } from "~~/hooks/useAllClaimableRewards";
-import { useClaimAll } from "~~/hooks/useClaimAll";
 import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
 import { useFreeTransactionAllowance } from "~~/hooks/useFreeTransactionAllowance";
-import { useManualRevealVotes } from "~~/hooks/useManualRevealVotes";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
-import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
-import { useVotingStakes } from "~~/hooks/useVotingStakes";
-import { getWalletDisplayLiquidMicro, useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
 type AddressInfoDropdownProps = {
@@ -37,88 +31,17 @@ const getMenuItemClass = (showText: boolean) =>
     ? "flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium"
     : "flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium";
 
+const WalletDetailsPanel = dynamic(() => import("./WalletDetailsPanel").then(mod => mod.WalletDetailsPanel), {
+  loading: () => (
+    <div className="px-4 pl-12 py-1 text-xs text-base-content/50">
+      <span className="loading loading-spinner loading-xs text-primary" /> Loading...
+    </div>
+  ),
+});
+
 function formatCrepAmount(value: bigint | null | undefined) {
   if (value == null) return "—";
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
-}
-
-function useWalletSummaryData(address: Address, crepBalance: bigint | undefined) {
-  const isPageVisible = usePageVisibility();
-  const { data: syncedCrepBalance } = useQuery({
-    queryKey: ["wallet-crep-balance", address.toLowerCase()],
-    queryFn: async () => {
-      const response = await fetch(`/api/leaderboard?includeAddress=${address}&limit=1`);
-      const body = (await response.json().catch(() => null)) as {
-        entries?: { address?: string; balance?: string }[];
-        error?: string;
-      } | null;
-      const matchedEntry = body?.entries?.find(entry => entry.address?.toLowerCase() === address.toLowerCase());
-      if (!response.ok || typeof matchedEntry?.balance !== "string") {
-        throw new Error(body?.error || `Failed to fetch cREP balance (${response.status})`);
-      }
-      return BigInt(matchedEntry.balance);
-    },
-    enabled: Boolean(address),
-    initialData: crepBalance,
-    staleTime: 15_000,
-    refetchInterval: isPageVisible ? 30_000 : false,
-    retry: 1,
-  });
-  const { totalSubmissionStake } = useSubmissionStakes(address);
-  const { activeStaked: votingStaked } = useVotingStakes(address);
-  const { votes: activeVotes, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
-  const { readyCount: manualRevealReadyCount } = useManualRevealVotes(address);
-  const showManualRevealLink = manualRevealReadyCount > 0;
-  const liquidBalance = syncedCrepBalance ?? crepBalance;
-
-  const { data: frontendInfo } = useScaffoldReadContract({
-    contractName: "FrontendRegistry",
-    functionName: "getFrontendInfo",
-    args: [address],
-    watch: false,
-    query: {
-      staleTime: 60_000,
-      refetchInterval: isPageVisible ? 60_000 : false,
-    },
-  });
-
-  const fallbackVotingStaked = activeVotes.reduce((sum, vote) => sum + Number(vote.stake) / 1e6, 0);
-  const effectiveVotingStaked = Math.max(votingStaked, fallbackVotingStaked);
-  const summary = useWalletDisplaySummary(
-    address,
-    liquidBalance === undefined
-      ? null
-      : {
-          liquidMicro: liquidBalance,
-          votingStakedMicro: BigInt(Math.round(effectiveVotingStaked * 1e6)),
-          submissionStakedMicro: BigInt(Math.round(totalSubmissionStake * 1e6)),
-          frontendStakedMicro: frontendInfo?.[1] ?? 0n,
-        },
-  );
-  const displayLiquidBalance = getWalletDisplayLiquidMicro(summary, liquidBalance);
-
-  return {
-    summary,
-    liquidBalance: displayLiquidBalance,
-    activeVotes,
-    earliestReveal,
-    hasPendingReveals,
-    showManualRevealLink,
-  };
-}
-
-function WalletBalanceText({
-  address,
-  crepBalance,
-  className,
-}: {
-  address: Address;
-  crepBalance: bigint | undefined;
-  className?: string;
-}) {
-  const { liquidBalance } = useWalletSummaryData(address, crepBalance);
-
-  return <div className={className}>{formatCrepAmount(liquidBalance)} cREP</div>;
 }
 
 function FreeTransactionAllowanceText({ className }: { className?: string }) {
@@ -137,61 +60,26 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
 }
 
 function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
-  const { claimableItems, totalClaimable, refetch: refetchClaimable } = useAllClaimableRewards();
-  const { claimAll, isClaiming, progress } = useClaimAll();
-  const { summary, liquidBalance, activeVotes, earliestReveal, hasPendingReveals, showManualRevealLink } =
-    useWalletSummaryData(address, crepBalance);
-  const shouldShowStaked = (summary?.totalStakedMicro ?? 0n) > 0n || activeVotes.length > 0;
-
-  const claimableFormatted =
-    totalClaimable > 0n ? (Number(totalClaimable) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 }) : "";
-
-  const handleClaimAll = () => {
-    claimAll(claimableItems, () => refetchClaimable());
-  };
-
-  const stakeParts: string[] = [];
-  const submissionStake = Number(summary?.submissionStakedMicro ?? 0n) / 1e6;
-  const frontendStake = Number(summary?.frontendStakedMicro ?? 0n) / 1e6;
-  const votingStake = Number(summary?.votingStakedMicro ?? 0n) / 1e6;
-
-  if (submissionStake > 0) stakeParts.push(`${submissionStake} cREP submissions`);
-  if (votingStake > 0) {
-    let votingLabel = `${votingStake} cREP voting`;
-    if (earliestReveal) votingLabel += ` · reveals in ${earliestReveal}`;
-    else if (showManualRevealLink || hasPendingReveals) votingLabel += ` · pending reveal`;
-    stakeParts.push(votingLabel);
-  }
-  if (frontendStake > 0) stakeParts.push(`${frontendStake} cREP frontend`);
-  const stakeTooltip = stakeParts.join(" · ");
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
     <>
-      <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(liquidBalance)} cREP</div>
+      <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(crepBalance)} cREP</div>
       <FreeTransactionAllowanceText className="px-4 pl-12 text-left" />
-      {showManualRevealLink ? (
-        <div className="text-left px-4 pl-12">
-          <Link
-            href="/vote/reveal"
-            className="text-xs text-base-content/50 hover:text-base-content underline underline-offset-2"
-          >
-            Reveal my vote
-          </Link>
+      <div className="px-4 pl-12 pt-1">
+        <button
+          type="button"
+          onClick={() => setShowDetails(current => !current)}
+          className="text-xs text-base-content/50 underline underline-offset-2 hover:text-base-content"
+        >
+          {showDetails ? "Hide details" : "Details"}
+        </button>
+      </div>
+      {showDetails ? (
+        <div className="pt-1">
+          <WalletDetailsPanel address={address} crepBalance={crepBalance} />
         </div>
       ) : null}
-      {shouldShowStaked && (
-        <div className="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12">
-          {formatCrepAmount(summary?.totalStakedMicro)} Staked
-          {stakeTooltip ? <InfoTooltip text={stakeTooltip} position="bottom" /> : null}
-        </div>
-      )}
-      {totalClaimable > 0n && (
-        <div className="text-left px-4 pl-12 mt-1">
-          <button onClick={handleClaimAll} disabled={isClaiming} className="btn btn-primary btn-xs">
-            {isClaiming ? `Claiming ${progress.current}/${progress.total}...` : `Claim ${claimableFormatted}`}
-          </button>
-        </div>
-      )}
     </>
   );
 }
@@ -278,11 +166,7 @@ export const AddressInfoDropdown = ({
       {inlineMenu ? <InlineWalletSummary address={address} crepBalance={crepBalance} /> : null}
       {!inlineMenu ? (
         <>
-          <WalletBalanceText
-            address={address}
-            crepBalance={crepBalance}
-            className="text-base text-base-content text-left px-4 pl-12"
-          />
+          <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(crepBalance)} cREP</div>
           <FreeTransactionAllowanceText className="px-4 pl-12 text-left" />
         </>
       ) : null}
@@ -308,11 +192,7 @@ export const AddressInfoDropdown = ({
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      <WalletBalanceText
-        address={address}
-        crepBalance={crepBalance}
-        className="text-base text-base-content hidden xl:inline xl:px-2"
-      />
+      <div className="text-base text-base-content hidden xl:inline xl:px-2">{formatCrepAmount(crepBalance)} cREP</div>
       <FreeTransactionAllowanceText className="hidden xl:flex xl:px-2" />
     </div>
   );
