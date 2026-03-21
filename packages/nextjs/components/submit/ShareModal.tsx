@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckIcon, ClipboardIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { truncateContentTitle } from "~~/lib/contentTitle";
@@ -14,6 +14,14 @@ interface ShareModalProps {
 
 export function ShareModal({ contentId, title, description, onClose }: ShareModalProps) {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/vote?content=${contentId}` : "";
   const truncatedTitle = truncateContentTitle(title);
@@ -38,7 +46,7 @@ export function ShareModal({ contentId, title, description, onClose }: ShareModa
   };
 
   return (
-    <div className="modal modal-open">
+    <div className="modal modal-open" role="dialog" aria-modal="true" aria-label="Content submitted">
       <div className="modal-box max-w-md bg-base-200 shadow-2xl">
         {/* Close button */}
         <button onClick={onClose} className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Close">
@@ -65,7 +73,7 @@ export function ShareModal({ contentId, title, description, onClose }: ShareModa
             rel="noopener noreferrer"
             className="btn btn-primary w-full gap-2"
           >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
             Share on X
