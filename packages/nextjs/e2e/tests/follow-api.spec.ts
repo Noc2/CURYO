@@ -146,7 +146,10 @@ test.describe("Profile follow API routes", () => {
     const list = await listRes.json();
 
     expect(list.count).toBe(2);
-    expect(list.items.map((item: { walletAddress: string }) => item.walletAddress)).toEqual([secondTarget, firstTarget]);
+    expect(list.items.map((item: { walletAddress: string }) => item.walletAddress)).toEqual([
+      secondTarget,
+      firstTarget,
+    ]);
 
     const removed = await unfollowProfile(address, secondTarget, account, combinedCookie);
     expect(removed.body).toMatchObject({ ok: true, following: false, targetAddress: secondTarget });

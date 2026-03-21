@@ -114,6 +114,7 @@ export function useVoteHistoryQuery(voter?: string, options: UseVoteHistoryQuery
     rpcEnabled: rpcFallbackEnabled,
     staleTime: 15_000,
     refetchInterval: isPageVisible ? 30_000 : false,
+    keepPrevious: true,
   });
 
   return {

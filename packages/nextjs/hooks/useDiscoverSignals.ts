@@ -53,6 +53,7 @@ export function useDiscoverSignals(address?: string, options?: UseDiscoverSignal
     rpcFn: async () => EMPTY_DISCOVER_SIGNALS,
     staleTime: 30_000,
     refetchInterval: isPageVisible ? 60_000 : false,
+    keepPrevious: true,
   });
 
   return {

@@ -9,10 +9,10 @@ import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
+import { NetworkEnvironmentBanner } from "~~/components/shared/NetworkEnvironmentBanner";
 import { ClearLegacyBurnerSession } from "~~/components/thirdweb/ClearLegacyBurnerSession";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
-import { NetworkEnvironmentBanner } from "~~/components/shared/NetworkEnvironmentBanner";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
 import { TermsAcceptanceProvider } from "~~/contexts/TermsAcceptanceContext";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
@@ -44,6 +44,8 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
     },
   },
 });

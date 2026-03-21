@@ -155,6 +155,7 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
     rpcEnabled: rpcFallbackEnabled,
     staleTime: 15_000,
     refetchInterval: isPageVisible ? 30_000 : false,
+    keepPrevious: true,
   });
 
   const baseFeed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);

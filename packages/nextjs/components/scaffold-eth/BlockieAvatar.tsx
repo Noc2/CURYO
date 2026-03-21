@@ -37,7 +37,12 @@ export const BlockieAvatar = ({ address, ensImage, size }: BlockieAvatarProps) =
       className="relative block overflow-hidden rounded-full"
       style={{ width: size, height: size, minWidth: size, minHeight: size }}
     >
-      <img className="absolute inset-0 h-full w-full rounded-full" src={fallbackAvatar || ""} alt="" aria-hidden="true" />
+      <img
+        className="absolute inset-0 h-full w-full rounded-full"
+        src={fallbackAvatar || ""}
+        alt=""
+        aria-hidden="true"
+      />
       <img
         className={`absolute inset-0 h-full w-full rounded-full transition-opacity duration-150 ${
           hasLoaded ? "opacity-100" : "opacity-0"

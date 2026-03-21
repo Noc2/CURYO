@@ -78,13 +78,7 @@ test.describe("Category lifecycle", () => {
 
     // Add both categories
     for (const cat of categories) {
-      const success = await addApprovedCategory(
-        cat.name,
-        cat.domain,
-        ["General"],
-        DEPLOYER.address,
-        CATEGORY_REGISTRY,
-      );
+      const success = await addApprovedCategory(cat.name, cat.domain, ["General"], DEPLOYER.address, CATEGORY_REGISTRY);
       expect(success).toBe(true);
     }
 

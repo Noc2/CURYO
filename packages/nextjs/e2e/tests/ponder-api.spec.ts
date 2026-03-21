@@ -1,10 +1,5 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import {
-  getContentById,
-  getContentList,
-  getStats,
-  ponderGet,
-} from "../helpers/ponder-api";
+import { getContentById, getContentList, getStats, ponderGet } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
 
 /**

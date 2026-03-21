@@ -1,7 +1,7 @@
 import { isAddress } from "viem";
 import { normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
-import { renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
 import type { ReputationAvatarPayload } from "~~/lib/avatar/avatarPayload";
+import { renderOrbitalAvatarSvg } from "~~/lib/avatar/orbitalAvatar";
 
 const EMPTY_REPUTATION_AVATAR_STREAK: ReputationAvatarPayload["streak"] = {
   currentDailyStreak: 0,

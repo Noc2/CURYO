@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { invalidatePonderCache, isPonderAvailable } from "~~/services/ponder/client";
 
 interface UsePonderQueryOptions<TPonder, TRpc> {
@@ -17,6 +17,8 @@ interface UsePonderQueryOptions<TPonder, TRpc> {
   staleTime?: number;
   /** Auto-refetch interval (ms). Set to false to disable. */
   refetchInterval?: number | false;
+  /** Keep previous data visible while new data is loading (e.g. pagination, filter changes) */
+  keepPrevious?: boolean;
 }
 
 export interface PonderQueryResult<T> {
@@ -46,6 +48,7 @@ export function usePonderQuery<TPonder, TRpc>({
   enabled = true,
   staleTime = 10_000,
   refetchInterval = false,
+  keepPrevious = false,
 }: UsePonderQueryOptions<TPonder, TRpc>) {
   return useQuery({
     queryKey: ["ponder-fallback", ...queryKey],
@@ -75,5 +78,6 @@ export function usePonderQuery<TPonder, TRpc>({
     enabled,
     staleTime,
     refetchInterval,
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
   });
 }

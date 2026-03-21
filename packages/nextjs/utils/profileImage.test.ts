@@ -1,6 +1,6 @@
+import { getFallbackReputationAvatarDataUrl, getReputationAvatarUrl } from "./profileImage";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getFallbackReputationAvatarDataUrl, getReputationAvatarUrl } from "./profileImage";
 
 test("getReputationAvatarUrl returns null for invalid addresses", () => {
   assert.equal(getReputationAvatarUrl("not-an-address"), null);

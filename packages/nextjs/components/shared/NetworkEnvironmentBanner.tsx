@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BeakerIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { hardhat } from "viem/chains";
+import { BeakerIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 
 const BANNER_VERSION = "v1";

@@ -1,6 +1,6 @@
+import { isInitialQueryPending } from "./useVoterIdNFT";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isInitialQueryPending } from "./useVoterIdNFT";
 
 test("isInitialQueryPending blocks while the first load is still in flight", () => {
   assert.equal(
