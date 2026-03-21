@@ -13385,7 +13385,7 @@ const deployedContracts = {
       deployedOnBlock: 20713454,
     },
     TimelockController: {
-      address: "0xf5368605070b5abfd9867cbf4adbfa1b36ffd681",
+      address: "0x45f25d8c74d19298921ec42e70efcfbc55554b82",
       abi: [
         {
           type: "constructor",
@@ -14406,10 +14406,10 @@ const deployedContracts = {
         onERC1155Received:
           "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol",
       },
-      deployedOnBlock: 20740123,
+      deployedOnBlock: 20796042,
     },
     CuryoReputation: {
-      address: "0x3c7646CdeC6136C6527d01E850e3B6e14c4444EB",
+      address: "0x28C3944501e860dB76fA9f07C9d122EF4Cb8e847",
       abi: [
         {
           type: "constructor",
@@ -16112,7 +16112,7 @@ const deployedContracts = {
       },
     },
     CuryoGovernor: {
-      address: "0xc92d69453f69a4112ec78b3eab1c2e3530f4c22c",
+      address: "0x7fcd76812b2ab35042522f3f8ff923500ddd02c8",
       abi: [
         {
           type: "constructor",
@@ -17980,10 +17980,10 @@ const deployedContracts = {
         updateTimelock:
           "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorTimelockControl.sol",
       },
-      deployedOnBlock: 20740123,
+      deployedOnBlock: 20796053,
     },
     ContentRegistry: {
-      address: "0x53585b83dFaC3A3E7Ce9e51DB004DC98A31c0FDd",
+      address: "0x10f46402A170F417e72ea46DcC44f8f17B396EEE",
       abi: [
         {
           type: "constructor",
@@ -19466,7 +19466,7 @@ const deployedContracts = {
       },
     },
     RoundVotingEngine: {
-      address: "0x59f92e9d745a9a18503564883E1b1437Ac6548A0",
+      address: "0x2A660012C024Afb70528ab4206a5C7734794FfaD",
       abi: [
         {
           type: "constructor",
@@ -21316,7 +21316,7 @@ const deployedContracts = {
       },
     },
     RoundRewardDistributor: {
-      address: "0xc3eC5370c700d75ACFdb7865C1535AcE79f9226F",
+      address: "0xF0AA9081816d57e38Bec23702a93B92C014658B7",
       abi: [
         {
           type: "constructor",
@@ -22598,7 +22598,7 @@ const deployedContracts = {
       },
     },
     FrontendRegistry: {
-      address: "0x5642179A4a579be03C231f2b89Ca4D546E24f91c",
+      address: "0x2dC04d1f9B92EAc5B8098EA425044bb8552F9137",
       abi: [
         {
           type: "constructor",
@@ -23558,7 +23558,7 @@ const deployedContracts = {
       },
     },
     ProfileRegistry: {
-      address: "0xB719DF0064e130A07f48c4B0a396aB9eD235359f",
+      address: "0xc639Fd4Ce89054B78B0203C3A88D6006fE3706F2",
       abi: [
         {
           type: "constructor",
@@ -24220,7 +24220,7 @@ const deployedContracts = {
       },
     },
     ProtocolConfig: {
-      address: "0xF2bBFB459f2e5d51F85E9Cce4316e692a0bF7700",
+      address: "0x35Fc615E7adB105859047746c00F6afFdd8dc7E1",
       abi: [
         {
           type: "constructor",
@@ -24901,7 +24901,7 @@ const deployedContracts = {
       },
     },
     TransparentUpgradeableProxy: {
-      address: "0x5642179a4a579be03c231f2b89ca4d546e24f91c",
+      address: "0x2dc04d1f9b92eac5b8098ea425044bb8552f9137",
       abi: [
         {
           type: "constructor",
@@ -25015,10 +25015,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 20740126,
+      deployedOnBlock: 20796119,
     },
     CategoryRegistry: {
-      address: "0xb1dd9Ba65a2B62bF73b3a73a402Da26d72AE9aF8",
+      address: "0xF32D2e5Cf54f94fA071CcF233044aaC9847d2bdC",
       abi: [
         {
           type: "constructor",
@@ -26103,7 +26103,7 @@ const deployedContracts = {
       },
     },
     VoterIdNFT: {
-      address: "0xf16B21f5fE9c67bA66f800cfA2BDe0bf894b1D2d",
+      address: "0x7cDD586bb2308E3824B972a20e427ECAf690Bc5C",
       abi: [
         {
           type: "constructor",
@@ -27389,7 +27389,7 @@ const deployedContracts = {
       },
     },
     ParticipationPool: {
-      address: "0x40a8FFdef01C3dC93F0BFCF0a1FaE8A1A46BdC7f",
+      address: "0x9779D2CDe5Ce4C9dc612e1cab29bBA3113AB4409",
       abi: [
         {
           type: "constructor",
@@ -28070,7 +28070,7 @@ const deployedContracts = {
       },
     },
     HumanFaucet: {
-      address: "0x8afbbB3129E10Fe16c6bC01f46bA9C1C15617cB8",
+      address: "0xA8A310F76D7051A76C21Ea95225dB9beDb7217A3",
       abi: [
         {
           type: "constructor",

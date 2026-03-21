@@ -191,13 +191,14 @@ The indexer must be running **before** the frontend can display content. Deploy 
 
 ### 3a. Configure
 
-The deploy step already refreshes `packages/ponder/.env.local` with the latest `PONDER_*_ADDRESS` and
-`PONDER_*_START_BLOCK` values for Celo. Use that file as the source of truth for production.
+The deploy step refreshes `packages/ponder/.env.local` to match the shared deployment metadata in
+`@curyo/contracts`. On supported chains (`31337`, `11142220`, `42220`), Ponder uses that shared package as the source
+of truth.
 
 For Railway, make sure the service has:
 - `PONDER_NETWORK=celo`
 - `PONDER_RPC_URL_42220=https://forno.celo.org` (or your paid RPC)
-- All contract address and start-block vars from `packages/ponder/.env.local`
+- No contract address/start-block vars unless you are indexing an unsupported chain
 - `CORS_ORIGIN=https://<your-frontend-domain>`
 - `RATE_LIMIT_TRUSTED_IP_HEADERS=x-forwarded-for` (or the header Railway/your proxy overwrites)
 - `DATABASE_URL=<managed-postgres-url>`
@@ -220,8 +221,8 @@ railway variables set DATABASE_URL=<managed-postgres-url>
 railway up
 ```
 
-Then copy the generated `PONDER_*_ADDRESS` and `PONDER_*_START_BLOCK` variables from
-`packages/ponder/.env.local` into Railway.
+On supported chains, Railway does not need `PONDER_*_ADDRESS` or `PONDER_*_START_BLOCK` vars. Ponder resolves those
+from `@curyo/contracts` at runtime.
 
 Use managed PostgreSQL in production. PGlite remains fine for local development, but the Ponder package treats it as
 dev-only because it is single-process and harder to back up or recover after corruption.
@@ -268,6 +269,8 @@ RESEND_API_KEY=<resend-api-key>
 RESEND_FROM_EMAIL=<verified-from-address>
 NOTIFICATION_DELIVERY_SECRET=<random-secret>
 ```
+
+No contract address env vars are needed in Next.js. It reads supported-chain deployments from `@curyo/contracts`.
 
 ### 4b. Set up Turso database (production)
 
@@ -420,8 +423,6 @@ The Keeper is a stateless service that reveals votes, settles eligible rounds, f
 # packages/keeper/.env
 RPC_URL=https://forno.celo.org
 CHAIN_ID=42220
-VOTING_ENGINE_ADDRESS=<RoundVotingEngine-address>
-CONTENT_REGISTRY_ADDRESS=<ContentRegistry-address>
 KEYSTORE_ACCOUNT=keeper
 KEYSTORE_PASSWORD=<keeper-keystore-password>
 KEEPER_INTERVAL_MS=30000
@@ -431,6 +432,9 @@ METRICS_ENABLED=true
 METRICS_PORT=9090
 LOG_FORMAT=json
 ```
+
+On supported chains (`31337`, `11142220`, `42220`), Keeper resolves `RoundVotingEngine` and `ContentRegistry` from
+`@curyo/contracts`. Only set address vars on unsupported chains.
 
 ### 7b. Deploy to Railway
 
@@ -446,8 +450,6 @@ railway link
 # Set environment variables
 railway variables set RPC_URL=https://forno.celo.org
 railway variables set CHAIN_ID=42220
-railway variables set VOTING_ENGINE_ADDRESS=<RoundVotingEngine-address>
-railway variables set CONTENT_REGISTRY_ADDRESS=<ContentRegistry-address>
 
 # Railway usually uses the raw key fallback because the container does not ship
 # with ~/.foundry/keystores by default.

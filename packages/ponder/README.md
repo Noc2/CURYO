@@ -40,13 +40,14 @@ Within the package directory, additional scripts are available:
 | `PONDER_RPC_URL_31337` | RPC URL for local Hardhat/Anvil chain |
 | `PONDER_RPC_URL_11142220` | RPC URL for Celo Sepolia |
 | `PONDER_RPC_URL_42220` | RPC URL for Celo mainnet |
-| `PONDER_CONTENT_REGISTRY_ADDRESS` etc. | Optional override contract addresses; supported chains fall back to `@curyo/contracts` |
-| `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Optional override start blocks; supported chains fall back to shared deployment metadata |
+| `PONDER_CONTENT_REGISTRY_ADDRESS` etc. | Optional fallback addresses when the active chain has no shared deployment in `@curyo/contracts` |
+| `PONDER_CONTENT_REGISTRY_START_BLOCK` etc. | Optional fallback start blocks when the active chain has no shared deployment metadata |
 | `CORS_ORIGIN` | Allowed origins (comma-separated; required in production) |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS` | Comma-separated proxy IP headers to trust for API rate limiting in production |
 
-After `yarn deploy --network celoSepolia --keystore <name>`, the Foundry deployment script refreshes `packages/ponder/.env.local`
-with the latest address and start-block values for that network.
+For supported chains, Ponder treats `@curyo/contracts` as the source of truth and ignores stale address/start-block env values.
+After `yarn deploy --network celoSepolia --keystore <name>`, the Foundry deployment script refreshes
+`packages/ponder/.env.local` to match those shared deployment values.
 
 ## Project Structure
 

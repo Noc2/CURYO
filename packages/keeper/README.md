@@ -7,7 +7,7 @@ Stateless service that reveals committed votes via `revealVoteByCommitKey()` aft
 ```bash
 # Copy and configure environment:
 cp .env.example .env.local
-# Edit .env.local with your RPC URL, contract addresses, and wallet
+# Edit .env.local with your RPC URL, chain, and wallet
 
 # From the monorepo root:
 yarn keeper:dev    # Development mode (with file watching)
@@ -24,6 +24,9 @@ yarn keeper:start  # Production mode (long-running service)
 ## Configuration
 
 Copy `.env.example` to `.env.local` and configure:
+
+For `CHAIN_ID` `31337`, `11142220`, and `42220`, Keeper reads the latest contract addresses from `@curyo/contracts`.
+Only set address vars on unsupported chains.
 
 | Variable | Default | Description |
 |---|---|---|

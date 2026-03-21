@@ -61,6 +61,7 @@ Key environment variables (see `.env.example` for the full list):
 Notes:
 
 - Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or `rpcOverrides[1]`. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
+- No contract address env vars are needed for supported chains. The frontend reads deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without it.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-forwarded-for` and `x-real-ip`. Protected API routes still fail closed when no trusted client IP can be derived.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
 
