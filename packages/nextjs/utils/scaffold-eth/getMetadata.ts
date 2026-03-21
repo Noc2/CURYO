@@ -12,6 +12,7 @@ export const getMetadata = ({ title, description }: { title: string; description
 
   return {
     metadataBase: new URL(baseUrl),
+    manifest: "/manifest.json",
     title: {
       default: title,
       template: titleTemplate,

@@ -18,6 +18,7 @@
     "flatten": "yarn foundry:flatten",
     "fork": "yarn foundry:fork",
     "format": "yarn next:format && yarn foundry:format",
+    "contracts:check-types": "yarn workspace @curyo/contracts check-types",
     "contracts:test": "yarn workspace @curyo/contracts test",
     "foundry:account": "yarn workspace @curyo/foundry account",
     "foundry:account-import": "yarn workspace @curyo/foundry account:import",
@@ -49,7 +50,6 @@
     "precommit": "lint-staged",
     "start": "yarn workspace @curyo/nextjs dev",
     "test": "yarn foundry:test",
-    "test:ts": "yarn contracts:test && yarn next:test && yarn workspace @curyo/keeper test && yarn workspace @curyo/bot test && yarn workspace @curyo/ponder test && yarn workspace @curyo/mcp-server test",
     "vercel": "yarn workspace @curyo/nextjs vercel",
     "vercel:login": "yarn workspace @curyo/nextjs vercel:login",
     "vercel:yolo": "yarn workspace @curyo/nextjs vercel:yolo",
@@ -70,8 +70,10 @@
     "mcp:dev:http": "yarn workspace @curyo/mcp-server dev:http",
     "mcp:test": "yarn workspace @curyo/mcp-server test",
     "mcp:check-types": "yarn workspace @curyo/mcp-server check-types",
+    "node-utils:check-types": "yarn workspace @curyo/node-utils check-types",
     "e2e": "yarn workspace @curyo/nextjs e2e",
-    "e2e:ui": "yarn workspace @curyo/nextjs e2e:ui"
+    "e2e:ui": "yarn workspace @curyo/nextjs e2e:ui",
+    "test:ts": "yarn contracts:check-types && yarn node-utils:check-types && yarn contracts:test && yarn next:test && yarn workspace @curyo/keeper test && yarn workspace @curyo/bot test && yarn workspace @curyo/ponder test && yarn workspace @curyo/mcp-server test"
   },
   "devDependencies": {
     "husky": "~9.1.6",

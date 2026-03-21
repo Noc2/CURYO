@@ -423,6 +423,7 @@ __metadata:
   resolution: "@curyo/bot@workspace:packages/bot"
   dependencies:
     "@curyo/contracts": "workspace:*"
+    "@curyo/node-utils": "workspace:*"
     "@types/node": ^20.10.7
     dotenv: ^16.4.5
     tlock-js: ^0.9.0
@@ -465,6 +466,7 @@ __metadata:
   resolution: "@curyo/keeper@workspace:packages/keeper"
   dependencies:
     "@curyo/contracts": "workspace:*"
+    "@curyo/node-utils": "workspace:*"
     "@types/node": ^20.10.7
     dotenv: ^16.4.5
     tlock-js: ^0.9.0
@@ -493,6 +495,7 @@ __metadata:
   resolution: "@curyo/nextjs@workspace:packages/nextjs"
   dependencies:
     "@curyo/contracts": "workspace:*"
+    "@curyo/node-utils": "workspace:*"
     "@fontsource/bebas-neue": ^5.2.7
     "@fontsource/space-grotesk": ^5.2.10
     "@heroicons/react": ~2.1.5
@@ -544,6 +547,16 @@ __metadata:
     viem: 2.39.0
     wagmi: 2.19.5
     zustand: ~5.0.0
+  languageName: unknown
+  linkType: soft
+
+"@curyo/node-utils@workspace:*, @curyo/node-utils@workspace:packages/node-utils":
+  version: 0.0.0-use.local
+  resolution: "@curyo/node-utils@workspace:packages/node-utils"
+  dependencies:
+    "@types/node": ^20.10.7
+    typescript: ~5.8.2
+    viem: 2.39.0
   languageName: unknown
   linkType: soft
 

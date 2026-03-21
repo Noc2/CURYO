@@ -1,5 +1,21 @@
 {
   "name": "Curyo",
+  "short_name": "Curyo",
   "description": "A Better Web, Guided by Human Reputation",
-  "iconPath": "favicon.svg"
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050607",
+  "theme_color": "#050607",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    }
+  ]
 }

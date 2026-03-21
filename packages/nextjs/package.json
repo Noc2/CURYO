@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@curyo/contracts": "workspace:*",
+    "@curyo/node-utils": "workspace:*",
     "@fontsource/bebas-neue": "^5.2.7",
     "@fontsource/space-grotesk": "^5.2.10",
     "@heroicons/react": "~2.1.5",

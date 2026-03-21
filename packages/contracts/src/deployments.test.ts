@@ -10,7 +10,7 @@ const chain11142220 = (deployedContracts as Record<number, Record<string, { addr
 const expectedChainStartBlock = Math.min(
   ...Object.values(chain11142220)
     .map(contract => contract.deployedOnBlock)
-    .filter((value): value is number => Number.isInteger(value) && value >= 0),
+    .filter((value): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0),
 );
 
 test("shared deployment helpers return supported-chain addresses", () => {

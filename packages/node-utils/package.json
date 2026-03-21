@@ -1,0 +1,23 @@
+{
+  "name": "@curyo/node-utils",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./keystore": "./src/keystore.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "viem": "2.39.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.7",
+    "typescript": "~5.8.2"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=24 <25"
+  }
+}
