@@ -14,6 +14,7 @@ config({ path: join(__dirname, "..", ".env") });
 const args = process.argv.slice(2);
 let network;
 let keystoreArg;
+let resume;
 
 try {
   const parsedArgs = parseDeployArgs(args);
@@ -23,6 +24,7 @@ try {
   }
   network = parsedArgs.network;
   keystoreArg = parsedArgs.keystoreArg;
+  resume = parsedArgs.resume;
 } catch (error) {
   console.error(`\n❌ Error: ${error.message}`);
   process.exit(1);
@@ -133,11 +135,26 @@ The default account (scaffold-eth-default) can only be used for localhost deploy
 process.env.DEPLOY_SCRIPT = "script/Deploy.s.sol";
 process.env.RPC_URL = network;
 process.env.ETH_KEYSTORE_ACCOUNT = selectedKeystore;
+process.env.RESUME_FLAG = resume ? "--resume" : "";
 
 // Blockscout networks — forge's built-in Celoscan URL returns 403 and the
 // [etherscan] override in foundry.toml is ignored. Skip auto-verification;
 // verify manually via: make verify-blockscout CONTRACT_ADDRESS=0x... CONTRACT_NAME=MyContract
 const BLOCKSCOUT_NETWORKS = new Set(["celoSepolia", "celo"]);
+const SLOW_BROADCAST_NETWORKS = new Set(["celoSepolia", "celo"]);
+process.env.DEPLOY_FLOW_FLAGS = SLOW_BROADCAST_NETWORKS.has(network)
+  ? "--slow"
+  : "";
+
+if (resume) {
+  console.log("\n⏯️  Resuming previous broadcast state");
+}
+
+if (SLOW_BROADCAST_NETWORKS.has(network)) {
+  console.log(
+    `\n🐢 Using slow broadcast mode for ${network} to avoid sequencer nonce issues`
+  );
+}
 
 // Determine verification flags based on network's explorer config
 if (network !== "localhost") {
@@ -188,6 +205,11 @@ const result = spawnSync("make", ["deploy-and-generate-abis"], {
 });
 
 if (result.status !== 0) {
+  if (!resume && network !== "localhost") {
+    console.log(
+      "\n💡 If this was a partial broadcast, rerun the same deploy with --resume."
+    );
+  }
   process.exit(result.status);
 }
 

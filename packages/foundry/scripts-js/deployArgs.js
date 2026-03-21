@@ -3,9 +3,11 @@ Usage: yarn deploy [options]
 Options:
   --network <network>   Specify the network (default: localhost)
   --keystore <name>     Specify the keystore account to use (bypasses selection prompt)
+  --resume              Resume a partial broadcast for the current network + account
   --help, -h           Show this help message
 Examples:
   yarn deploy --network sepolia --keystore my-account
+  yarn deploy --network celoSepolia --keystore my-account --resume
   yarn deploy
   `;
 
@@ -22,12 +24,13 @@ function readOptionValue(args, index, optionName) {
 export function parseDeployArgs(args) {
   let network = "localhost";
   let keystoreArg = null;
+  let resume = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
     if (arg === "--help" || arg === "-h") {
-      return { showHelp: true, network, keystoreArg };
+      return { showHelp: true, network, keystoreArg, resume };
     }
 
     if (arg === "--network") {
@@ -39,6 +42,11 @@ export function parseDeployArgs(args) {
     if (arg === "--keystore") {
       keystoreArg = readOptionValue(args, i, "--keystore");
       i++;
+      continue;
+    }
+
+    if (arg === "--resume") {
+      resume = true;
       continue;
     }
 
@@ -59,5 +67,5 @@ export function parseDeployArgs(args) {
     );
   }
 
-  return { showHelp: false, network, keystoreArg };
+  return { showHelp: false, network, keystoreArg, resume };
 }

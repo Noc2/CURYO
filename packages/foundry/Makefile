@@ -3,6 +3,8 @@
 DEPLOY_SCRIPT ?= script/Deploy.s.sol
 TEST_ARGS ?=
 COVERAGE_ARGS ?=
+RESUME_FLAG ?=
+DEPLOY_FLOW_FLAGS ?=
 
 # setup wallet for anvil
 setup-anvil-wallet:
@@ -20,7 +22,7 @@ fork: setup-anvil-wallet
 # Deploy the contracts
 deploy:
 	@if [ ! -f "$(DEPLOY_SCRIPT)" ]; then 		echo "Error: Deploy script '$(DEPLOY_SCRIPT)' not found"; 		exit 1; 	fi
-	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi --slow; 		else 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi --slow; 		fi 	else 		forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --account $(ETH_KEYSTORE_ACCOUNT) --broadcast --ffi --gas-estimate-multiplier 200 $(VERIFY_FLAGS); 	fi
+	@if [ "$(RPC_URL)" = "localhost" ]; then 		if [ "$(ETH_KEYSTORE_ACCOUNT)" = "scaffold-eth-default" ]; then 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --password localhost --broadcast --ffi --slow $(RESUME_FLAG); 		else 			forge script $(DEPLOY_SCRIPT) --rpc-url localhost --broadcast --ffi --slow $(RESUME_FLAG); 		fi 	else 		forge script $(DEPLOY_SCRIPT) --rpc-url $(RPC_URL) --account $(ETH_KEYSTORE_ACCOUNT) --broadcast --ffi --gas-estimate-multiplier 200 $(DEPLOY_FLOW_FLAGS) $(RESUME_FLAG) $(VERIFY_FLAGS); 	fi
 
 # Deploy and generate ABIs
 deploy-and-generate-abis: deploy generate-abis 
