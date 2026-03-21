@@ -430,8 +430,9 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
     /// @notice Once commit quorum exists, a round that never reaches reveal quorum finalizes as
     ///         RevealFailed only after maxDuration and the final grace deadline. Revealed votes stay refundable.
     function test_RevealFailed_RefundsOnlyRevealedVotes() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, 3, 200);
+        cfg.setConfig(EPOCH_DURATION, MAX_DURATION, 3, 200);
 
         uint256 cid = _submit();
 
@@ -497,8 +498,9 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
 
     /// @notice After cancelling an expired round that stayed below commit quorum, all voters can claim full refunds.
     function test_RefundFlow_CancelledRound() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(EPOCH_DURATION, MAX_DURATION, 4, 200);
+        cfg.setConfig(EPOCH_DURATION, MAX_DURATION, 4, 200);
 
         uint256 cid = _submit();
 

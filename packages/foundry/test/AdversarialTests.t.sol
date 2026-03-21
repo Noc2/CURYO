@@ -717,8 +717,9 @@ contract AdversarialTests is VotingTestBase {
     ///      holder's token. Here we simulate that by directly setting mock storage.
     function test_CooldownBypass_DelegationBlocked() public {
         MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setVoterIdNFT(address(voterIdNFT));
+        cfg.setVoterIdNFT(address(voterIdNFT));
 
         address holder = address(0xA1);
         address delegate = address(0xA2);
@@ -771,8 +772,9 @@ contract AdversarialTests is VotingTestBase {
     /// @notice Per-token cooldown blocks same identity on same content across rounds
     function test_CooldownBypass_SameTokenAcrossRounds() public {
         MockVoterIdNFT voterIdNFT = new MockVoterIdNFT();
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setVoterIdNFT(address(voterIdNFT));
+        cfg.setVoterIdNFT(address(voterIdNFT));
 
         address holder = address(0xA1);
         address delegate = address(0xA2);

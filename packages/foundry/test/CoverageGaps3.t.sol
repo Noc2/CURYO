@@ -1068,35 +1068,40 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
     // --- setConfig boundary validations ---
 
     function test_SetConfig_EpochTooShort_Reverts() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(4 minutes, 7 days, 3, 1000); // epochDuration < 5 minutes
+        cfg.setConfig(4 minutes, 7 days, 3, 1000); // epochDuration < 5 minutes
     }
 
     function test_SetConfig_MaxDurationTooShort_Reverts() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 12 hours, 3, 1000); // maxDuration < 1 day
+        cfg.setConfig(5 minutes, 12 hours, 3, 1000); // maxDuration < 1 day
     }
 
     function test_SetConfig_MinVotersTooLow_Reverts() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 1, 1000); // minVoters < 2
+        cfg.setConfig(5 minutes, 7 days, 1, 1000); // minVoters < 2
     }
 
     function test_SetConfig_MaxVotersLessThanMin_Reverts() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(address(engine.protocolConfig())).setConfig(5 minutes, 7 days, 5, 3); // maxVoters < minVoters
+        cfg.setConfig(5 minutes, 7 days, 5, 3); // maxVoters < minVoters
     }
 
     // --- VoterIdNFT integration ---
 
     function test_CommitWithVoterIdNFT() public {
         voterNFT = new MockVoterIdNFT();
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setVoterIdNFT(address(voterNFT));
+        cfg.setVoterIdNFT(address(voterNFT));
 
         voterNFT.setHolder(voter1);
         voterNFT.setHolder(voter2);
@@ -1111,8 +1116,9 @@ contract RoundSettlementEdgeCase3Test is VotingTestBase {
 
     function test_CommitWithoutVoterId_WhenRequired_Reverts() public {
         voterNFT = new MockVoterIdNFT();
+        ProtocolConfig cfg2 = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setVoterIdNFT(address(voterNFT));
+        cfg2.setVoterIdNFT(address(voterNFT));
 
         uint256 contentId = _submitContent();
 

@@ -333,24 +333,27 @@ contract SelectiveRevelationTest is VotingTestBase {
 
     /// @notice CONFIG_ROLE can update revealGracePeriod.
     function test_SetRevealGracePeriod_ConfigRole() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(2 hours);
-        assertEq(ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod(), 2 hours);
+        cfg.setRevealGracePeriod(2 hours);
+        assertEq(cfg.revealGracePeriod(), 2 hours);
     }
 
     /// @notice revealGracePeriod must be >= epochDuration.
     function test_SetRevealGracePeriod_BelowEpochDuration_Reverts() public {
         // epochDuration is 1 hour; 30 min < 1 hour → revert
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
         vm.expectRevert(ProtocolConfig.InvalidConfig.selector);
-        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(30 minutes);
+        cfg.setRevealGracePeriod(30 minutes);
     }
 
     /// @notice Non-CONFIG_ROLE cannot set revealGracePeriod.
     function test_SetRevealGracePeriod_Unauthorized_Reverts() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(voters[0]);
         vm.expectRevert();
-        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(2 hours);
+        cfg.setRevealGracePeriod(2 hours);
     }
 
     function test_RevealGracePeriodSnapshot_OldRoundKeepsOriginalValue() public {
@@ -368,8 +371,9 @@ contract SelectiveRevelationTest is VotingTestBase {
         RoundLib.Round memory r = RoundEngineReadHelpers.round(engine, contentId, roundId);
         assertEq(engine.roundRevealGracePeriodSnapshot(contentId, roundId), GRACE_PERIOD);
 
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(2 hours);
+        cfg.setRevealGracePeriod(2 hours);
 
         vm.warp(r.startTime + EPOCH + GRACE_PERIOD + 1);
 
@@ -384,8 +388,9 @@ contract SelectiveRevelationTest is VotingTestBase {
     }
 
     function test_RevealGracePeriodSnapshot_NewRoundUsesUpdatedValue() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(engine.protocolConfig())).setRevealGracePeriod(2 hours);
+        cfg.setRevealGracePeriod(2 hours);
 
         uint256 contentId = _submitContent();
 

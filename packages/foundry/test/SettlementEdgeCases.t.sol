@@ -370,9 +370,10 @@ contract SettlementEdgeCasesTest is VotingTestBase {
     // =========================================================================
 
     function test_SetTreasury_ZeroAddress_Reverts() public {
+        ProtocolConfig cfg = ProtocolConfig(address(engine.protocolConfig()));
         vm.prank(owner);
-        vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
-        ProtocolConfig(address(engine.protocolConfig())).setTreasury(address(0));
+        vm.expectRevert(ProtocolConfig.InvalidAddress.selector);
+        cfg.setTreasury(address(0));
     }
 
     function test_Settle_TreasuryReceivesFee() public {
@@ -476,7 +477,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
                 new ERC1967Proxy(
                     address(engineImpl2),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, owner, address(crepToken2), address(registry2))
+                        RoundVotingEngine.initialize, (owner, address(crepToken2), address(registry2), address(new ProtocolConfig(owner)))
                     )
                 )
             )

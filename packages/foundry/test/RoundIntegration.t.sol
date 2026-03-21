@@ -1141,8 +1141,9 @@ contract RoundIntegrationTest is VotingTestBase {
         assertEq(cfg.minVoters, 2);
 
         // Change config: increase minVoters to 10
+        ProtocolConfig protoCfg = ProtocolConfig(address(votingEngine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(EPOCH_DURATION, 7 days, 10, 200);
+        protoCfg.setConfig(EPOCH_DURATION, 7 days, 10, 200);
 
         // Snapshot unchanged
         cfg = RoundEngineReadHelpers.roundConfig(votingEngine, contentId, roundId);
@@ -1852,8 +1853,9 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 roundId = _settleRoundWith(voters, contentId, dirs, STAKE);
 
+        ProtocolConfig cfgRotation = ProtocolConfig(address(votingEngine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(pool2));
+        cfgRotation.setParticipationPool(address(pool2));
 
         uint256 expectedReward = STAKE * 9000 / 10000;
         uint256 pool1Before = crepToken.balanceOf(address(pool1));
@@ -2161,8 +2163,9 @@ contract RoundIntegrationTest is VotingTestBase {
 
     function test_SettlementSideEffectFailure_ParticipationRateSnapshotCanBeBackfilled() public {
         RevertingParticipationPool badPool = new RevertingParticipationPool(address(crepToken));
+        ProtocolConfig cfgBackfill = ProtocolConfig(address(votingEngine.protocolConfig()));
         vm.prank(owner);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(badPool));
+        cfgBackfill.setParticipationPool(address(badPool));
 
         uint256 contentId = _submitContent();
         address[] memory voters = new address[](3);
