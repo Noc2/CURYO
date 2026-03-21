@@ -53,7 +53,9 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
 
   return (
     <div className={`flex items-center gap-1 text-xs text-base-content/50 ${className ?? ""}`}>
-      <span>{remaining} free tx</span>
+      <span>
+        {remaining}/{limit} free tx
+      </span>
       <InfoTooltip text={`Verified wallets get ${limit} free app transactions. Add CELO for gas after that.`} />
     </div>
   );
@@ -152,7 +154,23 @@ export const AddressInfoDropdown = ({
   });
 
   if (menuItemsOnly) {
-    return <MenuItems disconnect={disconnect} showText={true} showFaucet={showFaucet} />;
+    return (
+      <>
+        <li className="px-3 py-2">
+          <div className="flex items-center gap-3">
+            <BlockieAvatar address={checkSumAddress} size={24} ensImage={ensAvatar} />
+            <div className="min-w-0">
+              <p className="truncate text-base">
+                {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
+              </p>
+              <p className="text-sm text-base-content/60">{formatCrepAmount(crepBalance)} cREP</p>
+              <FreeTransactionAllowanceText className="pt-0.5" />
+            </div>
+          </div>
+        </li>
+        <MenuItems disconnect={disconnect} showText={true} showFaucet={showFaucet} />
+      </>
+    );
   }
 
   const walletSummary = (
@@ -188,12 +206,12 @@ export const AddressInfoDropdown = ({
     <div className="flex flex-col items-center xl:items-start gap-0.5">
       <div className="flex items-center justify-center xl:justify-start gap-2 xl:px-2 py-1">
         <BlockieAvatar address={checkSumAddress} size={30} ensImage={ensAvatar} />
-        <span className="text-base hidden xl:inline">
+        <span className="text-base hidden lg:inline">
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      <div className="text-base text-base-content hidden xl:inline xl:px-2">{formatCrepAmount(crepBalance)} cREP</div>
-      <FreeTransactionAllowanceText className="hidden xl:flex xl:px-2" />
+      <div className="text-base text-base-content hidden lg:inline lg:px-2">{formatCrepAmount(crepBalance)} cREP</div>
+      <FreeTransactionAllowanceText className="hidden lg:flex lg:px-2" />
     </div>
   );
 };

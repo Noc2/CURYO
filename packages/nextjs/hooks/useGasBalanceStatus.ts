@@ -5,9 +5,14 @@ import { useAccount, useBalance } from "wagmi";
 import { useFreeTransactionAllowance } from "~~/hooks/useFreeTransactionAllowance";
 import { useWalletExecutionCapabilities } from "~~/hooks/useWalletExecutionCapabilities";
 
-export function useGasBalanceStatus() {
+type GasBalanceStatusOptions = {
+  includeExternalSendCalls?: boolean;
+};
+
+export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
+  const includeExternalSendCalls = options.includeExternalSendCalls ?? false;
   const { address, chain } = useAccount();
-  const { supportsSponsoredCalls } = useWalletExecutionCapabilities();
+  const { executionMode } = useWalletExecutionCapabilities();
   const freeTransactionAllowance = useFreeTransactionAllowance();
   const { data: nativeBalance, isLoading: nativeBalanceLoading } = useBalance({
     address,
@@ -20,6 +25,8 @@ export function useGasBalanceStatus() {
     const nativeBalanceValue = nativeBalance?.value ?? 0n;
     const nativeTokenSymbol = chain?.nativeCurrency?.symbol ?? "CELO";
     const hasResolvedNativeBalance = Boolean(address) && !nativeBalanceLoading && nativeBalance !== undefined;
+    const supportsSponsoredCalls =
+      executionMode === "sponsored_7702" || (includeExternalSendCalls && executionMode === "external_send_calls");
     const canSponsorTransactions = supportsSponsoredCalls && freeTransactionAllowance.canUseFreeTransactions;
     const isAwaitingFreeTransactionAllowance = supportsSponsoredCalls && !freeTransactionAllowance.isResolved;
     const isMissingGasBalance =
@@ -30,6 +37,7 @@ export function useGasBalanceStatus() {
 
     return {
       canSponsorTransactions,
+      executionMode,
       freeTransactionLimit: freeTransactionAllowance.limit,
       freeTransactionRemaining: freeTransactionAllowance.remaining,
       freeTransactionVerified: freeTransactionAllowance.verified,
@@ -44,14 +52,15 @@ export function useGasBalanceStatus() {
   }, [
     address,
     chain?.nativeCurrency?.symbol,
+    executionMode,
     freeTransactionAllowance.canUseFreeTransactions,
     freeTransactionAllowance.limit,
     freeTransactionAllowance.remaining,
     freeTransactionAllowance.isResolved,
     freeTransactionAllowance.verified,
     freeTransactionAllowance.voterIdTokenId,
+    includeExternalSendCalls,
     nativeBalance,
     nativeBalanceLoading,
-    supportsSponsoredCalls,
   ]);
 }

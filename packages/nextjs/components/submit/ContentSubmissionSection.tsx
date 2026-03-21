@@ -19,6 +19,7 @@ import {
 } from "~~/hooks/useCategoryRegistry";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
+import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
@@ -126,8 +127,11 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 }
 
 export function ContentSubmissionSection() {
-  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
+  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
+    includeExternalSendCalls: true,
+  });
   const { ratePercent, calculateBonus } = useParticipationRate();
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls } = useThirdwebSponsoredSubmitCalls();
   const submissionBonus = calculateBonus(10);
   const { requireAcceptance } = useTermsAcceptance();
 
@@ -295,6 +299,8 @@ export function ContentSubmissionSection() {
   });
   const { data: registryInfo } = useDeployedContractInfo({ contractName: "ContentRegistry" });
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const registryAddress = registryInfo?.address as `0x${string}` | undefined;
+  const crepAddress = crepInfo?.address as `0x${string}` | undefined;
   const { data: nextContentId, refetch: refetchNextContentId } = useScaffoldReadContract({
     contractName: "ContentRegistry",
     functionName: "nextContentId",
@@ -326,7 +332,7 @@ export function ContentSubmissionSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!registryInfo?.address) return;
+    if (!registryInfo || !registryAddress) return;
 
     setSubmitAttempted(true);
 
@@ -365,7 +371,7 @@ export function ContentSubmissionSection() {
       return;
     }
 
-    if (!crepInfo?.address) {
+    if (!crepInfo || !crepAddress) {
       notification.error("cREP token contract not deployed");
       return;
     }
@@ -380,16 +386,30 @@ export function ContentSubmissionSection() {
       const contentId = nextContentId ?? 1n;
       const stakeAmount = BigInt(10 * 1e6);
 
-      await writeCRep(
-        { functionName: "approve", args: [registryInfo.address, stakeAmount] },
-        { blockConfirmations: 1 },
-      );
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (canUseSponsoredSubmitCalls) {
+        await executeSponsoredCalls([
+          {
+            abi: crepInfo.abi,
+            address: crepAddress,
+            args: [registryAddress, stakeAmount],
+            functionName: "approve",
+          },
+          {
+            abi: registryInfo.abi,
+            address: registryAddress,
+            args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
+            functionName: "submitContent",
+          },
+        ]);
+      } else {
+        await writeCRep({ functionName: "approve", args: [registryAddress, stakeAmount] }, { blockConfirmations: 1 });
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-      await writeRegistry({
-        functionName: "submitContent",
-        args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
-      });
+        await writeRegistry({
+          functionName: "submitContent",
+          args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
+        });
+      }
 
       await refetchNextContentId();
 

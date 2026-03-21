@@ -10,6 +10,7 @@ import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
+import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -26,7 +27,10 @@ const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
  */
 export function FrontendRegistration() {
   const { address } = useAccount();
-  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
+  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
+    includeExternalSendCalls: true,
+  });
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls } = useThirdwebSponsoredSubmitCalls();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
@@ -41,6 +45,11 @@ export function FrontendRegistration() {
 
   // Contract info
   const { data: frontendRegistryInfo } = useDeployedContractInfo({ contractName: "FrontendRegistry" });
+  const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { data: rewardDistributorInfo } = useDeployedContractInfo({ contractName: "RoundRewardDistributor" });
+  const frontendRegistryAddress = frontendRegistryInfo?.address as `0x${string}` | undefined;
+  const crepAddress = crepInfo?.address as `0x${string}` | undefined;
+  const rewardDistributorAddress = rewardDistributorInfo?.address as `0x${string}` | undefined;
   const { writeContractAsync: writeRewardDistributor } = useScaffoldWriteContract({
     contractName: "RoundRewardDistributor",
   });
@@ -157,7 +166,7 @@ export function FrontendRegistration() {
   };
 
   const handleRegister = async () => {
-    if (!address || !frontendRegistryInfo?.address) return;
+    if (!address || !frontendRegistryInfo || !frontendRegistryAddress) return;
     if (!ensureGasBalance()) return;
 
     if (!canRegisterWithCurrentAddress) {
@@ -174,22 +183,35 @@ export function FrontendRegistration() {
     try {
       const amountWei = BigInt(STAKE_AMOUNT * 1e6);
 
-      // Approve cREP for FrontendRegistry
-      await writeCRep({
-        functionName: "approve",
-        args: [frontendRegistryInfo.address, amountWei],
-      });
+      if (canUseSponsoredSubmitCalls && crepInfo && crepAddress) {
+        await executeSponsoredCalls([
+          {
+            abi: crepInfo.abi,
+            address: crepAddress,
+            args: [frontendRegistryAddress, amountWei],
+            functionName: "approve",
+          },
+          {
+            abi: frontendRegistryInfo.abi,
+            address: frontendRegistryAddress,
+            functionName: "register",
+          },
+        ]);
+      } else {
+        await writeCRep({
+          functionName: "approve",
+          args: [frontendRegistryAddress, amountWei],
+        });
 
-      // Re-check wallet before second tx
-      if (!address) {
-        notification.error("Wallet disconnected after approval. Please reconnect and retry.");
-        return;
+        if (!address) {
+          notification.error("Wallet disconnected after approval. Please reconnect and retry.");
+          return;
+        }
+
+        await writeFrontendRegistryNoSim({
+          functionName: "register",
+        });
       }
-
-      // Register as frontend operator (skip simulation — allowance state may be stale)
-      await writeFrontendRegistryNoSim({
-        functionName: "register",
-      });
       notification.success("Registered.");
 
       refetchFrontendInfo();
@@ -203,14 +225,24 @@ export function FrontendRegistration() {
   };
 
   const handleDeregister = async () => {
-    if (!address) return;
+    if (!address || !frontendRegistryInfo || !frontendRegistryAddress) return;
     if (!ensureGasBalance()) return;
 
     setIsDeregistering(true);
     try {
-      await writeFrontendRegistry({
-        functionName: "requestDeregister",
-      });
+      if (canUseSponsoredSubmitCalls) {
+        await executeSponsoredCalls([
+          {
+            abi: frontendRegistryInfo.abi,
+            address: frontendRegistryAddress,
+            functionName: "requestDeregister",
+          },
+        ]);
+      } else {
+        await writeFrontendRegistry({
+          functionName: "requestDeregister",
+        });
+      }
 
       notification.success("Exit started.");
       refetchFrontendInfo();
@@ -226,14 +258,24 @@ export function FrontendRegistration() {
   };
 
   const handleCompleteDeregister = async () => {
-    if (!address) return;
+    if (!address || !frontendRegistryInfo || !frontendRegistryAddress) return;
     if (!ensureGasBalance()) return;
 
     setIsCompletingDeregister(true);
     try {
-      await writeFrontendRegistry({
-        functionName: "completeDeregister",
-      });
+      if (canUseSponsoredSubmitCalls) {
+        await executeSponsoredCalls([
+          {
+            abi: frontendRegistryInfo.abi,
+            address: frontendRegistryAddress,
+            functionName: "completeDeregister",
+          },
+        ]);
+      } else {
+        await writeFrontendRegistry({
+          functionName: "completeDeregister",
+        });
+      }
 
       notification.success("Deregistration completed. Stake and pending fees withdrawn.");
       refetchFrontendInfo();
@@ -249,14 +291,24 @@ export function FrontendRegistration() {
   };
 
   const handleClaimFees = async () => {
-    if (!address || !hasFees) return;
+    if (!address || !hasFees || !frontendRegistryInfo || !frontendRegistryAddress) return;
     if (!ensureGasBalance()) return;
 
     setIsClaiming(true);
     try {
-      await writeFrontendRegistry({
-        functionName: "claimFees",
-      });
+      if (canUseSponsoredSubmitCalls) {
+        await executeSponsoredCalls([
+          {
+            abi: frontendRegistryInfo.abi,
+            address: frontendRegistryAddress,
+            functionName: "claimFees",
+          },
+        ]);
+      } else {
+        await writeFrontendRegistry({
+          functionName: "claimFees",
+        });
+      }
 
       notification.success(`Claimed ${curyoFees.toFixed(2)} cREP!`);
       refetchFees();
@@ -275,10 +327,21 @@ export function FrontendRegistration() {
     const roundKey = `${contentId}-${roundId}`;
     setClaimingRoundKey(roundKey);
     try {
-      await writeRewardDistributor({
-        functionName: "claimFrontendFee",
-        args: [BigInt(contentId), BigInt(roundId), address],
-      });
+      if (canUseSponsoredSubmitCalls && rewardDistributorInfo && rewardDistributorAddress) {
+        await executeSponsoredCalls([
+          {
+            abi: rewardDistributorInfo.abi,
+            address: rewardDistributorAddress,
+            args: [BigInt(contentId), BigInt(roundId), address],
+            functionName: "claimFrontendFee",
+          },
+        ]);
+      } else {
+        await writeRewardDistributor({
+          functionName: "claimFrontendFee",
+          args: [BigInt(contentId), BigInt(roundId), address],
+        });
+      }
 
       notification.success(`Credited ${(Number(BigInt(claimableFee)) / 1e6).toFixed(2)} cREP from round ${roundId}.`);
       await Promise.all([refetchClaimableRoundFees(), refetchFees()]);
@@ -298,15 +361,27 @@ export function FrontendRegistration() {
     let claimedCount = 0;
 
     try {
-      for (const item of claimableRoundFees) {
-        try {
-          await writeRewardDistributor({
-            functionName: "claimFrontendFee",
+      if (canUseSponsoredSubmitCalls && rewardDistributorInfo && rewardDistributorAddress) {
+        await executeSponsoredCalls(
+          claimableRoundFees.map(item => ({
+            abi: rewardDistributorInfo.abi,
+            address: rewardDistributorAddress,
             args: [BigInt(item.contentId), BigInt(item.roundId), address],
-          });
-          claimedCount += 1;
-        } catch (error) {
-          console.error(`Failed to claim frontend fee for ${item.contentId}-${item.roundId}:`, error);
+            functionName: "claimFrontendFee",
+          })),
+        );
+        claimedCount = claimableRoundFees.length;
+      } else {
+        for (const item of claimableRoundFees) {
+          try {
+            await writeRewardDistributor({
+              functionName: "claimFrontendFee",
+              args: [BigInt(item.contentId), BigInt(item.roundId), address],
+            });
+            claimedCount += 1;
+          } catch (error) {
+            console.error(`Failed to claim frontend fee for ${item.contentId}-${item.roundId}:`, error);
+          }
         }
       }
 
@@ -320,6 +395,9 @@ export function FrontendRegistration() {
       }
 
       await Promise.all([refetchClaimableRoundFees(), refetchFees()]);
+    } catch (e: any) {
+      console.error("Claim all frontend round fees failed:", e);
+      notifyTransactionError(e, "Failed to credit round fees");
     } finally {
       setIsClaimingAllRoundFees(false);
       setClaimingRoundKey(null);

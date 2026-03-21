@@ -18,6 +18,7 @@ import {
   useGovernanceStats,
   useGovernanceWrite,
 } from "~~/hooks/useGovernance";
+import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -35,10 +36,13 @@ export const CategorySubmissionForm = () => {
   const { address } = useAccount();
   const wagmiConfig = useConfig();
   const { requireAcceptance } = useTermsAcceptance();
-  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus();
+  const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
+    includeExternalSendCalls: true,
+  });
   const { governorAddress, hasGovernorContract } = useGovernanceContracts();
   const { proposalThreshold } = useGovernanceStats();
   const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls } = useThirdwebSponsoredSubmitCalls();
 
   // Form state
   const [name, setName] = useState("");
@@ -48,8 +52,12 @@ export const CategorySubmissionForm = () => {
 
   // Contract hooks
   const { data: categoryRegistryInfo } = useDeployedContractInfo({ contractName: "CategoryRegistry" });
+  const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const categoryRegistryAddress = categoryRegistryInfo?.address as `0x${string}` | undefined;
+  const crepAddress = crepInfo?.address as `0x${string}` | undefined;
+  const governorContractAddress = governorAddress as `0x${string}` | undefined;
 
-  const isCategoryRegistryDeployed = !!categoryRegistryInfo?.address;
+  const isCategoryRegistryDeployed = !!categoryRegistryAddress;
 
   const { writeContractAsync: writeCRep } = useScaffoldWriteContract({ contractName: "CuryoReputation" });
   const { writeContractAsync: writeRegistry } = useScaffoldWriteContract({ contractName: "CategoryRegistry" });
@@ -110,7 +118,7 @@ export const CategorySubmissionForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!address || !categoryRegistryInfo?.address) return;
+    if (!address || !categoryRegistryInfo || !categoryRegistryAddress) return;
 
     if (isMissingGasBalance) {
       notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
@@ -153,57 +161,97 @@ export const CategorySubmissionForm = () => {
     let categorySubmitted = false;
     let proposalCreated = false;
     try {
-      // 1. Approve cREP spend
-      const approveTxHash = await writeCRep({
-        functionName: "approve",
-        args: [categoryRegistryInfo.address, CATEGORY_STAKE],
-      });
+      if (canUseSponsoredSubmitCalls && crepInfo && crepAddress) {
+        const callsResult = await executeSponsoredCalls([
+          {
+            abi: crepInfo.abi,
+            address: crepAddress,
+            args: [categoryRegistryAddress, CATEGORY_STAKE],
+            functionName: "approve",
+          },
+          {
+            abi: categoryRegistryInfo.abi,
+            address: categoryRegistryAddress,
+            args: [name.trim(), domain.trim().toLowerCase(), validSubcats],
+            functionName: "submitCategory",
+          },
+        ]);
 
-      // Wait for approve tx to be confirmed before submitting
-      // (on Anvil automine the transactor returns without waiting for the receipt,
-      // so the submitCategory simulation may not yet see the new allowance)
-      if (approveTxHash) {
-        await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
-      }
+        const submittedLog = (callsResult.receipts ?? [])
+          .flatMap(receipt => receipt.logs)
+          .find(log => {
+            if (log.address.toLowerCase() !== categoryRegistryInfo.address.toLowerCase()) {
+              return false;
+            }
 
-      // Re-check wallet before second tx
-      if (!address) {
-        notification.error("Wallet disconnected after approval. Please reconnect and retry.");
-        return;
-      }
+            try {
+              if (log.topics.length === 0) {
+                return false;
+              }
 
-      // 2. Submit category
-      const submitTxHash = await writeRegistry({
-        functionName: "submitCategory",
-        args: [name.trim(), domain.trim().toLowerCase(), validSubcats],
-      });
-      categorySubmitted = true;
-      if (submitTxHash) {
-        const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
-        const submittedLog = submitReceipt.logs.find(log => {
-          if (log.address.toLowerCase() !== categoryRegistryInfo.address.toLowerCase()) {
-            return false;
-          }
-
-          try {
-            const decoded = decodeEventLog({
-              abi: categoryRegistryInfo.abi,
-              data: log.data,
-              topics: log.topics,
-            });
-            return decoded.eventName === "CategorySubmitted";
-          } catch {
-            return false;
-          }
-        });
+              const decoded = decodeEventLog({
+                abi: categoryRegistryInfo.abi,
+                data: log.data as `0x${string}`,
+                topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
+              });
+              return decoded.eventName === "CategorySubmitted";
+            } catch {
+              return false;
+            }
+          });
 
         if (submittedLog?.topics[1]) {
           categoryId = BigInt(submittedLog.topics[1]);
         }
+        categorySubmitted = true;
+      } else {
+        const approveTxHash = await writeCRep({
+          functionName: "approve",
+          args: [categoryRegistryAddress, CATEGORY_STAKE],
+        });
+
+        if (approveTxHash) {
+          await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
+        }
+
+        if (!address) {
+          notification.error("Wallet disconnected after approval. Please reconnect and retry.");
+          return;
+        }
+
+        const submitTxHash = await writeRegistry({
+          functionName: "submitCategory",
+          args: [name.trim(), domain.trim().toLowerCase(), validSubcats],
+        });
+        if (submitTxHash) {
+          const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
+          const submittedLog = submitReceipt.logs.find(log => {
+            if (log.address.toLowerCase() !== categoryRegistryInfo.address.toLowerCase()) {
+              return false;
+            }
+
+            try {
+              const decoded = decodeEventLog({
+                abi: categoryRegistryInfo.abi,
+                data: log.data,
+                topics: log.topics,
+              });
+              return decoded.eventName === "CategorySubmitted";
+            } catch {
+              return false;
+            }
+          });
+
+          if (submittedLog?.topics[1]) {
+            categoryId = BigInt(submittedLog.topics[1]);
+          }
+        }
+        categorySubmitted = true;
       }
+
       await refetchNextCategoryId();
 
-      if (canAutoCreateProposal && governorAddress) {
+      if (canAutoCreateProposal && governorContractAddress) {
         const proposalDescription = `Approve category #${categoryId}`;
         const approvalCalldata = encodeFunctionData({
           abi: categoryRegistryInfo.abi,
@@ -211,18 +259,34 @@ export const CategorySubmissionForm = () => {
           args: [categoryId],
         } as any);
 
-        await writeGovernanceContract({
-          address: governorAddress,
-          abi: governorAbi,
-          functionName: "propose",
-          args: [[categoryRegistryInfo.address], [0n], [approvalCalldata], proposalDescription],
-        });
+        if (canUseSponsoredSubmitCalls) {
+          await executeSponsoredCalls([
+            {
+              abi: governorAbi,
+              address: governorContractAddress,
+              args: [[categoryRegistryAddress], [0n], [approvalCalldata], proposalDescription],
+              functionName: "propose",
+            },
+            {
+              abi: categoryRegistryInfo.abi,
+              address: categoryRegistryAddress,
+              args: [categoryId, getProposalDescriptionHash(proposalDescription)],
+              functionName: "linkApprovalProposal",
+            },
+          ]);
+        } else {
+          await writeGovernanceContract({
+            address: governorContractAddress,
+            abi: governorAbi,
+            functionName: "propose",
+            args: [[categoryRegistryAddress], [0n], [approvalCalldata], proposalDescription],
+          });
+          await writeRegistry({
+            functionName: "linkApprovalProposal",
+            args: [categoryId, getProposalDescriptionHash(proposalDescription)],
+          });
+        }
         proposalCreated = true;
-
-        await writeRegistry({
-          functionName: "linkApprovalProposal",
-          args: [categoryId, getProposalDescriptionHash(proposalDescription)],
-        });
 
         notification.success("Platform submitted and proposal created.");
       } else {
