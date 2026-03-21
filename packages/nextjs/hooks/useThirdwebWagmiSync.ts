@@ -2,12 +2,28 @@
 
 import { useCallback } from "react";
 import type { Wallet } from "thirdweb/wallets";
-import { useConnect } from "wagmi";
+import { ConnectorAlreadyConnectedError, useAccount, useConnect } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { thirdwebClient } from "~~/services/thirdweb/client";
 
+export function shouldSkipThirdwebWagmiSync(params: {
+  connectorId: string;
+  currentAddress?: string;
+  currentChainId?: number;
+  currentConnectorId?: string;
+  requestedAddress?: string;
+  requestedChainId: number;
+}) {
+  return (
+    params.currentConnectorId === params.connectorId &&
+    params.currentChainId === params.requestedChainId &&
+    params.currentAddress?.toLowerCase() === params.requestedAddress?.toLowerCase()
+  );
+}
+
 export function useThirdwebWagmiSync() {
   const { connectAsync, connectors } = useConnect();
+  const { address, chainId, connector: activeConnector } = useAccount();
   const { targetNetwork } = useTargetNetwork();
 
   const syncWalletToWagmi = useCallback(
@@ -21,14 +37,37 @@ export function useThirdwebWagmiSync() {
         throw new Error("Thirdweb wagmi connector is not configured");
       }
 
-      await connectAsync({
-        chainId: wallet.getChain()?.id ?? fallbackChainId,
-        connector,
-        isReconnecting: options?.reconnect,
-        wallet,
-      } as any);
+      const requestedChainId = wallet.getChain()?.id ?? fallbackChainId;
+      const requestedAddress = wallet.getAccount()?.address;
+
+      if (
+        shouldSkipThirdwebWagmiSync({
+          connectorId: connector.id,
+          currentAddress: address,
+          currentChainId: chainId,
+          currentConnectorId: activeConnector?.id,
+          requestedAddress,
+          requestedChainId,
+        })
+      ) {
+        return;
+      }
+
+      try {
+        await connectAsync({
+          chainId: requestedChainId,
+          connector,
+          isReconnecting: options?.reconnect,
+          wallet,
+        } as any);
+      } catch (error) {
+        if (error instanceof ConnectorAlreadyConnectedError) {
+          return;
+        }
+        throw error;
+      }
     },
-    [connectAsync, connectors, targetNetwork.id],
+    [activeConnector?.id, address, chainId, connectAsync, connectors, targetNetwork.id],
   );
 
   return {
