@@ -129,11 +129,16 @@ Fund with CELO for gas (server-side operations).
 
 ```bash
 # packages/foundry/.env
-ALCHEMY_API_KEY=<your-alchemy-key>        # Optional, Celo has free public RPC
+ALCHEMY_API_KEY=<your-alchemy-key>
+CELO_RPC_URL=<your-mainnet-rpc>           # Recommended over public Forno
+CELO_SEPOLIA_RPC_URL=<your-sepolia-rpc>   # Recommended over public Forno
 ```
 
 `LOCALHOST_KEYSTORE_ACCOUNT` only affects localhost deploys. For Celo mainnet, use a dedicated non-default keystore
 via `--keystore deployer`.
+
+If `CELO_RPC_URL` or `CELO_SEPOLIA_RPC_URL` is set, `yarn deploy` will use that endpoint instead of the public
+Forno fallback from `foundry.toml`.
 
 ### 2b. Run deployment
 

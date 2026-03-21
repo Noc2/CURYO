@@ -10,6 +10,11 @@ import { selectOrCreateKeystore } from "./selectOrCreateKeystore.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, "..", ".env") });
 
+const NETWORK_RPC_OVERRIDE_ENV = {
+  celoSepolia: "CELO_SEPOLIA_RPC_URL",
+  celo: "CELO_RPC_URL",
+};
+
 // Get all arguments after the script name
 const args = process.argv.slice(2);
 let network;
@@ -43,6 +48,20 @@ function validateKeystore(keystoreName) {
     keystoreName
   );
   return existsSync(keystorePath);
+}
+
+function resolveRpcUrl(networkName) {
+  const overrideEnvKey = NETWORK_RPC_OVERRIDE_ENV[networkName];
+  if (!overrideEnvKey) {
+    return { rpcUrl: networkName, overrideEnvKey: null };
+  }
+
+  const overrideValue = process.env[overrideEnvKey]?.trim();
+  if (!overrideValue) {
+    return { rpcUrl: networkName, overrideEnvKey: null };
+  }
+
+  return { rpcUrl: overrideValue, overrideEnvKey };
 }
 
 // Check if the network exists in rpc_endpoints
@@ -133,7 +152,8 @@ The default account (scaffold-eth-default) can only be used for localhost deploy
 
 // Set environment variables for the make command
 process.env.DEPLOY_SCRIPT = "script/Deploy.s.sol";
-process.env.RPC_URL = network;
+const { rpcUrl, overrideEnvKey } = resolveRpcUrl(network);
+process.env.RPC_URL = rpcUrl;
 process.env.ETH_KEYSTORE_ACCOUNT = selectedKeystore;
 process.env.RESUME_FLAG = resume ? "--resume" : "";
 
@@ -154,6 +174,10 @@ if (SLOW_BROADCAST_NETWORKS.has(network)) {
   console.log(
     `\n🐢 Using slow broadcast mode for ${network} to avoid sequencer nonce issues`
   );
+}
+
+if (overrideEnvKey) {
+  console.log(`\n🌐 Using custom RPC from ${overrideEnvKey}`);
 }
 
 // Determine verification flags based on network's explorer config
