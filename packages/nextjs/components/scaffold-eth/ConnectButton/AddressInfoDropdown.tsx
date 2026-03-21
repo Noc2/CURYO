@@ -1,5 +1,3 @@
-import { useState } from "react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getAddress } from "viem";
 import { Address } from "viem";
@@ -31,14 +29,6 @@ const getMenuItemClass = (showText: boolean) =>
     ? "flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium"
     : "flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-colors text-base-content/60 hover:text-base-content hover:bg-base-200 w-full text-base font-medium";
 
-const WalletDetailsPanel = dynamic(() => import("./WalletDetailsPanel").then(mod => mod.WalletDetailsPanel), {
-  loading: () => (
-    <div className="px-4 pl-12 py-1 text-xs text-base-content/50">
-      <span className="loading loading-spinner loading-xs text-primary" /> Loading...
-    </div>
-  ),
-});
-
 function formatCrepAmount(value: bigint | null | undefined) {
   if (value == null) return "—";
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -61,27 +51,11 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
   );
 }
 
-function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
-  const [showDetails, setShowDetails] = useState(false);
-
+function InlineWalletSummary({ crepBalance }: { crepBalance: bigint | undefined }) {
   return (
     <>
       <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(crepBalance)} cREP</div>
       <FreeTransactionAllowanceText className="px-4 pl-12 text-left" />
-      <div className="px-4 pl-12 pt-1">
-        <button
-          type="button"
-          onClick={() => setShowDetails(current => !current)}
-          className="text-xs text-base-content/50 underline underline-offset-2 hover:text-base-content"
-        >
-          {showDetails ? "Hide details" : "Details"}
-        </button>
-      </div>
-      {showDetails ? (
-        <div className="pt-1">
-          <WalletDetailsPanel address={address} crepBalance={crepBalance} />
-        </div>
-      ) : null}
     </>
   );
 }
@@ -181,7 +155,7 @@ export const AddressInfoDropdown = ({
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      {inlineMenu ? <InlineWalletSummary address={address} crepBalance={crepBalance} /> : null}
+      {inlineMenu ? <InlineWalletSummary crepBalance={crepBalance} /> : null}
       {!inlineMenu ? (
         <>
           <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(crepBalance)} cREP</div>
