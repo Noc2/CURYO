@@ -36,7 +36,8 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
     uint256 public nextCategoryId;
     mapping(uint256 => Category) private _categories;
-    mapping(bytes32 => uint256) private _domainToCategory; // domain hash => categoryId
+    mapping(bytes32 => uint256) private _approvedDomainToCategory; // domain hash => approved categoryId
+    mapping(bytes32 => uint256) private _pendingDomainReservation; // domain hash => pending linked categoryId
     uint256[] private _approvedCategoryIds;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
 
@@ -100,8 +101,8 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
     // --- Category Submission ---
 
-    /// @notice Submit a new category for governance approval sponsorship.
-    /// @dev Requires 100 cREP stake. A separate governor proposal must later be linked via linkApprovalProposal().
+    /// @notice Submit a new category draft for governance approval sponsorship.
+    /// @dev Requires 100 cREP stake. The domain is only reserved once a sponsored approval proposal is linked.
     /// @param name The category name (e.g., "YouTube", "MTG")
     /// @param domain The category domain (e.g., "youtube.com", "gatherer.wizards.com")
     /// @param subcategories Array of subcategory names (e.g., ["Education", "Gaming"])
@@ -133,9 +134,10 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         string memory normalizedDomain = _normalizeDomain(domain);
         require(bytes(normalizedDomain).length > 0, "Empty domain after normalization"); // L-13 fix
 
-        // Check domain uniqueness
+        // Approved or already-linked domains cannot be drafted again.
         bytes32 domainHash = keccak256(abi.encodePacked(normalizedDomain));
-        require(_domainToCategory[domainHash] == 0, "Domain already registered");
+        require(_approvedDomainToCategory[domainHash] == 0, "Domain already registered");
+        require(_pendingDomainReservation[domainHash] == 0, "Domain already registered");
 
         // Take stake from user
         token.safeTransferFrom(msg.sender, address(this), CATEGORY_STAKE);
@@ -153,9 +155,6 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
             proposalId: 0,
             createdAt: block.timestamp
         });
-
-        // Reserve domain
-        _domainToCategory[domainHash] = categoryId;
 
         emit CategorySubmitted(categoryId, msg.sender, name, normalizedDomain, 0);
     }
@@ -180,7 +179,12 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         require(governor.proposalProposer(proposalId) != address(0), "Proposal not found");
         require(_isLinkableProposalState(governor.state(proposalId)), "Proposal not linkable");
 
+        bytes32 domainHash = keccak256(abi.encodePacked(cat.domain));
+        require(_approvedDomainToCategory[domainHash] == 0, "Domain already registered");
+        require(_pendingDomainReservation[domainHash] == 0, "Domain already registered");
+
         cat.proposalId = proposalId;
+        _pendingDomainReservation[domainHash] = categoryId;
         emit CategoryProposalLinked(categoryId, proposalId, descriptionHash);
     }
 
@@ -201,6 +205,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         );
 
         cat.proposalId = 0;
+        _releasePendingDomain(cat, categoryId);
     }
 
     /// @notice Cancel an unsponsored category after the sponsorship window and reclaim the submitter stake.
@@ -215,8 +220,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
         cat.status = CategoryStatus.Canceled;
 
-        bytes32 domainHash = keccak256(abi.encodePacked(cat.domain));
-        delete _domainToCategory[domainHash];
+        _releasePendingDomain(cat, categoryId);
 
         token.safeTransfer(cat.submitter, cat.stakeAmount);
         emit CategoryCanceled(categoryId);
@@ -234,7 +238,13 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         require(cat.status == CategoryStatus.Pending, "Not pending");
         require(cat.proposalId != 0, "Proposal not linked");
 
+        bytes32 domainHash = keccak256(abi.encodePacked(cat.domain));
+        require(_approvedDomainToCategory[domainHash] == 0, "Domain already registered");
+        require(_pendingDomainReservation[domainHash] == categoryId, "Domain not reserved for category");
+
         cat.status = CategoryStatus.Approved;
+        delete _pendingDomainReservation[domainHash];
+        _approvedDomainToCategory[domainHash] = categoryId;
         _approvedCategoryIds.push(categoryId);
 
         // Return stake to submitter
@@ -257,9 +267,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
         cat.status = CategoryStatus.Rejected;
 
-        // Release domain for future use
-        bytes32 domainHash = keccak256(abi.encodePacked(cat.domain));
-        delete _domainToCategory[domainHash];
+        _releasePendingDomain(cat, categoryId);
 
         // Send stake to consensus reserve (0% return on rejection)
         token.forceApprove(address(votingEngine), cat.stakeAmount);
@@ -286,7 +294,8 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         string memory normalizedDomain = _normalizeDomain(domain);
         require(bytes(normalizedDomain).length > 0, "Empty domain after normalization"); // L-13 fix
         bytes32 domainHash = keccak256(abi.encodePacked(normalizedDomain));
-        require(_domainToCategory[domainHash] == 0, "Domain already registered");
+        require(_approvedDomainToCategory[domainHash] == 0, "Domain already registered");
+        require(_pendingDomainReservation[domainHash] == 0, "Domain already registered");
 
         // Create category
         categoryId = nextCategoryId++;
@@ -303,7 +312,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         });
 
         // Register domain
-        _domainToCategory[domainHash] = categoryId;
+        _approvedDomainToCategory[domainHash] = categoryId;
         _approvedCategoryIds.push(categoryId);
 
         emit CategoryAdded(categoryId, name, normalizedDomain);
@@ -331,7 +340,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     /// @inheritdoc ICategoryRegistry
     function getCategoryByDomain(string calldata domain) external view override returns (Category memory) {
         bytes32 domainHash = keccak256(abi.encodePacked(_normalizeDomain(domain)));
-        uint256 categoryId = _domainToCategory[domainHash];
+        uint256 categoryId = _approvedDomainToCategory[domainHash];
         require(categoryId != 0, "Domain not registered");
         return _categories[categoryId];
     }
@@ -364,7 +373,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     /// @inheritdoc ICategoryRegistry
     function isDomainRegistered(string calldata domain) external view override returns (bool) {
         bytes32 domainHash = keccak256(abi.encodePacked(_normalizeDomain(domain)));
-        return _domainToCategory[domainHash] != 0;
+        return _approvedDomainToCategory[domainHash] != 0 || _pendingDomainReservation[domainHash] != 0;
     }
 
     /// @notice Compute the governor proposal ID for approving a category with the supplied description hash.
@@ -407,6 +416,13 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     function _isLinkableProposalState(IGovernor.ProposalState proposalState) internal pure returns (bool) {
         return proposalState == IGovernor.ProposalState.Pending || proposalState == IGovernor.ProposalState.Active
             || proposalState == IGovernor.ProposalState.Succeeded || proposalState == IGovernor.ProposalState.Queued;
+    }
+
+    function _releasePendingDomain(Category storage cat, uint256 categoryId) internal {
+        bytes32 domainHash = keccak256(abi.encodePacked(cat.domain));
+        if (_pendingDomainReservation[domainHash] == categoryId) {
+            delete _pendingDomainReservation[domainHash];
+        }
     }
 
     /// @dev Normalize domain: strip protocol, www., path/query/fragment, trailing dot, and lowercase.

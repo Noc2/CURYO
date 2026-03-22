@@ -134,10 +134,14 @@ contract CategoryRegistryTest is Test {
     }
 
     function _submitCategory(string memory domain) internal returns (uint256 categoryId) {
+        return _submitCategoryAs(user1, domain);
+    }
+
+    function _submitCategoryAs(address submitter, string memory domain) internal returns (uint256 categoryId) {
         string[] memory subcategories = new string[](1);
         subcategories[0] = "General";
 
-        vm.startPrank(user1);
+        vm.startPrank(submitter);
         token.approve(address(registry), STAKE);
         categoryId = registry.submitCategory("MTG", domain, subcategories);
         vm.stopPrank();
@@ -335,6 +339,19 @@ contract CategoryRegistryTest is Test {
         vm.stopPrank();
     }
 
+    function test_RevertAddApprovedCategoryPendingReservedDomain() public {
+        string[] memory subcategories = new string[](1);
+        subcategories[0] = "General";
+
+        uint256 categoryId = _submitCategory("reserved-admin.test");
+        _linkApprovalProposal(categoryId, "Approve reserved admin domain");
+
+        vm.startPrank(admin);
+        vm.expectRevert("Domain already registered");
+        registry.addApprovedCategory("Reserved", "reserved-admin.test", subcategories);
+        vm.stopPrank();
+    }
+
     function test_RevertAddApprovedCategoryEmptySubcategories() public {
         string[] memory subcategories = new string[](0);
 
@@ -364,9 +381,40 @@ contract CategoryRegistryTest is Test {
         assertEq(cat.stakeAmount, STAKE);
         assertEq(uint256(cat.status), uint256(ICategoryRegistry.CategoryStatus.Pending));
         assertEq(cat.proposalId, 0); // Proposal is linked separately
+        assertFalse(registry.isDomainRegistered("gatherer.wizards.com"));
 
         // Verify stake was transferred
         assertEq(token.balanceOf(address(registry)), STAKE);
+    }
+
+    function test_SubmitCategory_AllowsDuplicateDraftsBeforeProposalLinked() public {
+        uint256 firstCategoryId = _submitCategory("shared-domain.test");
+        uint256 secondCategoryId = _submitCategoryAs(user2, "shared-domain.test");
+
+        assertEq(firstCategoryId, 1);
+        assertEq(secondCategoryId, 2);
+        assertFalse(registry.isDomainRegistered("shared-domain.test"));
+
+        ICategoryRegistry.Category memory firstCategory = registry.getCategory(firstCategoryId);
+        ICategoryRegistry.Category memory secondCategory = registry.getCategory(secondCategoryId);
+        assertEq(firstCategory.domain, "shared-domain.test");
+        assertEq(secondCategory.domain, "shared-domain.test");
+        assertEq(uint256(firstCategory.status), uint256(ICategoryRegistry.CategoryStatus.Pending));
+        assertEq(uint256(secondCategory.status), uint256(ICategoryRegistry.CategoryStatus.Pending));
+    }
+
+    function test_RevertSubmitCategoryWhenDomainReservedByLinkedProposal() public {
+        uint256 categoryId = _submitCategory("linked-domain.test");
+        _linkApprovalProposal(categoryId, "Approve linked domain");
+
+        string[] memory subcategories = new string[](1);
+        subcategories[0] = "General";
+
+        vm.startPrank(user2);
+        token.approve(address(registry), STAKE);
+        vm.expectRevert("Domain already registered");
+        registry.submitCategory("MTG", "linked-domain.test", subcategories);
+        vm.stopPrank();
     }
 
     function test_RevertSubmitCategoryInsufficientStake() public {
@@ -489,6 +537,18 @@ contract CategoryRegistryTest is Test {
         registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #1")));
     }
 
+    function test_RevertLinkApprovalProposal_DomainAlreadyReserved() public {
+        uint256 firstCategoryId = _submitCategory("reserved-link.test");
+        uint256 secondCategoryId = _submitCategoryAs(user2, "reserved-link.test");
+
+        _linkApprovalProposal(firstCategoryId, "Approve reserved link #1");
+        _createApprovalProposal(secondCategoryId, "Approve reserved link #2");
+
+        vm.prank(user2);
+        vm.expectRevert("Domain already registered");
+        registry.linkApprovalProposal(secondCategoryId, keccak256(bytes("Approve reserved link #2")));
+    }
+
     function test_RevertLinkApprovalProposal_ProposalNotLinkableWhenCanceled() public {
         uint256 categoryId = _submitCategory("canceled-link.test");
         uint256 proposalId = _createApprovalProposal(categoryId, "Approve category #1");
@@ -520,6 +580,7 @@ contract CategoryRegistryTest is Test {
         ICategoryRegistry.Category memory cleared = registry.getCategory(categoryId);
         assertEq(cleared.proposalId, 0);
         assertEq(uint256(cleared.status), uint256(ICategoryRegistry.CategoryStatus.Pending));
+        assertFalse(registry.isDomainRegistered("retry-link.test"));
 
         uint256 secondProposalId = _createApprovalProposal(categoryId, "Approve category #2");
         vm.prank(user1);
@@ -527,6 +588,7 @@ contract CategoryRegistryTest is Test {
 
         ICategoryRegistry.Category memory relinked = registry.getCategory(categoryId);
         assertEq(relinked.proposalId, secondProposalId);
+        assertTrue(registry.isDomainRegistered("retry-link.test"));
     }
 
     function test_ClearApprovalProposalAllowsCancelAfterWindow() public {
@@ -611,6 +673,14 @@ contract CategoryRegistryTest is Test {
 
         ICategoryRegistry.Category memory cat = registry.getCategoryByDomain("youtube.com");
         assertEq(cat.name, "YouTube");
+    }
+
+    function test_RevertGetCategoryByDomainForPendingLinkedCategory() public {
+        uint256 categoryId = _submitCategory("pending-view.test");
+        _linkApprovalProposal(categoryId, "Approve pending view");
+
+        vm.expectRevert("Domain not registered");
+        registry.getCategoryByDomain("pending-view.test");
     }
 
     function test_GetCategoryByDomainCaseInsensitive() public {
