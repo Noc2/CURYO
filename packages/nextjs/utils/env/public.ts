@@ -1,5 +1,6 @@
 import deployedContracts from "@curyo/contracts/deployedContracts";
 import { isAddress } from "viem";
+import { RPC_OVERRIDES } from "~~/config/shared";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "~~/utils/env/targetNetworks";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -51,8 +52,10 @@ function requireUrl(name: string, value: string | undefined, fallback?: string):
 }
 
 const targetNetworks = resolveTargetNetworks(rawPublicEnv.targetNetworks, {
+  alchemyApiKey: rawPublicEnv.alchemyApiKey,
   production: isProduction,
   fallback: !isProduction ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
+  rpcOverrides: RPC_OVERRIDES,
 });
 const targetNetworkIds = targetNetworks.map(network => network.id);
 

@@ -5,8 +5,10 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 const targetNetworks = resolveTargetNetworks(process.env.NEXT_PUBLIC_TARGET_NETWORKS, {
+  alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
   production: !isDev,
   fallback: isDev ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
+  rpcOverrides: RPC_OVERRIDES,
 });
 
 function toOrigin(value: string): string | undefined {

@@ -66,9 +66,11 @@ export function resolveServerTargetNetworks(
 ): [SupportedTargetNetwork, ...SupportedTargetNetwork[]] | null {
   try {
     return resolveTargetNetworks(rawValue, {
+      alchemyApiKey: readEnv("NEXT_PUBLIC_ALCHEMY_API_KEY"),
       production,
       fallback: !production ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
       allowFoundryInProduction: true,
+      rpcOverrides: RPC_OVERRIDES,
     });
   } catch {
     return null;

@@ -1,3 +1,4 @@
+import { withPreferredHttpRpcUrls } from "../rpcUrls";
 import * as chains from "viem/chains";
 
 export const AVAILABLE_TARGET_NETWORKS = {
@@ -30,6 +31,8 @@ export function resolveTargetNetworks(
     production: boolean;
     fallback?: string;
     allowFoundryInProduction?: boolean;
+    alchemyApiKey?: string;
+    rpcOverrides?: Partial<Record<number, string>>;
   },
 ): [SupportedTargetNetwork, ...SupportedTargetNetwork[]] {
   const resolvedValue = rawValue?.trim() || options.fallback;
@@ -53,7 +56,10 @@ export function resolveTargetNetworks(
       );
     }
 
-    return network;
+    return withPreferredHttpRpcUrls(network, {
+      alchemyApiKey: options.alchemyApiKey,
+      rpcOverrides: options.rpcOverrides,
+    });
   });
 
   return targetNetworks as [SupportedTargetNetwork, ...SupportedTargetNetwork[]];
