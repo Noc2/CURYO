@@ -13,7 +13,11 @@ import {
 } from "~~/hooks/useFreeTransactionAllowance";
 import { type WalletExecutionMode, useWalletExecutionCapabilities } from "~~/hooks/useWalletExecutionCapabilities";
 import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactionOperation";
-import { getThirdwebPaymasterServiceUrl, thirdwebClient } from "~~/services/thirdweb/client";
+import {
+  getThirdwebPaymasterServiceUrl,
+  supportsThirdwebExecutionCapabilities,
+  thirdwebClient,
+} from "~~/services/thirdweb/client";
 
 type SponsoredSubmitCapabilities = {
   paymasterService: {
@@ -55,10 +59,31 @@ function getSponsoredSubmitCapabilities(params: {
   };
 }
 
+export function shouldPreferSponsoredSubmitCalls(params: {
+  canUseFreeTransactions: boolean;
+  chainId: number | undefined;
+  connectorId: string | undefined;
+}) {
+  return (
+    params.canUseFreeTransactions && shouldExpectSponsoredSubmitCalls(params)
+  );
+}
+
+export function shouldExpectSponsoredSubmitCalls(params: {
+  chainId: number | undefined;
+  connectorId: string | undefined;
+}) {
+  return (
+    params.connectorId === "in-app-wallet" &&
+    typeof params.chainId === "number" &&
+    supportsThirdwebExecutionCapabilities(params.chainId)
+  );
+}
+
 export function useThirdwebSponsoredSubmitCalls() {
   const queryClient = useQueryClient();
   const activeWallet = useActiveWallet();
-  const { address, chainId } = useAccount();
+  const { address, chainId, connector } = useAccount();
   const freeTransactionAllowance = useFreeTransactionAllowance();
   const { executionMode, hasSendCalls, supportsPaymasterService } = useWalletExecutionCapabilities();
 
@@ -72,19 +97,49 @@ export function useThirdwebSponsoredSubmitCalls() {
     [chainId, executionMode, supportsPaymasterService],
   );
 
+  const expectsSponsoredSubmitCalls = useMemo(
+    () =>
+      shouldExpectSponsoredSubmitCalls({
+        chainId,
+        connectorId: connector?.id,
+      }),
+    [chainId, connector?.id],
+  );
+
+  const prefersSponsoredSubmitCalls = useMemo(
+    () =>
+      shouldPreferSponsoredSubmitCalls({
+        canUseFreeTransactions: freeTransactionAllowance.canUseFreeTransactions,
+        chainId,
+        connectorId: connector?.id,
+      }),
+    [chainId, connector?.id, freeTransactionAllowance.canUseFreeTransactions],
+  );
+
   const canUseGaslessSubmitTransactions = useMemo(
     () =>
       freeTransactionAllowance.canUseFreeTransactions &&
-      (executionMode === "sponsored_7702" || sponsoredSubmitCapabilities !== undefined),
-    [executionMode, freeTransactionAllowance.canUseFreeTransactions, sponsoredSubmitCapabilities],
+      (executionMode === "sponsored_7702" ||
+        sponsoredSubmitCapabilities !== undefined ||
+        expectsSponsoredSubmitCalls),
+    [
+      expectsSponsoredSubmitCalls,
+      executionMode,
+      freeTransactionAllowance.canUseFreeTransactions,
+      sponsoredSubmitCapabilities,
+    ],
   );
 
   const isEligibleForGaslessSubmitTransactions =
-    executionMode === "sponsored_7702" || sponsoredSubmitCapabilities !== undefined;
+    executionMode === "sponsored_7702" || sponsoredSubmitCapabilities !== undefined || expectsSponsoredSubmitCalls;
 
   const canUseSponsoredSubmitCalls = Boolean(
     thirdwebClient && activeWallet && typeof chainId === "number" && hasSendCalls && canUseGaslessSubmitTransactions,
   );
+  const isAwaitingSponsoredSubmitCalls =
+    expectsSponsoredSubmitCalls &&
+    (!freeTransactionAllowance.isResolved ||
+      (prefersSponsoredSubmitCalls && !canUseSponsoredSubmitCalls));
 
   const postFreeTransactionMutation = useCallback(async (path: string, body: Record<string, unknown>) => {
     const response = await fetch(path, {
@@ -216,6 +271,7 @@ export function useThirdwebSponsoredSubmitCalls() {
     freeTransactionLimit: freeTransactionAllowance.limit,
     freeTransactionRemaining: freeTransactionAllowance.remaining,
     freeTransactionVerified: freeTransactionAllowance.verified,
+    isAwaitingSponsoredSubmitCalls,
     isAwaitingFreeTransactionAllowance: isEligibleForGaslessSubmitTransactions && !freeTransactionAllowance.isResolved,
     executeSponsoredCalls,
   };

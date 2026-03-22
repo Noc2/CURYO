@@ -43,7 +43,8 @@ export const CategorySubmissionForm = () => {
   const { governorAddress, hasGovernorContract } = useGovernanceContracts();
   const { proposalThreshold } = useGovernanceStats();
   const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
-  const { canUseSponsoredSubmitCalls, executeSponsoredCalls } = useThirdwebSponsoredSubmitCalls();
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
+    useThirdwebSponsoredSubmitCalls();
 
   // Form state
   const [name, setName] = useState("");
@@ -120,6 +121,11 @@ export const CategorySubmissionForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!address || !categoryRegistryInfo || !categoryRegistryAddress) return;
+
+    if (isAwaitingSponsoredSubmitCalls) {
+      notification.warning("Wallet reconnecting. Retry in a moment.");
+      return;
+    }
 
     if (isMissingGasBalance) {
       notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
@@ -482,6 +488,7 @@ export const CategorySubmissionForm = () => {
             className="btn btn-submit w-full"
             disabled={
               isSubmitting ||
+              isAwaitingSponsoredSubmitCalls ||
               isMissingGasBalance ||
               !hasEnoughBalance ||
               !!isDomainRegistered ||

@@ -136,7 +136,8 @@ export function ContentSubmissionSection() {
     includeExternalSendCalls: true,
   });
   const { ratePercent, calculateBonus } = useParticipationRate();
-  const { canUseSponsoredSubmitCalls, executeSponsoredCalls } = useThirdwebSponsoredSubmitCalls();
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
+    useThirdwebSponsoredSubmitCalls();
   const submissionBonus = calculateBonus(10);
   const { requireAcceptance } = useTermsAcceptance();
 
@@ -365,6 +366,11 @@ export function ContentSubmissionSection() {
     if (!registryInfo || !registryAddress) return;
 
     setSubmitAttempted(true);
+
+    if (isAwaitingSponsoredSubmitCalls) {
+      notification.warning("Wallet reconnecting. Retry in a moment.");
+      return;
+    }
 
     if (isMissingGasBalance) {
       notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
@@ -830,7 +836,13 @@ export function ContentSubmissionSection() {
             <button
               type="submit"
               className="btn btn-submit w-full"
-              disabled={isSubmitting || isUrlAlreadySubmitted || urlCategoryMismatch || isMissingGasBalance}
+              disabled={
+                isSubmitting ||
+                isAwaitingSponsoredSubmitCalls ||
+                isUrlAlreadySubmitted ||
+                urlCategoryMismatch ||
+                isMissingGasBalance
+              }
             >
               {isSubmitting ? (
                 <span className="flex items-center gap-2">

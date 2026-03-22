@@ -11,6 +11,7 @@ import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
 import { NetworkEnvironmentBanner } from "~~/components/shared/NetworkEnvironmentBanner";
 import { ClearLegacyBurnerSession } from "~~/components/thirdweb/ClearLegacyBurnerSession";
+import { ThirdwebConnectorWalletBridge } from "~~/components/thirdweb/ThirdwebConnectorWalletBridge";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
 import { OptimisticVoteProvider } from "~~/contexts/OptimisticVoteContext";
@@ -57,6 +58,7 @@ export const ScaffoldEthAppWithProviders = ({ children }: { children: React.Reac
         <ThirdwebProvider>
           <ClearLegacyBurnerSession />
           <LocalTestWalletBridge />
+          <ThirdwebConnectorWalletBridge />
           <ThirdwebAutoConnectBridge />
           <ProgressBar height="3px" color="#F26426" />
           <TermsAcceptanceProvider>

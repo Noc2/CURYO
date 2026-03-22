@@ -1,5 +1,6 @@
 import { inAppWalletConnector } from "@thirdweb-dev/wagmi-adapter";
 import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
+import { setConnectedThirdwebConnectorWallet } from "~~/services/thirdweb/connectorWalletState";
 import {
   getPreferredThirdwebChainId,
   getThirdwebWalletExecutionMode,
@@ -30,6 +31,9 @@ export const wagmiConnectors = () => {
         metadata: {
           icon: CURYO_THIRDWEB_ICON,
           name: "Curyo Wallet",
+        },
+        onConnect: wallet => {
+          setConnectedThirdwebConnectorWallet(wallet);
         },
       }),
     );

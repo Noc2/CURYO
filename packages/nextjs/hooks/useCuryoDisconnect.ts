@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { useActiveWallet, useDisconnect as useThirdwebDisconnect } from "thirdweb/react";
 import { useDisconnect as useWagmiDisconnect } from "wagmi";
+import { setConnectedThirdwebConnectorWallet } from "~~/services/thirdweb/connectorWalletState";
 
 const WALLET_STATE_PREFIXES = [
   "thirdweb:",
@@ -51,6 +52,7 @@ export function useCuryoDisconnect() {
     }
 
     disconnectWagmi();
+    setConnectedThirdwebConnectorWallet(null);
 
     if (typeof window !== "undefined") {
       clearWalletState(window.localStorage);

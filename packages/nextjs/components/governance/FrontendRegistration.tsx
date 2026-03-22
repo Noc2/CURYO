@@ -31,7 +31,8 @@ export function FrontendRegistration() {
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
-  const { canUseSponsoredSubmitCalls, executeSponsoredCalls } = useThirdwebSponsoredSubmitCalls();
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
+    useThirdwebSponsoredSubmitCalls();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
@@ -150,6 +151,11 @@ export function FrontendRegistration() {
   }, [isExitPending]);
 
   const ensureGasBalance = () => {
+    if (isAwaitingSponsoredSubmitCalls) {
+      notification.warning("Wallet reconnecting. Retry in a moment.");
+      return false;
+    }
+
     if (!isMissingGasBalance) {
       return true;
     }
@@ -511,7 +517,11 @@ export function FrontendRegistration() {
             className="btn btn-submit w-full"
             onClick={handleRegister}
             disabled={
-              isRegistering || isMissingGasBalance || crepFormatted < STAKE_AMOUNT || !canRegisterWithCurrentAddress
+              isRegistering ||
+              isAwaitingSponsoredSubmitCalls ||
+              isMissingGasBalance ||
+              crepFormatted < STAKE_AMOUNT ||
+              !canRegisterWithCurrentAddress
             }
           >
             {isRegistering ? (
@@ -575,7 +585,7 @@ export function FrontendRegistration() {
                 <button
                   className="btn btn-submit btn-sm w-full"
                   onClick={handleClaimAllRoundFees}
-                  disabled={isClaimingAllRoundFees || isMissingGasBalance || isSlashed}
+                  disabled={isClaimingAllRoundFees || isAwaitingSponsoredSubmitCalls || isMissingGasBalance || isSlashed}
                 >
                   {isClaimingAllRoundFees ? (
                     <span className="flex items-center gap-2">
@@ -618,7 +628,13 @@ export function FrontendRegistration() {
                           <button
                             className="btn btn-outline btn-primary btn-sm"
                             onClick={() => handleClaimRoundFee(item.contentId, item.roundId, item.claimableFee)}
-                            disabled={isClaimingRound || isClaimingAllRoundFees || isMissingGasBalance || isSlashed}
+                            disabled={
+                              isClaimingRound ||
+                              isClaimingAllRoundFees ||
+                              isAwaitingSponsoredSubmitCalls ||
+                              isMissingGasBalance ||
+                              isSlashed
+                            }
                           >
                             {isClaimingRound ? <span className="loading loading-spinner loading-xs" /> : "Claim round"}
                           </button>
@@ -659,7 +675,7 @@ export function FrontendRegistration() {
               <button
                 className="btn btn-submit btn-sm"
                 onClick={handleClaimFees}
-                disabled={isClaiming || isMissingGasBalance || !hasFees || isExitPending}
+                disabled={isClaiming || isAwaitingSponsoredSubmitCalls || isMissingGasBalance || !hasFees || isExitPending}
               >
                 {isClaiming ? <span className="loading loading-spinner loading-xs" /> : "Claim"}
               </button>
@@ -677,7 +693,12 @@ export function FrontendRegistration() {
                   <button
                     className="btn btn-outline btn-error btn-sm w-full"
                     onClick={handleCompleteDeregister}
-                    disabled={isCompletingDeregister || isMissingGasBalance || !canCompleteDeregister}
+                    disabled={
+                      isCompletingDeregister ||
+                      isAwaitingSponsoredSubmitCalls ||
+                      isMissingGasBalance ||
+                      !canCompleteDeregister
+                    }
                   >
                     {isCompletingDeregister ? (
                       <span className="loading loading-spinner loading-xs" />
@@ -696,7 +717,7 @@ export function FrontendRegistration() {
                   <button
                     className="btn btn-outline btn-error btn-sm w-full"
                     onClick={handleDeregister}
-                    disabled={isDeregistering || isMissingGasBalance}
+                    disabled={isDeregistering || isAwaitingSponsoredSubmitCalls || isMissingGasBalance}
                   >
                     {isDeregistering ? <span className="loading loading-spinner loading-xs" /> : "Start Deregistration"}
                   </button>

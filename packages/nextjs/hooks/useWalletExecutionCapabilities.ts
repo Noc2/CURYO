@@ -78,7 +78,7 @@ export function useWalletExecutionCapabilities() {
 
   return useMemo(() => {
     const activeCapabilities = resolveWalletCapabilitiesForChain(capabilities, chainId);
-    const hasSendCalls = Boolean(thirdwebAccount?.sendCalls);
+    const hasSendCalls = Boolean(thirdwebAccount?.sendCalls ?? wallet?.getAccount()?.sendCalls);
     const isThirdwebInApp = wallet?.id === "inApp";
     const thirdwebSponsorshipMode = isThirdwebInApp ? getThirdwebWalletSponsorshipMode(wallet) : null;
     const supportsPaymasterService = walletCapabilitiesSupportPaymasterService(activeCapabilities);
