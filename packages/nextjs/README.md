@@ -55,7 +55,7 @@ Key environment variables (see `.env.example` for the full list):
 | `THIRDWEB_SERVER_VERIFIER_SECRET`       | Shared secret used by the thirdweb server verifier webhook                    |
 | `FREE_TRANSACTION_LIMIT`                | Free sponsored app transactions per verified Voter ID (defaults to `25`)      |
 | `RATE_LIMIT_TRUSTED_IP_HEADERS`         | Comma-separated proxy IP headers to trust for API rate limiting in production |
-| `NEXT_PUBLIC_DEV_FAUCET`                | Enable dev faucet UI                                                          |
+| `DEV_FAUCET_ENABLED`                    | Enable the development-only faucet route                                      |
 | `FAUCET_PRIVATE_KEY`                    | Server-side faucet wallet key                                                 |
 
 Notes:
