@@ -18,20 +18,17 @@ type AddEthereumChainParameter = {
 };
 
 function unique(values: Array<string | undefined>) {
-  return values.filter((value, index, allValues): value is string => Boolean(value) && allValues.indexOf(value) === index);
+  return values.filter(
+    (value, index, allValues): value is string => Boolean(value) && allValues.indexOf(value) === index,
+  );
 }
 
-export function canRepairWalletRpc(params: {
-  chain: Chain | null;
-  walletId: string | undefined;
-}) {
+export function canRepairWalletRpc(params: { chain: Chain | null; walletId: string | undefined }) {
   return params.walletId === "io.metamask" && Boolean(params.chain?.rpcUrls.default.http.length);
 }
 
 export function buildAddEthereumChainParameter(chain: Chain): AddEthereumChainParameter {
-  const blockExplorerUrls = unique(
-    Object.values(chain.blockExplorers ?? {}).map(explorer => explorer?.url),
-  );
+  const blockExplorerUrls = unique(Object.values(chain.blockExplorers ?? {}).map(explorer => explorer?.url));
 
   return {
     ...(blockExplorerUrls.length > 0 ? { blockExplorerUrls } : {}),
@@ -97,8 +94,12 @@ export function useWalletRpcRecovery() {
     notification.error(
       <div className="space-y-2">
         <p>{walletName} RPC overloaded.</p>
-        <button type="button" className="btn btn-xs btn-primary" onClick={() => void repairWalletRpc()}>
-          Refresh {targetChain.name} RPC
+        <button
+          type="button"
+          className="btn btn-xs btn-primary whitespace-nowrap"
+          onClick={() => void repairWalletRpc()}
+        >
+          Refresh RPC
         </button>
       </div>,
       { duration: 10_000 },
