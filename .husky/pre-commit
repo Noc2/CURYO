@@ -1,1 +1,37 @@
-yarn lint-staged --verbose
+#!/usr/bin/env sh
+set -e
+
+if command -v yarn >/dev/null 2>&1; then
+  exec yarn lint-staged --verbose
+fi
+
+YARN_RELEASE=""
+for candidate in "$(dirname -- "$0")"/../.yarn/releases/yarn-*.cjs; do
+  if [ -f "$candidate" ]; then
+    YARN_RELEASE="$candidate"
+    break
+  fi
+done
+
+if [ -z "$YARN_RELEASE" ]; then
+  echo "pre-commit: could not find a repo-local Yarn release in .yarn/releases" >&2
+  exit 127
+fi
+
+if command -v node >/dev/null 2>&1; then
+  exec node "$YARN_RELEASE" lint-staged --verbose
+fi
+
+for candidate in \
+  "$HOME/.nvm/versions/node"/*/bin/node \
+  /opt/homebrew/bin/node \
+  /usr/local/bin/node \
+  /usr/bin/node
+do
+  if [ -x "$candidate" ]; then
+    exec "$candidate" "$YARN_RELEASE" lint-staged --verbose
+  fi
+done
+
+echo "pre-commit: could not find node or yarn in PATH or common install locations" >&2
+exit 127
