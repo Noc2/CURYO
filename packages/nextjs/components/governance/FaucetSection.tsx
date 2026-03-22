@@ -34,6 +34,7 @@ const TIER_LABELS = ["Genesis", "Early Adopter", "Pioneer", "Explorer", "Settler
 const SELF_VERIFICATION_SESSION_KEY = "curyo_self_verification_session";
 const POLL_INTERVAL_MS = 4000;
 const POLL_TIMEOUT_MS = 600_000;
+const POST_CLAIM_ROUTE = "/vote";
 
 type PendingSelfVerificationSession = {
   address: string;
@@ -45,7 +46,8 @@ function readPendingSelfVerificationSession(): PendingSelfVerificationSession | 
     return null;
   }
 
-  const rawSession = sessionStorage.getItem(SELF_VERIFICATION_SESSION_KEY);
+  const rawSession =
+    sessionStorage.getItem(SELF_VERIFICATION_SESSION_KEY) ?? localStorage.getItem(SELF_VERIFICATION_SESSION_KEY);
   if (!rawSession) {
     return null;
   }
@@ -54,11 +56,13 @@ function readPendingSelfVerificationSession(): PendingSelfVerificationSession | 
     const parsed = JSON.parse(rawSession) as Partial<PendingSelfVerificationSession>;
     if (typeof parsed.address !== "string" || typeof parsed.startedAt !== "number") {
       sessionStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
+      localStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
       return null;
     }
 
     if (Date.now() - parsed.startedAt > POLL_TIMEOUT_MS) {
       sessionStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
+      localStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
       return null;
     }
 
@@ -68,6 +72,7 @@ function readPendingSelfVerificationSession(): PendingSelfVerificationSession | 
     };
   } catch {
     sessionStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
+    localStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
     return null;
   }
 }
@@ -84,6 +89,7 @@ function beginPendingSelfVerificationSession(address: string): PendingSelfVerifi
     startedAt: Date.now(),
   };
   sessionStorage.setItem(SELF_VERIFICATION_SESSION_KEY, JSON.stringify(nextSession));
+  localStorage.setItem(SELF_VERIFICATION_SESSION_KEY, JSON.stringify(nextSession));
   return nextSession;
 }
 
@@ -93,6 +99,7 @@ function clearPendingSelfVerificationSession() {
   }
 
   sessionStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
+  localStorage.removeItem(SELF_VERIFICATION_SESSION_KEY);
 }
 
 export function FaucetSection({ referrer }: FaucetSectionProps) {
@@ -193,7 +200,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     // Invalidate all queries so navbar balance updates immediately
     void queryClient.invalidateQueries();
     notification.success("cREP sent. Your wallet balance may take a few seconds to refresh.", { duration: 6000 });
-    router.replace("/vote");
+    router.replace(POST_CLAIM_ROUTE);
   }, [address, clearStatusToast, queryClient, refetchCrepBalance, router, stopPolling]);
 
   const startPolling = useCallback(() => {
