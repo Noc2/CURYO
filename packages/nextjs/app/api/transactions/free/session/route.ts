@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAddress } from "viem";
 import { getPrimaryServerTargetNetwork } from "~~/lib/env/server";
 import { getFreeTransactionAllowanceSummary } from "~~/lib/thirdweb/freeTransactions";
+import { checkRateLimit } from "~~/utils/rateLimit";
+
+const READ_RATE_LIMIT = { limit: 60, windowMs: 60_000 };
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
+  const limited = await checkRateLimit(request, READ_RATE_LIMIT, {
+    extraKeyParts: [typeof address === "string" ? address : undefined],
+  });
+  if (limited) return limited;
+
   const chainIdRaw = request.nextUrl.searchParams.get("chainId");
   const fallbackChainId = getPrimaryServerTargetNetwork()?.id;
   const parsedChainId = chainIdRaw ? Number.parseInt(chainIdRaw, 10) : fallbackChainId;

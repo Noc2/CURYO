@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { decodeEventLog } from "viem";
+import { useConfig } from "wagmi";
+import { waitForTransactionReceipt } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
@@ -128,6 +131,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 }
 
 export function ContentSubmissionSection() {
+  const wagmiConfig = useConfig();
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
@@ -302,7 +306,7 @@ export function ContentSubmissionSection() {
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const registryAddress = registryInfo?.address as `0x${string}` | undefined;
   const crepAddress = crepInfo?.address as `0x${string}` | undefined;
-  const { data: nextContentId, refetch: refetchNextContentId } = useScaffoldReadContract({
+  const { refetch: refetchNextContentId } = useScaffoldReadContract({
     contractName: "ContentRegistry",
     functionName: "nextContentId",
   });
@@ -320,6 +324,31 @@ export function ContentSubmissionSection() {
     },
   });
   const isUrlAlreadySubmitted = Boolean(canonicalUrl && isUrlSubmitted);
+
+  const extractSubmittedContentId = (logs: { address: string; data: `0x${string}`; topics: `0x${string}`[] }[]) => {
+    if (!registryInfo) {
+      return null;
+    }
+
+    const submittedLog = logs.find(log => {
+      if (log.address.toLowerCase() !== registryInfo.address.toLowerCase()) {
+        return false;
+      }
+
+      try {
+        const decoded = decodeEventLog({
+          abi: registryInfo.abi,
+          data: log.data,
+          topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
+        });
+        return decoded.eventName === "ContentSubmitted";
+      } catch {
+        return false;
+      }
+    });
+
+    return submittedLog?.topics[1] ? BigInt(submittedLog.topics[1]) : null;
+  };
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
@@ -384,38 +413,58 @@ export function ContentSubmissionSection() {
     const submittedTitle = title;
     const submittedDescription = description;
     try {
-      const contentId = nextContentId ?? 1n;
+      let contentId: bigint | null = null;
       const stakeAmount = BigInt(10 * 1e6);
 
       if (canUseSponsoredSubmitCalls) {
-        await executeSponsoredCalls([
+        const callsResult = await executeSponsoredCalls(
+          [
+            {
+              abi: crepInfo.abi,
+              address: crepAddress,
+              args: [registryAddress, stakeAmount],
+              functionName: "approve",
+            },
+            {
+              abi: registryInfo.abi,
+              address: registryAddress,
+              args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
+              functionName: "submitContent",
+            },
+          ],
           {
-            abi: crepInfo.abi,
-            address: crepAddress,
-            args: [registryAddress, stakeAmount],
-            functionName: "approve",
+            atomicRequired: true,
           },
-          {
-            abi: registryInfo.abi,
-            address: registryAddress,
-            args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
-            functionName: "submitContent",
-          },
-        ]);
-      } else {
-        await writeCRep({ functionName: "approve", args: [registryAddress, stakeAmount] }, { blockConfirmations: 1 });
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        );
 
-        await writeRegistry({
+        contentId = extractSubmittedContentId((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
+      } else {
+        const approveTxHash = await writeCRep(
+          { functionName: "approve", args: [registryAddress, stakeAmount] },
+          { blockConfirmations: 1 },
+        );
+
+        if (approveTxHash) {
+          await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
+        }
+
+        const submitTxHash = await writeRegistry({
           functionName: "submitContent",
           args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
         });
+
+        if (submitTxHash) {
+          const submitReceipt = await waitForTransactionReceipt(wagmiConfig, { hash: submitTxHash });
+          contentId = extractSubmittedContentId(submitReceipt.logs);
+        }
       }
 
       await refetchNextContentId();
 
       notification.success("Content submitted! Staked 10 cREP.");
-      setSubmittedContent({ id: contentId, title: submittedTitle, description: submittedDescription });
+      setSubmittedContent(
+        contentId !== null ? { id: contentId, title: submittedTitle, description: submittedDescription } : null,
+      );
       setUrl("");
       setUrlError(null);
       setTitle("");

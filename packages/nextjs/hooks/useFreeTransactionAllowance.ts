@@ -29,6 +29,57 @@ type FreeTransactionAllowanceResponse = {
   voterIdTokenId: string | null;
 };
 
+function buildFreeTransactionAllowanceSnapshotKey(address?: string, chainId?: number) {
+  if (!address || typeof chainId !== "number") {
+    return null;
+  }
+
+  return `curyo-free-transactions-summary:${address.toLowerCase()}:${chainId}`;
+}
+
+function readStoredFreeTransactionAllowanceSummary(address?: string, chainId?: number) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storageKey = buildFreeTransactionAllowanceSnapshotKey(address, chainId);
+  if (!storageKey) {
+    return null;
+  }
+
+  try {
+    const rawValue = window.sessionStorage.getItem(storageKey);
+    if (!rawValue) {
+      return null;
+    }
+
+    return JSON.parse(rawValue) as FreeTransactionAllowanceResponse;
+  } catch {
+    return null;
+  }
+}
+
+function storeFreeTransactionAllowanceSummary(
+  summary: FreeTransactionAllowanceResponse,
+  address?: string,
+  chainId?: number,
+) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const storageKey = buildFreeTransactionAllowanceSnapshotKey(address, chainId);
+  if (!storageKey) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(storageKey, JSON.stringify(summary));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function buildExhaustionToastKey(params: { chainId: number; voterIdTokenId: string }) {
   return `curyo-free-transactions-exhausted:${params.chainId}:${params.voterIdTokenId}`;
 }
@@ -89,13 +140,26 @@ export function useFreeTransactionAllowance() {
     retry: 1,
   });
 
+  const fallbackSummary = useMemo(
+    () => (query.data ? null : readStoredFreeTransactionAllowanceSummary(address, chain?.id)),
+    [address, chain?.id, query.data],
+  );
+
+  useEffect(() => {
+    if (!query.data) {
+      return;
+    }
+
+    storeFreeTransactionAllowanceSummary(query.data, address, chain?.id);
+  }, [address, chain?.id, query.data]);
+
   const allowance = useMemo(() => {
-    const summary = query.data;
+    const summary = query.data ?? fallbackSummary;
     const canUseFreeTransactions = Boolean(summary?.verified && summary.remaining > 0);
 
     return {
       ...query,
-      isResolved: query.isFetched || query.isError,
+      isResolved: query.isFetched || query.isError || Boolean(summary),
       canUseFreeTransactions,
       exhausted: Boolean(summary?.verified && summary.remaining === 0),
       limit: summary?.limit ?? 0,
@@ -104,7 +168,7 @@ export function useFreeTransactionAllowance() {
       verified: Boolean(summary?.verified),
       voterIdTokenId: summary?.voterIdTokenId ?? null,
     };
-  }, [query]);
+  }, [fallbackSummary, query]);
 
   const desiredSponsorshipMode = useMemo(() => {
     if (!chain?.id || !supportsThirdwebExecutionCapabilities(chain.id) || !allowance.isResolved) {

@@ -189,19 +189,22 @@ export function FrontendRegistration() {
       const amountWei = BigInt(STAKE_AMOUNT * 1e6);
 
       if (canUseSponsoredSubmitCalls && crepInfo && crepAddress) {
-        await executeSponsoredCalls([
-          {
-            abi: crepInfo.abi,
-            address: crepAddress,
-            args: [frontendRegistryAddress, amountWei],
-            functionName: "approve",
-          },
-          {
-            abi: frontendRegistryInfo.abi,
-            address: frontendRegistryAddress,
-            functionName: "register",
-          },
-        ]);
+        await executeSponsoredCalls(
+          [
+            {
+              abi: crepInfo.abi,
+              address: crepAddress,
+              args: [frontendRegistryAddress, amountWei],
+              functionName: "approve",
+            },
+            {
+              abi: frontendRegistryInfo.abi,
+              address: frontendRegistryAddress,
+              functionName: "register",
+            },
+          ],
+          { atomicRequired: true },
+        );
       } else {
         await writeCRep({
           functionName: "approve",

@@ -163,20 +163,23 @@ export const CategorySubmissionForm = () => {
     let proposalCreated = false;
     try {
       if (canUseSponsoredSubmitCalls && crepInfo && crepAddress) {
-        const callsResult = await executeSponsoredCalls([
-          {
-            abi: crepInfo.abi,
-            address: crepAddress,
-            args: [categoryRegistryAddress, CATEGORY_STAKE],
-            functionName: "approve",
-          },
-          {
-            abi: categoryRegistryInfo.abi,
-            address: categoryRegistryAddress,
-            args: [name.trim(), domain.trim().toLowerCase(), validSubcats],
-            functionName: "submitCategory",
-          },
-        ]);
+        const callsResult = await executeSponsoredCalls(
+          [
+            {
+              abi: crepInfo.abi,
+              address: crepAddress,
+              args: [categoryRegistryAddress, CATEGORY_STAKE],
+              functionName: "approve",
+            },
+            {
+              abi: categoryRegistryInfo.abi,
+              address: categoryRegistryAddress,
+              args: [name.trim(), domain.trim().toLowerCase(), validSubcats],
+              functionName: "submitCategory",
+            },
+          ],
+          { atomicRequired: true },
+        );
 
         const submittedLog = (callsResult.receipts ?? [])
           .flatMap(receipt => receipt.logs)
@@ -261,20 +264,23 @@ export const CategorySubmissionForm = () => {
         } as any);
 
         if (canUseSponsoredSubmitCalls) {
-          await executeSponsoredCalls([
-            {
-              abi: governorAbi,
-              address: governorContractAddress,
-              args: [[categoryRegistryAddress], [0n], [approvalCalldata], proposalDescription],
-              functionName: "propose",
-            },
-            {
-              abi: categoryRegistryInfo.abi,
-              address: categoryRegistryAddress,
-              args: [categoryId, getProposalDescriptionHash(proposalDescription)],
-              functionName: "linkApprovalProposal",
-            },
-          ]);
+          await executeSponsoredCalls(
+            [
+              {
+                abi: governorAbi,
+                address: governorContractAddress,
+                args: [[categoryRegistryAddress], [0n], [approvalCalldata], proposalDescription],
+                functionName: "propose",
+              },
+              {
+                abi: categoryRegistryInfo.abi,
+                address: categoryRegistryAddress,
+                args: [categoryId, getProposalDescriptionHash(proposalDescription)],
+                functionName: "linkApprovalProposal",
+              },
+            ],
+            { atomicRequired: true },
+          );
         } else {
           await writeGovernanceContract({
             address: governorContractAddress,

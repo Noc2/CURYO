@@ -173,3 +173,37 @@ export const freeTransactionQuotas = sqliteTable(
 
 export type FreeTransactionQuota = typeof freeTransactionQuotas.$inferSelect;
 export type NewFreeTransactionQuota = typeof freeTransactionQuotas.$inferInsert;
+
+export const freeTransactionReservations = sqliteTable(
+  "free_transaction_reservations",
+  {
+    operationKey: text("operation_key").primaryKey(),
+    identityKey: text("identity_key").notNull(),
+    voterIdTokenId: text("voter_id_token_id").notNull(),
+    chainId: integer("chain_id").notNull(),
+    environment: text("environment").notNull(),
+    walletAddress: text("wallet_address").notNull(),
+    status: text("status").notNull(),
+    txHashes: text("tx_hashes"),
+    reservedAt: integer("reserved_at", { mode: "timestamp" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    confirmedAt: integer("confirmed_at", { mode: "timestamp" }),
+    releasedAt: integer("released_at", { mode: "timestamp" }),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  },
+  table => ({
+    identityStatusExpiresIdx: index("free_transaction_reservations_identity_status_expires_idx").on(
+      table.identityKey,
+      table.status,
+      table.expiresAt,
+    ),
+    walletStatusUpdatedIdx: index("free_transaction_reservations_wallet_status_updated_idx").on(
+      table.walletAddress,
+      table.status,
+      table.updatedAt,
+    ),
+  }),
+);
+
+export type FreeTransactionReservation = typeof freeTransactionReservations.$inferSelect;
+export type NewFreeTransactionReservation = typeof freeTransactionReservations.$inferInsert;
