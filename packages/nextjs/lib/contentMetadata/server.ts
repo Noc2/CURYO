@@ -21,8 +21,12 @@ function toEmbedResult(cached: ContentMetadata): EmbedResult {
   };
 }
 
+function getTimestampMs(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+}
+
 function isFresh(cached: ContentMetadata): boolean {
-  return Date.now() - cached.fetchedAt.getTime() < CACHE_TTL_MS;
+  return Date.now() - getTimestampMs(cached.fetchedAt) < CACHE_TTL_MS;
 }
 
 function isHttpUrl(url: string): boolean {

@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, or } from "drizzle-orm";
 import "server-only";
 import { db, dbClient } from "~~/lib/db";
 import { notificationEmailDeliveries, notificationEmailSubscriptions, watchedContent } from "~~/lib/db/schema";
@@ -127,38 +127,7 @@ function getRequiredNotificationAppUrl() {
 
 export async function ensureNotificationEmailDeliveriesTable() {
   if (!ensureNotificationEmailDeliveriesTablePromise) {
-    ensureNotificationEmailDeliveriesTablePromise = (async () => {
-      await db.run(
-        sql.raw(`
-          CREATE TABLE IF NOT EXISTS notification_email_deliveries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            wallet_address TEXT NOT NULL,
-            email TEXT NOT NULL,
-            event_key TEXT NOT NULL UNIQUE,
-            event_type TEXT NOT NULL,
-            content_id TEXT,
-            status TEXT NOT NULL DEFAULT 'sent',
-            delivered_at INTEGER NOT NULL
-          )
-        `),
-      );
-      const tableInfo = await dbClient.execute("PRAGMA table_info(notification_email_deliveries)");
-      const hasStatusColumn = tableInfo.rows.some(row => row.name === "status");
-      if (!hasStatusColumn) {
-        await dbClient.execute(`
-          ALTER TABLE notification_email_deliveries
-          ADD COLUMN status TEXT NOT NULL DEFAULT 'sent'
-        `);
-      }
-      await db.run(
-        sql.raw(`
-          CREATE TABLE IF NOT EXISTS notification_email_delivery_leases (
-            event_key TEXT PRIMARY KEY,
-            lease_expires_at INTEGER NOT NULL
-          )
-        `),
-      );
-    })();
+    ensureNotificationEmailDeliveriesTablePromise = Promise.resolve();
   }
 
   await ensureNotificationEmailDeliveriesTablePromise;
@@ -378,7 +347,7 @@ async function reservePendingDelivery(candidate: EmailCandidate) {
       candidate.eventType,
       candidate.contentId ?? null,
       DELIVERY_STATUS_SENDING,
-      0,
+      null,
       DELIVERY_STATUS_SENT,
     ],
   });

@@ -56,30 +56,7 @@ export function __setRateLimitStoreForTests(store: RateLimitStore | null) {
 
 async function ensureRateLimitTable() {
   if (!initPromise) {
-    initPromise = (async () => {
-      await rateLimitStore.execute(`
-        CREATE TABLE IF NOT EXISTS api_rate_limits (
-          key TEXT PRIMARY KEY,
-          request_count INTEGER NOT NULL,
-          window_started_at INTEGER NOT NULL,
-          expires_at INTEGER NOT NULL
-        )
-      `);
-      await rateLimitStore.execute(`
-        CREATE INDEX IF NOT EXISTS api_rate_limits_expires_at_idx
-        ON api_rate_limits (expires_at)
-      `);
-      await rateLimitStore.execute(`
-        CREATE TABLE IF NOT EXISTS api_rate_limit_maintenance (
-          name TEXT PRIMARY KEY,
-          last_cleanup_started_at INTEGER NOT NULL,
-          lease_expires_at INTEGER NOT NULL
-        )
-      `);
-    })().catch(error => {
-      initPromise = null;
-      throw error;
-    });
+    initPromise = Promise.resolve();
   }
 
   await initPromise;
@@ -241,7 +218,7 @@ export async function checkRateLimit(
       sql: `
         INSERT INTO api_rate_limits (key, request_count, window_started_at, expires_at)
         VALUES (?, 1, ?, ?)
-        ON CONFLICT(key) DO UPDATE SET request_count = request_count + 1
+        ON CONFLICT(key) DO UPDATE SET request_count = api_rate_limits.request_count + 1
         RETURNING request_count
       `,
       args: [key, windowStartedAt, expiresAt],

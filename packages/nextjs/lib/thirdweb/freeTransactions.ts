@@ -89,6 +89,10 @@ function normalizeAddress(value: string): `0x${string}` {
   return getAddress(value) as `0x${string}`;
 }
 
+function getTimestampMs(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+}
+
 function isCallableAbi(abi: Abi) {
   return abi.some(entry => entry.type === "function");
 }
@@ -384,72 +388,7 @@ async function allTransactionHashesSucceeded(params: {
 
 export async function ensureFreeTransactionQuotaTable() {
   if (!ensureFreeTransactionQuotaTablePromise) {
-    ensureFreeTransactionQuotaTablePromise = (async () => {
-      try {
-        await db.run(
-          sql.raw(`
-            CREATE TABLE IF NOT EXISTS free_transaction_quotas (
-              identity_key TEXT PRIMARY KEY NOT NULL,
-              voter_id_token_id TEXT NOT NULL,
-              chain_id INTEGER NOT NULL,
-              environment TEXT NOT NULL,
-              last_wallet_address TEXT NOT NULL,
-              free_tx_limit INTEGER NOT NULL,
-              free_tx_used INTEGER NOT NULL,
-              exhausted_at INTEGER,
-              created_at INTEGER NOT NULL,
-              updated_at INTEGER NOT NULL
-            )
-          `),
-        );
-        await db.run(
-          sql.raw(`
-            CREATE UNIQUE INDEX IF NOT EXISTS free_transaction_quotas_token_chain_env_unique
-            ON free_transaction_quotas (voter_id_token_id, chain_id, environment)
-          `),
-        );
-        await db.run(
-          sql.raw(`
-            CREATE INDEX IF NOT EXISTS free_transaction_quotas_chain_updated_at_idx
-            ON free_transaction_quotas (chain_id, updated_at)
-          `),
-        );
-        await db.run(
-          sql.raw(`
-            CREATE TABLE IF NOT EXISTS free_transaction_reservations (
-              operation_key TEXT PRIMARY KEY NOT NULL,
-              identity_key TEXT NOT NULL,
-              voter_id_token_id TEXT NOT NULL,
-              chain_id INTEGER NOT NULL,
-              environment TEXT NOT NULL,
-              wallet_address TEXT NOT NULL,
-              status TEXT NOT NULL,
-              tx_hashes TEXT,
-              reserved_at INTEGER NOT NULL,
-              expires_at INTEGER NOT NULL,
-              confirmed_at INTEGER,
-              released_at INTEGER,
-              updated_at INTEGER NOT NULL
-            )
-          `),
-        );
-        await db.run(
-          sql.raw(`
-            CREATE INDEX IF NOT EXISTS free_transaction_reservations_identity_status_expires_idx
-            ON free_transaction_reservations (identity_key, status, expires_at)
-          `),
-        );
-        await db.run(
-          sql.raw(`
-            CREATE INDEX IF NOT EXISTS free_transaction_reservations_wallet_status_updated_idx
-            ON free_transaction_reservations (wallet_address, status, updated_at)
-          `),
-        );
-      } catch (err) {
-        ensureFreeTransactionQuotaTablePromise = null;
-        throw err;
-      }
-    })();
+    ensureFreeTransactionQuotaTablePromise = Promise.resolve();
   }
 
   await ensureFreeTransactionQuotaTablePromise;
@@ -582,9 +521,9 @@ export async function evaluateFreeTransactionAllowance(
     const idempotentConfirmed =
       existingReservation?.status === "confirmed" &&
       existingReservation.confirmedAt &&
-      now.getTime() - existingReservation.confirmedAt.getTime() <= FREE_TRANSACTION_IDEMPOTENCY_WINDOW_MS;
+      now.getTime() - getTimestampMs(existingReservation.confirmedAt) <= FREE_TRANSACTION_IDEMPOTENCY_WINDOW_MS;
 
-    if (existingReservation?.status === "pending" && existingReservation.expiresAt.getTime() > now.getTime()) {
+    if (existingReservation?.status === "pending" && getTimestampMs(existingReservation.expiresAt) > now.getTime()) {
       return {
         isAllowed: true,
         summary: buildQuotaSummary({

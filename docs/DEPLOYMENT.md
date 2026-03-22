@@ -255,8 +255,7 @@ NEXT_PUBLIC_DEV_FAUCET=false
 
 # Server-side only
 APP_URL=https://<your-domain>
-DATABASE_URL=<turso-database-url>                    # e.g., libsql://your-db.turso.io
-DATABASE_AUTH_TOKEN=<turso-auth-token>
+DATABASE_URL=<railway-postgres-url-for-curyo_app>
 TMDB_API_KEY=<tmdb-api-key>
 RAWG_API_KEY=<rawg-api-key>
 KEYSTORE_ACCOUNT=server
@@ -272,24 +271,19 @@ NOTIFICATION_DELIVERY_SECRET=<random-secret>
 
 No contract address env vars are needed in Next.js. It reads supported-chain deployments from `@curyo/contracts`.
 
-### 4b. Set up Turso database (production)
+### 4b. Set up the Next app database (production)
 
 ```bash
-# Install Turso CLI
-curl -sSfL https://get.tur.so/install.sh | bash
-turso auth login
-
-# Create database
-turso db create curyo-prod
-turso db show curyo-prod   # Get the URL
-turso db tokens create curyo-prod   # Get the auth token
+# Reuse the same Railway Postgres service as Ponder,
+# but create a separate logical database for the Next app.
+psql <railway-postgres-admin-url> -c 'CREATE DATABASE curyo_app;'
 
 # Push schema
 cd packages/nextjs
-DATABASE_URL=<turso-url> DATABASE_AUTH_TOKEN=<token> yarn db:push
+DATABASE_URL=<railway-postgres-url-for-curyo_app> yarn db:push
 ```
 
-Before running `yarn db:push` against production, take a fresh Turso backup/export, test the migration against a copy
+Before running `yarn db:push` against production, take a fresh PostgreSQL backup, test the migration against a copy
 or staging database first, and keep the previous Vercel deployment available until the new schema has been exercised in
 production.
 
@@ -772,7 +766,7 @@ This keeps the approval scope minimal and avoids leaving a large standing allowa
 | Rate-bot keystore | On compromise | Create new delegate wallet, update delegation from Cold Wallet B, fund, update env |
 | Server keystore | On compromise | Create new wallet, fund, update Vercel env |
 | NOTIFICATION_DELIVERY_SECRET (if enabled) | Quarterly | Regenerate, update Vercel env and cron caller |
-| DATABASE_AUTH_TOKEN | Quarterly | `turso db tokens create`, update Vercel env |
+| Next app DATABASE_URL | On DB credential rotation | Rotate Railway Postgres credentials, update Vercel env |
 | ALCHEMY_API_KEY | On compromise | Rotate in Alchemy dashboard |
 
 > **Bot key compromise recovery:** With delegation, a compromised bot key does NOT compromise the Voter ID. Simply: (1) call `setDelegate(newBotAddress)` from the cold wallet to revoke the old delegate, (2) create a new bot wallet, (3) fund it and update env vars. No governance action needed, no identity loss.

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "crypto";
-import { and, eq, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt, or } from "drizzle-orm";
 import "server-only";
 import { verifyMessage } from "viem";
 import { db } from "~~/lib/db";
@@ -7,8 +7,6 @@ import { signedActionChallenges } from "~~/lib/db/schema";
 
 export const SIGNED_ACTION_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 export const STALE_USED_CHALLENGE_MS = 24 * 60 * 60 * 1000;
-
-let ensureSignedActionChallengeTablePromise: Promise<void> | null = null;
 
 export function hashSignedActionPayload(parts: string[]): string {
   return createHash("sha256").update(parts.join("\n")).digest("hex");
@@ -40,8 +38,7 @@ function createSignedActionChallenge(params: {
   payloadHash: string;
   ttlMs?: number;
 }) {
-  // Truncate to whole seconds — SQLite stores timestamps as integer seconds,
-  // so the reconstructed message during verification must match the original.
+  // Truncate to whole seconds so signing and verification always serialize the same timestamp.
   const now = new Date(Math.floor(Date.now() / 1000) * 1000);
   const expiresAt = new Date(now.getTime() + (params.ttlMs ?? SIGNED_ACTION_CHALLENGE_TTL_MS));
   const challengeId = randomBytes(16).toString("hex");
@@ -99,38 +96,7 @@ export async function issueSignedActionChallenge(params: {
 }
 
 export async function ensureSignedActionChallengeTable() {
-  if (!ensureSignedActionChallengeTablePromise) {
-    ensureSignedActionChallengeTablePromise = (async () => {
-      await db.run(
-        sql.raw(`
-          CREATE TABLE IF NOT EXISTS signed_action_challenges (
-            id TEXT PRIMARY KEY NOT NULL,
-            wallet_address TEXT NOT NULL,
-            action TEXT NOT NULL,
-            payload_hash TEXT NOT NULL,
-            nonce TEXT NOT NULL,
-            expires_at INTEGER NOT NULL,
-            used_at INTEGER,
-            created_at INTEGER NOT NULL
-          )
-        `),
-      );
-      await db.run(
-        sql.raw(`
-          CREATE INDEX IF NOT EXISTS signed_action_challenges_expires_at_idx
-          ON signed_action_challenges (expires_at)
-        `),
-      );
-      await db.run(
-        sql.raw(`
-          CREATE INDEX IF NOT EXISTS signed_action_challenges_wallet_action_idx
-          ON signed_action_challenges (wallet_address, action)
-        `),
-      );
-    })();
-  }
-
-  await ensureSignedActionChallengeTablePromise;
+  // Schema is managed via Drizzle migrations.
 }
 
 export async function cleanupSignedActionChallenges(now = new Date()) {

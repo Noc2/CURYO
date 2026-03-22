@@ -1,19 +1,14 @@
 import { NextRequest } from "next/server";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { after, before, beforeEach, test } from "node:test";
 
-const tempDir = mkdtempSync(join(tmpdir(), "curyo-rate-limit-"));
-const dbPath = join(tempDir, "rate-limit.db");
 const env = process.env as Record<string, string | undefined>;
 const originalDatabaseUrl = process.env.DATABASE_URL;
 const originalNodeEnv = process.env.NODE_ENV;
 const originalTrustedHeaders = process.env.RATE_LIMIT_TRUSTED_IP_HEADERS;
 const originalVercel = process.env.VERCEL;
 
-env.DATABASE_URL = `file:${dbPath}`;
+env.DATABASE_URL = "memory:";
 
 type RateLimitModule = typeof import("./rateLimit");
 type DbModule = typeof import("../lib/db");
@@ -75,8 +70,6 @@ after(() => {
   } else {
     env.VERCEL = originalVercel;
   }
-
-  rmSync(tempDir, { recursive: true, force: true });
 });
 
 test("resolveRateLimitSubject trusts configured proxy IP headers in production", () => {

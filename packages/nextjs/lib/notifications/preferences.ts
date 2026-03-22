@@ -1,34 +1,14 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import "server-only";
 import { type NotificationPreferencesPayload } from "~~/lib/auth/notificationPreferences";
 import { db } from "~~/lib/db";
 import { notificationPreferences } from "~~/lib/db/schema";
 import { DEFAULT_NOTIFICATION_PREFERENCES } from "~~/lib/notifications/shared";
 
-let ensureNotificationPreferencesTablePromise: Promise<void> | null = null;
-
 export type StoredNotificationPreferences = typeof DEFAULT_NOTIFICATION_PREFERENCES;
 
 export async function ensureNotificationPreferencesTable() {
-  if (!ensureNotificationPreferencesTablePromise) {
-    ensureNotificationPreferencesTablePromise = (async () => {
-      await db.run(
-        sql.raw(`
-          CREATE TABLE IF NOT EXISTS notification_preferences (
-            wallet_address TEXT PRIMARY KEY NOT NULL,
-            round_resolved INTEGER NOT NULL,
-            settling_soon_hour INTEGER NOT NULL,
-            settling_soon_day INTEGER NOT NULL,
-            followed_submission INTEGER NOT NULL,
-            followed_resolution INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
-          )
-        `),
-      );
-    })();
-  }
-
-  await ensureNotificationPreferencesTablePromise;
+  // Schema is managed via Drizzle migrations.
 }
 
 export async function getNotificationPreferences(walletAddress: `0x${string}`): Promise<StoredNotificationPreferences> {

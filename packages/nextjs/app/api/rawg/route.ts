@@ -10,6 +10,10 @@ const RATE_LIMIT = { limit: 30, windowMs: 60_000 }; // 30 req/min per IP
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB cap on upstream response
 
+function getTimestampMs(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+}
+
 /**
  * Proxy for RAWG API to avoid exposing API key client-side.
  * Usage: GET /api/rawg?slug=elden-ring
@@ -28,7 +32,7 @@ export async function GET(request: NextRequest) {
   // Check DB cache
   try {
     const [cached] = await db.select().from(contentMetadata).where(eq(contentMetadata.url, cacheKey)).limit(1);
-    if (cached && Date.now() - cached.fetchedAt.getTime() < CACHE_TTL_MS) {
+    if (cached && Date.now() - getTimestampMs(cached.fetchedAt) < CACHE_TTL_MS) {
       return NextResponse.json({
         name: cached.title,
         description_raw: cached.description,

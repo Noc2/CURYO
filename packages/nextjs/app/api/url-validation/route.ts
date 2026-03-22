@@ -24,6 +24,14 @@ function isNonNullString(value: string | null): value is string {
   return value !== null;
 }
 
+function serializeTimestamp(value: Date | string): string {
+  return (value instanceof Date ? value : new Date(value)).toISOString();
+}
+
+function getTimestampMs(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+}
+
 function normalizeValidationUrl(value: unknown): string | null {
   if (typeof value !== "string") return null;
 
@@ -87,7 +95,7 @@ export async function GET(request: NextRequest) {
     if (row) {
       results[url] = {
         isValid: row.isValid,
-        checkedAt: row.checkedAt.toISOString(),
+        checkedAt: serializeTimestamp(row.checkedAt),
       };
     } else {
       results[url] = null;
@@ -148,7 +156,7 @@ export async function POST(request: NextRequest) {
   const toValidate = urls.filter(url => {
     const row = existingMap.get(url);
     if (!row) return true;
-    return row.checkedAt.getTime() < stale;
+    return getTimestampMs(row.checkedAt) < stale;
   });
 
   // Validate in parallel (with concurrency limit)
@@ -199,7 +207,7 @@ export async function POST(request: NextRequest) {
     } else {
       const row = existingMap.get(url);
       if (row) {
-        allResults[url] = { isValid: row.isValid, checkedAt: row.checkedAt.toISOString() };
+        allResults[url] = { isValid: row.isValid, checkedAt: serializeTimestamp(row.checkedAt) };
       }
     }
   }

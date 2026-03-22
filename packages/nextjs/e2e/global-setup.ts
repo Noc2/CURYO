@@ -83,7 +83,7 @@ async function topUpKeeperBalance(): Promise<void> {
 }
 
 /**
- * Ensure the Next.js SQLite database schema is up to date.
+ * Ensure the Next.js Postgres database schema is up to date.
  * Runs `drizzle-kit push` which creates any missing tables.
  * This is idempotent — safe to run on every test start.
  */
@@ -95,7 +95,7 @@ async function ensureDatabaseSchema(): Promise<void> {
       stdio: "pipe",
       timeout: 15_000,
     });
-    console.log("  ✓ SQLite database schema up to date");
+    console.log("  ✓ Postgres database schema up to date");
   } catch (err: any) {
     console.warn("  ⚠ drizzle-kit push failed:", err.stderr?.toString().trim() || err.message);
   }
@@ -121,7 +121,7 @@ async function globalSetup() {
     );
   }
 
-  // Ensure SQLite tables exist for API routes that still use local persistence (follows, watchlist, etc.)
+  // Ensure the app database schema exists for API routes that use server-side persistence.
   await ensureDatabaseSchema();
 
   // Top up keeper balance to prevent gas exhaustion during settlements

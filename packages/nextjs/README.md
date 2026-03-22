@@ -1,6 +1,6 @@
 # Curyo — Next.js (Frontend)
 
-Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, submitting content, managing portfolios, and reading in-app documentation. Includes server-side API routes and a SQLite database via Drizzle ORM.
+Full-stack web application built with Next.js 15 and React 19. Provides the UI for voting on content, submitting content, managing portfolios, and reading in-app documentation. Includes server-side API routes and a PostgreSQL database via Drizzle ORM.
 
 ## Quick Start
 
@@ -45,8 +45,7 @@ Key environment variables (see `.env.example` for the full list):
 | `NEXT_PUBLIC_THIRDWEB_CLIENT_ID`        | thirdweb client ID for in-app wallets and sponsored transactions              |
 | `NEXT_PUBLIC_TARGET_NETWORKS`           | Comma-separated deployed chain IDs exposed in the UI (required in production) |
 | `TMDB_API_KEY`                          | Server-side TMDB API key for movie metadata                                   |
-| `DATABASE_URL`                          | SQLite/Turso database URL (required in production)                            |
-| `DATABASE_AUTH_TOKEN`                   | Turso auth token (production only)                                            |
+| `DATABASE_URL`                          | PostgreSQL URL for the Next app logical database                              |
 | `RESEND_API_KEY`                        | Resend API key for email notification delivery                                |
 | `RESEND_FROM_EMAIL`                     | Verified sender address/domain used by Resend                                 |
 | `APP_URL`                               | Public app URL used in verification and email links                           |
@@ -62,6 +61,7 @@ Notes:
 
 - Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or `rpcOverrides[1]`. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
 - No contract address env vars are needed for supported chains. The frontend reads deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without it.
+- In production, the intended setup is one Railway Postgres service with separate logical databases for Ponder and Next.js.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-forwarded-for` and `x-real-ip`. Protected API routes still fail closed when no trusted client IP can be derived.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
 

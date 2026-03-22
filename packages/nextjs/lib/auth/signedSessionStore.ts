@@ -33,24 +33,7 @@ export function createSignedSessionStore<Scope extends string>(config: SignedSes
 
   async function ensureTable() {
     if (!ensureTablePromise) {
-      ensureTablePromise = (async () => {
-        await dbClient.execute(`
-          CREATE TABLE IF NOT EXISTS ${config.tableName} (
-            token_hash TEXT PRIMARY KEY,
-            wallet_address TEXT NOT NULL,
-            scope TEXT NOT NULL,
-            expires_at INTEGER NOT NULL,
-            created_at INTEGER NOT NULL
-          )
-        `);
-        await dbClient.execute(`
-          CREATE INDEX IF NOT EXISTS ${config.indexName}
-          ON ${config.tableName} (wallet_address, scope, expires_at)
-        `);
-      })().catch(error => {
-        ensureTablePromise = null;
-        throw error;
-      });
+      ensureTablePromise = Promise.resolve();
     }
 
     await ensureTablePromise;

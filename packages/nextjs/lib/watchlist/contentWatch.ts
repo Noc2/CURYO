@@ -1,8 +1,6 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, dbClient } from "~~/lib/db";
 import { watchedContent } from "~~/lib/db/schema";
-
-let ensureWatchedContentTablePromise: Promise<void> | null = null;
 
 export interface WatchedContentRecord {
   contentId: string;
@@ -38,45 +36,25 @@ export function createWatchlistTimestamp(nowMs = Date.now()): Date {
 }
 
 export async function ensureWatchedContentTable() {
-  if (!ensureWatchedContentTablePromise) {
-    ensureWatchedContentTablePromise = (async () => {
-      await dbClient.execute(`
-        CREATE TABLE IF NOT EXISTS watched_content (
-          id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-          wallet_address TEXT NOT NULL,
-          content_id TEXT NOT NULL,
-          created_at INTEGER NOT NULL
-        )
-      `);
-      await dbClient.execute(`
-        CREATE UNIQUE INDEX IF NOT EXISTS watched_content_wallet_content_unique
-        ON watched_content (wallet_address, content_id)
-      `);
-      await dbClient.execute(`
-        CREATE INDEX IF NOT EXISTS watched_content_wallet_created_at_idx
-        ON watched_content (wallet_address, created_at DESC)
-      `);
-    })();
-  }
-
-  await ensureWatchedContentTablePromise;
+  // Schema is managed via Drizzle migrations.
 }
 
 export async function listWatchedContent(walletAddress: `0x${string}`): Promise<WatchedContentRecord[]> {
   await ensureWatchedContentTable();
 
-  const rows = await db
-    .select({
-      contentId: watchedContent.contentId,
-      createdAt: watchedContent.createdAt,
-    })
-    .from(watchedContent)
-    .where(eq(watchedContent.walletAddress, walletAddress))
-    .orderBy(desc(watchedContent.createdAt));
+  const result = await dbClient.execute({
+    sql: `
+      SELECT content_id, created_at
+      FROM watched_content
+      WHERE wallet_address = ?
+      ORDER BY created_at DESC
+    `,
+    args: [walletAddress],
+  });
 
-  return rows.map(row => ({
-    contentId: row.contentId,
-    createdAt: row.createdAt.toISOString(),
+  return result.rows.map(row => ({
+    contentId: String(row.content_id),
+    createdAt: new Date(String(row.created_at)).toISOString(),
   }));
 }
 

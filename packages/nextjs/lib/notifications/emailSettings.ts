@@ -1,4 +1,4 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import "server-only";
 import { type NotificationEmailPayload } from "~~/lib/auth/notificationEmails";
 import { db } from "~~/lib/db";
@@ -8,33 +8,12 @@ import {
   type EmailNotificationSettingsState,
 } from "~~/lib/notifications/emailShared";
 
-let ensureNotificationEmailSubscriptionsTablePromise: Promise<void> | null = null;
-
 export async function ensureNotificationEmailSubscriptionsTable() {
-  if (!ensureNotificationEmailSubscriptionsTablePromise) {
-    ensureNotificationEmailSubscriptionsTablePromise = (async () => {
-      await db.run(
-        sql.raw(`
-          CREATE TABLE IF NOT EXISTS notification_email_subscriptions (
-            wallet_address TEXT PRIMARY KEY NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            verified_at INTEGER,
-            verification_token TEXT UNIQUE,
-            verification_expires_at INTEGER,
-            round_resolved INTEGER NOT NULL,
-            settling_soon_hour INTEGER NOT NULL,
-            settling_soon_day INTEGER NOT NULL,
-            followed_submission INTEGER NOT NULL,
-            followed_resolution INTEGER NOT NULL,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL
-          )
-        `),
-      );
-    })();
-  }
+  // Schema is managed via Drizzle migrations.
+}
 
-  await ensureNotificationEmailSubscriptionsTablePromise;
+function getTimestampMs(value: Date | string): number {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
 }
 
 function toState(row: typeof notificationEmailSubscriptions.$inferSelect | undefined): EmailNotificationSettingsState {
@@ -194,7 +173,7 @@ export async function verifyEmailNotificationToken(token: string) {
     .where(eq(notificationEmailSubscriptions.verificationToken, token))
     .limit(1);
 
-  if (!row || !row.verificationExpiresAt || row.verificationExpiresAt.getTime() < now.getTime()) {
+  if (!row || !row.verificationExpiresAt || getTimestampMs(row.verificationExpiresAt) < now.getTime()) {
     return { ok: false as const };
   }
 

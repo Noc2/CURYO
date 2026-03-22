@@ -94,7 +94,8 @@ export function getServerRpcOverrides(): Partial<Record<number, string>> {
 }
 
 export function getDatabaseConfig() {
-  const url = readEnv("DATABASE_URL") ?? (!isProduction ? "file:local.db" : undefined);
+  const url =
+    readEnv("DATABASE_URL") ?? (!isProduction ? "postgresql://postgres:postgres@127.0.0.1:5432/curyo_app" : undefined);
 
   if (!url) {
     throw new Error("DATABASE_URL is required in production.");
@@ -102,7 +103,6 @@ export function getDatabaseConfig() {
 
   return {
     url,
-    authToken: readEnv("DATABASE_AUTH_TOKEN"),
   };
 }
 

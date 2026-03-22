@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { after, before, beforeEach, test } from "node:test";
+import { before, beforeEach, test } from "node:test";
 
-const tempDir = mkdtempSync(join(tmpdir(), "curyo-watchlist-"));
-const dbPath = join(tempDir, "watchlist.db");
-
-process.env.DATABASE_URL = `file:${dbPath}`;
+process.env.DATABASE_URL = "memory:";
 
 type ContentWatchModule = typeof import("./contentWatch");
 type DbModule = typeof import("../db");
@@ -25,10 +19,6 @@ before(async () => {
 
 beforeEach(async () => {
   await dbModule.dbClient.execute("DELETE FROM watched_content");
-});
-
-after(() => {
-  rmSync(tempDir, { recursive: true, force: true });
 });
 
 test("createWatchlistTimestamp truncates to whole seconds", () => {
