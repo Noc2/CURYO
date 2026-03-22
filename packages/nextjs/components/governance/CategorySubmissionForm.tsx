@@ -19,6 +19,7 @@ import {
   useGovernanceWrite,
 } from "~~/hooks/useGovernance";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
+import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -45,6 +46,7 @@ export const CategorySubmissionForm = () => {
   const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
   const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
     useThirdwebSponsoredSubmitCalls();
+  const { showWalletRpcOverloadNotification } = useWalletRpcRecovery();
 
   // Form state
   const [name, setName] = useState("");
@@ -319,13 +321,13 @@ export const CategorySubmissionForm = () => {
           notification.warning("Platform submitted. Approval proposal still needs to be created.");
         }
       } else {
-        notification.error(
-          isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)
-            ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
-            : isWalletRpcOverloadedError(e)
-              ? "Wallet RPC is overloaded. Retry soon or switch RPC."
-              : e?.shortMessage || e?.message || "Failed to submit category",
-        );
+        if (isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)) {
+          notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
+        } else if (isWalletRpcOverloadedError(e)) {
+          showWalletRpcOverloadNotification();
+        } else {
+          notification.error(e?.shortMessage || e?.message || "Failed to submit category");
+        }
       }
     } finally {
       setIsSubmitting(false);

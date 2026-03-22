@@ -23,6 +23,7 @@ import {
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useParticipationRate } from "~~/hooks/useParticipationRate";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
+import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import { MAX_CONTENT_DESCRIPTION_LENGTH } from "~~/lib/contentDescription";
 import { MAX_CONTENT_TITLE_LENGTH } from "~~/lib/contentTitle";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
@@ -138,6 +139,7 @@ export function ContentSubmissionSection() {
   const { ratePercent, calculateBonus } = useParticipationRate();
   const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
     useThirdwebSponsoredSubmitCalls();
+  const { showWalletRpcOverloadNotification } = useWalletRpcRecovery();
   const submissionBonus = calculateBonus(10);
   const { requireAcceptance } = useTermsAcceptance();
 
@@ -483,15 +485,17 @@ export function ContentSubmissionSection() {
       setSubmitAttempted(false);
     } catch (e: unknown) {
       console.error("Submit failed:", e);
-      notification.error(
-        isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)
-          ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
-          : isWalletRpcOverloadedError(e)
-            ? "Wallet RPC is overloaded. Retry soon or switch RPC."
-            : (e as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
-              (e as { shortMessage?: string; message?: string } | undefined)?.message ||
-              "Failed to submit content",
-      );
+      if (isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)) {
+        notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
+      } else if (isWalletRpcOverloadedError(e)) {
+        showWalletRpcOverloadNotification();
+      } else {
+        notification.error(
+          (e as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
+            (e as { shortMessage?: string; message?: string } | undefined)?.message ||
+            "Failed to submit content",
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }

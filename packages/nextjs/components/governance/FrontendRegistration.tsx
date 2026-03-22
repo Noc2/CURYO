@@ -11,6 +11,7 @@ import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContr
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
 import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
+import { useWalletRpcRecovery } from "~~/hooks/useWalletRpcRecovery";
 import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
@@ -33,6 +34,7 @@ export function FrontendRegistration() {
   });
   const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
     useThirdwebSponsoredSubmitCalls();
+  const { showWalletRpcOverloadNotification } = useWalletRpcRecovery();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isDeregistering, setIsDeregistering] = useState(false);
   const [isCompletingDeregister, setIsCompletingDeregister] = useState(false);
@@ -165,14 +167,20 @@ export function FrontendRegistration() {
   };
 
   const notifyTransactionError = (error: unknown, fallback: string) => {
+    if (isFreeTransactionExhaustedError(error) || isInsufficientFundsError(error)) {
+      notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
+      return;
+    }
+
+    if (isWalletRpcOverloadedError(error)) {
+      showWalletRpcOverloadNotification();
+      return;
+    }
+
     notification.error(
-      isFreeTransactionExhaustedError(error) || isInsufficientFundsError(error)
-        ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
-        : isWalletRpcOverloadedError(error)
-          ? "Wallet RPC is overloaded. Retry soon or switch RPC."
-          : (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
-            (error as { shortMessage?: string; message?: string } | undefined)?.message ||
-            fallback,
+      (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
+        (error as { shortMessage?: string; message?: string } | undefined)?.message ||
+        fallback,
     );
   };
 
