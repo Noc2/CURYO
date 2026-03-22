@@ -2,6 +2,7 @@ import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
   isInsufficientFundsError,
+  isWalletRpcOverloadedError,
 } from "./transactionErrors";
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -40,4 +41,12 @@ test("detects exhausted free transaction verifier errors", () => {
   };
 
   assert.equal(isFreeTransactionExhaustedError(error), true);
+});
+
+test("detects wallet RPC overload errors", () => {
+  const error = {
+    message: "RPC endpoint returned too many errors, retrying in 0.5 minutes. Consider using a different RPC endpoint.",
+  };
+
+  assert.equal(isWalletRpcOverloadedError(error), true);
 });

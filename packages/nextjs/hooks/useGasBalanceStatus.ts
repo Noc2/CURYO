@@ -12,7 +12,7 @@ type GasBalanceStatusOptions = {
 export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
   const includeExternalSendCalls = options.includeExternalSendCalls ?? false;
   const { address, chain } = useAccount();
-  const { executionMode } = useWalletExecutionCapabilities();
+  const { executionMode, supportsPaymasterService } = useWalletExecutionCapabilities();
   const freeTransactionAllowance = useFreeTransactionAllowance();
   const { data: nativeBalance, isLoading: nativeBalanceLoading } = useBalance({
     address,
@@ -26,7 +26,8 @@ export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
     const nativeTokenSymbol = chain?.nativeCurrency?.symbol ?? "CELO";
     const hasResolvedNativeBalance = Boolean(address) && !nativeBalanceLoading && nativeBalance !== undefined;
     const supportsSponsoredCalls =
-      executionMode === "sponsored_7702" || (includeExternalSendCalls && executionMode === "external_send_calls");
+      executionMode === "sponsored_7702" ||
+      (includeExternalSendCalls && executionMode === "external_send_calls" && supportsPaymasterService);
     const canSponsorTransactions = supportsSponsoredCalls && freeTransactionAllowance.canUseFreeTransactions;
     const isAwaitingFreeTransactionAllowance = supportsSponsoredCalls && !freeTransactionAllowance.isResolved;
     const isMissingGasBalance =
@@ -62,5 +63,6 @@ export function useGasBalanceStatus(options: GasBalanceStatusOptions = {}) {
     includeExternalSendCalls,
     nativeBalance,
     nativeBalanceLoading,
+    supportsPaymasterService,
   ]);
 }

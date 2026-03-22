@@ -23,6 +23,7 @@ import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
   isInsufficientFundsError,
+  isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { notification } from "~~/utils/scaffold-eth";
@@ -309,7 +310,9 @@ export const CategorySubmissionForm = () => {
         notification.error(
           isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)
             ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
-            : e?.shortMessage || "Failed to submit category",
+            : isWalletRpcOverloadedError(e)
+              ? "Wallet RPC is overloaded. Retry soon or switch RPC."
+              : e?.shortMessage || e?.message || "Failed to submit category",
         );
       }
     } finally {

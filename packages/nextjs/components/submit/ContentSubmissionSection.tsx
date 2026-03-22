@@ -27,6 +27,7 @@ import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
   isInsufficientFundsError,
+  isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
 import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter";
 import { sanitizeExternalUrl } from "~~/utils/externalUrl";
@@ -430,7 +431,11 @@ export function ContentSubmissionSection() {
       notification.error(
         isFreeTransactionExhaustedError(e) || isInsufficientFundsError(e)
           ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
-          : "Failed to submit content",
+          : isWalletRpcOverloadedError(e)
+            ? "Wallet RPC is overloaded. Retry soon or switch RPC."
+            : (e as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
+              (e as { shortMessage?: string; message?: string } | undefined)?.message ||
+              "Failed to submit content",
       );
     } finally {
       setIsSubmitting(false);

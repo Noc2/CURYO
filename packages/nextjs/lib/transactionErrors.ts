@@ -46,6 +46,15 @@ export function isFreeTransactionExhaustedError(error: unknown) {
   );
 }
 
+export function isWalletRpcOverloadedError(error: unknown) {
+  const haystack = collectErrorText(error, new Set()).join(" ").toLowerCase();
+
+  return (
+    haystack.includes("rpc endpoint returned too many errors") ||
+    haystack.includes("consider using a different rpc endpoint")
+  );
+}
+
 export function getGasBalanceErrorMessage(nativeTokenSymbol: string, options?: { canSponsorTransactions?: boolean }) {
   if (options?.canSponsorTransactions) {
     return `Gas is sponsored for now. If it still fails, add some ${nativeTokenSymbol} and retry.`;

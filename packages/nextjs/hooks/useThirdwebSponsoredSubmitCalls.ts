@@ -12,7 +12,13 @@ import {
   useFreeTransactionAllowance,
 } from "~~/hooks/useFreeTransactionAllowance";
 import { type WalletExecutionMode, useWalletExecutionCapabilities } from "~~/hooks/useWalletExecutionCapabilities";
-import { thirdwebClient } from "~~/services/thirdweb/client";
+import { getThirdwebPaymasterServiceUrl, thirdwebClient } from "~~/services/thirdweb/client";
+
+type SponsoredSubmitCapabilities = {
+  paymasterService: {
+    url: string;
+  };
+};
 
 export type SponsoredSubmitContractCall = {
   abi: Abi;
@@ -22,8 +28,26 @@ export type SponsoredSubmitContractCall = {
   value?: bigint;
 };
 
-function isGaslessSubmitExecutionMode(executionMode: WalletExecutionMode) {
-  return executionMode === "sponsored_7702" || executionMode === "external_send_calls";
+function getSponsoredSubmitCapabilities(params: {
+  chainId: number | undefined;
+  executionMode: WalletExecutionMode;
+  supportsPaymasterService: boolean;
+}): SponsoredSubmitCapabilities | undefined {
+  if (params.executionMode !== "external_send_calls" || !params.supportsPaymasterService) {
+    return undefined;
+  }
+
+  const paymasterServiceUrl =
+    typeof params.chainId === "number" ? getThirdwebPaymasterServiceUrl(params.chainId) : null;
+  if (!paymasterServiceUrl) {
+    return undefined;
+  }
+
+  return {
+    paymasterService: {
+      url: paymasterServiceUrl,
+    },
+  };
 }
 
 export function useThirdwebSponsoredSubmitCalls() {
@@ -31,12 +55,27 @@ export function useThirdwebSponsoredSubmitCalls() {
   const activeWallet = useActiveWallet();
   const { chainId } = useAccount();
   const freeTransactionAllowance = useFreeTransactionAllowance();
-  const { executionMode, hasSendCalls } = useWalletExecutionCapabilities();
+  const { executionMode, hasSendCalls, supportsPaymasterService } = useWalletExecutionCapabilities();
+
+  const sponsoredSubmitCapabilities = useMemo(
+    () =>
+      getSponsoredSubmitCapabilities({
+        chainId,
+        executionMode,
+        supportsPaymasterService,
+      }),
+    [chainId, executionMode, supportsPaymasterService],
+  );
 
   const canUseGaslessSubmitTransactions = useMemo(
-    () => freeTransactionAllowance.canUseFreeTransactions && isGaslessSubmitExecutionMode(executionMode),
-    [executionMode, freeTransactionAllowance.canUseFreeTransactions],
+    () =>
+      freeTransactionAllowance.canUseFreeTransactions &&
+      (executionMode === "sponsored_7702" || sponsoredSubmitCapabilities !== undefined),
+    [executionMode, freeTransactionAllowance.canUseFreeTransactions, sponsoredSubmitCapabilities],
   );
+
+  const isEligibleForGaslessSubmitTransactions =
+    executionMode === "sponsored_7702" || sponsoredSubmitCapabilities !== undefined;
 
   const canUseSponsoredSubmitCalls = Boolean(
     thirdwebClient && activeWallet && typeof chainId === "number" && hasSendCalls && canUseGaslessSubmitTransactions,
@@ -55,6 +94,7 @@ export function useThirdwebSponsoredSubmitCalls() {
       try {
         const result = await sendAndConfirmCalls({
           atomicRequired: false,
+          ...(sponsoredSubmitCapabilities ? { capabilities: sponsoredSubmitCapabilities } : {}),
           calls: calls.map(call =>
             prepareTransaction({
               chain,
@@ -82,7 +122,7 @@ export function useThirdwebSponsoredSubmitCalls() {
         void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
       }
     },
-    [activeWallet, canUseSponsoredSubmitCalls, chainId, queryClient],
+    [activeWallet, canUseSponsoredSubmitCalls, chainId, queryClient, sponsoredSubmitCapabilities],
   );
 
   return {
@@ -92,8 +132,7 @@ export function useThirdwebSponsoredSubmitCalls() {
     freeTransactionLimit: freeTransactionAllowance.limit,
     freeTransactionRemaining: freeTransactionAllowance.remaining,
     freeTransactionVerified: freeTransactionAllowance.verified,
-    isAwaitingFreeTransactionAllowance:
-      isGaslessSubmitExecutionMode(executionMode) && !freeTransactionAllowance.isResolved,
+    isAwaitingFreeTransactionAllowance: isEligibleForGaslessSubmitTransactions && !freeTransactionAllowance.isResolved,
     executeSponsoredCalls,
   };
 }

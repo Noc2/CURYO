@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useActiveAccount, useActiveWallet, useActiveWalletChain, useCapabilities } from "thirdweb/react";
+import type { GetCapabilitiesResult } from "thirdweb/wallets/eip5792";
 import { useAccount } from "wagmi";
 import { getThirdwebWalletSponsorshipMode, supportsThirdwebExecutionCapabilities } from "~~/services/thirdweb/client";
 
@@ -27,6 +28,39 @@ export function resolveWalletExecutionChainId(
   return undefined;
 }
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export function resolveWalletCapabilitiesForChain(
+  capabilities: GetCapabilitiesResult | undefined,
+  chainId: number | null | undefined,
+) {
+  if (!capabilities || typeof chainId !== "number") {
+    return undefined;
+  }
+
+  const chainCapabilities = (capabilities as Record<string, unknown>)[chainId];
+  if (isObjectRecord(chainCapabilities)) {
+    return chainCapabilities;
+  }
+
+  if (isObjectRecord((capabilities as Record<string, unknown>).paymasterService)) {
+    return capabilities as Record<string, unknown>;
+  }
+
+  if (isObjectRecord((capabilities as Record<string, unknown>).atomic)) {
+    return capabilities as Record<string, unknown>;
+  }
+
+  return undefined;
+}
+
+export function walletCapabilitiesSupportPaymasterService(capabilities: Record<string, unknown> | undefined) {
+  const paymasterService = capabilities?.paymasterService;
+  return isObjectRecord(paymasterService) && paymasterService.supported === true;
+}
+
 export function useWalletExecutionCapabilities() {
   const wallet = useActiveWallet();
   const thirdwebAccount = useActiveAccount();
@@ -43,11 +77,11 @@ export function useWalletExecutionCapabilities() {
   });
 
   return useMemo(() => {
-    const activeCapabilities =
-      typeof chainId === "number" && capabilities && chainId in capabilities ? capabilities[chainId] : undefined;
+    const activeCapabilities = resolveWalletCapabilitiesForChain(capabilities, chainId);
     const hasSendCalls = Boolean(thirdwebAccount?.sendCalls);
     const isThirdwebInApp = wallet?.id === "inApp";
     const thirdwebSponsorshipMode = isThirdwebInApp ? getThirdwebWalletSponsorshipMode(wallet) : null;
+    const supportsPaymasterService = walletCapabilitiesSupportPaymasterService(activeCapabilities);
 
     let executionMode: WalletExecutionMode = "direct_celo";
 
@@ -67,7 +101,9 @@ export function useWalletExecutionCapabilities() {
       hasSendCalls,
       isThirdwebInApp,
       supportsFeeCurrencyFallback: supportedChain,
-      supportsSponsoredCalls: executionMode === "sponsored_7702",
+      supportsPaymasterService,
+      supportsSponsoredCalls:
+        executionMode === "sponsored_7702" || (executionMode === "external_send_calls" && supportsPaymasterService),
     };
   }, [capabilities, chainId, supportedChain, thirdwebAccount?.sendCalls, wallet]);
 }

@@ -15,6 +15,7 @@ import {
   getGasBalanceErrorMessage,
   isFreeTransactionExhaustedError,
   isInsufficientFundsError,
+  isWalletRpcOverloadedError,
 } from "~~/lib/transactionErrors";
 import scaffoldConfig from "~~/scaffold.config";
 import { notification } from "~~/utils/scaffold-eth";
@@ -161,7 +162,11 @@ export function FrontendRegistration() {
     notification.error(
       isFreeTransactionExhaustedError(error) || isInsufficientFundsError(error)
         ? getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions })
-        : (error as { shortMessage?: string } | undefined)?.shortMessage || fallback,
+        : isWalletRpcOverloadedError(error)
+          ? "Wallet RPC is overloaded. Retry soon or switch RPC."
+          : (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||
+            (error as { shortMessage?: string; message?: string } | undefined)?.message ||
+            fallback,
     );
   };
 
