@@ -1,9 +1,19 @@
 import { withPreferredHttpRpcUrls } from "../rpcUrls";
 import * as chains from "viem/chains";
 
+// viem still labels Celo Sepolia's native token as S-CELO, but wallets like
+// MetaMask expect the native symbol to be CELO for the testnet network config.
+const celoSepolia = {
+  ...chains.celoSepolia,
+  nativeCurrency: {
+    ...chains.celoSepolia.nativeCurrency,
+    symbol: "CELO",
+  },
+} satisfies chains.Chain;
+
 export const AVAILABLE_TARGET_NETWORKS = {
   [chains.foundry.id]: chains.foundry,
-  [chains.celoSepolia.id]: chains.celoSepolia,
+  [chains.celoSepolia.id]: celoSepolia,
   [chains.celo.id]: chains.celo,
 } as const satisfies Record<number, chains.Chain>;
 
