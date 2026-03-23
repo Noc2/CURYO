@@ -11,6 +11,16 @@ export interface VotingConfig {
   maxVoters: number;
 }
 
+export interface OpenRoundFallbackData {
+  roundId: bigint;
+  voteCount: number;
+  revealedCount: number;
+  totalStake: bigint;
+  upPool: bigint;
+  downPool: bigint;
+  startTime: bigint | null;
+}
+
 export interface OptimisticRoundDelta {
   voteCount: number;
   stake: bigint;
@@ -101,6 +111,10 @@ function toNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" ? value : typeof value === "bigint" ? Number(value) : fallback;
 }
 
+function maxBigInt(left: bigint, right: bigint): bigint {
+  return left > right ? left : right;
+}
+
 export function parseVotingConfig(rawConfig: unknown): VotingConfig {
   if (!rawConfig) return DEFAULT_VOTING_CONFIG;
 
@@ -132,25 +146,8 @@ export function parseRound(rawRoundData: unknown): RoundData | undefined {
 
   const round = rawRoundData as Record<string, unknown> & unknown[];
 
-  if (round.startTime != null) {
-    return {
-      startTime: toBigInt(round.startTime),
-      state: toNumber(round.state),
-      voteCount: toBigInt(round.voteCount),
-      revealedCount: toBigInt(round.revealedCount),
-      totalStake: toBigInt(round.totalStake),
-      upPool: toBigInt(round.upPool),
-      downPool: toBigInt(round.downPool),
-      upCount: toBigInt(round.upCount),
-      downCount: toBigInt(round.downCount),
-      upWins: Boolean(round.upWins),
-      settledAt: toBigInt(round.settledAt),
-      thresholdReachedAt: toBigInt(round.thresholdReachedAt),
-      weightedUpPool: toBigInt(round.weightedUpPool),
-      weightedDownPool: toBigInt(round.weightedDownPool),
-    };
-  }
-
+  // viem/abitype tuples can arrive as arrays with partially attached named properties.
+  // Prefer indexed decoding when possible so missing named keys do not silently zero fields.
   if (Array.isArray(round) && round.length >= 14) {
     return {
       startTime: toBigInt(round[0]),
@@ -170,7 +167,75 @@ export function parseRound(rawRoundData: unknown): RoundData | undefined {
     };
   }
 
+  if (round.startTime != null) {
+    return {
+      startTime: toBigInt(round.startTime),
+      state: toNumber(round.state),
+      voteCount: toBigInt(round.voteCount),
+      revealedCount: toBigInt(round.revealedCount),
+      totalStake: toBigInt(round.totalStake),
+      upPool: toBigInt(round.upPool),
+      downPool: toBigInt(round.downPool),
+      upCount: toBigInt(round.upCount),
+      downCount: toBigInt(round.downCount),
+      upWins: Boolean(round.upWins),
+      settledAt: toBigInt(round.settledAt),
+      thresholdReachedAt: toBigInt(round.thresholdReachedAt),
+      weightedUpPool: toBigInt(round.weightedUpPool),
+      weightedDownPool: toBigInt(round.weightedDownPool),
+    };
+  }
+
   return undefined;
+}
+
+export function mergeRoundDataWithFallback(params: {
+  roundId: bigint;
+  round?: RoundData;
+  fallback?: OpenRoundFallbackData;
+}): { roundId: bigint; round?: RoundData } {
+  const { fallback, round } = params;
+
+  if (!fallback) {
+    return { roundId: params.roundId, round };
+  }
+
+  if (params.roundId > 0n && fallback.roundId > 0n && params.roundId !== fallback.roundId) {
+    return { roundId: params.roundId, round };
+  }
+
+  if (
+    round?.startTime != null &&
+    round.startTime > 0n &&
+    fallback.startTime != null &&
+    round.startTime !== fallback.startTime
+  ) {
+    return { roundId: params.roundId, round };
+  }
+
+  const fallbackVoteCount = BigInt(Math.max(0, fallback.voteCount));
+  const fallbackRevealedCount = BigInt(Math.max(0, fallback.revealedCount));
+  const resolvedRoundId = params.roundId > 0n ? params.roundId : fallback.roundId;
+
+  return {
+    roundId: resolvedRoundId,
+    round: {
+      startTime: round?.startTime ?? fallback.startTime ?? 0n,
+      state: round?.state ?? ROUND_STATE.Open,
+      voteCount: maxBigInt(round?.voteCount ?? 0n, fallbackVoteCount),
+      revealedCount: maxBigInt(round?.revealedCount ?? 0n, fallbackRevealedCount),
+      totalStake: maxBigInt(round?.totalStake ?? 0n, fallback.totalStake),
+      upPool: maxBigInt(round?.upPool ?? 0n, fallback.upPool),
+      downPool: maxBigInt(round?.downPool ?? 0n, fallback.downPool),
+      upCount: round?.upCount ?? 0n,
+      downCount: round?.downCount ?? 0n,
+      upWins: round?.upWins ?? false,
+      settledAt: round?.settledAt ?? 0n,
+      thresholdReachedAt: round?.thresholdReachedAt ?? 0n,
+      weightedUpPool: round?.weightedUpPool ?? 0n,
+      weightedDownPool: round?.weightedDownPool ?? 0n,
+    },
+  };
 }
 
 export function deriveRoundTiming(params: {

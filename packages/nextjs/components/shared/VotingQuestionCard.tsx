@@ -7,6 +7,7 @@ import { RatingOrb } from "~~/components/shared/RatingOrb";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
 import { RoundRevealedBreakdown, RoundStats } from "~~/components/shared/RoundStats";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import type { ContentOpenRoundSummary } from "~~/hooks/contentFeed/shared";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useRoundSnapshot } from "~~/hooks/useRoundSnapshot";
 import { formatVoteCooldownRemaining } from "~~/lib/vote/cooldown";
@@ -22,6 +23,7 @@ interface VotingQuestionCardProps {
   error?: string | null;
   cooldownSecondsRemaining?: number;
   isOwnContent?: boolean;
+  openRound?: ContentOpenRoundSummary | null;
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
 }
@@ -42,10 +44,11 @@ export function VotingQuestionCard({
   error,
   cooldownSecondsRemaining = 0,
   isOwnContent,
+  openRound,
   embedded,
 }: VotingQuestionCardProps) {
   // Check if user already voted on this content in the current round
-  const roundSnapshot = useRoundSnapshot(contentId);
+  const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined);
   const { roundId, isRoundFull, phase, voteCount, revealedCount, minVoters } = roundSnapshot;
   const pendingRevealCount = Math.max(0, voteCount - revealedCount);
   const { filled: filledVoteIcons, empty: emptyVoteIcons } = computeVoteProgressIconCounts({ voteCount, minVoters });

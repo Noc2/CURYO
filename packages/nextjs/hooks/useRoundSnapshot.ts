@@ -5,9 +5,14 @@ import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { useUnixTime } from "~~/hooks/useUnixTime";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
-import { deriveRoundSnapshot, parseRound } from "~~/lib/contracts/roundVotingEngine";
+import {
+  type OpenRoundFallbackData,
+  deriveRoundSnapshot,
+  mergeRoundDataWithFallback,
+  parseRound,
+} from "~~/lib/contracts/roundVotingEngine";
 
-export function useRoundSnapshot(contentId?: bigint) {
+export function useRoundSnapshot(contentId?: bigint, fallbackOpenRound?: OpenRoundFallbackData) {
   const { getOptimisticDelta } = useOptimisticVote();
   const optimisticDelta = contentId !== undefined ? getOptimisticDelta(contentId) : undefined;
   const config = useVotingConfig();
@@ -39,11 +44,16 @@ export function useRoundSnapshot(contentId?: bigint) {
   } as any);
 
   const parsedRound = parseRound(rawRoundData);
-  const roundId = parsedRound?.state === 0 ? currentRoundId : 0n;
+  const mergedRound = mergeRoundDataWithFallback({
+    roundId: currentRoundId,
+    round: parsedRound,
+    fallback: fallbackOpenRound,
+  });
+  const roundId = mergedRound.round?.state === 0 ? mergedRound.roundId : 0n;
 
   const snapshot = deriveRoundSnapshot({
     roundId,
-    round: roundId > 0n ? parsedRound : undefined,
+    round: roundId > 0n ? mergedRound.round : undefined,
     config,
     optimisticDelta,
     now,

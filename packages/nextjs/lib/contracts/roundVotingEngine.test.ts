@@ -4,6 +4,8 @@ import {
   buildStakeAmountWei,
   deriveRoundSnapshot,
   deriveVoteDeadlines,
+  mergeRoundDataWithFallback,
+  parseRound,
   resolveFrontendCode,
 } from "./roundVotingEngine";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
@@ -64,6 +66,75 @@ test("deriveRoundSnapshot marks rounds ready once the revealed threshold is met"
   assert.equal(snapshot.votersNeeded, 0);
   assert.equal(snapshot.readyToSettle, true);
   assert.equal(snapshot.thresholdReachedAt, 1250);
+});
+
+test("parseRound prefers tuple values when named round fields are incomplete", () => {
+  const rawRound = Object.assign(
+    [1_000n, ROUND_STATE.Open, 1n, 0n, 50_000_000n, 50_000_000n, 0n, 1n, 0n, true, 0n, 0n, 50_000_000n, 0n],
+    {
+      startTime: 1_000n,
+      state: ROUND_STATE.Open,
+      totalStake: 50_000_000n,
+      upPool: 50_000_000n,
+    },
+  );
+
+  const parsedRound = parseRound(rawRound);
+
+  assert.ok(parsedRound);
+  assert.equal(parsedRound.voteCount, 1n);
+  assert.equal(parsedRound.totalStake, 50_000_000n);
+  assert.equal(parsedRound.upCount, 1n);
+});
+
+test("mergeRoundDataWithFallback keeps the higher feed vote totals for the same round", () => {
+  const merged = mergeRoundDataWithFallback({
+    roundId: 7n,
+    round: makeRound({
+      startTime: 1_000n,
+      voteCount: 0n,
+      totalStake: 0n,
+    }),
+    fallback: {
+      roundId: 7n,
+      voteCount: 1,
+      revealedCount: 0,
+      totalStake: 100_000_000n,
+      upPool: 100_000_000n,
+      downPool: 0n,
+      startTime: 1_000n,
+    },
+  });
+
+  assert.equal(merged.roundId, 7n);
+  assert.ok(merged.round);
+  assert.equal(merged.round.voteCount, 1n);
+  assert.equal(merged.round.totalStake, 100_000_000n);
+  assert.equal(merged.round.upPool, 100_000_000n);
+});
+
+test("mergeRoundDataWithFallback ignores feed data from a different round", () => {
+  const baseRound = makeRound({
+    startTime: 1_000n,
+    voteCount: 0n,
+    totalStake: 0n,
+  });
+  const merged = mergeRoundDataWithFallback({
+    roundId: 7n,
+    round: baseRound,
+    fallback: {
+      roundId: 8n,
+      voteCount: 1,
+      revealedCount: 0,
+      totalStake: 100_000_000n,
+      upPool: 100_000_000n,
+      downPool: 0n,
+      startTime: 1_000n,
+    },
+  });
+
+  assert.equal(merged.roundId, 7n);
+  assert.equal(merged.round, baseRound);
 });
 
 test("deriveVoteDeadlines returns the round expiry and next action window", () => {
