@@ -5,6 +5,7 @@ import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts"
 import { useQueryClient } from "@tanstack/react-query";
 import { type Hex, encodeFunctionData } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
+import { useOptimisticVote } from "~~/contexts/OptimisticVoteContext";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -88,6 +89,7 @@ async function postFreeTransactionMutation(path: string, body: Record<string, un
  */
 export function useRoundVote() {
   const { address } = useAccount();
+  const { addOptimisticVote } = useOptimisticVote();
   const { targetNetwork } = useTargetNetwork();
   const { hasVoterId, tokenId } = useVoterIdNFT(address);
   const [isCommitting, setIsCommitting] = useState(false);
@@ -210,6 +212,7 @@ export function useRoundVote() {
         }
       }
 
+      addOptimisticVote(contentId, stakeWei);
       void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
 
       queryClient.setQueryData<WalletDisplaySummary | undefined>(
