@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { decodeEventLog } from "viem";
-import { useConfig } from "wagmi";
-import { waitForTransactionReceipt } from "wagmi/actions";
+import { decodeEventLog, encodeAbiParameters, keccak256, toHex } from "viem";
+import { useAccount, useConfig } from "wagmi";
+import { readContract, waitForTransactionReceipt } from "wagmi/actions";
 import { ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
@@ -100,6 +100,8 @@ const DEFAULT_URL_CONFIG = {
   urlHint: "Select a platform first, then paste your URL",
 };
 
+const RESERVED_SUBMISSION_SALT_PREFIX = "curyo:reserved-content-salt:";
+
 function getTitleValidationError(value: string): string | null {
   if (value.length > MAX_CONTENT_TITLE_LENGTH) {
     return `Title must be ${MAX_CONTENT_TITLE_LENGTH} characters or fewer`;
@@ -118,6 +120,59 @@ function getDescriptionValidationError(value: string): string | null {
   return check.blocked ? "Your description contains prohibited content" : null;
 }
 
+function createSubmissionSalt(): `0x${string}` {
+  const bytes = new Uint8Array(32);
+  window.crypto.getRandomValues(bytes);
+  return toHex(bytes);
+}
+
+function getReservedSubmissionSaltKey(
+  address: `0x${string}`,
+  url: string,
+  title: string,
+  description: string,
+  tags: string,
+  categoryId: bigint,
+): string {
+  return `${RESERVED_SUBMISSION_SALT_PREFIX}${keccak256(
+    encodeAbiParameters(
+      [
+        { type: "address" },
+        { type: "string" },
+        { type: "string" },
+        { type: "string" },
+        { type: "string" },
+        { type: "uint256" },
+      ],
+      [address, url, title, description, tags, categoryId],
+    ),
+  )}`;
+}
+
+function getStoredSubmissionSalt(storageKey: string): `0x${string}` | null {
+  if (typeof window === "undefined") return null;
+  const stored = window.localStorage.getItem(storageKey);
+  return stored && stored.startsWith("0x") ? (stored as `0x${string}`) : null;
+}
+
+function setStoredSubmissionSalt(storageKey: string, salt: `0x${string}`) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(storageKey, salt);
+}
+
+function clearStoredSubmissionSalt(storageKey: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(storageKey);
+}
+
+function isReservationExistsError(error: unknown): boolean {
+  const message =
+    (error as { shortMessage?: string; message?: string } | undefined)?.shortMessage ??
+    (error as { shortMessage?: string; message?: string } | undefined)?.message ??
+    "";
+  return message.includes("Reservation exists");
+}
+
 function PlatformIcon({ domain, className }: { domain: string; className?: string }) {
   const iconClass = className || "w-4 h-4";
   const faviconDomain = domain.replace(/^(www\.|en\.)/, "");
@@ -133,6 +188,7 @@ function PlatformIcon({ domain, className }: { domain: string; className?: strin
 
 export function ContentSubmissionSection() {
   const wagmiConfig = useConfig();
+  const { address: connectedAddress } = useAccount();
   const { canSponsorTransactions, isMissingGasBalance, nativeTokenSymbol } = useGasBalanceStatus({
     includeExternalSendCalls: true,
   });
@@ -394,6 +450,12 @@ export function ContentSubmissionSection() {
       return;
     }
 
+    const normalizedSubmissionUrl = canonicalUrl;
+    if (!normalizedSubmissionUrl) {
+      notification.warning("Please fix the highlighted fields before submitting.");
+      return;
+    }
+
     if (nextUrlError || nextTitleError || nextDescriptionError) {
       notification.warning("Please fix the highlighted fields before submitting.");
       return;
@@ -423,20 +485,103 @@ export function ContentSubmissionSection() {
     try {
       let contentId: bigint | null = null;
       const stakeAmount = BigInt(10 * 1e6);
+      const submissionTags = serializeTags(selectedSubcategories);
+      const submitterAddress = connectedAddress as `0x${string}` | undefined;
+      if (!submitterAddress) {
+        throw new Error("Wallet not connected");
+      }
+
+      const [, submissionKey] = (await readContract(wagmiConfig, {
+        abi: registryInfo.abi,
+        address: registryAddress,
+        functionName: "previewSubmissionKey",
+        args: [normalizedSubmissionUrl, selectedCategory.id],
+      })) as readonly [bigint, `0x${string}`];
+
+      const saltStorageKey = getReservedSubmissionSaltKey(
+        submitterAddress,
+        normalizedSubmissionUrl,
+        title,
+        description,
+        submissionTags,
+        selectedCategory.id,
+      );
+      const submissionSalt = getStoredSubmissionSalt(saltStorageKey) ?? createSubmissionSalt();
+      setStoredSubmissionSalt(saltStorageKey, submissionSalt);
+
+      const revealCommitment = keccak256(
+        encodeAbiParameters(
+          [
+            { type: "bytes32" },
+            { type: "string" },
+            { type: "string" },
+            { type: "string" },
+            { type: "uint256" },
+            { type: "bytes32" },
+            { type: "address" },
+          ],
+          [submissionKey, title, description, submissionTags, selectedCategory.id, submissionSalt, submitterAddress],
+        ),
+      );
+
+      const reserveSubmission = async () => {
+        if (canUseSponsoredSubmitCalls) {
+          await executeSponsoredCalls(
+            [
+              {
+                abi: crepInfo.abi,
+                address: crepAddress,
+                args: [registryAddress, stakeAmount],
+                functionName: "approve",
+              },
+              {
+                abi: registryInfo.abi,
+                address: registryAddress,
+                args: [revealCommitment],
+                functionName: "reserveSubmission",
+              },
+            ],
+            {
+              atomicRequired: true,
+            },
+          );
+          return;
+        }
+
+        const approveTxHash = await writeCRep(
+          { functionName: "approve", args: [registryAddress, stakeAmount] },
+          { blockConfirmations: 1 },
+        );
+
+        if (approveTxHash) {
+          await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
+        }
+
+        const reserveTxHash = await writeRegistry({
+          functionName: "reserveSubmission",
+          args: [revealCommitment],
+        });
+
+        if (reserveTxHash) {
+          await waitForTransactionReceipt(wagmiConfig, { hash: reserveTxHash });
+        }
+      };
+
+      try {
+        await reserveSubmission();
+      } catch (error) {
+        if (!isReservationExistsError(error)) {
+          throw error;
+        }
+      }
 
       if (canUseSponsoredSubmitCalls) {
         const callsResult = await executeSponsoredCalls(
           [
             {
-              abi: crepInfo.abi,
-              address: crepAddress,
-              args: [registryAddress, stakeAmount],
-              functionName: "approve",
-            },
-            {
               abi: registryInfo.abi,
               address: registryAddress,
-              args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
+              args: [normalizedSubmissionUrl, title, description, submissionTags, selectedCategory.id, submissionSalt],
               functionName: "submitContent",
             },
           ],
@@ -447,18 +592,9 @@ export function ContentSubmissionSection() {
 
         contentId = extractSubmittedContentId((callsResult.receipts ?? []).flatMap(receipt => receipt.logs));
       } else {
-        const approveTxHash = await writeCRep(
-          { functionName: "approve", args: [registryAddress, stakeAmount] },
-          { blockConfirmations: 1 },
-        );
-
-        if (approveTxHash) {
-          await waitForTransactionReceipt(wagmiConfig, { hash: approveTxHash });
-        }
-
         const submitTxHash = await writeRegistry({
           functionName: "submitContent",
-          args: [canonicalUrl, title, description, serializeTags(selectedSubcategories), selectedCategory.id],
+          args: [normalizedSubmissionUrl, title, description, submissionTags, selectedCategory.id, submissionSalt],
         });
 
         if (submitTxHash) {
@@ -468,6 +604,7 @@ export function ContentSubmissionSection() {
       }
 
       await refetchNextContentId();
+      clearStoredSubmissionSalt(saltStorageKey);
 
       notification.success("Content submitted! Staked 10 cREP.");
       setSubmittedContent(
@@ -489,6 +626,8 @@ export function ContentSubmissionSection() {
         notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
       } else if (isWalletRpcOverloadedError(e)) {
         showWalletRpcOverloadNotification();
+      } else if (isReservationExistsError(e)) {
+        notification.warning("Reservation saved. Retry submit.");
       } else {
         notification.error(
           (e as { shortMessage?: string; message?: string } | undefined)?.shortMessage ||

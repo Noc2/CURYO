@@ -14,7 +14,7 @@ contract GasBudgetTest is RoundIntegrationTest {
     // Content submission now resolves canonical URLs through SubmissionCanonicalizer
     // and a live CategoryRegistry lookup, so the baseline is higher than the initial
     // pre-extraction measurement.
-    uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 525_000;
+    uint256 internal constant MAX_SUBMIT_CONTENT_GAS = 700_000;
     uint256 internal constant MAX_COMMIT_VOTE_GAS = 800_000;
     uint256 internal constant MAX_REVEAL_VOTE_GAS = 320_000;
     uint256 internal constant MAX_SETTLE_ROUND_GAS = 475_000;
@@ -52,11 +52,30 @@ contract GasBudgetTest is RoundIntegrationTest {
         crepToken.approve(address(registry), 10e6);
         vm.stopPrank();
 
-        uint256 gasUsed = _measureCallAs(
+        (, bytes32 submissionKey) = registry.previewSubmissionKey("https://example.com/gas-submit", 0);
+        bytes32 salt = keccak256(
+            abi.encode(
+                "https://example.com/gas-submit", "test goal", "test goal", "test", uint256(0), submitter, block.timestamp, block.number
+            )
+        );
+        bytes32 revealCommitment =
+            keccak256(abi.encode(submissionKey, "test goal", "test goal", "test", uint256(0), salt, submitter));
+
+        uint256 reserveGasUsed = _measureCallAs(
             submitter,
             address(registry),
-            abi.encodeCall(ContentRegistry.submitContent, ("https://example.com/gas-submit", "test goal", "test goal", "test", 0))
+            abi.encodeCall(ContentRegistry.reserveSubmission, (revealCommitment))
         );
+        vm.warp(block.timestamp + 1);
+        uint256 revealGasUsed = _measureCallAs(
+            submitter,
+            address(registry),
+            abi.encodeCall(
+                ContentRegistry.submitContent,
+                ("https://example.com/gas-submit", "test goal", "test goal", "test", 0, salt)
+            )
+        );
+        uint256 gasUsed = reserveGasUsed + revealGasUsed;
 
         assertLe(gasUsed, MAX_SUBMIT_CONTENT_GAS, "submitContent gas budget exceeded");
     }
@@ -273,7 +292,8 @@ contract GasBudgetTest is RoundIntegrationTest {
         (, address frontendOp) = _setupFrontendRegistry();
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
-        uint256 gasUsed = _measureCall(
+        uint256 gasUsed = _measureCallAs(
+            frontendOp,
             address(rewardDistributor),
             abi.encodeCall(RoundRewardDistributor.claimFrontendFee, (contentId, roundId, frontendOp))
         );

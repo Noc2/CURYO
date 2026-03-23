@@ -95,7 +95,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
     function test_ResolveSubmitterStake_RevertsWhileLaterRoundIsOpen() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
         uint256 submitterBalanceAfterSubmit = crepToken.balanceOf(submitter);
 
@@ -126,7 +126,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
     function test_ResolveSubmitterStake_AllowsResolutionAfterLaterRoundCancels() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 0);
         vm.stopPrank();
         uint256 submitterBalanceAfterSubmit = crepToken.balanceOf(submitter);
 
@@ -162,7 +162,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
     function test_ResolveSubmitterStake_DormancyFallbackRevertsWhileLaterRoundIsOpenWithoutSettlement() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/no-settlement", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(registry, "https://example.com/no-settlement", "goal", "goal", "tags", 0);
         vm.stopPrank();
         uint256 submitterBalanceAfterSubmit = crepToken.balanceOf(submitter);
 
@@ -182,7 +182,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
     function test_ResolveSubmitterStake_DormancyFallbackWorksAfterOpenRoundCancels() public {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/dormancy-ready", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(registry, "https://example.com/dormancy-ready", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         _commit(voter1, 1, true);
@@ -204,7 +204,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/slash-path", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(registry, "https://example.com/slash-path", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         (bytes32 commitKey1, bytes32 salt1) = _commitWithStake(voter1, 1, false, slashStake);

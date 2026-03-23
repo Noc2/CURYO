@@ -123,7 +123,7 @@ contract SecurityReentrancyTest is VotingTestBase {
     function _submitContent() internal returns (uint256) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "test goal", "test goal", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return 1;
     }
@@ -274,7 +274,7 @@ contract SecurityTransferAndCallTest is VotingTestBase {
     function _submitContent() internal returns (uint256) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "test goal", "test goal", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return 1;
     }
@@ -410,7 +410,7 @@ contract SecuritySettlementTimingTest is VotingTestBase {
     function _submitContent() internal returns (uint256) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "test goal", "test goal", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return 1;
     }

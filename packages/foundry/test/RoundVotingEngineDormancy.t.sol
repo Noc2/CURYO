@@ -116,7 +116,7 @@ contract RoundVotingEngineDormancyTest is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/dormancy", "test goal", "test goal", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/dormancy", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return 1;
     }

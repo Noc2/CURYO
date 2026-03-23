@@ -125,7 +125,7 @@ contract SelectiveRevelationTest is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/selective", "test", "test", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/selective", "test", "test", "test", 0);
         vm.stopPrank();
         contentId = 1;
     }

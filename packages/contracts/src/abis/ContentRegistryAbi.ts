@@ -71,6 +71,19 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "DORMANT_EXCLUSIVE_REVIVAL_PERIOD",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MAX_DESCRIPTION_LENGTH",
     "inputs": [],
     "outputs": [
@@ -162,6 +175,19 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "RESERVED_SUBMISSION_MIN_AGE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "REVIVAL_STAKE",
     "inputs": [],
     "outputs": [
@@ -176,6 +202,19 @@ export const ContentRegistryAbi = [
   {
     "type": "function",
     "name": "SLASH_RATING_THRESHOLD",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "SUBMISSION_RESERVATION_PERIOD",
     "inputs": [],
     "outputs": [
       {
@@ -214,6 +253,19 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "cancelReservedSubmission",
+    "inputs": [
+      {
+        "name": "revealCommitment",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "categoryRegistry",
     "inputs": [],
     "outputs": [
@@ -242,6 +294,19 @@ export const ContentRegistryAbi = [
         "internalType": "uint256"
       }
     ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "clearExpiredReservedSubmission",
+    "inputs": [
+      {
+        "name": "revealCommitment",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -327,6 +392,25 @@ export const ContentRegistryAbi = [
         "name": "",
         "type": "address",
         "internalType": "contract IERC20"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "dormantKeyReleasableAt",
+    "inputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -533,7 +617,88 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "pendingSubmissions",
+    "inputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "submitter",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "submitterIdentity",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "reservedStake",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "reservedAt",
+        "type": "uint48",
+        "internalType": "uint48"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint48",
+        "internalType": "uint48"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "previewSubmissionKey",
+    "inputs": [
+      {
+        "name": "url",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "resolvedCategoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "submissionKey",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "recordMeaningfulActivity",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "releaseDormantSubmissionKey",
     "inputs": [
       {
         "name": "contentId",
@@ -557,6 +722,19 @@ export const ContentRegistryAbi = [
         "name": "callerConfirmation",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "reserveSubmission",
+    "inputs": [
+      {
+        "name": "revealCommitment",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [],
@@ -810,6 +988,11 @@ export const ContentRegistryAbi = [
         "name": "categoryId",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "salt",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [
@@ -1133,6 +1316,25 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "event",
+    "name": "DormantSubmissionKeyReleased",
+    "inputs": [
+      {
+        "name": "contentId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "submissionKey",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Initialized",
     "inputs": [
       {
@@ -1253,6 +1455,81 @@ export const ContentRegistryAbi = [
         "type": "address",
         "indexed": true,
         "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubmissionReservationCancelled",
+    "inputs": [
+      {
+        "name": "submitter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "revealCommitment",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "refund",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubmissionReservationExpired",
+    "inputs": [
+      {
+        "name": "submitter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "revealCommitment",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "refund",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SubmissionReserved",
+    "inputs": [
+      {
+        "name": "submitter",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "revealCommitment",
+        "type": "bytes32",
+        "indexed": true,
+        "internalType": "bytes32"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false

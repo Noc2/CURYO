@@ -38,8 +38,17 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     error TreasuryNotSet();
     error InvalidParticipationSnapshot();
     error UnauthorizedCaller();
+    error UnauthorizedFrontendFeeCaller();
+    error FrontendFeeNotClaimable();
+    error FrontendFeeNotConfiscatable();
     error ParticipationRewardsOutstanding();
     error ParticipationRewardsAlreadyFinalized();
+
+    enum FrontendFeeDisposition {
+        Direct,
+        CreditRegistry,
+        Protocol
+    }
 
     // --- State ---
     IERC20 public crepToken;
@@ -79,6 +88,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         uint256 indexed contentId, uint256 indexed roundId, address indexed submitter, uint256 crepAmount
     );
     event FrontendFeeClaimed(
+        uint256 indexed contentId, uint256 indexed roundId, address indexed frontend, uint256 amount
+    );
+    event FrontendFeeConfiscated(
         uint256 indexed contentId, uint256 indexed roundId, address indexed frontend, uint256 amount
     );
     event ParticipationRewardClaimed(
@@ -228,36 +240,44 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         nonReentrant
         returns (uint256 fee)
     {
-        RoundLib.Round memory round = _readRound(contentId, roundId);
-        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
-        if (frontendFeeClaimed[contentId][roundId][frontend]) revert AlreadyClaimed();
+        FrontendFeeDisposition disposition;
+        address operator;
+        fee = _quoteFrontendFee(contentId, roundId, frontend);
+        (disposition, operator) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+        if (disposition == FrontendFeeDisposition.Protocol) revert FrontendFeeNotClaimable();
 
-        uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
-        uint256 frontendStake = votingEngine.roundPerFrontendStake(contentId, roundId, frontend);
-        uint256 totalEligibleStake = votingEngine.roundStakeWithEligibleFrontend(contentId, roundId);
-        uint256 totalFrontendClaimants = votingEngine.roundEligibleFrontendCount(contentId, roundId);
+        address expectedCaller = operator != address(0) ? operator : frontend;
+        if (msg.sender != expectedCaller) revert UnauthorizedFrontendFeeCaller();
 
-        if (totalFrontendPool == 0) revert NoPool();
-        if (frontendStake == 0) revert NoStake();
-        if (totalEligibleStake == 0) revert NoEligibleStake();
-        if (totalFrontendClaimants == 0) revert NoPool();
-
-        uint256 claimedCount = roundFrontendClaimedCount[contentId][roundId];
-        uint256 claimedAmount = roundFrontendClaimedAmount[contentId][roundId];
-        if (claimedAmount > totalFrontendPool) revert PoolExhausted();
-
-        if (claimedCount + 1 == totalFrontendClaimants) {
-            fee = totalFrontendPool - claimedAmount;
-        } else {
-            fee = (totalFrontendPool * frontendStake) / totalEligibleStake;
-        }
-
-        frontendFeeClaimed[contentId][roundId][frontend] = true;
-        roundFrontendClaimedCount[contentId][roundId] = claimedCount + 1;
-        roundFrontendClaimedAmount[contentId][roundId] = claimedAmount + fee;
-
-        _payoutFrontendFee(contentId, roundId, frontend, fee);
+        _consumeFrontendFeeClaim(contentId, roundId, frontend, fee);
+        _payoutFrontendFee(contentId, roundId, frontend, fee, disposition);
         emit FrontendFeeClaimed(contentId, roundId, frontend, fee);
+    }
+
+    /// @notice Route a settled frontend fee to protocol once the frontend is slashed or underbonded.
+    function confiscateFrontendFee(uint256 contentId, uint256 roundId, address frontend)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        nonReentrant
+        returns (uint256 fee)
+    {
+        fee = _quoteFrontendFee(contentId, roundId, frontend);
+        (FrontendFeeDisposition disposition,) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
+        if (disposition != FrontendFeeDisposition.Protocol) revert FrontendFeeNotConfiscatable();
+
+        _consumeFrontendFeeClaim(contentId, roundId, frontend, fee);
+        _routeFrontendFeeToProtocol(fee);
+        emit FrontendFeeConfiscated(contentId, roundId, frontend, fee);
+    }
+
+    function previewFrontendFee(uint256 contentId, uint256 roundId, address frontend)
+        external
+        view
+        returns (uint256 fee, FrontendFeeDisposition disposition, address operator, bool alreadyClaimed)
+    {
+        alreadyClaimed = frontendFeeClaimed[contentId][roundId][frontend];
+        fee = _quoteFrontendFee(contentId, roundId, frontend);
+        (disposition, operator) = _resolveFrontendFeeDisposition(contentId, roundId, frontend);
     }
 
     /// @notice Snapshot and reserve voter participation rewards for a settled round.
@@ -439,35 +459,90 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         ) = votingEngine.commits(contentId, roundId, commitKey);
     }
 
-    function _payoutFrontendFee(uint256 contentId, uint256 roundId, address frontend, uint256 fee) internal {
+    function _quoteFrontendFee(uint256 contentId, uint256 roundId, address frontend) internal view returns (uint256 fee) {
+        RoundLib.Round memory round = _readRound(contentId, roundId);
+        if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
+        if (frontendFeeClaimed[contentId][roundId][frontend]) revert AlreadyClaimed();
+
+        uint256 totalFrontendPool = votingEngine.roundFrontendPool(contentId, roundId);
+        uint256 frontendStake = votingEngine.roundPerFrontendStake(contentId, roundId, frontend);
+        uint256 totalEligibleStake = votingEngine.roundStakeWithEligibleFrontend(contentId, roundId);
+        uint256 totalFrontendClaimants = votingEngine.roundEligibleFrontendCount(contentId, roundId);
+
+        if (totalFrontendPool == 0) revert NoPool();
+        if (frontendStake == 0) revert NoStake();
+        if (totalEligibleStake == 0) revert NoEligibleStake();
+        if (totalFrontendClaimants == 0) revert NoPool();
+
+        uint256 claimedCount = roundFrontendClaimedCount[contentId][roundId];
+        uint256 claimedAmount = roundFrontendClaimedAmount[contentId][roundId];
+        if (claimedAmount > totalFrontendPool) revert PoolExhausted();
+
+        if (claimedCount + 1 == totalFrontendClaimants) {
+            fee = totalFrontendPool - claimedAmount;
+        } else {
+            fee = (totalFrontendPool * frontendStake) / totalEligibleStake;
+        }
+    }
+
+    function _consumeFrontendFeeClaim(uint256 contentId, uint256 roundId, address frontend, uint256 fee) internal {
+        frontendFeeClaimed[contentId][roundId][frontend] = true;
+        roundFrontendClaimedCount[contentId][roundId] += 1;
+        roundFrontendClaimedAmount[contentId][roundId] += fee;
+    }
+
+    function _resolveFrontendFeeDisposition(uint256 contentId, uint256 roundId, address frontend)
+        internal
+        view
+        returns (FrontendFeeDisposition disposition, address operator)
+    {
+        address snapshotRegistryAddress = votingEngine.roundFrontendRegistrySnapshot(contentId, roundId);
+        if (snapshotRegistryAddress == address(0)) {
+            return (FrontendFeeDisposition.Direct, frontend);
+        }
+
+        IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
+        try snapshotRegistry.getFrontendInfo(frontend) returns (
+            address frontendOperator, uint256 stakedAmount, bool, bool slashed
+        ) {
+            if (frontendOperator == address(0)) {
+                return (FrontendFeeDisposition.Direct, frontend);
+            }
+            if (slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
+                return (FrontendFeeDisposition.Protocol, frontendOperator);
+            }
+            return (FrontendFeeDisposition.CreditRegistry, frontendOperator);
+        } catch {
+            return (FrontendFeeDisposition.Direct, frontend);
+        }
+    }
+
+    function _payoutFrontendFee(
+        uint256 contentId,
+        uint256 roundId,
+        address frontend,
+        uint256 fee,
+        FrontendFeeDisposition disposition
+    ) internal {
         if (fee == 0) return;
 
         address snapshotRegistryAddress = votingEngine.roundFrontendRegistrySnapshot(contentId, roundId);
-        if (snapshotRegistryAddress == address(0)) {
+        if (disposition == FrontendFeeDisposition.Direct || snapshotRegistryAddress == address(0)) {
             votingEngine.transferReward(frontend, fee);
+            return;
+        }
+
+        if (disposition == FrontendFeeDisposition.Protocol) {
+            _routeFrontendFeeToProtocol(fee);
             return;
         }
 
         IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
 
-        try snapshotRegistry.getFrontendInfo(frontend) returns (
-            address frontendOperator, uint256 stakedAmount, bool, bool slashed
-        ) {
-            if (frontendOperator == address(0)) {
-                votingEngine.transferReward(frontend, fee);
-                return;
-            }
-            if (slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
-                _routeFrontendFeeToProtocol(fee);
-                return;
-            }
-            try snapshotRegistry.creditFees(frontend, fee) {
-                votingEngine.transferReward(snapshotRegistryAddress, fee);
-            } catch {
-                _routeFrontendFeeToProtocol(fee);
-            }
+        try snapshotRegistry.creditFees(frontend, fee) {
+            votingEngine.transferReward(snapshotRegistryAddress, fee);
         } catch {
-            votingEngine.transferReward(frontend, fee);
+            _routeFrontendFeeToProtocol(fee);
         }
     }
 

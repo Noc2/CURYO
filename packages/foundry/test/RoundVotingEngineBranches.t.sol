@@ -191,7 +191,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "test goal", "test goal", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         contentId = 1;
     }
@@ -200,7 +200,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
     function _submitContentWithUrl(string memory url) internal returns (uint256) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent(url, "test goal", "test goal", "test", 0);
+        _submitContentWithReservation(registry, url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
         return registry.nextContentId() - 1;
     }
@@ -874,6 +874,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
         uint256 feesBefore = frontendRegistry.getAccumulatedFees(frontend1);
+        vm.prank(frontend1);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
         uint256 feesAfter = frontendRegistry.getAccumulatedFees(frontend1);
 
@@ -899,6 +900,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         uint256 feesBefore = frontendRegistry.getAccumulatedFees(frontend1);
+        vm.prank(frontend1);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
         uint256 feesAfter = frontendRegistry.getAccumulatedFees(frontend1);
 
@@ -923,9 +925,11 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         engine.settleRound(contentId, roundId);
 
+        vm.prank(frontend1);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
 
         vm.expectRevert(RoundVotingEngine.AlreadyClaimed.selector);
+        vm.prank(frontend1);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
     }
 
@@ -952,6 +956,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         engine.settleRound(contentId, roundId);
 
         vm.expectRevert(RoundRewardDistributor.NoPool.selector);
+        vm.prank(frontend1);
         rewardDistributor.claimFrontendFee(contentId, roundId, frontend1);
     }
 
@@ -1320,7 +1325,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId;
         vm.startPrank(delegate1);
         crepToken.approve(address(registry), 10e6);
-        contentId = registry.submitContent("https://example.com/delegate-self-vote", "goal", "goal", "tags", 0);
+        contentId = _submitContentWithReservation(registry, "https://example.com/delegate-self-vote", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
         bytes32 saltDelegate = keccak256(abi.encodePacked(delegate1, block.timestamp, "delegate"));

@@ -149,7 +149,7 @@ contract RoundIntegrationTest is VotingTestBase {
     function _submitContent() internal returns (uint256 contentId) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/1", "test goal", "test goal", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/1", "test goal", "test goal", "test", 0);
         vm.stopPrank();
         contentId = 1;
     }
@@ -159,7 +159,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
         string memory url = string(abi.encodePacked("https://example.com/", vm.toString(n)));
-        registry.submitContent(url, "test goal", "test goal", "test", 0);
+        _submitContentWithReservation(registry, url, "test goal", "test goal", "test", 0);
         vm.stopPrank();
         contentId = n;
     }
@@ -1508,7 +1508,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
 
         // Claim frontend fee
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
         assertGt(frontendReg.getAccumulatedFees(frontendOp) - feesBefore, 0, "Frontend fee should be credited");
     }
@@ -1518,11 +1518,11 @@ contract RoundIntegrationTest is VotingTestBase {
         (uint256 contentId, uint256 roundId) = _settleRoundWithFrontend(frontendOp);
 
         // First claim succeeds
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
         // Second claim reverts
         vm.expectRevert(RoundVotingEngine.AlreadyClaimed.selector);
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
     }
 
     function test_ClaimFrontendFee_PaysDeregisteredFrontendDirectly() public {
@@ -1535,7 +1535,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
         assertGt(crepToken.balanceOf(frontendOp) - frontendBalanceBefore, 0);
         assertEq(
@@ -1554,7 +1554,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 frontendBalanceBefore = crepToken.balanceOf(frontendOp);
         uint256 treasuryBalanceBefore = crepToken.balanceOf(treasury);
         uint256 reserveBefore = votingEngine.consensusReserve();
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _confiscateFrontendFee(contentId, roundId, frontendOp);
 
         assertEq(crepToken.balanceOf(frontendOp), frontendBalanceBefore, "slashed frontend must not be paid directly");
         assertEq(frontendReg.getAccumulatedFees(frontendOp), feesBefore, "slashed frontend must not accrue fees");
@@ -1580,7 +1580,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.stopPrank();
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
         assertGt(
             frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
@@ -1605,7 +1605,7 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.stopPrank();
 
         uint256 feesBefore = frontendReg.getAccumulatedFees(frontendOp);
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
         assertGt(
             frontendReg.getAccumulatedFees(frontendOp) - feesBefore,
@@ -1652,7 +1652,7 @@ contract RoundIntegrationTest is VotingTestBase {
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter3, ch3), false, s3);
 
         votingEngine.settleRound(contentId, roundId);
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
         assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "commit-time eligibility should remain preserved");
     }
@@ -1702,7 +1702,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         votingEngine.settleRound(contentId, roundId);
         vm.expectRevert(RoundRewardDistributor.NoPool.selector);
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
     }
 
     function test_FrontendTracking_KeepsCommitKeysAccessible() public {
@@ -1713,7 +1713,7 @@ contract RoundIntegrationTest is VotingTestBase {
 
         assertEq(commitKeys.length, 3);
 
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
         assertGt(frontendReg.getAccumulatedFees(frontendOp), 0, "Frontend fee claim should still succeed");
     }
 
@@ -1739,7 +1739,7 @@ contract RoundIntegrationTest is VotingTestBase {
         uint256 originalFeesBefore = originalRegistry.getAccumulatedFees(frontendOp);
         uint256 replacementFeesBefore = replacementRegistry.getAccumulatedFees(frontendOp);
 
-        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+        _claimFrontendFeeAsOperator(contentId, roundId, frontendOp);
 
         assertGt(
             originalRegistry.getAccumulatedFees(frontendOp) - originalFeesBefore,
@@ -1780,6 +1780,16 @@ contract RoundIntegrationTest is VotingTestBase {
         vm.warp(block.timestamp + frontendReg.UNBONDING_PERIOD() + 1);
         vm.prank(frontendOp);
         frontendReg.completeDeregister();
+    }
+
+    function _claimFrontendFeeAsOperator(uint256 contentId, uint256 roundId, address frontendOp) internal {
+        vm.prank(frontendOp);
+        rewardDistributor.claimFrontendFee(contentId, roundId, frontendOp);
+    }
+
+    function _confiscateFrontendFee(uint256 contentId, uint256 roundId, address frontendOp) internal {
+        vm.prank(owner);
+        rewardDistributor.confiscateFrontendFee(contentId, roundId, frontendOp);
     }
 
     // =========================================================================

@@ -14,10 +14,11 @@ import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { RewardMath } from "../contracts/libraries/RewardMath.sol";
 import { VotingHandler } from "./handlers/VotingHandler.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 /// @title InvariantSolvency
 /// @notice Invariant tests for pool solvency (C-01), token conservation (C-02), and balance solvency (C-03).
-contract InvariantSolvency is Test {
+contract InvariantSolvency is VotingTestBase {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
@@ -107,8 +108,8 @@ contract InvariantSolvency is Test {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://example.com/inv1", "test", "test", "test", 0);
-        registry.submitContent("https://example.com/inv2", "test", "test", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/inv1", "test", "test", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/inv2", "test", "test", "test", 0);
         vm.stopPrank();
 
         contentIds.push(1);

@@ -27,10 +27,10 @@ const FrontendCodes: NextPage = () => {
         </li>
         <li>
           <strong>Claim:</strong> First call{" "}
-          <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> on each settled round, then
-          withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code> while active, or with{" "}
-          <code>completeDeregister()</code> after exit. If governance slashes your frontend, you must restore the full
-          1,000 cREP bond before fee claims can accrue to you again.
+          <code>RoundRewardDistributor.claimFrontendFee(contentId, roundId, frontend)</code> from your operator address
+          on each settled round, then withdraw your accumulated cREP from <code>FrontendRegistry.claimFees()</code>{" "}
+          while active, or with <code>completeDeregister()</code> after exit. If governance slashes your frontend, you
+          must restore the full 1,000 cREP bond before fee claims can accrue to you again.
         </li>
       </ol>
 

@@ -313,7 +313,8 @@ CuryoReputation.transferAndCall(votingEngineAddress, stakeAmount, payload)`}</co
         the first round settles).
       </p>
       <pre>
-        <code>{`submitContent(url, title, description, tags, categoryId)
+        <code>{`reserveSubmission(revealCommitment)
+submitContent(url, title, description, tags, categoryId, salt)
 
 // Duplicate canonical URLs revert with "URL already submitted"`}</code>
       </pre>

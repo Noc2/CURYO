@@ -12,11 +12,12 @@ import { RoundLib } from "../contracts/libraries/RoundLib.sol";
 import { RoundEngineReadHelpers } from "./helpers/RoundEngineReadHelpers.sol";
 import { VotingHandler } from "./handlers/VotingHandler.sol";
 import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
+import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 
 /// @title InvariantRating
 /// @notice Invariant: after settlement, content rating is always in [0,100].
 ///         UP-majority rounds produce rating >= 50.
-contract InvariantRating is Test {
+contract InvariantRating is VotingTestBase {
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public engine;
@@ -105,8 +106,8 @@ contract InvariantRating is Test {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        registry.submitContent("https://example.com/rating1", "test", "test", "test", 0);
-        registry.submitContent("https://example.com/rating2", "test", "test", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/rating1", "test", "test", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/rating2", "test", "test", "test", 0);
         vm.stopPrank();
 
         contentIds.push(1);

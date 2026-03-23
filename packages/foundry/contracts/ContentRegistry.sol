@@ -35,6 +35,9 @@ contract ContentRegistry is
     uint256 public constant REVIVAL_STAKE = 5e6; // 5 cREP (6 decimals)
     uint256 public constant CANCELLATION_FEE = 1e6; // 1 cREP (prevents submit-cancel spam)
     uint256 public constant DORMANCY_PERIOD = 30 days;
+    uint256 public constant SUBMISSION_RESERVATION_PERIOD = 30 minutes;
+    uint256 public constant RESERVED_SUBMISSION_MIN_AGE = 1 seconds;
+    uint256 public constant DORMANT_EXCLUSIVE_REVIVAL_PERIOD = 1 days;
     uint8 public constant MAX_REVIVALS = 2;
 
     // Submitter stake rules
@@ -67,6 +70,14 @@ contract ContentRegistry is
         bool submitterStakeReturned;
         uint8 rating; // 0-100, starts at 50
         uint64 categoryId; // Reference to approved category
+    }
+
+    struct PendingSubmission {
+        address submitter;
+        address submitterIdentity;
+        uint64 reservedStake;
+        uint48 reservedAt;
+        uint48 expiresAt;
     }
 
     // --- State ---
@@ -107,16 +118,22 @@ contract ContentRegistry is
     /// @notice Canonical submitter identity snapshot (holder address if submitted through a delegate).
     mapping(uint256 => address) internal contentSubmitterIdentity;
 
+    /// @notice Hidden, time-bounded reservations for future content reveals.
+    mapping(bytes32 => PendingSubmission) public pendingSubmissions;
+
     /// @notice Meaningful-activity anchor used for dormancy checks.
     /// @dev Vote commits still update `lastActivityAt` for UI/analytics, but only submission, revival,
     ///      and milestone-0 settlement move the dormancy window forward.
     mapping(uint256 => uint256) internal dormancyAnchorAt;
 
+    /// @notice Timestamp after which a dormant content key may be publicly released for replacement.
+    mapping(uint256 => uint256) public dormantKeyReleasableAt;
+
     /// @dev Stateless helper used to resolve canonical submission keys without bloating the registry runtime.
     SubmissionCanonicalizer internal immutable SUBMISSION_CANONICALIZER;
 
     /// @dev Reserved storage gap for future upgrades
-    uint256[42] private __gap;
+    uint256[40] private __gap;
 
     // --- Events ---
     event ContentSubmitted(
@@ -130,7 +147,11 @@ contract ContentRegistry is
         uint256 indexed categoryId
     );
     event ContentCancelled(uint256 indexed contentId);
+    event SubmissionReserved(address indexed submitter, bytes32 indexed revealCommitment, uint256 expiresAt);
+    event SubmissionReservationCancelled(address indexed submitter, bytes32 indexed revealCommitment, uint256 refund);
+    event SubmissionReservationExpired(address indexed submitter, bytes32 indexed revealCommitment, uint256 refund);
     event ContentDormant(uint256 indexed contentId);
+    event DormantSubmissionKeyReleased(uint256 indexed contentId, bytes32 indexed submissionKey);
     event ContentRevived(uint256 indexed contentId, address indexed reviver);
     event SubmitterStakeReturned(uint256 indexed contentId, uint256 amount);
     event SubmitterStakeSlashed(uint256 indexed contentId, uint256 slashedAmount);
@@ -212,19 +233,57 @@ contract ContentRegistry is
 
     // --- Content Lifecycle ---
 
-    /// @notice Submit new content. Locks MIN_SUBMITTER_STAKE cREP tokens.
-    /// @param url The content URL (stored in event only).
-    /// @param title The content title (stored in event only).
-    /// @param description The content description (stored in event only).
-    /// @param tags Comma-separated subcategory tags (stored in event only).
-    /// @param categoryId The category ID hint. The URL determines the effective category and this hint must either
-    ///        match it or be 0.
+    /// @notice Reserve a hidden submission commitment before revealing the public content metadata.
+    /// @param revealCommitment Keccak-256 hash of the future submission reveal payload.
+    function reserveSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
+        // Require Voter ID if VoterIdNFT is configured
+        if (address(voterIdNFT) != address(0)) {
+            require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
+        }
+
+        require(revealCommitment != bytes32(0), "Invalid commitment");
+        PendingSubmission storage pending = pendingSubmissions[revealCommitment];
+        require(pending.submitter == address(0), "Reservation exists");
+
+        crepToken.safeTransferFrom(msg.sender, address(this), MIN_SUBMITTER_STAKE);
+
+        pendingSubmissions[revealCommitment] = PendingSubmission({
+            submitter: msg.sender,
+            submitterIdentity: _resolveSubmitterIdentity(msg.sender),
+            reservedStake: uint64(MIN_SUBMITTER_STAKE),
+            reservedAt: uint48(block.timestamp),
+            expiresAt: uint48(block.timestamp + SUBMISSION_RESERVATION_PERIOD)
+        });
+
+        emit SubmissionReserved(msg.sender, revealCommitment, block.timestamp + SUBMISSION_RESERVATION_PERIOD);
+    }
+
+    function cancelReservedSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
+        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        require(pending.submitter == msg.sender, "Not submitter");
+        delete pendingSubmissions[revealCommitment];
+
+        uint256 refund = _refundReservedSubmission(pending, msg.sender);
+        emit SubmissionReservationCancelled(msg.sender, revealCommitment, refund);
+    }
+
+    function clearExpiredReservedSubmission(bytes32 revealCommitment) external nonReentrant whenNotPaused {
+        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        require(pending.submitter != address(0), "Reservation not found");
+        require(block.timestamp > pending.expiresAt, "Reservation active");
+        delete pendingSubmissions[revealCommitment];
+
+        uint256 refund = _refundReservedSubmission(pending, pending.submitter);
+        emit SubmissionReservationExpired(pending.submitter, revealCommitment, refund);
+    }
+
     function submitContent(
         string calldata url,
         string calldata title,
         string calldata description,
         string calldata tags,
-        uint256 categoryId
+        uint256 categoryId,
+        bytes32 salt
     ) external nonReentrant whenNotPaused returns (uint256) {
         // Require Voter ID if VoterIdNFT is configured
         if (address(voterIdNFT) != address(0)) {
@@ -246,21 +305,26 @@ contract ContentRegistry is
             SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
 
         require(!submissionKeyUsed[submissionKey], "URL already submitted");
+
+        bytes32 revealCommitment =
+            _computeRevealCommitment(submissionKey, title, description, tags, categoryId, salt, msg.sender);
+        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
+        require(pending.submitter == msg.sender, "Reservation not found");
+        require(block.timestamp <= pending.expiresAt, "Reservation expired");
+        require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
+        delete pendingSubmissions[revealCommitment];
         submissionKeyUsed[submissionKey] = true;
 
         bytes32 contentHash = keccak256(abi.encode(url, title, description, tags));
-        address submitterIdentity = _resolveSubmitterIdentity(msg.sender);
-
-        crepToken.safeTransferFrom(msg.sender, address(this), MIN_SUBMITTER_STAKE);
 
         uint256 contentId = nextContentId++;
         contentSubmissionKey[contentId] = submissionKey;
-        contentSubmitterIdentity[contentId] = submitterIdentity;
+        contentSubmitterIdentity[contentId] = pending.submitterIdentity;
         contents[contentId] = Content({
             id: uint64(contentId),
             contentHash: contentHash,
             submitter: msg.sender,
-            submitterStake: uint64(MIN_SUBMITTER_STAKE),
+            submitterStake: pending.reservedStake,
             createdAt: uint48(block.timestamp),
             lastActivityAt: uint48(block.timestamp),
             status: ContentStatus.Active,
@@ -271,6 +335,7 @@ contract ContentRegistry is
             categoryId: uint64(resolvedCategoryId)
         });
         dormancyAnchorAt[contentId] = block.timestamp;
+        delete dormantKeyReleasableAt[contentId];
 
         emit ContentSubmitted(contentId, msg.sender, contentHash, url, title, description, tags, resolvedCategoryId);
 
@@ -346,10 +411,9 @@ contract ContentRegistry is
 
         c.status = ContentStatus.Dormant;
 
-        // Release canonical uniqueness so the content can be resubmitted (M-07 fix).
         bytes32 submissionKey = contentSubmissionKey[contentId];
         if (submissionKey != bytes32(0)) {
-            submissionKeyUsed[submissionKey] = false;
+            dormantKeyReleasableAt[contentId] = block.timestamp + DORMANT_EXCLUSIVE_REVIVAL_PERIOD;
         }
 
         _resolvePendingSubmitterStake(contentId, c);
@@ -372,8 +436,9 @@ contract ContentRegistry is
 
         bytes32 submissionKey = contentSubmissionKey[contentId];
         if (submissionKey != bytes32(0)) {
-            require(!submissionKeyUsed[submissionKey], "URL already submitted");
-            submissionKeyUsed[submissionKey] = true;
+            require(submissionKeyUsed[submissionKey], "Dormant key released");
+            require(contentSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not original submitter");
+            require(block.timestamp <= dormantKeyReleasableAt[contentId], "Revival window elapsed");
         }
 
         // M-1/M-2 fix: send revival stake to treasury instead of leaving it unaccounted
@@ -384,9 +449,26 @@ contract ContentRegistry is
         c.dormantCount++;
         c.lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
+        delete dormantKeyReleasableAt[contentId];
         c.reviver = msg.sender;
 
         emit ContentRevived(contentId, msg.sender);
+    }
+
+    /// @notice Release a dormant content key after the exclusive revival window expires.
+    function releaseDormantSubmissionKey(uint256 contentId) external nonReentrant {
+        Content storage c = contents[contentId];
+        require(c.id != 0, "Content does not exist");
+        require(c.status == ContentStatus.Dormant, "Not dormant");
+
+        bytes32 submissionKey = contentSubmissionKey[contentId];
+        require(submissionKey != bytes32(0), "No submission key");
+        require(submissionKeyUsed[submissionKey], "Key already released");
+        require(block.timestamp > dormantKeyReleasableAt[contentId], "Revival window active");
+
+        submissionKeyUsed[submissionKey] = false;
+
+        emit DormantSubmissionKeyReleased(contentId, submissionKey);
     }
 
     // --- VotingEngine callbacks ---
@@ -607,10 +689,52 @@ contract ContentRegistry is
         }
     }
 
+    /// @notice Preview the resolved category and canonical submission key for a future reveal.
+    function previewSubmissionKey(string calldata url, uint256 categoryId)
+        external
+        view
+        returns (uint256 resolvedCategoryId, bytes32 submissionKey)
+    {
+        require(bytes(url).length > 0, "URL required");
+        require(bytes(url).length <= MAX_URL_LENGTH, "URL too long");
+        require(_isValidSubmissionUrl(url), "Invalid URL");
+        require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
+        return SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
+    }
+
     /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
     function resolveSubmissionKey(string calldata url) external view returns (bytes32 submissionKey) {
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
         (, submissionKey) = SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, 0);
+    }
+
+    function _computeRevealCommitment(
+        bytes32 submissionKey,
+        string calldata title,
+        string calldata description,
+        string calldata tags,
+        uint256 categoryId,
+        bytes32 salt,
+        address submitter
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
+    }
+
+    function _refundReservedSubmission(PendingSubmission memory pending, address recipient) internal returns (uint256 refund) {
+        uint256 reservedStake = pending.reservedStake;
+        if (reservedStake == 0) return 0;
+
+        uint256 fee = reservedStake >= CANCELLATION_FEE ? CANCELLATION_FEE : reservedStake;
+        refund = reservedStake - fee;
+
+        if (fee > 0) {
+            address feeSink = bonusPool != address(0) ? bonusPool : treasury;
+            require(feeSink != address(0), "Fee sink not set");
+            crepToken.safeTransfer(feeSink, fee);
+        }
+        if (refund > 0) {
+            crepToken.safeTransfer(recipient, refund);
+        }
     }
 
     function _resolveSubmitterIdentity(address submitter) internal view returns (address) {

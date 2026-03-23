@@ -112,7 +112,7 @@ contract AdversarialTests is VotingTestBase {
     function _submitContent() internal returns (uint256) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/adv", "test", "test", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/adv", "test", "test", "test", 0);
         vm.stopPrank();
         return 1;
     }
@@ -120,7 +120,7 @@ contract AdversarialTests is VotingTestBase {
     function _submitContent2() internal returns (uint256) {
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/adv2", "test", "test", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/adv2", "test", "test", "test", 0);
         vm.stopPrank();
         return 2;
     }
@@ -574,7 +574,7 @@ contract AdversarialTests is VotingTestBase {
         // Submit content
         vm.startPrank(submitter);
         token2.approve(address(reg2), 10e6);
-        reg2.submitContent("https://example.com/zero", "test", "test", "test", 0);
+        _submitContentWithReservation(reg2, "https://example.com/zero", "test", "test", "test", 0);
         vm.stopPrank();
 
         // Unanimous votes
@@ -755,7 +755,7 @@ contract AdversarialTests is VotingTestBase {
         // For a NEW content item, it should be blocked by per-token cooldown.
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        registry.submitContent("https://example.com/adv3", "test", "test", "test", 0);
+        _submitContentWithReservation(registry, "https://example.com/adv3", "test", "test", "test", 0);
         vm.stopPrank();
 
         // Delegate tries to vote on SAME content — blocked by CooldownActive (checked before IdentityAlreadyCommitted)
