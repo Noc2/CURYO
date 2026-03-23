@@ -1,10 +1,5 @@
 import * as schema from "./schema";
 import { drizzle as drizzleNodePg } from "drizzle-orm/node-postgres";
-import { drizzle as drizzlePgProxy } from "drizzle-orm/pg-proxy";
-import * as fs from "node:fs";
-import { createRequire } from "node:module";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Pool, type PoolConfig, type QueryResult, type QueryResultRow } from "pg";
 import "server-only";
 import { getDatabaseConfig } from "~~/lib/env/server";
@@ -21,9 +16,6 @@ type DatabaseResources = {
   pool: Pool;
 };
 
-const MIGRATION_BREAKPOINT = "--> statement-breakpoint";
-const require = createRequire(import.meta.url);
-
 function normalizeQuery(input: QueryInput) {
   const text = typeof input === "string" ? input : input.sql;
   const values = typeof input === "string" ? [] : (input.args ?? []);
@@ -35,42 +27,6 @@ function normalizeQuery(input: QueryInput) {
     text: parameterizedText,
     values,
   };
-}
-
-function getMigrationDirectory() {
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../drizzle");
-}
-
-function applySqlStatements(sqlText: string, execute: (statement: string) => void) {
-  for (const statement of sqlText
-    .split(MIGRATION_BREAKPOINT)
-    .map(part => part.trim())
-    .filter(Boolean)) {
-    execute(statement);
-  }
-}
-
-function createMemoryPool(): Pool {
-  const migrationDirectory = getMigrationDirectory();
-  const { newDb } = require("pg-mem") as typeof import("pg-mem");
-  const memoryDb = newDb();
-
-  if (fs.existsSync(migrationDirectory)) {
-    const files = fs
-      .readdirSync(migrationDirectory)
-      .filter(file => file.endsWith(".sql"))
-      .sort((a, b) => a.localeCompare(b));
-
-    for (const file of files) {
-      const sqlText = fs.readFileSync(path.join(migrationDirectory, file), "utf8");
-      applySqlStatements(sqlText, statement => {
-        memoryDb.public.none(statement);
-      });
-    }
-  }
-
-  const adapter = memoryDb.adapters.createPg();
-  return new adapter.Pool() as unknown as Pool;
 }
 
 function createPool(config: { url: string }): Pool {
@@ -94,27 +50,7 @@ function createDatabaseResources(): DatabaseResources {
   const config = getDatabaseConfig();
 
   if (config.url === "memory:") {
-    const pool = createMemoryPool();
-    const client = createDatabaseClient(pool);
-    const database = drizzlePgProxy(
-      async (query, params) => {
-        const result = await pool.query({
-          text: query,
-          values: params,
-        });
-
-        return {
-          rows: result.rows,
-        };
-      },
-      { schema },
-    ) as unknown as ReturnType<typeof drizzleNodePg>;
-
-    return {
-      client,
-      database,
-      pool,
-    };
+    throw new Error("In-memory database support is only available through test helpers.");
   }
 
   const pool = createPool(config);
@@ -129,8 +65,13 @@ function createDatabaseResources(): DatabaseResources {
 }
 
 let resources: DatabaseResources | null = null;
+let resourcesOverride: DatabaseResources | null = null;
 
 function getDatabaseResources(): DatabaseResources {
+  if (resourcesOverride) {
+    return resourcesOverride;
+  }
+
   if (!resources) {
     resources = createDatabaseResources();
   }
@@ -161,3 +102,9 @@ function createLazyProxy<T extends object>(getValue: () => T): T {
 export const db = createLazyProxy(() => getDatabaseResources().database);
 export const dbClient = createLazyProxy(() => getDatabaseResources().client);
 export const dbPool = createLazyProxy(() => getDatabaseResources().pool);
+
+export function __setDatabaseResourcesForTests(value: DatabaseResources | null) {
+  resourcesOverride = value;
+}
+
+export type { DatabaseClient, DatabaseResources, QueryInput };

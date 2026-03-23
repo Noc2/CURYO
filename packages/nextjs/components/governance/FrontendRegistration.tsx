@@ -593,7 +593,9 @@ export function FrontendRegistration() {
                 <button
                   className="btn btn-submit btn-sm w-full"
                   onClick={handleClaimAllRoundFees}
-                  disabled={isClaimingAllRoundFees || isAwaitingSponsoredSubmitCalls || isMissingGasBalance || isSlashed}
+                  disabled={
+                    isClaimingAllRoundFees || isAwaitingSponsoredSubmitCalls || isMissingGasBalance || isSlashed
+                  }
                 >
                   {isClaimingAllRoundFees ? (
                     <span className="flex items-center gap-2">
@@ -683,7 +685,9 @@ export function FrontendRegistration() {
               <button
                 className="btn btn-submit btn-sm"
                 onClick={handleClaimFees}
-                disabled={isClaiming || isAwaitingSponsoredSubmitCalls || isMissingGasBalance || !hasFees || isExitPending}
+                disabled={
+                  isClaiming || isAwaitingSponsoredSubmitCalls || isMissingGasBalance || !hasFees || isExitPending
+                }
               >
                 {isClaiming ? <span className="loading loading-spinner loading-xs" /> : "Claim"}
               </button>

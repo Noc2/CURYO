@@ -1,24 +1,32 @@
 import assert from "node:assert/strict";
-import { before, beforeEach, test } from "node:test";
+import { after, before, beforeEach, test } from "node:test";
 
 process.env.DATABASE_URL = "memory:";
 
 type ContentWatchModule = typeof import("./contentWatch");
 type DbModule = typeof import("../db");
+type DbTestMemoryModule = typeof import("../db/testMemory");
 
 let contentWatch: ContentWatchModule;
 let dbModule: DbModule;
+let dbTestMemory: DbTestMemoryModule;
 
 const WALLET = "0x1234567890abcdef1234567890abcdef12345678" as const;
 
 before(async () => {
-  contentWatch = await import("./contentWatch");
   dbModule = await import("../db");
+  dbTestMemory = await import("../db/testMemory");
+  dbModule.__setDatabaseResourcesForTests(dbTestMemory.createMemoryDatabaseResources());
+  contentWatch = await import("./contentWatch");
   await contentWatch.ensureWatchedContentTable();
 });
 
 beforeEach(async () => {
   await dbModule.dbClient.execute("DELETE FROM watched_content");
+});
+
+after(() => {
+  dbModule.__setDatabaseResourcesForTests(null);
 });
 
 test("createWatchlistTimestamp truncates to whole seconds", () => {

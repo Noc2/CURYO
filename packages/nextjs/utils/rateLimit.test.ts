@@ -12,9 +12,11 @@ env.DATABASE_URL = "memory:";
 
 type RateLimitModule = typeof import("./rateLimit");
 type DbModule = typeof import("../lib/db");
+type DbTestMemoryModule = typeof import("../lib/db/testMemory");
 
 let rateLimit: RateLimitModule;
 let dbModule: DbModule;
+let dbTestMemory: DbTestMemoryModule;
 
 function makeRequest(pathname: string, method = "GET", headers: Record<string, string> = {}) {
   return new NextRequest(`http://localhost${pathname}`, {
@@ -26,8 +28,10 @@ function makeRequest(pathname: string, method = "GET", headers: Record<string, s
 before(async () => {
   env.NODE_ENV = "production";
   env.RATE_LIMIT_TRUSTED_IP_HEADERS = "x-forwarded-for";
-  rateLimit = await import("./rateLimit");
   dbModule = await import("../lib/db");
+  dbTestMemory = await import("../lib/db/testMemory");
+  dbModule.__setDatabaseResourcesForTests(dbTestMemory.createMemoryDatabaseResources());
+  rateLimit = await import("./rateLimit");
 
   await rateLimit.checkRateLimit(
     makeRequest("/__rate_limit_init__", "GET", {
@@ -47,6 +51,8 @@ beforeEach(async () => {
 });
 
 after(() => {
+  dbModule.__setDatabaseResourcesForTests(null);
+
   if (originalDatabaseUrl === undefined) {
     delete env.DATABASE_URL;
   } else {

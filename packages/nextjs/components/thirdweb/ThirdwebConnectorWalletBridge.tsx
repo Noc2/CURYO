@@ -34,7 +34,11 @@ export function ThirdwebConnectorWalletBridge() {
     const connectorWalletAddress = normalizeAddress(connectorWallet.getAccount()?.address);
     const activeWalletAddress = normalizeAddress(activeWallet?.getAccount()?.address);
 
-    if (!normalizedAddress || connectorWalletAddress !== normalizedAddress || activeWalletAddress === normalizedAddress) {
+    if (
+      !normalizedAddress ||
+      connectorWalletAddress !== normalizedAddress ||
+      activeWalletAddress === normalizedAddress
+    ) {
       setActiveAttemptRef.current = null;
       return;
     }
@@ -62,7 +66,11 @@ export function ThirdwebConnectorWalletBridge() {
     const activeWalletAddress = normalizeAddress(activeWallet?.getAccount()?.address);
     const connectorWalletAddress = normalizeAddress(connectorWallet?.getAccount()?.address);
 
-    if (!normalizedAddress || activeWalletAddress === normalizedAddress || connectorWalletAddress === normalizedAddress) {
+    if (
+      !normalizedAddress ||
+      activeWalletAddress === normalizedAddress ||
+      connectorWalletAddress === normalizedAddress
+    ) {
       reconnectAttemptRef.current = null;
       return;
     }
@@ -74,12 +82,10 @@ export function ThirdwebConnectorWalletBridge() {
 
     reconnectAttemptRef.current = attemptKey;
 
-    void connector
-      .getProvider({ chainId })
-      .catch(error => {
-        console.error("Failed to reconnect thirdweb wallet from wagmi connector:", error);
-        reconnectAttemptRef.current = null;
-      });
+    void connector.getProvider({ chainId }).catch(error => {
+      console.error("Failed to reconnect thirdweb wallet from wagmi connector:", error);
+      reconnectAttemptRef.current = null;
+    });
   }, [activeWallet, address, chainId, connector, connectorWallet]);
 
   return null;
