@@ -132,12 +132,9 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @param to Address to receive tokens
     /// @param amount Amount to withdraw (use type(uint256).max for full balance)
     function withdrawRemaining(address to, uint256 amount) external onlyOwner nonReentrant {
-        require(to != address(0), "Invalid address");
-        uint256 withdrawAmount = amount > poolBalance ? poolBalance : amount;
-        require(withdrawAmount > 0, "Nothing to withdraw");
-        poolBalance -= withdrawAmount;
-        crepToken.safeTransfer(to, withdrawAmount);
-        emit PoolWithdrawal(to, withdrawAmount);
+        to;
+        amount;
+        revert("Withdraw disabled");
     }
 
     /// @notice Recover tokens that were transferred directly to the contract without increasing poolBalance.

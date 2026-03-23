@@ -317,8 +317,7 @@ contract HumanFaucetCoverageTest is Test {
     // --- InsufficientFaucetBalance ---
 
     function test_ClaimRevertsWhenFaucetEmpty() public {
-        vm.prank(admin);
-        faucet.withdrawRemaining(admin, type(uint256).max);
+        _drainFaucet(crep.balanceOf(address(faucet)));
 
         mockHub.setVerified(user1);
         vm.expectRevert(HumanFaucet.InsufficientFaucetBalance.selector);
@@ -332,8 +331,7 @@ contract HumanFaucetCoverageTest is Test {
         uint256 balance = crep.balanceOf(address(faucet));
         uint256 currentAmount = faucet.getCurrentClaimAmount();
         uint256 toWithdraw = balance - (currentAmount - 1);
-        vm.prank(admin);
-        faucet.withdrawRemaining(admin, toWithdraw);
+        _drainFaucet(toWithdraw);
 
         mockHub.setVerified(user2);
         bytes memory userData = abi.encodePacked(user1);
@@ -479,11 +477,9 @@ contract HumanFaucetCoverageTest is Test {
     // --- withdrawRemaining edge cases ---
 
     function test_WithdrawRemainingNothingToWithdraw() public {
+        _drainFaucet(crep.balanceOf(address(faucet)));
         vm.prank(admin);
-        faucet.withdrawRemaining(admin, type(uint256).max);
-
-        vm.prank(admin);
-        vm.expectRevert("Nothing to withdraw");
+        vm.expectRevert("Withdraw disabled");
         faucet.withdrawRemaining(admin, 100);
     }
 
@@ -500,6 +496,11 @@ contract HumanFaucetCoverageTest is Test {
 
     function _setTotalClaimants(uint256 value) internal {
         vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+    }
+
+    function _drainFaucet(uint256 amount) internal {
+        vm.prank(address(faucet));
+        crep.transfer(admin, amount);
     }
 }
 

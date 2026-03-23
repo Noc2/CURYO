@@ -612,24 +612,15 @@ contract HumanFaucetTest is Test {
     // --- Withdraw Remaining Tests ---
 
     function test_WithdrawRemaining() public {
-        uint256 faucetBalance = crepToken.balanceOf(address(faucet));
-        uint256 withdrawAmount = 1_000_000e6;
-
         vm.prank(admin);
-        faucet.withdrawRemaining(admin, withdrawAmount);
-
-        assertEq(crepToken.balanceOf(admin), withdrawAmount);
-        assertEq(crepToken.balanceOf(address(faucet)), faucetBalance - withdrawAmount);
+        vm.expectRevert("Withdraw disabled");
+        faucet.withdrawRemaining(admin, 1_000_000e6);
     }
 
     function test_WithdrawRemainingFullBalance() public {
-        uint256 faucetBalance = crepToken.balanceOf(address(faucet));
-
         vm.prank(admin);
+        vm.expectRevert("Withdraw disabled");
         faucet.withdrawRemaining(admin, type(uint256).max);
-
-        assertEq(crepToken.balanceOf(admin), faucetBalance);
-        assertEq(crepToken.balanceOf(address(faucet)), 0);
     }
 
     function test_WithdrawRemainingOnlyOwner() public {
@@ -640,7 +631,7 @@ contract HumanFaucetTest is Test {
 
     function test_WithdrawRemainingRevertsZeroAddress() public {
         vm.prank(admin);
-        vm.expectRevert("Invalid address");
+        vm.expectRevert("Withdraw disabled");
         faucet.withdrawRemaining(address(0), 1_000e6);
     }
 
@@ -670,14 +661,15 @@ contract HumanFaucetTest is Test {
         assertEq(crepToken.balanceOf(user1), TIER_0_AMOUNT);
     }
 
-    function test_Pause_WithdrawStillWorks() public {
+    function test_Pause_WithdrawRemainsDisabled() public {
         vm.prank(admin);
         faucet.pause();
 
         uint256 faucetBalance = crepToken.balanceOf(address(faucet));
         vm.prank(admin);
+        vm.expectRevert("Withdraw disabled");
         faucet.withdrawRemaining(admin, faucetBalance);
-        assertEq(crepToken.balanceOf(admin), faucetBalance);
+        assertEq(crepToken.balanceOf(address(faucet)), faucetBalance);
     }
 
     function test_Pause_OnlyOwner() public {

@@ -175,11 +175,9 @@ contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     /// @param to Address to receive the tokens
     /// @param amount Amount to withdraw (use type(uint256).max for full balance)
     function withdrawRemaining(address to, uint256 amount) external onlyOwner {
-        require(to != address(0), "Invalid address");
-        uint256 balance = crepToken.balanceOf(address(this));
-        uint256 withdrawAmount = amount > balance ? balance : amount;
-        require(withdrawAmount > 0, "Nothing to withdraw");
-        crepToken.safeTransfer(to, withdrawAmount);
+        to;
+        amount;
+        revert("Withdraw disabled");
     }
 
     /// @notice Set the Voter ID NFT contract address

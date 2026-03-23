@@ -73,10 +73,9 @@ contract FormalVerification_GovernanceTest is Test {
         return governor.propose(targets, values, calldatas, desc);
     }
 
-    // ==================== Test 1: Early Capture - First 1000 Claimants ====================
+    // ==================== Test 1: Bootstrap Quorum Floor Dominates Early ====================
 
-    /// @notice 1000 users x 1000 cREP = 1M circulating. Quorum = max(40K, 10K) = 40K.
-    ///         40 users (4%) can meet quorum.
+    /// @notice 1000 users x 1000 cREP = 1M circulating. Dynamic quorum is 40K, but the 500K floor dominates.
     function test_EarlyCapture_First1000Claimants() public {
         // Simulate 1M circulating (1000 users x 1000 cREP) via single address
         _mintCirculating(address(100), 1_000_000e6);
@@ -84,17 +83,17 @@ contract FormalVerification_GovernanceTest is Test {
         vm.roll(block.number + 1);
 
         uint256 q = governor.quorum(block.number - 1);
-        // circulating = 1M, quorum = 4% of 1M = 40K
-        assertEq(q, 40_000e6, "Quorum = 40K cREP with 1M circulating");
+        // circulating = 1M, dynamic quorum = 40K, bootstrap floor = 500K
+        assertEq(q, 500_000e6, "Bootstrap floor holds quorum at 500K cREP with 1M circulating");
 
-        // 40 users x 1000 cREP = 40K = quorum
+        // 500 users x 1000 cREP = 500K = quorum
         uint256 usersForQuorum = q / 1000e6;
-        assertEq(usersForQuorum, 40, "40 of 1000 users (4%) meet quorum");
+        assertEq(usersForQuorum, 500, "Half the cohort is still needed while the bootstrap floor is active");
     }
 
     // ==================== Test 2: Minimum Floor Prevents Tiny Capture ====================
 
-    /// @notice 10 users x 1000 cREP = 10K circulating. Dynamic quorum = 400, but floor = 10K.
+    /// @notice 10 users x 1000 cREP = 10K circulating. Dynamic quorum = 400, but floor = 500K.
     function test_EarlyCapture_MinFloor_TinyCirculating() public {
         // Only 10K circulating
         _mintCirculating(address(100), 10_000e6);
@@ -102,11 +101,11 @@ contract FormalVerification_GovernanceTest is Test {
         vm.roll(block.number + 1);
 
         uint256 q = governor.quorum(block.number - 1);
-        // circulating = 10K, dynamic = 4% of 10K = 400, floor = 10K
-        assertEq(q, 10_000e6, "Floor of 10K cREP enforced");
+        // circulating = 10K, dynamic = 4% of 10K = 400, floor = 500K
+        assertEq(q, 500_000e6, "Floor of 500K cREP enforced");
 
-        // Need ALL 10K to meet quorum (100% of circulating)
-        assertEq(q, 10_000e6, "All 10 users needed to meet quorum");
+        // Quorum intentionally exceeds live circulation during bootstrap.
+        assertGt(q, 10_000e6, "Bootstrap quorum intentionally exceeds tiny circulating supply");
     }
 
     // ==================== Test 3: Quorum Grows as Faucet Drains ====================
@@ -120,16 +119,16 @@ contract FormalVerification_GovernanceTest is Test {
         uint256 beforeSnapshotBlock = transferBlock - 1;
         uint256 qBefore = governor.quorum(beforeSnapshotBlock);
 
-        // Faucet transfers 10M to users (simulating claims)
+        // Faucet transfers 20M to users (simulating claims) so dynamic quorum exceeds the bootstrap floor.
         vm.prank(mockFaucet);
-        token.transfer(address(101), 10_000_000e6);
+        token.transfer(address(101), 20_000_000e6);
 
         vm.roll(transferBlock + 1);
         uint256 qAfter = governor.quorum(transferBlock);
 
-        // Circulating went from 1M to 11M, quorum from 40K to 440K
+        // Circulating went from 1M to 21M, quorum from the 500K floor to 840K
         assertGt(qAfter, qBefore, "Quorum increases as faucet drains");
-        assertEq(qAfter, 440_000e6, "4% of 11M = 440K");
+        assertEq(qAfter, 840_000e6, "4% of 21M = 840K");
     }
 
     // ==================== Test 4: Mature Protocol Quorum ====================
@@ -155,15 +154,15 @@ contract FormalVerification_GovernanceTest is Test {
         assertEq(q, 2_000_000e6, "Mature quorum = 2M cREP");
     }
 
-    // ==================== Test 5: Proposal Spam at 100 cREP Threshold ====================
+    // ==================== Test 5: Proposal Spam at 100K cREP Threshold ====================
 
-    /// @notice Anyone with 100 cREP can create proposals. Multiple proposals allowed.
-    function test_ProposalSpam_100CREPThreshold() public {
-        // Create 5 different proposers each with exactly 100 cREP (threshold)
+    /// @notice Anyone with 100K cREP can still create proposals, so threshold hardening is only one layer.
+    function test_ProposalSpam_100KCREPThreshold() public {
+        // Create 5 different proposers each with exactly 100K cREP (threshold)
         address[5] memory proposers;
         for (uint256 i = 0; i < 5; i++) {
             proposers[i] = address(uint160(200 + i));
-            _mintCirculating(proposers[i], 100e6);
+            _mintCirculating(proposers[i], 100_000e6);
         }
 
         vm.roll(block.number + 1);
@@ -176,23 +175,24 @@ contract FormalVerification_GovernanceTest is Test {
         }
 
         // Document finding: no per-address rate limit on proposals
-        assertEq(governor.proposalThreshold(), 100e6, "100 cREP threshold - no rate limit");
+        assertEq(governor.proposalThreshold(), 100_000e6, "100K cREP threshold - no rate limit");
     }
 
     // ==================== Test 6: Whale Unilateral Pass ====================
 
-    /// @notice Whale with 200K in 4M circulating can pass alone (quorum=160K, >50% of votes).
+    /// @notice A whale can still pass alone once circulation is large enough that 4% exceeds the bootstrap floor.
     function test_WhaleGovernance_UnilateralPass() public {
-        // Max supply = 100M, pools = 96M, so 4M available for circulating
+        // Drain 20M from the excluded faucet balance into circulation. Quorum becomes 800K.
         address whale = address(200);
-        _mintCirculating(whale, 200_000e6);
-        // Rest of circulating dispersed (but don't vote)
-        _mintCirculating(address(201), 3_800_000e6);
+        vm.startPrank(mockFaucet);
+        token.transfer(whale, 900_000e6);
+        token.transfer(address(201), 19_100_000e6);
+        vm.stopPrank();
 
         vm.roll(block.number + 1);
 
         uint256 q = governor.quorum(block.number - 1);
-        assertEq(q, 160_000e6, "Quorum = 160K with 4M circulating");
+        assertEq(q, 800_000e6, "Quorum = 800K with 20M circulating");
 
         // Whale creates and votes on proposal
         uint256 pid = _propose(whale, "Whale proposal");
@@ -204,7 +204,7 @@ contract FormalVerification_GovernanceTest is Test {
         // Advance past voting period
         vm.roll(block.number + governor.votingPeriod() + 1);
 
-        // Proposal should succeed: 200K > 160K quorum, 100% of votes FOR
+        // Proposal should succeed: 900K > 800K quorum, 100% of votes FOR
         assertEq(
             uint256(governor.state(pid)), uint256(IGovernor.ProposalState.Succeeded), "Whale passes proposal alone"
         );
@@ -224,7 +224,7 @@ contract FormalVerification_GovernanceTest is Test {
         _mintCirculating(coalition[0], 100_000e6);
         _mintCirculating(coalition[1], 100_000e6);
         _mintCirculating(coalition[2], 100_000e6);
-        // Total circulating = 500K, quorum = 20K
+        // Total circulating = 500K, so the 500K bootstrap floor still applies.
 
         vm.roll(block.number + 1);
 
@@ -306,13 +306,13 @@ contract FormalVerification_GovernanceTest is Test {
         uint256 pid = _propose(voter, "Lock test");
         vm.roll(block.number + governor.votingDelay() + 1);
 
-        // Vote locks tokens (propose already locked 100 cREP threshold)
+        // Vote locks tokens (propose already locked the 100K cREP threshold)
         vm.prank(voter);
         governor.castVote(pid, 1);
 
         uint256 locked = token.getLockedBalance(voter);
-        // Locked = proposal threshold (100 cREP) + voting power (1M cREP) = 1,000,100 cREP
-        assertEq(locked, 1_000_100e6, "Proposal threshold + voting power locked");
+        // Locked = proposal threshold (100K cREP) + voting power (1M cREP) = 1.1M cREP
+        assertEq(locked, 1_100_000e6, "Proposal threshold + voting power locked");
 
         // Cannot transfer while locked
         vm.prank(voter);

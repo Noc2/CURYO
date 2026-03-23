@@ -19,7 +19,7 @@ import { CuryoReputation } from "../CuryoReputation.sol";
 ///      - Simple counting (For/Against/Abstain)
 ///      - Votes from cREP token (which implements ERC20Votes)
 ///      - Dynamic quorum: 4% of circulating supply (total minus protocol-controlled balances)
-///      - Minimum quorum floor of 10K cREP to prevent trivial early proposals
+///      - Bootstrap quorum floor of 500K cREP to prevent early capture while circulation is thin
 ///      - Timelock execution for security
 ///      - 7-day token lock when voting or proposing
 contract CuryoGovernor is
@@ -39,8 +39,10 @@ contract CuryoGovernor is
     mapping(address => bool) public isExcludedHolder;
     /// @notice Whether excluded holders have been set (one-time initialization)
     bool public poolsInitialized;
-    /// @notice Minimum quorum regardless of circulating supply (10K cREP with 6 decimals)
-    uint256 public constant MINIMUM_QUORUM = 10_000 * 1e6;
+    /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (100K cREP with 6 decimals)
+    uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 100_000 * 1e6;
+    /// @notice Minimum quorum regardless of circulating supply (500K cREP with 6 decimals)
+    uint256 public constant MINIMUM_QUORUM = 500_000 * 1e6;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
 
@@ -52,7 +54,7 @@ contract CuryoGovernor is
         GovernorSettings(
             7200, // Voting delay: ~1 day (assuming 12s blocks)
             50400, // Voting period: ~1 week
-            100e6 // Proposal threshold: 100 cREP (with 6 decimals)
+            BOOTSTRAP_PROPOSAL_THRESHOLD
         )
         GovernorVotes(_crepToken)
         GovernorVotesQuorumFraction(4) // 4% of circulating supply
@@ -105,7 +107,7 @@ contract CuryoGovernor is
 
     /// @notice Dynamic quorum: 4% of circulating supply (total minus excluded protocol-controlled balances)
     /// @dev Uses historical excluded-holder balances at `blockNumber` to align with snapshotted total supply.
-    ///      Returns at least MINIMUM_QUORUM to prevent trivial early proposals.
+    ///      Returns at least MINIMUM_QUORUM to keep early bootstrap governance intentionally conservative.
     function quorum(uint256 blockNumber) public view override(Governor, GovernorVotesQuorumFraction) returns (uint256) {
         uint256 totalSupply = token().getPastTotalSupply(blockNumber);
         uint256 locked;

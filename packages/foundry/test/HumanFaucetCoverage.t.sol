@@ -174,9 +174,7 @@ contract HumanFaucetCoverageTest is Test {
     }
 
     function test_GetRemainingClaims_ZeroBalance_ReturnsZero() public {
-        // Withdraw all tokens
-        vm.prank(admin);
-        faucet.withdrawRemaining(admin, type(uint256).max);
+        _drainFaucet(crepToken.balanceOf(address(faucet)));
 
         assertEq(faucet.getRemainingClaims(), 0);
     }
@@ -186,9 +184,7 @@ contract HumanFaucetCoverageTest is Test {
     // =========================================================================
 
     function test_Claim_InsufficientBalance_Reverts() public {
-        // Withdraw all but 1 cREP
-        vm.prank(admin);
-        faucet.withdrawRemaining(admin, 52_000_000e6 - 1e6);
+        _drainFaucet(52_000_000e6 - 1e6);
 
         mockHub.setVerified(user1);
         vm.expectRevert(HumanFaucet.InsufficientFaucetBalance.selector);
@@ -203,8 +199,7 @@ contract HumanFaucetCoverageTest is Test {
         // Withdraw most tokens — leave enough for base claim but not base+referral
         uint256 balance = crepToken.balanceOf(address(faucet));
         // Leave TIER_0_AMOUNT (10,000) which is less than needed with referral (10,000+5,000+5,000=20,000)
-        vm.prank(admin);
-        faucet.withdrawRemaining(admin, balance - TIER_0_AMOUNT);
+        _drainFaucet(balance - TIER_0_AMOUNT);
 
         // Claim with referral should fail — needs 15,000 for claimant + 5,000 for referrer
         mockHub.setVerified(user2);
@@ -292,22 +287,16 @@ contract HumanFaucetCoverageTest is Test {
     // =========================================================================
 
     function test_WithdrawRemaining_AmountExceedsBalance_CapsToBalance() public {
-        uint256 balance = crepToken.balanceOf(address(faucet));
-
+        uint256 amount = crepToken.balanceOf(address(faucet)) + 1_000_000e6;
         vm.prank(admin);
-        faucet.withdrawRemaining(admin, balance + 1_000_000e6);
-
-        // Should withdraw exactly balance (capped)
-        assertEq(crepToken.balanceOf(admin), balance);
-        assertEq(crepToken.balanceOf(address(faucet)), 0);
+        vm.expectRevert("Withdraw disabled");
+        faucet.withdrawRemaining(admin, amount);
     }
 
     function test_WithdrawRemaining_ZeroBalance_Reverts() public {
+        _drainFaucet(crepToken.balanceOf(address(faucet)));
         vm.prank(admin);
-        faucet.withdrawRemaining(admin, type(uint256).max);
-
-        vm.prank(admin);
-        vm.expectRevert("Nothing to withdraw");
+        vm.expectRevert("Withdraw disabled");
         faucet.withdrawRemaining(admin, 1e6);
     }
 
@@ -519,5 +508,10 @@ contract HumanFaucetCoverageTest is Test {
     /// @dev Storage slot 6 for totalClaimants (from `forge inspect HumanFaucet storage`)
     function _setTotalClaimants(uint256 value) internal {
         vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+    }
+
+    function _drainFaucet(uint256 amount) internal {
+        vm.prank(address(faucet));
+        crepToken.transfer(admin, amount);
     }
 }

@@ -219,9 +219,8 @@ contract FormalVerification_ParticipationPoolTest is Test {
 
     /// @notice Empty pool returns 0 reward without reverting.
     function test_EmptyPool_GracefulDegradation() public {
-        // Drain pool to 0 via admin withdrawal
-        vm.prank(admin);
-        pool.withdrawRemaining(admin, type(uint256).max);
+        // Drain the tracked pool balance to 0 without relying on the disabled owner sweep.
+        _setPoolBalance(0);
         assertEq(pool.poolBalance(), 0, "Pool drained");
 
         uint256 balBefore = crepToken.balanceOf(user);

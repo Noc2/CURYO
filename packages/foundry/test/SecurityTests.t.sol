@@ -528,8 +528,10 @@ contract SecurityAccessControlTest is Test {
     address attacker = address(0xF1);
 
     bytes32 CONFIG_ROLE_ENGINE;
+    bytes32 TREASURY_ROLE_ENGINE;
     bytes32 PAUSER_ROLE_ENGINE;
     bytes32 CONFIG_ROLE_REGISTRY;
+    bytes32 TREASURY_ROLE_REGISTRY;
     bytes32 PAUSER_ROLE_REGISTRY;
     bytes32 MINTER_ROLE_TOKEN;
     bytes32 CONFIG_ROLE_TOKEN;
@@ -577,8 +579,10 @@ contract SecurityAccessControlTest is Test {
         vm.stopPrank();
 
         CONFIG_ROLE_ENGINE = ProtocolConfig(protocolConfigAddress).CONFIG_ROLE();
+        TREASURY_ROLE_ENGINE = ProtocolConfig(protocolConfigAddress).TREASURY_ROLE();
         PAUSER_ROLE_ENGINE = votingEngine.PAUSER_ROLE();
         CONFIG_ROLE_REGISTRY = registry.CONFIG_ROLE();
+        TREASURY_ROLE_REGISTRY = registry.TREASURY_ROLE();
         PAUSER_ROLE_REGISTRY = registry.PAUSER_ROLE();
         MINTER_ROLE_TOKEN = crepToken.MINTER_ROLE();
         CONFIG_ROLE_TOKEN = crepToken.CONFIG_ROLE();
@@ -610,7 +614,7 @@ contract SecurityAccessControlTest is Test {
 
     function test_ACL_Engine_setTreasury_Unauthorized() public {
         vm.prank(attacker);
-        _expectUnauthorized(attacker, CONFIG_ROLE_ENGINE);
+        _expectUnauthorized(attacker, TREASURY_ROLE_ENGINE);
         ProtocolConfig(protocolConfigAddress).setTreasury(attacker);
     }
 
@@ -682,13 +686,13 @@ contract SecurityAccessControlTest is Test {
 
     function test_ACL_Registry_setBonusPool_Unauthorized() public {
         vm.prank(attacker);
-        _expectUnauthorized(attacker, CONFIG_ROLE_REGISTRY);
+        _expectUnauthorized(attacker, TREASURY_ROLE_REGISTRY);
         registry.setBonusPool(attacker);
     }
 
     function test_ACL_Registry_setTreasury_Unauthorized() public {
         vm.prank(attacker);
-        _expectUnauthorized(attacker, CONFIG_ROLE_REGISTRY);
+        _expectUnauthorized(attacker, TREASURY_ROLE_REGISTRY);
         registry.setTreasury(attacker);
     }
 

@@ -528,8 +528,7 @@ contract HumanFaucetBranchTest is Test {
     // --- getRemainingClaims when zero ---
 
     function test_GetRemainingClaimsWhenEmpty() public {
-        vm.prank(admin);
-        faucet.withdrawRemaining(admin, type(uint256).max);
+        _drainFaucet(crep.balanceOf(address(faucet)));
         assertEq(faucet.getRemainingClaims(), 0);
     }
 
@@ -537,7 +536,7 @@ contract HumanFaucetBranchTest is Test {
 
     function test_WithdrawRemainingToZeroAddressReverts() public {
         vm.prank(admin);
-        vm.expectRevert("Invalid address");
+        vm.expectRevert("Withdraw disabled");
         faucet.withdrawRemaining(address(0), 100);
     }
 
@@ -589,6 +588,11 @@ contract HumanFaucetBranchTest is Test {
 
     function _setTotalClaimants(uint256 value) internal {
         vm.store(address(faucet), bytes32(uint256(6)), bytes32(value));
+    }
+
+    function _drainFaucet(uint256 amount) internal {
+        vm.prank(address(faucet));
+        crep.transfer(admin, amount);
     }
 }
 

@@ -9,6 +9,8 @@ import { RoundLib } from "./libraries/RoundLib.sol";
 /// @notice Governance-controlled configuration and address book for RoundVotingEngine.
 contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
+    bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
+    bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
 
     error InvalidAddress();
     error InvalidConfig();
@@ -40,18 +42,33 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     }
 
     function initialize(address admin, address governance) external initializer {
-        __AccessControl_init();
-        _initialize(admin, governance);
+        _initialize(admin, governance, governance);
     }
 
-    function _initialize(address admin, address governance) internal {
+    function initializeWithTreasury(address admin, address governance, address treasuryAuthority)
+        external
+        initializer
+    {
+        _initialize(admin, governance, treasuryAuthority);
+    }
+
+    function _initialize(address admin, address governance, address treasuryAuthority) internal {
+        __AccessControl_init();
         if (admin == address(0)) revert InvalidAddress();
         if (governance == address(0)) revert InvalidAddress();
+        if (treasuryAuthority == address(0)) revert InvalidAddress();
 
         _grantRole(DEFAULT_ADMIN_ROLE, governance);
         _grantRole(CONFIG_ROLE, governance);
+        _setRoleAdmin(TREASURY_ROLE, TREASURY_ADMIN_ROLE);
+        _setRoleAdmin(TREASURY_ADMIN_ROLE, TREASURY_ADMIN_ROLE);
+        _grantRole(TREASURY_ADMIN_ROLE, treasuryAuthority);
+        _grantRole(TREASURY_ROLE, treasuryAuthority);
         if (admin != governance) {
             _grantRole(CONFIG_ROLE, admin);
+            if (admin != treasuryAuthority) {
+                _grantRole(TREASURY_ROLE, admin);
+            }
         }
 
         config = RoundLib.RoundConfig({
@@ -75,7 +92,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         _setCategoryRegistry(value);
     }
 
-    function setTreasury(address value) external onlyRole(CONFIG_ROLE) {
+    function setTreasury(address value) external onlyRole(TREASURY_ROLE) {
         _setTreasury(value);
     }
 

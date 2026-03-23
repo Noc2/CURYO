@@ -259,11 +259,8 @@ contract ParticipationPoolTest is Test {
     // --- Pool Depletion Tests ---
 
     function test_PoolDepletion_CapsAtRemaining() public {
-        // Withdraw most of the pool, leaving only 50 cREP
-        uint256 withdrawAmount = POOL_AMOUNT - 50e6;
-        vm.prank(admin);
-        pool.withdrawRemaining(admin, withdrawAmount);
-
+        // Set the tracked pool balance low without relying on a privileged sweep path.
+        _setPoolBalance(50e6);
         assertEq(pool.poolBalance(), 50e6);
 
         // Stake 100, reward would be 90 cREP but only 50 left — cap at 50
@@ -276,9 +273,8 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_PoolDepletion_ZeroRewardWhenEmpty() public {
-        // Drain the pool completely
-        vm.prank(admin);
-        pool.withdrawRemaining(admin, type(uint256).max);
+        // Simulate an exhausted pool without relying on owner withdrawals.
+        _setPoolBalance(0);
         assertEq(pool.poolBalance(), 0);
 
         uint256 balanceBefore = crepToken.balanceOf(user1);
@@ -293,10 +289,8 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_PoolDepletion_SubmitCapsAtRemaining() public {
-        // Leave only 5 cREP — submit reward (9 cREP) gets capped
-        uint256 withdrawAmount = POOL_AMOUNT - 5e6;
-        vm.prank(admin);
-        pool.withdrawRemaining(admin, withdrawAmount);
+        // Leave only 5 cREP tracked in the pool - submit reward (9 cREP) gets capped.
+        _setPoolBalance(5e6);
 
         vm.prank(contentRegistry);
         pool.rewardSubmission(user1, 10e6);
@@ -437,21 +431,15 @@ contract ParticipationPoolTest is Test {
     // --- Withdraw Tests ---
 
     function test_WithdrawRemaining() public {
-        uint256 withdrawAmount = 1_000_000e6;
-
         vm.prank(admin);
-        pool.withdrawRemaining(admin, withdrawAmount);
-
-        assertEq(pool.poolBalance(), POOL_AMOUNT - withdrawAmount);
-        assertEq(crepToken.balanceOf(admin), withdrawAmount);
+        vm.expectRevert("Withdraw disabled");
+        pool.withdrawRemaining(admin, 1_000_000e6);
     }
 
     function test_WithdrawRemaining_FullBalance() public {
         vm.prank(admin);
+        vm.expectRevert("Withdraw disabled");
         pool.withdrawRemaining(admin, type(uint256).max);
-
-        assertEq(pool.poolBalance(), 0);
-        assertEq(crepToken.balanceOf(admin), POOL_AMOUNT);
     }
 
     function test_WithdrawRemaining_OnlyOwner() public {
@@ -462,16 +450,14 @@ contract ParticipationPoolTest is Test {
 
     function test_WithdrawRemaining_RevertZeroAddress() public {
         vm.prank(admin);
-        vm.expectRevert("Invalid address");
+        vm.expectRevert("Withdraw disabled");
         pool.withdrawRemaining(address(0), 1_000e6);
     }
 
     function test_WithdrawRemaining_RevertNothingToWithdraw() public {
+        _setPoolBalance(0);
         vm.prank(admin);
-        pool.withdrawRemaining(admin, type(uint256).max);
-
-        vm.prank(admin);
-        vm.expectRevert("Nothing to withdraw");
+        vm.expectRevert("Withdraw disabled");
         pool.withdrawRemaining(admin, 1e6);
     }
 
@@ -538,8 +524,7 @@ contract ParticipationPoolTest is Test {
     }
 
     function test_DistributeReward_CapsAtPoolBalance() public {
-        vm.prank(admin);
-        pool.withdrawRemaining(admin, POOL_AMOUNT - 10e6);
+        _setPoolBalance(10e6);
 
         vm.prank(votingEngine);
         uint256 paid = pool.distributeReward(user1, 50e6);
@@ -576,8 +561,8 @@ contract ParticipationPoolTest is Test {
 
     function test_WithdrawRemaining_FunctionalWithNonReentrant() public {
         vm.prank(admin);
+        vm.expectRevert("Withdraw disabled");
         pool.withdrawRemaining(admin, 1_000e6);
-        assertEq(crepToken.balanceOf(admin), 1_000e6);
     }
 
     // --- Helpers ---
@@ -587,5 +572,10 @@ contract ParticipationPoolTest is Test {
         // Storage layout: Ownable._owner = slot 0, totalDistributed = slot 1, poolBalance = slot 2
         vm.store(address(pool), bytes32(uint256(1)), bytes32(n));
         assertEq(pool.totalDistributed(), n);
+    }
+
+    function _setPoolBalance(uint256 n) internal {
+        vm.store(address(pool), bytes32(uint256(2)), bytes32(n));
+        assertEq(pool.poolBalance(), n);
     }
 }

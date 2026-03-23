@@ -214,25 +214,22 @@ contract ParticipationPoolBranchesTest is Test {
 
     function test_WithdrawRemaining_ZeroAddress_Reverts() public {
         vm.prank(admin);
-        vm.expectRevert("Invalid address");
+        vm.expectRevert("Withdraw disabled");
         pool.withdrawRemaining(address(0), 1e6);
     }
 
     function test_WithdrawRemaining_ExceedsBalance_CapsAtBalance() public {
-        uint256 poolBal = pool.poolBalance();
+        uint256 amount = pool.poolBalance() + 1_000e6;
         vm.prank(admin);
-        pool.withdrawRemaining(user1, poolBal + 1_000e6);
-
-        // User receives full pool balance, not more
-        assertEq(crepToken.balanceOf(user1), poolBal);
-        assertEq(pool.poolBalance(), 0);
+        vm.expectRevert("Withdraw disabled");
+        pool.withdrawRemaining(user1, amount);
     }
 
     function test_WithdrawRemaining_NothingToWithdraw_Reverts() public {
         _setPoolBalance(0);
 
         vm.prank(admin);
-        vm.expectRevert("Nothing to withdraw");
+        vm.expectRevert("Withdraw disabled");
         pool.withdrawRemaining(user1, 1e6);
     }
 

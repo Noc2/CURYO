@@ -29,6 +29,8 @@ contract ContentRegistry is
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant TREASURY_ROLE = keccak256("TREASURY_ROLE");
+    bytes32 public constant TREASURY_ADMIN_ROLE = keccak256("TREASURY_ADMIN_ROLE");
 
     // --- Constants ---
     uint256 public constant MIN_SUBMITTER_STAKE = 10e6; // 10 cREP (6 decimals)
@@ -170,11 +172,25 @@ contract ContentRegistry is
     }
 
     function initialize(address _admin, address _governance, address _crepToken) public initializer {
+        _initialize(_admin, _governance, _governance, _crepToken);
+    }
+
+    function initializeWithTreasury(address _admin, address _governance, address _treasuryAuthority, address _crepToken)
+        public
+        initializer
+    {
+        _initialize(_admin, _governance, _treasuryAuthority, _crepToken);
+    }
+
+    function _initialize(address _admin, address _governance, address _treasuryAuthority, address _crepToken)
+        internal
+    {
         __AccessControl_init();
         __Pausable_init();
 
         require(_admin != address(0), "Invalid admin");
         require(_governance != address(0), "Invalid governance");
+        require(_treasuryAuthority != address(0), "Invalid treasury authority");
         require(_crepToken != address(0), "Invalid cREP token");
 
         // Governance gets all permanent roles
@@ -182,10 +198,17 @@ contract ContentRegistry is
         _grantRole(ADMIN_ROLE, _governance);
         _grantRole(CONFIG_ROLE, _governance);
         _grantRole(PAUSER_ROLE, _governance);
+        _setRoleAdmin(TREASURY_ROLE, TREASURY_ADMIN_ROLE);
+        _setRoleAdmin(TREASURY_ADMIN_ROLE, TREASURY_ADMIN_ROLE);
+        _grantRole(TREASURY_ADMIN_ROLE, _treasuryAuthority);
+        _grantRole(TREASURY_ROLE, _treasuryAuthority);
 
         // Admin gets only CONFIG_ROLE for initial cross-contract wiring
         if (_admin != _governance) {
             _grantRole(CONFIG_ROLE, _admin);
+            if (_admin != _treasuryAuthority) {
+                _grantRole(TREASURY_ROLE, _admin);
+            }
         }
 
         crepToken = IERC20(_crepToken);
@@ -219,14 +242,14 @@ contract ContentRegistry is
         participationPool = IParticipationPool(_participationPool);
     }
 
-    /// @notice Set the cancellation fee sink address (can only be called by CONFIG_ROLE).
-    function setBonusPool(address _bonusPool) external onlyRole(CONFIG_ROLE) {
+    /// @notice Set the cancellation fee sink address (can only be called by TREASURY_ROLE).
+    function setBonusPool(address _bonusPool) external onlyRole(TREASURY_ROLE) {
         require(_bonusPool != address(0), "Invalid address");
         bonusPool = _bonusPool;
     }
 
-    /// @notice Set the treasury address that receives slashed stakes (can only be called by CONFIG_ROLE).
-    function setTreasury(address _treasury) external onlyRole(CONFIG_ROLE) {
+    /// @notice Set the treasury address that receives slashed stakes (can only be called by TREASURY_ROLE).
+    function setTreasury(address _treasury) external onlyRole(TREASURY_ROLE) {
         require(_treasury != address(0), "Invalid address");
         treasury = _treasury;
     }
