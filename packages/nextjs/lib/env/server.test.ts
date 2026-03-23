@@ -63,3 +63,10 @@ test("getDatabaseConfig upgrades legacy sslmode values to verify-full", () => {
     url: "postgresql://alice:secret@db.example.com:5432/curyo_app?sslmode=verify-full&pool_max=1",
   });
 });
+
+test("getDatabaseConfig preserves libpq-compatible sslmode urls", () => {
+  env.DATABASE_URL = "postgresql://alice:secret@db.example.com:5432/curyo_app?uselibpqcompat=true&sslmode=require";
+  assert.deepEqual(getDatabaseConfig(), {
+    url: "postgresql://alice:secret@db.example.com:5432/curyo_app?uselibpqcompat=true&sslmode=require",
+  });
+});

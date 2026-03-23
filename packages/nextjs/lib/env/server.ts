@@ -25,6 +25,11 @@ function normalizeDatabaseUrl(rawUrl: string): string {
       return rawUrl;
     }
 
+    const useLibpqCompat = parsed.searchParams.get("uselibpqcompat");
+    if (useLibpqCompat === "true") {
+      return rawUrl;
+    }
+
     const sslMode = parsed.searchParams.get("sslmode");
     if (sslMode === "prefer" || sslMode === "require" || sslMode === "verify-ca") {
       parsed.searchParams.set("sslmode", "verify-full");
