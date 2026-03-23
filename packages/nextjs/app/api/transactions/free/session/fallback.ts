@@ -8,6 +8,7 @@ type ErrorWithCause = Error & {
 
 const STORE_UNAVAILABLE_ERROR_CODES = new Set([
   "28000",
+  "42P01",
   "ECONNREFUSED",
   "EPERM",
   "ETIMEDOUT",

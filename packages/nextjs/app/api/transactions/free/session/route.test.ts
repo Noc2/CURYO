@@ -26,10 +26,16 @@ test("detects nested database auth/connect/tls failures for free transaction ses
       code: "SELF_SIGNED_CERT_IN_CHAIN",
     },
   });
+  const missingTableError = new Error("wrapper", {
+    cause: {
+      code: "42P01",
+    },
+  });
 
   assert.equal(isFreeTransactionStoreUnavailableError(error), true);
   assert.equal(isFreeTransactionStoreUnavailableError({ code: "ECONNREFUSED" }), true);
   assert.equal(isFreeTransactionStoreUnavailableError(tlsError), true);
+  assert.equal(isFreeTransactionStoreUnavailableError(missingTableError), true);
   assert.equal(isFreeTransactionStoreUnavailableError(new Error("boom")), false);
 });
 
