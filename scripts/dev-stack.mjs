@@ -73,20 +73,39 @@ function printMissingDockerHelp(databaseConfig) {
   );
 }
 
-function runDbPush(databaseUrl) {
-  console.log("[dev-stack] Applying the Next.js database schema...");
+function outputIndicatesFailure(output) {
+  return (
+    /(^|\n)\s*(Error|error):/m.test(output) ||
+    /severity:\s*['"]FATAL['"]/i.test(output) ||
+    /connect\s+(EPERM|ECONNREFUSED|ETIMEDOUT|EHOSTUNREACH|ENOTFOUND)\b/i.test(output)
+  );
+}
+
+function runDbPush(databaseConfig) {
+  console.log(`[dev-stack] Applying the Next.js database schema at ${formatDatabaseTarget(databaseConfig)}...`);
 
   const result = spawnSync(yarnCommand, ["workspace", "@curyo/nextjs", "db:push"], {
     cwd: repoRoot,
-    stdio: "inherit",
+    encoding: "utf8",
     env: {
       ...process.env,
-      DATABASE_URL: databaseUrl,
+      DATABASE_URL: databaseConfig.url,
     },
   });
 
-  if (result.status !== 0) {
-    throw new Error("Failed to apply the Next.js database schema.");
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
+
+  const combinedOutput = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status !== 0 || outputIndicatesFailure(combinedOutput)) {
+    throw new Error(
+      `Failed to apply the Next.js database schema against ${formatDatabaseTarget(databaseConfig)}. ` +
+        "If you are using your own local Postgres, set DATABASE_URL to a valid role/password and rerun with `yarn dev:stack --skip-db`.",
+    );
   }
 }
 
@@ -185,7 +204,7 @@ Options:
     }
   }
 
-  runDbPush(databaseConfig.url);
+  runDbPush(databaseConfig);
 
   console.log("[dev-stack] Starting Ponder, Next.js, and Keeper...");
   console.log("[dev-stack] Deployment stays separate. Point your env files at the chain you already deployed to.");
