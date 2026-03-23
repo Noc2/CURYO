@@ -16,9 +16,10 @@ import { SelfVerifyButton } from "~~/components/governance/SelfVerifyButton";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { buildSelfVerificationApp, getSelfVerificationUniversalLink } from "~~/lib/governance/selfVerificationApp";
 import { notification } from "~~/utils/scaffold-eth";
 
 interface FaucetSectionProps {
@@ -103,14 +104,16 @@ function clearPendingSelfVerificationSession() {
 }
 
 export function FaucetSection({ referrer }: FaucetSectionProps) {
-  const { address } = useAccount();
+  const { address, chain } = useAccount();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { hasVoterId, tokenId, isLoading: voterIdLoading } = useVoterIdNFT(address);
   const { isAccepted, requireAcceptance } = useTermsAcceptance();
+  const { data: faucetContractInfo } = useDeployedContractInfo({ contractName: "HumanFaucet" });
   const [termsOk, setTermsOk] = useState(false);
   const [verificationPending, setVerificationPending] = useState(false);
   const [verificationConfirmed, setVerificationConfirmed] = useState(false);
+  const [selfRetryLink, setSelfRetryLink] = useState<string | null>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval>>(null);
   const pollStart = useRef<number>(0);
   const completionHandled = useRef(false);
@@ -333,10 +336,32 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
     };
   }, [address, finishVerification, hasClaimed, hasVoterId, startPolling, verificationPending]);
 
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !/iPhone|iPad|iPod|Android/i.test(window.navigator.userAgent) ||
+      !address ||
+      !chain?.id ||
+      !faucetContractInfo?.address
+    ) {
+      setSelfRetryLink(null);
+      return;
+    }
+
+    const selfApp = buildSelfVerificationApp({
+      address,
+      contractAddress: faucetContractInfo.address,
+      chainId: chain.id,
+      deeplinkCallback: window.location.href,
+    });
+
+    setSelfRetryLink(selfApp ? getSelfVerificationUniversalLink(selfApp) : null);
+  }, [address, chain?.id, faucetContractInfo?.address]);
+
   const handleVerificationStarted = useCallback(() => {
     completionHandled.current = false;
     setVerificationConfirmed(false);
-    notification.info("Finish verification in Self. We'll complete your faucet claim when you return.", {
+    notification.info("Finish verification in Self. If it does not open, tap Open Self again.", {
       duration: 5000,
     });
     startPolling();
@@ -479,9 +504,20 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
               <p className="text-base-content/60 text-base">
                 {verificationConfirmed
                   ? "Self verification succeeded. Your cREP claim is being finalized. Your wallet balance can lag briefly."
-                  : "Complete verification in Self. We'll continue the faucet claim when you come back."}
+                  : "Complete verification in Self."}
               </p>
             </div>
+            {!verificationConfirmed && selfRetryLink ? (
+              <a
+                href={selfRetryLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-primary btn-sm"
+                onClick={handleVerificationStarted}
+              >
+                Open Self again
+              </a>
+            ) : null}
             <div className="flex gap-2 mt-2">
               {[0, 1, 2].map(i => (
                 <div
