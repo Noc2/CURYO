@@ -100,8 +100,15 @@ export function getDatabaseConfig() {
     rawDatabaseUrl === "file:local.db" ||
     rawDatabaseUrl?.startsWith("file:") === true ||
     rawDatabaseUrl?.startsWith("sqlite:") === true;
-  const url =
-    rawDatabaseUrl && !usesLegacyLocalDatabaseUrl ? rawDatabaseUrl : !isProduction ? defaultDevDatabaseUrl : undefined;
+  const url = rawDatabaseUrl
+    ? usesLegacyLocalDatabaseUrl
+      ? !isProduction
+        ? "memory:"
+        : undefined
+      : rawDatabaseUrl
+    : !isProduction
+      ? defaultDevDatabaseUrl
+      : undefined;
 
   if (!url) {
     throw new Error("DATABASE_URL is required in production.");

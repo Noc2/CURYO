@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const LOCAL_HOSTNAMES = new Set(["127.0.0.1", "localhost", "::1"]);
 const DEFAULT_DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5432/curyo_app";
+const IN_MEMORY_DATABASE_URL = "memory:";
 const currentFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(currentFile), "..");
 const composeFile = path.join(repoRoot, "docker-compose.dev.yml");
@@ -59,13 +60,28 @@ export function resolveNextDatabaseConfig() {
   const envDatabaseUrl = process.env.DATABASE_URL?.trim();
   const fileDatabaseUrl = envFileValues.DATABASE_URL?.trim();
   const rawUrl = envDatabaseUrl || fileDatabaseUrl;
-  const url = rawUrl && !isLegacyLocalDatabaseUrl(rawUrl) ? rawUrl : DEFAULT_DATABASE_URL;
+  const usesLegacyLocalDatabaseUrl = rawUrl ? isLegacyLocalDatabaseUrl(rawUrl) : false;
+  const url = rawUrl ? (usesLegacyLocalDatabaseUrl ? IN_MEMORY_DATABASE_URL : rawUrl) : DEFAULT_DATABASE_URL;
 
-  if (rawUrl && isLegacyLocalDatabaseUrl(rawUrl)) {
+  if (rawUrl && usesLegacyLocalDatabaseUrl) {
     const source = envDatabaseUrl ? "the current shell environment" : "packages/nextjs/.env.local";
     console.warn(
-      `[dev-db] Ignoring legacy SQLite DATABASE_URL (${rawUrl}) from ${source} and using ${DEFAULT_DATABASE_URL} instead.`,
+      `[dev-db] Mapping legacy SQLite DATABASE_URL (${rawUrl}) from ${source} to ${IN_MEMORY_DATABASE_URL}. ` +
+        "Update it to `memory:` or a PostgreSQL URL when convenient.",
     );
+  }
+
+  if (url === IN_MEMORY_DATABASE_URL) {
+    return {
+      url,
+      host: "memory",
+      port: 0,
+      databaseName: "memory",
+      user: "memory",
+      password: "",
+      isLocal: false,
+      isMemory: true,
+    };
   }
 
   let parsed;
@@ -92,10 +108,15 @@ export function resolveNextDatabaseConfig() {
     user: decodeURIComponent(parsed.username || "postgres"),
     password: decodeURIComponent(parsed.password || ""),
     isLocal: LOCAL_HOSTNAMES.has(parsed.hostname),
+    isMemory: false,
   };
 }
 
 export function formatDatabaseTarget(config) {
+  if (config.isMemory) {
+    return "in-memory database";
+  }
+
   return `${config.user}@${config.host}:${config.port}/${config.databaseName}`;
 }
 
@@ -157,6 +178,14 @@ async function waitForDatabaseReady(config) {
 
 export async function ensureLocalDatabase() {
   const config = resolveNextDatabaseConfig();
+
+  if (config.isMemory) {
+    return {
+      skipped: true,
+      config,
+      reason: "DATABASE_URL uses the in-memory development database",
+    };
+  }
 
   if (!config.isLocal) {
     return {

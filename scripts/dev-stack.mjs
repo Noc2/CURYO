@@ -82,6 +82,11 @@ function outputIndicatesFailure(output) {
 }
 
 function runDbPush(databaseConfig) {
+  if (databaseConfig.isMemory) {
+    console.log("[dev-stack] Skipping Next.js schema push for the in-memory development database.");
+    return;
+  }
+
   console.log(`[dev-stack] Applying the Next.js database schema at ${formatDatabaseTarget(databaseConfig)}...`);
 
   const result = spawnSync(yarnCommand, ["workspace", "@curyo/nextjs", "db:push"], {
@@ -217,7 +222,7 @@ Options:
 
   for (const service of services) {
     spawnService(service, {
-      DATABASE_URL: databaseConfig.url,
+      ...(service.label === "next" ? { DATABASE_URL: databaseConfig.url } : {}),
     });
   }
 }

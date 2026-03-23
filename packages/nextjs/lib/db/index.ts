@@ -2,10 +2,10 @@ import * as schema from "./schema";
 import { drizzle as drizzleNodePg } from "drizzle-orm/node-postgres";
 import { drizzle as drizzlePgProxy } from "drizzle-orm/pg-proxy";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool, type PoolConfig, type QueryResult, type QueryResultRow } from "pg";
-import { newDb } from "pg-mem";
 import "server-only";
 import { getDatabaseConfig } from "~~/lib/env/server";
 
@@ -22,6 +22,7 @@ type DatabaseResources = {
 };
 
 const MIGRATION_BREAKPOINT = "--> statement-breakpoint";
+const require = createRequire(import.meta.url);
 
 function normalizeQuery(input: QueryInput) {
   const text = typeof input === "string" ? input : input.sql;
@@ -51,6 +52,7 @@ function applySqlStatements(sqlText: string, execute: (statement: string) => voi
 
 function createMemoryPool(): Pool {
   const migrationDirectory = getMigrationDirectory();
+  const { newDb } = require("pg-mem") as typeof import("pg-mem");
   const memoryDb = newDb();
 
   if (fs.existsSync(migrationDirectory)) {
