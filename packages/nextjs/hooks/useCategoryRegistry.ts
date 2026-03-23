@@ -271,6 +271,7 @@ const DOMAIN_CONTENT_LABELS: Record<string, string> = {
   "rawg.io": "game",
   "openlibrary.org": "book",
   "huggingface.co": "ai",
+  "themoviedb.org": "movie",
   "www.themoviedb.org": "movie",
   "coingecko.com": "token",
   "open.spotify.com": "podcast",

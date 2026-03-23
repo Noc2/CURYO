@@ -65,7 +65,7 @@ const PLATFORM_CONFIG: Record<string, { urlPlaceholder: string; urlHint: string 
     urlPlaceholder: "https://openlibrary.org/works/OL45804W/Fahrenheit_451",
     urlHint: "Paste an Open Library book URL",
   },
-  "www.themoviedb.org": {
+  "themoviedb.org": {
     urlPlaceholder: "https://www.themoviedb.org/movie/238-the-godfather",
     urlHint: "Paste a TMDB movie URL",
   },
