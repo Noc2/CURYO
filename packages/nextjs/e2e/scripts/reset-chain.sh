@@ -29,6 +29,6 @@ sleep 5
 
 echo ""
 echo "✓ Chain reset complete."
-echo "  Start the frontend with: yarn start"
+echo "  Start the app stack with: yarn dev:stack"
 echo "  Run tests with:          yarn e2e"
 echo ""

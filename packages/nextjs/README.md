@@ -6,10 +6,10 @@ Full-stack web application built with Next.js 15 and React 19. Provides the UI f
 
 ```bash
 # From the monorepo root:
-yarn start   # Start the dev server at http://localhost:3000
+yarn dev:stack   # Start local Postgres, apply schema, then run Next.js + Ponder + Keeper
 ```
 
-Requires the local chain (`yarn chain`), deployed contracts (`yarn deploy`), and the Ponder indexer (`yarn ponder:dev`) to be running. See the root README for the full local setup.
+Deployment stays separate, so you can point the app stack at either a local chain or a testnet. For local-chain development, keep `yarn chain` and `yarn deploy` separate. Use `yarn dev:db:down` to stop the local Postgres container when you are done.
 
 ## Scripts
 
@@ -18,6 +18,9 @@ Run these from the monorepo root unless noted otherwise:
 | Command                                         | Description                                                     |
 | ----------------------------------------------- | --------------------------------------------------------------- |
 | `yarn start`                                    | Start development server (localhost:3000)                       |
+| `yarn dev:db`                                   | Start the local Postgres container for the Next app             |
+| `yarn dev:db:down`                              | Stop the local Postgres container                               |
+| `yarn dev:stack`                                | Start local Postgres, apply schema, then run Next.js + Ponder + Keeper |
 | `yarn next:build`                               | Production build                                                |
 | `yarn next:lint`                                | Run ESLint                                                      |
 | `yarn next:check-types`                         | TypeScript type checking                                        |
@@ -62,6 +65,7 @@ Notes:
 - Mainnet is no longer auto-enabled in the browser unless you explicitly target chain `1` or provide a mainnet-capable RPC via `NEXT_PUBLIC_ALCHEMY_API_KEY` or `rpcOverrides[1]`. This avoids CSP violations and noisy ENS lookup failures on unsupported public fallbacks.
 - No contract address env vars are needed for supported chains. The frontend reads deployment metadata from `@curyo/contracts` and fails fast if `NEXT_PUBLIC_TARGET_NETWORKS` includes a chain without it.
 - In production, the intended setup is one Railway Postgres service with separate logical databases for Ponder and Next.js.
+- For local development, `yarn dev:db` and `yarn dev:stack` manage a Docker Postgres container when `DATABASE_URL` points to localhost.
 - On Next.js 15, `NextRequest.ip` is not reliably populated. On non-Vercel production hosts you must configure `RATE_LIMIT_TRUSTED_IP_HEADERS` to the header(s) your hosting proxy overwrites. Vercel auto-trusts `x-forwarded-for` and `x-real-ip`. Protected API routes still fail closed when no trusted client IP can be derived.
 - The free transaction quota is enforced by the thirdweb server verifier route at `/api/thirdweb/verify-transaction`. Configure the same secret in thirdweb’s dashboard and in `THIRDWEB_SERVER_VERIFIER_SECRET`.
 

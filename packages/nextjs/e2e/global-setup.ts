@@ -113,7 +113,11 @@ async function globalSetup() {
   if (failures.length > 0) {
     throw new Error(
       `E2E infrastructure not ready:\n${failures.join("\n")}\n\n` +
-        "  Start all services:\n" +
+        "  Quick start:\n" +
+        "    Terminal 1: yarn chain\n" +
+        "    Terminal 2: yarn deploy\n" +
+        "    Terminal 3: yarn dev:stack\n\n" +
+        "  Or start services manually:\n" +
         "    Terminal 1: yarn chain\n" +
         "    Terminal 2: yarn deploy  (once chain is up)\n" +
         "    Terminal 3: yarn ponder:dev\n" +

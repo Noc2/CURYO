@@ -96,7 +96,19 @@ For Celo mainnet deployment, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ### Run Locally
 
-Open four terminals:
+The quickest app-only startup is:
+
+```bash
+yarn dev:stack
+```
+
+That command starts the Next app's local Postgres container, runs `db:push`, and then starts the frontend, Ponder, and Keeper together. Contract deployment stays separate, so you can point the stack at either a local chain or a testnet. Stop the local Postgres container later with:
+
+```bash
+yarn dev:db:down
+```
+
+If you are using a local chain, keep Anvil and deployment separate:
 
 **1. Local chain:**
 ```bash
@@ -110,24 +122,14 @@ yarn chain --block-time 12
 yarn deploy
 ```
 
-**3. Start the indexer:**
+**3. Start the app stack:**
 ```bash
-yarn ponder:dev
-```
-
-**4. Start the frontend:**
-```bash
-yarn start
+yarn dev:stack
 ```
 
 Visit [http://localhost:3000](http://localhost:3000).
 
-**Optional 5. Start the keeper** to exercise automatic reveals, settlement, unrevealed-vote cleanup, cancellations, and
-dormancy flows locally:
-
-```bash
-yarn keeper:dev
-```
+If you only want the database helper, use `yarn dev:db`. It starts the local Postgres container without the other services.
 
 ### Run the Keeper
 

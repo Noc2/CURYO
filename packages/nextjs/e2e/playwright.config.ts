@@ -86,5 +86,5 @@ export default defineConfig({
   ],
 
   // Services must be started manually (global-setup.ts validates they're running):
-  //   yarn chain && yarn deploy && yarn ponder:dev && yarn start
+  //   yarn chain && yarn deploy && yarn dev:stack
 });
