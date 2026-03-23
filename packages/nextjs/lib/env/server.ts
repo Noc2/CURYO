@@ -7,6 +7,7 @@ import {
 } from "~~/utils/env/targetNetworks";
 
 const isProduction = process.env.NODE_ENV === "production";
+const defaultDevDatabaseUrl = "postgresql://postgres:postgres@127.0.0.1:5432/curyo_app";
 
 function readEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
@@ -94,8 +95,13 @@ export function getServerRpcOverrides(): Partial<Record<number, string>> {
 }
 
 export function getDatabaseConfig() {
+  const rawDatabaseUrl = readEnv("DATABASE_URL");
+  const usesLegacyLocalDatabaseUrl =
+    rawDatabaseUrl === "file:local.db" ||
+    rawDatabaseUrl?.startsWith("file:") === true ||
+    rawDatabaseUrl?.startsWith("sqlite:") === true;
   const url =
-    readEnv("DATABASE_URL") ?? (!isProduction ? "postgresql://postgres:postgres@127.0.0.1:5432/curyo_app" : undefined);
+    rawDatabaseUrl && !usesLegacyLocalDatabaseUrl ? rawDatabaseUrl : !isProduction ? defaultDevDatabaseUrl : undefined;
 
   if (!url) {
     throw new Error("DATABASE_URL is required in production.");

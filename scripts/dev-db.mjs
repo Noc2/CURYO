@@ -43,9 +43,23 @@ function parseEnvFile(filePath) {
   return values;
 }
 
+function isLegacyLocalDatabaseUrl(value) {
+  return value === "file:local.db" || value.startsWith("file:") || value.startsWith("sqlite:");
+}
+
 export function resolveNextDatabaseConfig() {
   const envFileValues = parseEnvFile(nextEnvLocalFile);
-  const url = process.env.DATABASE_URL?.trim() || envFileValues.DATABASE_URL?.trim() || DEFAULT_DATABASE_URL;
+  const envDatabaseUrl = process.env.DATABASE_URL?.trim();
+  const fileDatabaseUrl = envFileValues.DATABASE_URL?.trim();
+  const rawUrl = envDatabaseUrl || fileDatabaseUrl;
+  const url = rawUrl && !isLegacyLocalDatabaseUrl(rawUrl) ? rawUrl : DEFAULT_DATABASE_URL;
+
+  if (rawUrl && isLegacyLocalDatabaseUrl(rawUrl)) {
+    const source = envDatabaseUrl ? "the current shell environment" : "packages/nextjs/.env.local";
+    console.warn(
+      `[dev-db] Ignoring legacy SQLite DATABASE_URL (${rawUrl}) from ${source} and using ${DEFAULT_DATABASE_URL} instead.`,
+    );
+  }
 
   let parsed;
   try {

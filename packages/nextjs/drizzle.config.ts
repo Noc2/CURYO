@@ -1,7 +1,11 @@
 import type { Config } from "drizzle-kit";
 
 const defaultDatabaseUrl = "postgresql://postgres:postgres@127.0.0.1:5432/curyo_app";
-const url = process.env.DATABASE_URL?.trim() || defaultDatabaseUrl;
+const rawDatabaseUrl = process.env.DATABASE_URL?.trim();
+const url =
+  rawDatabaseUrl && !rawDatabaseUrl.startsWith("file:") && !rawDatabaseUrl.startsWith("sqlite:")
+    ? rawDatabaseUrl
+    : defaultDatabaseUrl;
 
 export default {
   schema: "./lib/db/schema.ts",
