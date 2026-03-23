@@ -71,7 +71,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
                 )
             )
         );
@@ -477,7 +477,7 @@ contract SettlementEdgeCasesTest is VotingTestBase {
                 new ERC1967Proxy(
                     address(engineImpl2),
                     abi.encodeCall(
-                        RoundVotingEngine.initialize, (owner, address(crepToken2), address(registry2), address(new ProtocolConfig(owner)))
+                        RoundVotingEngine.initialize, (owner, address(crepToken2), address(registry2), address(_deployProtocolConfig(owner)))
                     )
                 )
             )

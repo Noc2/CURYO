@@ -3,7 +3,20 @@ pragma solidity ^0.8.20;
 
 import { Test } from "forge-std/Test.sol";
 import { Vm, VmSafe } from "forge-std/Vm.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../../contracts/ContentRegistry.sol";
+import { ProtocolConfig } from "../../contracts/ProtocolConfig.sol";
+
+function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig protocolConfig) {
+    return deployInitializedProtocolConfig(admin, admin);
+}
+
+function deployInitializedProtocolConfig(address admin, address governance) returns (ProtocolConfig protocolConfig) {
+    ProtocolConfig implementation = new ProtocolConfig();
+    protocolConfig = ProtocolConfig(
+        address(new ERC1967Proxy(address(implementation), abi.encodeCall(ProtocolConfig.initialize, (admin, governance))))
+    );
+}
 
 abstract contract ContentSubmissionTestBase {
     Vm internal constant HEVM = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
@@ -46,6 +59,14 @@ abstract contract ContentSubmissionTestBase {
 /// @dev Base contract with shared helpers for tlock commit-reveal test patterns.
 ///      Inherit from this instead of `Test` to get `_testCiphertext`, `_commitHash`, `_commitKey`.
 abstract contract VotingTestBase is Test, ContentSubmissionTestBase {
+    function _deployProtocolConfig(address admin) internal returns (ProtocolConfig protocolConfig) {
+        return deployInitializedProtocolConfig(admin, admin);
+    }
+
+    function _deployProtocolConfig(address admin, address governance) internal returns (ProtocolConfig protocolConfig) {
+        return deployInitializedProtocolConfig(admin, governance);
+    }
+
     /// @dev Build a test ciphertext (65-byte plaintext accepted by contract validation).
     function _testCiphertext(bool isUp, bytes32 salt, uint256 contentId) internal pure returns (bytes memory) {
         return abi.encodePacked(uint8(isUp ? 1 : 0), salt, contentId);

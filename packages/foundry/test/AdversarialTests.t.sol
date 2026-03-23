@@ -63,7 +63,7 @@ contract AdversarialTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(new ProtocolConfig(owner))))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
                 )
             )
         );
@@ -539,7 +539,7 @@ contract AdversarialTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(new RoundVotingEngine()),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(token2), address(reg2), address(new ProtocolConfig(owner))))
+                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(token2), address(reg2), address(_deployProtocolConfig(owner))))
                 )
             )
         );

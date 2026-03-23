@@ -549,7 +549,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
                     address(engImpl),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crep), address(registry), address(new ProtocolConfig(owner)))
+                        (owner, address(crep), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )
@@ -643,7 +643,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
     function test_InitializeZeroGovernanceReverts() public {
         RoundVotingEngine impl = new RoundVotingEngine();
-        address newProtocolConfig = address(new ProtocolConfig(owner));
+        address newProtocolConfig = address(_deployProtocolConfig(owner));
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
             address(impl),
@@ -655,7 +655,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
     function test_InitializeZeroTokenReverts() public {
         RoundVotingEngine impl = new RoundVotingEngine();
-        address newProtocolConfig = address(new ProtocolConfig(owner));
+        address newProtocolConfig = address(_deployProtocolConfig(owner));
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
             address(impl),
@@ -665,7 +665,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
 
     function test_InitializeZeroRegistryReverts() public {
         RoundVotingEngine impl = new RoundVotingEngine();
-        address newProtocolConfig = address(new ProtocolConfig(owner));
+        address newProtocolConfig = address(_deployProtocolConfig(owner));
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
             address(impl),
@@ -778,7 +778,7 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
                     address(engImpl2),
                     abi.encodeCall(
                         RoundVotingEngine.initialize,
-                        (owner, address(crep), address(registry), address(new ProtocolConfig(owner)))
+                        (owner, address(crep), address(registry), address(_deployProtocolConfig(owner)))
                     )
                 )
             )

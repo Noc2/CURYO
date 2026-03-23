@@ -103,7 +103,7 @@ contract UpgradeTest is Test {
         contentRegistryAdmin = _proxyAdmin(address(crProxy));
 
         // --- ProtocolConfig ---
-        ProtocolConfig pcImpl = new ProtocolConfig(address(0));
+        ProtocolConfig pcImpl = new ProtocolConfig();
         TransparentUpgradeableProxy pcProxy = new TransparentUpgradeableProxy(
             address(pcImpl), governance, abi.encodeCall(ProtocolConfig.initialize, (admin, governance))
         );
@@ -201,13 +201,13 @@ contract UpgradeTest is Test {
     // =========================================================================
 
     function test_ProtocolConfig_GovernanceCanUpgrade() public {
-        ProtocolConfig newImpl = new ProtocolConfig(address(0));
+        ProtocolConfig newImpl = new ProtocolConfig();
         vm.prank(governance);
         protocolConfigAdmin.upgradeAndCall(_proxy(address(protocolConfig)), address(newImpl), "");
     }
 
     function test_ProtocolConfig_UnauthorizedCannotUpgrade() public {
-        ProtocolConfig newImpl = new ProtocolConfig(address(0));
+        ProtocolConfig newImpl = new ProtocolConfig();
         vm.prank(attacker);
         vm.expectRevert();
         protocolConfigAdmin.upgradeAndCall(_proxy(address(protocolConfig)), address(newImpl), "");
@@ -226,7 +226,7 @@ contract UpgradeTest is Test {
         assertEq(protocolConfigAdmin.owner(), governance);
         assertEq(protocolConfig.treasury(), address(1234));
 
-        ProtocolConfig newImpl = new ProtocolConfig(address(0));
+        ProtocolConfig newImpl = new ProtocolConfig();
         vm.prank(governance);
         protocolConfigAdmin.upgradeAndCall(_proxy(address(protocolConfig)), address(newImpl), "");
 
@@ -419,7 +419,7 @@ contract UpgradeTest is Test {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         frImpl.initialize(admin, governance, address(crepToken));
 
-        ProtocolConfig pcImpl = new ProtocolConfig(address(0));
+        ProtocolConfig pcImpl = new ProtocolConfig();
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         pcImpl.initialize(admin, governance);
     }

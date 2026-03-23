@@ -2,12 +2,12 @@
 pragma solidity ^0.8.24;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { RoundLib } from "./libraries/RoundLib.sol";
 
 /// @title ProtocolConfig
 /// @notice Governance-controlled configuration and address book for RoundVotingEngine.
-contract ProtocolConfig is Initializable, AccessControl {
+contract ProtocolConfig is Initializable, AccessControlUpgradeable {
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
 
     error InvalidAddress();
@@ -35,14 +35,12 @@ contract ProtocolConfig is Initializable, AccessControl {
     event ConfigUpdated(uint256 epochDuration, uint256 maxDuration, uint256 minVoters, uint256 maxVoters);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(address directGovernance) {
-        if (directGovernance != address(0)) {
-            _initialize(directGovernance, directGovernance);
-        }
+    constructor() {
         _disableInitializers();
     }
 
     function initialize(address admin, address governance) external initializer {
+        __AccessControl_init();
         _initialize(admin, governance);
     }
 

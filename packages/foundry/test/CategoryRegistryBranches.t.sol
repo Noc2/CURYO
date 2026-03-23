@@ -10,6 +10,7 @@ import { ProtocolConfig } from "../contracts/ProtocolConfig.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
 import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
+import { deployInitializedProtocolConfig } from "./helpers/VotingTestHelpers.sol";
 
 // =========================================================================
 // TEST CONTRACT
@@ -53,7 +54,10 @@ contract CategoryRegistryBranchesTest is Test {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (admin, address(crepToken), address(registry), address(new ProtocolConfig(admin))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (admin, address(crepToken), address(registry), address(deployInitializedProtocolConfig(admin)))
+                    )
                 )
             )
         );

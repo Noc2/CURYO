@@ -103,7 +103,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         RoundRewardDistributor rewardDistributorImpl = new RoundRewardDistributor();
         FrontendRegistry frontendRegistryImpl = new FrontendRegistry();
         ProfileRegistry profileRegistryImpl = new ProfileRegistry();
-        ProtocolConfig protocolConfigImpl = new ProtocolConfig(address(0));
+        ProtocolConfig protocolConfigImpl = new ProtocolConfig();
 
         // 5. Deploy transparent proxies with initialization (governance owns each ProxyAdmin)
         TransparentUpgradeableProxy frontendRegistryProxy = new TransparentUpgradeableProxy(
