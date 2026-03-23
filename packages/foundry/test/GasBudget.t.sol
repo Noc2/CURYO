@@ -18,6 +18,7 @@ contract GasBudgetTest is RoundIntegrationTest {
     uint256 internal constant MAX_COMMIT_VOTE_GAS = 800_000;
     uint256 internal constant MAX_REVEAL_VOTE_GAS = 320_000;
     uint256 internal constant MAX_SETTLE_ROUND_GAS = 475_000;
+    uint256 internal constant MAX_SETTLE_ROUND_MAX_EPOCH_SCAN_GAS = 5_500_000;
     uint256 internal constant MAX_PROCESS_UNREVEALED_GAS = 250_000;
     uint256 internal constant MAX_CANCEL_EXPIRED_ROUND_GAS = 60_000;
     uint256 internal constant MAX_CLAIM_REWARD_GAS = 190_000;
@@ -125,6 +126,40 @@ contract GasBudgetTest is RoundIntegrationTest {
             _measureCall(address(votingEngine), abi.encodeCall(RoundVotingEngine.settleRound, (contentId, roundId)));
 
         assertLe(gasUsed, MAX_SETTLE_ROUND_GAS, "settleRound gas budget exceeded");
+    }
+
+    function testGas_settleRound_maxEpochScan_underBudget() public {
+        vm.pauseGasMetering();
+
+        ProtocolConfig config = ProtocolConfig(address(votingEngine.protocolConfig()));
+        vm.startPrank(owner);
+        config.setConfig(5 minutes, 7 days, 2, 200);
+        vm.stopPrank();
+
+        uint256 contentId = _submitContent();
+
+        address[] memory voters = new address[](2);
+        voters[0] = voter1;
+        voters[1] = voter2;
+        bool[] memory directions = new bool[](2);
+        directions[0] = true;
+        directions[1] = false;
+
+        _commitAllThenReveal(voters, contentId, directions, STAKE);
+        uint256 roundId = _getActiveOrLatestRoundId(contentId);
+        RoundLib.Round memory round = RoundEngineReadHelpers.round(votingEngine, contentId, roundId);
+
+        uint256 maxEpochEnd = uint256(round.startTime) + 7 days + 5 minutes;
+        vm.warp(maxEpochEnd + config.revealGracePeriod() + 1);
+
+        uint256 gasUsed =
+            _measureCall(address(votingEngine), abi.encodeCall(RoundVotingEngine.settleRound, (contentId, roundId)));
+
+        assertLe(
+            gasUsed,
+            MAX_SETTLE_ROUND_MAX_EPOCH_SCAN_GAS,
+            "settleRound worst-case epoch scan gas budget exceeded"
+        );
     }
 
     function testGas_processUnrevealedVotes_underBudget() public {
