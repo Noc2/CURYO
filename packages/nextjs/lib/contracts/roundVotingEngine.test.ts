@@ -69,22 +69,7 @@ test("deriveRoundSnapshot marks rounds ready once the revealed threshold is met"
 
 test("parseRound prefers tuple values when named round fields are incomplete", () => {
   const rawRound = Object.assign(
-    [
-      1_000n,
-      ROUND_STATE.Open,
-      1n,
-      0n,
-      50_000_000n,
-      50_000_000n,
-      0n,
-      1n,
-      0n,
-      true,
-      0n,
-      0n,
-      50_000_000n,
-      0n,
-    ],
+    [1_000n, ROUND_STATE.Open, 1n, 0n, 50_000_000n, 50_000_000n, 0n, 1n, 0n, true, 0n, 0n, 50_000_000n, 0n],
     {
       startTime: 1_000n,
       state: ROUND_STATE.Open,

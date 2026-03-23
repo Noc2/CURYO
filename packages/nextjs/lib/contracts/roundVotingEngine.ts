@@ -132,27 +132,6 @@ export function parseRound(rawRoundData: unknown): RoundData | undefined {
 
   const round = rawRoundData as Record<string, unknown> & unknown[];
 
-  // viem/abitype tuples can arrive as arrays with partially attached named properties.
-  // Prefer indexed decoding when possible so missing named keys do not silently zero fields.
-  if (Array.isArray(round) && round.length >= 14) {
-    return {
-      startTime: toBigInt(round[0]),
-      state: toNumber(round[1]),
-      voteCount: toBigInt(round[2]),
-      revealedCount: toBigInt(round[3]),
-      totalStake: toBigInt(round[4]),
-      upPool: toBigInt(round[5]),
-      downPool: toBigInt(round[6]),
-      upCount: toBigInt(round[7]),
-      downCount: toBigInt(round[8]),
-      upWins: Boolean(round[9]),
-      settledAt: toBigInt(round[10]),
-      thresholdReachedAt: toBigInt(round[11]),
-      weightedUpPool: toBigInt(round[12]),
-      weightedDownPool: toBigInt(round[13]),
-    };
-  }
-
   if (round.startTime != null) {
     return {
       startTime: toBigInt(round.startTime),
@@ -169,6 +148,25 @@ export function parseRound(rawRoundData: unknown): RoundData | undefined {
       thresholdReachedAt: toBigInt(round.thresholdReachedAt),
       weightedUpPool: toBigInt(round.weightedUpPool),
       weightedDownPool: toBigInt(round.weightedDownPool),
+    };
+  }
+
+  if (Array.isArray(round) && round.length >= 14) {
+    return {
+      startTime: toBigInt(round[0]),
+      state: toNumber(round[1]),
+      voteCount: toBigInt(round[2]),
+      revealedCount: toBigInt(round[3]),
+      totalStake: toBigInt(round[4]),
+      upPool: toBigInt(round[5]),
+      downPool: toBigInt(round[6]),
+      upCount: toBigInt(round[7]),
+      downCount: toBigInt(round[8]),
+      upWins: Boolean(round[9]),
+      settledAt: toBigInt(round[10]),
+      thresholdReachedAt: toBigInt(round[11]),
+      weightedUpPool: toBigInt(round[12]),
+      weightedDownPool: toBigInt(round[13]),
     };
   }
 
