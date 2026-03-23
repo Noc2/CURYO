@@ -132,25 +132,8 @@ export function parseRound(rawRoundData: unknown): RoundData | undefined {
 
   const round = rawRoundData as Record<string, unknown> & unknown[];
 
-  if (round.startTime != null) {
-    return {
-      startTime: toBigInt(round.startTime),
-      state: toNumber(round.state),
-      voteCount: toBigInt(round.voteCount),
-      revealedCount: toBigInt(round.revealedCount),
-      totalStake: toBigInt(round.totalStake),
-      upPool: toBigInt(round.upPool),
-      downPool: toBigInt(round.downPool),
-      upCount: toBigInt(round.upCount),
-      downCount: toBigInt(round.downCount),
-      upWins: Boolean(round.upWins),
-      settledAt: toBigInt(round.settledAt),
-      thresholdReachedAt: toBigInt(round.thresholdReachedAt),
-      weightedUpPool: toBigInt(round.weightedUpPool),
-      weightedDownPool: toBigInt(round.weightedDownPool),
-    };
-  }
-
+  // viem/abitype tuples can arrive as arrays with partially attached named properties.
+  // Prefer indexed decoding when possible so missing named keys do not silently zero fields.
   if (Array.isArray(round) && round.length >= 14) {
     return {
       startTime: toBigInt(round[0]),
@@ -167,6 +150,25 @@ export function parseRound(rawRoundData: unknown): RoundData | undefined {
       thresholdReachedAt: toBigInt(round[11]),
       weightedUpPool: toBigInt(round[12]),
       weightedDownPool: toBigInt(round[13]),
+    };
+  }
+
+  if (round.startTime != null) {
+    return {
+      startTime: toBigInt(round.startTime),
+      state: toNumber(round.state),
+      voteCount: toBigInt(round.voteCount),
+      revealedCount: toBigInt(round.revealedCount),
+      totalStake: toBigInt(round.totalStake),
+      upPool: toBigInt(round.upPool),
+      downPool: toBigInt(round.downPool),
+      upCount: toBigInt(round.upCount),
+      downCount: toBigInt(round.downCount),
+      upWins: Boolean(round.upWins),
+      settledAt: toBigInt(round.settledAt),
+      thresholdReachedAt: toBigInt(round.thresholdReachedAt),
+      weightedUpPool: toBigInt(round.weightedUpPool),
+      weightedDownPool: toBigInt(round.weightedDownPool),
     };
   }
 

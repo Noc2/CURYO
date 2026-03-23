@@ -4,6 +4,7 @@ import {
   buildStakeAmountWei,
   deriveRoundSnapshot,
   deriveVoteDeadlines,
+  parseRound,
   resolveFrontendCode,
 } from "./roundVotingEngine";
 import { ROUND_STATE } from "@curyo/contracts/protocol";
@@ -64,6 +65,40 @@ test("deriveRoundSnapshot marks rounds ready once the revealed threshold is met"
   assert.equal(snapshot.votersNeeded, 0);
   assert.equal(snapshot.readyToSettle, true);
   assert.equal(snapshot.thresholdReachedAt, 1250);
+});
+
+test("parseRound prefers tuple values when named round fields are incomplete", () => {
+  const rawRound = Object.assign(
+    [
+      1_000n,
+      ROUND_STATE.Open,
+      1n,
+      0n,
+      50_000_000n,
+      50_000_000n,
+      0n,
+      1n,
+      0n,
+      true,
+      0n,
+      0n,
+      50_000_000n,
+      0n,
+    ],
+    {
+      startTime: 1_000n,
+      state: ROUND_STATE.Open,
+      totalStake: 50_000_000n,
+      upPool: 50_000_000n,
+    },
+  );
+
+  const parsedRound = parseRound(rawRound);
+
+  assert.ok(parsedRound);
+  assert.equal(parsedRound.voteCount, 1n);
+  assert.equal(parsedRound.totalStake, 50_000_000n);
+  assert.equal(parsedRound.upCount, 1n);
 });
 
 test("deriveVoteDeadlines returns the round expiry and next action window", () => {

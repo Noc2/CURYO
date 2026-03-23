@@ -6,28 +6,32 @@ import { useRouter } from "next/navigation";
 import styles from "./LandingPageActions.module.css";
 import { useAccount } from "wagmi";
 import { ChevronRightIcon } from "@heroicons/react/20/solid";
-import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
+import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
 export function LandingPageActions() {
   const { address, isConnected } = useAccount();
   const router = useRouter();
-  const wasConnected = useRef(isConnected);
-
-  const { data: crepBalance } = useScaffoldReadContract({
-    contractName: "CuryoReputation",
-    functionName: "balanceOf",
-    args: [address],
-    watch: false,
-    query: { enabled: !!address, staleTime: 30_000 },
-  });
+  const redirectedAddressRef = useRef<string | null>(null);
+  const { hasVoterId, isResolved: voterIdResolved } = useVoterIdNFT(address);
 
   useEffect(() => {
-    if (isConnected && !wasConnected.current) {
-      const hasBalance = crepBalance && crepBalance > 0n;
-      router.push(hasBalance ? "/vote" : "/governance");
+    if (!isConnected || !address) {
+      redirectedAddressRef.current = null;
+      return;
     }
-    wasConnected.current = isConnected;
-  }, [crepBalance, isConnected, router]);
+
+    if (!voterIdResolved) {
+      return;
+    }
+
+    const addressKey = address.toLowerCase();
+    if (redirectedAddressRef.current === addressKey) {
+      return;
+    }
+
+    router.replace(hasVoterId ? "/vote" : "/governance");
+    redirectedAddressRef.current = addressKey;
+  }, [address, hasVoterId, isConnected, router, voterIdResolved]);
 
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">
