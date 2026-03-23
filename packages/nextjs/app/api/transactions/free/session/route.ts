@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildUnavailableFreeTransactionSummary, isFreeTransactionStoreUnavailableError } from "./fallback";
 import { isAddress } from "viem";
 import { getPrimaryServerTargetNetwork } from "~~/lib/env/server";
 import { getFreeTransactionAllowanceSummary } from "~~/lib/thirdweb/freeTransactions";
@@ -33,6 +34,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (error) {
+    if (isFreeTransactionStoreUnavailableError(error)) {
+      console.warn("Free transaction store unavailable; falling back to self-funded mode.", error);
+      return NextResponse.json(
+        buildUnavailableFreeTransactionSummary({
+          address,
+          chainId: parsedChainId!,
+        }),
+      );
+    }
+
     console.error("Failed to read free transaction summary:", error);
     return NextResponse.json({ error: "Failed to read free transaction summary" }, { status: 500 });
   }

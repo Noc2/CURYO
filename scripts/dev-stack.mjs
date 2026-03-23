@@ -109,11 +109,14 @@ function runDbPush(databaseConfig) {
   }
 }
 
-function spawnService(service) {
+function spawnService(service, extraEnv = {}) {
   const prefix = `${service.color}[${service.label}]${resetColor}`;
   const child = spawn(service.command, service.args, {
     cwd: repoRoot,
-    env: process.env,
+    env: {
+      ...process.env,
+      ...extraEnv,
+    },
     stdio: ["inherit", "pipe", "pipe"],
   });
 
@@ -213,7 +216,9 @@ Options:
   process.on("SIGTERM", () => shutdown(0));
 
   for (const service of services) {
-    spawnService(service);
+    spawnService(service, {
+      DATABASE_URL: databaseConfig.url,
+    });
   }
 }
 
