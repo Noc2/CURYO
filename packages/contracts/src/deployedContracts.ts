@@ -1756,6 +1756,7 @@ const deployedContracts = {
         revokeRole:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
+      deployedOnBlock: 4,
     },
     ContentRegistry: {
       address: "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC",
@@ -1982,6 +1983,32 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TREASURY_ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TREASURY_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
             },
           ],
           stateMutability: "view",
@@ -2267,6 +2294,34 @@ const deployedContracts = {
             },
             {
               name: "_governance",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_crepToken",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "initializeWithTreasury",
+          inputs: [
+            {
+              name: "_admin",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_governance",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_treasuryAuthority",
               type: "address",
               internalType: "address",
             },
@@ -3516,6 +3571,7 @@ const deployedContracts = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
+      deployedOnBlock: 13,
     },
     RoundVotingEngine: {
       address: "0x2a264F26859166C5BF3868A54593eE716AeBC848",
@@ -5366,6 +5422,7 @@ const deployedContracts = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
+      deployedOnBlock: 15,
     },
     RoundRewardDistributor: {
       address: "0xd04fF4A75Edd737A73E92b2F2274Cb887d96E110",
@@ -6768,6 +6825,7 @@ const deployedContracts = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
+      deployedOnBlock: 16,
     },
     FrontendRegistry: {
       address: "0x82Dc47734901ee7d4f4232f398752cB9Dd5dACcC",
@@ -7728,6 +7786,7 @@ const deployedContracts = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
+      deployedOnBlock: 11,
     },
     ProfileRegistry: {
       address: "0x196dBCBb54b8ec4958c959D8949EBFE87aC2Aaaf",
@@ -8390,19 +8449,14 @@ const deployedContracts = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
+      deployedOnBlock: 12,
     },
     ProtocolConfig: {
       address: "0x05B4CB126885fb10464fdD12666FEb25E2563B76",
       abi: [
         {
           type: "constructor",
-          inputs: [
-            {
-              name: "directGovernance",
-              type: "address",
-              internalType: "address",
-            },
-          ],
+          inputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -8421,6 +8475,32 @@ const deployedContracts = {
         {
           type: "function",
           name: "DEFAULT_ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TREASURY_ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TREASURY_ROLE",
           inputs: [],
           outputs: [
             {
@@ -8557,6 +8637,29 @@ const deployedContracts = {
             },
             {
               name: "governance",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "initializeWithTreasury",
+          inputs: [
+            {
+              name: "admin",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "governance",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "treasuryAuthority",
               type: "address",
               internalType: "address",
             },
@@ -9057,20 +9160,21 @@ const deployedContracts = {
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         grantRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         hasRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         renounceRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         revokeRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
+      deployedOnBlock: 14,
     },
     TransparentUpgradeableProxy: {
       address: "0x82dc47734901ee7d4f4232f398752cb9dd5daccc",
@@ -10291,6 +10395,7 @@ const deployedContracts = {
         supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
+      deployedOnBlock: 17,
     },
     VoterIdNFT: {
       address: "0x29a79095352a718B3D7Fe84E1F14E9F34A35598e",
@@ -11577,6 +11682,7 @@ const deployedContracts = {
         revokeVoterId: "contracts/interfaces/IVoterIdNFT.sol",
         setDelegate: "contracts/interfaces/IVoterIdNFT.sol",
       },
+      deployedOnBlock: 18,
     },
     ParticipationPool: {
       address: "0x7C10A8944Baa22A41a51B82DC419e866a04e55dB",
@@ -12258,6 +12364,7 @@ const deployedContracts = {
         transferOwnership:
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
       },
+      deployedOnBlock: 54,
     },
     MockIdentityVerificationHub: {
       address: "0x5d1ce2a19aa885765abcef89b7590e213422a8b9",
@@ -13748,11 +13855,12 @@ const deployedContracts = {
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         paused: "lib/openzeppelin-contracts/contracts/utils/Pausable.sol",
       },
+      deployedOnBlock: 63,
     },
   },
   11142220: {
     CategoryFeeLib: {
-      address: "0x4102e7e33c8f72a28675e63a859ead637f77d621",
+      address: "0x99a9634e3b14971ee57a97bdaf0f9e3fe7493751",
       abi: [
         {
           type: "error",
@@ -13767,7 +13875,7 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 20713454,
+      deployedOnBlock: 20996051,
     },
     TokenTransferLib: {
       address: "0x05b7e0e01dd70628ee883eb41fcdaf5cfca1b8ff",
@@ -13788,7 +13896,7 @@ const deployedContracts = {
       deployedOnBlock: 20704320,
     },
     SubmitterStakeLib: {
-      address: "0x2aecdb8484d088e4563bad5f23e1131856e334cd",
+      address: "0xfd167ad7261f8501cbd303bcccc862e91624af3a",
       abi: [
         {
           type: "error",
@@ -13797,10 +13905,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 20713454,
+      deployedOnBlock: 20996056,
     },
     TimelockController: {
-      address: "0x45f25d8c74d19298921ec42e70efcfbc55554b82",
+      address: "0x0cf34535bab83c33fc5c39f48f3bd752fb2f4fd5",
       abi: [
         {
           type: "constructor",
@@ -14821,10 +14929,10 @@ const deployedContracts = {
         onERC1155Received:
           "lib/openzeppelin-contracts/contracts/token/ERC1155/utils/ERC1155Holder.sol",
       },
-      deployedOnBlock: 20796042,
+      deployedOnBlock: 20996062,
     },
     CuryoReputation: {
-      address: "0x28C3944501e860dB76fA9f07C9d122EF4Cb8e847",
+      address: "0x91B3Dc22F0DF93940b093Ac577BcAfE492f185d2",
       abi: [
         {
           type: "constructor",
@@ -16525,9 +16633,10 @@ const deployedContracts = {
         revokeRole:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
+      deployedOnBlock: 20996067,
     },
     CuryoGovernor: {
-      address: "0x7fcd76812b2ab35042522f3f8ff923500ddd02c8",
+      address: "0x6f66e7d708b59f6c26655adb259c4e5a215e5dbd",
       abi: [
         {
           type: "constructor",
@@ -16558,6 +16667,19 @@ const deployedContracts = {
               name: "",
               type: "bytes32",
               internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "BOOTSTRAP_PROPOSAL_THRESHOLD",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -18395,10 +18517,10 @@ const deployedContracts = {
         updateTimelock:
           "lib/openzeppelin-contracts/contracts/governance/extensions/GovernorTimelockControl.sol",
       },
-      deployedOnBlock: 20796053,
+      deployedOnBlock: 20996074,
     },
     ContentRegistry: {
-      address: "0x10f46402A170F417e72ea46DcC44f8f17B396EEE",
+      address: "0x150Bd7cb3071CC2032fF78f1451dE3c7C95cA2F4",
       abi: [
         {
           type: "constructor",
@@ -18622,6 +18744,32 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TREASURY_ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TREASURY_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
             },
           ],
           stateMutability: "view",
@@ -18907,6 +19055,34 @@ const deployedContracts = {
             },
             {
               name: "_governance",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_crepToken",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "initializeWithTreasury",
+          inputs: [
+            {
+              name: "_admin",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_governance",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "_treasuryAuthority",
               type: "address",
               internalType: "address",
             },
@@ -20156,9 +20332,10 @@ const deployedContracts = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
+      deployedOnBlock: 20996143,
     },
     RoundVotingEngine: {
-      address: "0x2A660012C024Afb70528ab4206a5C7734794FfaD",
+      address: "0xfa76dA82F1fe7089AEB625892847AF326fFe0234",
       abi: [
         {
           type: "constructor",
@@ -22006,9 +22183,10 @@ const deployedContracts = {
         paused:
           "lib/openzeppelin-contracts-upgradeable/contracts/utils/PausableUpgradeable.sol",
       },
+      deployedOnBlock: 20996155,
     },
     RoundRewardDistributor: {
-      address: "0xF0AA9081816d57e38Bec23702a93B92C014658B7",
+      address: "0xA4F5B9381319c0534ebb6179ee07d441FBbbd218",
       abi: [
         {
           type: "constructor",
@@ -23408,9 +23586,10 @@ const deployedContracts = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
+      deployedOnBlock: 20996161,
     },
     FrontendRegistry: {
-      address: "0x2dC04d1f9B92EAc5B8098EA425044bb8552F9137",
+      address: "0x50017e9fcc8Eb79c118EAe4DE83D0eBD2486f56A",
       abi: [
         {
           type: "constructor",
@@ -24368,9 +24547,10 @@ const deployedContracts = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
+      deployedOnBlock: 20996134,
     },
     ProfileRegistry: {
-      address: "0xc639Fd4Ce89054B78B0203C3A88D6006fE3706F2",
+      address: "0xf519D5d6c07CbEfb1929f5134698C8047c461929",
       abi: [
         {
           type: "constructor",
@@ -25030,19 +25210,14 @@ const deployedContracts = {
         supportsInterface:
           "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
+      deployedOnBlock: 20996138,
     },
     ProtocolConfig: {
-      address: "0x35Fc615E7adB105859047746c00F6afFdd8dc7E1",
+      address: "0x4b4CBd8b43fbF7D5A33e0fff7210dA60C6843942",
       abi: [
         {
           type: "constructor",
-          inputs: [
-            {
-              name: "directGovernance",
-              type: "address",
-              internalType: "address",
-            },
-          ],
+          inputs: [],
           stateMutability: "nonpayable",
         },
         {
@@ -25061,6 +25236,32 @@ const deployedContracts = {
         {
           type: "function",
           name: "DEFAULT_ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TREASURY_ADMIN_ROLE",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "TREASURY_ROLE",
           inputs: [],
           outputs: [
             {
@@ -25197,6 +25398,29 @@ const deployedContracts = {
             },
             {
               name: "governance",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "initializeWithTreasury",
+          inputs: [
+            {
+              name: "admin",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "governance",
+              type: "address",
+              internalType: "address",
+            },
+            {
+              name: "treasuryAuthority",
               type: "address",
               internalType: "address",
             },
@@ -25697,23 +25921,24 @@ const deployedContracts = {
       ],
       inheritedFunctions: {
         DEFAULT_ADMIN_ROLE:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         getRoleAdmin:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         grantRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         hasRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         renounceRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         revokeRole:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
         supportsInterface:
-          "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
+          "lib/openzeppelin-contracts-upgradeable/contracts/access/AccessControlUpgradeable.sol",
       },
+      deployedOnBlock: 20996149,
     },
     TransparentUpgradeableProxy: {
-      address: "0x2dc04d1f9b92eac5b8098ea425044bb8552f9137",
+      address: "0x50017e9fcc8eb79c118eae4de83d0ebd2486f56a",
       abi: [
         {
           type: "constructor",
@@ -25827,10 +26052,10 @@ const deployedContracts = {
         },
       ],
       inheritedFunctions: {},
-      deployedOnBlock: 20796119,
+      deployedOnBlock: 20996134,
     },
     CategoryRegistry: {
-      address: "0xF32D2e5Cf54f94fA071CcF233044aaC9847d2bdC",
+      address: "0x4Dc45EEc1474F19F598626E303BFaC467eB005aB",
       abi: [
         {
           type: "constructor",
@@ -26931,9 +27156,10 @@ const deployedContracts = {
         supportsInterface:
           "lib/openzeppelin-contracts/contracts/access/AccessControl.sol",
       },
+      deployedOnBlock: 20996168,
     },
     VoterIdNFT: {
-      address: "0x7cDD586bb2308E3824B972a20e427ECAf690Bc5C",
+      address: "0x8193453D97DC7ce15F3D96f2B35097902D163609",
       abi: [
         {
           type: "constructor",
@@ -28217,9 +28443,10 @@ const deployedContracts = {
         revokeVoterId: "contracts/interfaces/IVoterIdNFT.sol",
         setDelegate: "contracts/interfaces/IVoterIdNFT.sol",
       },
+      deployedOnBlock: 20996173,
     },
     ParticipationPool: {
-      address: "0x9779D2CDe5Ce4C9dc612e1cab29bBA3113AB4409",
+      address: "0xf4e008FD73A3fc20C1627c77bbdb77bF0A493656",
       abi: [
         {
           type: "constructor",
@@ -28898,9 +29125,10 @@ const deployedContracts = {
         transferOwnership:
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
       },
+      deployedOnBlock: 20996384,
     },
     HumanFaucet: {
-      address: "0xA8A310F76D7051A76C21Ea95225dB9beDb7217A3",
+      address: "0x87E2f693Fb1A4241FDFC2b43F51Fbb9312CAAD80",
       abi: [
         {
           type: "constructor",
@@ -29989,6 +30217,7 @@ const deployedContracts = {
           "lib/openzeppelin-contracts/contracts/access/Ownable.sol",
         paused: "lib/openzeppelin-contracts/contracts/utils/Pausable.sol",
       },
+      deployedOnBlock: 20996434,
     },
   },
 } as const;

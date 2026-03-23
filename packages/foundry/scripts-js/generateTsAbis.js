@@ -144,6 +144,7 @@ function getInheritedFunctions(mainArtifact) {
 function processAllDeployments(broadcastPath) {
   const scriptFolders = getDirectories(broadcastPath);
   const allDeployments = new Map();
+  const allDeploymentsByAddress = new Map();
 
   scriptFolders.forEach((scriptFolder) => {
     const scriptPath = join(broadcastPath, scriptFolder);
@@ -158,6 +159,7 @@ function processAllDeployments(broadcastPath) {
           deployment.deploymentFile.match(/run-(\d+)/)?.[1] || "0"
         );
         const key = `${chainId}-${deployment.contractName}`;
+        const addressKey = `${chainId}-${deployment.address.toLowerCase()}`;
 
         // Only update if this deployment is newer
         if (
@@ -165,6 +167,19 @@ function processAllDeployments(broadcastPath) {
           timestamp > allDeployments.get(key).timestamp
         ) {
           allDeployments.set(key, {
+            ...deployment,
+            timestamp,
+            chainId,
+            deploymentScript: scriptFolder,
+            deployedOnBlock: deployment?.receipt?.blockNumber,
+          });
+        }
+
+        if (
+          !allDeploymentsByAddress.has(addressKey) ||
+          timestamp > allDeploymentsByAddress.get(addressKey).timestamp
+        ) {
+          allDeploymentsByAddress.set(addressKey, {
             ...deployment,
             timestamp,
             chainId,
@@ -208,7 +223,7 @@ function processAllDeployments(broadcastPath) {
     }
   });
 
-  return { contracts: allContracts, deployers };
+  return { contracts: allContracts, deployers, deploymentsByAddress: allDeploymentsByAddress };
 }
 
 function main() {
@@ -229,7 +244,11 @@ function main() {
   });
 
   // Process all deployments from all script folders
-  const { contracts: allGeneratedContracts, deployers } = processAllDeployments(
+  const {
+    contracts: allGeneratedContracts,
+    deployers,
+    deploymentsByAddress,
+  } = processAllDeployments(
     current_path_to_broadcast
   );
 
@@ -259,6 +278,15 @@ function main() {
         address: address,
         abi: artifact.abi,
         inheritedFunctions: getInheritedFunctions(artifact),
+        deployedOnBlock: (() => {
+          const deployment = deploymentsByAddress.get(
+            `${chainId}-${address.toLowerCase()}`
+          );
+          return (
+            deployment?.deployedOnBlock &&
+            Number(BigInt(deployment.deployedOnBlock))
+          );
+        })(),
       };
     });
   });

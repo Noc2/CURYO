@@ -9,6 +9,7 @@ const expectedChainStartBlock = Math.min(
     .map(contract => contract.deployedOnBlock)
     .filter((value): value is number => Number.isInteger(value) && value >= 0),
 );
+const expectedContentRegistryStartBlock = chain11142220.ContentRegistry.deployedOnBlock ?? expectedChainStartBlock;
 const ORIGINAL_ENV = { ...process.env };
 const VALID_ENV = {
   PONDER_NETWORK: "celoSepolia",
@@ -24,7 +25,7 @@ const VALID_ENV = {
     chain11142220?.FrontendRegistry?.address ?? "0x6666666666666666666666666666666666666666",
   PONDER_VOTER_ID_NFT_ADDRESS: chain11142220?.VoterIdNFT?.address ?? "0x7777777777777777777777777777777777777777",
   PONDER_CREP_ADDRESS: chain11142220?.CuryoReputation?.address ?? "0x8888888888888888888888888888888888888888",
-  PONDER_CONTENT_REGISTRY_START_BLOCK: String(expectedChainStartBlock),
+  PONDER_CONTENT_REGISTRY_START_BLOCK: String(expectedContentRegistryStartBlock),
 };
 
 async function loadPonderConfig(overrides: Record<string, string | undefined> = {}, removals: string[] = []) {
@@ -72,7 +73,9 @@ describe("ponder config", () => {
       chain11142220.RoundVotingEngine.address,
     );
     expect(loadedConfig.contracts.CuryoReputation.network.celoSepolia.address).toBe(chain11142220.CuryoReputation.address);
-    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(expectedChainStartBlock);
+    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(
+      expectedContentRegistryStartBlock,
+    );
   });
 
   it("ignores stale Ponder env overrides when shared deployment artifacts exist", async () => {
@@ -85,7 +88,9 @@ describe("ponder config", () => {
     const loadedConfig = config as any;
 
     expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.address).toBe(chain11142220.ContentRegistry.address);
-    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(expectedChainStartBlock);
+    expect(loadedConfig.contracts.ContentRegistry.network.celoSepolia.startBlock).toBe(
+      expectedContentRegistryStartBlock,
+    );
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_ADDRESS"));
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("Ignoring PONDER_CONTENT_REGISTRY_START_BLOCK"));
   });

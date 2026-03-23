@@ -227,6 +227,32 @@ export const ContentRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "TREASURY_ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "TREASURY_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "bonusPool",
     "inputs": [],
     "outputs": [
@@ -506,6 +532,34 @@ export const ContentRegistryAbi = [
       },
       {
         "name": "_governance",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_crepToken",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "initializeWithTreasury",
+    "inputs": [
+      {
+        "name": "_admin",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_governance",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_treasuryAuthority",
         "type": "address",
         "internalType": "address"
       },

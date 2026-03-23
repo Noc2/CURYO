@@ -1,13 +1,7 @@
 export const ProtocolConfigAbi = [
   {
     "type": "constructor",
-    "inputs": [
-      {
-        "name": "directGovernance",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
+    "inputs": [],
     "stateMutability": "nonpayable"
   },
   {
@@ -26,6 +20,32 @@ export const ProtocolConfigAbi = [
   {
     "type": "function",
     "name": "DEFAULT_ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "TREASURY_ADMIN_ROLE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "TREASURY_ROLE",
     "inputs": [],
     "outputs": [
       {
@@ -162,6 +182,29 @@ export const ProtocolConfigAbi = [
       },
       {
         "name": "governance",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "initializeWithTreasury",
+    "inputs": [
+      {
+        "name": "admin",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "governance",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "treasuryAuthority",
         "type": "address",
         "internalType": "address"
       }

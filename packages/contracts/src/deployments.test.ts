@@ -12,15 +12,16 @@ const expectedChainStartBlock = Math.min(
     .map(contract => contract.deployedOnBlock)
     .filter((value): value is number => typeof value === "number" && Number.isInteger(value) && value >= 0),
 );
+const expectedContentRegistryStartBlock = chain11142220.ContentRegistry.deployedOnBlock ?? expectedChainStartBlock;
 
 test("shared deployment helpers return supported-chain addresses", () => {
   assert.equal(getSharedDeploymentAddress(11142220, "ContentRegistry"), chain11142220.ContentRegistry.address);
   assert.equal(getSharedDeploymentAddress(11142220, "RoundVotingEngine"), chain11142220.RoundVotingEngine.address);
 });
 
-test("shared deployment helpers use the chain start block when a contract lacks deployedOnBlock", () => {
+test("shared deployment helpers expose the chain start block and prefer contract-specific blocks when present", () => {
   assert.equal(getSharedChainStartBlock(11142220), expectedChainStartBlock);
-  assert.equal(getSharedDeploymentStartBlock(11142220, "ContentRegistry"), expectedChainStartBlock);
+  assert.equal(getSharedDeploymentStartBlock(11142220, "ContentRegistry"), expectedContentRegistryStartBlock);
 });
 
 test("shared deployment helpers return undefined for unknown chains", () => {
