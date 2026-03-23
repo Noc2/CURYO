@@ -147,10 +147,16 @@ contract CategoryRegistryTest is Test {
         vm.stopPrank();
     }
 
+    function _descriptionHash(string memory description) internal pure returns (bytes32) {
+        return keccak256(bytes(description));
+    }
+
     function _createApprovalProposal(uint256 categoryId, string memory description)
         internal
         returns (uint256 proposalId)
     {
+        bytes32 descriptionHash = _descriptionHash(description);
+
         address[] memory targets = new address[](1);
         targets[0] = address(registry);
 
@@ -158,7 +164,7 @@ contract CategoryRegistryTest is Test {
         values[0] = 0;
 
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId);
+        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash);
 
         vm.prank(user2);
         proposalId = governor.propose(targets, values, calldatas, description);
@@ -171,7 +177,11 @@ contract CategoryRegistryTest is Test {
         proposalId = _createApprovalProposal(categoryId, description);
 
         vm.prank(user1);
-        registry.linkApprovalProposal(categoryId, keccak256(bytes(description)));
+        registry.linkApprovalProposal(categoryId, _descriptionHash(description));
+    }
+
+    function _queueProposal(uint256 proposalId) internal {
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Queued);
     }
 
     // --- Constructor Tests ---
@@ -213,6 +223,8 @@ contract CategoryRegistryTest is Test {
         uint256 categoryId = _submitCategory("migrate.example");
         MockGovernor newGovernor = new MockGovernor();
         address newTimelock = address(99);
+        string memory description = "Approve migrated category";
+        bytes32 descriptionHash = _descriptionHash(description);
 
         vm.prank(timelock);
         registry.updateGovernance(address(newGovernor), newTimelock);
@@ -226,21 +238,22 @@ contract CategoryRegistryTest is Test {
         targets[0] = address(registry);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId);
-        string memory description = "Approve migrated category";
+        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash);
 
         vm.prank(user2);
-        newGovernor.propose(targets, values, calldatas, description);
+        uint256 proposalId = newGovernor.propose(targets, values, calldatas, description);
 
         vm.prank(user1);
-        registry.linkApprovalProposal(categoryId, keccak256(bytes(description)));
+        registry.linkApprovalProposal(categoryId, descriptionHash);
+
+        newGovernor.setProposalState(proposalId, IGovernor.ProposalState.Queued);
 
         vm.prank(timelock);
         vm.expectRevert("Only timelock");
-        registry.approveCategory(categoryId);
+        registry.approveCategory(categoryId, descriptionHash);
 
         vm.prank(newTimelock);
-        registry.approveCategory(categoryId);
+        registry.approveCategory(categoryId, descriptionHash);
 
         assertTrue(registry.isApprovedCategory(categoryId));
     }
@@ -431,14 +444,16 @@ contract CategoryRegistryTest is Test {
     // --- Approve Category Tests ---
 
     function test_ApproveCategory() public {
+        string memory description = "Approve category #1";
         uint256 categoryId = _submitCategory("gatherer.wizards.com");
-        _linkApprovalProposal(categoryId, "Approve category #1");
+        uint256 proposalId = _linkApprovalProposal(categoryId, description);
+        _queueProposal(proposalId);
 
         uint256 userBalanceBefore = token.balanceOf(user1);
 
         // Approve via timelock
         vm.prank(timelock);
-        registry.approveCategory(categoryId);
+        registry.approveCategory(categoryId, _descriptionHash(description));
 
         assertTrue(registry.isApprovedCategory(categoryId));
 
@@ -450,24 +465,63 @@ contract CategoryRegistryTest is Test {
     }
 
     function test_RevertApproveCategoryNonTimelock() public {
+        string memory description = "Approve category #1";
         uint256 categoryId = _submitCategory("gatherer.wizards.com");
-        _linkApprovalProposal(categoryId, "Approve category #1");
+        uint256 proposalId = _linkApprovalProposal(categoryId, description);
+        _queueProposal(proposalId);
 
         vm.prank(user1);
         vm.expectRevert("Only timelock");
-        registry.approveCategory(categoryId);
+        registry.approveCategory(categoryId, _descriptionHash(description));
     }
 
     function test_RevertApproveCategoryAlreadyApproved() public {
+        string memory description = "Approve category #1";
         uint256 categoryId = _submitCategory("gatherer.wizards.com");
-        _linkApprovalProposal(categoryId, "Approve category #1");
+        uint256 proposalId = _linkApprovalProposal(categoryId, description);
+        _queueProposal(proposalId);
 
         vm.prank(timelock);
-        registry.approveCategory(categoryId);
+        registry.approveCategory(categoryId, _descriptionHash(description));
 
         vm.prank(timelock);
         vm.expectRevert("Not pending");
-        registry.approveCategory(categoryId);
+        registry.approveCategory(categoryId, _descriptionHash(description));
+    }
+
+    function test_RevertApproveCategoryProposalNotQueued() public {
+        string memory description = "Approve category #1";
+        uint256 categoryId = _submitCategory("gatherer.wizards.com");
+        _linkApprovalProposal(categoryId, description);
+
+        vm.prank(timelock);
+        vm.expectRevert("Proposal not queued");
+        registry.approveCategory(categoryId, _descriptionHash(description));
+    }
+
+    function test_RevertApproveCategoryOldProposalCannotApproveAfterRelink() public {
+        uint256 categoryId = _submitCategory("stale-proposal.test");
+        string memory firstDescription = "Approve category #1";
+        uint256 firstProposalId = _linkApprovalProposal(categoryId, firstDescription);
+
+        governor.setProposalState(firstProposalId, IGovernor.ProposalState.Canceled);
+
+        vm.prank(user1);
+        registry.clearApprovalProposal(categoryId);
+
+        string memory secondDescription = "Approve category #2";
+        uint256 secondProposalId = _linkApprovalProposal(categoryId, secondDescription);
+
+        _queueProposal(firstProposalId);
+        vm.prank(timelock);
+        vm.expectRevert("Wrong proposal");
+        registry.approveCategory(categoryId, _descriptionHash(firstDescription));
+
+        _queueProposal(secondProposalId);
+        vm.prank(timelock);
+        registry.approveCategory(categoryId, _descriptionHash(secondDescription));
+
+        assertTrue(registry.isApprovedCategory(categoryId));
     }
 
     // --- Reject Category Tests ---
@@ -591,6 +645,22 @@ contract CategoryRegistryTest is Test {
         assertTrue(registry.isDomainRegistered("retry-link.test"));
     }
 
+    function test_ClearApprovalProposalAllowsStaleSucceededProposal() public {
+        uint256 categoryId = _submitCategory("stale-succeeded.test");
+        uint256 proposalId = _linkApprovalProposal(categoryId, "Approve stale succeeded category");
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Succeeded);
+
+        vm.warp(block.timestamp + registry.STALE_LINKED_PROPOSAL_TIMEOUT() + 1);
+
+        vm.prank(user1);
+        registry.clearApprovalProposal(categoryId);
+
+        ICategoryRegistry.Category memory cleared = registry.getCategory(categoryId);
+        assertEq(cleared.proposalId, 0);
+        assertEq(uint256(cleared.status), uint256(ICategoryRegistry.CategoryStatus.Pending));
+        assertFalse(registry.isDomainRegistered("stale-succeeded.test"));
+    }
+
     function test_ClearApprovalProposalAllowsCancelAfterWindow() public {
         uint256 categoryId = _submitCategory("clear-then-cancel.test");
         uint256 proposalId = _linkApprovalProposal(categoryId, "Approve category #1");
@@ -623,6 +693,16 @@ contract CategoryRegistryTest is Test {
     function test_RevertClearApprovalProposal_ProposalNotClearable() public {
         uint256 categoryId = _submitCategory("not-clearable.test");
         _linkApprovalProposal(categoryId, "Approve category #1");
+
+        vm.prank(user1);
+        vm.expectRevert("Proposal not clearable");
+        registry.clearApprovalProposal(categoryId);
+    }
+
+    function test_RevertClearApprovalProposal_FreshSucceededProposal() public {
+        uint256 categoryId = _submitCategory("fresh-succeeded.test");
+        uint256 proposalId = _linkApprovalProposal(categoryId, "Approve category #1");
+        governor.setProposalState(proposalId, IGovernor.ProposalState.Succeeded);
 
         vm.prank(user1);
         vm.expectRevert("Proposal not clearable");

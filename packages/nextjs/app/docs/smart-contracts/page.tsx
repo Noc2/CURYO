@@ -486,14 +486,15 @@ const SmartContracts: NextPage = () => {
         </li>
         <li>
           <code>clearApprovalProposal(categoryId)</code> &mdash; Clear a linked approval proposal after it was canceled
-          or expired so the submitter can retry or cancel.
+          or expired, or after it stayed succeeded but unqueued past the timeout, so the submitter can retry or cancel.
         </li>
         <li>
           <code>cancelUnlinkedCategory(categoryId)</code> &mdash; Reclaim stake after 7 days if no approval proposal was
           linked.
         </li>
         <li>
-          <code>approveCategory(categoryId)</code> &mdash; Approve after successful governance vote (timelock only).
+          <code>approveCategory(categoryId, descriptionHash)</code> &mdash; Approve after successful governance vote for
+          the exact linked proposal (timelock only).
         </li>
         <li>
           <code>rejectCategory(categoryId)</code> &mdash; Reject after a defeated vote (permissionless, checks proposal

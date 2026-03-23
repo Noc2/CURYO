@@ -136,6 +136,19 @@ export const CategoryRegistryAbi = [
   },
   {
     "type": "function",
+    "name": "STALE_LINKED_PROPOSAL_TIMEOUT",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "addApprovedCategory",
     "inputs": [
       {
@@ -171,6 +184,11 @@ export const CategoryRegistryAbi = [
         "name": "categoryId",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "descriptionHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [],

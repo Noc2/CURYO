@@ -265,10 +265,11 @@ export const CategorySubmissionForm = () => {
 
       if (canAutoCreateProposal && governorContractAddress) {
         const proposalDescription = `Approve category #${categoryId}`;
+        const proposalDescriptionHash = getProposalDescriptionHash(proposalDescription);
         const approvalCalldata = encodeFunctionData({
           abi: categoryRegistryInfo.abi,
           functionName: "approveCategory",
-          args: [categoryId],
+          args: [categoryId, proposalDescriptionHash],
         } as any);
 
         if (canUseSponsoredSubmitCalls) {
@@ -283,7 +284,7 @@ export const CategorySubmissionForm = () => {
               {
                 abi: categoryRegistryInfo.abi,
                 address: categoryRegistryAddress,
-                args: [categoryId, getProposalDescriptionHash(proposalDescription)],
+                args: [categoryId, proposalDescriptionHash],
                 functionName: "linkApprovalProposal",
               },
             ],
@@ -298,7 +299,7 @@ export const CategorySubmissionForm = () => {
           });
           await writeRegistry({
             functionName: "linkApprovalProposal",
-            args: [categoryId, getProposalDescriptionHash(proposalDescription)],
+            args: [categoryId, proposalDescriptionHash],
           });
         }
         proposalCreated = true;

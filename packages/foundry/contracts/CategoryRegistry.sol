@@ -27,6 +27,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     uint256 public constant MAX_SUBCATEGORIES = 20;
     uint256 public constant MAX_SUBCATEGORY_LENGTH = 32;
     uint256 public constant SPONSORSHIP_WINDOW = 7 days;
+    uint256 public constant STALE_LINKED_PROPOSAL_TIMEOUT = 14 days;
 
     // --- State ---
     IERC20 public immutable token;
@@ -38,6 +39,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     mapping(uint256 => Category) private _categories;
     mapping(bytes32 => uint256) private _approvedDomainToCategory; // domain hash => approved categoryId
     mapping(bytes32 => uint256) private _pendingDomainReservation; // domain hash => pending linked categoryId
+    mapping(uint256 => uint256) private _proposalLinkedAt; // categoryId => timestamp when current proposal was linked
     uint256[] private _approvedCategoryIds;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
 
@@ -184,11 +186,13 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         require(_pendingDomainReservation[domainHash] == 0, "Domain already registered");
 
         cat.proposalId = proposalId;
+        _proposalLinkedAt[categoryId] = block.timestamp;
         _pendingDomainReservation[domainHash] = categoryId;
         emit CategoryProposalLinked(categoryId, proposalId, descriptionHash);
     }
 
-    /// @notice Clear a linked approval proposal after the sponsor canceled it or it expired.
+    /// @notice Clear a linked approval proposal after it was canceled, expired, or left succeeded but unqueued past
+    ///         the stale timeout.
     /// @dev This lets the submitter either relink a fresh proposal before the sponsorship window ends
     ///      or reclaim stake via cancelUnlinkedCategory() after the window has passed.
     function clearApprovalProposal(uint256 categoryId) external nonReentrant {
@@ -200,11 +204,16 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
         IGovernor.ProposalState proposalState = governor.state(cat.proposalId);
         require(
-            proposalState == IGovernor.ProposalState.Canceled || proposalState == IGovernor.ProposalState.Expired,
+            proposalState == IGovernor.ProposalState.Canceled || proposalState == IGovernor.ProposalState.Expired
+                || (
+                    proposalState == IGovernor.ProposalState.Succeeded
+                        && block.timestamp > _proposalLinkedAt[categoryId] + STALE_LINKED_PROPOSAL_TIMEOUT
+                ),
             "Proposal not clearable"
         );
 
         cat.proposalId = 0;
+        delete _proposalLinkedAt[categoryId];
         _releasePendingDomain(cat, categoryId);
     }
 
@@ -229,8 +238,10 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     // --- Governance Callbacks ---
 
     /// @notice Approve a category after successful governance vote
-    /// @dev Only callable by the timelock after proposal execution
-    function approveCategory(uint256 categoryId) external nonReentrant {
+    /// @dev Only callable by the timelock while the exact linked proposal is being executed from the queued state.
+    /// @param categoryId The pending category to approve.
+    /// @param descriptionHash Keccak-256 hash of the exact governor proposal description linked to the category.
+    function approveCategory(uint256 categoryId, bytes32 descriptionHash) external nonReentrant {
         require(msg.sender == timelock, "Only timelock");
 
         Category storage cat = _categories[categoryId];
@@ -238,11 +249,16 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         require(cat.status == CategoryStatus.Pending, "Not pending");
         require(cat.proposalId != 0, "Proposal not linked");
 
+        uint256 expectedProposalId = getApprovalProposalId(categoryId, descriptionHash);
+        require(expectedProposalId == cat.proposalId, "Wrong proposal");
+        require(governor.state(expectedProposalId) == IGovernor.ProposalState.Queued, "Proposal not queued");
+
         bytes32 domainHash = keccak256(abi.encodePacked(cat.domain));
         require(_approvedDomainToCategory[domainHash] == 0, "Domain already registered");
         require(_pendingDomainReservation[domainHash] == categoryId, "Domain not reserved for category");
 
         cat.status = CategoryStatus.Approved;
+        delete _proposalLinkedAt[categoryId];
         delete _pendingDomainReservation[domainHash];
         _approvedDomainToCategory[domainHash] = categoryId;
         _approvedCategoryIds.push(categoryId);
@@ -266,6 +282,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         require(proposalState == IGovernor.ProposalState.Defeated, "Proposal not defeated");
 
         cat.status = CategoryStatus.Rejected;
+        delete _proposalLinkedAt[categoryId];
 
         _releasePendingDomain(cat, categoryId);
 
@@ -389,7 +406,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         values[0] = 0;
 
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSelector(this.approveCategory.selector, categoryId);
+        calldatas[0] = abi.encodeWithSelector(this.approveCategory.selector, categoryId, descriptionHash);
 
         proposalId = governor.getProposalId(targets, values, calldatas, descriptionHash);
     }

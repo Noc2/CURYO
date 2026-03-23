@@ -9,7 +9,13 @@ import { waitForTransactionReceipt } from "wagmi/actions";
 import { ArrowsRightLeftIcon } from "@heroicons/react/24/outline";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
-import { governorAbi, useGovernanceContracts, useGovernanceStats, useGovernanceWrite } from "~~/hooks/useGovernance";
+import {
+  getProposalDescriptionHash,
+  governorAbi,
+  useGovernanceContracts,
+  useGovernanceStats,
+  useGovernanceWrite,
+} from "~~/hooks/useGovernance";
 
 type ComposerFieldType = "address" | "uint" | "crep" | "string" | "textarea" | "csv" | "bytes32";
 
@@ -42,7 +48,11 @@ type GovernanceActionTemplate = {
   note?: string;
   advanced?: boolean;
   fields: readonly ComposerField[];
-  buildArgs: (values: Record<string, string>, parser: FieldParser) => readonly unknown[];
+  buildArgs: (
+    values: Record<string, string>,
+    parser: FieldParser,
+    descriptionHash?: `0x${string}`,
+  ) => readonly unknown[];
   buildDescription?: (values: Record<string, string>) => string;
 };
 
@@ -105,7 +115,12 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     description: "Create a governor proposal to sponsor and approve a pending category submission.",
     note: "After the proposal confirms, the original category submitter must link it from the same wallet that staked the category.",
     fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
+    buildArgs: (_, parser, descriptionHash) => {
+      if (!descriptionHash) {
+        throw new Error("Description hash is required.");
+      }
+      return [parser.uint("categoryId", "Category ID"), descriptionHash];
+    },
     buildDescription: values => `Approve category #${values.categoryId || "0"}`,
   },
   {
@@ -556,13 +571,19 @@ export function GovernanceActionComposer() {
         throw new Error("You do not currently meet the proposal threshold for governor proposals.");
       }
 
-      const args = selectedTemplate.buildArgs(formValues, parser);
-
       if (selectedTemplate.mode === "proposal") {
         if (!effectiveDescription) {
           throw new Error("Proposal description is required.");
         }
+      }
 
+      const proposalDescriptionHash =
+        selectedTemplate.mode === "proposal" && effectiveDescription
+          ? getProposalDescriptionHash(effectiveDescription)
+          : undefined;
+      const args = selectedTemplate.buildArgs(formValues, parser, proposalDescriptionHash);
+
+      if (selectedTemplate.mode === "proposal") {
         const calldata = encodeFunctionData({
           abi: targetContract.abi,
           functionName: selectedTemplate.functionName,
