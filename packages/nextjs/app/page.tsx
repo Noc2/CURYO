@@ -10,7 +10,7 @@ const LANDING_STATS_REVALIDATE_SECONDS = 300;
 const STEPS = [
   {
     icon: ShieldCheckIcon,
-    title: "Verify Humanity",
+    title: "Get Verified",
     description: "Claim one privacy-preserving Voter ID and cREP so each rating comes from a real human.",
   },
   {
