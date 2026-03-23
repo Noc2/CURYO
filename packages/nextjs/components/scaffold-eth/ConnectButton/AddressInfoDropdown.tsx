@@ -146,13 +146,13 @@ function WalletSummaryDetails({
   return (
     <>
       <div className={balanceClassName}>{formatCrepAmount(liquidBalance)} cREP</div>
-      <FreeTransactionAllowanceText className={freeTxClassName} />
       {showStaked ? (
         <div className={stakeClassName}>
           {formatCrepAmount(totalStakedMicro)} Staked
           {stakeTooltip ? <InfoTooltip text={stakeTooltip} position="bottom" /> : null}
         </div>
       ) : null}
+      <FreeTransactionAllowanceText className={freeTxClassName} />
     </>
   );
 }
