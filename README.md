@@ -108,6 +108,12 @@ That command starts the Next app's local Postgres container, runs `db:push`, and
 yarn dev:db:down
 ```
 
+If the local Postgres volume was initialized with old credentials, reset it with:
+
+```bash
+yarn dev:db:reset
+```
+
 If you are using a local chain, keep Anvil and deployment separate:
 
 **1. Local chain:**

@@ -108,6 +108,10 @@ function outputIndicatesFailure(output) {
   );
 }
 
+function outputHasMissingRoleError(output) {
+  return /role\s+"[^"]+"\s+does not exist/i.test(output);
+}
+
 function runDbPush(databaseConfig) {
   if (databaseConfig.isMemory) {
     console.log("[dev-stack] Skipping Next.js schema push for the in-memory development database.");
@@ -134,6 +138,13 @@ function runDbPush(databaseConfig) {
   }
 
   if (result.status !== 0 || outputIndicatesFailure(combinedOutput)) {
+    if (databaseConfig.isLocal && outputHasMissingRoleError(combinedOutput)) {
+      throw new Error(
+        `Failed to apply the Next.js database schema against ${formatDatabaseTarget(databaseConfig)} because the local Postgres volume was initialized with different credentials. ` +
+          "Run `yarn dev:db:reset` once, then rerun `yarn dev:stack`.",
+      );
+    }
+
     throw new Error(
       `Failed to apply the Next.js database schema against ${formatDatabaseTarget(databaseConfig)}. ` +
         "If you are using your own local Postgres, set DATABASE_URL to a valid role/password and rerun with `yarn dev:stack --skip-db`.",

@@ -18,6 +18,7 @@
     "dev:db": "node scripts/dev-db.mjs up",
     "dev:db:down": "node scripts/dev-db.mjs down",
     "dev:db:logs": "node scripts/dev-db.mjs logs",
+    "dev:db:reset": "node scripts/dev-db.mjs reset",
     "dev:stack": "node scripts/dev-stack.mjs",
     "flatten": "yarn foundry:flatten",
     "fork": "yarn foundry:fork",

@@ -222,17 +222,25 @@ export function stopLocalDatabase() {
   }
 }
 
+export function resetLocalDatabase() {
+  const result = runCompose(["down", "-v"]);
+  if (result.status !== 0) {
+    throw new Error("Failed to reset the local Postgres container and volume.");
+  }
+}
+
 export function streamLocalDatabaseLogs() {
   const result = runCompose(["logs", "-f", postgresServiceName]);
   process.exit(result.status ?? 0);
 }
 
 function printUsage() {
-  console.log(`Usage: node scripts/dev-db.mjs [up|down|logs]
+  console.log(`Usage: node scripts/dev-db.mjs [up|down|reset|logs]
 
 Commands:
   up    Start the local Postgres container for the Next app
   down  Stop the local Postgres container
+  reset Stop the local Postgres container and delete its data volume
   logs  Follow Postgres logs
 `);
 }
@@ -256,6 +264,12 @@ async function main() {
   if (command === "down") {
     stopLocalDatabase();
     console.log("[dev-db] Local Postgres stopped.");
+    return;
+  }
+
+  if (command === "reset") {
+    resetLocalDatabase();
+    console.log("[dev-db] Local Postgres volume reset.");
     return;
   }
 

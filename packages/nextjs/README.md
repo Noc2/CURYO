@@ -20,6 +20,7 @@ Run these from the monorepo root unless noted otherwise:
 | `yarn start`                                    | Start development server (localhost:3000)                       |
 | `yarn dev:db`                                   | Start the local Postgres container for the Next app             |
 | `yarn dev:db:down`                              | Stop the local Postgres container                               |
+| `yarn dev:db:reset`                             | Reset the local Postgres container and its data volume          |
 | `yarn dev:stack`                                | Start local Postgres, apply schema, then run Next.js + Ponder + Keeper |
 | `yarn next:build`                               | Production build                                                |
 | `yarn next:lint`                                | Run ESLint                                                      |

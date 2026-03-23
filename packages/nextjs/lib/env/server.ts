@@ -18,6 +18,25 @@ function isLocalhostHostname(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
+function normalizeDatabaseUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
+      return rawUrl;
+    }
+
+    const sslMode = parsed.searchParams.get("sslmode");
+    if (sslMode === "prefer" || sslMode === "require" || sslMode === "verify-ca") {
+      parsed.searchParams.set("sslmode", "verify-full");
+      return parsed.toString();
+    }
+
+    return rawUrl;
+  } catch {
+    return rawUrl;
+  }
+}
+
 export function resolveAppUrl(rawValue: string | undefined, production: boolean): string | null {
   const resolvedValue = rawValue?.trim() || (!production ? "http://localhost:3000" : undefined);
 
@@ -105,7 +124,7 @@ export function getDatabaseConfig() {
       ? !isProduction
         ? "memory:"
         : undefined
-      : rawDatabaseUrl
+      : normalizeDatabaseUrl(rawDatabaseUrl)
     : !isProduction
       ? defaultDevDatabaseUrl
       : undefined;
