@@ -42,6 +42,18 @@ contract DeployCuryo is ScaffoldETHDeploy {
     address constant CELO_SEPOLIA_HUB = 0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74;
     uint256 constant SELF_FACET_MINIMUM_AGE = 18;
 
+    function _beforeBroadcast() internal view override {
+        if (block.chainid == 31337) {
+            return;
+        }
+
+        address treasuryAuthority = vm.envOr("TREASURY_AUTHORITY_ADDRESS", address(0));
+        require(
+            treasuryAuthority != address(0),
+            "Set TREASURY_AUTHORITY_ADDRESS before deploy"
+        );
+    }
+
     function run() external ScaffoldEthDeployerRunner {
         // Detect local dev: anvil/hardhat chain IDs
         bool isLocalDev = block.chainid == 31337;
