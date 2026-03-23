@@ -67,17 +67,12 @@ async function main() {
   const MIN_BALANCE = BigInt(config.minGasBalanceWei);
 
   async function updateOperationalGauges() {
-    const [balanceResult, consensusReserveResult, keeperRewardPoolResult] = await Promise.allSettled([
+    const [balanceResult, consensusReserveResult] = await Promise.allSettled([
       publicClient.getBalance({ address: account.address }),
       publicClient.readContract({
         address: config.contracts.votingEngine,
         abi: RoundVotingEngineAbi,
         functionName: "consensusReserve",
-      }),
-      publicClient.readContract({
-        address: config.contracts.votingEngine,
-        abi: RoundVotingEngineAbi,
-        functionName: "keeperRewardPool",
       }),
     ]);
 
@@ -99,14 +94,6 @@ async function main() {
     } else {
       logger.warn("Failed to read consensus reserve", {
         error: consensusReserveResult.reason?.message || String(consensusReserveResult.reason),
-      });
-    }
-
-    if (keeperRewardPoolResult.status === "fulfilled") {
-      setGauge("keeper_reward_pool_wei", Number(keeperRewardPoolResult.value));
-    } else {
-      logger.warn("Failed to read keeper reward pool", {
-        error: keeperRewardPoolResult.reason?.message || String(keeperRewardPoolResult.reason),
       });
     }
   }

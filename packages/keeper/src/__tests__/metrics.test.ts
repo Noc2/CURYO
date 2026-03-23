@@ -64,7 +64,7 @@ describe("metrics", () => {
     expect(getConsecutiveErrors()).toBe(2);
   });
 
-  it("renders pool balance gauges in metrics and health responses", async () => {
+  it("renders operational gauges in metrics and health responses", async () => {
     recordRun(
       makeResult({
         roundsRevealFailedFinalized: 2,
@@ -74,14 +74,12 @@ describe("metrics", () => {
       75,
     );
     setGauge("keeper_consensus_reserve_wei", 4_000_000_000_000);
-    setGauge("keeper_reward_pool_wei", 250_000_000_000);
 
     const metricsBody = getMetricsText();
     expect(metricsBody).toContain("keeper_rounds_reveal_failed_finalized_total 2");
     expect(metricsBody).toContain("keeper_unrevealed_cleanup_batches_total 3");
     expect(metricsBody).toContain("keeper_submitter_stakes_resolved_total 4");
     expect(metricsBody).toContain("keeper_consensus_reserve_wei 4000000000000");
-    expect(metricsBody).toContain("keeper_reward_pool_wei 250000000000");
 
     const health = getHealthSnapshot();
     expect([200, 503]).toContain(health.status);
@@ -90,7 +88,6 @@ describe("metrics", () => {
       cleanupBatchesProcessed: 3,
       submitterStakesResolved: 4,
       consensusReserveWei: "4000000000000",
-      keeperRewardPoolWei: "250000000000",
     });
   });
 });

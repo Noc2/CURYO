@@ -62,7 +62,7 @@ docker run --env-file packages/keeper/.env.local -p 9090:9090 curyo-keeper
 - **Prometheus metrics:** `http://localhost:9090/metrics`
 - **Health check:** `http://localhost:9090/health`
 
-Key metrics: `keeper_is_running` (gauge), `keeper_rounds_settled_total` (counter), `keeper_rounds_cancelled_total` (counter), `keeper_rounds_reveal_failed_finalized_total` (counter), `keeper_unrevealed_cleanup_batches_total` (counter), `keeper_consensus_reserve_wei` (gauge), `keeper_reward_pool_wei` (gauge).
+Key metrics: `keeper_is_running` (gauge), `keeper_rounds_settled_total` (counter), `keeper_rounds_cancelled_total` (counter), `keeper_rounds_reveal_failed_finalized_total` (counter), `keeper_unrevealed_cleanup_batches_total` (counter), `keeper_consensus_reserve_wei` (gauge).
 
 ## Project Structure
 

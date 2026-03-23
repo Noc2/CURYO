@@ -7,8 +7,7 @@ const ACCOUNT = "0x3333333333333333333333333333333333333333" as const;
 type KeeperIndexOptions = {
   balance?: bigint;
   consensusReserve?: bigint;
-  keeperRewardPool?: bigint;
-  failRead?: "consensusReserve" | "keeperRewardPool" | null;
+  failRead?: "consensusReserve" | null;
 };
 
 async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
@@ -27,13 +26,6 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
         throw new Error("consensus reserve read failed");
       }
       return options.consensusReserve ?? 900n;
-    }
-
-    if (functionName === "keeperRewardPool") {
-      if (options.failRead === "keeperRewardPool") {
-        throw new Error("keeper reward pool read failed");
-      }
-      return options.keeperRewardPool ?? 700n;
     }
 
     throw new Error(`unexpected readContract(${functionName})`);
@@ -134,7 +126,6 @@ describe("keeper index", () => {
     const keeper = await loadKeeperIndex({
       balance: 1_500n,
       consensusReserve: 4_000n,
-      keeperRewardPool: 250n,
     });
 
     expect(keeper.validateKeeperContracts).toHaveBeenCalledWith(expect.anything(), ENGINE, REGISTRY);
@@ -143,13 +134,8 @@ describe("keeper index", () => {
       1,
       expect.objectContaining({ address: ENGINE, functionName: "consensusReserve" }),
     );
-    expect(keeper.readContract).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ address: ENGINE, functionName: "keeperRewardPool" }),
-    );
     expect(keeper.setGauge).toHaveBeenCalledWith("keeper_wallet_balance_wei", 1500);
     expect(keeper.setGauge).toHaveBeenCalledWith("keeper_consensus_reserve_wei", 4000);
-    expect(keeper.setGauge).toHaveBeenCalledWith("keeper_reward_pool_wei", 250);
     expect(keeper.resolveRounds).toHaveBeenCalledOnce();
     expect(keeper.recordRun).toHaveBeenCalledOnce();
   });
@@ -157,7 +143,6 @@ describe("keeper index", () => {
   it("logs failed pool reads but still runs the keeper loop", async () => {
     const keeper = await loadKeeperIndex({
       balance: 1_500n,
-      keeperRewardPool: 250n,
       failRead: "consensusReserve",
     });
 
@@ -165,7 +150,6 @@ describe("keeper index", () => {
       error: "consensus reserve read failed",
     });
     expect(keeper.setGauge).not.toHaveBeenCalledWith("keeper_consensus_reserve_wei", expect.any(Number));
-    expect(keeper.setGauge).toHaveBeenCalledWith("keeper_reward_pool_wei", 250);
     expect(keeper.resolveRounds).toHaveBeenCalledOnce();
     expect(keeper.recordError).not.toHaveBeenCalled();
   });
@@ -174,7 +158,6 @@ describe("keeper index", () => {
     const keeper = await loadKeeperIndex({
       balance: 50n,
       consensusReserve: 4_000n,
-      keeperRewardPool: 250n,
     });
 
     expect(keeper.logger.warn).toHaveBeenCalledWith("Keeper wallet balance low", {
@@ -183,7 +166,6 @@ describe("keeper index", () => {
     });
     expect(keeper.setGauge).toHaveBeenCalledWith("keeper_wallet_balance_wei", 50);
     expect(keeper.setGauge).toHaveBeenCalledWith("keeper_consensus_reserve_wei", 4000);
-    expect(keeper.setGauge).toHaveBeenCalledWith("keeper_reward_pool_wei", 250);
     expect(keeper.resolveRounds).toHaveBeenCalledOnce();
   });
 });
