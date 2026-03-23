@@ -6,7 +6,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { ensureLocalDatabase, formatDatabaseTarget, resolveNextDatabaseConfig } from "./dev-db.mjs";
+import { MissingDockerComposeError, ensureLocalDatabase, formatDatabaseTarget, resolveNextDatabaseConfig } from "./dev-db.mjs";
 
 const currentFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(currentFile), "..");
@@ -62,6 +62,15 @@ function warnIfMissing(filePath, message) {
   if (!existsSync(filePath)) {
     console.warn(`[dev-stack] ${message}`);
   }
+}
+
+function printMissingDockerHelp(databaseConfig) {
+  console.error("[dev-stack] Docker is not available for the local Postgres helper.");
+  console.error("[dev-stack] Choose one of these next steps:");
+  console.error("[dev-stack]  1. Install Docker Desktop, then rerun `yarn dev:stack`.");
+  console.error(
+    `[dev-stack]  2. Start Postgres yourself at ${databaseConfig.host}:${databaseConfig.port}/${databaseConfig.databaseName}, set DATABASE_URL, then run \`yarn dev:stack --skip-db\`.`,
+  );
 }
 
 function runDbPush(databaseUrl) {
@@ -162,9 +171,17 @@ Options:
   if (skipDb) {
     console.log(`[dev-stack] Skipping local Postgres. Using ${formatDatabaseTarget(databaseConfig)}.`);
   } else {
-    const localDbResult = await ensureLocalDatabase();
-    if (localDbResult.skipped) {
-      console.log(`[dev-stack] Skipping local Postgres because ${localDbResult.reason}.`);
+    try {
+      const localDbResult = await ensureLocalDatabase();
+      if (localDbResult.skipped) {
+        console.log(`[dev-stack] Skipping local Postgres because ${localDbResult.reason}.`);
+      }
+    } catch (error) {
+      if (error instanceof MissingDockerComposeError) {
+        printMissingDockerHelp(databaseConfig);
+        process.exit(1);
+      }
+      throw error;
     }
   }
 

@@ -14,6 +14,13 @@ const composeFile = path.join(repoRoot, "docker-compose.dev.yml");
 const nextEnvLocalFile = path.join(repoRoot, "packages", "nextjs", ".env.local");
 const postgresServiceName = "next-postgres";
 
+export class MissingDockerComposeError extends Error {
+  constructor() {
+    super("Docker Compose is required. Install Docker Desktop or docker-compose to use local Postgres.");
+    this.name = "MissingDockerComposeError";
+  }
+}
+
 function stripMatchingQuotes(value) {
   if (
     value.length >= 2 &&
@@ -109,7 +116,7 @@ function getComposeCommand() {
     return { command: "docker-compose", args: [] };
   }
 
-  throw new Error("Docker Compose is required. Install Docker Desktop or docker-compose to use local Postgres.");
+  throw new MissingDockerComposeError();
 }
 
 function getComposeEnv(config = resolveNextDatabaseConfig()) {
