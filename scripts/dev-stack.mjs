@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,8 @@ import { MissingDockerComposeError, ensureLocalDatabase, formatDatabaseTarget, r
 
 const currentFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(currentFile), "..");
+const nextProjectDir = path.join(repoRoot, "packages", "nextjs");
+const nextDevLockPath = path.join(nextProjectDir, ".next-dev.lock");
 const yarnCommand = process.platform === "win32" ? "yarn.cmd" : "yarn";
 const services = [
   {
@@ -37,6 +39,31 @@ const services = [
 const resetColor = "\u001b[0m";
 const managedChildren = [];
 let shuttingDown = false;
+
+function pidIsAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error instanceof Error && "code" in error && error.code === "EPERM";
+  }
+}
+
+function readActiveNextDevLock() {
+  if (!existsSync(nextDevLockPath)) return null;
+
+  try {
+    const raw = readFileSync(nextDevLockPath, "utf8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.pid === "number" && pidIsAlive(parsed.pid)) {
+      return parsed;
+    }
+  } catch {
+    // Ignore malformed/stale locks here. Next's own preflight handles cleanup.
+  }
+
+  return null;
+}
 
 function prefixOutput(stream, target, prefix) {
   let buffer = "";
@@ -185,6 +212,7 @@ Options:
 
   const databaseConfig = resolveNextDatabaseConfig();
   const skipDb = process.argv.includes("--skip-db");
+  const activeNextDevLock = readActiveNextDevLock();
 
   warnIfMissing(
     path.join(repoRoot, "packages", "ponder", ".env.local"),
@@ -195,11 +223,19 @@ Options:
     "packages/keeper/.env.local is missing. Keeper needs RPC_URL, CHAIN_ID, and a wallet before it can start.",
   );
 
+  if (activeNextDevLock) {
+    console.error(
+      `[dev-stack] Next is already running for this workspace (PID ${activeNextDevLock.pid}). ` +
+        "Stop that process before running `yarn dev:stack` so the full stack can start cleanly.",
+    );
+    process.exit(1);
+  }
+
   if (skipDb) {
     console.log(`[dev-stack] Skipping local Postgres. Using ${formatDatabaseTarget(databaseConfig)}.`);
   } else {
     try {
-      const localDbResult = await ensureLocalDatabase();
+      const localDbResult = await ensureLocalDatabase(databaseConfig);
       if (localDbResult.skipped) {
         console.log(`[dev-stack] Skipping local Postgres because ${localDbResult.reason}.`);
       }

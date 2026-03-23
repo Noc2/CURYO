@@ -176,8 +176,7 @@ async function waitForDatabaseReady(config) {
   throw new Error(`Local Postgres did not become ready at ${formatDatabaseTarget(config)} within 30 seconds.`);
 }
 
-export async function ensureLocalDatabase() {
-  const config = resolveNextDatabaseConfig();
+export async function ensureLocalDatabase(config = resolveNextDatabaseConfig()) {
 
   if (config.isMemory) {
     return {
