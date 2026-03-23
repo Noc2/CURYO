@@ -11,6 +11,7 @@ import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
 import { getRecentUserVotesQueryKey } from "~~/hooks/useRecentUserVotes";
+import { useThirdwebSponsoredSubmitCalls } from "~~/hooks/useThirdwebSponsoredSubmitCalls";
 import { getVoteHistoryQueryKey } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { useVotingConfig } from "~~/hooks/useVotingConfig";
@@ -100,6 +101,8 @@ export function useRoundVote() {
   const { epochDuration } = useVotingConfig();
   const writeTx = useTransactor();
   const wagmiTokenWrite = useWriteContract();
+  const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
+    useThirdwebSponsoredSubmitCalls();
 
   const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
@@ -134,6 +137,11 @@ export function useRoundVote() {
       return false;
     }
 
+    if (isAwaitingSponsoredSubmitCalls) {
+      setError("Preparing wallet. Try again in a moment.");
+      return false;
+    }
+
     // Synchronous guard against double-submission (React state updates are async)
     if (commitLock.current) return false;
     commitLock.current = true;
@@ -157,58 +165,72 @@ export function useRoundVote() {
         ciphertext,
         frontend,
       });
-      const transferAndCallData = encodeFunctionData({
-        abi: CuryoReputationAbi,
-        functionName: "transferAndCall",
-        args: [votingEngineInfo.address, stakeWei, payload],
-      });
-
-      freeTransactionOperationKey = buildFreeTransactionOperationKey({
-        chainId: targetNetwork.id,
-        calls: [
-          {
-            data: transferAndCallData,
-            to: crepInfo.address as `0x${string}`,
-            value: 0n,
-          },
-        ],
-        sender: address,
-      });
-
+      const transferAndCallArgs = [votingEngineInfo.address, stakeWei, payload] as const;
       const transferAndCallRequest: any = {
         abi: CuryoReputationAbi,
         address: crepInfo.address,
         functionName: "transferAndCall",
-        args: [votingEngineInfo.address, stakeWei, payload] as const,
+        args: transferAndCallArgs,
       };
 
-      if (publicClient) {
+      if (canUseSponsoredSubmitCalls) {
+        await executeSponsoredCalls([
+          {
+            abi: CuryoReputationAbi,
+            address: crepInfo.address as `0x${string}`,
+            args: transferAndCallArgs,
+            functionName: "transferAndCall",
+          },
+        ]);
+      } else {
+        const transferAndCallData = encodeFunctionData({
+          abi: CuryoReputationAbi,
+          functionName: "transferAndCall",
+          args: transferAndCallArgs,
+        });
+
+        freeTransactionOperationKey = buildFreeTransactionOperationKey({
+          chainId: targetNetwork.id,
+          calls: [
+            {
+              data: transferAndCallData,
+              to: crepInfo.address as `0x${string}`,
+              value: 0n,
+            },
+          ],
+          sender: address,
+        });
+      }
+
+      if (!canUseSponsoredSubmitCalls && publicClient) {
         const estimatedGas = await publicClient.estimateContractGas({
           address: crepInfo.address,
           abi: CuryoReputationAbi,
           functionName: "transferAndCall",
-          args: [votingEngineInfo.address, stakeWei, payload],
+          args: transferAndCallArgs,
           account: address,
         });
         transferAndCallRequest.gas = (estimatedGas * 120n) / 100n;
       }
 
-      wagmiTokenWrite.reset();
-      const transactionHash = await writeTx(() => wagmiTokenWrite.writeContractAsync(transferAndCallRequest));
-      if (!transactionHash) {
-        return false;
-      }
+      if (!canUseSponsoredSubmitCalls) {
+        wagmiTokenWrite.reset();
+        const transactionHash = await writeTx(() => wagmiTokenWrite.writeContractAsync(transferAndCallRequest));
+        if (!transactionHash) {
+          return false;
+        }
 
-      if (freeTransactionOperationKey) {
-        try {
-          await postFreeTransactionMutation("/api/transactions/free/confirm", {
-            address,
-            chainId: targetNetwork.id,
-            operationKey: freeTransactionOperationKey,
-            transactionHashes: [transactionHash],
-          });
-        } catch (confirmationError) {
-          console.error("Failed to confirm sponsored free transaction usage:", confirmationError);
+        if (freeTransactionOperationKey) {
+          try {
+            await postFreeTransactionMutation("/api/transactions/free/confirm", {
+              address,
+              chainId: targetNetwork.id,
+              operationKey: freeTransactionOperationKey,
+              transactionHashes: [transactionHash],
+            });
+          } catch (confirmationError) {
+            console.error("Failed to confirm sponsored free transaction usage:", confirmationError);
+          }
         }
       }
 
