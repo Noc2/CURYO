@@ -503,6 +503,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
                 </a>{" "}
                 that you are a human
               </p>
+              <p className="text-base-content/60 text-base">Use a passport or biometric ID card.</p>
             </div>
 
             <SelfVerifyButton onStart={handleVerificationStarted} onSuccess={handleVerificationSuccess} />
