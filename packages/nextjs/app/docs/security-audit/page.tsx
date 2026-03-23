@@ -977,9 +977,9 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>L-04</td>
               <td>
-                <strong>No token recovery function on HumanFaucet.</strong> Added{" "}
-                <code>withdrawRemaining(address, uint256)</code> with <code>onlyOwner</code> modifier to allow recovery
-                of remaining cREP after faucet decommissioning.
+                <strong>Historical recovery-path finding on HumanFaucet.</strong> A recovery path was added during audit
+                remediation, but the current pre-launch hardening disables privileged sweeps of accounted faucet funds.
+                <code>withdrawRemaining(address, uint256)</code> remains in the ABI for compatibility but reverts.
               </td>
               <td className="font-mono text-primary">HumanFaucet</td>
               <td>
@@ -1388,10 +1388,10 @@ const SecurityAudit: NextPage = () => {
             </tr>
             <tr>
               <td>
-                <strong>Governance attack</strong> &mdash; Attacker acquires 4% of circulating supply to reach quorum
-                and pass malicious proposals. TimelockController delay provides community response window.
+                <strong>Governance attack</strong> &mdash; Attacker acquires enough voting power to clear the bootstrap
+                proposal threshold and the larger of the quorum floor or 4% of circulating supply.
               </td>
-              <td>4% of circulating cREP (dynamic quorum, 10K floor)</td>
+              <td>100K proposal threshold + max(500K cREP, 4% of circulating supply)</td>
               <td>Timelock delay allows community response</td>
               <td>
                 <span className="badge badge-warning whitespace-nowrap text-base-content">Deployment</span>
@@ -1660,13 +1660,13 @@ const SecurityAudit: NextPage = () => {
           <strong>Self-delegation only:</strong> CuryoReputation._delegate requires delegatee == account.
         </li>
         <li>
-          <strong>Governance-first access control:</strong> Timelock holds DEFAULT_ADMIN_ROLE from deployment. Deployer
-          has only temporary CONFIG/MINTER roles with no grant power. Ownable contracts restrict transferOwnership to
-          immutable governance address.
+          <strong>Split authority access control:</strong> Timelock holds upgrade/config authority from deployment.
+          Treasury-specific roles and the initial treasury allocation are routed to a separate treasury authority.
+          Deployer has only temporary setup roles with no grant power.
         </li>
         <li>
-          <strong>HumanFaucet Pausable:</strong> customVerificationHook checks _requireNotPaused(). withdrawRemaining is
-          NOT paused (emergency fund extraction always works).
+          <strong>HumanFaucet Pausable:</strong> customVerificationHook checks _requireNotPaused(). Privileged faucet
+          sweeps are disabled entirely, so pausing only affects claims.
         </li>
       </ol>
 

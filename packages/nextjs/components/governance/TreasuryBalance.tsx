@@ -43,10 +43,10 @@ function PoolStat({ title, description, tooltip, value, isLoading, Icon }: PoolS
 }
 
 export const TreasuryBalance = () => {
-  // Read timelock (treasury) address from CategoryRegistry
+  // Read the dedicated treasury authority address from ContentRegistry.
   const { data: treasuryAddress, isLoading: treasuryAddressLoading } = useScaffoldReadContract({
-    contractName: "CategoryRegistry",
-    functionName: "timelock",
+    contractName: "ContentRegistry",
+    functionName: "treasury",
   });
 
   // Read cREP balance of treasury
@@ -94,7 +94,7 @@ export const TreasuryBalance = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
         <PoolStat
           title="Treasury"
-          tooltip="Funded by the 1% settlement fee, forfeited submitter stakes, and forfeited votes."
+          tooltip="Balance held by the dedicated treasury authority. Funded by the 1% settlement fee, cancellation fees, forfeited submitter stakes, and forfeited votes."
           value={treasuryBalanceRaw}
           isLoading={treasuryLoading}
           Icon={BuildingLibraryIcon}

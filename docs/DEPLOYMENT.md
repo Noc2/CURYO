@@ -16,7 +16,8 @@ Target chain: **Celo Mainnet** (chain ID `42220`)
 
 ## 1. Create Wallets
 
-You need **seven** wallets across three security tiers. Never reuse keys across roles.
+You need **seven operational wallets plus one treasury authority address** across three security tiers. Never reuse keys
+across roles.
 
 | Role | Type | Holds | Notes |
 |---|---|---|---|
@@ -27,6 +28,7 @@ You need **seven** wallets across three security tiers. Never reuse keys across 
 | **rate-bot** | Foundry keystore (hot) | Small cREP + gas | Delegate of Cold Wallet B; daily operations |
 | **keeper** | Foundry keystore (hot) | Gas only (no cREP) | Reveals votes, progresses round state, cleans up unrevealed stake |
 | **server** | Foundry keystore (hot) | Gas only | Next.js server operations |
+| **Treasury Authority** | Safe / hardware / dedicated custody address | 10M cREP treasury allocation | Must be different from TimelockController; controls treasury funds and treasury-specific roles, but no proxy upgrades |
 
 ### 1a. Create the Deployer key
 
@@ -118,6 +120,7 @@ Fund with CELO for gas (server-side operations).
 - [ ] Keystore passwords stored in a password manager (1Password, Bitwarden), never in plaintext `.env` files
 - [ ] No raw private keys in `.env` files (use `KEYSTORE_ACCOUNT` + `KEYSTORE_PASSWORD` env vars)
 - [ ] Each role uses a **dedicated** address — deployer, cold-a, cold-b, submit-bot, rate-bot, keeper, server are all different
+- [ ] `TREASURY_AUTHORITY_ADDRESS` is a **separate** address from the TimelockController / governor upgrade path
 - [ ] Deployer key will have its roles renounced after deployment (Step 2)
 - [ ] Back up hot wallet keystores: `cp -r ~/.foundry/keystores/ <secure-backup-location>`
 
@@ -132,6 +135,7 @@ Fund with CELO for gas (server-side operations).
 ALCHEMY_API_KEY=<your-alchemy-key>
 CELO_RPC_URL=<your-mainnet-rpc>           # Recommended over public Forno
 CELO_SEPOLIA_RPC_URL=<your-sepolia-rpc>   # Recommended over public Forno
+TREASURY_AUTHORITY_ADDRESS=<safe-or-cold-wallet-address>  # Must differ from TimelockController on non-local deploys
 ```
 
 `LOCALHOST_KEYSTORE_ACCOUNT` only affects localhost deploys. For Celo mainnet, use a dedicated non-default keystore
@@ -147,15 +151,15 @@ yarn deploy --network celo --keystore deployer
 ```
 
 This will:
-1. Deploy `TimelockController` (2-day delay) + `CuryoGovernor`
+1. Deploy `TimelockController` (2-day delay) + `CuryoGovernor` as the upgrade / config authority
 2. Deploy `CuryoReputation` (cREP token, 100M max supply)
 3. Deploy all transparent-proxy contracts (`ContentRegistry`, `RoundVotingEngine`, `RoundRewardDistributor`, `ProfileRegistry`, `FrontendRegistry`, `ProtocolConfig`) plus non-upgradeable contracts (`CategoryRegistry`, `VoterIdNFT`, `ParticipationPool`, `HumanFaucet`)
-4. Initialize governance-owned proxy admins and deploy the stateless `SubmissionCanonicalizer` helper used internally by `ContentRegistry` URL canonicalization
+4. Initialize timelock-owned proxy admins, wire treasury-specific roles to `TREASURY_AUTHORITY_ADDRESS`, and deploy the stateless `SubmissionCanonicalizer` helper used internally by `ContentRegistry` URL canonicalization
 5. Wire cross-contract references
 6. Seed 12 content categories with their approved domains and subcategories
-7. Mint token allocations: 51,899,900→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 100K→KeeperRewardPool, 10M→Treasury
-8. **Renounce deployer's temporary admin roles** — governance transfers fully to TimelockController
-9. **Automatically verify** that governance owns the expected roles and proxy admins and the deployer retained none
+7. Mint token allocations: 51,899,900→HumanFaucet, 34M→ParticipationPool, 4M→ConsensusReserve, 100K→KeeperRewardPool, 10M→Treasury Authority
+8. **Renounce deployer's temporary admin and treasury roles** — upgrade authority transfers fully to TimelockController and treasury routing remains on the dedicated treasury authority
+9. **Automatically verify** that governance owns the expected upgrade/config roles and proxy admins, treasury authority owns the treasury-routing roles, and the deployer retained none
 
 ### 2c. Verify contracts on Blockscout
 
@@ -179,7 +183,8 @@ Save a copy of these addresses somewhere safe. You'll need them for Ponder, Keep
 ### 2e. Post-deployment verification
 
 `DeployCuryo.s.sol` now performs automatic post-deploy role verification at the end of the production deploy flow and
-fails the deploy command if any deployer setup role remains or governance ownership is missing.
+fails the deploy command if any deployer setup role remains, governance ownership is missing, or the treasury
+authority is miswired.
 
 Manual spot-checks are still useful, but they are no longer the primary safety mechanism.
 
@@ -659,8 +664,10 @@ Set up two cron schedules in the Railway dashboard:
 
 ### 9d. Contract security
 
-- [ ] All admin roles have been renounced by deployer and transferred to governance (TimelockController)
+- [ ] All upgrade/config admin roles have been renounced by deployer and transferred to governance (TimelockController)
 - [ ] All transparent proxy admins are owned by governance only (`ProxyAdmin.owner() == TimelockController`)
+- [ ] Treasury-specific roles on `ContentRegistry` / `ProtocolConfig` belong to `TREASURY_AUTHORITY_ADDRESS`
+- [ ] `TREASURY_AUTHORITY_ADDRESS != TimelockController`
 - [ ] Frontend operators are permissionless but remain slashable by governance
 - [ ] HumanFaucet requires Self.xyz identity verification (one person, one vote)
 - [ ] TimelockController enforces 2-day delay on all governance actions
@@ -728,7 +735,7 @@ cron + webhook, GitHub Action, etc.) around the `cast call` commands above.
 #### Protocol pool refill runbook
 
 Both pool top-up functions on `RoundVotingEngine` pull tokens with `safeTransferFrom(msg.sender, ...)`, so a treasury
-refill must include **both** an ERC-20 approval and the funding call in the **same governance proposal execution
+refill must include **both** an ERC-20 approval and the funding call in the **same treasury-authority execution
 batch**.
 
 1. Confirm the low balance in two places:
@@ -738,23 +745,23 @@ batch**.
    - Default target for `keeperRewardPool`: restore to **100,000 cREP**
    - Default target for `consensusReserve`: restore to **4,000,000 cREP**
 3. Calculate the refill amount as `target - currentBalance`.
-4. Create a governance proposal executed by the timelock with these calls, in order:
+4. Execute from `TREASURY_AUTHORITY_ADDRESS` (or its Safe / higher-threshold governance wrapper) with these calls, in order:
    - `CuryoReputation.approve(<RoundVotingEngine>, amount)`
    - `RoundVotingEngine.fundKeeperRewardPool(amount)`
    - or `RoundVotingEngine.addToConsensusReserve(amount)`
-5. Vote, queue, and execute the proposal after the standard **2-day timelock**.
+5. If the treasury authority itself is governed, follow that authority's approval flow and execute the batch once approved.
 6. Verify the refill:
    - Governance UI pool balances updated
    - `cast call` returns the new balance
-   - Keeper / operator notes record the refill date, amount, and proposal ID
+   - Keeper / operator notes record the refill date, amount, and execution reference
 
-If both pools are low, batch all three calls into a single proposal:
+If both pools are low, batch all three calls into a single treasury-authority execution:
 
 1. `approve(<RoundVotingEngine>, keeperAmount + reserveAmount)`
 2. `fundKeeperRewardPool(keeperAmount)`
 3. `addToConsensusReserve(reserveAmount)`
 
-This keeps the approval scope minimal and avoids leaving a large standing allowance from the treasury to
+This keeps the approval scope minimal and avoids leaving a large standing allowance from the treasury authority to
 `RoundVotingEngine`.
 
 ### 9g. Secrets rotation plan
@@ -776,7 +783,7 @@ This keeps the approval scope minimal and avoids leaving a large standing allowa
 ## Deployment Order Summary
 
 ```
-1.  Create wallets (deployer, 2 cold wallets, submit-bot, rate-bot, keeper, server)
+1.  Create wallets and treasury authority (deployer, 2 cold wallets, submit-bot, rate-bot, keeper, server, treasury authority)
 2.  Fund deployer with CELO (buy from exchange)
 3.  Deploy contracts (yarn deploy --network celo --keystore deployer)
 4.  Verify contracts on Blockscout

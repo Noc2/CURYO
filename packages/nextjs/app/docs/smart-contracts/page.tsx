@@ -549,6 +549,7 @@ const SmartContracts: NextPage = () => {
         On a successful claim, HumanFaucet also mints a <strong>VoterIdNFT</strong> for the claimant, enabling
         participation across the platform.
       </p>
+      <p>Privileged sweeps of accounted faucet funds are disabled in the current launch hardening.</p>
 
       <hr />
 
@@ -576,11 +577,11 @@ const SmartContracts: NextPage = () => {
             </tr>
             <tr>
               <td>Proposal threshold</td>
-              <td>100 cREP</td>
+              <td>{protocolDocFacts.governanceProposalThresholdLabel}</td>
             </tr>
             <tr>
               <td>Quorum</td>
-              <td>4% of circulating supply (min 10,000 cREP)</td>
+              <td>{protocolDocFacts.governanceQuorumLabel}</td>
             </tr>
             <tr>
               <td>Governance lock</td>
@@ -599,6 +600,10 @@ const SmartContracts: NextPage = () => {
         submitter stake return resolves after a settled round. Funded with 34M cREP. Uses a halving schedule: starting
         at 90% reward rate, halving each time a tier threshold is reached (2M, 6M, 14M, 30M cumulative), with a 1% floor
         rate.
+      </p>
+      <p>
+        Privileged sweeps of accounted participation rewards are disabled; only reward accounting and surplus recovery
+        move funds.
       </p>
 
       <hr />
@@ -631,8 +636,8 @@ const SmartContracts: NextPage = () => {
       <h2>Security</h2>
       <ul>
         <li>
-          <strong>UUPS Upgradeable:</strong> Core registries and voting contracts are upgradeable via UPGRADER_ROLE
-          (governance timelock).
+          <strong>Transparent proxies:</strong> Core registries and voting contracts are upgradeable through
+          timelock-owned proxy admins.
         </li>
         <li>
           <strong>Reentrancy Guard:</strong> All token-transferring functions use ReentrancyGuard.
@@ -655,10 +660,9 @@ const SmartContracts: NextPage = () => {
           RoundRewardDistributor cannot be paused (users can always withdraw).
         </li>
         <li>
-          <strong>Governance-First Access Control:</strong> The governance timelock holds DEFAULT_ADMIN_ROLE from
-          deployment. The deployer receives only temporary setup roles (CONFIG_ROLE, MINTER_ROLE) with no ability to
-          grant or escalate privileges. Ownable contracts (VoterIdNFT, HumanFaucet) restrict ownership transfer to the
-          immutable governance address.
+          <strong>Split authority access control:</strong> The governor/timelock owns upgrade and config roles, while
+          treasury-specific roles and the initial 10M treasury allocation live on a separate treasury authority address.
+          The deployer receives only temporary setup roles and renounces them after deployment.
         </li>
       </ul>
     </article>

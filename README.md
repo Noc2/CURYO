@@ -27,9 +27,10 @@ Curyo replaces passive likes with **prediction games**. Voters predict whether c
 - **Sybil Resistant** — one soulbound Voter ID NFT per verified human
 - **Per-Content Rounds** — each content item accumulates votes; rounds settle once the revealed-vote threshold is reached and past-epoch reveal constraints are satisfied
 - **tlock Commit-Reveal** — votes are encrypted with timelock encryption and revealed after each epoch; vote directions stay hidden until reveal, preventing front-running and copycat strategies
-- **Governance-Native** — finalized deployments run under on-chain governance without privileged admin keys
+- **Split Governance Controls** — launch deployments keep upgrade authority under governor/timelock control while routing treasury authority through a separate principal to reduce blast radius
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.
+Current bootstrap governance is intentionally conservative: proposals require 100,000 cREP and quorum never drops below 500,000 cREP while circulation is still thin.
 
 ## Architecture
 

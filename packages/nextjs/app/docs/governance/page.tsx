@@ -85,7 +85,7 @@ const GovernanceDocs: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono">Proposal threshold</td>
-              <td>100 cREP</td>
+              <td>{protocolDocFacts.governanceProposalThresholdLabel}</td>
             </tr>
             <tr>
               <td className="font-mono">Voting delay</td>
@@ -97,7 +97,7 @@ const GovernanceDocs: NextPage = () => {
             </tr>
             <tr>
               <td className="font-mono">Quorum</td>
-              <td>4% of circulating supply (min 10K cREP)</td>
+              <td>{protocolDocFacts.governanceQuorumLabel}</td>
             </tr>
             <tr>
               <td className="font-mono">Timelock delay</td>
@@ -111,12 +111,18 @@ const GovernanceDocs: NextPage = () => {
         </table>
       </div>
       <p>
-        The proposal threshold is a snapshot eligibility check, not a bonded deposit. In the current governor design,
-        the same voting power can back multiple live proposals as long as it satisfied the threshold at proposal
-        creation time. The 7-day governance lock is a flat transfer restriction that begins when an account proposes or
-        votes; because proposal timing is block-based, that lock can expire before the full voting delay plus voting
-        period ends. Proposal-spam resistance therefore comes primarily from quorum, majority voting, and the timelock,
-        not from per-proposal collateral.
+        The bootstrap governor is intentionally conservative while circulating supply is thin: a proposal needs{" "}
+        <strong>{protocolDocFacts.governanceProposalThresholdLabel}</strong>, and quorum never drops below{" "}
+        <strong>{protocolDocFacts.governanceMinimumQuorumLabel}</strong> even when 4% of circulating supply would be
+        smaller. The proposal threshold is a snapshot eligibility check, not a bonded deposit. The same voting power can
+        back multiple live proposals as long as it satisfied the threshold at proposal creation time. The 7-day
+        governance lock is a flat transfer restriction that begins when an account proposes or votes; because proposal
+        timing is block-based, that lock can expire before the full voting delay plus voting period ends.
+      </p>
+      <p>
+        Upgrade authority and treasury authority are also split. The governor/timelock owns proxy upgrades and config
+        changes, while treasury routing is assigned to a separate treasury authority address. That separation reduces
+        blast radius if one authority is compromised.
       </p>
 
       <h2>Round Voting Parameters</h2>
@@ -195,8 +201,8 @@ const GovernanceDocs: NextPage = () => {
 
       <h2>Treasury</h2>
       <p>
-        The governance treasury is held by the timelock controller and starts with 10M cREP. It grows over time through
-        four main ongoing inflow sources:
+        The protocol treasury starts with <strong>10M cREP</strong> routed to a dedicated treasury authority, separate
+        from the governor/timelock that controls upgrades. It grows over time through four main ongoing inflow sources:
       </p>
       <ul>
         <li>
@@ -217,9 +223,9 @@ const GovernanceDocs: NextPage = () => {
         </li>
       </ul>
       <p>
-        Treasury tokens can only be distributed through governance proposals. Token holders propose allocations, the
-        community votes, and after the timelock delay, the transaction is executed automatically. This ensures
-        transparent, community-controlled distribution of community tokens.
+        Treasury spending is intentionally separated from proxy-upgrade authority. The recommended production setup is a
+        dedicated multisig or higher-threshold governance process that can fund grants, whistleblower rewards, and
+        reserve top-ups without also owning proxy upgrades.
       </p>
       <p>
         The consensus subsidy reserve is separate from the treasury. It is seeded with 4M cREP at deployment and
