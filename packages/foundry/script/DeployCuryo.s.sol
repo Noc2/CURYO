@@ -27,7 +27,7 @@ import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.
 /// @notice Deploy script for all Curyo contracts with transparent proxies.
 /// @dev All protocol operations use cREP token only (no stablecoins).
 ///      Local dev: deployer is governance (all roles go to deployer).
-///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles.
+///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles including treasury routing.
 contract DeployCuryo is ScaffoldETHDeploy {
     error DeploymentRoleVerificationFailed(string check);
 
@@ -42,34 +42,20 @@ contract DeployCuryo is ScaffoldETHDeploy {
     address constant CELO_SEPOLIA_HUB = 0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74;
     uint256 constant SELF_FACET_MINIMUM_AGE = 18;
 
-    function _beforeBroadcast() internal view override {
-        if (block.chainid == 31337) {
-            return;
-        }
-
-        address treasuryAuthority = vm.envOr("TREASURY_AUTHORITY_ADDRESS", address(0));
-        require(
-            treasuryAuthority != address(0),
-            "Set TREASURY_AUTHORITY_ADDRESS before deploy"
-        );
-    }
-
     function run() external ScaffoldEthDeployerRunner {
         // Detect local dev: anvil/hardhat chain IDs
         bool isLocalDev = block.chainid == 31337;
 
-        // --- Determine upgrade and treasury authorities ---
-        // Local dev: deployer serves as both authorities
-        // Production: timelock is upgrade authority, treasury authority is a separate configured address
+        // --- Determine governance authority ---
+        // Local dev: deployer serves as governance and treasury
+        // Production: timelock governs upgrades, config, and treasury from launch
         address governance;
         address governorAddr;
-        address treasuryAuthority;
 
         if (isLocalDev) {
             governance = deployer;
             governorAddr = deployer;
-            treasuryAuthority = deployer;
-            console.log("Local dev: deployer is upgrade + treasury authority");
+            console.log("Local dev: deployer is governance + treasury");
         } else {
             // 1. Deploy TimelockController
             address[] memory proposers = new address[](1);
@@ -85,11 +71,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             );
             governance = address(timelock);
             console.log("TimelockController deployed at:", governance);
-
-            treasuryAuthority = vm.envOr("TREASURY_AUTHORITY_ADDRESS", address(0));
-            require(treasuryAuthority != address(0), "Treasury authority not set");
-            require(treasuryAuthority != governance, "Treasury authority must differ from governance");
-            console.log("Treasury authority configured at:", treasuryAuthority);
+            console.log("Treasury routed to governance:", governance);
         }
 
         // 2. Deploy CuryoReputation (non-upgradeable governance token)
@@ -140,14 +122,14 @@ contract DeployCuryo is ScaffoldETHDeploy {
         TransparentUpgradeableProxy registryProxy = new TransparentUpgradeableProxy(
             address(registryImpl),
             governance,
-            abi.encodeCall(ContentRegistry.initializeWithTreasury, (deployer, governance, treasuryAuthority, address(crepToken)))
+            abi.encodeCall(ContentRegistry.initialize, (deployer, governance, address(crepToken)))
         );
         ContentRegistry registry = ContentRegistry(address(registryProxy));
 
         TransparentUpgradeableProxy protocolConfigProxy = new TransparentUpgradeableProxy(
             address(protocolConfigImpl),
             governance,
-            abi.encodeCall(ProtocolConfig.initializeWithTreasury, (deployer, governance, treasuryAuthority))
+            abi.encodeCall(ProtocolConfig.initialize, (deployer, governance))
         );
         ProtocolConfig protocolConfig = ProtocolConfig(address(protocolConfigProxy));
 
@@ -208,9 +190,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         crepToken.setContentVotingContracts(address(votingEngine), address(registry));
 
         // 11. Set treasury, cancellation fee sink, and configure round parameters
-        registry.setBonusPool(treasuryAuthority);
-        registry.setTreasury(treasuryAuthority);
-        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(treasuryAuthority);
+        registry.setBonusPool(governance);
+        registry.setTreasury(governance);
+        ProtocolConfig(address(votingEngine.protocolConfig())).setTreasury(governance);
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters
 
         // 12. Fund consensus reserve (pre-funded reserve for unanimous round rewards)
@@ -225,10 +207,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         votingEngine.addToConsensusReserve(consensusPoolAmount);
         console.log("Funded 4M cREP to consensus reserve");
 
-        // 12a. Fund treasury (10M cREP to treasury authority)
+        // 12a. Fund treasury (10M cREP to governance treasury)
         uint256 treasuryAmount = 10_000_000 * 1e6; // 10M cREP
-        crepToken.mint(treasuryAuthority, treasuryAmount);
-        console.log("Minted 10M cREP to treasury authority");
+        crepToken.mint(governance, treasuryAmount);
+        console.log("Minted 10M cREP to governance treasury");
 
         // 12b. Deploy and fund ParticipationPool (34M cREP)
         ParticipationPool participationPool = new ParticipationPool(address(crepToken), governance);
@@ -311,7 +293,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 address(participationPool),
                 address(rewardDistributor),
                 address(votingEngine),
-                treasuryAuthority,
+                governance,
                 address(registry),
                 address(frontendRegistry),
                 address(categoryRegistry)
@@ -395,7 +377,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
             _verifyProductionDeploymentRoles({
                 deployerAddress: deployer,
                 governance: governance,
-                treasuryAuthority: treasuryAuthority,
                 governorAddr: governorAddr,
                 crepToken: crepToken,
                 registry: registry,
@@ -446,7 +427,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("HumanFaucet:", address(humanFaucet));
         }
         console.log("Governance:", governance);
-        console.log("Treasury authority:", treasuryAuthority);
+        console.log("Treasury:", governance);
         if (!isLocalDev) {
             console.log("CuryoGovernor:", governorAddr);
         }
@@ -458,7 +439,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
     function _verifyProductionDeploymentRoles(
         address deployerAddress,
         address governance,
-        address treasuryAuthority,
         address governorAddr,
         CuryoReputation crepToken,
         ContentRegistry registry,
@@ -486,9 +466,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
         _requireHasRole(address(registry), registry.ADMIN_ROLE(), governance, "ContentRegistry governance admin");
         _requireHasRole(address(registry), registry.CONFIG_ROLE(), governance, "ContentRegistry governance config");
         _requireHasRole(address(registry), registry.PAUSER_ROLE(), governance, "ContentRegistry governance pauser");
-        _requireHasRole(address(registry), registry.TREASURY_ROLE(), treasuryAuthority, "ContentRegistry treasury role");
+        _requireHasRole(address(registry), registry.TREASURY_ROLE(), governance, "ContentRegistry governance treasury");
         _requireHasRole(
-            address(registry), registry.TREASURY_ADMIN_ROLE(), treasuryAuthority, "ContentRegistry treasury admin"
+            address(registry), registry.TREASURY_ADMIN_ROLE(), governance, "ContentRegistry governance treasury admin"
         );
         _requireLacksRole(address(registry), registry.CONFIG_ROLE(), deployerAddress, "ContentRegistry deployer config");
         _requireLacksRole(address(registry), registry.TREASURY_ROLE(), deployerAddress, "ContentRegistry deployer treasury");
@@ -511,13 +491,13 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
         _requireHasRole(address(protocolConfig), protocolConfig.CONFIG_ROLE(), governance, "ProtocolConfig governance config");
         _requireHasRole(
-            address(protocolConfig), protocolConfig.TREASURY_ROLE(), treasuryAuthority, "ProtocolConfig treasury role"
+            address(protocolConfig), protocolConfig.TREASURY_ROLE(), governance, "ProtocolConfig governance treasury"
         );
         _requireHasRole(
             address(protocolConfig),
             protocolConfig.TREASURY_ADMIN_ROLE(),
-            treasuryAuthority,
-            "ProtocolConfig treasury admin"
+            governance,
+            "ProtocolConfig governance treasury admin"
         );
         _requireLacksRole(address(protocolConfig), protocolConfig.CONFIG_ROLE(), deployerAddress, "ProtocolConfig deployer config");
         _requireLacksRole(
@@ -581,10 +561,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
         );
 
         _require(protocolConfig.voterIdNFT() == address(voterIdNFT), "ProtocolConfig voterIdNFT");
-        _require(protocolConfig.treasury() == treasuryAuthority, "ProtocolConfig treasury");
+        _require(protocolConfig.treasury() == governance, "ProtocolConfig treasury");
         _require(address(registry.voterIdNFT()) == address(voterIdNFT), "ContentRegistry voterIdNFT");
-        _require(registry.treasury() == treasuryAuthority, "ContentRegistry treasury");
-        _require(registry.bonusPool() == treasuryAuthority, "ContentRegistry bonus pool");
+        _require(registry.treasury() == governance, "ContentRegistry treasury");
+        _require(registry.bonusPool() == governance, "ContentRegistry bonus pool");
         _require(address(categoryRegistry.voterIdNFT()) == address(voterIdNFT), "CategoryRegistry voterIdNFT");
         _require(address(frontendRegistry.voterIdNFT()) == address(voterIdNFT), "FrontendRegistry voterIdNFT");
         _require(address(profileRegistry.voterIdNFT()) == address(voterIdNFT), "ProfileRegistry voterIdNFT");

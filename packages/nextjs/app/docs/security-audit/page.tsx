@@ -1660,9 +1660,9 @@ const SecurityAudit: NextPage = () => {
           <strong>Self-delegation only:</strong> CuryoReputation._delegate requires delegatee == account.
         </li>
         <li>
-          <strong>Split authority access control:</strong> Timelock holds upgrade/config authority from deployment.
-          Treasury-specific roles and the initial treasury allocation are routed to a separate treasury authority.
-          Deployer has only temporary setup roles with no grant power.
+          <strong>Governance-owned treasury access control:</strong> Timelock holds upgrade, config, and treasury
+          authority from deployment, and the initial treasury allocation is routed there directly. Deployer has only
+          temporary setup roles with no grant power.
         </li>
         <li>
           <strong>HumanFaucet Pausable:</strong> customVerificationHook checks _requireNotPaused(). Privileged faucet

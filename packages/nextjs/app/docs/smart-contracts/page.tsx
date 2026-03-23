@@ -660,9 +660,9 @@ const SmartContracts: NextPage = () => {
           RoundRewardDistributor cannot be paused (users can always withdraw).
         </li>
         <li>
-          <strong>Split authority access control:</strong> The governor/timelock owns upgrade and config roles, while
-          treasury-specific roles and the initial 10M treasury allocation live on a separate treasury authority address.
-          The deployer receives only temporary setup roles and renounces them after deployment.
+          <strong>Governance-owned access control:</strong> The governor/timelock owns upgrade, config, and treasury
+          roles from launch. The initial 10M treasury allocation also sits there, while the deployer receives only
+          temporary setup roles and renounces them after deployment.
         </li>
       </ul>
     </article>

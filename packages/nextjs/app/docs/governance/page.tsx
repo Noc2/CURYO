@@ -120,9 +120,9 @@ const GovernanceDocs: NextPage = () => {
         timing is block-based, that lock can expire before the full voting delay plus voting period ends.
       </p>
       <p>
-        Upgrade authority and treasury authority are also split. The governor/timelock owns proxy upgrades and config
-        changes, while treasury routing is assigned to a separate treasury authority address. That separation reduces
-        blast radius if one authority is compromised.
+        Upgrades, config changes, and treasury routing all sit behind the same governor/timelock from launch. That keeps
+        treasury control on the same on-chain governance path as the rest of the protocol instead of relying on a
+        separate operator key.
       </p>
 
       <h2>Round Voting Parameters</h2>
@@ -201,8 +201,8 @@ const GovernanceDocs: NextPage = () => {
 
       <h2>Treasury</h2>
       <p>
-        The protocol treasury starts with <strong>10M cREP</strong> routed to a dedicated treasury authority, separate
-        from the governor/timelock that controls upgrades. It grows over time through four main ongoing inflow sources:
+        The protocol treasury starts with <strong>10M cREP</strong> routed to the governor/timelock itself. It grows
+        over time through four main ongoing inflow sources:
       </p>
       <ul>
         <li>
@@ -223,9 +223,9 @@ const GovernanceDocs: NextPage = () => {
         </li>
       </ul>
       <p>
-        Treasury spending is intentionally separated from proxy-upgrade authority. The recommended production setup is a
-        dedicated multisig or higher-threshold governance process that can fund grants, whistleblower rewards, and
-        reserve top-ups without also owning proxy upgrades.
+        Treasury spending follows the same governor proposal and timelock execution flow as upgrades and config changes.
+        That keeps the protocol decentralized from launch, but it also means treasury actions inherit the same
+        governance thresholds and delay.
       </p>
       <p>
         The consensus subsidy reserve is separate from the treasury. It is seeded with 4M cREP at deployment and

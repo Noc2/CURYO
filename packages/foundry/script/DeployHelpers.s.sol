@@ -27,7 +27,6 @@ contract ScaffoldETHDeploy is Script {
 
     /// @notice Use this modifier on your run() function on your deploy scripts
     modifier ScaffoldEthDeployerRunner() {
-        _beforeBroadcast();
         deployer = _startBroadcast();
         if (deployer == address(0)) {
             revert InvalidPrivateKey("Invalid private key");
@@ -36,8 +35,6 @@ contract ScaffoldETHDeploy is Script {
         _stopBroadcast();
         exportDeployments();
     }
-
-    function _beforeBroadcast() internal view virtual { }
 
     function _startBroadcast() internal returns (address) {
         vm.startBroadcast();

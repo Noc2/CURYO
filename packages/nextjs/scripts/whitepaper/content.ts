@@ -831,7 +831,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Slashed submitter stakes, the 1% treasury fee on contested settlements, cancellation fees, and forfeited past-epoch unrevealed stakes all flow to a dedicated treasury authority. The consensus subsidy reserve is separate: it is pre-funded at launch and replenished by 5% of losing pools from two-sided rounds. Treasury spending is intentionally separated from proxy-upgrade authority and is best placed behind a dedicated multisig or higher-threshold governance process.",
+            text: "Slashed submitter stakes, the 1% treasury fee on contested settlements, cancellation fees, and forfeited past-epoch unrevealed stakes all flow to the governance-controlled treasury. The consensus subsidy reserve is separate: it is pre-funded at launch and replenished by 5% of losing pools from two-sided rounds. Treasury spending follows the same governor proposal and timelock execution flow as upgrades and config changes.",
           },
         ],
       },
@@ -858,7 +858,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: `A revealed losing vote first recovers a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. The ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (${protocolDocFacts.blindPhaseWeightLabel} of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn ${protocolDocFacts.openPhaseWeightLabel} weight. This ${protocolDocFacts.earlyVoterAdvantageLabel} ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The ${protocolDocFacts.treasuryNetSharePercentLabel} treasury fee is routed to the dedicated treasury authority.`,
+            text: `A revealed losing vote first recovers a fixed ${protocolDocFacts.revealedLoserRefundPercentLabel} rebate. The ${protocolDocFacts.voterPoolNetSharePercentLabel} voter share then goes to a content-specific pool, distributed proportionally by epoch-weighted effective stake to winning voters on that content. Tier-1 voters (who committed during epoch 1 with no information) earn full weight (${protocolDocFacts.blindPhaseWeightLabel} of their stake), while Tier-2 voters (who committed after epoch-1 results were visible) earn ${protocolDocFacts.openPhaseWeightLabel} weight. This ${protocolDocFacts.earlyVoterAdvantageLabel} ratio means early voters receive a larger portion of the reward pool per cREP staked. Because each content item has independent rounds that settle on their own timeline, rewards are claimable immediately after settlement  -- no waiting for other content. The ${protocolDocFacts.consensusNetSharePercentLabel} consensus subsidy share funds one-sided-round rewards (see Consensus Subsidy Pool). The ${protocolDocFacts.treasuryNetSharePercentLabel} treasury fee is routed to the governance timelock.`,
           },
         ],
       },
@@ -1067,7 +1067,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "The treasury starts with 10M cREP routed to a dedicated treasury authority, separate from the upgrade timelock. It grows over time through four primary ongoing inflow sources:",
+            text: "The treasury starts with 10M cREP routed directly to the governance timelock. It grows over time through four primary ongoing inflow sources:",
           },
           {
             type: "bullets",
@@ -1080,7 +1080,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Treasury spending is intentionally separated from proxy-upgrade authority. The recommended deployment uses a distinct treasury multisig or higher-threshold governance process for grants, whistleblower rewards, reserve top-ups, and protocol development without also holding proxy upgrade powers.",
+            text: "Treasury spending follows the same governor proposal and timelock execution flow as upgrades and config changes. That keeps the system decentralized from launch, but it also means governance capture affects both code changes and treasury movements.",
           },
         ],
       },
@@ -1210,15 +1210,15 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Quorum is calculated as 4% of circulating supply  -- total supply minus balances held by protocol-controlled holders excluded by the governor. In the deployment model this includes custody contracts such as HumanFaucet, ParticipationPool, RewardDistributor, RoundVotingEngine reserves, the dedicated treasury authority, and registry-held stakes. This dynamic calculation still scales with real circulation, but the bootstrap floor is intentionally much higher: quorum never drops below 500,000 cREP in the earliest stages. As the user base grows and more tokens enter circulation, the quorum threshold increases proportionally, requiring increasingly broad consensus.",
+            text: "Quorum is calculated as 4% of circulating supply  -- total supply minus balances held by protocol-controlled holders excluded by the governor. In the deployment model this includes custody contracts such as HumanFaucet, ParticipationPool, RewardDistributor, RoundVotingEngine reserves, the timelock-held treasury balance, and registry-held stakes. This dynamic calculation still scales with real circulation, but the bootstrap floor is intentionally much higher: quorum never drops below 500,000 cREP in the earliest stages. As the user base grows and more tokens enter circulation, the quorum threshold increases proportionally, requiring increasingly broad consensus.",
           },
           {
             type: "sub_heading",
-            text: "Split Authority Deployment",
+            text: "Governance-Native Deployment",
           },
           {
             type: "paragraph",
-            text: "Launch deployment deliberately separates authority domains. The timelock controller owns proxy upgrades and config roles, while treasury-specific roles and the initial 10M treasury allocation live on a separate treasury authority address. This means compromising upgrade authority does not automatically hand over the treasury, and compromising treasury authority does not grant upgrade powers. The bootstrap proposal threshold is intentionally high (100,000 cREP) and quorum never drops below 500,000 cREP; the real protection remains the combination of that conservative bootstrap, dynamic circulating-supply quorum, majority vote, timelock delay, and split authorities. Proposal eligibility is snapshot-based, so the same voting power can back multiple concurrent proposals, and the 7-day governance lock does not add marginal collateral per live proposal.",
+            text: "Launch deployment keeps proxy upgrades, config roles, and treasury routing on the same timelock-controlled governance path. That preserves decentralization from day one: there is no separate treasury operator key once the deployer renounces setup roles. The bootstrap proposal threshold is intentionally high (100,000 cREP) and quorum never drops below 500,000 cREP; the real protection remains the combination of that conservative bootstrap, dynamic circulating-supply quorum, majority vote, and timelock delay. Proposal eligibility is snapshot-based, so the same voting power can back multiple concurrent proposals, and the 7-day governance lock does not add marginal collateral per live proposal.",
           },
         ],
       },

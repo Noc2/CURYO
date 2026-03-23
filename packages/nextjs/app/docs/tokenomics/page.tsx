@@ -217,12 +217,11 @@ const Tokenomics = () => {
 
       <h3>Treasury</h3>
       <p>
-        The protocol treasury starts with <strong>10M cREP</strong> on a dedicated treasury authority address, separate
-        from the governor/timelock that owns upgrades. It grows over time through four main ongoing inflow sources: a 1%
-        treasury fee on contested losing pools, cancellation fees from voluntary content withdrawals, forfeited
-        submitter deposits (when content rating drops below 25), and forfeited unrevealed past-epoch votes swept during
-        settlement cleanup. Recommended deployments place treasury spending behind a separate multisig or
-        higher-threshold governance process.
+        The protocol treasury starts with <strong>10M cREP</strong> on the governor/timelock from launch. It grows over
+        time through four main ongoing inflow sources: a 1% treasury fee on contested losing pools, cancellation fees
+        from voluntary content withdrawals, forfeited submitter deposits (when content rating drops below 25), and
+        forfeited unrevealed past-epoch votes swept during settlement cleanup. Treasury spending follows the same
+        governance proposal path as upgrades and other governed config changes.
       </p>
 
       <hr />
