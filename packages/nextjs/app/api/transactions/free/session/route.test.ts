@@ -15,15 +15,21 @@ after(() => {
   }
 });
 
-test("detects nested database auth/connect failures for free transaction session fallback", () => {
+test("detects nested database auth/connect/tls failures for free transaction session fallback", () => {
   const error = new Error("wrapper", {
     cause: {
       code: "28000",
     },
   });
+  const tlsError = new Error("wrapper", {
+    cause: {
+      code: "SELF_SIGNED_CERT_IN_CHAIN",
+    },
+  });
 
   assert.equal(isFreeTransactionStoreUnavailableError(error), true);
   assert.equal(isFreeTransactionStoreUnavailableError({ code: "ECONNREFUSED" }), true);
+  assert.equal(isFreeTransactionStoreUnavailableError(tlsError), true);
   assert.equal(isFreeTransactionStoreUnavailableError(new Error("boom")), false);
 });
 

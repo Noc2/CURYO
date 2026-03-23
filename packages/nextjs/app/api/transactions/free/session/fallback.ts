@@ -6,20 +6,27 @@ type ErrorWithCause = Error & {
   cause?: unknown;
 };
 
+const STORE_UNAVAILABLE_ERROR_CODES = new Set([
+  "28000",
+  "ECONNREFUSED",
+  "EPERM",
+  "ETIMEDOUT",
+  "EHOSTUNREACH",
+  "ENOTFOUND",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "CERT_HAS_EXPIRED",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+]);
+
 export function isFreeTransactionStoreUnavailableError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;
   }
 
   const candidate = error as ErrorWithCause;
-  if (
-    candidate.code === "28000" ||
-    candidate.code === "ECONNREFUSED" ||
-    candidate.code === "EPERM" ||
-    candidate.code === "ETIMEDOUT" ||
-    candidate.code === "EHOSTUNREACH" ||
-    candidate.code === "ENOTFOUND"
-  ) {
+  if (candidate.code && STORE_UNAVAILABLE_ERROR_CODES.has(candidate.code)) {
     return true;
   }
 
