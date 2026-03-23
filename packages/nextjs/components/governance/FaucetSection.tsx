@@ -493,21 +493,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
             </div>
           </div>
         ) : termsOk ? (
-          <>
-            <div className="flex flex-col items-center gap-2 text-center">
-              <p className="text-base-content/60 text-base">
-                Claim <span className="font-bold text-primary">{formatAmount(totalClaimAmount)} cREP</span> by verifying
-                with{" "}
-                <a href="https://self.xyz" target="_blank" rel="noopener noreferrer" className="link link-primary">
-                  Self.xyz
-                </a>{" "}
-                that you are a human
-              </p>
-              <p className="text-base-content/60 text-base">Use a passport or biometric ID card.</p>
-            </div>
-
-            <SelfVerifyButton onStart={handleVerificationStarted} onSuccess={handleVerificationSuccess} />
-          </>
+          <SelfVerifyButton onStart={handleVerificationStarted} onSuccess={handleVerificationSuccess} />
         ) : (
           <div className="flex flex-col items-center gap-4 text-center">
             <p className="text-base-content/60 text-base">
