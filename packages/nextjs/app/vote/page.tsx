@@ -423,7 +423,7 @@ const HomeInner = () => {
     contentId: bigint;
     categoryId: bigint;
   }>({ isOpen: false, isUp: false, contentId: 0n, categoryId: 0n });
-  const { commitVote, isCommitting, error: voteError } = useRoundVote();
+  const { commitVote, isCommitting, error: voteError, clearError: clearVoteError } = useRoundVote();
   // Apply search, category filter, and the selected view before sorting
   const filteredFeed = useMemo(() => {
     let items = filterDiscoverCategoryItems(feed, activeCategory, activeCategoryId);
@@ -638,11 +638,13 @@ const HomeInner = () => {
         return;
       }
 
+      clearVoteError();
       markPrimaryInteraction(item.id);
       recordRecommendationSignal(item, "vote_intent", { isUp });
       setStakeModal({ isOpen: true, isUp, contentId: item.id, categoryId: item.categoryId });
     },
     [
+      clearVoteError,
       getContentCooldownSeconds,
       markPrimaryInteraction,
       primaryItem,
@@ -667,8 +669,9 @@ const HomeInner = () => {
         stakeAmount,
         submitter: item?.submitter,
       });
-      setStakeModal(prev => ({ ...prev, isOpen: false }));
       if (success) {
+        clearVoteError();
+        setStakeModal(prev => ({ ...prev, isOpen: false }));
         setOptimisticVotedContentIds(previous => {
           const next = new Set(previous);
           next.add(stakeModal.contentId.toString());
@@ -686,6 +689,7 @@ const HomeInner = () => {
       }
     },
     [
+      clearVoteError,
       commitVote,
       displayFeed,
       isFirstVote,
@@ -698,6 +702,7 @@ const HomeInner = () => {
   );
 
   const handleCancelStake = () => {
+    clearVoteError();
     setStakeModal(prev => ({ ...prev, isOpen: false }));
   };
 
@@ -1059,6 +1064,8 @@ const HomeInner = () => {
           contentId={stakeModal.contentId}
           categoryId={stakeModal.categoryId}
           cooldownSecondsRemaining={stakeModalCooldownSeconds}
+          isConfirming={isCommitting}
+          confirmError={voteError}
           onConfirm={handleConfirmStake}
           onCancel={handleCancelStake}
         />

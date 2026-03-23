@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { type Hex, encodeFunctionData } from "viem";
@@ -107,6 +107,7 @@ export function useRoundVote() {
   const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
   const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const publicClient = usePublicClient();
+  const clearError = useCallback(() => setError(null), []);
 
   const commitVote = async ({ contentId, isUp, stakeAmount, frontendCode, submitter }: RoundVoteParams) => {
     const accepted = await requireAcceptance("vote");
@@ -302,6 +303,7 @@ export function useRoundVote() {
     commitVote,
     isCommitting,
     error,
+    clearError,
     hasVoterId,
     tokenId,
   };

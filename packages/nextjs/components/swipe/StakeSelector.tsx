@@ -20,6 +20,8 @@ interface StakeSelectorProps {
   contentId: bigint;
   categoryId?: bigint;
   cooldownSecondsRemaining?: number;
+  isConfirming?: boolean;
+  confirmError?: string | null;
   onConfirm: (stakeAmount: number) => void;
   onCancel: () => void;
 }
@@ -35,6 +37,8 @@ export function StakeSelector({
   contentId,
   categoryId,
   cooldownSecondsRemaining = 0,
+  isConfirming = false,
+  confirmError = null,
   onConfirm,
   onCancel,
 }: StakeSelectorProps) {
@@ -73,11 +77,11 @@ export function StakeSelector({
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape" && !isConfirming) onCancel();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onCancel]);
+  }, [isConfirming, isOpen, onCancel]);
 
   const symbol = tokenSymbol ?? "cREP";
   const { calculateBonus } = useParticipationRate();
@@ -93,6 +97,8 @@ export function StakeSelector({
   const isCapacityLimited = maxByCapacity < maxByBalance;
   const cooldownActive = cooldownSecondsRemaining > 0;
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
+  const confirmDisabled =
+    isConfirming || !hasVoterId || cooldownActive || amount < 1 || amount > maxStake || maxStake < 1;
   const phaseHeadline = effectiveIsBlind ? "Blind phase" : "Open phase";
   const phaseToneClassName = isUp ? (effectiveIsBlind ? "bg-primary/10" : "bg-warning/10") : "bg-error/10";
   const phaseHeadlineClassName = isUp ? (effectiveIsBlind ? "text-primary" : "text-warning") : "text-error";
@@ -119,12 +125,16 @@ export function StakeSelector({
           role="dialog"
           aria-modal="true"
           aria-label="Select stake amount"
+          aria-busy={isConfirming}
           className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={isConfirming ? undefined : onCancel}
+          />
 
           <motion.div
             className="relative w-full max-w-md rounded-t-2xl bg-base-200 p-6 shadow-2xl sm:rounded-2xl"
@@ -196,6 +206,7 @@ export function StakeSelector({
                   className={`rounded-lg px-4 py-2 text-base font-medium transition-colors ${
                     amount === preset ? selectedPresetClassName : "pill-inactive-muted"
                   }`}
+                  disabled={isConfirming}
                 >
                   {preset}
                 </button>
@@ -211,7 +222,7 @@ export function StakeSelector({
                 onChange={e => setAmount(Number(e.target.value))}
                 className={sliderClassName}
                 style={sliderStyle}
-                disabled={maxStake < 1}
+                disabled={isConfirming || maxStake < 1}
                 aria-label="Stake amount"
               />
               <div className="mt-1 flex justify-between text-base text-base-content/30">
@@ -300,21 +311,40 @@ export function StakeSelector({
               </div>
             </div>
 
+            {isConfirming && (
+              <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-center text-sm text-primary">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="loading loading-spinner loading-xs" />
+                  <span>Submitting vote. Check your wallet and wait for confirmation.</span>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <button
                 onClick={onCancel}
                 className="btn flex-1 border border-base-content/10 bg-base-300 text-base-content hover:bg-base-300/80"
+                disabled={isConfirming}
               >
                 Cancel
               </button>
               <button
                 onClick={() => onConfirm(amount)}
                 className={`btn flex-1 text-primary-content ${isUp ? "bg-success hover:bg-success/90" : "bg-error hover:bg-error/90"}`}
-                disabled={!hasVoterId || cooldownActive || amount < 1 || amount > maxStake || maxStake < 1}
+                disabled={confirmDisabled}
               >
-                Stake {amount} {symbol}
+                {isConfirming ? (
+                  <span className="flex items-center gap-2">
+                    <span className="loading loading-spinner loading-xs" />
+                    <span>Submitting...</span>
+                  </span>
+                ) : (
+                  `Stake ${amount} ${symbol}`
+                )}
               </button>
             </div>
+
+            {confirmError && !isConfirming && <p className="mt-3 text-center text-base text-error">{confirmError}</p>}
 
             {cooldownActive && (
               <p className="mt-3 text-center text-base text-warning">
