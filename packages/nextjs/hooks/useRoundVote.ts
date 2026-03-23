@@ -3,10 +3,12 @@
 import { useRef, useState } from "react";
 import { CuryoReputationAbi, encodeVoteTransferPayload } from "@curyo/contracts";
 import { useQueryClient } from "@tanstack/react-query";
+import { type Hex, encodeFunctionData } from "viem";
 import { useAccount, usePublicClient, useWriteContract } from "wagmi";
 import { useTermsAcceptance } from "~~/contexts/TermsAcceptanceContext";
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { FREE_TRANSACTION_ALLOWANCE_QUERY_KEY } from "~~/hooks/useFreeTransactionAllowance";
 import { getRecentUserVotesQueryKey } from "~~/hooks/useRecentUserVotes";
 import { getVoteHistoryQueryKey } from "~~/hooks/useVoteHistoryQuery";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
@@ -17,6 +19,7 @@ import {
   persistWalletDisplaySummarySnapshot,
 } from "~~/hooks/useWalletDisplaySummary";
 import { buildCommitVoteParams } from "~~/lib/contracts/roundVotingEngine";
+import { buildFreeTransactionOperationKey } from "~~/lib/thirdweb/freeTransactionOperation";
 import { isFreeTransactionExhaustedError } from "~~/lib/transactionErrors";
 import { VOTE_COOLDOWN_SECONDS } from "~~/lib/vote/cooldown";
 import scaffoldConfig from "~~/scaffold.config";
@@ -56,6 +59,23 @@ function normalizeRoundVoteError(message: string) {
     return "Voter ID required. Please verify your identity to vote.";
   }
   return message;
+}
+
+async function postFreeTransactionMutation(path: string, body: Record<string, unknown>) {
+  const response = await fetch(path, {
+    body: JSON.stringify(body),
+    headers: {
+      "content-type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (response.ok) {
+    return;
+  }
+
+  const responseBody = (await response.json().catch(() => null)) as { error?: string } | null;
+  throw new Error(responseBody?.error || "Free transaction update failed");
 }
 
 /**
@@ -117,6 +137,7 @@ export function useRoundVote() {
     commitLock.current = true;
     setIsCommitting(true);
     setError(null);
+    let freeTransactionOperationKey: Hex | null = null;
 
     try {
       const { ciphertext, commitHash, frontend, stakeWei } = await buildCommitVoteParams({
@@ -133,6 +154,23 @@ export function useRoundVote() {
         commitHash,
         ciphertext,
         frontend,
+      });
+      const transferAndCallData = encodeFunctionData({
+        abi: CuryoReputationAbi,
+        functionName: "transferAndCall",
+        args: [votingEngineInfo.address, stakeWei, payload],
+      });
+
+      freeTransactionOperationKey = buildFreeTransactionOperationKey({
+        chainId: targetNetwork.id,
+        calls: [
+          {
+            data: transferAndCallData,
+            to: crepInfo.address as `0x${string}`,
+            value: 0n,
+          },
+        ],
+        sender: address,
       });
 
       const transferAndCallRequest: any = {
@@ -154,7 +192,25 @@ export function useRoundVote() {
       }
 
       wagmiTokenWrite.reset();
-      await writeTx(() => wagmiTokenWrite.writeContractAsync(transferAndCallRequest));
+      const transactionHash = await writeTx(() => wagmiTokenWrite.writeContractAsync(transferAndCallRequest));
+      if (!transactionHash) {
+        return false;
+      }
+
+      if (freeTransactionOperationKey) {
+        try {
+          await postFreeTransactionMutation("/api/transactions/free/confirm", {
+            address,
+            chainId: targetNetwork.id,
+            operationKey: freeTransactionOperationKey,
+            transactionHashes: [transactionHash],
+          });
+        } catch (confirmationError) {
+          console.error("Failed to confirm sponsored free transaction usage:", confirmationError);
+        }
+      }
+
+      void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
 
       queryClient.setQueryData<WalletDisplaySummary | undefined>(
         getWalletDisplaySummaryQueryKey(address.toLowerCase()),
@@ -194,6 +250,15 @@ export function useRoundVote() {
 
       return true;
     } catch (e: any) {
+      if (freeTransactionOperationKey) {
+        await postFreeTransactionMutation("/api/transactions/free/release", {
+          address,
+          chainId: targetNetwork.id,
+          operationKey: freeTransactionOperationKey,
+        }).catch(() => undefined);
+      }
+
+      void queryClient.invalidateQueries({ queryKey: FREE_TRANSACTION_ALLOWANCE_QUERY_KEY });
       console.error("Round vote commit failed:", e);
       if (isFreeTransactionExhaustedError(e)) {
         setError("Free transactions used up. Add CELO to continue.");

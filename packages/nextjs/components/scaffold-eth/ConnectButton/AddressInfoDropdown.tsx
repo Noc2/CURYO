@@ -8,9 +8,13 @@ import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
+import { useActiveVotesWithDeadlines } from "~~/hooks/useActiveVotesWithDeadlines";
 import { useCuryoDisconnect } from "~~/hooks/useCuryoDisconnect";
 import { useFreeTransactionAllowance } from "~~/hooks/useFreeTransactionAllowance";
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
+import { useSubmissionStakes } from "~~/hooks/useSubmissionStakes";
+import { useVotingStakes } from "~~/hooks/useVotingStakes";
+import { getWalletDisplayLiquidMicro, useWalletDisplaySummary } from "~~/hooks/useWalletDisplaySummary";
 import { isENS } from "~~/utils/scaffold-eth/common";
 
 type AddressInfoDropdownProps = {
@@ -34,6 +38,53 @@ function formatCrepAmount(value: bigint | null | undefined) {
   return (Number(value) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
+function toMicroUnits(value: number) {
+  return BigInt(Math.round(value * 1e6));
+}
+
+function useWalletSummaryData(address: Address, crepBalance: bigint | undefined) {
+  const isPageVisible = usePageVisibility();
+  const { totalSubmissionStake } = useSubmissionStakes(address);
+  const { activeStaked: votingStaked } = useVotingStakes(address);
+  const { votes: activeVotes, earliestReveal, hasPendingReveals } = useActiveVotesWithDeadlines(address);
+
+  const { data: frontendInfo } = useScaffoldReadContract({
+    contractName: "FrontendRegistry",
+    functionName: "getFrontendInfo",
+    args: [address],
+    watch: false,
+    query: {
+      staleTime: 60_000,
+      refetchInterval: isPageVisible ? 60_000 : false,
+    },
+  });
+
+  const fallbackVotingStakedMicro = activeVotes.reduce((sum, vote) => sum + BigInt(vote.stake), 0n);
+  const indexedVotingStakedMicro = toMicroUnits(votingStaked);
+  const votingStakedMicro =
+    indexedVotingStakedMicro > fallbackVotingStakedMicro ? indexedVotingStakedMicro : fallbackVotingStakedMicro;
+
+  const summary = useWalletDisplaySummary(
+    address,
+    crepBalance === undefined
+      ? null
+      : {
+          liquidMicro: crepBalance,
+          votingStakedMicro,
+          submissionStakedMicro: toMicroUnits(totalSubmissionStake),
+          frontendStakedMicro: frontendInfo?.[1] ?? 0n,
+        },
+  );
+
+  return {
+    activeVotes,
+    earliestReveal,
+    hasPendingReveals,
+    liquidBalance: getWalletDisplayLiquidMicro(summary, crepBalance),
+    summary,
+  };
+}
+
 function FreeTransactionAllowanceText({ className }: { className?: string }) {
   const { isResolved, limit, remaining, verified } = useFreeTransactionAllowance();
 
@@ -51,12 +102,70 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
   );
 }
 
-function InlineWalletSummary({ crepBalance }: { crepBalance: bigint | undefined }) {
+function WalletSummaryDetails({
+  address,
+  crepBalance,
+  balanceClassName,
+  freeTxClassName,
+  stakeClassName,
+}: {
+  address: Address;
+  crepBalance: bigint | undefined;
+  balanceClassName: string;
+  freeTxClassName: string;
+  stakeClassName: string;
+}) {
+  const { activeVotes, earliestReveal, hasPendingReveals, liquidBalance, summary } = useWalletSummaryData(
+    address,
+    crepBalance,
+  );
+  const totalStakedMicro = summary?.totalStakedMicro ?? 0n;
+  const showStaked = totalStakedMicro > 0n || activeVotes.length > 0;
+  const submissionStakedMicro = summary?.submissionStakedMicro ?? 0n;
+  const frontendStakedMicro = summary?.frontendStakedMicro ?? 0n;
+  const votingStakedMicro = summary?.votingStakedMicro ?? 0n;
+
+  const stakeParts: string[] = [];
+  if (submissionStakedMicro > 0n) {
+    stakeParts.push(`${formatCrepAmount(submissionStakedMicro)} cREP submissions`);
+  }
+  if (votingStakedMicro > 0n) {
+    let votingLabel = `${formatCrepAmount(votingStakedMicro)} cREP voting`;
+    if (earliestReveal) {
+      votingLabel += ` · reveals in ${earliestReveal}`;
+    } else if (hasPendingReveals) {
+      votingLabel += " · pending reveal";
+    }
+    stakeParts.push(votingLabel);
+  }
+  if (frontendStakedMicro > 0n) {
+    stakeParts.push(`${formatCrepAmount(frontendStakedMicro)} cREP frontend`);
+  }
+  const stakeTooltip = stakeParts.join(" · ");
+
   return (
     <>
-      <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(crepBalance)} cREP</div>
-      <FreeTransactionAllowanceText className="px-4 pl-12 text-left" />
+      <div className={balanceClassName}>{formatCrepAmount(liquidBalance)} cREP</div>
+      <FreeTransactionAllowanceText className={freeTxClassName} />
+      {showStaked ? (
+        <div className={stakeClassName}>
+          {formatCrepAmount(totalStakedMicro)} Staked
+          {stakeTooltip ? <InfoTooltip text={stakeTooltip} position="bottom" /> : null}
+        </div>
+      ) : null}
     </>
+  );
+}
+
+function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
+  return (
+    <WalletSummaryDetails
+      address={address}
+      crepBalance={crepBalance}
+      balanceClassName="text-base text-base-content text-left px-4 pl-12"
+      freeTxClassName="px-4 pl-12 text-left"
+      stakeClassName="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12"
+    />
   );
 }
 
@@ -137,8 +246,13 @@ export const AddressInfoDropdown = ({
               <p className="truncate text-base">
                 {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
               </p>
-              <p className="text-sm text-base-content/60">{formatCrepAmount(crepBalance)} cREP</p>
-              <FreeTransactionAllowanceText className="pt-0.5" />
+              <WalletSummaryDetails
+                address={address}
+                crepBalance={crepBalance}
+                balanceClassName="text-sm text-base-content/60"
+                freeTxClassName="pt-0.5"
+                stakeClassName="flex items-center gap-1 pt-0.5 text-sm text-base-content/60"
+              />
             </div>
           </div>
         </li>
@@ -155,11 +269,16 @@ export const AddressInfoDropdown = ({
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      {inlineMenu ? <InlineWalletSummary crepBalance={crepBalance} /> : null}
+      {inlineMenu ? <InlineWalletSummary address={address} crepBalance={crepBalance} /> : null}
       {!inlineMenu ? (
         <>
-          <div className="text-base text-base-content text-left px-4 pl-12">{formatCrepAmount(crepBalance)} cREP</div>
-          <FreeTransactionAllowanceText className="px-4 pl-12 text-left" />
+          <WalletSummaryDetails
+            address={address}
+            crepBalance={crepBalance}
+            balanceClassName="text-base text-base-content text-left px-4 pl-12"
+            freeTxClassName="px-4 pl-12 text-left"
+            stakeClassName="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12"
+          />
         </>
       ) : null}
     </div>
@@ -184,8 +303,13 @@ export const AddressInfoDropdown = ({
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
-      <div className="text-base text-base-content hidden lg:inline lg:px-2">{formatCrepAmount(crepBalance)} cREP</div>
-      <FreeTransactionAllowanceText className="hidden lg:flex lg:px-2" />
+      <WalletSummaryDetails
+        address={address}
+        crepBalance={crepBalance}
+        balanceClassName="hidden lg:inline lg:px-2 text-base text-base-content"
+        freeTxClassName="hidden lg:flex lg:px-2"
+        stakeClassName="hidden lg:flex lg:px-2 items-center gap-1 text-base text-base-content"
+      />
     </div>
   );
 };
