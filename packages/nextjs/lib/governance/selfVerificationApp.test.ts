@@ -1,7 +1,9 @@
 import {
   SELF_MINIMUM_AGE,
   SELF_VERIFICATION_SCOPE,
+  buildSelfVerificationApp,
   buildSelfVerificationAppConfig,
+  getSelfVerificationUniversalLink,
   getSelfVerificationWebsocketUrl,
   isSelfVerificationSupportedChain,
 } from "./selfVerificationApp";
@@ -40,6 +42,32 @@ test("buildSelfVerificationAppConfig keeps production mode on Celo mainnet", () 
   assert.equal(config.endpointType, "celo");
   assert.equal(config.devMode, false);
   assert.equal(config.disclosures.minimumAge, 18);
+});
+
+test("buildSelfVerificationApp creates a mobile universal link that Self can open", () => {
+  const selfApp = buildSelfVerificationApp({
+    address,
+    contractAddress,
+    chainId: 11142220,
+    deeplinkCallback: "https://curyo.example/faucet",
+  });
+
+  assert.ok(selfApp);
+
+  const link = getSelfVerificationUniversalLink(selfApp);
+  const url = new URL(link);
+
+  assert.equal(url.origin, "https://redirect.self.xyz");
+  assert.equal(url.searchParams.has("app"), false);
+
+  const encodedSelfApp = url.searchParams.get("selfApp");
+  assert.ok(encodedSelfApp);
+
+  const decodedSelfApp = JSON.parse(encodedSelfApp) as Record<string, unknown>;
+  assert.equal(decodedSelfApp.endpointType, "staging_celo");
+  assert.equal(decodedSelfApp.chainID, 11142220);
+  assert.equal(decodedSelfApp.userId, address.slice(2));
+  assert.equal(decodedSelfApp.deeplinkCallback, "https://curyo.example/faucet");
 });
 
 test("unsupported chains do not build a Self verification app config", () => {

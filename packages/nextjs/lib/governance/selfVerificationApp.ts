@@ -1,3 +1,6 @@
+import { SelfAppBuilder, getUniversalLink } from "@selfxyz/qrcode";
+import type { SelfApp } from "@selfxyz/qrcode";
+
 export const SELF_VERIFICATION_SCOPE = "curyo-faucet";
 export const SELF_MINIMUM_AGE = 18;
 
@@ -23,11 +26,19 @@ export type SelfVerificationAppConfig = {
   scope: typeof SELF_VERIFICATION_SCOPE;
   endpoint: string;
   endpointType: SelfVerificationEndpointType;
+  deeplinkCallback: string;
   userId: string;
   userIdType: "hex";
   devMode: boolean;
   version: 2;
   disclosures: SelfVerificationDisclosures;
+};
+
+type BuildSelfVerificationAppParams = {
+  address: string;
+  contractAddress: string;
+  chainId: number;
+  deeplinkCallback?: string;
 };
 
 const SELF_ENDPOINT_TYPES: Record<SupportedSelfVerificationChainId, SelfVerificationEndpointType> = {
@@ -58,11 +69,8 @@ export function buildSelfVerificationAppConfig({
   address,
   contractAddress,
   chainId,
-}: {
-  address: string;
-  contractAddress: string;
-  chainId: number;
-}): SelfVerificationAppConfig | null {
+  deeplinkCallback = "",
+}: BuildSelfVerificationAppParams): SelfVerificationAppConfig | null {
   if (!isSelfVerificationSupportedChain(chainId)) {
     return null;
   }
@@ -72,6 +80,7 @@ export function buildSelfVerificationAppConfig({
     scope: SELF_VERIFICATION_SCOPE,
     endpoint: contractAddress.toLowerCase(),
     endpointType: SELF_ENDPOINT_TYPES[chainId],
+    deeplinkCallback,
     userId: address,
     userIdType: "hex",
     // Self uses dev mode for mock document flows on staging/testnet.
@@ -90,4 +99,13 @@ export function buildSelfVerificationAppConfig({
       expiry_date: false,
     },
   };
+}
+
+export function buildSelfVerificationApp(params: BuildSelfVerificationAppParams): SelfApp | null {
+  const appConfig = buildSelfVerificationAppConfig(params);
+  return appConfig ? new SelfAppBuilder(appConfig).build() : null;
+}
+
+export function getSelfVerificationUniversalLink(selfApp: SelfApp): string {
+  return getUniversalLink(selfApp);
 }

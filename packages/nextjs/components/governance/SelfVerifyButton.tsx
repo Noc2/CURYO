@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { SelfAppBuilder } from "@selfxyz/qrcode";
 import type { SelfApp } from "@selfxyz/qrcode";
 import { useAccount } from "wagmi";
 import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
 import {
-  buildSelfVerificationAppConfig,
+  buildSelfVerificationApp,
+  getSelfVerificationUniversalLink,
   getSelfVerificationWebsocketUrl,
   isSelfVerificationSupportedChain,
 } from "~~/lib/governance/selfVerificationApp";
@@ -45,14 +45,15 @@ export function SelfVerifyButton({ onStart, onSuccess }: SelfVerifyButtonProps) 
       return;
     }
 
-    const appConfig = buildSelfVerificationAppConfig({
+    const nextSelfApp = buildSelfVerificationApp({
       address,
       contractAddress: contractInfo.address,
       chainId: chain.id,
+      deeplinkCallback: isMobile ? window.location.href : undefined,
     });
 
-    setSelfApp(appConfig ? new SelfAppBuilder(appConfig).build() : null);
-  }, [address, contractInfo?.address, chain?.id]);
+    setSelfApp(nextSelfApp);
+  }, [address, contractInfo?.address, chain?.id, isMobile]);
 
   if (!isSelfVerificationSupportedChain(chain?.id)) {
     return (
@@ -86,7 +87,7 @@ export function SelfVerifyButton({ onStart, onSuccess }: SelfVerifyButtonProps) 
     return (
       <div className="space-y-3 text-center">
         <a
-          href={`https://self.xyz/verify?app=${encodeURIComponent(JSON.stringify(selfApp))}`}
+          href={getSelfVerificationUniversalLink(selfApp)}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-curyo btn-lg inline-flex"
