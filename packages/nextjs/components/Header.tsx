@@ -188,6 +188,8 @@ const MobileMenuLinks = () => {
 };
 
 const SEARCH_COMMIT_DEBOUNCE_MS = 200;
+const MOBILE_HEADER_SCROLL_DELTA = 12;
+const MOBILE_HEADER_HIDE_OFFSET = 72;
 
 const HeaderBrand = ({ className, compact = false }: { className?: string; compact?: boolean }) => (
   <Link href="/" className={`flex min-w-0 items-center gap-2 ${className ?? ""}`}>
@@ -331,20 +333,64 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
 export const Header = () => {
   const pathname = usePathname() ?? "";
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [isMobileHeaderVisible, setIsMobileHeaderVisible] = useState(true);
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
+  const lastScrollYRef = useRef(0);
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
 
   useEffect(() => {
     setMobileSearchOpen(false);
+    setIsMobileHeaderVisible(true);
   }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    lastScrollYRef.current = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const scrollDelta = currentScrollY - lastScrollYRef.current;
+      const isMobileMenuOpen = burgerMenuRef.current?.open ?? false;
+
+      if (currentScrollY <= 0) {
+        setIsMobileHeaderVisible(true);
+        lastScrollYRef.current = 0;
+        return;
+      }
+
+      if (mobileSearchOpen || isMobileMenuOpen) {
+        setIsMobileHeaderVisible(true);
+        lastScrollYRef.current = currentScrollY;
+        return;
+      }
+
+      if (Math.abs(scrollDelta) < MOBILE_HEADER_SCROLL_DELTA) return;
+
+      setIsMobileHeaderVisible(scrollDelta < 0 || currentScrollY < MOBILE_HEADER_HIDE_OFFSET);
+      lastScrollYRef.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [mobileSearchOpen]);
 
   return (
     <>
       {/* Mobile: top bar */}
-      <div className="xl:hidden sticky top-0 z-20">
+      <div
+        className={`xl:hidden sticky top-0 z-20 transition-transform duration-200 ease-out will-change-transform ${
+          isMobileHeaderVisible ? "translate-y-0" : "-translate-y-full"
+        }`}
+        data-mobile-header="true"
+        data-visible={isMobileHeaderVisible ? "true" : "false"}
+      >
         <div className="navbar min-h-0 shrink-0 justify-between bg-base-200 px-4 py-3 shadow-[0_18px_44px_rgba(9,10,12,0.32)] backdrop-blur-xl sm:px-6">
           {mobileSearchOpen ? (
             <Suspense>
@@ -353,7 +399,13 @@ export const Header = () => {
           ) : (
             <>
               <div className="flex min-w-0 items-center gap-2">
-                <details className="dropdown" ref={burgerMenuRef}>
+                <details
+                  className="dropdown"
+                  ref={burgerMenuRef}
+                  onToggle={() => {
+                    if (burgerMenuRef.current?.open) setIsMobileHeaderVisible(true);
+                  }}
+                >
                   <summary className="btn btn-ghost btn-sm hover:bg-transparent p-1" aria-label="Open menu">
                     <Bars3Icon className="h-5 w-5" />
                   </summary>

@@ -33,6 +33,23 @@ test.describe("Mobile viewport (phone)", () => {
     await expect(dropdown.getByRole("link", { name: /cREP/i })).toBeVisible({ timeout: 3_000 });
   });
 
+  test("mobile header hides on scroll down and returns on scroll up", async ({ connectedPage: page }) => {
+    await page.goto("/vote");
+    await waitForFeedLoaded(page);
+
+    const mobileHeader = page.locator('[data-mobile-header="true"]');
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+
+    const canScroll = await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight + 200);
+    expect(canScroll).toBe(true);
+
+    await page.evaluate(() => window.scrollTo(0, 900));
+    await expect(mobileHeader).toHaveAttribute("data-visible", "false");
+
+    await page.evaluate(() => window.scrollTo(0, 320));
+    await expect(mobileHeader).toHaveAttribute("data-visible", "true");
+  });
+
   test("hamburger menu navigation works", async ({ connectedPage: page }) => {
     await page.goto("/vote");
     await waitForFeedLoaded(page);
