@@ -57,18 +57,38 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
       .or(page.getByText("Round full"))
       .or(page.getByText("No content submitted yet"))
       .or(page.getByText(/No content found/i));
+  const connectWalletButton = page.getByRole("button", { name: /Connect Wallet/i });
 
-  try {
-    await feedContent().first().waitFor({ state: "visible", timeout });
-  } catch (error) {
-    const stillLoading = await page.getByText("Loading...").isVisible().catch(() => false);
-    if (!stillLoading) {
-      throw error;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      if (await connectWalletButton.isVisible().catch(() => false)) {
+        await connectWalletButton.waitFor({ state: "hidden", timeout: Math.min(timeout, 10_000) }).catch(() => undefined);
+      }
+
+      await feedContent().first().waitFor({ state: "visible", timeout });
+      return;
+    } catch (error) {
+      lastError = error;
+
+      const stillLoading = await page.getByText("Loading...").first().isVisible().catch(() => false);
+      const connectPromptVisible = await page
+        .getByText(/Connect your wallet/i)
+        .first()
+        .isVisible()
+        .catch(() => false);
+
+      if (attempt === 1 || (!stillLoading && !connectPromptVisible)) {
+        throw error;
+      }
+
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("networkidle").catch(() => undefined);
     }
-
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await feedContent().first().waitFor({ state: "visible", timeout });
   }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 export async function waitForVisibleWithReload(
