@@ -1,10 +1,10 @@
 "use client";
 
-import { type Chain, type ThirdwebClient, defineChain } from "thirdweb";
+import { type Chain, type ThirdwebClient } from "thirdweb";
 import { type Account, type Wallet, privateKeyToAccount } from "thirdweb/wallets";
 
 type LocalTestWalletOptions = {
-  chainId: number;
+  chain: Chain;
   client: ThirdwebClient;
   privateKey: string;
 };
@@ -13,14 +13,14 @@ type AccountChangedListener = (account: Account) => void;
 type ChainChangedListener = (chain: Chain) => void;
 type DisconnectListener = () => void;
 
-export function createLocalTestWallet({ chainId, client, privateKey }: LocalTestWalletOptions): Wallet<"inApp"> {
+export function createLocalTestWallet({ chain: initialChain, client, privateKey }: LocalTestWalletOptions): Wallet<"inApp"> {
   const baseAccount = privateKeyToAccount({
     client,
     privateKey,
   });
 
   let account: Account | undefined = baseAccount;
-  let chain = defineChain(chainId);
+  let chain = initialChain;
 
   const accountChangedListeners = new Set<AccountChangedListener>();
   const chainChangedListeners = new Set<ChainChangedListener>();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { defineChain } from "thirdweb";
 import { useActiveAccount, useConnect as useThirdwebConnect } from "thirdweb/react";
 import { useAccount } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
@@ -39,8 +40,28 @@ export function LocalTestWalletBridge() {
       return;
     }
 
+    const rpcUrl = targetNetwork.rpcUrls.default.http[0];
+    if (!rpcUrl) {
+      return;
+    }
+
     const wallet = createLocalTestWallet({
-      chainId: targetNetwork.id,
+      chain: defineChain({
+        blockExplorers:
+          targetNetwork.blockExplorers?.default?.url
+            ? [
+                {
+                  name: targetNetwork.blockExplorers.default.name,
+                  url: targetNetwork.blockExplorers.default.url,
+                },
+              ]
+            : [],
+        id: targetNetwork.id,
+        name: targetNetwork.name,
+        nativeCurrency: targetNetwork.nativeCurrency,
+        rpc: rpcUrl,
+        testnet: targetNetwork.testnet,
+      }),
       client: thirdwebClient,
       privateKey,
     });
