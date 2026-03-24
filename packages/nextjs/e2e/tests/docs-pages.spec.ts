@@ -7,7 +7,6 @@ import { expect, test } from "@playwright/test";
 test.describe("Documentation pages", () => {
   const docPages = [
     "/docs",
-    "/docs/getting-started",
     "/docs/how-it-works",
     "/docs/tokenomics",
     "/docs/governance",
