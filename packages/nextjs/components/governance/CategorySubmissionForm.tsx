@@ -81,6 +81,13 @@ export const CategorySubmissionForm = () => {
     args: [address],
   });
 
+  const { data: transferableBalanceRaw } = useScaffoldReadContract({
+    contractName: "CuryoReputation",
+    functionName: "getTransferableBalance" as any,
+    args: [address],
+    query: { enabled: !!address },
+  });
+
   const { data: votingPowerRaw } = useScaffoldReadContract({
     contractName: "CuryoReputation",
     functionName: "getVotes" as any,
@@ -106,12 +113,17 @@ export const CategorySubmissionForm = () => {
     : 0n;
   const submitsWithProposal = hasGovernorContract && !!governorAddress;
   const totalRequiredBalance = submitsWithProposal ? CATEGORY_STAKE + categoryProposalThreshold : CATEGORY_STAKE;
+  const transferableBalance = transferableBalanceRaw as bigint | undefined;
   const hasEnoughBalance = crepBalance !== undefined && crepBalance >= totalRequiredBalance;
+  const hasEnoughStakeTransferable = transferableBalance !== undefined && transferableBalance >= CATEGORY_STAKE;
   const votingPower = votingPowerRaw as bigint | undefined;
   const hasEnoughVotingPowerForProposal =
     !submitsWithProposal || (votingPower !== undefined && votingPower >= categoryProposalThreshold);
-  const canAutoCreateProposal = submitsWithProposal && hasEnoughBalance && hasEnoughVotingPowerForProposal;
-  const canSubmitCategory = !submitsWithProposal ? hasEnoughBalance : canAutoCreateProposal;
+  const canAutoCreateProposal =
+    submitsWithProposal && hasEnoughBalance && hasEnoughStakeTransferable && hasEnoughVotingPowerForProposal;
+  const canSubmitCategory = !submitsWithProposal
+    ? hasEnoughBalance && hasEnoughStakeTransferable
+    : canAutoCreateProposal;
 
   const addSubcategory = () => {
     if (subcategories.length < MAX_SUBCATEGORIES) {
@@ -145,8 +157,10 @@ export const CategorySubmissionForm = () => {
       return;
     }
 
-    if (submitsWithProposal && !canSubmitCategory) {
-      if (!hasEnoughVotingPowerForProposal) {
+    if (!canSubmitCategory) {
+      if (!hasEnoughStakeTransferable) {
+        notification.error(`You need ${formatCRep(CATEGORY_STAKE)} transferable balance for the platform stake.`);
+      } else if (submitsWithProposal && !hasEnoughVotingPowerForProposal) {
         notification.error(`You need ${formatCRep(categoryProposalThreshold)} voting power to submit a platform.`);
       } else {
         notification.error(`You need ${formatCRep(totalRequiredBalance)} total to submit a platform.`);
@@ -496,11 +510,14 @@ export const CategorySubmissionForm = () => {
                   <span className="font-medium text-base-content">{formatCRep(totalRequiredBalance)}</span>
                 </div>
                 <p>Submit creates the approval proposal immediately.</p>
+                {!hasEnoughStakeTransferable && (
+                  <p className="text-warning">Need {formatCRep(CATEGORY_STAKE)} transferable for the stake.</p>
+                )}
                 {!hasEnoughVotingPowerForProposal && (
                   <p className="text-warning">Need {formatCRep(categoryProposalThreshold)} voting power.</p>
                 )}
                 {!hasEnoughBalance && (
-                  <p className="text-warning">Need {formatCRep(totalRequiredBalance)} available balance.</p>
+                  <p className="text-warning">Need {formatCRep(totalRequiredBalance)} total balance.</p>
                 )}
               </div>
             )}
