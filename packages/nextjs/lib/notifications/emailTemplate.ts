@@ -1,5 +1,3 @@
-import { getOptionalAppUrl } from "../env/server";
-
 interface CuryoEmailTemplateParams {
   title: string;
   body: string;
@@ -19,16 +17,6 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
-function getAbsoluteAppUrl() {
-  const appUrl = getOptionalAppUrl();
-  return appUrl ? appUrl.replace(/\/+$/, "") : null;
-}
-
-function getEmailLogoUrl() {
-  const appUrl = getAbsoluteAppUrl();
-  return appUrl ? `${appUrl}/curyo-email-logo.svg` : null;
-}
-
 export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
   const safeTitle = escapeHtml(params.title);
   const safeBody = escapeHtml(params.body);
@@ -39,8 +27,6 @@ export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
     params.footerNote ?? "You are receiving this email because you signed up for Curyo email notifications.",
   );
   const safeLinkIntro = escapeHtml(params.linkIntro ?? "If the button does not work, open this link manually:");
-  const logoUrl = getEmailLogoUrl();
-  const safeLogoUrl = logoUrl ? escapeHtml(logoUrl) : null;
 
   return `
     <div style="margin:0; padding:32px 16px; background:#090a0c; color:#f5f0eb;">
@@ -48,22 +34,24 @@ export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
         <tr>
           <td align="center">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:separate; width:100%; max-width:640px;">
-              ${
-                safeLogoUrl
-                  ? `
               <tr>
                 <td style="padding:0 0 16px 0;">
-                  <img
-                    src="${safeLogoUrl}"
-                    alt="Curyo"
-                    width="210"
-                    style="display:block; width:210px; max-width:100%; height:auto; border:0;"
-                  />
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>
+                      <td
+                        width="14"
+                        height="14"
+                        style="width:14px; height:14px; border-radius:999px; background:#f26426; box-shadow:0 0 0 4px rgba(242,100,38,0.14);"
+                      ></td>
+                      <td
+                        style="padding-left:10px; color:#f5f0eb; font-family:Arial, Helvetica, sans-serif; font-size:26px; line-height:1; font-weight:700; letter-spacing:-0.4px;"
+                      >
+                        Curyo
+                      </td>
+                    </tr>
+                  </table>
                 </td>
               </tr>
-              `
-                  : ""
-              }
               <tr>
                 <td
                   style="

@@ -2,7 +2,7 @@ import { buildCuryoEmailHtml } from "./emailTemplate";
 import assert from "node:assert/strict";
 import test from "node:test";
 
-test("buildCuryoEmailHtml includes the branded logo, button, and fallback link", () => {
+test("buildCuryoEmailHtml includes the branded header, button, and fallback link", () => {
   const html = buildCuryoEmailHtml({
     title: "Verify your email",
     body: "Confirm this email address to receive Curyo notification emails.",
@@ -11,7 +11,7 @@ test("buildCuryoEmailHtml includes the branded logo, button, and fallback link",
     eyebrow: "Email verification",
   });
 
-  assert.match(html, /curyo-email-logo\.svg/);
+  assert.match(html, />\s*Curyo\s*</);
   assert.match(html, /Email verification/);
   assert.match(html, /Verify your email/);
   assert.match(html, /background:#f26426/);
