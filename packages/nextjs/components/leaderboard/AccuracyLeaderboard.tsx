@@ -94,7 +94,7 @@ export function AccuracyLeaderboard() {
 
       if (!result.ok) {
         if (result.reason === "not_connected") {
-          notification.info("Connect your wallet to follow curators.");
+          notification.info("Sign in to follow curators.");
           void openConnectModal();
           return;
         }
@@ -122,7 +122,7 @@ export function AccuracyLeaderboard() {
       const result = await requestReadAccess();
       if (!result.ok) {
         if (result.reason === "not_connected") {
-          notification.info("Connect your wallet to filter by curators you follow.");
+          notification.info("Sign in to filter by curators you follow.");
           void openConnectModal();
           return;
         }

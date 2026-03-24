@@ -288,7 +288,10 @@ export function DelegationSection() {
           <InfoTooltip text="Send cREP to your delegate or any other address." />
         </h3>
 
-        <p className="text-base text-base-content/60">Balance {formattedBalance} cREP</p>
+        <div className="space-y-1 text-base text-base-content/60">
+          <p>Balance {formattedBalance} cREP</p>
+          {address ? <p className="font-mono text-sm break-all">Connected wallet {address}</p> : null}
+        </div>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">

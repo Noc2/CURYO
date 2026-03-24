@@ -62,9 +62,7 @@ const SubmitPage: NextPage = () => {
   }, []);
 
   if (!address) {
-    return (
-      <ConnectWalletCard title="Submit" message="Connect your wallet to submit content or propose new categories." />
-    );
+    return <ConnectWalletCard title="Submit" message="Sign in to submit content or propose new categories." />;
   }
 
   if (requiresPageLevelVoterId && !voterIdResolved) {

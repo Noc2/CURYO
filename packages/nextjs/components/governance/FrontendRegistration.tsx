@@ -53,7 +53,7 @@ function FrontendOperatorAddressRow({ label, address }: { label?: string; addres
           </button>
         </>
       ) : (
-        <span className="text-base-content/50">Connect wallet</span>
+        <span className="text-base-content/50">Sign in</span>
       )}
     </div>
   );

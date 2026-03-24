@@ -72,7 +72,7 @@ export function SelfVerifyButton({ onStart, onSuccess }: SelfVerifyButtonProps) 
   }
 
   if (!address) {
-    return <div className="text-center text-base-content/60 py-4">Connect your wallet to verify your identity.</div>;
+    return <div className="text-center text-base-content/60 py-4">Sign in to verify your identity.</div>;
   }
 
   if (!selfApp) {

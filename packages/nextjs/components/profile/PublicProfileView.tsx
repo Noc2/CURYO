@@ -274,7 +274,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
 
     if (!result.ok) {
       if (result.reason === "not_connected") {
-        notification.info("Connect your wallet to follow curators.");
+        notification.info("Sign in to follow curators.");
         void openConnectModal();
         return;
       }

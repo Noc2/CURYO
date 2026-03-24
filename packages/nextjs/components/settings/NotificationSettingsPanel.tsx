@@ -134,8 +134,12 @@ export function NotificationSettingsPanel({
   useEffect(() => {
     if (emailQueryStatus === "verified") {
       notification.success("Email verified. Curyo can now send email notifications to that address.");
+    } else if (emailQueryStatus === "unsubscribed") {
+      notification.success("Email notifications unsubscribed.");
     } else if (emailQueryStatus === "invalid") {
       notification.error("That verification link is invalid or expired.");
+    } else if (emailQueryStatus === "invalid_unsubscribe") {
+      notification.error("That unsubscribe link is invalid or no longer active.");
     }
   }, [emailQueryStatus]);
 
@@ -242,7 +246,7 @@ export function NotificationSettingsPanel({
             </div>
             <h2 className="mt-3 text-3xl font-semibold text-base-content sm:text-4xl">Notification settings</h2>
             <p className="mt-3 text-base text-base-content/60">
-              Connect your wallet to choose which in-app, browser, and email alerts you want to receive.
+              Sign in to choose which in-app, browser, and email alerts you want to receive.
             </p>
           </div>
           <button
@@ -252,7 +256,7 @@ export function NotificationSettingsPanel({
             }}
             className="btn btn-submit px-6"
           >
-            Connect wallet
+            Sign In
           </button>
         </div>
       </div>

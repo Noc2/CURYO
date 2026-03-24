@@ -53,7 +53,7 @@ export default function PortfolioPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <h1 className="text-2xl font-bold mb-4">Portfolio</h1>
-        <p className="text-base-content/60 mb-6 text-center">Connect your wallet to view your portfolio</p>
+        <p className="text-base-content/60 mb-6 text-center">Sign in to view your portfolio</p>
         <CuryoConnectButton />
       </div>
     );

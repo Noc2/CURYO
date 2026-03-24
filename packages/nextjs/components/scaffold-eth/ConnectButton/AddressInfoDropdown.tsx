@@ -203,7 +203,7 @@ function MenuItems({
           onClick={() => void disconnect()}
         >
           <ArrowLeftOnRectangleIcon className="w-6 h-6 shrink-0" />
-          <span className={textClass}>Disconnect</span>
+          <span className={textClass}>Sign Out</span>
         </button>
       </li>
     </>

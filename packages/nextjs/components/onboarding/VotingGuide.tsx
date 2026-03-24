@@ -11,7 +11,7 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
 const STEPS = [
   {
-    label: "Connect wallet",
+    label: "Sign in",
     desc: "claim a Voter ID to vote, stake, and claim",
   },
   { label: "Vote", desc: "place your prediction while direction stays hidden" },
@@ -82,7 +82,7 @@ export function VotingGuide() {
               className="btn btn-sm btn-curyo border-none w-full"
               style={{ fontSize: "16px" }}
             >
-              Connect Wallet
+              Sign In
             </button>
           ) : !hasVoterId ? (
             <Link href="/governance" className="btn btn-primary btn-sm w-full">

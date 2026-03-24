@@ -31,14 +31,14 @@ export const CuryoConnectButton = ({ inlineMenu = false }: { inlineMenu?: boolea
         style={{ fontSize: "16px" }}
       >
         <span className="sm:hidden">
-          {!thirdwebEnabled ? "Unavailable" : isConnecting || syncingThirdwebAccount ? "..." : "Connect"}
+          {!thirdwebEnabled ? "Unavailable" : isConnecting || syncingThirdwebAccount ? "..." : "Sign In"}
         </span>
         <span className="hidden sm:inline">
           {!thirdwebEnabled
-            ? "Wallet Unavailable"
+            ? "Sign In Unavailable"
             : isConnecting || syncingThirdwebAccount
-              ? "Connecting..."
-              : "Connect Wallet"}
+              ? "Signing In..."
+              : "Sign In"}
         </span>
       </button>
     );

@@ -46,7 +46,7 @@ export const WrongNetworkDropdown = () => {
             onClick={() => void disconnect()}
           >
             <ArrowLeftOnRectangleIcon className="h-6 w-4 ml-2 sm:ml-0" />
-            <span>Disconnect</span>
+            <span>Sign Out</span>
           </button>
         </li>
       </ul>

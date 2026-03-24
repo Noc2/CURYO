@@ -770,7 +770,7 @@ const HomeInner = () => {
 
       if (!result.ok) {
         if (result.reason === "not_connected") {
-          notification.info("Connect your wallet to watch content.");
+          notification.info("Sign in to watch content.");
           void openConnectModal();
           return;
         }
@@ -799,7 +799,7 @@ const HomeInner = () => {
 
       if (!result.ok) {
         if (result.reason === "not_connected") {
-          notification.info("Connect your wallet to follow curators.");
+          notification.info("Sign in to follow curators.");
           void openConnectModal();
           return;
         }
@@ -837,7 +837,7 @@ const HomeInner = () => {
         const result = await requestWatchReadAccess();
         if (!result.ok) {
           if (result.reason === "not_connected") {
-            notification.info("Connect your wallet to view your watchlist.");
+            notification.info("Sign in to view your watchlist.");
             void openConnectModal();
             return;
           }
@@ -860,7 +860,7 @@ const HomeInner = () => {
       const result = await requestFollowReadAccess();
       if (!result.ok) {
         if (result.reason === "not_connected") {
-          notification.info("Connect your wallet to view curators you follow.");
+          notification.info("Sign in to view curators you follow.");
           void openConnectModal();
           return;
         }
@@ -912,27 +912,27 @@ const HomeInner = () => {
     }
 
     if (activeScope === "watched") {
-      return address ? "You aren't watching any content yet." : "Connect your wallet to view watched content.";
+      return address ? "You aren't watching any content yet." : "Sign in to view watched content.";
     }
 
     if (activeScope === "my_votes") {
-      return address ? "You haven't voted on any content yet." : "Connect your wallet to view your votes.";
+      return address ? "You haven't voted on any content yet." : "Sign in to view your votes.";
     }
 
     if (activeScope === "my_submissions") {
-      return address ? "You haven't submitted any content yet." : "Connect your wallet to view your submissions.";
+      return address ? "You haven't submitted any content yet." : "Sign in to view your submissions.";
     }
 
     if (activeScope === "settling_soon") {
       return address
         ? "Nothing you are tracking looks close to settlement right now."
-        : "Connect your wallet to view rounds settling soon.";
+        : "Sign in to view rounds settling soon.";
     }
 
     if (activeScope === "followed_curators") {
       return address
         ? "Follow a few curators to turn this into a live feed."
-        : "Connect your wallet to view activity from curators you follow.";
+        : "Sign in to view activity from curators you follow.";
     }
 
     if (activeScope === "all" && activeFeedMode === "trending") {

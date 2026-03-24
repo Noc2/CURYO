@@ -194,7 +194,7 @@ function GovernancePageInner() {
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
-    return <ConnectWalletCard title="cREP" message="Connect your wallet to participate." />;
+    return <ConnectWalletCard title="cREP" message="Sign in to participate." />;
   }
 
   if (shouldWaitForEntryRouting) {
