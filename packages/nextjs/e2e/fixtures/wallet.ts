@@ -15,3 +15,4 @@ export const test = base.extend<WalletFixtures>({
 });
 
 export { expect };
+export type { Page };

@@ -21,6 +21,7 @@ import {
   restoreEmailNotificationSubscription,
   upsertEmailNotificationSettings,
 } from "~~/lib/notifications/emailSettings";
+import { resolveNotificationEmailAppUrl } from "~~/lib/notifications/emailUrls";
 import { isResendConfigured, sendNotificationVerificationEmail } from "~~/lib/notifications/resend";
 import { checkRateLimit } from "~~/utils/rateLimit";
 
@@ -132,7 +133,10 @@ export async function PUT(request: NextRequest) {
       (!existingSubscription ||
         existingSubscription.email !== payload.email ||
         existingSubscription.verifiedAt === null);
-    const appUrl = getOptionalAppUrl();
+    const appUrl = resolveNotificationEmailAppUrl({
+      requestOrigin: request.nextUrl.origin,
+      fallbackAppUrl: getOptionalAppUrl(),
+    });
 
     if (requiresVerification && !appUrl) {
       return NextResponse.json(
@@ -169,6 +173,12 @@ export async function PUT(request: NextRequest) {
       let verificationSent = false;
 
       if (verificationToken && payload.email) {
+        if (!appUrl) {
+          return NextResponse.json(
+            { error: "Email notifications are missing an application URL for verification links" },
+            { status: 503 },
+          );
+        }
         const verifyUrl = new URL("/api/notifications/email/verify", appUrl);
         verifyUrl.searchParams.set("token", verificationToken);
         await sendNotificationVerificationEmail({
