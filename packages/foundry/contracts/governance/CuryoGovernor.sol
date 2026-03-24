@@ -19,7 +19,7 @@ import { CuryoReputation } from "../CuryoReputation.sol";
 ///      - Simple counting (For/Against/Abstain)
 ///      - Votes from cREP token (which implements ERC20Votes)
 ///      - Dynamic quorum: 4% of circulating supply (total minus protocol-controlled balances)
-///      - Bootstrap quorum floor of 500K cREP to prevent early capture while circulation is thin
+///      - Bootstrap quorum floor of 100K cREP to prevent early capture while circulation is thin
 ///      - Timelock execution for security
 ///      - 7-day token lock when voting or proposing
 contract CuryoGovernor is
@@ -39,10 +39,10 @@ contract CuryoGovernor is
     mapping(address => bool) public isExcludedHolder;
     /// @notice Whether excluded holders have been set (one-time initialization)
     bool public poolsInitialized;
-    /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (100K cREP with 6 decimals)
-    uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 100_000 * 1e6;
-    /// @notice Minimum quorum regardless of circulating supply (500K cREP with 6 decimals)
-    uint256 public constant MINIMUM_QUORUM = 500_000 * 1e6;
+    /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (10K cREP with 6 decimals)
+    uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 10_000 * 1e6;
+    /// @notice Minimum quorum regardless of circulating supply (100K cREP with 6 decimals)
+    uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
 

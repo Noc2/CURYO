@@ -1391,7 +1391,7 @@ const SecurityAudit: NextPage = () => {
                 <strong>Governance attack</strong> &mdash; Attacker acquires enough voting power to clear the bootstrap
                 proposal threshold and the larger of the quorum floor or 4% of circulating supply.
               </td>
-              <td>100K proposal threshold + max(500K cREP, 4% of circulating supply)</td>
+              <td>10K proposal threshold + max(100K cREP, 4% of circulating supply)</td>
               <td>Timelock delay allows community response</td>
               <td>
                 <span className="badge badge-warning whitespace-nowrap text-base-content">Deployment</span>

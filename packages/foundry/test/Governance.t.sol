@@ -245,8 +245,8 @@ contract GovernanceTest is Test {
     }
 
     function test_GovernorProposalThreshold() public view {
-        // Bootstrap proposal threshold should be 100K cREP
-        assertEq(governor.proposalThreshold(), 100_000e6);
+        // Bootstrap proposal threshold should be 10K cREP
+        assertEq(governor.proposalThreshold(), 10_000e6);
     }
 
     function test_GovernorVotingPeriod() public view {
@@ -268,17 +268,17 @@ contract GovernanceTest is Test {
             - CATEGORY_REGISTRY_BALANCE;
         uint256 expectedDynamicQuorum = (circulatingSupply * 4) / 100; // 4% of 6M = 240K
         assertEq(expectedDynamicQuorum, 240_000 * 1e6);
-        assertEq(governor.quorum(block.number - 1), governor.MINIMUM_QUORUM());
+        assertEq(governor.quorum(block.number - 1), expectedDynamicQuorum);
     }
 
     function test_GovernorQuorum_ExcludesEngineAndTreasuryBalances() public {
         vm.roll(block.number + 1);
 
-        uint256 expectedQuorum = governor.MINIMUM_QUORUM();
+        uint256 expectedQuorum = 240_000 * 1e6;
         uint256 brokenQuorum = ((6_000_000 * 1e6 + ENGINE_BALANCE + TREASURY_BALANCE) * 4) / 100;
 
         assertEq(governor.quorum(block.number - 1), expectedQuorum);
-        assertEq(brokenQuorum - expectedQuorum, 304_000 * 1e6);
+        assertEq(brokenQuorum - expectedQuorum, 564_000 * 1e6);
     }
 
     function test_GovernorQuorumMinimumFloor() public {
@@ -299,13 +299,13 @@ contract GovernanceTest is Test {
         holders[2] = address(102);
         smallGovernor.initializePools(holders);
 
-        // Mint 1M to pool, 100K to a user -> circulating = 100K, 4% = 4K < 500K floor
+        // Mint 1M to pool, 100K to a user -> circulating = 100K, 4% = 4K < 100K floor
         smallToken.mint(holders[0], 1_000_000 * 1e6);
         smallToken.mint(address(200), 100_000 * 1e6);
         vm.stopPrank();
 
         vm.roll(block.number + 1);
-        assertEq(smallGovernor.quorum(block.number - 1), 500_000 * 1e6); // bootstrap floor
+        assertEq(smallGovernor.quorum(block.number - 1), 100_000 * 1e6); // bootstrap floor
     }
 
     function test_GovernorQuorumGrowsAsPoolsDrain() public {
@@ -314,7 +314,7 @@ contract GovernanceTest is Test {
         uint256 transferBlock = vm.getBlockNumber();
         uint256 beforeSnapshotBlock = transferBlock - 1;
         uint256 quorumBefore = governor.quorum(beforeSnapshotBlock);
-        assertEq(quorumBefore, governor.MINIMUM_QUORUM());
+        assertEq(quorumBefore, 240_000 * 1e6);
 
         // Simulate faucet distributing enough tokens to move past the bootstrap floor.
         vm.prank(mockFaucet);
