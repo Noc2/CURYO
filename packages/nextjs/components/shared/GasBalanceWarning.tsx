@@ -11,7 +11,7 @@ export function GasBalanceWarning({ nativeTokenSymbol }: GasBalanceWarningProps)
       <p className="text-base text-base-content/70">
         Add a little {nativeTokenSymbol}, then retry.{" "}
         <Link href="/docs/funding-wallet" className="link link-primary">
-          Learn more
+          See transaction costs
         </Link>
       </p>
     </div>
