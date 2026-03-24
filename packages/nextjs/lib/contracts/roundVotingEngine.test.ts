@@ -113,6 +113,30 @@ test("mergeRoundDataWithFallback keeps the higher feed vote totals for the same 
   assert.equal(merged.round.upPool, 100_000_000n);
 });
 
+test("mergeRoundDataWithFallback keeps the fallback start time when the round snapshot is zeroed", () => {
+  const merged = mergeRoundDataWithFallback({
+    roundId: 7n,
+    round: makeRound({
+      startTime: 0n,
+      voteCount: 1n,
+      totalStake: 25_000_000n,
+    }),
+    fallback: {
+      roundId: 7n,
+      voteCount: 1,
+      revealedCount: 0,
+      totalStake: 25_000_000n,
+      upPool: 25_000_000n,
+      downPool: 0n,
+      startTime: 1_000n,
+    },
+  });
+
+  assert.equal(merged.roundId, 7n);
+  assert.ok(merged.round);
+  assert.equal(merged.round.startTime, 1_000n);
+});
+
 test("mergeRoundDataWithFallback ignores feed data from a different round", () => {
   const baseRound = makeRound({
     startTime: 1_000n,

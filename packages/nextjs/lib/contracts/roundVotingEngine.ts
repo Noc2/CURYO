@@ -115,6 +115,18 @@ function maxBigInt(left: bigint, right: bigint): bigint {
   return left > right ? left : right;
 }
 
+function preferPositiveBigInt(
+  primary: bigint | undefined,
+  fallback: bigint | null | undefined,
+  defaultValue = 0n,
+): bigint {
+  if (primary != null && primary > 0n) return primary;
+  if (fallback != null && fallback > 0n) return fallback;
+  if (primary != null) return primary;
+  if (fallback != null) return fallback;
+  return defaultValue;
+}
+
 export function parseVotingConfig(rawConfig: unknown): VotingConfig {
   if (!rawConfig) return DEFAULT_VOTING_CONFIG;
 
@@ -220,7 +232,7 @@ export function mergeRoundDataWithFallback(params: {
   return {
     roundId: resolvedRoundId,
     round: {
-      startTime: round?.startTime ?? fallback.startTime ?? 0n,
+      startTime: preferPositiveBigInt(round?.startTime, fallback.startTime),
       state: round?.state ?? ROUND_STATE.Open,
       voteCount: maxBigInt(round?.voteCount ?? 0n, fallbackVoteCount),
       revealedCount: maxBigInt(round?.revealedCount ?? 0n, fallbackRevealedCount),
