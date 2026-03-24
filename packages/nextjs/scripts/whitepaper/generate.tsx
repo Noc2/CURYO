@@ -6,7 +6,23 @@
 import React from "react";
 import { ContentBlock, EXECUTIVE_SUMMARY, META, SECTIONS, TableData } from "./content";
 import { renderLatex } from "./latex";
-import { Document, Image, Page, StyleSheet, Text, View, renderToFile, renderToStream } from "@react-pdf/renderer";
+import {
+  Circle,
+  Defs,
+  Document,
+  Ellipse,
+  LinearGradient,
+  Page,
+  Path,
+  RadialGradient,
+  Stop,
+  StyleSheet,
+  Svg,
+  Text,
+  View,
+  renderToFile,
+  renderToStream,
+} from "@react-pdf/renderer";
 
 // ── Brand colors ──
 const EMBER = "#F26426";
@@ -17,7 +33,6 @@ const GRAY = STEEL;
 const LIGHT_BG = "#F5F0EB";
 // Per-section accent colors (cycles through the website palette)
 const SECTION_COLORS = [EMBER, STEEL, EMBER_DEEP, EMBER, STEEL, EMBER_DEEP, EMBER];
-const coverLogoPath = new URL("../../public/favicon.png", import.meta.url).pathname;
 
 // Module-level map populated during first render pass (for TOC page numbers)
 const sectionPageMap: Record<number, number> = {};
@@ -88,8 +103,43 @@ const s = StyleSheet.create({
 });
 
 function CoverLogo() {
-  // eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image is not a DOM img and has no alt prop.
-  return <Image src={coverLogoPath} style={{ width: 280, height: 280 }} />;
+  return (
+    <Svg viewBox="0 0 84 84" style={{ width: 280, height: 280 }}>
+      <Defs>
+        <RadialGradient id="cover-orb" cx="48" cy="26" r="46" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor="#FFF8F2" />
+          <Stop offset="20%" stopColor="#F8E1D0" />
+          <Stop offset="40%" stopColor="#F7B070" />
+          <Stop offset="62%" stopColor="#F26426" />
+          <Stop offset="82%" stopColor="#B23C3B" />
+          <Stop offset="100%" stopColor="#6A345F" />
+        </RadialGradient>
+        <RadialGradient id="cover-glow" cx="46" cy="34" r="32" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor="#FFF8F3" stopOpacity={0.74} />
+          <Stop offset="55%" stopColor="#FFF8F3" stopOpacity={0.16} />
+          <Stop offset="100%" stopColor="#FFF8F3" stopOpacity={0} />
+        </RadialGradient>
+        <LinearGradient id="cover-flare" x1="38" y1="10" x2="76" y2="46" gradientUnits="userSpaceOnUse">
+          <Stop offset="0%" stopColor="#F45C4D" />
+          <Stop offset="28%" stopColor="#FF8A5D" />
+          <Stop offset="62%" stopColor="#FFC37A" />
+          <Stop offset="100%" stopColor="#FFF4DB" />
+        </LinearGradient>
+      </Defs>
+
+      <Circle cx="42" cy="42" r="24" fill="url(#cover-orb)" />
+      <Ellipse cx="42" cy="42" rx="24" ry="24" fill="url(#cover-glow)" />
+      <Path d="M20 48C28 36 42 29 57 30C49 34 42 39 33 49C28 54 24 57 20 48Z" fill="#FFF7F0" fillOpacity={0.22} />
+      <Path d="M27 57C35 52 43 49 54 48C51 53 47 58 41 62C35 64 30 63 27 57Z" fill="#6B37A5" fillOpacity={0.22} />
+      <Path
+        d="M60.5 16.5C67 18.5 72.5 22.5 76 28.5"
+        stroke="url(#cover-flare)"
+        strokeWidth={4.75}
+        strokeLinecap="round"
+      />
+      <Circle cx="77.5" cy="31" r="3.5" fill="#FFF4DB" />
+    </Svg>
+  );
 }
 
 // ── PDF Table component ──

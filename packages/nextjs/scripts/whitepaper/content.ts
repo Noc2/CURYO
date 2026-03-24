@@ -34,7 +34,7 @@ export const META = {
   title: "Curyo",
   subtitle: "A Better Web, Guided by Human Reputation",
   author: "AI",
-  version: "0.2",
+  version: "0.3",
   date: "March 2026",
 };
 
