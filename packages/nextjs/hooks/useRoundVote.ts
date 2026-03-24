@@ -104,8 +104,10 @@ export function useRoundVote() {
   const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
     useThirdwebSponsoredSubmitCalls();
 
-  const { data: votingEngineInfo } = useDeployedContractInfo({ contractName: "RoundVotingEngine" } as any);
-  const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { data: votingEngineInfo, isLoading: isVotingEngineLoading } = useDeployedContractInfo({
+    contractName: "RoundVotingEngine",
+  } as any);
+  const { data: crepInfo, isLoading: isCrepLoading } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const publicClient = usePublicClient();
   const clearError = useCallback(() => setError(null), []);
 
@@ -128,13 +130,13 @@ export function useRoundVote() {
       return false;
     }
 
-    if (!votingEngineInfo?.address) {
-      setError("RoundVotingEngine contract not deployed");
+    if (isVotingEngineLoading || isCrepLoading) {
+      setError("Preparing vote. Try again in a moment.");
       return false;
     }
 
-    if (!crepInfo?.address) {
-      setError("cREP token contract not deployed");
+    if (!votingEngineInfo?.address || !crepInfo?.address) {
+      setError("Voting is unavailable right now.");
       return false;
     }
 

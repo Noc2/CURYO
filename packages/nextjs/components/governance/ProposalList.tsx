@@ -14,7 +14,7 @@ export const ProposalList = () => {
   const [filter, setFilter] = useState<FilterState>("all");
   const [actingProposalId, setActingProposalId] = useState<bigint | null>(null);
   const queryClient = useQueryClient();
-  const { governorAddress, hasGovernorContract } = useGovernanceContracts();
+  const { governorAddress, hasGovernorContract, isGovernorContractLoading } = useGovernanceContracts();
   const { data: proposals = [], isLoading, error } = useGovernorProposals();
   const { writeContractAsync, isPending } = useGovernanceWrite();
 
@@ -101,7 +101,9 @@ export const ProposalList = () => {
           <p className="text-base text-base-content/50">
             {hasGovernorContract
               ? `${proposals.length} on-chain proposal${proposals.length === 1 ? "" : "s"}`
-              : "Governor unavailable on this network"}
+              : isGovernorContractLoading
+                ? "Checking governance..."
+                : "Governance unavailable on this network"}
           </p>
         </div>
         <button className="btn btn-primary btn-sm gap-2" onClick={scrollToComposer}>
@@ -124,34 +126,39 @@ export const ProposalList = () => {
         ))}
       </div>
 
-      {!hasGovernorContract && (
+      {isGovernorContractLoading && (
+        <div className="text-center py-10">
+          <span className="loading loading-spinner loading-md" />
+          <p className="text-base text-base-content/60 mt-2">Checking governance...</p>
+        </div>
+      )}
+
+      {!isGovernorContractLoading && !hasGovernorContract && (
         <div className="text-center py-10 text-base-content/60">
           <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
-          <p className="mb-2">
-            A live <code>CuryoGovernor</code> contract is not deployed on this network.
-          </p>
+          <p className="mb-2">Governance proposals are unavailable on this network.</p>
           <p className="text-base text-base-content/40">
             Direct registry actions can still be used below when the underlying contract allows them.
           </p>
         </div>
       )}
 
-      {hasGovernorContract && isLoading && (
+      {hasGovernorContract && !isGovernorContractLoading && isLoading && (
         <div className="text-center py-10">
           <span className="loading loading-spinner loading-md" />
           <p className="text-base text-base-content/60 mt-2">Loading on-chain proposals...</p>
         </div>
       )}
 
-      {hasGovernorContract && !isLoading && error && (
+      {hasGovernorContract && !isGovernorContractLoading && !isLoading && error && (
         <div className="text-center py-10">
           <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
           <p className="text-base-content/60 mb-2">Unable to load proposals from chain.</p>
-          <p className="text-base text-base-content/40">Check your RPC connection and deployed governor address.</p>
+          <p className="text-base text-base-content/40">Check your connection and try again.</p>
         </div>
       )}
 
-      {hasGovernorContract && !isLoading && !error && filteredProposals.length > 0 && (
+      {hasGovernorContract && !isGovernorContractLoading && !isLoading && !error && filteredProposals.length > 0 && (
         <div className="space-y-4">
           {filteredProposals.map(proposal => (
             <ProposalCard
@@ -166,7 +173,7 @@ export const ProposalList = () => {
         </div>
       )}
 
-      {hasGovernorContract && !isLoading && !error && filteredProposals.length === 0 && (
+      {hasGovernorContract && !isGovernorContractLoading && !isLoading && !error && filteredProposals.length === 0 && (
         <div className="text-center py-10">
           <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
           <p className="text-base-content/60 mb-2">

@@ -132,7 +132,13 @@ export function useGovernanceContracts() {
   const frontendRegistry = useDeployedContractInfo({ contractName: "FrontendRegistry" });
   const contentRegistry = useDeployedContractInfo({ contractName: "ContentRegistry" });
 
-  const { data: governorRaw } = useScaffoldReadContract({
+  const {
+    data: governorRaw,
+    isLoading: governorReadLoading,
+    isFetching: governorReadFetching,
+    isFetched: governorReadFetched,
+    isError: governorReadError,
+  } = useScaffoldReadContract({
     contractName: "CuryoReputation",
     functionName: "governor" as any,
   });
@@ -140,7 +146,11 @@ export function useGovernanceContracts() {
   const governorAddress =
     typeof governorRaw === "string" && governorRaw !== ZERO_ADDRESS ? (governorRaw as Address) : undefined;
 
-  const { data: governorBytecode } = useQuery({
+  const {
+    data: governorBytecode,
+    isLoading: governorBytecodeLoading,
+    isFetching: governorBytecodeFetching,
+  } = useQuery({
     queryKey: ["governor-bytecode", targetNetwork.id, governorAddress],
     enabled: !!publicClient && !!governorAddress,
     staleTime: 60_000,
@@ -149,6 +159,12 @@ export function useGovernanceContracts() {
     },
   });
 
+  const governorAddressLookupPending =
+    !!token.data && !governorReadError && !governorReadFetched && (governorReadLoading || governorReadFetching);
+  const isGovernorContractLoading =
+    token.isLoading ||
+    governorAddressLookupPending ||
+    (!!governorAddress && (governorBytecodeLoading || governorBytecodeFetching));
   const hasGovernorContract = !!governorAddress && !!governorBytecode && governorBytecode !== "0x";
 
   const { data: timelockRaw } = useReadContract({
@@ -220,6 +236,7 @@ export function useGovernanceContracts() {
     frontendRegistry,
     contentRegistry,
     governorAddress,
+    isGovernorContractLoading,
     hasGovernorContract,
     timelockAddress,
     knownContracts,

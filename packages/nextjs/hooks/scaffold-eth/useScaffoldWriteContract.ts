@@ -59,7 +59,7 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
 
   const selectedNetwork = useSelectedNetwork(chainId);
 
-  const { data: deployedContractData } = useDeployedContractInfo({
+  const { data: deployedContractData, isLoading: deployedContractLoading } = useDeployedContractInfo({
     contractName,
     chainId: selectedNetwork.id as AllowedChainIds,
   });
@@ -71,7 +71,9 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
     options?: ScaffoldWriteContractOptions,
   ) => {
     if (!deployedContractData) {
-      notification.error("Target Contract is not deployed, did you forget to run `yarn deploy`?");
+      notification.error(
+        deployedContractLoading ? "Still loading. Try again in a moment." : "This action is unavailable right now.",
+      );
       return;
     }
 
@@ -157,7 +159,9 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
     options?: Omit<ScaffoldWriteContractOptions, "onBlockConfirmation" | "blockConfirmations">,
   ) => {
     if (!deployedContractData) {
-      notification.error("Target Contract is not deployed, did you forget to run `yarn deploy`?");
+      notification.error(
+        deployedContractLoading ? "Still loading. Try again in a moment." : "This action is unavailable right now.",
+      );
       return;
     }
     if (!accountChain?.id) {

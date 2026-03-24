@@ -361,8 +361,10 @@ export function ContentSubmissionSection() {
     contractName: "ContentRegistry",
     disableSimulate: true,
   });
-  const { data: registryInfo } = useDeployedContractInfo({ contractName: "ContentRegistry" });
-  const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { data: registryInfo, isLoading: isRegistryLoading } = useDeployedContractInfo({
+    contractName: "ContentRegistry",
+  });
+  const { data: crepInfo, isLoading: isCrepLoading } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const registryAddress = registryInfo?.address as `0x${string}` | undefined;
   const crepAddress = crepInfo?.address as `0x${string}` | undefined;
   const { refetch: refetchNextContentId } = useScaffoldReadContract({
@@ -421,7 +423,16 @@ export function ContentSubmissionSection() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!registryInfo || !registryAddress) return;
+
+    if (isRegistryLoading || isCrepLoading) {
+      notification.warning("Submission is still loading. Try again in a moment.");
+      return;
+    }
+
+    if (!registryInfo || !registryAddress || !crepInfo || !crepAddress) {
+      notification.error("Submission is unavailable right now.");
+      return;
+    }
 
     setSubmitAttempted(true);
 
@@ -468,11 +479,6 @@ export function ContentSubmissionSection() {
 
     if (urlCategoryMismatch) {
       notification.error("URL doesn't match the selected platform");
-      return;
-    }
-
-    if (!crepInfo || !crepAddress) {
-      notification.error("cREP token contract not deployed");
       return;
     }
 

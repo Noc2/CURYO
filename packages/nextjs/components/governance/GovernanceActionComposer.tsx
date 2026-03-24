@@ -443,7 +443,8 @@ export function GovernanceActionComposer() {
   const queryClient = useQueryClient();
   const { address } = useAccount();
   const wagmiConfig = useConfig();
-  const { governorAddress, hasGovernorContract, knownContractsByName } = useGovernanceContracts();
+  const { governorAddress, hasGovernorContract, isGovernorContractLoading, knownContractsByName } =
+    useGovernanceContracts();
   const { proposalThreshold } = useGovernanceStats();
   const { writeContractAsync, isPending } = useGovernanceWrite();
   const [selectedActionId, setSelectedActionId] = useState("");
@@ -549,7 +550,7 @@ export function GovernanceActionComposer() {
 
       const targetContract = knownContractsByName[selectedTemplate.contractName];
       if (!targetContract) {
-        throw new Error(`${selectedTemplate.contractName} is not available on this network.`);
+        throw new Error("This action is unavailable on this network.");
       }
 
       const actionAbi =
@@ -558,8 +559,12 @@ export function GovernanceActionComposer() {
           ? CategoryRegistryAbi
           : targetContract.abi;
 
+      if (selectedTemplate.mode === "proposal" && isGovernorContractLoading) {
+        throw new Error("Checking governance availability. Try again in a moment.");
+      }
+
       if (selectedTemplate.mode === "proposal" && (!hasGovernorContract || !governorAddress)) {
-        throw new Error("CuryoGovernor is not deployed on this network.");
+        throw new Error("Governance proposals are unavailable on this network.");
       }
 
       if (selectedTemplate.mode === "proposal" && proposalBlocked) {
@@ -737,8 +742,11 @@ export function GovernanceActionComposer() {
                   Description: <span className="text-base-content/80">{effectiveDescription || "—"}</span>
                 </p>
               )}
-              {selectedTemplate.mode === "proposal" && !hasGovernorContract && (
-                <p className="text-base text-warning">CuryoGovernor is not deployed on this network.</p>
+              {selectedTemplate.mode === "proposal" && isGovernorContractLoading && (
+                <p className="text-base text-base-content/50">Checking governance availability...</p>
+              )}
+              {selectedTemplate.mode === "proposal" && !isGovernorContractLoading && !hasGovernorContract && (
+                <p className="text-base text-warning">Governance proposals are unavailable on this network.</p>
               )}
               {proposalBlocked && (
                 <p className="text-base text-warning">

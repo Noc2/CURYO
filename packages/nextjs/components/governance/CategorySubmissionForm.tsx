@@ -55,13 +55,16 @@ export const CategorySubmissionForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Contract hooks
-  const { data: categoryRegistryInfo } = useDeployedContractInfo({ contractName: "CategoryRegistry" });
-  const { data: crepInfo } = useDeployedContractInfo({ contractName: "CuryoReputation" });
+  const { data: categoryRegistryInfo, isLoading: isCategoryRegistryLoading } = useDeployedContractInfo({
+    contractName: "CategoryRegistry",
+  });
+  const { data: crepInfo, isLoading: isCrepLoading } = useDeployedContractInfo({ contractName: "CuryoReputation" });
   const categoryRegistryAddress = categoryRegistryInfo?.address as `0x${string}` | undefined;
   const crepAddress = crepInfo?.address as `0x${string}` | undefined;
   const governorContractAddress = governorAddress as `0x${string}` | undefined;
 
   const isCategoryRegistryDeployed = !!categoryRegistryAddress;
+  const isCategorySubmissionLoading = isCategoryRegistryLoading || isCrepLoading;
 
   const { writeContractAsync: writeCRep } = useScaffoldWriteContract({ contractName: "CuryoReputation" });
   const { writeContractAsync: writeRegistry } = useScaffoldWriteContract({ contractName: "CategoryRegistry" });
@@ -351,13 +354,20 @@ export const CategorySubmissionForm = () => {
     <div className="surface-card rounded-2xl p-6 space-y-5">
       <h1 className={surfaceSectionHeadingClassName}>Propose New Platform</h1>
 
-      {!isCategoryRegistryDeployed && (
-        <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
-          <p className="text-base text-warning">CategoryRegistry contract is not deployed. Please deploy it first.</p>
+      {isCategorySubmissionLoading && (
+        <div className="flex items-center gap-3 rounded-lg bg-base-200 p-4 text-base-content/60">
+          <span className="loading loading-spinner loading-sm text-primary" />
+          <p className="text-base">Loading platform submission...</p>
         </div>
       )}
 
-      {isCategoryRegistryDeployed && (
+      {!isCategorySubmissionLoading && !isCategoryRegistryDeployed && (
+        <div className="bg-warning/10 border border-warning/20 rounded-lg p-4">
+          <p className="text-base text-warning">Platform submissions are unavailable right now.</p>
+        </div>
+      )}
+
+      {!isCategorySubmissionLoading && isCategoryRegistryDeployed && (
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Category Name */}
           <div>
