@@ -5,8 +5,8 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { isAddress } from "viem";
 import { useAccount } from "wagmi";
-import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
+import { ConnectWalletCard } from "~~/components/shared/ConnectWalletCard";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
@@ -194,12 +194,7 @@ function GovernancePageInner() {
 
   // Show connect wallet prompt if not connected
   if (!isConnected) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        <p className="text-base-content/60 mb-6 text-center">Connect your wallet to participate</p>
-        <CuryoConnectButton />
-      </div>
-    );
+    return <ConnectWalletCard title="cREP" message="Connect your wallet to participate." />;
   }
 
   if (shouldWaitForEntryRouting) {

@@ -6,8 +6,8 @@ import Link from "next/link";
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { IdentificationIcon } from "@heroicons/react/24/outline";
-import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { AppPageShell } from "~~/components/shared/AppPageShell";
+import { ConnectWalletCard } from "~~/components/shared/ConnectWalletCard";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 
@@ -63,15 +63,7 @@ const SubmitPage: NextPage = () => {
 
   if (!address) {
     return (
-      <div className="flex flex-col items-center justify-center grow px-6 pt-20">
-        <div className="surface-card rounded-2xl p-8 text-center max-w-sm">
-          <h1 className={`${surfaceSectionHeadingClassName} mb-3`}>Submit</h1>
-          <p className="text-base-content/50 mb-6 text-base">
-            Connect your wallet to submit content or propose new categories.
-          </p>
-          <CuryoConnectButton />
-        </div>
-      </div>
+      <ConnectWalletCard title="Submit" message="Connect your wallet to submit content or propose new categories." />
     );
   }
 
