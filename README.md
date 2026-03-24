@@ -33,7 +33,7 @@ See the in-app documentation at `/docs` for detailed game theory analysis and se
 
 ## Architecture
 
-Curyo is a monorepo with seven packages:
+Curyo is a monorepo with eight packages:
 
 | Package | Description |
 |---|---|
@@ -44,17 +44,19 @@ Curyo is a monorepo with seven packages:
 | `packages/keeper` | Standalone keeper service for trustless round settlement |
 | `packages/bot` | CLI voting bot with pluggable rating strategies |
 | `packages/mcp-server` | Read-only MCP server exposing Curyo data to AI agents |
+| `packages/node-utils` | Shared Node.js utilities used by services and scripts |
 
 ```
-foundry   (compile) → deployments + artifacts
-contracts (shared)  → ABIs + deployed addresses for apps/services
-ponder    (index)   → REST API at localhost:42069
-nextjs    (frontend)→ reads contracts via wagmi + Ponder API
-keeper    (service) → settles rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant content
-mcp-server (tools)  → exposes read-only MCP tools backed by the Ponder API
+foundry    (compile) → deployments + artifacts
+contracts  (shared)  → ABIs + deployed addresses for apps/services
+node-utils (shared)  → keystore and other reusable Node helpers
+ponder     (index)   → REST API at localhost:42069
+nextjs     (frontend)→ reads contracts via thirdweb, wagmi, and the Ponder API
+keeper     (service) → settles rounds, finalizes reveal failures, cleans up unrevealed votes, marks dormant content
+mcp-server (tools)   → exposes read-only MCP tools backed by the Ponder API
 ```
 
-Built with [Scaffold-ETH 2](https://scaffoldeth.io), Next.js, Foundry, Ponder, RainbowKit, wagmi, and viem.
+Built with Next.js, Foundry, Ponder, thirdweb, wagmi, viem, Drizzle ORM, and PostgreSQL.
 
 ### Vendored And Upstream Code
 
