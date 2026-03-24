@@ -385,7 +385,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The dynamic quorum mechanism now uses the larger of 4% of circulating supply or a 100,000 cREP bootstrap floor, paired with a 10,000 cREP proposal threshold. That launch configuration still keeps governance activation above a single faucet claim while circulation is thin. As the platform matures and token pools drain into circulation, quorum requirements continue to scale proportionally  -- at 50M circulating, quorum reaches 2M cREP. The 7-day governance lock is a transfer restriction that mitigates vote-then-sell attacks while still allowing content voting during the lock period; it is not a per-proposal bond.",
+            text: "The dynamic quorum mechanism now uses the larger of 4% of circulating supply or a 100,000 cREP bootstrap floor, paired with a 10,000 cREP proposal threshold. At launch, circulating supply starts at 0 because the pre-minted protocol pools are excluded from quorum, so the 100,000 cREP floor binds until enough faucet claims move tokens into user hands. As the platform matures and token pools drain into circulation, quorum requirements continue to scale proportionally  -- at 50M circulating, quorum reaches 2M cREP. The 7-day governance lock is a transfer restriction that mitigates vote-then-sell attacks while still allowing content voting during the lock period; it is not a per-proposal bond.",
           },
         ],
       },
