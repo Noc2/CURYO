@@ -166,7 +166,6 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
   const [committedAvatarAccentHex, setCommittedAvatarAccentHex] = useState<string | null>(null);
   const [profileDraftInitialized, setProfileDraftInitialized] = useState(false);
   const [avatarAccentInitialized, setAvatarAccentInitialized] = useState(false);
-  const [initialEditStateSet, setInitialEditStateSet] = useState(false);
   const following = followedWallets.has(normalizedAddress);
   const pending = isFollowPending(normalizedAddress);
   const backHref = ownProfile ? "/governance#profile" : "/governance";
@@ -187,7 +186,6 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     setCommittedAvatarAccentHex(null);
     setProfileDraftInitialized(false);
     setAvatarAccentInitialized(false);
-    setInitialEditStateSet(false);
   }, [normalizedAddress]);
 
   useEffect(() => {
@@ -202,20 +200,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
     setNameInput(nextName);
     setStrategyInput(nextStrategy);
     setProfileDraftInitialized(true);
-
-    if (ownProfile && !initialEditStateSet) {
-      setIsEditing(!hasLiveProfile && hasVoterId);
-      setInitialEditStateSet(true);
-    }
-  }, [
-    liveProfile,
-    hasLiveProfile,
-    hasVoterId,
-    liveProfileLoading,
-    ownProfile,
-    profileDraftInitialized,
-    initialEditStateSet,
-  ]);
+  }, [liveProfile, liveProfileLoading, profileDraftInitialized]);
 
   useEffect(() => {
     if (!profileDraftInitialized || isEditing || liveProfileLoading) {

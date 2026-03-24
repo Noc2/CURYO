@@ -1,5 +1,6 @@
 import { expect, test } from "../fixtures/wallet";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { setupWallet } from "../helpers/wallet-session";
 
 test.describe("Governance page", () => {
   test("page loads and shows tabs", async ({ connectedPage: page }) => {
@@ -33,6 +34,24 @@ test.describe("Governance page", () => {
     await expect(page.getByRole("combobox", { name: "Filter by category" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox", { name: "Sort by" })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("combobox", { name: "Minimum votes" })).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("profile tab stays read-only until edit is clicked", async ({ browser }) => {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
+    await setupWallet(page, ANVIL_ACCOUNTS.account10.privateKey);
+    await page.goto("/governance#profile");
+
+    const editProfileButton = page.getByRole("button", { name: "Edit profile", exact: true });
+    await expect(editProfileButton).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel("Profile name")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Cancel", exact: true })).toHaveCount(0);
+
+    await editProfileButton.click();
+    await expect(page.getByLabel("Profile name")).toBeVisible({ timeout: 10_000 });
+
+    await context.close();
   });
 
   test("own public profile is editable directly", async ({ connectedPage: page }) => {
