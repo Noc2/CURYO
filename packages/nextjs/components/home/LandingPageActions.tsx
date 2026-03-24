@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./LandingPageActions.module.css";
 import { useAccount } from "wagmi";
 import { ChevronRightIcon } from "@heroicons/react/20/solid";
@@ -11,10 +11,32 @@ import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 export function LandingPageActions() {
   const { address, isConnected } = useAccount();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const redirectedAddressRef = useRef<string | null>(null);
+  const explicitLandingVisitRef = useRef(false);
   const { hasVoterId, isResolved: voterIdResolved } = useVoterIdNFT(address);
+  const showLanding = searchParams?.get("landing") === "1";
 
   useEffect(() => {
+    if (!showLanding) {
+      return;
+    }
+
+    explicitLandingVisitRef.current = true;
+    redirectedAddressRef.current = null;
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete("landing");
+    const nextSearch = url.searchParams.toString();
+    const cleanedUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ""}${url.hash}`;
+    window.history.replaceState(window.history.state, "", cleanedUrl);
+  }, [showLanding]);
+
+  useEffect(() => {
+    if (explicitLandingVisitRef.current) {
+      return;
+    }
+
     if (!isConnected || !address) {
       redirectedAddressRef.current = null;
       return;

@@ -1,6 +1,6 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { setupWallet } from "../helpers/wallet-session";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
+import { setupWallet } from "../helpers/wallet-session";
 import { expect, test } from "@playwright/test";
 
 test.describe("Smoke tests", () => {
@@ -31,6 +31,17 @@ test.describe("Smoke tests", () => {
     // (that would mean the test wallet sync failed)
     const mainPrompt = page.getByText("Connect your wallet to submit", { exact: false });
     expect(await mainPrompt.isVisible().catch(() => false)).toBe(false);
+  });
+
+  test("brand link can reopen landing page without redirecting connected users back to discover", async ({ page }) => {
+    await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
+    await page.goto("/vote");
+    await waitForFeedLoaded(page);
+
+    await page.getByRole("link", { name: /CURYO \(BETA\)/i }).click();
+
+    await expect(page.getByRole("heading", { name: /A Better Web/i }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/\/$/);
   });
 
   test("navigation to submit page works", async ({ page }) => {
