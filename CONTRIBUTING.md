@@ -11,7 +11,7 @@ Thank you for your interest in contributing to Curyo — the first human reputat
    cd curyo
    yarn install
    ```
-3. Follow the [Quick Start](README.md#quick-start) to run the project locally
+3. Follow the [Usage](README.md#usage) section to run the project locally
 
 ## Project Structure
 
