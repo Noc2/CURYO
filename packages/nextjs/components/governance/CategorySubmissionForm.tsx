@@ -403,21 +403,6 @@ export const CategorySubmissionForm = () => {
             {domainBlockedError && <p className="text-error text-base mt-1">This domain contains prohibited content</p>}
           </div>
 
-          <div className="bg-info/10 rounded-lg p-4">
-            <p className="text-base font-medium text-info mb-2">How Platform Ratings Work</p>
-            <ul className="text-base text-base-content/70 space-y-1.5 list-disc list-inside">
-              <li>Every content item starts with a neutral community rating and moves up or down through voting.</li>
-              <li>
-                Voters do not answer a platform-specific question. They judge whether the current rating should rise or
-                fall.
-              </li>
-              <li>Platform categories should still be concrete and easy for voters to evaluate consistently.</li>
-              <li>
-                Illegal, broken, or misdescribed content should always be downvoted regardless of the current score.
-              </li>
-            </ul>
-          </div>
-
           {/* Subcategories */}
           <div>
             <label className="block text-base font-medium mb-2">
