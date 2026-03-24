@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Address } from "@scaffold-ui/components";
 import { useAccount } from "wagmi";
+import { CheckIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
+import { BlockieAvatar } from "~~/components/scaffold-eth";
 import { GasBalanceWarning } from "~~/components/shared/GasBalanceWarning";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
+import { useCopyToClipboard } from "~~/hooks/scaffold-eth";
 import { useDeployedContractInfo, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useFrontendClaimableFees } from "~~/hooks/useFrontendClaimableFees";
 import { useGasBalanceStatus } from "~~/hooks/useGasBalanceStatus";
@@ -23,6 +26,39 @@ import { notification } from "~~/utils/scaffold-eth";
 import { ZERO_ADDRESS } from "~~/utils/scaffold-eth/common";
 
 const STAKE_AMOUNT = 1000; // Fixed 1,000 cREP stake
+
+function truncateAddress(address: string) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+function FrontendOperatorAddressRow({ label, address }: { label: string; address?: string }) {
+  const { copyToClipboard, isCopiedToClipboard } = useCopyToClipboard();
+
+  return (
+    <div className="flex items-center gap-2 text-base">
+      <span className="text-base-content/60">{label}</span>
+      {address ? (
+        <>
+          <BlockieAvatar address={address} size={24} />
+          <span className="font-mono" title={address}>
+            {truncateAddress(address)}
+          </span>
+          <button
+            type="button"
+            onClick={() => copyToClipboard(address)}
+            className="btn btn-ghost btn-xs btn-square"
+            aria-label="Copy address"
+            title="Copy address"
+          >
+            {isCopiedToClipboard ? <CheckIcon className="h-4 w-4" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
+          </button>
+        </>
+      ) : (
+        <span className="text-base-content/50">Connect wallet</span>
+      )}
+    </div>
+  );
+}
 
 /**
  * Frontend Registration section for developers to register as frontend operators
@@ -493,10 +529,7 @@ export function FrontendRegistration() {
         // Registration Form
         <div className="space-y-4">
           {/* Address being registered */}
-          <div className="flex items-center gap-2 text-base">
-            <span className="text-base-content/60">Registering address:</span>
-            <Address address={address} />
-          </div>
+          <FrontendOperatorAddressRow label="Registering address:" address={address} />
 
           {requiresVoterId && (
             <p className={`text-sm ${canRegisterWithCurrentAddress ? "text-success" : "text-warning"}`}>
@@ -546,10 +579,7 @@ export function FrontendRegistration() {
         // Registered State
         <div className="space-y-4">
           {/* Registered address */}
-          <div className="flex items-center gap-2 text-base">
-            <span className="text-base-content/60">Registered address:</span>
-            <Address address={address} />
-          </div>
+          <FrontendOperatorAddressRow label="Registered address:" address={address} />
 
           {/* Status and Stats */}
           <div className="flex items-center justify-between">
