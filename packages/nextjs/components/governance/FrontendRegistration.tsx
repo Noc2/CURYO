@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Address } from "@scaffold-ui/components";
 import { useAccount } from "wagmi";
 import { CheckIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline";
 import { BlockieAvatar } from "~~/components/scaffold-eth";
@@ -31,12 +30,12 @@ function truncateAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-function FrontendOperatorAddressRow({ label, address }: { label: string; address?: string }) {
+function FrontendOperatorAddressRow({ label, address }: { label?: string; address?: string }) {
   const { copyToClipboard, isCopiedToClipboard } = useCopyToClipboard();
 
   return (
     <div className="flex items-center gap-2 text-base">
-      <span className="text-base-content/60">{label}</span>
+      {label && <span className="text-base-content/60">{label}</span>}
       {address ? (
         <>
           <BlockieAvatar address={address} size={24} />
@@ -504,9 +503,7 @@ export function FrontendRegistration() {
           )}
         </div>
         {deploymentIsConfigured ? (
-          <div className="flex items-center gap-2 text-base">
-            <Address address={configuredFrontendCode} />
-          </div>
+          <FrontendOperatorAddressRow address={configuredFrontendCode} />
         ) : (
           <p className="text-sm text-base-content/70">
             Set <code>NEXT_PUBLIC_FRONTEND_CODE</code> to the frontend operator address before launch. Otherwise votes
