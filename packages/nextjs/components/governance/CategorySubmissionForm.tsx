@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { decodeEventLog, encodeFunctionData } from "viem";
+import { decodeEventLog } from "viem";
 import { useAccount, useConfig } from "wagmi";
 import { waitForTransactionReceipt } from "wagmi/actions";
 import { PlusIcon, TrashIcon } from "@heroicons/react/24/outline";
@@ -30,9 +30,14 @@ import { containsBlockedText, containsBlockedUrl } from "~~/utils/contentFilter"
 import { notification } from "~~/utils/scaffold-eth";
 
 // Constants from CategoryRegistry contract
-const CATEGORY_STAKE = 100n * 1000000n; // 100 cREP (6 decimals)
+const CATEGORY_STAKE = 500n * 1000000n; // 500 cREP (6 decimals)
+const CATEGORY_PROPOSAL_THRESHOLD_FALLBACK = 500n * 1000000n; // 500 cREP (6 decimals)
 const MAX_SUBCATEGORIES = 20;
 const MAX_SUBCATEGORY_LENGTH = 32;
+
+function formatCRep(amount: bigint) {
+  return `${(Number(amount) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 0 })} cREP`;
+}
 
 export const CategorySubmissionForm = () => {
   const { address } = useAccount();
@@ -42,7 +47,7 @@ export const CategorySubmissionForm = () => {
     includeExternalSendCalls: true,
   });
   const { governorAddress, hasGovernorContract } = useGovernanceContracts();
-  const { proposalThreshold } = useGovernanceStats();
+  const { categoryProposalThreshold: categoryProposalThresholdRaw } = useGovernanceStats();
   const { writeContractAsync: writeGovernanceContract } = useGovernanceWrite();
   const { canUseSponsoredSubmitCalls, executeSponsoredCalls, isAwaitingSponsoredSubmitCalls } =
     useThirdwebSponsoredSubmitCalls();
@@ -96,14 +101,17 @@ export const CategorySubmissionForm = () => {
     args: [domain],
   });
 
-  const hasEnoughBalance = crepBalance && crepBalance >= CATEGORY_STAKE;
+  const categoryProposalThreshold = hasGovernorContract
+    ? (categoryProposalThresholdRaw ?? CATEGORY_PROPOSAL_THRESHOLD_FALLBACK)
+    : 0n;
+  const submitsWithProposal = hasGovernorContract && !!governorAddress;
+  const totalRequiredBalance = submitsWithProposal ? CATEGORY_STAKE + categoryProposalThreshold : CATEGORY_STAKE;
+  const hasEnoughBalance = crepBalance !== undefined && crepBalance >= totalRequiredBalance;
   const votingPower = votingPowerRaw as bigint | undefined;
-  const canAutoCreateProposal =
-    hasGovernorContract &&
-    !!governorAddress &&
-    proposalThreshold !== undefined &&
-    votingPower !== undefined &&
-    votingPower >= proposalThreshold;
+  const hasEnoughVotingPowerForProposal =
+    !submitsWithProposal || (votingPower !== undefined && votingPower >= categoryProposalThreshold);
+  const canAutoCreateProposal = submitsWithProposal && hasEnoughBalance && hasEnoughVotingPowerForProposal;
+  const canSubmitCategory = !submitsWithProposal ? hasEnoughBalance : canAutoCreateProposal;
 
   const addSubcategory = () => {
     if (subcategories.length < MAX_SUBCATEGORIES) {
@@ -134,6 +142,15 @@ export const CategorySubmissionForm = () => {
 
     if (isMissingGasBalance) {
       notification.error(getGasBalanceErrorMessage(nativeTokenSymbol, { canSponsorTransactions }));
+      return;
+    }
+
+    if (submitsWithProposal && !canSubmitCategory) {
+      if (!hasEnoughVotingPowerForProposal) {
+        notification.error(`You need ${formatCRep(categoryProposalThreshold)} voting power to submit a platform.`);
+      } else {
+        notification.error(`You need ${formatCRep(totalRequiredBalance)} total to submit a platform.`);
+      }
       return;
     }
 
@@ -269,11 +286,6 @@ export const CategorySubmissionForm = () => {
       if (canAutoCreateProposal && governorContractAddress) {
         const proposalDescription = `Approve category #${categoryId}`;
         const proposalDescriptionHash = getProposalDescriptionHash(proposalDescription);
-        const approvalCalldata = encodeFunctionData({
-          abi: categoryRegistryInfo.abi,
-          functionName: "approveCategory",
-          args: [categoryId, proposalDescriptionHash],
-        } as any);
 
         if (canUseSponsoredSubmitCalls) {
           await executeSponsoredCalls(
@@ -281,8 +293,8 @@ export const CategorySubmissionForm = () => {
               {
                 abi: governorAbi,
                 address: governorContractAddress,
-                args: [[categoryRegistryAddress], [0n], [approvalCalldata], proposalDescription],
-                functionName: "propose",
+                args: [categoryId],
+                functionName: "proposeCategoryApproval",
               },
               {
                 abi: categoryRegistryInfo.abi,
@@ -297,8 +309,8 @@ export const CategorySubmissionForm = () => {
           await writeGovernanceContract({
             address: governorContractAddress,
             abi: governorAbi,
-            functionName: "propose",
-            args: [[categoryRegistryAddress], [0n], [approvalCalldata], proposalDescription],
+            functionName: "proposeCategoryApproval",
+            args: [categoryId],
           });
           await writeRegistry({
             functionName: "linkApprovalProposal",
@@ -309,7 +321,7 @@ export const CategorySubmissionForm = () => {
 
         notification.success("Platform submitted and proposal created.");
       } else {
-        notification.success("Platform submitted. Create approval proposal next.");
+        notification.success("Platform submitted.");
       }
 
       // Reset form
@@ -465,16 +477,32 @@ export const CategorySubmissionForm = () => {
                 </p>
               </div>
               <div className="text-right">
-                <span className="text-xl font-bold text-base-content">100</span>
+                <span className="text-xl font-bold text-base-content">500</span>
                 <span className="ml-1 text-base text-base-content/60">cREP</span>
               </div>
             </div>
             {hasGovernorContract && (
-              <p className="text-sm text-base-content/60">
-                {canAutoCreateProposal
-                  ? "Approval proposal will be created automatically."
-                  : "Approval proposal comes next."}
-              </p>
+              <div className="space-y-2 text-sm text-base-content/60">
+                <div className="flex items-center justify-between gap-3">
+                  <span>Platform stake</span>
+                  <span className="font-medium text-base-content">{formatCRep(CATEGORY_STAKE)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>Category proposal lock</span>
+                  <span className="font-medium text-base-content">{formatCRep(categoryProposalThreshold)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-base-content/10 pt-2">
+                  <span>Total to submit</span>
+                  <span className="font-medium text-base-content">{formatCRep(totalRequiredBalance)}</span>
+                </div>
+                <p>Submit creates the approval proposal immediately.</p>
+                {!hasEnoughVotingPowerForProposal && (
+                  <p className="text-warning">Need {formatCRep(categoryProposalThreshold)} voting power.</p>
+                )}
+                {!hasEnoughBalance && (
+                  <p className="text-warning">Need {formatCRep(totalRequiredBalance)} available balance.</p>
+                )}
+              </div>
             )}
           </div>
 
@@ -488,7 +516,7 @@ export const CategorySubmissionForm = () => {
               isSubmitting ||
               isAwaitingSponsoredSubmitCalls ||
               isMissingGasBalance ||
-              !hasEnoughBalance ||
+              !canSubmitCategory ||
               !!isDomainRegistered ||
               !name.trim() ||
               !domain.trim() ||

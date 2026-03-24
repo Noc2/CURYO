@@ -106,7 +106,7 @@ contract CategoryRegistryTest is Test {
     address public user2 = address(5);
     address public delegate = address(6);
 
-    uint256 public constant STAKE = 100e6; // 100 cREP
+    uint256 public constant STAKE = 500e6; // 500 cREP
 
     function setUp() public {
         vm.startPrank(admin);

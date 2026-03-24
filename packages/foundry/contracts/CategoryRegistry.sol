@@ -12,7 +12,7 @@ import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
 /// @title CategoryRegistry
 /// @notice Manages content categories/platforms with governance-based approval.
-/// @dev Categories require 100 cREP stake and a separately sponsored governance approval proposal to become active.
+/// @dev Categories require 500 cREP stake and a separately sponsored governance approval proposal to become active.
 ///      Rejected categories lose their stake to the consensus reserve.
 contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
@@ -21,7 +21,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     // --- Constants ---
-    uint256 public constant CATEGORY_STAKE = 100e6; // 100 cREP (6 decimals)
+    uint256 public constant CATEGORY_STAKE = 500e6; // 500 cREP (6 decimals)
     uint256 public constant MAX_NAME_LENGTH = 64;
     uint256 public constant MAX_DOMAIN_LENGTH = 256;
     uint256 public constant MAX_SUBCATEGORIES = 20;
@@ -104,7 +104,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     // --- Category Submission ---
 
     /// @notice Submit a new category draft for governance approval sponsorship.
-    /// @dev Requires 100 cREP stake. The domain is only reserved once a sponsored approval proposal is linked.
+    /// @dev Requires 500 cREP stake. The domain is only reserved once a sponsored approval proposal is linked.
     /// @param name The category name (e.g., "YouTube", "MTG")
     /// @param domain The category domain (e.g., "youtube.com", "gatherer.wizards.com")
     /// @param subcategories Array of subcategory names (e.g., ["Education", "Gaming"])

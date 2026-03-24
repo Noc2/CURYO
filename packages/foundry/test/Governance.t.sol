@@ -38,7 +38,7 @@ contract GovernanceTest is Test {
     uint256 public constant TREASURY_BALANCE = 10_000_000 * 1e6;
     uint256 public constant CONTENT_REGISTRY_BALANCE = 20_000 * 1e6;
     uint256 public constant FRONTEND_REGISTRY_BALANCE = 10_000 * 1e6;
-    uint256 public constant CATEGORY_REGISTRY_BALANCE = 100 * 1e6;
+    uint256 public constant CATEGORY_REGISTRY_BALANCE = 500 * 1e6;
 
     // Voter balances — circulating supply is 6M after excluded protocol balances are removed.
     uint256 public constant VOTER_BALANCE = 2_000_000 * 1e6; // 2M tokens each
@@ -65,6 +65,7 @@ contract GovernanceTest is Test {
 
         // Deploy Governor with cREP directly (no wrapper needed)
         governor = new CuryoGovernor(IVotes(address(token)), timelock);
+        governor.setCategoryRegistry(mockCategoryRegistry);
 
         // Initialize protocol-controlled holders excluded from dynamic quorum
         governor.initializePools(_excludedHolders());
@@ -249,6 +250,10 @@ contract GovernanceTest is Test {
         assertEq(governor.proposalThreshold(), 10_000e6);
     }
 
+    function test_CategoryProposalThreshold() public view {
+        assertEq(governor.categoryProposalThreshold(), 500e6);
+    }
+
     function test_GovernorVotingPeriod() public view {
         // Voting period should be ~1 week (50400 blocks)
         assertEq(governor.votingPeriod(), 50400);
@@ -306,6 +311,41 @@ contract GovernanceTest is Test {
 
         vm.roll(block.number + 1);
         assertEq(smallGovernor.quorum(block.number - 1), 100_000 * 1e6); // bootstrap floor
+    }
+
+    function test_CategoryApprovalProposal_UsesLowerThresholdAndLocksThreshold() public {
+        vm.startPrank(deployer);
+        CuryoReputation smallToken = new CuryoReputation(deployer, deployer);
+        smallToken.grantRole(smallToken.MINTER_ROLE(), deployer);
+
+        TimelockController smallTimelock = new TimelockController(2 days, new address[](0), new address[](0), deployer);
+        CuryoGovernor smallGovernor = new CuryoGovernor(IVotes(address(smallToken)), smallTimelock);
+        smallGovernor.setCategoryRegistry(mockCategoryRegistry);
+
+        address[] memory holders = new address[](1);
+        holders[0] = address(100);
+        smallGovernor.initializePools(holders);
+        smallToken.setGovernor(address(smallGovernor));
+        smallToken.mint(address(200), 500e6);
+        vm.stopPrank();
+
+        vm.roll(block.number + 1);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(smallTimelock);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+
+        vm.prank(address(200));
+        vm.expectRevert();
+        smallGovernor.propose(targets, values, calldatas, "Generic proposal");
+
+        vm.prank(address(200));
+        uint256 proposalId = smallGovernor.proposeCategoryApproval(7);
+
+        assertTrue(proposalId != 0);
+        assertEq(uint256(smallGovernor.state(proposalId)), uint256(IGovernor.ProposalState.Pending));
+        assertEq(smallToken.getLockedBalance(address(200)), 500e6);
     }
 
     function test_GovernorQuorumGrowsAsPoolsDrain() public {

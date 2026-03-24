@@ -160,6 +160,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance, // timelock as governance
             address(votingEngine)
         );
+        CuryoGovernor(payable(governorAddr)).setCategoryRegistry(address(categoryRegistry));
 
         // 7. Deploy VoterIdNFT (soulbound identity for verified humans)
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
@@ -253,7 +254,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 humanFaucet.setVoterIdNFT(address(voterIdNFT));
 
                 // Fund with remaining supply:
-                // 52M baseline faucet allocation minus 100k keeper pool and minus 100 cREP CategoryRegistry reserve.
+                // 52M baseline faucet allocation minus 100k keeper pool and minus the 100 cREP rounding remainder.
                 uint256 faucetAmount = 51_899_900 * 1e6;
                 crepToken.mint(address(humanFaucet), faucetAmount);
                 console.log("Minted 51,899,900 cREP to HumanFaucet");
@@ -577,6 +578,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
 
         _require(governorAddr != address(0), "Governor deployed");
         CuryoGovernor governor = CuryoGovernor(payable(governorAddr));
+        _require(governor.categoryRegistry() == address(categoryRegistry), "Governor category registry");
         _require(governor.poolsInitialized(), "Governor pools initialized");
         _require(governor.getExcludedHolders().length > 0, "Governor excluded holders");
         TimelockController timelock = TimelockController(payable(governance));

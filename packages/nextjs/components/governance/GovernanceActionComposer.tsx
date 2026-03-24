@@ -42,9 +42,11 @@ type GovernanceActionTemplate = {
   group: string;
   label: string;
   mode: "proposal" | "direct";
+  proposalMode?: "generic" | "categoryApproval";
   contractName: "CuryoGovernor" | "CategoryRegistry" | "FrontendRegistry" | "ContentRegistry";
   functionName: string;
   description: string;
+  allowCustomDescription?: boolean;
   note?: string;
   advanced?: boolean;
   fields: readonly ComposerField[];
@@ -110,17 +112,14 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     group: "Category Registry",
     label: "Approve category",
     mode: "proposal",
-    contractName: "CategoryRegistry",
-    functionName: "approveCategory",
-    description: "Create a governor proposal to sponsor and approve a pending category submission.",
-    note: "After the proposal confirms, the original category submitter must link it from the same wallet that staked the category.",
+    proposalMode: "categoryApproval",
+    contractName: "CuryoGovernor",
+    functionName: "proposeCategoryApproval",
+    description: "Create a lower-threshold governor proposal to sponsor and approve a pending category submission.",
+    allowCustomDescription: false,
+    note: "The description is fixed so the original category submitter can link it from the same wallet that staked the category.",
     fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
-    buildArgs: (_, parser, descriptionHash) => {
-      if (!descriptionHash) {
-        throw new Error("Description hash is required.");
-      }
-      return [parser.uint("categoryId", "Category ID"), descriptionHash];
-    },
+    buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
     buildDescription: values => `Approve category #${values.categoryId || "0"}`,
   },
   {
@@ -182,7 +181,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     contractName: "CategoryRegistry",
     functionName: "cancelUnlinkedCategory",
     description:
-      "Cancel your pending category submission and reclaim the 100 cREP stake after 7 days if no approval proposal was linked.",
+      "Cancel your pending category submission and reclaim the 500 cREP stake after 7 days if no approval proposal was linked.",
     fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
     buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
   },
@@ -445,7 +444,7 @@ export function GovernanceActionComposer() {
   const wagmiConfig = useConfig();
   const { governorAddress, hasGovernorContract, isGovernorContractLoading, knownContractsByName } =
     useGovernanceContracts();
-  const { proposalThreshold } = useGovernanceStats();
+  const { proposalThreshold, categoryProposalThreshold: categoryProposalThresholdRaw } = useGovernanceStats();
   const { writeContractAsync, isPending } = useGovernanceWrite();
   const [selectedActionId, setSelectedActionId] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -471,6 +470,10 @@ export function GovernanceActionComposer() {
 
   const defaultDescription = selectedTemplate?.buildDescription?.(formValues) ?? selectedTemplate?.label ?? "";
   const effectiveDescription = customDescription.trim() || defaultDescription;
+  const activeProposalThreshold =
+    selectedTemplate?.proposalMode === "categoryApproval"
+      ? (categoryProposalThresholdRaw ?? 500n * 1_000_000n)
+      : proposalThreshold;
 
   const groupedTemplates = useMemo(() => {
     const grouped = new Map<string, GovernanceActionTemplate[]>();
@@ -484,9 +487,9 @@ export function GovernanceActionComposer() {
 
   const proposalBlocked =
     selectedTemplate?.mode === "proposal" &&
-    proposalThreshold !== undefined &&
+    activeProposalThreshold !== undefined &&
     votingPower !== undefined &&
-    votingPower < proposalThreshold;
+    votingPower < activeProposalThreshold;
 
   const parser: FieldParser = {
     address: (key, label) => {
@@ -578,24 +581,39 @@ export function GovernanceActionComposer() {
       }
 
       const proposalDescriptionHash =
-        selectedTemplate.mode === "proposal" && effectiveDescription
+        selectedTemplate.mode === "proposal" &&
+        selectedTemplate.proposalMode !== "categoryApproval" &&
+        effectiveDescription
           ? getProposalDescriptionHash(effectiveDescription)
           : undefined;
       const args = selectedTemplate.buildArgs(formValues, parser, proposalDescriptionHash);
 
       if (selectedTemplate.mode === "proposal") {
-        const calldata = encodeFunctionData({
-          abi: targetContract.abi,
-          functionName: selectedTemplate.functionName,
-          args,
-        } as any);
-
-        const txHash = await writeContractAsync({
-          address: governorAddress!,
-          abi: governorAbi,
-          functionName: "propose",
-          args: [[targetContract.address], [0n], [calldata], effectiveDescription],
-        });
+        const txHash =
+          selectedTemplate.proposalMode === "categoryApproval"
+            ? await writeContractAsync({
+                address: governorAddress!,
+                abi: governorAbi,
+                functionName: "proposeCategoryApproval",
+                args,
+              })
+            : await writeContractAsync({
+                address: governorAddress!,
+                abi: governorAbi,
+                functionName: "propose",
+                args: [
+                  [targetContract.address],
+                  [0n],
+                  [
+                    encodeFunctionData({
+                      abi: targetContract.abi,
+                      functionName: selectedTemplate.functionName,
+                      args,
+                    } as any),
+                  ],
+                  effectiveDescription,
+                ],
+              });
 
         if (!txHash) return;
 
@@ -710,7 +728,7 @@ export function GovernanceActionComposer() {
               </div>
             ))}
 
-            {selectedTemplate.mode === "proposal" && (
+            {selectedTemplate.mode === "proposal" && selectedTemplate.allowCustomDescription !== false && (
               <div>
                 <label className="label">
                   <span className="label-text">Proposal description</span>
@@ -734,7 +752,9 @@ export function GovernanceActionComposer() {
               </div>
               <p className="text-base text-base-content/70">
                 {selectedTemplate.mode === "proposal"
-                  ? `Create a proposal targeting ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`
+                  ? selectedTemplate.proposalMode === "categoryApproval"
+                    ? "Create a category approval proposal using the lower category threshold."
+                    : `Create a proposal targeting ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`
                   : `Send a direct transaction to ${selectedTemplate.contractName}.${selectedTemplate.functionName}.`}
               </p>
               {selectedTemplate.mode === "proposal" && (
@@ -750,7 +770,9 @@ export function GovernanceActionComposer() {
               )}
               {proposalBlocked && (
                 <p className="text-base text-warning">
-                  Your current voting power is below the live proposal threshold, so this proposal would revert.
+                  Your current voting power is below the live{" "}
+                  {selectedTemplate.proposalMode === "categoryApproval" ? "category proposal" : "governor"} threshold,
+                  so this proposal would revert.
                 </p>
               )}
             </div>

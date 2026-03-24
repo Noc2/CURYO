@@ -11,6 +11,7 @@ import { GovernorTimelockControl } from "@openzeppelin/contracts/governance/exte
 import { GovernorSettings } from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { CuryoReputation } from "../CuryoReputation.sol";
 
 /// @title CuryoGovernor
@@ -41,10 +42,16 @@ contract CuryoGovernor is
     bool public poolsInitialized;
     /// @notice Bootstrap proposal threshold regardless of early faucet claim sizes (10K cREP with 6 decimals)
     uint256 public constant BOOTSTRAP_PROPOSAL_THRESHOLD = 10_000 * 1e6;
+    /// @notice Lower proposal threshold reserved for category approval proposals (500 cREP with 6 decimals)
+    uint256 public constant CATEGORY_PROPOSAL_THRESHOLD = 500 * 1e6;
     /// @notice Minimum quorum regardless of circulating supply (100K cREP with 6 decimals)
     uint256 public constant MINIMUM_QUORUM = 100_000 * 1e6;
     /// @notice Hard cap to keep quorum evaluation bounded and proposals cheap to evaluate.
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
+    /// @notice CategoryRegistry address allowed for lower-threshold category approval proposals.
+    address public categoryRegistry;
+
+    event CategoryRegistryUpdated(address indexed categoryRegistry);
 
     /// @notice Deploy the governor with cREP token and timelock
     /// @param _crepToken The cREP voting token address
@@ -91,6 +98,21 @@ contract CuryoGovernor is
         return _excludedHolders;
     }
 
+    /// @notice Configure the CategoryRegistry used by the lower-threshold approval flow.
+    /// @dev The deployment initializer can set this once during bootstrap. Any later update must go through governance.
+    function setCategoryRegistry(address _categoryRegistry) external {
+        require(_categoryRegistry != address(0), "Invalid category registry");
+
+        if (categoryRegistry == address(0)) {
+            require(msg.sender == poolsInitializer, "Only pools initializer");
+        } else {
+            _checkGovernance();
+        }
+
+        categoryRegistry = _categoryRegistry;
+        emit CategoryRegistryUpdated(_categoryRegistry);
+    }
+
     // --- Required Overrides ---
 
     function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
@@ -103,6 +125,11 @@ contract CuryoGovernor is
 
     function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.proposalThreshold();
+    }
+
+    /// @notice Lower proposal threshold used only for category approval proposals.
+    function categoryProposalThreshold() public pure returns (uint256) {
+        return CATEGORY_PROPOSAL_THRESHOLD;
     }
 
     /// @notice Dynamic quorum: 4% of circulating supply (total minus excluded protocol-controlled balances)
@@ -199,5 +226,39 @@ contract CuryoGovernor is
         CuryoReputation(address(token())).lockForGovernance(msg.sender, proposalThreshold());
 
         return proposalId;
+    }
+
+    /// @notice Create a category-approval proposal using the lower category-specific threshold.
+    /// @dev Only proposals targeting the configured CategoryRegistry.approveCategory path can use this function.
+    function proposeCategoryApproval(uint256 categoryId) public returns (uint256 proposalId) {
+        require(poolsInitialized, "Pools not initialized");
+        require(categoryRegistry != address(0), "Category registry not set");
+
+        address proposer = _msgSender();
+        uint256 threshold = categoryProposalThreshold();
+        uint256 proposerVotes = getVotes(proposer, clock() - 1);
+        if (proposerVotes < threshold) {
+            revert GovernorInsufficientProposerVotes(proposer, proposerVotes, threshold);
+        }
+
+        string memory description = string(abi.encodePacked("Approve category #", Strings.toString(categoryId)));
+        if (!_isValidDescriptionForProposer(proposer, description)) {
+            revert GovernorRestrictedProposer(proposer);
+        }
+
+        bytes32 descriptionHash = keccak256(bytes(description));
+        address[] memory targets = new address[](1);
+        targets[0] = categoryRegistry;
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSignature("approveCategory(uint256,bytes32)", categoryId, descriptionHash);
+
+        proposalId = _propose(targets, values, calldatas, description, proposer);
+
+        // Lock only the lower category threshold amount for the proposer.
+        CuryoReputation(address(token())).lockForGovernance(proposer, threshold);
     }
 }
