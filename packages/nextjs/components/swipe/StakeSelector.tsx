@@ -315,7 +315,7 @@ export function StakeSelector({
               <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-center text-sm text-primary">
                 <div className="flex items-center justify-center gap-2">
                   <span className="loading loading-spinner loading-xs" />
-                  <span>Submitting vote. Check your wallet and wait for confirmation.</span>
+                  <span>Submitting vote. Approve if prompted, then wait for confirmation.</span>
                 </div>
               </div>
             )}
