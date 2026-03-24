@@ -30,7 +30,7 @@ Curyo replaces passive likes with **prediction games**. Voters predict whether c
 - **Governance-Native Controls** — launch deployments keep upgrades, config, and treasury routing under the governor/timelock, with deployer setup roles renounced after deployment
 
 See the in-app documentation at `/docs` for detailed game theory analysis and security information.
-Current bootstrap governance is intentionally conservative: proposals require 100,000 cREP and quorum never drops below 500,000 cREP while circulation is still thin.
+Current bootstrap governance is intentionally conservative: proposals require 10,000 cREP and quorum never drops below 100,000 cREP while circulation is still thin.
 
 ## Architecture
 

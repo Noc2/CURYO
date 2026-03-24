@@ -385,7 +385,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The dynamic quorum mechanism now uses the larger of 4% of circulating supply or a 500,000 cREP bootstrap floor, paired with a 100,000 cREP proposal threshold. That launch configuration pushes governance activation well beyond a single faucet claim and makes early capture meaningfully more expensive while circulation is still thin. As the platform matures and token pools drain into circulation, quorum requirements continue to scale proportionally  -- at 50M circulating, quorum reaches 2M cREP. The 7-day governance lock is a transfer restriction that mitigates vote-then-sell attacks while still allowing content voting during the lock period; it is not a per-proposal bond.",
+            text: "The dynamic quorum mechanism now uses the larger of 4% of circulating supply or a 100,000 cREP bootstrap floor, paired with a 10,000 cREP proposal threshold. That launch configuration still keeps governance activation above a single faucet claim while circulation is thin. As the platform matures and token pools drain into circulation, quorum requirements continue to scale proportionally  -- at 50M circulating, quorum reaches 2M cREP. The 7-day governance lock is a transfer restriction that mitigates vote-then-sell attacks while still allowing content voting during the lock period; it is not a per-proposal bond.",
           },
         ],
       },
@@ -1210,7 +1210,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Quorum is calculated as 4% of circulating supply  -- total supply minus balances held by protocol-controlled holders excluded by the governor. In the deployment model this includes custody contracts such as HumanFaucet, ParticipationPool, RewardDistributor, RoundVotingEngine reserves, the timelock-held treasury balance, and registry-held stakes. This dynamic calculation still scales with real circulation, but the bootstrap floor is intentionally much higher: quorum never drops below 500,000 cREP in the earliest stages. As the user base grows and more tokens enter circulation, the quorum threshold increases proportionally, requiring increasingly broad consensus.",
+            text: "Quorum is calculated as 4% of circulating supply  -- total supply minus balances held by protocol-controlled holders excluded by the governor. In the deployment model this includes custody contracts such as HumanFaucet, ParticipationPool, RewardDistributor, RoundVotingEngine reserves, the timelock-held treasury balance, and registry-held stakes. This dynamic calculation still scales with real circulation, but the bootstrap floor keeps early governance from becoming too cheap: quorum never drops below 100,000 cREP in the earliest stages. As the user base grows and more tokens enter circulation, the quorum threshold increases proportionally, requiring increasingly broad consensus.",
           },
           {
             type: "sub_heading",
@@ -1218,7 +1218,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Launch deployment keeps proxy upgrades, config roles, and treasury routing on the same timelock-controlled governance path. That preserves decentralization from day one: there is no separate treasury operator key once the deployer renounces setup roles. The bootstrap proposal threshold is intentionally high (100,000 cREP) and quorum never drops below 500,000 cREP; the real protection remains the combination of that conservative bootstrap, dynamic circulating-supply quorum, majority vote, and timelock delay. Proposal eligibility is snapshot-based, so the same voting power can back multiple concurrent proposals, and the 7-day governance lock does not add marginal collateral per live proposal.",
+            text: "Launch deployment keeps proxy upgrades, config roles, and treasury routing on the same timelock-controlled governance path. That preserves decentralization from day one: there is no separate treasury operator key once the deployer renounces setup roles. The bootstrap proposal threshold is 10,000 cREP and quorum never drops below 100,000 cREP; the real protection remains the combination of that bootstrap, dynamic circulating-supply quorum, majority vote, and timelock delay. Proposal eligibility is snapshot-based, so the same voting power can back multiple concurrent proposals, and the 7-day governance lock does not add marginal collateral per live proposal.",
           },
         ],
       },
