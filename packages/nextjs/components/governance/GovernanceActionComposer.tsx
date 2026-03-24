@@ -439,11 +439,6 @@ const CATEGORY_REGISTRY_EXTENDED_FUNCTIONS = new Set([
   "cancelUnlinkedCategory",
 ]);
 
-function formatVotingPower(amount: bigint | undefined) {
-  if (amount === undefined) return "—";
-  return `${(Number(amount) / 1e6).toLocaleString(undefined, { maximumFractionDigits: 2 })} cREP`;
-}
-
 export function GovernanceActionComposer() {
   const queryClient = useQueryClient();
   const { address } = useAccount();
@@ -645,17 +640,6 @@ export function GovernanceActionComposer() {
           />
           Show advanced actions
         </label>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-base-200 rounded-xl p-4">
-          <p className="text-base text-base-content/50">Current voting power</p>
-          <p className="text-xl font-semibold">{formatVotingPower(votingPower)}</p>
-        </div>
-        <div className="bg-base-200 rounded-xl p-4">
-          <p className="text-base text-base-content/50">Proposal threshold</p>
-          <p className="text-xl font-semibold">{formatVotingPower(proposalThreshold)}</p>
-        </div>
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
