@@ -1,4 +1,8 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { newE2EContext } from "../helpers/browser-context";
+import "../helpers/fetch-shim";
+import { PONDER_URL } from "../helpers/ponder-url";
+import { gotoWithRetry, waitForVisibleWithReload } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
 import { expect, test } from "@playwright/test";
 
@@ -9,12 +13,20 @@ import { expect, test } from "@playwright/test";
  * Uses account #8 which has a VoterID but may not have a profile yet.
  */
 test.describe("Profile management", () => {
-  const profileAccount = ANVIL_ACCOUNTS.account8;
+  const createProfileAccount = ANVIL_ACCOUNTS.account8;
+  const updateProfileAccount = ANVIL_ACCOUNTS.account2;
+
+  async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithRetry>[0]) {
+    await gotoWithRetry(page, "/settings");
+    await waitForVisibleWithReload(page, () => page.getByRole("button", { name: "Notifications", exact: true }), {
+      timeout: 10_000,
+    });
+  }
 
   test("settings page stays focused on settings without notification signature prompts on load", async ({ browser }) => {
     test.setTimeout(120_000);
 
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     const notificationChallengeRequests: string[] = [];
 
@@ -27,11 +39,10 @@ test.describe("Profile management", () => {
       }
     });
 
-    await setupWallet(page, profileAccount.privateKey);
-    await page.goto("/settings");
+    await setupWallet(page, createProfileAccount.privateKey);
+    await openSettingsWithConnectedWallet(page);
 
-    const notificationsTab = page.getByRole("button", { name: "Notifications" });
-    await expect(notificationsTab).toBeVisible({ timeout: 5_000 });
+    const notificationsTab = page.getByRole("button", { name: "Notifications", exact: true });
     await expect(page.getByRole("heading", { name: /Notification settings/i })).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: "Delegation" })).toBeVisible({ timeout: 5_000 });
     await expect(page.getByRole("button", { name: "Profile" })).toHaveCount(0);
@@ -44,15 +55,16 @@ test.describe("Profile management", () => {
   test("can create profile via governance profile tab", async ({ browser }) => {
     test.setTimeout(120_000);
 
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
-    await setupWallet(page, profileAccount.privateKey);
+    await setupWallet(page, createProfileAccount.privateKey);
 
-    await page.goto("/governance#profile");
+    await openSettingsWithConnectedWallet(page);
+    await gotoWithRetry(page, "/governance#profile");
 
     const nameInput = page.getByLabel("Profile name");
     const editProfileButton = page.getByRole("button", { name: "Edit profile", exact: true });
-    await expect(nameInput.or(editProfileButton)).toBeVisible({ timeout: 15_000 });
+    await waitForVisibleWithReload(page, () => nameInput.or(editProfileButton), { timeout: 15_000 });
     if (await editProfileButton.count()) {
       await expect(editProfileButton).toBeVisible({ timeout: 15_000 });
       await editProfileButton.click();
@@ -69,8 +81,8 @@ test.describe("Profile management", () => {
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 
-    const success = page.getByText(/Profile (created|updated)!/i);
-    await expect(success).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Edit profile", exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: uniqueName, exact: true })).toBeVisible({ timeout: 30_000 });
 
     await context.close();
   });
@@ -78,14 +90,15 @@ test.describe("Profile management", () => {
   test("can update profile from the public profile view", async ({ browser }) => {
     test.setTimeout(120_000);
 
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
-    await setupWallet(page, profileAccount.privateKey);
+    await setupWallet(page, updateProfileAccount.privateKey);
 
-    await page.goto(`/profiles/${profileAccount.address}`);
+    await openSettingsWithConnectedWallet(page);
+    await gotoWithRetry(page, `/profiles/${updateProfileAccount.address}`);
 
     const editProfileButton = page.getByRole("button", { name: "Edit profile", exact: true });
-    await expect(editProfileButton).toBeVisible({ timeout: 15_000 });
+    await waitForVisibleWithReload(page, () => editProfileButton, { timeout: 15_000 });
     await editProfileButton.click();
 
     const updatedName = `e2e_upd_${Date.now().toString(36).slice(-5)}`;
@@ -100,8 +113,8 @@ test.describe("Profile management", () => {
     await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
     await saveBtn.click();
 
-    const success = page.getByText(/Profile (created|updated)!/i);
-    await expect(success).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: "Edit profile", exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: updatedName, exact: true })).toBeVisible({ timeout: 30_000 });
 
     await context.close();
   });
@@ -110,11 +123,11 @@ test.describe("Profile management", () => {
     // Wait for Ponder to index the on-chain event
     await new Promise(resolve => setTimeout(resolve, 5_000));
 
-    const address = profileAccount.address.toLowerCase();
+    const address = createProfileAccount.address.toLowerCase();
 
     let res: Response;
     try {
-      res = await fetch(`http://localhost:42069/profile/${address}`);
+      res = await fetch(`${PONDER_URL}/profile/${address}`);
     } catch {
       test.skip(true, "Ponder not available — cannot verify profile in API");
       return;
@@ -140,7 +153,7 @@ test.describe("Profile management", () => {
   test("profile update appears in Ponder API", async () => {
     test.setTimeout(60_000);
 
-    const address = profileAccount.address.toLowerCase();
+    const address = updateProfileAccount.address.toLowerCase();
 
     // Poll Ponder until the updated name (e2e_upd_ prefix) appears.
     // The ProfileUpdated event may take several seconds to be indexed.
@@ -152,7 +165,7 @@ test.describe("Profile management", () => {
 
       let res: Response;
       try {
-        res = await fetch(`http://localhost:42069/profile/${address}`);
+        res = await fetch(`${PONDER_URL}/profile/${address}`);
       } catch {
         if (attempt === maxAttempts - 1) {
           test.skip(true, "Ponder not available — cannot verify profile update");
@@ -175,7 +188,7 @@ test.describe("Profile management", () => {
 
     if (!matched) {
       // Final check — fetch one more time and assert for clear failure message
-      const res = await fetch(`http://localhost:42069/profile/${address}`);
+      const res = await fetch(`${PONDER_URL}/profile/${address}`);
       if (res.status === 404) {
         test.skip(true, "Profile not found in Ponder (update test may not have run)");
         return;

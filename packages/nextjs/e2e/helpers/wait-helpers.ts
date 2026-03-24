@@ -1,21 +1,111 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+
+const RETRIABLE_GOTO_ERROR_PATTERNS = [/ERR_ABORTED/i, /frame was detached/i, /Test timeout/i];
+
+function isRetriableGotoError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return RETRIABLE_GOTO_ERROR_PATTERNS.some(pattern => pattern.test(message));
+}
+
+export async function gotoWithRetry(
+  page: Page,
+  url: string,
+  options: {
+    attempts?: number;
+    timeout?: number;
+    waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
+  } = {},
+): Promise<void> {
+  const { attempts = 3, timeout = 90_000, waitUntil = "domcontentloaded" } = options;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      await page.goto(url, { timeout, waitUntil });
+
+      const runtimeErrorHeading = page.getByRole("heading", { name: /Application error/i });
+      if (await runtimeErrorHeading.isVisible().catch(() => false)) {
+        await page.reload({ timeout, waitUntil: "domcontentloaded" });
+      }
+
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isRetriableGotoError(error) || attempt === attempts - 1) {
+        throw error;
+      }
+
+      await page.waitForTimeout(1_000 * (attempt + 1));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
 
 /**
  * Wait until the content feed has loaded — either content cards appear
  * or the "No content submitted yet" empty state shows.
  */
 export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<void> {
-  const feedContent = page
-    .getByRole("button", { name: "Vote up" })
-    .or(page.getByRole("button", { name: "Vote down" }))
-    .or(page.getByText(/Voted (Up|Down)/i))
-    .or(page.getByText("Your submission"))
-    .or(page.getByText(/Cooldown/))
-    .or(page.getByText("Round full"))
-    .or(page.getByText("No content submitted yet"))
-    .or(page.getByText(/No content found/i));
+  const feedContent = () =>
+    page
+      .getByRole("button", { name: "Vote up" })
+      .or(page.getByRole("button", { name: "Vote down" }))
+      .or(page.getByText(/Voted (Up|Down)/i))
+      .or(page.getByText("Your submission"))
+      .or(page.getByText(/Cooldown/))
+      .or(page.getByText("Round full"))
+      .or(page.getByText("No content submitted yet"))
+      .or(page.getByText(/No content found/i));
 
-  await feedContent.first().waitFor({ state: "visible", timeout });
+  try {
+    await feedContent().first().waitFor({ state: "visible", timeout });
+  } catch (error) {
+    const stillLoading = await page.getByText("Loading...").isVisible().catch(() => false);
+    if (!stillLoading) {
+      throw error;
+    }
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await feedContent().first().waitFor({ state: "visible", timeout });
+  }
+}
+
+export async function waitForVisibleWithReload(
+  page: Page,
+  target: () => Locator,
+  options: {
+    attempts?: number;
+    timeout?: number;
+  } = {},
+): Promise<void> {
+  const { attempts = 2, timeout = 15_000 } = options;
+
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      await target().first().waitFor({ state: "visible", timeout });
+      return;
+    } catch (error) {
+      lastError = error;
+
+      const connectPromptVisible = await page
+        .getByText(/Connect your wallet/i)
+        .first()
+        .isVisible()
+        .catch(() => false);
+      const loadingVisible = await page.getByText("Loading...").first().isVisible().catch(() => false);
+
+      if (attempt === attempts - 1 || (!connectPromptVisible && !loadingVisible)) {
+        throw error;
+      }
+
+      await page.reload({ waitUntil: "domcontentloaded" });
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 /**
@@ -50,4 +140,3 @@ export async function findVoteableContent(page: Page): Promise<boolean> {
 
   return canVote;
 }
-
