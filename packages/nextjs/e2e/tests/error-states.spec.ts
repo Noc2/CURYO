@@ -1,4 +1,5 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { newE2EContext } from "../helpers/browser-context";
 import { setupWallet } from "../helpers/wallet-session";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
 import { expect, test } from "@playwright/test";
@@ -6,7 +7,7 @@ import { expect, test } from "@playwright/test";
 test.describe("Error states and edge cases", () => {
   test("submit page without VoterID shows mint prompt", async ({ browser }) => {
     // Account #1 has no cREP and no VoterID — use fresh context
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account1.privateKey);
     await page.goto("/submit", { waitUntil: "domcontentloaded" });
@@ -30,14 +31,15 @@ test.describe("Error states and edge cases", () => {
     test.setTimeout(60_000);
     // Account #2 submitted seeded content items. Use the dedicated activity
     // view instead of relying on the default mixed feed order.
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
     await page.goto(`/vote?q=${encodeURIComponent("Fantastic Mr. Fox")}`, { waitUntil: "domcontentloaded" });
+    await waitForFeedLoaded(page, 20_000);
 
     const ownContentLabel = page.getByText("Your submission");
-    await expect(page.getByRole("heading", { name: "Fantastic Mr. Fox" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Fantastic Mr. Fox", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
     await expect(ownContentLabel).toBeVisible({ timeout: 10_000 });
 
     await context.close();
@@ -46,7 +48,7 @@ test.describe("Error states and edge cases", () => {
   test("page loads without wallet setup", async ({ browser }) => {
     // Without setupWallet, no local test wallet session is injected.
     // This test verifies the page still loads without errors.
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await page.goto("/vote");
     await waitForFeedLoaded(page, 20_000);
