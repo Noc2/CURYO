@@ -13,12 +13,11 @@ test.describe("Documentation pages", () => {
     "/docs/blind-voting",
     "/docs/smart-contracts",
     "/docs/frontend-codes",
-    "/docs/security-audit",
     "/docs/whitepaper",
   ];
 
   test("all doc pages load with h1 heading", async ({ page }) => {
-    test.setTimeout(180_000); // 10 pages, some (security-audit) need up to 20s
+    test.setTimeout(180_000); // 8 pages
     const errors: string[] = [];
 
     for (const path of docPages) {

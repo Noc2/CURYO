@@ -211,7 +211,6 @@ In-app documentation is available at `/docs` when running the frontend, covering
 - Tokenomics
 - Governance
 - Smart Contracts
-- Security Audit
 
 Additional local interfaces:
 
