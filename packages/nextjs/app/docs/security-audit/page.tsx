@@ -182,7 +182,7 @@ const SecurityAudit: NextPage = () => {
             <tr>
               <td>Medium</td>
               <td>21</td>
-              <td>15 resolved/verified, 3 design, 1 needs verification, 2 accepted</td>
+              <td>14 resolved/verified, 3 design, 2 accepted, 1 mitigated, 1 superseded</td>
             </tr>
             <tr>
               <td>Low</td>
@@ -2009,7 +2009,7 @@ const SecurityAudit: NextPage = () => {
           <strong>Configure VoterIdNFT</strong> in all contracts before enabling public access.
         </li>
         <li>
-          <strong>Set timelock minimum delay</strong> to an appropriate value (e.g., 2 days) for governance proposals.
+          <strong>Confirm deployed timelock minimum delay</strong> remains 2 days on the target governance deployment.
         </li>
         <li>
           <del>Implement invariant tests</del> for C-01, C-02, C-03 &mdash; <span className="text-success">Done.</span>{" "}
@@ -2017,8 +2017,9 @@ const SecurityAudit: NextPage = () => {
           <code>VotingHandler.sol</code>.
         </li>
         <li>
-          <strong>Verify CategoryRegistry delegation</strong> (M-14) &mdash; ensure deployment script delegates tokens
-          to the contract.
+          <del>Verify CategoryRegistry delegation</del> (M-14) &mdash;{" "}
+          <span className="text-success">No longer applicable.</span> Category approvals are now sponsored and linked by
+          a real wallet, so the registry no longer needs delegated voting power.
         </li>
         <li>
           <del>Review dormant URL locking</del> (M-07) &mdash; <span className="text-success">Done.</span>{" "}
