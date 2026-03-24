@@ -2,11 +2,14 @@
  * Playwright global setup — validates that all required services are running
  * before any test executes.  Fails fast with actionable error messages.
  */
+import { execFileSync, execSync } from "child_process";
+import { ensureBaselineSeedData } from "./helpers/baseline-seed";
+import { E2E_BASE_URL, E2E_RPC_URL, PONDER_URL } from "./helpers/service-urls";
 
 const SERVICES = [
   {
     name: "Anvil (local chain)",
-    url: "http://localhost:8545",
+    url: E2E_RPC_URL,
     method: "POST" as const,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 }),
@@ -14,12 +17,12 @@ const SERVICES = [
   },
   {
     name: "Next.js (frontend)",
-    url: "http://localhost:3000",
+    url: E2E_BASE_URL,
     hint: "yarn start",
   },
   {
     name: "Ponder (indexer)",
-    url: "http://localhost:42069/content?limit=1",
+    url: new URL("/content?limit=1", PONDER_URL).toString(),
     hint: "yarn ponder:dev",
   },
 ];
@@ -27,21 +30,39 @@ const SERVICES = [
 const MAX_WAIT_MS = 30_000;
 const POLL_INTERVAL_MS = 2_000;
 
+function httpStatus(service: (typeof SERVICES)[number]): number | null {
+  const args = ["-sS", "-m", "5", "-o", "/dev/null", "-w", "%{http_code}"];
+
+  if (service.method) {
+    args.push("-X", service.method);
+  }
+
+  for (const [header, value] of Object.entries(service.headers ?? {})) {
+    args.push("-H", `${header}: ${value}`);
+  }
+
+  if (service.body) {
+    args.push("--data", service.body);
+  }
+
+  args.push(service.url);
+
+  try {
+    return Number(execFileSync("curl", args, { encoding: "utf8" }).trim());
+  } catch {
+    return null;
+  }
+}
+
 async function checkService(service: (typeof SERVICES)[number]): Promise<void> {
   const start = Date.now();
 
   while (Date.now() - start < MAX_WAIT_MS) {
-    try {
-      const res = await fetch(service.url, {
-        method: service.method ?? "GET",
-        headers: service.headers,
-        body: service.body,
-        signal: AbortSignal.timeout(5_000),
-      });
-      if (res.ok) return;
-    } catch {
-      // Service not ready yet
+    const status = httpStatus(service);
+    if (status && status >= 200 && status < 400) {
+      return;
     }
+
     await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 
@@ -62,18 +83,29 @@ async function topUpKeeperBalance(): Promise<void> {
   const BALANCE_HEX = "0x21E19E0C9BAB2400000";
 
   try {
-    const res = await fetch("http://localhost:8545", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method: "anvil_setBalance",
-        params: [KEEPER_ADDRESS, BALANCE_HEX],
-        id: 1,
-      }),
-      signal: AbortSignal.timeout(5_000),
-    });
-    const json = await res.json();
+    const json = JSON.parse(
+      execFileSync(
+        "curl",
+        [
+          "-sS",
+          "-m",
+          "5",
+          "-X",
+          "POST",
+          E2E_RPC_URL,
+          "-H",
+          "Content-Type: application/json",
+          "--data",
+          JSON.stringify({
+            jsonrpc: "2.0",
+            method: "anvil_setBalance",
+            params: [KEEPER_ADDRESS, BALANCE_HEX],
+            id: 1,
+          }),
+        ],
+        { encoding: "utf8" },
+      ),
+    );
     if (!json.error) {
       console.log("  ✓ Keeper (account #1) balance topped up to 10,000 ETH");
     }
@@ -88,7 +120,6 @@ async function topUpKeeperBalance(): Promise<void> {
  * This is idempotent — safe to run on every test start.
  */
 async function ensureDatabaseSchema(): Promise<void> {
-  const { execSync } = await import("child_process");
   try {
     execSync("npx drizzle-kit push", {
       cwd: `${process.cwd()}`,
@@ -128,14 +159,22 @@ async function globalSetup() {
   // Ensure the app database schema exists for API routes that use server-side persistence.
   await ensureDatabaseSchema();
 
+  // Seed the baseline local content + commits expected by the E2E suite when
+  // the chain/indexer starts empty.
+  await ensureBaselineSeedData();
+
   // Top up keeper balance to prevent gas exhaustion during settlements
   await topUpKeeperBalance();
 
   // Keeper health check. The dedicated keeper-backed settlement project
   // requires a live keeper process with metrics enabled.
   try {
-    const keeperRes = await fetch("http://localhost:9090/health", { signal: AbortSignal.timeout(3_000) });
-    if (keeperRes.ok) {
+    const status = Number(
+      execFileSync("curl", ["-sS", "-m", "3", "-o", "/dev/null", "-w", "%{http_code}", "http://localhost:9090/health"], {
+        encoding: "utf8",
+      }).trim(),
+    );
+    if (status >= 200 && status < 400) {
       console.log("  ✓ Keeper (settlement service) running with metrics");
     } else {
       if (process.env.REQUIRE_E2E_KEEPER === "1") {

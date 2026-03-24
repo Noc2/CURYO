@@ -8,8 +8,89 @@
  * Pattern follows cancelExpiredRoundDirect() in keeper.ts — ABI-encode
  * the call with viem and send via eth_sendTransaction.
  */
+import "./fetch-shim";
+import { PONDER_URL } from "./ponder-url";
 
 const ANVIL_RPC = "http://localhost:8545";
+
+async function rpcRequest<T = any>(method: string, params: unknown[]): Promise<T | null> {
+  const res = await fetch(ANVIL_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      method,
+      params,
+      id: Date.now(),
+    }),
+  });
+  const json = await res.json();
+  if (json.error) return null;
+  return (json.result ?? null) as T | null;
+}
+
+async function buildSubmissionReservation(
+  url: string,
+  title: string,
+  description: string,
+  tags: string,
+  categoryId: bigint,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<{ revealCommitment: `0x${string}`; salt: `0x${string}` } | null> {
+  const { decodeFunctionResult, encodeAbiParameters, encodeFunctionData, keccak256, stringToHex } = await import(
+    "viem"
+  );
+
+  const previewAbi = [
+    {
+      name: "previewSubmissionKey",
+      type: "function",
+      inputs: [
+        { name: "url", type: "string" },
+        { name: "categoryId", type: "uint256" },
+      ],
+      outputs: [
+        { name: "resolvedCategoryId", type: "uint256" },
+        { name: "submissionKey", type: "bytes32" },
+      ],
+      stateMutability: "view",
+    },
+  ] as const;
+
+  const previewData = encodeFunctionData({
+    abi: previewAbi,
+    functionName: "previewSubmissionKey",
+    args: [url, categoryId],
+  });
+
+  const previewResult = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data: previewData }, "latest"]);
+  if (!previewResult) return null;
+
+  const [, submissionKey] = decodeFunctionResult({
+    abi: previewAbi,
+    functionName: "previewSubmissionKey",
+    data: previewResult,
+  }) as readonly [bigint, `0x${string}`];
+
+  const salt = keccak256(stringToHex(`${fromAddress}:${categoryId}:${url}:${title}:${Date.now()}`));
+  const revealCommitment = keccak256(
+    encodeAbiParameters(
+      [
+        { type: "bytes32" },
+        { type: "string" },
+        { type: "string" },
+        { type: "string" },
+        { type: "uint256" },
+        { type: "bytes32" },
+        { type: "address" },
+      ],
+      [submissionKey, title, description, tags, categoryId, salt, fromAddress as `0x${string}`],
+    ),
+  );
+
+  return { revealCommitment, salt };
+}
 
 /** Send a raw transaction to the Anvil RPC, return true if it succeeded on-chain. */
 async function sendTx(from: string, to: string, data: `0x${string}`): Promise<boolean> {
@@ -174,6 +255,36 @@ export async function submitContentDirect(
   contractAddress: string,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
+  const resolvedCategoryId = BigInt(categoryId);
+  const reservation = await buildSubmissionReservation(
+    url,
+    title,
+    description,
+    tags,
+    resolvedCategoryId,
+    fromAddress,
+    contractAddress,
+  );
+  if (!reservation) return false;
+
+  const reserveData = encodeFunctionData({
+    abi: [
+      {
+        name: "reserveSubmission",
+        type: "function",
+        inputs: [{ name: "revealCommitment", type: "bytes32" }],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "reserveSubmission",
+    args: [reservation.revealCommitment],
+  });
+  const reserved = await sendTx(fromAddress, contractAddress, reserveData);
+  if (!reserved) return false;
+
+  await evmIncreaseTime(1);
+
   const data = encodeFunctionData({
     abi: [
       {
@@ -185,13 +296,14 @@ export async function submitContentDirect(
           { name: "description", type: "string" },
           { name: "tags", type: "string" },
           { name: "categoryId", type: "uint256" },
+          { name: "salt", type: "bytes32" },
         ],
         outputs: [{ name: "", type: "uint256" }],
         stateMutability: "nonpayable",
       },
     ],
     functionName: "submitContent",
-    args: [url, title, description, tags, BigInt(categoryId)],
+    args: [url, title, description, tags, resolvedCategoryId, reservation.salt],
   });
   return sendTx(fromAddress, contractAddress, data);
 }
@@ -1430,7 +1542,7 @@ export async function setTestConfig(
 export async function waitForPonderSync(
   maxWaitMs = 120_000,
   pollInterval = 2_000,
-  ponderURL = "http://localhost:42069",
+  ponderURL = PONDER_URL,
 ): Promise<boolean> {
   // Get current chain block number
   const blockRes = await fetch(ANVIL_RPC, {
