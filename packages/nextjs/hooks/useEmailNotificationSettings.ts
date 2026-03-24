@@ -18,9 +18,14 @@ interface UpdateEmailNotificationSettingsResult {
   verificationSent?: boolean;
 }
 
+interface UseEmailNotificationSettingsOptions {
+  autoRead?: boolean;
+}
+
 async function readEmailNotificationSettings(
   address: string,
   signMessageAsync: (args: { message: string }) => Promise<`0x${string}`>,
+  autoRead: boolean,
 ): Promise<EmailNotificationSettingsState> {
   const sessionRes = await fetch(`/api/notifications/email/session?address=${encodeURIComponent(address)}`);
   const sessionBody = (await sessionRes.json().catch(() => null)) as { hasSession?: boolean; error?: string } | null;
@@ -36,6 +41,10 @@ async function readEmailNotificationSettings(
     }
 
     return (await existingSessionRes.json()) as EmailNotificationSettingsState;
+  }
+
+  if (!autoRead) {
+    return { ...DEFAULT_EMAIL_NOTIFICATION_SETTINGS };
   }
 
   const challengeRes = await fetch("/api/notifications/email/challenge", {
@@ -78,11 +87,12 @@ async function readEmailNotificationSettings(
   return body as EmailNotificationSettingsState;
 }
 
-export function useEmailNotificationSettings(address?: string) {
+export function useEmailNotificationSettings(address?: string, options?: UseEmailNotificationSettingsOptions) {
   const { signMessageAsync } = useSignMessage();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const queryKey = useMemo(() => ["emailNotificationSettings", address] as const, [address]);
+  const autoRead = options?.autoRead ?? false;
 
   const { data, isLoading, refetch } = useQuery({
     queryKey,
@@ -90,7 +100,7 @@ export function useEmailNotificationSettings(address?: string) {
       if (!address) return { ...DEFAULT_EMAIL_NOTIFICATION_SETTINGS };
 
       try {
-        return await readEmailNotificationSettings(address, signMessageAsync);
+        return await readEmailNotificationSettings(address, signMessageAsync, autoRead);
       } catch (error) {
         if (isSignatureRejected(error)) {
           return { ...DEFAULT_EMAIL_NOTIFICATION_SETTINGS };
