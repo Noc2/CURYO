@@ -314,8 +314,62 @@ contract SubmissionCanonicalizer {
         returns (string memory)
     {
         string memory path = _normalizePath(url);
-        string memory query = _normalizeQuery(url);
+        string memory query = _normalizeGenericQuery(url);
         return string(abi.encodePacked("https://", resolvedDomain, path, query));
+    }
+
+    function _normalizeGenericQuery(string memory url) internal pure returns (string memory) {
+        string memory query = _normalizeQuery(url);
+        bytes memory queryBytes = bytes(query);
+        if (queryBytes.length <= 1) return "";
+
+        uint256 pairCount = 1;
+        for (uint256 i = 1; i < queryBytes.length; i++) {
+            if (queryBytes[i] == "&") {
+                pairCount++;
+            }
+        }
+        if (pairCount == 1) return query;
+
+        string[] memory pairs = new string[](pairCount);
+        uint256 pairStart = 1;
+        uint256 pairIndex = 0;
+        for (uint256 i = 1; i <= queryBytes.length; i++) {
+            if (i == queryBytes.length || queryBytes[i] == "&") {
+                pairs[pairIndex] = _sliceBytesToString(queryBytes, pairStart, i);
+                pairIndex++;
+                pairStart = i + 1;
+            }
+        }
+
+        // Generic fallback treats query ordering as non-semantic so equivalent URLs
+        // cannot bypass duplicate protection by permuting otherwise identical pairs.
+        for (uint256 i = 1; i < pairCount; i++) {
+            string memory current = pairs[i];
+            uint256 j = i;
+            while (j > 0 && _stringLessThan(current, pairs[j - 1])) {
+                pairs[j] = pairs[j - 1];
+                j--;
+            }
+            pairs[j] = current;
+        }
+
+        bytes memory normalized = new bytes(queryBytes.length);
+        normalized[0] = "?";
+        uint256 cursor = 1;
+        for (uint256 i = 0; i < pairCount; i++) {
+            bytes memory pairBytes = bytes(pairs[i]);
+            for (uint256 j = 0; j < pairBytes.length; j++) {
+                normalized[cursor] = pairBytes[j];
+                cursor++;
+            }
+            if (i + 1 < pairCount) {
+                normalized[cursor] = "&";
+                cursor++;
+            }
+        }
+
+        return string(normalized);
     }
 
     function _extractNormalizedHost(string memory url) internal pure returns (string memory) {
@@ -550,5 +604,18 @@ contract SubmissionCanonicalizer {
 
     function _equals(string memory left, string memory right) internal pure returns (bool) {
         return keccak256(bytes(left)) == keccak256(bytes(right));
+    }
+
+    function _stringLessThan(string memory left, string memory right) internal pure returns (bool) {
+        bytes memory leftBytes = bytes(left);
+        bytes memory rightBytes = bytes(right);
+        uint256 sharedLength = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
+
+        for (uint256 i = 0; i < sharedLength; i++) {
+            if (leftBytes[i] == rightBytes[i]) continue;
+            return leftBytes[i] < rightBytes[i];
+        }
+
+        return leftBytes.length < rightBytes.length;
     }
 }

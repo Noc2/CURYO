@@ -855,6 +855,13 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         assertEq(shortKey, canonicalKey);
     }
 
+    function test_ResolveSubmissionKey_GenericQueryOrderCanonicalizes() public view {
+        bytes32 firstKey = registry.resolveSubmissionKey("https://example.com/search?a=1&b=2");
+        bytes32 secondKey = registry.resolveSubmissionKey("https://example.com/search?b=2&a=1");
+
+        assertEq(firstKey, secondKey);
+    }
+
     function test_IsUrlSubmitted_ReturnsFalseForInvalidOrUnapprovedUrls() public view {
         assertFalse(registry.isUrlSubmitted(""));
         assertFalse(registry.isUrlSubmitted("javascript:alert(1)"));
@@ -1109,6 +1116,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         _submitContentWithReservation(registry, "https://github.com/foundry-rs/foundry/tree/master/crates", "goal", "goal", "tags", 0);
         vm.expectRevert("URL already submitted");
         registry.submitContent("https://www.github.com/foundry-rs/foundry", "goal2", "goal2", "tags2", 1, bytes32(0));
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_CanonicalDuplicate_GenericQueryOrderCollides() public {
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 20e6);
+        _submitContentWithReservation(registry, "https://example.com/search?a=1&b=2", "goal", "goal", "tags", 0);
+        vm.expectRevert("URL already submitted");
+        registry.submitContent("https://example.com/search?b=2&a=1", "goal2", "goal2", "tags2", 1, bytes32(0));
         vm.stopPrank();
     }
 
