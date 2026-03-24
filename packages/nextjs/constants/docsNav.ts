@@ -3,7 +3,6 @@ export const DOCS_NAV = [
     section: "Start Here",
     links: [
       { label: "Introduction", href: "/docs" },
-      { label: "Transaction Costs", href: "/docs/funding-wallet" },
       { label: "Whitepaper", href: "/docs/whitepaper" },
     ],
   },
@@ -12,6 +11,7 @@ export const DOCS_NAV = [
     links: [
       { label: "How It Works", href: "/docs/how-it-works" },
       { label: "Blind Voting", href: "/docs/blind-voting" },
+      { label: "Transaction Costs", href: "/docs/funding-wallet" },
       { label: "Tokenomics", href: "/docs/tokenomics" },
       { label: "Governance", href: "/docs/governance" },
       { label: "Curyo & AI", href: "/docs/curyo-and-ai" },
