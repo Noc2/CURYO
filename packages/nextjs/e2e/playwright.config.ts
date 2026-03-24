@@ -1,3 +1,4 @@
+import { E2E_BASE_URL } from "./helpers/service-urls";
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
@@ -11,7 +12,7 @@ export default defineConfig({
   timeout: 60_000, // On-chain tx confirmation needs time
 
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: E2E_BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },

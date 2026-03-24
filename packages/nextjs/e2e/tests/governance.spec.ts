@@ -1,5 +1,6 @@
 import { expect, test } from "../fixtures/wallet";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { newE2EContext } from "../helpers/browser-context";
 import { setupWallet } from "../helpers/wallet-session";
 
 test.describe("Governance page", () => {
@@ -10,7 +11,7 @@ test.describe("Governance page", () => {
     await expect(page.locator("main")).toBeVisible({ timeout: 15_000 });
 
     // Account #2 has cREP, so should see all tabs (not just Faucet)
-    const profileTab = page.getByRole("button", { name: "Profile" });
+    const profileTab = page.getByRole("button", { name: "Profile", exact: true });
     const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
     const governanceTab = page.getByRole("button", { name: "Governance" });
 
@@ -37,7 +38,7 @@ test.describe("Governance page", () => {
   });
 
   test("profile tab stays read-only until edit is clicked", async ({ browser }) => {
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
 
     await setupWallet(page, ANVIL_ACCOUNTS.account10.privateKey);
