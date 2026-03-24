@@ -146,17 +146,6 @@ export function PlatformProposals() {
           </p>
         </div>
       ) : null}
-
-      {/* Info Box */}
-      <div className="mt-6 p-4 bg-base-200 rounded-xl">
-        <h3 className="text-base font-medium mb-2">How It Works</h3>
-        <ol className="text-base text-base-content/60 space-y-1 list-decimal list-inside">
-          <li>Submit a new platform on the Submit page.</li>
-          <li>Create or vote on the approval proposal here.</li>
-          <li>If approved, the stake is returned and the platform is added.</li>
-          <li>If rejected, the stake goes to the consensus reserve.</li>
-        </ol>
-      </div>
     </div>
   );
 }
