@@ -55,7 +55,7 @@ jobs:
         run: yarn install --immutable
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium --with-deps
+        run: yarn workspace @curyo/nextjs exec playwright install chromium --with-deps
 
       - name: Start Anvil and deploy contracts
         env:
