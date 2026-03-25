@@ -36,11 +36,11 @@ Archived alternatives kept only for reference:
 The checked-in PNG previews are generated from the retained SVG sources with:
 
 ```bash
-node docs/design-mockups/generate-planet-flare-theme-directions.mjs
-node docs/design-mockups/render-pngs.mjs \
-  docs/design-mockups/ai-sphere-obsidian-ember-fold-with-flare.svg \
-  docs/design-mockups/planet-flare-obsidian-ember.svg \
-  docs/design-mockups/ai-sphere-obsidian-ember-fold-with-flare-single-palette-deeper-blue.svg
+node design-mockups/generate-planet-flare-theme-directions.mjs
+node design-mockups/render-pngs.mjs \
+  design-mockups/ai-sphere-obsidian-ember-fold-with-flare.svg \
+  design-mockups/planet-flare-obsidian-ember.svg \
+  design-mockups/ai-sphere-obsidian-ember-fold-with-flare-single-palette-deeper-blue.svg
 ```
 
 This keeps the raster previews in sync with the editable SVG artwork.

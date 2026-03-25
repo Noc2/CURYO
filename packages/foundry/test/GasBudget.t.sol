@@ -55,16 +55,21 @@ contract GasBudgetTest is RoundIntegrationTest {
         (, bytes32 submissionKey) = registry.previewSubmissionKey("https://example.com/gas-submit", 0);
         bytes32 salt = keccak256(
             abi.encode(
-                "https://example.com/gas-submit", "test goal", "test goal", "test", uint256(0), submitter, block.timestamp, block.number
+                "https://example.com/gas-submit",
+                "test goal",
+                "test goal",
+                "test",
+                uint256(0),
+                submitter,
+                block.timestamp,
+                block.number
             )
         );
         bytes32 revealCommitment =
             keccak256(abi.encode(submissionKey, "test goal", "test goal", "test", uint256(0), salt, submitter));
 
         uint256 reserveGasUsed = _measureCallAs(
-            submitter,
-            address(registry),
-            abi.encodeCall(ContentRegistry.reserveSubmission, (revealCommitment))
+            submitter, address(registry), abi.encodeCall(ContentRegistry.reserveSubmission, (revealCommitment))
         );
         vm.warp(block.timestamp + 1);
         uint256 revealGasUsed = _measureCallAs(
@@ -118,7 +123,8 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 gasUsed = _measureCall(
             address(votingEngine),
             abi.encodeCall(
-                RoundVotingEngine.revealVoteByCommitKey, (contentId, roundId, _commitKey(voter1, commitHash), true, salt)
+                RoundVotingEngine.revealVoteByCommitKey,
+                (contentId, roundId, _commitKey(voter1, commitHash), true, salt)
             )
         );
 
@@ -174,11 +180,7 @@ contract GasBudgetTest is RoundIntegrationTest {
         uint256 gasUsed =
             _measureCall(address(votingEngine), abi.encodeCall(RoundVotingEngine.settleRound, (contentId, roundId)));
 
-        assertLe(
-            gasUsed,
-            MAX_SETTLE_ROUND_MAX_EPOCH_SCAN_GAS,
-            "settleRound worst-case epoch scan gas budget exceeded"
-        );
+        assertLe(gasUsed, MAX_SETTLE_ROUND_MAX_EPOCH_SCAN_GAS, "settleRound worst-case epoch scan gas budget exceeded");
     }
 
     function testGas_processUnrevealedVotes_underBudget() public {
@@ -215,16 +217,13 @@ contract GasBudgetTest is RoundIntegrationTest {
         votingEngine.revealVoteByCommitKey(contentId, roundId, _commitKey(voter2, ch2), true, s2);
 
         vm.warp(
-            round.startTime
-                + EPOCH_DURATION
-                + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod()
-                + 1
+            round.startTime + EPOCH_DURATION
+                + ProtocolConfig(address(votingEngine.protocolConfig())).revealGracePeriod() + 1
         );
         votingEngine.settleRound(contentId, roundId);
 
         uint256 gasUsed = _measureCall(
-            address(votingEngine),
-            abi.encodeCall(RoundVotingEngine.processUnrevealedVotes, (contentId, roundId, 0, 10))
+            address(votingEngine), abi.encodeCall(RoundVotingEngine.processUnrevealedVotes, (contentId, roundId, 0, 10))
         );
 
         assertLe(gasUsed, MAX_PROCESS_UNREVEALED_GAS, "processUnrevealedVotes gas budget exceeded");

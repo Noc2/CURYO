@@ -2,9 +2,10 @@ import { and, eq, isNotNull, or } from "drizzle-orm";
 import "server-only";
 import { db, dbClient } from "~~/lib/db";
 import { notificationEmailDeliveries, notificationEmailSubscriptions, watchedContent } from "~~/lib/db/schema";
-import { getOptionalAppUrl } from "~~/lib/env/server";
+import { getNotificationDeliverySecret, getOptionalAppUrl } from "~~/lib/env/server";
 import { getFollowedWalletAddresses } from "~~/lib/follows/profileFollow";
 import { buildCuryoEmailHtml } from "~~/lib/notifications/emailTemplate";
+import { buildNotificationEmailUnsubscribeUrl } from "~~/lib/notifications/emailUrls";
 import { isResendConfigured, sendResendEmail } from "~~/lib/notifications/resend";
 import { pickSettlingSoonNotification } from "~~/lib/notifications/settlingSoon";
 import { isPonderAvailable, isPonderConfigured, ponderGet } from "~~/services/ponder/client";
@@ -395,11 +396,23 @@ async function releaseDeliveryLease(eventKey: string) {
   });
 }
 
-async function sendCandidate(candidate: EmailCandidate) {
+async function sendCandidate(candidate: EmailCandidate, appUrl: string) {
+  const unsubscribeSecret = getNotificationDeliverySecret();
+  if (!unsubscribeSecret) {
+    throw new Error("Notification delivery is not configured");
+  }
+
+  const unsubscribeUrl = buildNotificationEmailUnsubscribeUrl({
+    appUrl,
+    walletAddress: candidate.walletAddress,
+    email: candidate.email,
+    secret: unsubscribeSecret,
+  });
+
   await sendResendEmail({
     to: candidate.email,
     subject: candidate.subject,
-    text: `${candidate.body}\n\nOpen Curyo: ${candidate.href}`,
+    text: `${candidate.body}\n\nOpen Curyo: ${candidate.href}\n\nUnsubscribe from these emails: ${unsubscribeUrl}`,
     html: buildCuryoEmailHtml({
       eyebrow: "Curyo notification",
       title: candidate.subject,
@@ -407,6 +420,8 @@ async function sendCandidate(candidate: EmailCandidate) {
       ctaLabel: "Open Curyo",
       ctaHref: candidate.href,
       footerNote: "You are receiving this email because this notification type is enabled in your Curyo settings.",
+      footerLinkLabel: "Unsubscribe from these emails",
+      footerLinkHref: unsubscribeUrl,
     }),
   });
 }
@@ -458,7 +473,7 @@ export async function deliverNotificationEmails() {
           continue;
         }
 
-        await sendCandidate(candidate);
+        await sendCandidate(candidate, appUrl);
         try {
           await markDeliverySent(candidate.eventKey);
           result.sent += 1;

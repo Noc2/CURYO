@@ -17,12 +17,7 @@ import { SubmissionCanonicalizer } from "./SubmissionCanonicalizer.sol";
 /// @title ContentRegistry
 /// @notice Manages content lifecycle: submission → active → dormant → revived / cancelled.
 /// @dev Stores only a metadata hash on-chain; full URL/title/description are emitted in events.
-contract ContentRegistry is
-    Initializable,
-    AccessControlUpgradeable,
-    PausableUpgradeable,
-    ReentrancyGuardTransient
-{
+contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     // --- Access Control Roles ---
@@ -182,9 +177,7 @@ contract ContentRegistry is
         _initialize(_admin, _governance, _treasuryAuthority, _crepToken);
     }
 
-    function _initialize(address _admin, address _governance, address _treasuryAuthority, address _crepToken)
-        internal
-    {
+    function _initialize(address _admin, address _governance, address _treasuryAuthority, address _crepToken) internal {
         __AccessControl_init();
         __Pausable_init();
 
@@ -460,7 +453,9 @@ contract ContentRegistry is
         bytes32 submissionKey = contentSubmissionKey[contentId];
         if (submissionKey != bytes32(0)) {
             require(submissionKeyUsed[submissionKey], "Dormant key released");
-            require(contentSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not original submitter");
+            require(
+                contentSubmitterIdentity[contentId] == _resolveSubmitterIdentity(msg.sender), "Not original submitter"
+            );
             require(block.timestamp <= dormantKeyReleasableAt[contentId], "Revival window elapsed");
         }
 
@@ -743,7 +738,10 @@ contract ContentRegistry is
         return keccak256(abi.encode(submissionKey, title, description, tags, categoryId, salt, submitter));
     }
 
-    function _refundReservedSubmission(PendingSubmission memory pending, address recipient) internal returns (uint256 refund) {
+    function _refundReservedSubmission(PendingSubmission memory pending, address recipient)
+        internal
+        returns (uint256 refund)
+    {
         uint256 reservedStake = pending.reservedStake;
         if (reservedStake == 0) return 0;
 
@@ -795,5 +793,4 @@ contract ContentRegistry is
     function unpause() external onlyRole(PAUSER_ROLE) {
         _unpause();
     }
-
 }

@@ -14,13 +14,6 @@ const SLICES = [
     color: "#B3341B",
   },
   {
-    label: "Keeper Reward Pool",
-    amount: "100,000 cREP",
-    value: 0.1,
-    percentLabel: "0.1%",
-    color: "rgba(242, 100, 38, 0.55)",
-  },
-  {
     label: "Category Registry",
     amount: "100 cREP",
     value: 0.0001,
@@ -95,7 +88,7 @@ export function TokenAllocationChart() {
           fontSize={11}
           fontWeight={500}
         >
-          100M
+          99.9M
         </text>
         <text
           x={CENTER}

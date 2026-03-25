@@ -23,6 +23,7 @@ export const CuryoConnectButton = ({ inlineMenu = false }: { inlineMenu?: boolea
     return (
       <button
         className="btn btn-sm btn-curyo border-none"
+        data-testid="auth-connect-button"
         disabled={!thirdwebEnabled || isConnecting || syncingThirdwebAccount}
         onClick={() => {
           void openConnectModal();

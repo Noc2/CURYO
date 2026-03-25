@@ -2,6 +2,13 @@ import { expect, test } from "../fixtures/wallet";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
 
 test.describe("Category filter", () => {
+  async function loadVoteFeed(page: any, path = "/vote") {
+    await expect(async () => {
+      await page.goto(path, { waitUntil: "domcontentloaded" });
+      await waitForFeedLoaded(page, 20_000);
+    }).toPass({ timeout: 30_000, intervals: [500, 1_000, 2_000] });
+  }
+
   /**
    * Helper: find the first visible category pill that isn't "All".
    * Waits for the "All" button to appear, then finds sibling category buttons.
@@ -35,8 +42,7 @@ test.describe("Category filter", () => {
   }
 
   test("clicking category pill updates URL hash and filters feed", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await loadVoteFeed(page);
 
     // Find any visible category pill
     const pill = await findVisibleCategoryPill(page);
@@ -65,8 +71,7 @@ test.describe("Category filter", () => {
 
   test("clicking All clears URL hash", async ({ connectedPage: page }) => {
     // Start with a category hash
-    await page.goto("/vote#youtube");
-    await waitForFeedLoaded(page);
+    await loadVoteFeed(page, "/vote#youtube");
 
     // Click "All" pill
     const allPill = page.getByRole("button", { name: /^All$/i }).first();
@@ -81,8 +86,7 @@ test.describe("Category filter", () => {
 
   test("URL hash on load activates corresponding category", async ({ connectedPage: page }) => {
     // Find a visible category on the default page first
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await loadVoteFeed(page);
 
     const pill = await findVisibleCategoryPill(page);
     expect(pill).toBeTruthy();
@@ -90,8 +94,7 @@ test.describe("Category filter", () => {
     const hash = pill!.name.toLowerCase().replace(/\s+/g, "-");
 
     // Navigate with that hash
-    await page.goto(`/vote#${hash}`);
-    await waitForFeedLoaded(page);
+    await loadVoteFeed(page, `/vote#${hash}`);
 
     // The pill should have the active class
     const activePill = page.getByRole("button", { name: new RegExp(`^${pill!.name}$`, "i") }).first();
@@ -99,8 +102,7 @@ test.describe("Category filter", () => {
   });
 
   test("overflow dropdown opens with search", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await loadVoteFeed(page);
 
     // Narrow viewport to force category overflow
     await page.setViewportSize({ width: 800, height: 900 });
@@ -145,8 +147,7 @@ test.describe("Category filter", () => {
   });
 
   test("category filter shows content or empty state", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await loadVoteFeed(page);
 
     // Find any visible category pill
     const pill = await findVisibleCategoryPill(page);

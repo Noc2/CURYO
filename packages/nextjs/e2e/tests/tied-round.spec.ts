@@ -7,8 +7,10 @@ import {
   waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
+import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { fastForwardTime, waitForSettlementIndexed } from "../helpers/keeper";
+import { PONDER_URL } from "../helpers/ponder-url";
 import { setupWallet } from "../helpers/wallet-session";
 import { getContentById, getContentList } from "../helpers/ponder-api";
 import { voteOnSpecificContent } from "../helpers/vote-helpers";
@@ -50,7 +52,7 @@ test.describe("Tied round lifecycle", () => {
   test("submit fresh content for tie test", async ({ browser }) => {
     test.setTimeout(120_000);
 
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
@@ -148,7 +150,7 @@ test.describe("Tied round lifecycle", () => {
     let successCount = 0;
 
     for (const voter of voters) {
-      const context = await browser.newContext();
+      const context = await newE2EContext(browser);
       const page = await context.newPage();
       await setupWallet(page, voter.account.privateKey);
 
@@ -177,7 +179,7 @@ test.describe("Tied round lifecycle", () => {
     // Trigger the keeper to reveal votes via its API.
     // The keeper reads committed votes on-chain and calls revealVoteByCommitKey.
     // In E2E, we trigger a keeper run by calling its endpoint or just fast-forward
-    // and let the keeper poll loop handle it. Since UI votes use commitVote(),
+    // and let the keeper poll loop handle it. Since UI votes use transferAndCall(),
     // the keeper's _revealCommits will decode the mock ciphertext and reveal.
     //
     // Wait a bit for the keeper to pick up the reveals
@@ -193,7 +195,7 @@ test.describe("Tied round lifecycle", () => {
     }
 
     // Wait for settlement in Ponder
-    const settled = await waitForSettlementIndexed(newContentId!, "http://localhost:42069", 30_000);
+    const settled = await waitForSettlementIndexed(newContentId!, PONDER_URL, 30_000);
     expect(settled).toBe(true);
 
     // Verify round state — must be Tied (state=3) since pools are equal

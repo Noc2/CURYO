@@ -13,7 +13,11 @@ type AccountChangedListener = (account: Account) => void;
 type ChainChangedListener = (chain: Chain) => void;
 type DisconnectListener = () => void;
 
-export function createLocalTestWallet({ chain: initialChain, client, privateKey }: LocalTestWalletOptions): Wallet<"inApp"> {
+export function createLocalTestWallet({
+  chain: initialChain,
+  client,
+  privateKey,
+}: LocalTestWalletOptions): Wallet<"inApp"> {
   const baseAccount = privateKeyToAccount({
     client,
     privateKey,

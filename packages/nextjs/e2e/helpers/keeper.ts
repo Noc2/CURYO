@@ -2,6 +2,8 @@
  * Settlement lifecycle helpers for E2E tests.
  * Uses Anvil JSON-RPC to fast-forward time and mine blocks for settlement.
  */
+import "./fetch-shim";
+import { PONDER_URL } from "./ponder-url";
 
 const ANVIL_RPC = "http://localhost:8545";
 
@@ -88,7 +90,7 @@ export async function cancelExpiredRoundDirect(
  */
 export async function waitForSettlementIndexed(
   contentId: string | number,
-  ponderURL = "http://localhost:42069",
+  ponderURL = PONDER_URL,
   maxWaitMs = 30_000,
   label = "waitForSettlementIndexed",
 ): Promise<boolean> {

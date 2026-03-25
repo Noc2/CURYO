@@ -83,14 +83,6 @@ const Tokenomics = () => {
               <td>Governance-controlled cREP tokens for grants, whistleblower rewards, and protocol development</td>
             </tr>
             <tr>
-              <td className="font-medium">Keeper Reward Pool</td>
-              <td className="font-mono">100,000 cREP</td>
-              <td>
-                Dedicated flat rewards for settlement and unrevealed-vote cleanup so keeper incentives do not drain user
-                stakes
-              </td>
-            </tr>
-            <tr>
               <td className="font-medium">Category Registry</td>
               <td className="font-mono">0 cREP</td>
               <td>Pending category stakes are user-funded; approval proposals are now sponsored directly by voters</td>
@@ -105,7 +97,7 @@ const Tokenomics = () => {
         <a href="https://self.xyz" target="_blank" rel="noopener noreferrer" className="link link-primary">
           Self.xyz
         </a>{" "}
-        passport verification. Claim size falls as adoption grows.
+        passport or biometric ID card verification. Claim size falls as adoption grows.
       </p>
       <div className="not-prose overflow-x-auto my-6 rounded-xl bg-base-200">
         <table className="table table-zebra [&_th]:text-base [&_td]:text-base [&_.badge]:text-base [&_th]:bg-base-300">

@@ -18,6 +18,7 @@ import {
   waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
+import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { setupWallet } from "../helpers/wallet-session";
 import { getContentById, getContentList, getSubmitterRewards, ponderGet } from "../helpers/ponder-api";
@@ -190,7 +191,7 @@ test.describe("Reward claim lifecycle", () => {
     test.setTimeout(120_000);
     test.skip(!settledContentId, "No settled content from previous test");
 
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
 
@@ -469,11 +470,8 @@ test.describe("Reward claim lifecycle", () => {
     const settled = await settleRoundDirect(BigInt(cleanupContentId!), cleanupRoundId, keeper.address, VOTING_ENGINE);
     expect(settled, "Cleanup setup round did not settle").toBe(true);
 
-    const treasuryAddress = await readAddress("treasury", VOTING_ENGINE);
-    const keeperReward = await readUint256("keeperReward", VOTING_ENGINE);
-    const keeperRewardPoolBefore = await readUint256("keeperRewardPool", VOTING_ENGINE);
+    const treasuryAddress = await readAddress("treasury", CONTENT_REGISTRY);
     const treasuryBalanceBefore = await readTokenBalance(treasuryAddress, CREP_TOKEN);
-    const keeperBalanceBefore = await readTokenBalance(keeper.address, CREP_TOKEN);
 
     const cleanupSuccess = await processUnrevealedVotes(
       BigInt(cleanupContentId!),
@@ -486,13 +484,9 @@ test.describe("Reward claim lifecycle", () => {
     expect(cleanupSuccess, "Cleanup should process unrevealed votes").toBe(true);
 
     const treasuryBalanceAfter = await readTokenBalance(treasuryAddress, CREP_TOKEN);
-    const keeperBalanceAfter = await readTokenBalance(keeper.address, CREP_TOKEN);
-    const keeperRewardPoolAfter = await readUint256("keeperRewardPool", VOTING_ENGINE);
 
     // Both unrevealed epoch-0 stakes forfeited to treasury
     expect(treasuryBalanceAfter - treasuryBalanceBefore).toBe(STAKE * 2n);
-    expect(keeperRewardPoolBefore - keeperRewardPoolAfter).toBe(keeperReward);
-    expect(keeperBalanceAfter - keeperBalanceBefore).toBe(keeperReward);
 
     const secondCleanup = await processUnrevealedVotes(
       BigInt(cleanupContentId!),
@@ -503,7 +497,5 @@ test.describe("Reward claim lifecycle", () => {
       VOTING_ENGINE,
     );
     expect(secondCleanup, "Cleanup should not pay out again once all unrevealed votes are processed").toBe(false);
-    expect(await readTokenBalance(keeper.address, CREP_TOKEN)).toBe(keeperBalanceAfter);
-    expect(await readUint256("keeperRewardPool", VOTING_ENGINE)).toBe(keeperRewardPoolAfter);
   });
 });

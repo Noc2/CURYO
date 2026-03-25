@@ -678,7 +678,8 @@ contract RoundSettlementEdgeCaseTest is VotingTestBase {
         RoundVotingEngine impl = new RoundVotingEngine();
         vm.expectRevert(RoundVotingEngine.InvalidAddress.selector);
         new ERC1967Proxy(
-            address(impl), abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crep), address(registry), address(0)))
+            address(impl),
+            abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crep), address(registry), address(0)))
         );
     }
 

@@ -11,24 +11,9 @@ import { ContentRegistry } from "../ContentRegistry.sol";
 library SubmitterStakeLib {
     error ContentNotFound();
 
-    function resolve(
-        ContentRegistry registry,
-        bool hasSettledRound,
-        uint256 contentId
-    ) external {
-        (
-            uint256 existingContentId,
-            ,
-            ,
-            ,
-            uint256 contentCreatedAt,
-            ,
-            ,
-            ,
-            ,
-            bool submitterStakeReturned,
-            uint256 rating,
-        ) = registry.contents(contentId);
+    function resolve(ContentRegistry registry, bool hasSettledRound, uint256 contentId) external {
+        (uint256 existingContentId,,,, uint256 contentCreatedAt,,,,, bool submitterStakeReturned, uint256 rating,) =
+            registry.contents(contentId);
         if (submitterStakeReturned) return;
         if (existingContentId == 0) revert ContentNotFound();
 

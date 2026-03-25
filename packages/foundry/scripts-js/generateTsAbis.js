@@ -223,7 +223,11 @@ function processAllDeployments(broadcastPath) {
     }
   });
 
-  return { contracts: allContracts, deployers, deploymentsByAddress: allDeploymentsByAddress };
+  return {
+    contracts: allContracts,
+    deployers,
+    deploymentsByAddress: allDeploymentsByAddress,
+  };
 }
 
 function main() {
@@ -248,11 +252,9 @@ function main() {
     contracts: allGeneratedContracts,
     deployers,
     deploymentsByAddress,
-  } = processAllDeployments(
-    current_path_to_broadcast
-  );
+  } = processAllDeployments(current_path_to_broadcast);
 
-  // Handle UUPS proxies: the deployments JSON maps proxy addresses to
+  // Handle upgradeable proxies: the deployments JSON maps proxy addresses to
   // implementation contract names (e.g., { "0xProxy": "ContentToken" }).
   // We create entries using the proxy address + the implementation's ABI.
   // This is needed because the broadcast records proxies as "ERC1967Proxy"

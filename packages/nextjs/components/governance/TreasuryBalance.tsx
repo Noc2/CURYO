@@ -1,6 +1,6 @@
 "use client";
 
-import { BoltIcon, BuildingLibraryIcon, GiftIcon, ShieldCheckIcon, UserGroupIcon } from "@heroicons/react/24/outline";
+import { BuildingLibraryIcon, GiftIcon, ShieldCheckIcon, UserGroupIcon } from "@heroicons/react/24/outline";
 import { surfaceSectionHeadingClassName } from "~~/components/shared/sectionHeading";
 import { InfoTooltip } from "~~/components/ui/InfoTooltip";
 import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
@@ -64,11 +64,6 @@ export const TreasuryBalance = () => {
     functionName: "consensusReserve",
   });
 
-  const { data: keeperRewardPool, isLoading: keeperRewardPoolLoading } = useScaffoldReadContract({
-    contractName: "RoundVotingEngine",
-    functionName: "keeperRewardPool",
-  });
-
   const { data: participationPoolBalance, isLoading: participationPoolLoading } = useScaffoldReadContract({
     contractName: "ParticipationPool",
     functionName: "poolBalance",
@@ -105,13 +100,6 @@ export const TreasuryBalance = () => {
           value={consensusReserve}
           isLoading={consensusReserveLoading}
           Icon={ShieldCheckIcon}
-        />
-        <PoolStat
-          title="Keeper Reward Pool"
-          tooltip="Tracked inside RoundVotingEngine and decremented when keeper actions are rewarded."
-          value={keeperRewardPool}
-          isLoading={keeperRewardPoolLoading}
-          Icon={BoltIcon}
         />
         <PoolStat
           title="Participation Pool"

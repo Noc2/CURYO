@@ -381,7 +381,9 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         nonReentrant
         returns (uint256 releasedDust)
     {
-        if (roundParticipationRewardFinalized[contentId][roundId]) revert ParticipationRewardsAlreadyFinalized();
+        if (roundParticipationRewardFinalized[contentId][roundId]) {
+            revert ParticipationRewardsAlreadyFinalized();
+        }
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
@@ -459,7 +461,11 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
         ) = votingEngine.commits(contentId, roundId, commitKey);
     }
 
-    function _quoteFrontendFee(uint256 contentId, uint256 roundId, address frontend) internal view returns (uint256 fee) {
+    function _quoteFrontendFee(uint256 contentId, uint256 roundId, address frontend)
+        internal
+        view
+        returns (uint256 fee)
+    {
         RoundLib.Round memory round = _readRound(contentId, roundId);
         if (round.state != RoundLib.RoundState.Settled) revert RoundNotSettled();
         if (frontendFeeClaimed[contentId][roundId][frontend]) revert AlreadyClaimed();

@@ -20,7 +20,7 @@ contract ProfileRegistryTest is Test {
     function setUp() public {
         vm.startPrank(admin);
 
-        // Deploy registry (UUPS proxy)
+        // Deploy registry behind an ERC1967 proxy for upgradeable storage behavior
         ProfileRegistry impl = new ProfileRegistry();
         registry = ProfileRegistry(
             address(new ERC1967Proxy(address(impl), abi.encodeCall(ProfileRegistry.initialize, (admin, admin))))

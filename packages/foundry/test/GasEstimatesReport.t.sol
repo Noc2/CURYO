@@ -62,16 +62,21 @@ contract UserTransactionGasEstimatesTest is RoundIntegrationTest {
         (, bytes32 submissionKey) = registry.previewSubmissionKey("https://example.com/gas-report", 0);
         bytes32 salt = keccak256(
             abi.encode(
-                "https://example.com/gas-report", "test goal", "test goal", "test", uint256(0), submitter, block.timestamp, block.number
+                "https://example.com/gas-report",
+                "test goal",
+                "test goal",
+                "test",
+                uint256(0),
+                submitter,
+                block.timestamp,
+                block.number
             )
         );
         bytes32 revealCommitment =
             keccak256(abi.encode(submissionKey, "test goal", "test goal", "test", uint256(0), salt, submitter));
 
         uint256 reserveGasUsed = _measureCallAs(
-            submitter,
-            address(registry),
-            abi.encodeCall(ContentRegistry.reserveSubmission, (revealCommitment))
+            submitter, address(registry), abi.encodeCall(ContentRegistry.reserveSubmission, (revealCommitment))
         );
         vm.warp(block.timestamp + 1);
         uint256 revealGasUsed = _measureCallAs(

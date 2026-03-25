@@ -69,9 +69,8 @@ library RoundEngineReadHelpers {
         view
         returns (RoundLib.RoundConfig memory cfg)
     {
-        (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) = engine.roundConfigSnapshot(
-            contentId, roundId
-        );
+        (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) =
+            engine.roundConfigSnapshot(contentId, roundId);
         if (cfg.epochDuration == 0) {
             (cfg.epochDuration, cfg.maxDuration, cfg.minVoters, cfg.maxVoters) =
                 ProtocolConfig(address(engine.protocolConfig())).config();

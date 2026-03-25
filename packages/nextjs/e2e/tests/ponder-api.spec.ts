@@ -1,4 +1,6 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import "../helpers/fetch-shim";
+import { PONDER_URL } from "../helpers/ponder-url";
 import { getContentById, getContentList, getStats, ponderGet } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
 
@@ -102,10 +104,10 @@ test.describe("Ponder API endpoints", () => {
   test("GET /profile/:address returns profile activity payload", async () => {
     const address = ANVIL_ACCOUNTS.account2.address.toLowerCase();
     // Use retry logic — Ponder may return 429 during rapid test runs
-    let res = await fetch(`http://localhost:42069/profile/${address}`);
+    let res = await fetch(`${PONDER_URL}/profile/${address}`);
     for (let attempt = 0; attempt < 3 && res.status === 429; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
-      res = await fetch(`http://localhost:42069/profile/${address}`);
+      res = await fetch(`${PONDER_URL}/profile/${address}`);
     }
     expect(res.status).toBe(200);
 

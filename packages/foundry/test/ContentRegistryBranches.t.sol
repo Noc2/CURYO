@@ -64,7 +64,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -176,10 +179,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(delegate);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = _submitContentWithReservation(registry, "https://example.com/delegate-submit", "goal", "goal", "tags", 0);
+        uint256 id =
+            _submitContentWithReservation(registry, "https://example.com/delegate-submit", "goal", "goal", "tags", 0);
         vm.stopPrank();
 
-        (, , address rawSubmitter,,,,,,,,,) = registry.contents(id);
+        (,, address rawSubmitter,,,,,,,,,) = registry.contents(id);
         assertEq(rawSubmitter, delegate, "raw submitter should remain delegate wallet");
         assertEq(registry.getSubmitterIdentity(id), submitter, "submitter identity should snapshot the holder");
     }
@@ -250,7 +254,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         uint256 balAfter = crepToken.balanceOf(submitter);
         assertEq(balAfter, balBefore - 10e6, "no-vote content should not unlock through healthy resolution");
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertFalse(submitterStakeReturned, "no-vote content should remain unresolved");
     }
 
@@ -269,7 +273,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         uint256 balAfter = crepToken.balanceOf(submitter);
         assertEq(balAfter, balBefore, "dormancy fallback should return the locked stake without a submission reward");
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertTrue(submitterStakeReturned, "stake should resolve after the dormancy period");
     }
 
@@ -285,13 +289,15 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/retryable-submitter-reward", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://example.com/retryable-submitter-reward", "goal", "goal", "tags", 0
+        );
         vm.stopPrank();
 
         vm.warp(T0 + 4 days + 1);
         _settleHealthyRound(1);
 
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertTrue(submitterStakeReturned, "healthy settlement should return stake");
         assertEq(registry.submitterParticipationRewardPool(1), address(tinyPool), "reward pool should be snapshotted");
         assertEq(registry.submitterParticipationRewardOwed(1), 9e6, "reward should be snapshotted at the healthy rate");
@@ -307,7 +313,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(submitter);
         uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
         assertEq(paidAmount, 9e6, "claim should pay the reserved reward plus any newly available remainder");
-        assertEq(crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim, 9e6, "submitter should receive the full snapshotted reward");
+        assertEq(
+            crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim,
+            9e6,
+            "submitter should receive the full snapshotted reward"
+        );
         assertEq(registry.submitterParticipationRewardPaid(1), 9e6, "all snapshotted rewards should be accounted for");
     }
 
@@ -325,7 +335,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/snapshotted-submitter-rate", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://example.com/snapshotted-submitter-rate", "goal", "goal", "tags", 0
+        );
         vm.stopPrank();
 
         _settleHealthyRound(1);
@@ -365,7 +377,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/submitter-reserved-reward", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://example.com/submitter-reserved-reward", "goal", "goal", "tags", 0
+        );
         vm.stopPrank();
 
         vm.warp(T0 + 4 days + 1);
@@ -379,7 +393,11 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 paidAmount = registry.claimSubmitterParticipationReward(1);
 
         assertEq(paidAmount, 4e6, "reserved rewards should remain claimable even after deauthorization");
-        assertEq(crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim, 4e6, "submitter should receive the reserved amount");
+        assertEq(
+            crepToken.balanceOf(submitter) - submitterBalanceBeforeClaim,
+            4e6,
+            "submitter should receive the reserved amount"
+        );
         assertEq(registry.submitterParticipationRewardPaid(1), 4e6, "paid amount should track the reserved payout");
     }
 
@@ -415,7 +433,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 submitterBalanceBeforeSubmit = crepToken.balanceOf(submitter);
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, "https://example.com/dormant-submitter-reward", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://example.com/dormant-submitter-reward", "goal", "goal", "tags", 0
+        );
         vm.stopPrank();
 
         _settleHealthyRound(1);
@@ -423,8 +443,10 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.warp(block.timestamp + 30 days + 1);
         registry.markDormant(1);
 
-        (, , , , , , ContentRegistry.ContentStatus status, , , bool submitterStakeReturned,,) = registry.contents(1);
-        assertEq(uint256(status), uint256(ContentRegistry.ContentStatus.Dormant), "content should transition to dormant");
+        (,,,,,, ContentRegistry.ContentStatus status,,, bool submitterStakeReturned,,) = registry.contents(1);
+        assertEq(
+            uint256(status), uint256(ContentRegistry.ContentStatus.Dormant), "content should transition to dormant"
+        );
         assertTrue(submitterStakeReturned, "dormancy should still resolve the submitter stake");
         assertEq(
             crepToken.balanceOf(submitter),
@@ -470,7 +492,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
             submitterBefore - 10e6,
             "submitter should not recover stake after dormant fallback slash"
         );
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertTrue(submitterStakeReturned, "stake should resolve after dormant fallback slash");
     }
 
@@ -986,7 +1008,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(address(votingEngine));
         registry.updateRatingDirect(1, 110);
 
-        (, , , , , , , , , , uint256 rating,) = registry.contents(1);
+        (,,,,,,,,,, uint256 rating,) = registry.contents(1);
         assertEq(rating, 100);
     }
 
@@ -1000,7 +1022,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(address(votingEngine));
         registry.updateRatingDirect(1, 0);
 
-        (, , , , , , , , , , uint256 rating,) = registry.contents(1);
+        (,,,,,,,,,, uint256 rating,) = registry.contents(1);
         assertEq(rating, 0);
     }
 
@@ -1014,7 +1036,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.prank(address(votingEngine));
         registry.updateRatingDirect(1, 50);
 
-        (, , , , , , , , , , uint256 rating,) = registry.contents(1);
+        (,,,,,,,,,, uint256 rating,) = registry.contents(1);
         assertEq(rating, 50); // unchanged
     }
 
@@ -1029,7 +1051,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         uint256 id = _submitContentWithReservation(registry, "https://example.com/1", "goal", "goal", "tags", 1);
         vm.stopPrank();
         assertEq(id, 1);
-        (, , , , , , , , , , , uint256 categoryId) = registry.contents(1);
+        (,,,,,,,,,,, uint256 categoryId) = registry.contents(1);
         assertEq(categoryId, 1);
     }
 
@@ -1045,7 +1067,7 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         vm.stopPrank();
 
         assertEq(id, 1);
-        (, , , , , , , , , , , uint256 categoryId) = registry.contents(id);
+        (,,,,,,,,,,, uint256 categoryId) = registry.contents(id);
         assertEq(categoryId, 7, "configured registries should derive the category from the URL");
     }
 
@@ -1113,7 +1135,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        _submitContentWithReservation(registry, "https://github.com/foundry-rs/foundry/tree/master/crates", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://github.com/foundry-rs/foundry/tree/master/crates", "goal", "goal", "tags", 0
+        );
         vm.expectRevert("URL already submitted");
         registry.submitContent("https://www.github.com/foundry-rs/foundry", "goal2", "goal2", "tags2", 1, bytes32(0));
         vm.stopPrank();
@@ -1136,9 +1160,13 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        _submitContentWithReservation(registry, "https://scryfall.com/card/lea/232/black-lotus?utm_source=test", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://scryfall.com/card/lea/232/black-lotus?utm_source=test", "goal", "goal", "tags", 0
+        );
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://scryfall.com/card/lea/232/black-lotus", "goal2", "goal2", "tags2", 1, bytes32(0));
+        registry.submitContent(
+            "https://scryfall.com/card/lea/232/black-lotus", "goal2", "goal2", "tags2", 1, bytes32(0)
+        );
         vm.stopPrank();
     }
 
@@ -1150,7 +1178,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        _submitContentWithReservation(registry, "https://www.themoviedb.org/movie/238-the-godfather", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://www.themoviedb.org/movie/238-the-godfather", "goal", "goal", "tags", 0
+        );
         vm.expectRevert("URL already submitted");
         registry.submitContent("https://themoviedb.org/movie/238", "goal2", "goal2", "tags2", 1, bytes32(0));
         vm.stopPrank();
@@ -1164,7 +1194,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        _submitContentWithReservation(registry, "https://en.wikipedia.org/wiki/Lionel_Messi?oldformat=true", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://en.wikipedia.org/wiki/Lionel_Messi?oldformat=true", "goal", "goal", "tags", 0
+        );
         vm.expectRevert("URL already submitted");
         registry.submitContent("https://en.wikipedia.org/wiki/Lionel_Messi", "goal2", "goal2", "tags2", 1, bytes32(0));
         vm.stopPrank();
@@ -1192,7 +1224,9 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        _submitContentWithReservation(registry, "https://openlibrary.org/works/OL45883W/Fantastic_Mr_Fox", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://openlibrary.org/works/OL45883W/Fantastic_Mr_Fox", "goal", "goal", "tags", 0
+        );
         vm.expectRevert("URL already submitted");
         registry.submitContent("https://openlibrary.org/works/OL45883W", "goal2", "goal2", "tags2", 1, bytes32(0));
         vm.stopPrank();
@@ -1206,9 +1240,13 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        _submitContentWithReservation(registry, "https://huggingface.co/Qwen/Qwen3.5-397B-A17B/tree/main", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://huggingface.co/Qwen/Qwen3.5-397B-A17B/tree/main", "goal", "goal", "tags", 0
+        );
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://huggingface.co/Qwen/Qwen3.5-397B-A17B", "goal2", "goal2", "tags2", 1, bytes32(0));
+        registry.submitContent(
+            "https://huggingface.co/Qwen/Qwen3.5-397B-A17B", "goal2", "goal2", "tags2", 1, bytes32(0)
+        );
         vm.stopPrank();
     }
 
@@ -1240,9 +1278,13 @@ contract ContentRegistryBranchesTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 20e6);
-        _submitContentWithReservation(registry, "https://open.spotify.com/embed/show/5eXZwvvxt3K2dxha3BSaAe", "goal", "goal", "tags", 0);
+        _submitContentWithReservation(
+            registry, "https://open.spotify.com/embed/show/5eXZwvvxt3K2dxha3BSaAe", "goal", "goal", "tags", 0
+        );
         vm.expectRevert("URL already submitted");
-        registry.submitContent("https://open.spotify.com/intl-de/show/5eXZwvvxt3K2dxha3BSaAe", "goal2", "goal2", "tags2", 1, bytes32(0));
+        registry.submitContent(
+            "https://open.spotify.com/intl-de/show/5eXZwvvxt3K2dxha3BSaAe", "goal2", "goal2", "tags2", 1, bytes32(0)
+        );
         vm.stopPrank();
     }
 }

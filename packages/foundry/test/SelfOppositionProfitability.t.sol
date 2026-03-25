@@ -60,7 +60,10 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -122,7 +125,14 @@ contract SelfOppositionProfitabilityTest is VotingTestBase {
         contentNonce++;
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = _submitContentWithReservation(registry, string(abi.encodePacked("https://example.com/", vm.toString(contentNonce))), "Goal", "Goal", "tag", 0);
+        uint256 id = _submitContentWithReservation(
+            registry,
+            string(abi.encodePacked("https://example.com/", vm.toString(contentNonce))),
+            "Goal",
+            "Goal",
+            "tag",
+            0
+        );
         vm.stopPrank();
         return id;
     }

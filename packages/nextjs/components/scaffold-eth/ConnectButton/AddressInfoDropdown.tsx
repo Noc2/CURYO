@@ -239,7 +239,7 @@ export const AddressInfoDropdown = ({
   if (menuItemsOnly) {
     return (
       <>
-        <li className="px-3 py-2">
+        <li className="px-3 py-2" data-testid="wallet-connected">
           <div className="flex items-center gap-3">
             <BlockieAvatar address={checkSumAddress} size={24} ensImage={ensAvatar} />
             <div className="min-w-0">
@@ -286,7 +286,7 @@ export const AddressInfoDropdown = ({
 
   if (inlineMenu) {
     return (
-      <div className="w-full flex flex-col">
+      <div className="w-full flex flex-col" data-testid="wallet-connected">
         {walletSummary}
         <ul className="menu menu-vertical p-0 gap-0.5 w-full">
           <MenuItems disconnect={disconnect} showFaucet={showFaucet} />
@@ -296,7 +296,7 @@ export const AddressInfoDropdown = ({
   }
 
   return (
-    <div className="flex flex-col items-center xl:items-start gap-0.5">
+    <div className="flex flex-col items-center xl:items-start gap-0.5" data-testid="wallet-connected">
       <div className="flex items-center justify-center xl:justify-start gap-2 xl:px-2 py-1">
         <BlockieAvatar address={checkSumAddress} size={30} ensImage={ensAvatar} />
         <span className="text-base hidden lg:inline">

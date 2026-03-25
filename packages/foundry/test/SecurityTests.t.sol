@@ -341,7 +341,9 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         vm.prank(voter);
         crepToken.transfer(address(votingEngine), STAKE);
 
-        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "plain transfers do not create rounds");
+        assertEq(
+            RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "plain transfers do not create rounds"
+        );
         assertEq(crepToken.balanceOf(address(votingEngine)), 1_000_000e6 + STAKE, "tokens transferred without vote");
     }
 }

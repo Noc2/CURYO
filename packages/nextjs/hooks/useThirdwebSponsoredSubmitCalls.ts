@@ -64,9 +64,7 @@ export function shouldPreferSponsoredSubmitCalls(params: {
   chainId: number | undefined;
   connectorId: string | undefined;
 }) {
-  return (
-    params.canUseFreeTransactions && shouldExpectSponsoredSubmitCalls(params)
-  );
+  return params.canUseFreeTransactions && shouldExpectSponsoredSubmitCalls(params);
 }
 
 export function shouldExpectSponsoredSubmitCalls(params: {
@@ -119,9 +117,7 @@ export function useThirdwebSponsoredSubmitCalls() {
   const canUseGaslessSubmitTransactions = useMemo(
     () =>
       freeTransactionAllowance.canUseFreeTransactions &&
-      (executionMode === "sponsored_7702" ||
-        sponsoredSubmitCapabilities !== undefined ||
-        expectsSponsoredSubmitCalls),
+      (executionMode === "sponsored_7702" || sponsoredSubmitCapabilities !== undefined || expectsSponsoredSubmitCalls),
     [
       expectsSponsoredSubmitCalls,
       executionMode,
@@ -138,8 +134,7 @@ export function useThirdwebSponsoredSubmitCalls() {
   );
   const isAwaitingSponsoredSubmitCalls =
     expectsSponsoredSubmitCalls &&
-    (!freeTransactionAllowance.isResolved ||
-      (prefersSponsoredSubmitCalls && !canUseSponsoredSubmitCalls));
+    (!freeTransactionAllowance.isResolved || (prefersSponsoredSubmitCalls && !canUseSponsoredSubmitCalls));
 
   const postFreeTransactionMutation = useCallback(async (path: string, body: Record<string, unknown>) => {
     const response = await fetch(path, {

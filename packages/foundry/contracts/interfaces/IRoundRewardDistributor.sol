@@ -18,9 +18,7 @@ interface IRoundRewardDistributor {
     function claimFrontendFee(uint256 contentId, uint256 roundId, address frontend) external returns (uint256 fee);
 
     /// @notice Route a settled frontend fee to protocol once the frontend is slashed or underbonded.
-    function confiscateFrontendFee(uint256 contentId, uint256 roundId, address frontend)
-        external
-        returns (uint256 fee);
+    function confiscateFrontendFee(uint256 contentId, uint256 roundId, address frontend) external returns (uint256 fee);
 
     /// @notice Claim a participation reward for the caller on a settled round.
     function claimParticipationReward(uint256 contentId, uint256 roundId) external returns (uint256 paidReward);

@@ -65,7 +65,10 @@ contract GameTheoryImprovementsTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -118,7 +121,9 @@ contract GameTheoryImprovementsTest is VotingTestBase {
         contentNonce++;
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = _submitContentWithReservation(registry, string(abi.encodePacked("https://t.co/gt", vm.toString(contentNonce))), "Goal", "Goal", "tag", 0);
+        uint256 id = _submitContentWithReservation(
+            registry, string(abi.encodePacked("https://t.co/gt", vm.toString(contentNonce))), "Goal", "Goal", "tag", 0
+        );
         vm.stopPrank();
         return id;
     }

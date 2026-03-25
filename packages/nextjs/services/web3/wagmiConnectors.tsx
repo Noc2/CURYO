@@ -1,11 +1,11 @@
 import { inAppWalletConnector } from "@thirdweb-dev/wagmi-adapter";
 import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
-import { setConnectedThirdwebConnectorWallet } from "~~/services/thirdweb/connectorWalletState";
 import {
   getPreferredThirdwebChainId,
   getThirdwebWalletExecutionMode,
   thirdwebClient,
 } from "~~/services/thirdweb/client";
+import { setConnectedThirdwebConnectorWallet } from "~~/services/thirdweb/connectorWalletState";
 
 const CURYO_THIRDWEB_ICON = "/favicon.svg";
 

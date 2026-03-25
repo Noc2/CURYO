@@ -61,7 +61,10 @@ contract InvariantRating is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -128,7 +131,7 @@ contract InvariantRating is VotingTestBase {
             VotingHandler.RoundRecord memory rec = handler.getRoundRecord(i);
             if (!rec.settled) continue;
 
-            (, , , , , , , , , , uint256 rating,) = registry.contents(rec.contentId);
+            (,,,,,,,,,, uint256 rating,) = registry.contents(rec.contentId);
             assertLe(rating, 100, "rating exceeds 100");
         }
     }
@@ -144,7 +147,7 @@ contract InvariantRating is VotingTestBase {
             // Only check rounds where UP side had strictly more raw stake
             if (round.upPool <= round.downPool) continue;
 
-            (, , , , , , , , , , uint256 rating,) = registry.contents(rec.contentId);
+            (,,,,,,,,,, uint256 rating,) = registry.contents(rec.contentId);
             assertGe(rating, 50, "UP-majority round produced rating < 50");
         }
     }

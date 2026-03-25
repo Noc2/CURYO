@@ -682,7 +682,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         (, bytes32 submissionKey) = registry.previewSubmissionKey(url, 0);
-        bytes32 revealCommitment = keccak256(abi.encode(submissionKey, title, description, tags, uint256(0), salt, submitter));
+        bytes32 revealCommitment =
+            keccak256(abi.encode(submissionKey, title, description, tags, uint256(0), salt, submitter));
         registry.reserveSubmission(revealCommitment);
         vm.warp(block.timestamp + 1);
         vm.expectEmit(true, true, false, true);
@@ -782,8 +783,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        uint256 contentId =
-            _submitContentWithReservation(registry, "https://example.com/exact-max-title", string(title), "description", "tag1", 0);
+        uint256 contentId = _submitContentWithReservation(
+            registry, "https://example.com/exact-max-title", string(title), "description", "tag1", 0
+        );
         vm.stopPrank();
 
         assertEq(contentId, 1);
@@ -799,7 +801,9 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
         vm.expectRevert("Title too long");
-        registry.submitContent("https://example.com/over-max-title", string(title), "description", "tag1", 0, bytes32(0));
+        registry.submitContent(
+            "https://example.com/over-max-title", string(title), "description", "tag1", 0, bytes32(0)
+        );
         vm.stopPrank();
     }
 
@@ -812,8 +816,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
 
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        uint256 contentId = _submitContentWithReservation(registry, 
-            "https://example.com/exact-max-description", "title", string(description), "tag1", 0
+        uint256 contentId = _submitContentWithReservation(
+            registry, "https://example.com/exact-max-description", "title", string(description), "tag1", 0
         );
         vm.stopPrank();
 
@@ -952,7 +956,8 @@ contract ContentRegistryCoverageTest is VotingTestBase {
         // URL should be reusable
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        uint256 id2 = _submitContentWithReservation(registry, "https://example.com/reuse", "new goal", "new goal", "tag", 0);
+        uint256 id2 =
+            _submitContentWithReservation(registry, "https://example.com/reuse", "new goal", "new goal", "tag", 0);
         vm.stopPrank();
         assertEq(id2, 2);
     }
@@ -1615,7 +1620,10 @@ contract RoundSettlementBranchTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crep), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crep), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -1927,8 +1935,13 @@ contract RoundSettlementBranchTest is VotingTestBase {
         contentId = registry.nextContentId();
         vm.startPrank(submitter);
         crep.approve(address(registry), 10e6);
-        _submitContentWithReservation(registry, 
-            string(abi.encodePacked("https://example.com/test-", vm.toString(contentId))), "goal", "goal", "test", 0
+        _submitContentWithReservation(
+            registry,
+            string(abi.encodePacked("https://example.com/test-", vm.toString(contentId))),
+            "goal",
+            "goal",
+            "test",
+            0
         );
         vm.stopPrank();
     }

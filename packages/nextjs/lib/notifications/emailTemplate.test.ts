@@ -9,6 +9,8 @@ test("buildCuryoEmailHtml includes the branded header, button, and fallback link
     ctaLabel: "Verify email",
     ctaHref: "https://info.curyo.xyz/api/notifications/email/verify?token=test-token",
     eyebrow: "Email verification",
+    footerLinkLabel: "Unsubscribe from these emails",
+    footerLinkHref: "https://info.curyo.xyz/api/notifications/email/unsubscribe?token=unsubscribe-token",
   });
 
   assert.match(html, />\s*Curyo\s*</);
@@ -17,4 +19,6 @@ test("buildCuryoEmailHtml includes the branded header, button, and fallback link
   assert.match(html, /background:#f26426/);
   assert.match(html, />\s*Verify email\s*</);
   assert.match(html, /If the button does not work, open this link manually:/);
+  assert.match(html, /Unsubscribe from these emails/);
+  assert.match(html, /unsubscribe\?token=unsubscribe-token/);
 });

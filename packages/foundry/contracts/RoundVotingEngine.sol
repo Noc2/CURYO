@@ -158,6 +158,7 @@ contract RoundVotingEngine is
     );
     event ConsensusReserveFunded(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
     event ConsensusSubsidyDistributed(uint256 indexed contentId, uint256 indexed roundId, uint256 amount);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -630,31 +631,28 @@ contract RoundVotingEngine is
 
         // Update content rating using raw revealed pools (accurate crowd opinion)
         uint16 newRating = RewardMath.calculateRating(round.upPool, round.downPool);
-        try registry.updateRatingDirect(contentId, newRating) { }
-        catch { }
+        try registry.updateRatingDirect(contentId, newRating) { } catch { }
 
-        try registry.recordMeaningfulActivity(contentId) { }
-        catch { }
+        try registry.recordMeaningfulActivity(contentId) { } catch { }
 
         // Snapshot participation rate for pull-based claiming
         if (address(currentParticipationPool) != address(0)) {
             try currentParticipationPool.getCurrentRateBps() returns (uint256 rate) {
                 try registry.snapshotSubmitterParticipationTerms(contentId, address(currentParticipationPool), rate) { }
-                catch { }
+                    catch { }
                 if (currentRewardDistributor != address(0)) {
                     uint256 winningStake = upWins ? round.upPool : round.downPool;
                     try IRoundRewardDistributor(currentRewardDistributor)
                         .snapshotParticipationRewards(
                             contentId, roundId, address(currentParticipationPool), rate, winningStake
                         ) { }
-                    catch { }
+                        catch { }
                 }
             } catch { }
         }
 
         // Check submitter stake return/slash conditions
-        try SubmitterStakeLib.resolve(registry, contentHasSettledRound[contentId], contentId) { }
-        catch { }
+        try SubmitterStakeLib.resolve(registry, contentHasSettledRound[contentId], contentId) { } catch { }
         emit RoundSettled(contentId, roundId, upWins, losingPool);
     }
 

@@ -50,9 +50,7 @@ contract GovernanceGasBudgetTest is Test {
         uint256 gasUsed = _measureCall(address(governor), abi.encodeCall(CuryoGovernor.quorum, (block.number - 1)));
 
         assertLe(
-            gasUsed,
-            MAX_QUORUM_MAX_EXCLUDED_HOLDERS_GAS,
-            "quorum worst-case excluded-holder scan gas budget exceeded"
+            gasUsed, MAX_QUORUM_MAX_EXCLUDED_HOLDERS_GAS, "quorum worst-case excluded-holder scan gas budget exceeded"
         );
     }
 }

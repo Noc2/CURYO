@@ -229,8 +229,8 @@ for VADDR in "$VOTER1_ADDR" "$VOTER2_ADDR"; do
 done
 echo ""
 
-# Mine 5 blocks for flash-loan protection (MIN_HOLD_BLOCKS = 5)
-echo "Mining blocks for flash-loan protection..."
+# Mine a few blocks so seeded voting happens after the initial setup transactions.
+echo "Mining blocks before seeded votes..."
 for _ in {1..5}; do
   cast rpc anvil_mine --rpc-url "$RPC" > /dev/null 2>&1
 done
