@@ -158,7 +158,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance, // timelock as governance
             address(votingEngine)
         );
-        CuryoGovernor(payable(governorAddr)).setCategoryRegistry(address(categoryRegistry));
+        if (!isLocalDev) {
+            CuryoGovernor(payable(governorAddr)).setCategoryRegistry(address(categoryRegistry));
+        }
 
         // 7. Deploy VoterIdNFT (soulbound identity for verified humans)
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
