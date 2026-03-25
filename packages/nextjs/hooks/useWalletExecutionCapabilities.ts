@@ -18,26 +18,26 @@ export function resolveWalletExecutionMode(params: {
   isThirdwebInApp: boolean;
   supportedChain: boolean;
   thirdwebSponsorshipMode: "sponsored" | "self-funded" | null;
-}) {
+}): WalletExecutionMode {
   if (params.supportedChain && params.isThirdwebInApp && params.thirdwebSponsorshipMode === "sponsored") {
-    return "sponsored_7702" satisfies WalletExecutionMode;
+    return "sponsored_7702";
   }
 
   if (params.supportedChain && params.isThirdwebInApp && params.thirdwebSponsorshipMode === "self-funded") {
-    return "self_funded_7702" satisfies WalletExecutionMode;
+    return "self_funded_7702";
   }
 
   if (params.supportedChain) {
     // External wallets may expose `sendCalls`, but hardware-backed accounts
     // can still reject the EIP-7702 upgrade path. Keep them on plain Celo txs.
-    return "fee_currency" satisfies WalletExecutionMode;
+    return "fee_currency";
   }
 
   if (params.hasSendCalls) {
-    return "external_send_calls" satisfies WalletExecutionMode;
+    return "external_send_calls";
   }
 
-  return "direct_celo" satisfies WalletExecutionMode;
+  return "direct_celo";
 }
 
 export function resolveWalletExecutionChainId(

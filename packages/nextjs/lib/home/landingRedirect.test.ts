@@ -1,6 +1,6 @@
+import { shouldAutoRedirectFromLanding } from "./landingRedirect";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { shouldAutoRedirectFromLanding } from "./landingRedirect";
 
 test("does not auto-redirect visitors who are not connected", () => {
   assert.equal(
