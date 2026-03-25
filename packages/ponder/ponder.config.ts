@@ -164,6 +164,23 @@ function resolveStartBlock(key: string, contractName: string): number {
     return sharedStartBlock;
   }
 
+  if (activeNetwork === "hardhat") {
+    if (envValue) {
+      const parsedEnvValue = Number(envValue);
+      if (!Number.isFinite(parsedEnvValue) || !Number.isInteger(parsedEnvValue) || parsedEnvValue < 0) {
+        console.warn(
+          `[ponder config] Ignoring invalid ${key} value for hardhat; using local start block 0 for ${contractName}.`,
+        );
+      } else if (parsedEnvValue !== 0) {
+        console.warn(
+          `[ponder config] Ignoring ${key}=${envValue} for hardhat; using local start block 0 for ${contractName}.`,
+        );
+      }
+    }
+
+    return 0;
+  }
+
   if (!envValue) return 0;
 
   const parsed = Number(envValue);
