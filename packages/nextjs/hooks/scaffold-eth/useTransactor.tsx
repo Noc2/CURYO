@@ -55,7 +55,15 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
     let blockExplorerTxURL = "";
     let chainId: number = scaffoldConfig.targetNetworks[0].id;
     try {
-      chainId = await walletClient.getChainId();
+      const cachedChainId =
+        walletClient.chain?.id ??
+        (typeof walletClient.account === "object" && "chainId" in walletClient.account
+          ? Number((walletClient.account as { chainId?: number }).chainId)
+          : undefined);
+      chainId = Number.isFinite(cachedChainId) ? cachedChainId : scaffoldConfig.targetNetworks[0].id;
+      if (!Number.isFinite(chainId)) {
+        chainId = await walletClient.getChainId();
+      }
       // Get full transaction from public client for the correct chain
       const publicClient = getPublicClient(runtimeConfig, { chainId: chainId as any });
       if (!publicClient) {
