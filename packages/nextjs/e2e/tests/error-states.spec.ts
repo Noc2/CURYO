@@ -1,7 +1,7 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
 import { setupWallet } from "../helpers/wallet-session";
-import { waitForFeedLoaded } from "../helpers/wait-helpers";
+import { gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 import { expect, test } from "@playwright/test";
 
 test.describe("Error states and edge cases", () => {
@@ -10,7 +10,7 @@ test.describe("Error states and edge cases", () => {
     const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account1.privateKey);
-    await page.goto("/submit", { waitUntil: "domcontentloaded" });
+    await gotoWithRetry(page, "/submit");
 
     // Without VoterID, should show "Voter ID Required" heading
     const voterIdRequired = page.getByRole("heading", { name: /Voter ID Required/i });
@@ -35,7 +35,7 @@ test.describe("Error states and edge cases", () => {
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
-    await page.goto(`/vote?q=${encodeURIComponent("Fantastic Mr. Fox")}`, { waitUntil: "domcontentloaded" });
+    await gotoWithRetry(page, `/vote?q=${encodeURIComponent("Fantastic Mr. Fox")}`);
     await waitForFeedLoaded(page, 20_000);
 
     const ownContentLabel = page.getByText("Your submission");
@@ -50,7 +50,7 @@ test.describe("Error states and edge cases", () => {
     // This test verifies the page still loads without errors.
     const context = await newE2EContext(browser);
     const page = await context.newPage();
-    await page.goto("/vote");
+    await gotoWithRetry(page, "/vote");
     await waitForFeedLoaded(page, 20_000);
 
     // Page should render main content
