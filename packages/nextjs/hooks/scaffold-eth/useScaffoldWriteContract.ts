@@ -108,8 +108,8 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
         });
       }
 
-      // Pre-estimate gas via public client (direct RPC) to avoid failures when
-      // the wallet connector (e.g. MetaMask) has stale cached state after chain restart
+      // Pre-fill gas and nonce via the public client (direct RPC) to avoid
+      // wallet-side stale state during sequential writes on external wallets.
       if (accountAddress) {
         const publicClient = getPublicClient(wagmiConfig, { chainId: selectedNetwork.id as any });
         if (publicClient) {
@@ -126,6 +126,15 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
             (writeContractObject as any).gas = (estimated * 120n) / 100n;
           } catch {
             // Fallback: let the wallet estimate gas
+          }
+
+          try {
+            (writeContractObject as any).nonce = await publicClient.getTransactionCount({
+              address: accountAddress,
+              blockTag: "pending",
+            });
+          } catch {
+            // Fallback: let the wallet choose the nonce
           }
         }
       }

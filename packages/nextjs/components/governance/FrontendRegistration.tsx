@@ -528,12 +528,8 @@ export function FrontendRegistration() {
           {/* Address being registered */}
           <FrontendOperatorAddressRow label="Registering address:" address={address} />
 
-          {requiresVoterId && (
-            <p className={`text-sm ${canRegisterWithCurrentAddress ? "text-success" : "text-warning"}`}>
-              {canRegisterWithCurrentAddress
-                ? "This wallet satisfies the Voter ID requirement for frontend registration."
-                : "Frontend registration requires this wallet to hold a Voter ID directly."}
-            </p>
+          {requiresVoterId && !canRegisterWithCurrentAddress && (
+            <p className="text-sm text-warning">Frontend registration requires this wallet to hold a Voter ID directly.</p>
           )}
 
           {/* Stake info */}

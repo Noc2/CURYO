@@ -6,6 +6,10 @@ import { ConnectorAlreadyConnectedError, useAccount, useConnect } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { thirdwebClient } from "~~/services/thirdweb/client";
 
+export function getWagmiConnectorIdForThirdwebWallet(wallet: Wallet) {
+  return wallet.id === "inApp" ? "in-app-wallet" : "injected";
+}
+
 export function shouldSkipThirdwebWagmiSync(params: {
   connectorId: string;
   currentAddress?: string;
@@ -32,9 +36,10 @@ export function useThirdwebWagmiSync() {
         return;
       }
 
-      const connector = connectors.find(item => item.id === "in-app-wallet");
+      const connectorId = getWagmiConnectorIdForThirdwebWallet(wallet);
+      const connector = connectors.find(item => item.id === connectorId);
       if (!connector) {
-        throw new Error("Thirdweb wagmi connector is not configured");
+        throw new Error(`Wagmi connector "${connectorId}" is not configured`);
       }
 
       const requestedChainId = wallet.getChain()?.id ?? fallbackChainId;
@@ -54,12 +59,14 @@ export function useThirdwebWagmiSync() {
       }
 
       try {
-        await connectAsync({
-          chainId: requestedChainId,
-          connector,
-          isReconnecting: options?.reconnect,
-          wallet,
-        } as any);
+        await connectAsync(
+          {
+            chainId: requestedChainId,
+            connector,
+            isReconnecting: options?.reconnect,
+            ...(connector.id === "in-app-wallet" ? { wallet } : {}),
+          } as any,
+        );
       } catch (error) {
         if (error instanceof ConnectorAlreadyConnectedError) {
           return;

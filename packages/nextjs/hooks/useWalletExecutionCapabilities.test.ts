@@ -1,5 +1,6 @@
 import {
   resolveWalletCapabilitiesForChain,
+  resolveWalletExecutionMode,
   resolveWalletExecutionChainId,
   walletCapabilitiesSupportPaymasterService,
 } from "./useWalletExecutionCapabilities";
@@ -16,6 +17,30 @@ test("resolveWalletExecutionChainId falls back to the thirdweb chain during reco
 
 test("resolveWalletExecutionChainId returns undefined when no wallet chain is available", () => {
   assert.equal(resolveWalletExecutionChainId(undefined, undefined), undefined);
+});
+
+test("resolveWalletExecutionMode uses sponsored 7702 for in-app wallets on supported chains", () => {
+  assert.equal(
+    resolveWalletExecutionMode({
+      hasSendCalls: true,
+      isThirdwebInApp: true,
+      supportedChain: true,
+      thirdwebSponsorshipMode: "sponsored",
+    }),
+    "sponsored_7702",
+  );
+});
+
+test("resolveWalletExecutionMode keeps external wallets on fee-currency flow for supported chains", () => {
+  assert.equal(
+    resolveWalletExecutionMode({
+      hasSendCalls: true,
+      isThirdwebInApp: false,
+      supportedChain: true,
+      thirdwebSponsorshipMode: null,
+    }),
+    "fee_currency",
+  );
 });
 
 test("resolveWalletCapabilitiesForChain reads chain-keyed capabilities", () => {

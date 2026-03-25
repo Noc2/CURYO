@@ -3,7 +3,7 @@ import { type Hex, getAddress, isAddress, isHex, keccak256, stringToHex, toHex }
 export type FreeTransactionOperationCall = {
   data?: Hex;
   to: `0x${string}`;
-  value?: bigint | Hex;
+  value?: bigint | Hex | string;
 };
 
 function normalizeHex(value: Hex | undefined, fallback: Hex): Hex {
@@ -14,13 +14,25 @@ function normalizeHex(value: Hex | undefined, fallback: Hex): Hex {
   return (value.startsWith("0x") ? value.toLowerCase() : `0x${value}`.toLowerCase()) as Hex;
 }
 
-function normalizeValue(value: bigint | Hex | undefined): Hex | null {
+function normalizeValue(value: bigint | Hex | string | undefined): Hex | null {
   if (typeof value === "bigint") {
     return toHex(value);
   }
 
   if (typeof value === "string") {
-    return isHex(value) ? normalizeHex(value, "0x0") : null;
+    if (isHex(value)) {
+      return normalizeHex(value, "0x0");
+    }
+
+    if (/^\d+$/.test(value)) {
+      try {
+        return toHex(BigInt(value));
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
   }
 
   return "0x0";

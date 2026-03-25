@@ -1,4 +1,8 @@
-import { shouldExpectSponsoredSubmitCalls, shouldPreferSponsoredSubmitCalls } from "./useThirdwebSponsoredSubmitCalls";
+import {
+  isThirdwebSponsorshipDeniedError,
+  shouldExpectSponsoredSubmitCalls,
+  shouldPreferSponsoredSubmitCalls,
+} from "./useThirdwebSponsoredSubmitCalls";
 import assert from "node:assert/strict";
 import test from "node:test";
 
@@ -43,4 +47,17 @@ test("does not prefer sponsored submit calls for unsupported connectors", () => 
     }),
     false,
   );
+});
+
+test("detects thirdweb sponsorship denials", () => {
+  assert.equal(
+    isThirdwebSponsorshipDeniedError(
+      new Error('Error executing 7702 transaction: {"reason":"Transaction not sponsored."}'),
+    ),
+    true,
+  );
+});
+
+test("ignores unrelated thirdweb submit failures", () => {
+  assert.equal(isThirdwebSponsorshipDeniedError(new Error("User rejected the request.")), false);
 });

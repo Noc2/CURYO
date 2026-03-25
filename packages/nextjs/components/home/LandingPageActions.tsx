@@ -7,9 +7,10 @@ import styles from "./LandingPageActions.module.css";
 import { useAccount } from "wagmi";
 import { ChevronRightIcon } from "@heroicons/react/20/solid";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
+import { shouldAutoRedirectFromLanding } from "~~/lib/home/landingRedirect";
 
 export function LandingPageActions() {
-  const { address, isConnected } = useAccount();
+  const { address, connector, isConnected } = useAccount();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectedAddressRef = useRef<string | null>(null);
@@ -33,16 +34,21 @@ export function LandingPageActions() {
   }, [showLanding]);
 
   useEffect(() => {
-    if (explicitLandingVisitRef.current) {
-      return;
-    }
-
-    if (!isConnected || !address) {
+    if (
+      !shouldAutoRedirectFromLanding({
+        address,
+        connectorId: connector?.id,
+        hasExplicitLandingOverride: explicitLandingVisitRef.current,
+        isConnected,
+        voterIdResolved,
+      })
+    ) {
       redirectedAddressRef.current = null;
       return;
     }
 
-    if (!voterIdResolved) {
+    if (!address) {
+      redirectedAddressRef.current = null;
       return;
     }
 
@@ -53,7 +59,7 @@ export function LandingPageActions() {
 
     router.replace(hasVoterId ? "/vote" : "/governance");
     redirectedAddressRef.current = addressKey;
-  }, [address, hasVoterId, isConnected, router, voterIdResolved]);
+  }, [address, connector?.id, hasVoterId, isConnected, router, voterIdResolved]);
 
   return (
     <div className="mt-6 flex flex-wrap justify-center gap-3 lg:justify-start">

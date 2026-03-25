@@ -13,6 +13,33 @@ export type WalletExecutionMode =
   | "fee_currency"
   | "direct_celo";
 
+export function resolveWalletExecutionMode(params: {
+  hasSendCalls: boolean;
+  isThirdwebInApp: boolean;
+  supportedChain: boolean;
+  thirdwebSponsorshipMode: "sponsored" | "self-funded" | null;
+}): WalletExecutionMode {
+  if (params.supportedChain && params.isThirdwebInApp && params.thirdwebSponsorshipMode === "sponsored") {
+    return "sponsored_7702";
+  }
+
+  if (params.supportedChain && params.isThirdwebInApp && params.thirdwebSponsorshipMode === "self-funded") {
+    return "self_funded_7702";
+  }
+
+  if (params.supportedChain) {
+    // External wallets may expose `sendCalls`, but hardware-backed accounts
+    // can still reject the EIP-7702 upgrade path. Keep them on plain Celo txs.
+    return "fee_currency";
+  }
+
+  if (params.hasSendCalls) {
+    return "external_send_calls";
+  }
+
+  return "direct_celo";
+}
+
 export function resolveWalletExecutionChainId(
   wagmiChainId: number | null | undefined,
   thirdwebChainId: number | null | undefined,
@@ -83,17 +110,12 @@ export function useWalletExecutionCapabilities() {
     const thirdwebSponsorshipMode = isThirdwebInApp ? getThirdwebWalletSponsorshipMode(wallet) : null;
     const supportsPaymasterService = walletCapabilitiesSupportPaymasterService(activeCapabilities);
 
-    let executionMode: WalletExecutionMode = "direct_celo";
-
-    if (supportedChain && isThirdwebInApp && thirdwebSponsorshipMode === "sponsored") {
-      executionMode = "sponsored_7702";
-    } else if (supportedChain && isThirdwebInApp && thirdwebSponsorshipMode === "self-funded") {
-      executionMode = "self_funded_7702";
-    } else if (supportedChain && hasSendCalls && wallet) {
-      executionMode = "external_send_calls";
-    } else if (supportedChain) {
-      executionMode = "fee_currency";
-    }
+    const executionMode = resolveWalletExecutionMode({
+      hasSendCalls: Boolean(hasSendCalls && wallet),
+      isThirdwebInApp,
+      supportedChain,
+      thirdwebSponsorshipMode,
+    });
 
     return {
       capabilities: activeCapabilities,

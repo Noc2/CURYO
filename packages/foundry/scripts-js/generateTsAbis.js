@@ -323,9 +323,9 @@ function main() {
     ${generatedContractComment}
     import type { GenericContractsDeclaration } from "./types";
 
-    const deployedContracts = {${fileContent}} as const;
+    const deployedContracts: GenericContractsDeclaration = {${fileContent}};
 
-    export default deployedContracts satisfies GenericContractsDeclaration;
+    export default deployedContracts;
   `;
 
   writeFileSync(
