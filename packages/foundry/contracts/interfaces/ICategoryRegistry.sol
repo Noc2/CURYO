@@ -53,4 +53,13 @@ interface ICategoryRegistry {
 
     /// @notice Get the submitter address for a category
     function getSubmitter(uint256 categoryId) external view returns (address);
+
+    /// @notice Get the current status for a category
+    function getCategoryStatus(uint256 categoryId) external view returns (CategoryStatus);
+
+    /// @notice Get the current approval digest that governance proposals must bind to for this category
+    function getCategoryApprovalDigest(uint256 categoryId) external view returns (bytes32);
+
+    /// @notice Get the block number where the category was submitted
+    function getCategoryCreatedBlock(uint256 categoryId) external view returns (uint256);
 }

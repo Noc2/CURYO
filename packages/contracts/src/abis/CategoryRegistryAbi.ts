@@ -189,6 +189,11 @@ export const CategoryRegistryAbi = [
         "name": "descriptionHash",
         "type": "bytes32",
         "internalType": "bytes32"
+      },
+      {
+        "name": "approvalDigest",
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
     "outputs": [],
@@ -420,6 +425,44 @@ export const CategoryRegistryAbi = [
         "name": "",
         "type": "uint8",
         "internalType": "enum ICategoryRegistry.CategoryStatus"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getCategoryApprovalDigest",
+    "inputs": [
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getCategoryCreatedBlock",
+    "inputs": [
+      {
+        "name": "categoryId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"

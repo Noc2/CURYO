@@ -10,9 +10,14 @@ import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 
+interface IProposalCreationTracker {
+    function proposalCreatedBlock(uint256 proposalId) external view returns (uint256);
+}
+
 /// @title CategoryRegistry
 /// @notice Manages content categories/platforms with governance-based approval.
 /// @dev Categories require 500 cREP stake and a separately sponsored governance approval proposal to become active.
+///      Approval proposals are bound to the current submission attempt so old or pre-created proposals cannot be reused.
 ///      Rejected categories lose their stake to the consensus reserve.
 contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
@@ -40,6 +45,9 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     mapping(bytes32 => uint256) private _approvedDomainToCategory; // domain hash => approved categoryId
     mapping(bytes32 => uint256) private _pendingDomainReservation; // domain hash => pending linked categoryId
     mapping(uint256 => uint256) private _proposalLinkedAt; // categoryId => timestamp when current proposal was linked
+    mapping(uint256 => uint256) private _categoryCreatedBlock; // categoryId => submission block number
+    mapping(uint256 => bytes32) private _categoryApprovalSeed; // categoryId => submission-bound approval seed
+    mapping(uint256 => uint256) private _categoryApprovalNonce; // categoryId => current approval retry nonce
     uint256[] private _approvedCategoryIds;
     IVoterIdNFT public voterIdNFT; // Voter ID NFT for sybil resistance
 
@@ -157,11 +165,16 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
             proposalId: 0,
             createdAt: block.timestamp
         });
+        _categoryCreatedBlock[categoryId] = block.number;
+        _categoryApprovalSeed[categoryId] =
+            keccak256(abi.encode(block.prevrandao, block.number, categoryId, msg.sender, name, normalizedDomain, subcategories));
 
         emit CategorySubmitted(categoryId, msg.sender, name, normalizedDomain, 0);
     }
 
     /// @notice Link the separately created governor approval proposal for a pending category.
+    /// @dev The linked proposal must match the current submission-bound approval digest and must have been created
+    ///      in a later block than the submission itself.
     /// @param categoryId The pending category ID.
     /// @param descriptionHash Keccak-256 hash of the exact governor proposal description.
     /// @return proposalId The canonical governor proposal ID for this category.
@@ -180,6 +193,10 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         proposalId = getApprovalProposalId(categoryId, descriptionHash);
         require(governor.proposalProposer(proposalId) != address(0), "Proposal not found");
         require(_isLinkableProposalState(governor.state(proposalId)), "Proposal not linkable");
+        require(
+            IProposalCreationTracker(address(governor)).proposalCreatedBlock(proposalId) > _categoryCreatedBlock[categoryId],
+            "Proposal too early"
+        );
 
         bytes32 domainHash = keccak256(abi.encodePacked(cat.domain));
         require(_approvedDomainToCategory[domainHash] == 0, "Domain already registered");
@@ -194,7 +211,8 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     /// @notice Clear a linked approval proposal after it was canceled, expired, or left succeeded but unqueued past
     ///         the stale timeout.
     /// @dev This lets the submitter either relink a fresh proposal before the sponsorship window ends
-    ///      or reclaim stake via cancelUnlinkedCategory() after the window has passed.
+    ///      or reclaim stake via cancelUnlinkedCategory() after the window has passed. Each clear rotates the
+    ///      submission's approval nonce so stale proposals cannot be relinked.
     function clearApprovalProposal(uint256 categoryId) external nonReentrant {
         Category storage cat = _categories[categoryId];
         require(cat.id != 0, "Category does not exist");
@@ -205,15 +223,14 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         IGovernor.ProposalState proposalState = governor.state(cat.proposalId);
         require(
             proposalState == IGovernor.ProposalState.Canceled || proposalState == IGovernor.ProposalState.Expired
-                || (
-                    proposalState == IGovernor.ProposalState.Succeeded
-                        && block.timestamp > _proposalLinkedAt[categoryId] + STALE_LINKED_PROPOSAL_TIMEOUT
-                ),
+                || (proposalState == IGovernor.ProposalState.Succeeded
+                    && block.timestamp > _proposalLinkedAt[categoryId] + STALE_LINKED_PROPOSAL_TIMEOUT),
             "Proposal not clearable"
         );
 
         cat.proposalId = 0;
         delete _proposalLinkedAt[categoryId];
+        _categoryApprovalNonce[categoryId] += 1;
         _releasePendingDomain(cat, categoryId);
     }
 
@@ -241,13 +258,15 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
     /// @dev Only callable by the timelock while the exact linked proposal is being executed from the queued state.
     /// @param categoryId The pending category to approve.
     /// @param descriptionHash Keccak-256 hash of the exact governor proposal description linked to the category.
-    function approveCategory(uint256 categoryId, bytes32 descriptionHash) external nonReentrant {
+    /// @param approvalDigest Submission-bound digest for the current approval attempt.
+    function approveCategory(uint256 categoryId, bytes32 descriptionHash, bytes32 approvalDigest) external nonReentrant {
         require(msg.sender == timelock, "Only timelock");
 
         Category storage cat = _categories[categoryId];
         require(cat.id != 0, "Category does not exist");
         require(cat.status == CategoryStatus.Pending, "Not pending");
         require(cat.proposalId != 0, "Proposal not linked");
+        require(approvalDigest == getCategoryApprovalDigest(categoryId), "Wrong approval digest");
 
         uint256 expectedProposalId = getApprovalProposalId(categoryId, descriptionHash);
         require(expectedProposalId == cat.proposalId, "Wrong proposal");
@@ -297,11 +316,11 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
 
     /// @notice Add an approved category directly (for initial seeding)
     /// @dev Only callable by admin. No stake required.
-    function addApprovedCategory(
-        string calldata name,
-        string calldata domain,
-        string[] calldata subcategories
-    ) external onlyRole(ADMIN_ROLE) returns (uint256 categoryId) {
+    function addApprovedCategory(string calldata name, string calldata domain, string[] calldata subcategories)
+        external
+        onlyRole(ADMIN_ROLE)
+        returns (uint256 categoryId)
+    {
         // Validate inputs
         require(bytes(name).length > 0 && bytes(name).length <= MAX_NAME_LENGTH, "Invalid name length");
         require(bytes(domain).length > 0 && bytes(domain).length <= MAX_DOMAIN_LENGTH, "Invalid domain length");
@@ -399,6 +418,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         view
         returns (uint256 proposalId)
     {
+        bytes32 approvalDigest = getCategoryApprovalDigest(categoryId);
         address[] memory targets = new address[](1);
         targets[0] = address(this);
 
@@ -406,15 +426,25 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
         values[0] = 0;
 
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSelector(this.approveCategory.selector, categoryId, descriptionHash);
+        calldatas[0] = abi.encodeWithSelector(this.approveCategory.selector, categoryId, descriptionHash, approvalDigest);
 
         proposalId = governor.getProposalId(targets, values, calldatas, descriptionHash);
     }
 
     /// @notice Get category status
-    function getCategoryStatus(uint256 categoryId) external view returns (CategoryStatus) {
+    function getCategoryStatus(uint256 categoryId) external view override returns (CategoryStatus) {
         require(_categories[categoryId].id != 0, "Category does not exist");
         return _categories[categoryId].status;
+    }
+
+    function getCategoryApprovalDigest(uint256 categoryId) public view override returns (bytes32) {
+        require(_categories[categoryId].id != 0, "Category does not exist");
+        return keccak256(abi.encode(_categoryApprovalSeed[categoryId], _categoryApprovalNonce[categoryId]));
+    }
+
+    function getCategoryCreatedBlock(uint256 categoryId) external view override returns (uint256) {
+        require(_categories[categoryId].id != 0, "Category does not exist");
+        return _categoryCreatedBlock[categoryId];
     }
 
     /// @notice Get category's subcategories
@@ -475,7 +505,7 @@ contract CategoryRegistry is ICategoryRegistry, AccessControl, ReentrancyGuardTr
             // Verify there's still a valid domain after the subdomain (at least "x.y")
             bool hasMoreDots = false;
             for (uint256 j = startIndex + 2; j < b.length; j++) {
-                if (b[j] == "/" || b[j] == ":" || b[j] == "?" || b[j] == "#") break;// forgefmt: disable-next-line
+                if (b[j] == "/" || b[j] == ":" || b[j] == "?" || b[j] == "#") break; // forgefmt: disable-next-line
                 if (b[j] == ".") { hasMoreDots = true; break; }
             }
             if (hasMoreDots) {

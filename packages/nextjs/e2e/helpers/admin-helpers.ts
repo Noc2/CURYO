@@ -64,7 +64,10 @@ async function buildSubmissionReservation(
     args: [url, categoryId],
   });
 
-  const previewResult = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data: previewData }, "latest"]);
+  const previewResult = await rpcRequest<`0x${string}`>("eth_call", [
+    { to: contractAddress, data: previewData },
+    "latest",
+  ]);
   if (!previewResult) return null;
 
   const [, submissionKey] = decodeFunctionResult({
@@ -156,7 +159,7 @@ async function sendTx(from: string, to: string, data: `0x${string}`): Promise<bo
 
 /**
  * Approve a pending category via the timelock.
- * Calls CategoryRegistry.approveCategory(uint256 categoryId, bytes32 descriptionHash).
+ * Calls CategoryRegistry.approveCategory(uint256 categoryId, bytes32 descriptionHash, bytes32 approvalDigest).
  * In local dev, deployer == timelock so account #0 can call directly.
  */
 export async function approveCategory(
@@ -165,7 +168,40 @@ export async function approveCategory(
   fromAddress: string,
   contractAddress: string,
 ): Promise<boolean> {
-  const { encodeFunctionData } = await import("viem");
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const digestData = encodeFunctionData({
+    abi: [
+      {
+        name: "getCategoryApprovalDigest",
+        type: "function",
+        inputs: [{ name: "categoryId", type: "uint256" }],
+        outputs: [{ name: "", type: "bytes32" }],
+        stateMutability: "view",
+      },
+    ],
+    functionName: "getCategoryApprovalDigest",
+    args: [BigInt(categoryId)],
+  });
+  const digestResult = await rpcRequest<`0x${string}`>("eth_call", [
+    { to: contractAddress, data: digestData },
+    "latest",
+  ]);
+  if (!digestResult) return false;
+
+  const approvalDigest = decodeFunctionResult({
+    abi: [
+      {
+        name: "getCategoryApprovalDigest",
+        type: "function",
+        inputs: [{ name: "categoryId", type: "uint256" }],
+        outputs: [{ name: "", type: "bytes32" }],
+        stateMutability: "view",
+      },
+    ],
+    functionName: "getCategoryApprovalDigest",
+    data: digestResult,
+  }) as `0x${string}`;
+
   const data = encodeFunctionData({
     abi: [
       {
@@ -174,13 +210,14 @@ export async function approveCategory(
         inputs: [
           { name: "categoryId", type: "uint256" },
           { name: "descriptionHash", type: "bytes32" },
+          { name: "approvalDigest", type: "bytes32" },
         ],
         outputs: [],
         stateMutability: "nonpayable",
       },
     ],
     functionName: "approveCategory",
-    args: [BigInt(categoryId), descriptionHash],
+    args: [BigInt(categoryId), descriptionHash, approvalDigest],
   });
   return sendTx(fromAddress, contractAddress, data);
 }

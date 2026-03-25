@@ -14,6 +14,7 @@ import { MockVoterIdNFT } from "./mocks/MockVoterIdNFT.sol";
 contract MockGovernor {
     mapping(uint256 => IGovernor.ProposalState) public proposalStates;
     mapping(uint256 => address) public proposalProposers;
+    mapping(uint256 => uint256) public proposalCreatedBlock;
 
     function propose(
         address[] memory targets,
@@ -24,6 +25,7 @@ contract MockGovernor {
         uint256 proposalId = getProposalId(targets, values, calldatas, keccak256(bytes(description)));
         proposalStates[proposalId] = IGovernor.ProposalState.Pending;
         proposalProposers[proposalId] = msg.sender;
+        proposalCreatedBlock[proposalId] = block.number;
         return proposalId;
     }
 
@@ -151,11 +153,17 @@ contract CategoryRegistryTest is Test {
         return keccak256(bytes(description));
     }
 
+    function _approvalDigest(uint256 categoryId) internal view returns (bytes32) {
+        return registry.getCategoryApprovalDigest(categoryId);
+    }
+
     function _createApprovalProposal(uint256 categoryId, string memory description)
         internal
         returns (uint256 proposalId)
     {
+        vm.roll(block.number + 1);
         bytes32 descriptionHash = _descriptionHash(description);
+        bytes32 approvalDigest = _approvalDigest(categoryId);
 
         address[] memory targets = new address[](1);
         targets[0] = address(registry);
@@ -164,7 +172,7 @@ contract CategoryRegistryTest is Test {
         values[0] = 0;
 
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash);
+        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash, approvalDigest);
 
         vm.prank(user2);
         proposalId = governor.propose(targets, values, calldatas, description);
@@ -225,6 +233,7 @@ contract CategoryRegistryTest is Test {
         address newTimelock = address(99);
         string memory description = "Approve migrated category";
         bytes32 descriptionHash = _descriptionHash(description);
+        bytes32 approvalDigest = _approvalDigest(categoryId);
 
         vm.prank(timelock);
         registry.updateGovernance(address(newGovernor), newTimelock);
@@ -238,8 +247,10 @@ contract CategoryRegistryTest is Test {
         targets[0] = address(registry);
         uint256[] memory values = new uint256[](1);
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash);
+        calldatas[0] =
+            abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash, approvalDigest);
 
+        vm.roll(block.number + 1);
         vm.prank(user2);
         uint256 proposalId = newGovernor.propose(targets, values, calldatas, description);
 
@@ -250,10 +261,10 @@ contract CategoryRegistryTest is Test {
 
         vm.prank(timelock);
         vm.expectRevert("Only timelock");
-        registry.approveCategory(categoryId, descriptionHash);
+        registry.approveCategory(categoryId, descriptionHash, approvalDigest);
 
         vm.prank(newTimelock);
-        registry.approveCategory(categoryId, descriptionHash);
+        registry.approveCategory(categoryId, descriptionHash, approvalDigest);
 
         assertTrue(registry.isApprovedCategory(categoryId));
     }
@@ -448,12 +459,13 @@ contract CategoryRegistryTest is Test {
         uint256 categoryId = _submitCategory("gatherer.wizards.com");
         uint256 proposalId = _linkApprovalProposal(categoryId, description);
         _queueProposal(proposalId);
+        bytes32 approvalDigest = _approvalDigest(categoryId);
 
         uint256 userBalanceBefore = token.balanceOf(user1);
 
         // Approve via timelock
         vm.prank(timelock);
-        registry.approveCategory(categoryId, _descriptionHash(description));
+        registry.approveCategory(categoryId, _descriptionHash(description), approvalDigest);
 
         assertTrue(registry.isApprovedCategory(categoryId));
 
@@ -469,10 +481,11 @@ contract CategoryRegistryTest is Test {
         uint256 categoryId = _submitCategory("gatherer.wizards.com");
         uint256 proposalId = _linkApprovalProposal(categoryId, description);
         _queueProposal(proposalId);
+        bytes32 approvalDigest = _approvalDigest(categoryId);
 
         vm.prank(user1);
         vm.expectRevert("Only timelock");
-        registry.approveCategory(categoryId, _descriptionHash(description));
+        registry.approveCategory(categoryId, _descriptionHash(description), approvalDigest);
     }
 
     function test_RevertApproveCategoryAlreadyApproved() public {
@@ -480,23 +493,25 @@ contract CategoryRegistryTest is Test {
         uint256 categoryId = _submitCategory("gatherer.wizards.com");
         uint256 proposalId = _linkApprovalProposal(categoryId, description);
         _queueProposal(proposalId);
+        bytes32 approvalDigest = _approvalDigest(categoryId);
 
         vm.prank(timelock);
-        registry.approveCategory(categoryId, _descriptionHash(description));
+        registry.approveCategory(categoryId, _descriptionHash(description), approvalDigest);
 
         vm.prank(timelock);
         vm.expectRevert("Not pending");
-        registry.approveCategory(categoryId, _descriptionHash(description));
+        registry.approveCategory(categoryId, _descriptionHash(description), approvalDigest);
     }
 
     function test_RevertApproveCategoryProposalNotQueued() public {
         string memory description = "Approve category #1";
         uint256 categoryId = _submitCategory("gatherer.wizards.com");
         _linkApprovalProposal(categoryId, description);
+        bytes32 approvalDigest = _approvalDigest(categoryId);
 
         vm.prank(timelock);
         vm.expectRevert("Proposal not queued");
-        registry.approveCategory(categoryId, _descriptionHash(description));
+        registry.approveCategory(categoryId, _descriptionHash(description), approvalDigest);
     }
 
     function test_RevertApproveCategoryOldProposalCannotApproveAfterRelink() public {
@@ -509,17 +524,18 @@ contract CategoryRegistryTest is Test {
         vm.prank(user1);
         registry.clearApprovalProposal(categoryId);
 
-        string memory secondDescription = "Approve category #2";
+        string memory secondDescription = "Approve category #1";
         uint256 secondProposalId = _linkApprovalProposal(categoryId, secondDescription);
+        bytes32 approvalDigest = _approvalDigest(categoryId);
 
         _queueProposal(firstProposalId);
         vm.prank(timelock);
-        vm.expectRevert("Wrong proposal");
-        registry.approveCategory(categoryId, _descriptionHash(firstDescription));
+        vm.expectRevert("Proposal not queued");
+        registry.approveCategory(categoryId, _descriptionHash(firstDescription), approvalDigest);
 
         _queueProposal(secondProposalId);
         vm.prank(timelock);
-        registry.approveCategory(categoryId, _descriptionHash(secondDescription));
+        registry.approveCategory(categoryId, _descriptionHash(secondDescription), approvalDigest);
 
         assertTrue(registry.isApprovedCategory(categoryId));
     }
@@ -582,6 +598,46 @@ contract CategoryRegistryTest is Test {
         registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #1")));
     }
 
+    function test_RevertLinkApprovalProposal_SameBlockProposalTooEarly() public {
+        uint256 categoryId = _submitCategory("same-block-link.test");
+        bytes32 descriptionHash = keccak256(bytes("Approve category #1"));
+        bytes32 approvalDigest = _approvalDigest(categoryId);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(registry);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] =
+            abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash, approvalDigest);
+
+        vm.prank(user2);
+        governor.propose(targets, values, calldatas, "Approve category #1");
+
+        vm.prank(user1);
+        vm.expectRevert("Proposal too early");
+        registry.linkApprovalProposal(categoryId, descriptionHash);
+    }
+
+    function test_RevertLinkApprovalProposal_WrongApprovalDigest() public {
+        uint256 categoryId = _submitCategory("wrong-digest-link.test");
+        bytes32 descriptionHash = keccak256(bytes("Approve category #1"));
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(registry);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] =
+            abi.encodeWithSelector(registry.approveCategory.selector, categoryId, descriptionHash, bytes32("wrong"));
+
+        vm.roll(block.number + 1);
+        vm.prank(user2);
+        governor.propose(targets, values, calldatas, "Approve category #1");
+
+        vm.prank(user1);
+        vm.expectRevert("Proposal not found");
+        registry.linkApprovalProposal(categoryId, descriptionHash);
+    }
+
     function test_RevertLinkApprovalProposal_NotSubmitter() public {
         uint256 categoryId = _submitCategory("submitter-only-link.test");
         _createApprovalProposal(categoryId, "Approve category #1");
@@ -636,12 +692,13 @@ contract CategoryRegistryTest is Test {
         assertEq(uint256(cleared.status), uint256(ICategoryRegistry.CategoryStatus.Pending));
         assertFalse(registry.isDomainRegistered("retry-link.test"));
 
-        uint256 secondProposalId = _createApprovalProposal(categoryId, "Approve category #2");
+        uint256 secondProposalId = _createApprovalProposal(categoryId, "Approve category #1");
         vm.prank(user1);
-        registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #2")));
+        registry.linkApprovalProposal(categoryId, keccak256(bytes("Approve category #1")));
 
         ICategoryRegistry.Category memory relinked = registry.getCategory(categoryId);
         assertEq(relinked.proposalId, secondProposalId);
+        assertTrue(secondProposalId != firstProposalId);
         assertTrue(registry.isDomainRegistered("retry-link.test"));
     }
 

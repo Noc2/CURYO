@@ -480,11 +480,12 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>submitCategory(name, domain, subcategories)</code> &mdash; Submit category for governance sponsorship
-          (100 cREP stake). Requires Voter ID.
+          (500 cREP stake). Requires Voter ID.
         </li>
         <li>
           <code>linkApprovalProposal(categoryId, descriptionHash)</code> &mdash; Link the separately created governor
-          approval proposal to the pending category. Submitter only.
+          approval proposal to the pending category. Submitter only, and only for proposals created after that
+          submission.
         </li>
         <li>
           <code>clearApprovalProposal(categoryId)</code> &mdash; Clear a linked approval proposal after it was canceled
@@ -495,8 +496,8 @@ const SmartContracts: NextPage = () => {
           linked.
         </li>
         <li>
-          <code>approveCategory(categoryId, descriptionHash)</code> &mdash; Approve after successful governance vote for
-          the exact linked proposal (timelock only).
+          <code>approveCategory(categoryId, descriptionHash, approvalDigest)</code> &mdash; Approve after successful
+          governance vote for the exact linked proposal and current submission binding (timelock only).
         </li>
         <li>
           <code>rejectCategory(categoryId)</code> &mdash; Reject after a defeated vote (permissionless, checks proposal

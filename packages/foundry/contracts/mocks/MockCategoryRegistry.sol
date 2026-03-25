@@ -8,6 +8,8 @@ contract MockCategoryRegistry is ICategoryRegistry {
     mapping(uint256 => address) public submitters;
     mapping(uint256 => string) public domains;
     mapping(bytes32 => uint256) public domainToId;
+    mapping(uint256 => bytes32) public approvalDigests;
+    mapping(uint256 => uint256) public createdBlocks;
 
     function seedApprovedCategory(uint256 id, string memory domain, address submitter) external {
         setDomain(id, domain);
@@ -84,6 +86,14 @@ contract MockCategoryRegistry is ICategoryRegistry {
         submitters[id] = s;
     }
 
+    function setApprovalDigest(uint256 id, bytes32 digest) external {
+        approvalDigests[id] = digest;
+    }
+
+    function setCreatedBlock(uint256 id, uint256 createdBlock) external {
+        createdBlocks[id] = createdBlock;
+    }
+
     function isApprovedCategory(uint256 categoryId) external view override returns (bool) {
         return approved[categoryId];
     }
@@ -99,7 +109,12 @@ contract MockCategoryRegistry is ICategoryRegistry {
         return _category(categoryId);
     }
 
-    function getApprovedCategoryIdsPaginated(uint256, uint256) external pure override returns (uint256[] memory, uint256) {
+    function getApprovedCategoryIdsPaginated(uint256, uint256)
+        external
+        pure
+        override
+        returns (uint256[] memory, uint256)
+    {
         return (new uint256[](0), 0);
     }
 
@@ -109,6 +124,21 @@ contract MockCategoryRegistry is ICategoryRegistry {
 
     function getSubmitter(uint256 categoryId) external view override returns (address) {
         return submitters[categoryId];
+    }
+
+    function getCategoryStatus(uint256 categoryId) external view override returns (CategoryStatus) {
+        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
+        return approved[categoryId] ? CategoryStatus.Approved : CategoryStatus.Pending;
+    }
+
+    function getCategoryApprovalDigest(uint256 categoryId) external view override returns (bytes32) {
+        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
+        return approvalDigests[categoryId];
+    }
+
+    function getCategoryCreatedBlock(uint256 categoryId) external view override returns (uint256) {
+        require(bytes(domains[categoryId]).length != 0, "Category does not exist");
+        return createdBlocks[categoryId];
     }
 
     function _category(uint256 categoryId) internal view returns (Category memory) {

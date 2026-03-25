@@ -9,6 +9,7 @@ import { IGovernor } from "@openzeppelin/contracts/governance/IGovernor.sol";
 import { CuryoReputation } from "../contracts/CuryoReputation.sol";
 import { CuryoGovernor } from "../contracts/governance/CuryoGovernor.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
+import { MockCategoryRegistry } from "../contracts/mocks/MockCategoryRegistry.sol";
 
 contract GovernanceTest is Test {
     CuryoReputation public token;
@@ -28,7 +29,7 @@ contract GovernanceTest is Test {
     address public mockTreasury = address(14);
     address public mockContentRegistry = address(15);
     address public mockFrontendRegistry = address(16);
-    address public mockCategoryRegistry = address(17);
+    MockCategoryRegistry public mockCategoryRegistry;
 
     // Protocol-controlled balances excluded from quorum
     uint256 public constant FAUCET_BALANCE = 30_000_000 * 1e6;
@@ -65,7 +66,11 @@ contract GovernanceTest is Test {
 
         // Deploy Governor with cREP directly (no wrapper needed)
         governor = new CuryoGovernor(IVotes(address(token)), timelock);
-        governor.setCategoryRegistry(mockCategoryRegistry);
+        mockCategoryRegistry = new MockCategoryRegistry();
+        mockCategoryRegistry.setDomain(7, "pending-category.test");
+        mockCategoryRegistry.setCreatedBlock(7, block.number);
+        mockCategoryRegistry.setApprovalDigest(7, keccak256("pending-category-7"));
+        governor.setCategoryRegistry(address(mockCategoryRegistry));
 
         // Initialize protocol-controlled holders excluded from dynamic quorum
         governor.initializePools(_excludedHolders());
@@ -85,7 +90,7 @@ contract GovernanceTest is Test {
         token.mint(mockTreasury, TREASURY_BALANCE);
         token.mint(mockContentRegistry, CONTENT_REGISTRY_BALANCE);
         token.mint(mockFrontendRegistry, FRONTEND_REGISTRY_BALANCE);
-        token.mint(mockCategoryRegistry, CATEGORY_REGISTRY_BALANCE);
+        token.mint(address(mockCategoryRegistry), CATEGORY_REGISTRY_BALANCE);
 
         // Mint tokens to voters (circulating supply)
         token.mint(voter1, VOTER_BALANCE);
@@ -320,7 +325,7 @@ contract GovernanceTest is Test {
 
         TimelockController smallTimelock = new TimelockController(2 days, new address[](0), new address[](0), deployer);
         CuryoGovernor smallGovernor = new CuryoGovernor(IVotes(address(smallToken)), smallTimelock);
-        smallGovernor.setCategoryRegistry(mockCategoryRegistry);
+        smallGovernor.setCategoryRegistry(address(mockCategoryRegistry));
 
         address[] memory holders = new address[](1);
         holders[0] = address(100);
@@ -346,6 +351,18 @@ contract GovernanceTest is Test {
         assertTrue(proposalId != 0);
         assertEq(uint256(smallGovernor.state(proposalId)), uint256(IGovernor.ProposalState.Pending));
         assertEq(smallToken.getLockedBalance(address(200)), 500e6);
+    }
+
+    function test_CategoryApprovalProposal_RevertsInSubmissionBlock() public {
+        vm.roll(block.number + 1);
+
+        mockCategoryRegistry.setDomain(8, "same-block-category.test");
+        mockCategoryRegistry.setCreatedBlock(8, block.number);
+        mockCategoryRegistry.setApprovalDigest(8, keccak256("same-block-category-8"));
+
+        vm.prank(voter1);
+        vm.expectRevert("Category proposal too early");
+        governor.proposeCategoryApproval(8);
     }
 
     function test_GovernorQuorumGrowsAsPoolsDrain() public {
@@ -458,7 +475,7 @@ contract GovernanceTest is Test {
         assertEq(holders[4], mockTreasury);
         assertEq(holders[5], mockContentRegistry);
         assertEq(holders[6], mockFrontendRegistry);
-        assertEq(holders[7], mockCategoryRegistry);
+        assertEq(holders[7], address(mockCategoryRegistry));
     }
 
     function test_GovernorRejectsProposalsBeforePoolsInitialization() public {
@@ -487,7 +504,7 @@ contract GovernanceTest is Test {
         holders[4] = mockTreasury;
         holders[5] = mockContentRegistry;
         holders[6] = mockFrontendRegistry;
-        holders[7] = mockCategoryRegistry;
+        holders[7] = address(mockCategoryRegistry);
     }
 
     function test_CreateProposal() public {
