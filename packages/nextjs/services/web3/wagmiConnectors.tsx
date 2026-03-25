@@ -1,4 +1,5 @@
 import { inAppWalletConnector } from "@thirdweb-dev/wagmi-adapter";
+import { injected } from "wagmi/connectors";
 import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
 import {
   getPreferredThirdwebChainId,
@@ -38,6 +39,12 @@ export const wagmiConnectors = () => {
       }),
     );
   }
+
+  connectors.push(
+    injected({
+      shimDisconnect: true,
+    }),
+  );
 
   return connectors;
 };
