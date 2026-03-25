@@ -148,7 +148,7 @@ contract AdversarialTests is VotingTestBase {
         bool up = uint8(c.ciphertext[0]) == 1;
         bytes32 s;
         bytes memory ct = c.ciphertext;
-        assembly {
+        assembly ("memory-safe") {
             s := mload(add(ct, 33))
         }
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, up, s);

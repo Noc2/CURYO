@@ -125,7 +125,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
                 bytes memory ct = c.ciphertext;
                 bool isUp = uint8(ct[0]) == 1;
                 bytes32 salt;
-                assembly {
+                assembly ("memory-safe") {
                     salt := mload(add(ct, 33))
                 }
                 try votingEngine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }
