@@ -581,6 +581,10 @@ export function ContentSubmissionSection() {
         }
       }
 
+      // ContentRegistry enforces a minimum reservation age before reveal.
+      // Give the next block timestamp enough room to advance before submitContent.
+      await new Promise(resolve => setTimeout(resolve, 1_100));
+
       if (canUseSponsoredSubmitCalls) {
         const callsResult = await executeSponsoredCalls(
           [

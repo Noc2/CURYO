@@ -1,6 +1,6 @@
 import { wagmiConnectors } from "./wagmiConnectors";
 import { Chain, createClient, fallback, http } from "viem";
-import { hardhat, mainnet } from "viem/chains";
+import { foundry, hardhat, mainnet } from "viem/chains";
 import { createConfig } from "wagmi";
 import scaffoldConfig, { ScaffoldConfig } from "~~/scaffold.config";
 import { getAlchemyHttpUrl } from "~~/utils/scaffold-eth";
@@ -8,18 +8,23 @@ import { getAlchemyHttpUrl } from "~~/utils/scaffold-eth";
 const { targetNetworks } = scaffoldConfig;
 const rpcOverrides = scaffoldConfig.rpcOverrides as ScaffoldConfig["rpcOverrides"];
 const targetHasMainnet = targetNetworks.some((network: Chain) => network.id === mainnet.id);
+const isProduction = process.env.NODE_ENV === "production";
 const mainnetRpcUrls = [rpcOverrides?.[mainnet.id], getAlchemyHttpUrl(mainnet.id)].filter(
   (value, index, values): value is string => Boolean(value) && values.indexOf(value) === index,
 );
+const maybeLocalDevChains = !isProduction ? [foundry] : [];
+const withOptionalMainnet = targetHasMainnet
+  ? targetNetworks
+  : mainnetRpcUrls.length > 0
+    ? [...targetNetworks, mainnet]
+    : targetNetworks;
+const dedupeChains = (chains: readonly Chain[]) =>
+  chains.filter((chain, index, allChains) => allChains.findIndex(candidate => candidate.id === chain.id) === index);
 
 // Only add mainnet automatically when we have an explicit RPC for it.
 // Otherwise wallet tooling will probe viem's public defaults in the browser,
 // which can violate CSP or hit unreliable third-party endpoints.
-export const enabledChains = targetHasMainnet
-  ? targetNetworks
-  : mainnetRpcUrls.length > 0
-    ? ([...targetNetworks, mainnet] as const)
-    : targetNetworks;
+export const enabledChains = dedupeChains([...withOptionalMainnet, ...maybeLocalDevChains]);
 
 export const wagmiConfig = createConfig({
   chains: enabledChains,
