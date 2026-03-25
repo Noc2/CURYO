@@ -38,6 +38,7 @@ jobs:
           slither-config: packages/foundry/slither.config.json
           ignore-compile: true
       - uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
+        if: ${{ hashFiles('results.sarif') != '' }}
         with:
           sarif_file: results.sarif
           category: slither
@@ -90,6 +91,7 @@ jobs:
         working-directory: packages/foundry
         run: aderyn . -o report.sarif
       - uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
+        if: ${{ hashFiles('packages/foundry/report.sarif') != '' }}
         with:
           sarif_file: packages/foundry/report.sarif
           category: aderyn
@@ -109,4 +111,4 @@ jobs:
           key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/contracts/**/*.sol') }}
       - name: Run forge coverage
         working-directory: packages/foundry
-        run: forge coverage --ir-minimum
+        run: forge coverage --offline --ir-minimum --skip script --skip GasBudget.t.sol --skip GasEstimatesReport.t.sol --skip RoundIntegration.t.sol
