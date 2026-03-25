@@ -60,7 +60,10 @@ export const useTransactor = (_walletClient?: WalletClient): TransactionFunc => 
         (typeof walletClient.account === "object" && "chainId" in walletClient.account
           ? Number((walletClient.account as { chainId?: number }).chainId)
           : undefined);
-      chainId = Number.isFinite(cachedChainId) ? cachedChainId : scaffoldConfig.targetNetworks[0].id;
+      chainId =
+        typeof cachedChainId === "number" && Number.isFinite(cachedChainId)
+          ? cachedChainId
+          : scaffoldConfig.targetNetworks[0].id;
       if (!Number.isFinite(chainId)) {
         chainId = await walletClient.getChainId();
       }
