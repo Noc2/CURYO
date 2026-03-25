@@ -6,13 +6,13 @@ import { PROMPT_CATALOG } from "./prompts.js";
 import type { PonderClient } from "./clients/ponder.js";
 import type { ServerConfig } from "./config.js";
 
-export const STATIC_RESOURCE_URIS = {
+const STATIC_RESOURCE_URIS = {
   about: "curyo://about",
   status: "curyo://status",
   toolSchema: "curyo://schema/tools",
 } as const;
 
-export const DYNAMIC_RESOURCE_URIS = {
+const DYNAMIC_RESOURCE_URIS = {
   categories: "curyo://categories",
 } as const;
 

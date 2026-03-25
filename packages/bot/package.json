@@ -14,7 +14,6 @@
     "@curyo/contracts": "workspace:*",
     "@curyo/node-utils": "workspace:*",
     "dotenv": "^16.4.5",
-    "tlock-js": "^0.9.0",
     "viem": "2.39.0"
   },
   "devDependencies": {

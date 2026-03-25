@@ -14,7 +14,7 @@ import { decodeTransactionData } from "~~/utils/scaffold-eth";
 
 const BLOCKS_PER_PAGE = 20;
 
-export const testClient = createTestClient({
+const testClient = createTestClient({
   chain: hardhat,
   mode: "hardhat",
   transport: webSocket("ws://127.0.0.1:8545"),

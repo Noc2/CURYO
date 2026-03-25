@@ -1,10 +1,8 @@
 /**
  * Foundry keystore helpers for the keeper.
  */
-import { decryptKeystore, getKeystoreAccountFromCredentials } from "@curyo/node-utils/keystore";
+import { getKeystoreAccountFromCredentials } from "@curyo/node-utils/keystore";
 import type { PrivateKeyAccount } from "viem/accounts";
-
-export { decryptKeystore };
 
 let cachedAccount: PrivateKeyAccount | null | undefined;
 

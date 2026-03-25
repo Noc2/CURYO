@@ -44,7 +44,7 @@ export const governorAbi = parseAbi([
   "function hasVoted(uint256 proposalId, address account) view returns (bool)",
 ]);
 
-export const timelockAbi = parseAbi(["function getMinDelay() view returns (uint256)"]);
+const timelockAbi = parseAbi(["function getMinDelay() view returns (uint256)"]);
 
 export type GovernanceManagedContractName =
   | "CuryoGovernor"
@@ -111,7 +111,7 @@ function formatArg(value: unknown): string {
   return String(value);
 }
 
-export function formatDecodedActionSummary(
+function formatDecodedActionSummary(
   targetName: string,
   functionName: string,
   args: readonly unknown[] | undefined,
