@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { db } from "~~/lib/db";
 import { urlValidations } from "~~/lib/db/schema";
 import { detectPlatform, getThumbnailUrl } from "~~/utils/platforms";
@@ -178,21 +178,22 @@ export async function POST(request: NextRequest) {
   try {
     for (const [url, isValid] of newResults) {
       const info = detectPlatform(url);
-      const existingRow = existingMap.get(url);
-
-      if (existingRow) {
-        await db
-          .update(urlValidations)
-          .set({ isValid, checkedAt: now, platform: info.type })
-          .where(eq(urlValidations.id, existingRow.id));
-      } else {
-        await db.insert(urlValidations).values({
+      await db
+        .insert(urlValidations)
+        .values({
           url,
           isValid,
           platform: info.type,
           checkedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: urlValidations.url,
+          set: {
+            isValid,
+            platform: info.type,
+            checkedAt: now,
+          },
         });
-      }
     }
   } catch (error) {
     console.warn("[url-validation] cache write failed, returning uncached results:", error);
