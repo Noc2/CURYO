@@ -9,7 +9,6 @@ import { WagmiProvider } from "wagmi";
 import { Footer } from "~~/components/Footer";
 import { Header } from "~~/components/Header";
 import { RouteScopedNotifiers } from "~~/components/RouteScopedNotifiers";
-import { NetworkEnvironmentBanner } from "~~/components/shared/NetworkEnvironmentBanner";
 import { ClearLegacyBurnerSession } from "~~/components/thirdweb/ClearLegacyBurnerSession";
 import { LocalTestWalletBridge } from "~~/components/thirdweb/LocalTestWalletBridge";
 import { ThirdwebAutoConnectBridge } from "~~/components/thirdweb/ThirdwebAutoConnectBridge";
@@ -30,7 +29,6 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
         <Header />
         {/* Main content: offset by left sidebar on desktop (224px at xl) */}
         <div className="flex flex-1 flex-col xl:pl-56">
-          <NetworkEnvironmentBanner />
           <main className="relative flex flex-1 flex-col overflow-x-hidden">{children}</main>
           <Footer />
         </div>
