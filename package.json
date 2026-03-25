@@ -60,6 +60,7 @@
     "vercel:login": "yarn workspace @curyo/nextjs vercel:login",
     "vercel:yolo": "yarn workspace @curyo/nextjs vercel:yolo",
     "verify": "yarn foundry:verify",
+    "yeet": "node scripts/yeet-pr.mjs",
     "ponder:dev": "yarn workspace @curyo/ponder dev",
     "ponder:dev:ui": "yarn workspace @curyo/ponder dev:ui",
     "ponder:start": "yarn workspace @curyo/ponder start",

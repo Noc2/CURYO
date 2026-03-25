@@ -3,7 +3,7 @@ import {
   assertContractDeployed,
   readRoundVotingConfig,
   validateKeeperContracts,
-} from "../keeper.js";
+} from "../contract-reads.js";
 
 const ENGINE = "0x1111111111111111111111111111111111111111" as const;
 const REGISTRY = "0x2222222222222222222222222222222222222222" as const;

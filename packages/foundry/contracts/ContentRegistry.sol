@@ -79,6 +79,14 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         uint48 expiresAt;
     }
 
+    struct SubmissionMetadata {
+        string url;
+        string title;
+        string description;
+        string tags;
+        uint256 categoryId;
+    }
+
     // --- State ---
     IERC20 public crepToken;
     address public votingEngine;
@@ -308,56 +316,17 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             require(voterIdNFT.hasVoterId(msg.sender), "Voter ID required");
         }
 
-        require(bytes(url).length > 0, "URL required");
-        require(bytes(url).length <= MAX_URL_LENGTH, "URL too long");
-        require(_isValidSubmissionUrl(url), "Invalid URL");
-        require(bytes(title).length > 0, "Title required");
-        require(bytes(title).length <= MAX_TITLE_LENGTH, "Title too long");
-        require(bytes(description).length > 0, "Description required");
-        require(bytes(description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
-        require(bytes(tags).length > 0, "Tags required");
-        require(bytes(tags).length <= MAX_TAGS_LENGTH, "Tags too long");
+        SubmissionMetadata memory metadata = SubmissionMetadata({
+            url: url,
+            title: title,
+            description: description,
+            tags: tags,
+            categoryId: categoryId
+        });
+        _validateSubmissionMetadata(metadata);
 
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        (uint256 resolvedCategoryId, bytes32 submissionKey) =
-            SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
-
-        require(!submissionKeyUsed[submissionKey], "URL already submitted");
-
-        bytes32 revealCommitment =
-            _computeRevealCommitment(submissionKey, title, description, tags, categoryId, salt, msg.sender);
-        PendingSubmission memory pending = pendingSubmissions[revealCommitment];
-        require(pending.submitter == msg.sender, "Reservation not found");
-        require(block.timestamp <= pending.expiresAt, "Reservation expired");
-        require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
-        delete pendingSubmissions[revealCommitment];
-        submissionKeyUsed[submissionKey] = true;
-
-        bytes32 contentHash = keccak256(abi.encode(url, title, description, tags));
-
-        uint256 contentId = nextContentId++;
-        contentSubmissionKey[contentId] = submissionKey;
-        contentSubmitterIdentity[contentId] = pending.submitterIdentity;
-        contents[contentId] = Content({
-            id: contentId.toUint64(),
-            contentHash: contentHash,
-            submitter: msg.sender,
-            submitterStake: pending.reservedStake,
-            createdAt: block.timestamp.toUint48(),
-            lastActivityAt: block.timestamp.toUint48(),
-            status: ContentStatus.Active,
-            dormantCount: 0,
-            reviver: address(0),
-            submitterStakeReturned: false,
-            rating: 50,
-            categoryId: resolvedCategoryId.toUint64()
-        });
-        dormancyAnchorAt[contentId] = block.timestamp;
-        delete dormantKeyReleasableAt[contentId];
-
-        emit ContentSubmitted(contentId, msg.sender, contentHash, url, title, description, tags, resolvedCategoryId);
-
-        return contentId;
+        return _submitValidatedContent(metadata, salt);
     }
 
     /// @notice Cancel content before any votes. Returns submitter stake in cREP.
@@ -395,7 +364,86 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         emit ContentCancelled(contentId);
     }
 
-    function _isValidSubmissionUrl(string calldata url) internal pure returns (bool) {
+    function _validateSubmissionMetadata(SubmissionMetadata memory metadata) internal pure {
+        require(bytes(metadata.url).length > 0, "URL required");
+        require(bytes(metadata.url).length <= MAX_URL_LENGTH, "URL too long");
+        require(_isValidSubmissionUrl(metadata.url), "Invalid URL");
+        require(bytes(metadata.title).length > 0, "Title required");
+        require(bytes(metadata.title).length <= MAX_TITLE_LENGTH, "Title too long");
+        require(bytes(metadata.description).length > 0, "Description required");
+        require(bytes(metadata.description).length <= MAX_DESCRIPTION_LENGTH, "Description too long");
+        require(bytes(metadata.tags).length > 0, "Tags required");
+        require(bytes(metadata.tags).length <= MAX_TAGS_LENGTH, "Tags too long");
+    }
+
+    function _submitValidatedContent(SubmissionMetadata memory metadata, bytes32 salt)
+        internal
+        returns (uint256 contentId)
+    {
+        (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending) =
+            _prepareSubmission(metadata, salt);
+        bytes32 contentHash = keccak256(abi.encode(metadata.url, metadata.title, metadata.description, metadata.tags));
+        contentId = _storeSubmittedContent(submissionKey, pending, contentHash, resolvedCategoryId);
+        emit ContentSubmitted(
+            contentId,
+            msg.sender,
+            contentHash,
+            metadata.url,
+            metadata.title,
+            metadata.description,
+            metadata.tags,
+            resolvedCategoryId
+        );
+    }
+
+    function _prepareSubmission(SubmissionMetadata memory metadata, bytes32 salt)
+        internal
+        returns (uint256 resolvedCategoryId, bytes32 submissionKey, PendingSubmission memory pending)
+    {
+        (resolvedCategoryId, submissionKey) =
+            SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, metadata.url, metadata.categoryId);
+        require(!submissionKeyUsed[submissionKey], "URL already submitted");
+
+        bytes32 revealCommitment = _computeRevealCommitment(
+            submissionKey, metadata.title, metadata.description, metadata.tags, metadata.categoryId, salt, msg.sender
+        );
+        pending = pendingSubmissions[revealCommitment];
+        require(pending.submitter == msg.sender, "Reservation not found");
+        require(block.timestamp <= pending.expiresAt, "Reservation expired");
+        require(block.timestamp >= pending.reservedAt + RESERVED_SUBMISSION_MIN_AGE, "Reservation too new");
+
+        delete pendingSubmissions[revealCommitment];
+        submissionKeyUsed[submissionKey] = true;
+    }
+
+    function _storeSubmittedContent(
+        bytes32 submissionKey,
+        PendingSubmission memory pending,
+        bytes32 contentHash,
+        uint256 resolvedCategoryId
+    ) internal returns (uint256 contentId) {
+        contentId = nextContentId++;
+        contentSubmissionKey[contentId] = submissionKey;
+        contentSubmitterIdentity[contentId] = pending.submitterIdentity;
+        contents[contentId] = Content({
+            id: contentId.toUint64(),
+            contentHash: contentHash,
+            submitter: msg.sender,
+            submitterStake: pending.reservedStake,
+            createdAt: block.timestamp.toUint48(),
+            lastActivityAt: block.timestamp.toUint48(),
+            status: ContentStatus.Active,
+            dormantCount: 0,
+            reviver: address(0),
+            submitterStakeReturned: false,
+            rating: 50,
+            categoryId: resolvedCategoryId.toUint64()
+        });
+        dormancyAnchorAt[contentId] = block.timestamp;
+        delete dormantKeyReleasableAt[contentId];
+    }
+
+    function _isValidSubmissionUrl(string memory url) internal pure returns (bool) {
         bytes memory urlBytes = bytes(url);
         bytes memory prefix = bytes("https://");
         if (urlBytes.length < prefix.length) {
@@ -467,7 +515,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         c.status = ContentStatus.Active;
         c.dormantCount++;
-        c.lastActivityAt = block.timestamp.toUint48();
+        c.lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
         delete dormantKeyReleasableAt[contentId];
         c.reviver = msg.sender;
@@ -497,13 +545,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
-        contents[contentId].lastActivityAt = block.timestamp.toUint48();
+        contents[contentId].lastActivityAt = uint48(block.timestamp);
     }
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
-        contents[contentId].lastActivityAt = block.timestamp.toUint48();
+        contents[contentId].lastActivityAt = uint48(block.timestamp);
         dormancyAnchorAt[contentId] = block.timestamp;
     }
 
@@ -515,7 +563,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         Content storage c = contents[contentId];
         uint8 oldRating = c.rating;
-        uint8 clampedRating = newRating > 100 ? 100 : uint256(newRating).toUint8();
+        uint8 clampedRating = newRating > 100 ? 100 : uint8(newRating);
 
         if (clampedRating == oldRating) return;
 
@@ -730,9 +778,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
     function _computeRevealCommitment(
         bytes32 submissionKey,
-        string calldata title,
-        string calldata description,
-        string calldata tags,
+        string memory title,
+        string memory description,
+        string memory tags,
         uint256 categoryId,
         bytes32 salt,
         address submitter

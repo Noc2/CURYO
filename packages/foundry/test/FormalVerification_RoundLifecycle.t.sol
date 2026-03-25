@@ -144,7 +144,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
                 bool up = uint8(c.ciphertext[0]) == 1;
                 bytes32 s;
                 bytes memory ct = c.ciphertext;
-                assembly { s := mload(add(ct, 33)) }
+                assembly ("memory-safe") { s := mload(add(ct, 33)) }
                 try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
             }
         }
