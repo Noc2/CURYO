@@ -381,16 +381,25 @@ async function allTransactionHashesSucceeded(params: {
         ]);
 
         return {
-          ok:
-            receipt.status === "success" &&
-            transaction.from.toLowerCase() === params.walletAddress.toLowerCase() &&
-            Number(transaction.chainId) === params.chainId,
+          ok: receipt.status === "success" && Number(transaction.chainId) === params.chainId,
+          from: transaction.from.toLowerCase(),
         };
       } catch {
         return { ok: false };
       }
     }),
   );
+
+  const hasSenderMismatch = receipts.some(
+    receipt => "from" in receipt && receipt.from !== params.walletAddress.toLowerCase(),
+  );
+  if (hasSenderMismatch) {
+    console.info("[thirdweb-free-tx] confirmed sponsored transaction with non-user sender", {
+      chainId: params.chainId,
+      transactionHashes: params.transactionHashes,
+      walletAddress: params.walletAddress,
+    });
+  }
 
   return receipts.every(receipt => receipt.ok);
 }
