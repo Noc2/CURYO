@@ -55,6 +55,8 @@ jobs:
         run: yarn next:lint --max-warnings=0
 
       - name: Check typings on nextjs
+        env:
+          NEXT_PUBLIC_TARGET_NETWORKS: "11142220"
         run: yarn next:check-types
 
       - name: Verify production Next.js build
