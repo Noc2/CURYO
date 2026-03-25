@@ -62,11 +62,20 @@ export type FreeTransactionAllowanceDecision =
   | {
       isAllowed: true;
       summary: FreeTransactionAllowanceSummary;
+      debugCode?: string;
     }
   | {
       isAllowed: false;
       reason: string;
       summary?: FreeTransactionAllowanceSummary;
+      debugCode:
+        | "invalid_chain"
+        | "invalid_sender"
+        | "invalid_targets"
+        | "target_not_allowlisted"
+        | "invalid_operation_key"
+        | "missing_voter_id"
+        | "free_tx_exhausted";
     };
 
 const DEFAULT_DENY_REASON = "Transaction not sponsored.";
@@ -435,6 +444,7 @@ export async function evaluateFreeTransactionAllowance(
   if (typeof body.chainId !== "number") {
     return {
       isAllowed: false,
+      debugCode: "invalid_chain",
       reason: DEFAULT_DENY_REASON,
     };
   }
@@ -443,6 +453,7 @@ export async function evaluateFreeTransactionAllowance(
   if (!sender || !isAddress(sender)) {
     return {
       isAllowed: false,
+      debugCode: "invalid_sender",
       reason: DEFAULT_DENY_REASON,
     };
   }
@@ -452,6 +463,7 @@ export async function evaluateFreeTransactionAllowance(
   if (!targets || targets.size === 0) {
     return {
       isAllowed: false,
+      debugCode: "invalid_targets",
       reason: DEFAULT_DENY_REASON,
     };
   }
@@ -459,6 +471,7 @@ export async function evaluateFreeTransactionAllowance(
   if ([...targets].some(target => !allowedTargets.has(target))) {
     return {
       isAllowed: false,
+      debugCode: "target_not_allowlisted",
       reason: DEFAULT_DENY_REASON,
     };
   }
@@ -467,6 +480,7 @@ export async function evaluateFreeTransactionAllowance(
   if (!operationKey) {
     return {
       isAllowed: false,
+      debugCode: "invalid_operation_key",
       reason: DEFAULT_DENY_REASON,
     };
   }
@@ -477,6 +491,7 @@ export async function evaluateFreeTransactionAllowance(
   if (!voterIdTokenId) {
     return {
       isAllowed: false,
+      debugCode: "missing_voter_id",
       reason: NO_VOTER_ID_REASON,
       summary: buildUnverifiedSummary({
         chainId: body.chainId,
@@ -556,6 +571,7 @@ export async function evaluateFreeTransactionAllowance(
     if (quotaRow.freeTxUsed + pendingCountExcludingCurrent >= quotaRow.freeTxLimit) {
       return {
         isAllowed: false,
+        debugCode: "free_tx_exhausted",
         reason: FREE_TX_EXHAUSTED_REASON,
         summary: buildQuotaSummary({
           chainId: quotaRow.chainId,
