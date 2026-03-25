@@ -38,7 +38,7 @@ export const landingFaqItems: LandingFaqItem[] = [
     question: "Why is voting blind?",
     answer:
       "Blind voting hides directions until the phase ends, which reduces herding and rewards independent judgment.",
-    learnMoreHref: "/docs/how-it-works",
+    learnMoreHref: "/docs/how-it-works#blind-voting",
     learnMoreLabel: "Blind Voting",
   },
   {

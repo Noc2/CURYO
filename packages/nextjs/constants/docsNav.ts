@@ -10,7 +10,6 @@ export const DOCS_NAV = [
     section: "Concepts",
     links: [
       { label: "How It Works", href: "/docs/how-it-works" },
-      { label: "Blind Voting", href: "/docs/blind-voting" },
       { label: "Transaction Costs", href: "/docs/funding-wallet" },
       { label: "Tokenomics", href: "/docs/tokenomics" },
       { label: "Governance", href: "/docs/governance" },

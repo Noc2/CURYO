@@ -25,13 +25,27 @@ const HowItWorks: NextPage = () => {
           <strong>Vote:</strong> Choose up or down and stake 1&ndash;100 cREP. Your direction is hidden.
         </li>
         <li>
-          <strong>Reveal:</strong> After the blind phase, the keeper normally reveals eligible votes.
+          <strong>Reveal:</strong> After the blind phase, the keeper normally reveals eligible votes and users can
+          self-reveal if needed.
         </li>
         <li>
           <strong>Resolve:</strong> Once at least {protocolDocFacts.minVotersLabel} votes are revealed and reveal
           conditions are met, the round settles, the rating updates, and rewards become claimable.
         </li>
       </ol>
+
+      <h3 id="blind-voting">Blind Voting</h3>
+      <p>
+        Vote directions are encrypted during the first <strong>{protocolDocFacts.blindPhaseDurationLabel}</strong> to
+        prevent herding. After that, later votes may see revealed directions and only receive{" "}
+        <strong>{protocolDocFacts.openPhaseWeightLabel}</strong> reward weight instead of full weight.
+      </p>
+      <p>
+        That creates a <strong>{protocolDocFacts.earlyVoterAdvantageLabel} early-voter advantage</strong>. If all
+        revealed voters agree, a small consensus subsidy can replace the missing losing pool. If quorum never arrives by{" "}
+        <strong>{protocolDocFacts.maxRoundDurationLabel}</strong>, the round cancels and refunds; if reveal quorum still
+        never materializes after commit quorum, the round can finalize as reveal-failed.
+      </p>
 
       <h3>Voting Rules</h3>
       <ul>

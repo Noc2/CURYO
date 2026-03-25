@@ -10,14 +10,13 @@ test.describe("Documentation pages", () => {
     "/docs/how-it-works",
     "/docs/tokenomics",
     "/docs/governance",
-    "/docs/blind-voting",
     "/docs/smart-contracts",
     "/docs/frontend-codes",
     "/docs/whitepaper",
   ];
 
   test("all doc pages load with h1 heading", async ({ page }) => {
-    test.setTimeout(180_000); // 8 pages
+    test.setTimeout(180_000); // 7 pages
     const errors: string[] = [];
 
     for (const path of docPages) {
@@ -34,6 +33,12 @@ test.describe("Documentation pages", () => {
     }
 
     expect(errors, `Pages missing h1: ${errors.join(", ")}`).toEqual([]);
+  });
+
+  test("blind voting docs redirect to how it works", async ({ page }) => {
+    await page.goto("/docs/blind-voting");
+    await page.waitForURL(/\/docs\/how-it-works#blind-voting$/);
+    await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("docs sidebar navigation works", async ({ page }) => {
