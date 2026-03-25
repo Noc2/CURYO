@@ -109,6 +109,9 @@ jobs:
             packages/foundry/cache
             packages/foundry/out
           key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/contracts/**/*.sol') }}
+      - name: Build contracts for coverage
+        working-directory: packages/foundry
+        run: forge build
       - name: Run forge coverage
         working-directory: packages/foundry
         run: forge coverage --offline --ir-minimum --skip script --skip GasBudget.t.sol --skip GasEstimatesReport.t.sol --skip RoundIntegration.t.sol
