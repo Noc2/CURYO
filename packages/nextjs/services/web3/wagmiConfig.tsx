@@ -20,11 +20,16 @@ const withOptionalMainnet = targetHasMainnet
     : targetNetworks;
 const dedupeChains = (chains: readonly Chain[]) =>
   chains.filter((chain, index, allChains) => allChains.findIndex(candidate => candidate.id === chain.id) === index);
+const resolvedEnabledChains = dedupeChains([...withOptionalMainnet, ...maybeLocalDevChains]);
+
+if (resolvedEnabledChains.length === 0) {
+  throw new Error("At least one target network must be configured for wagmi");
+}
 
 // Only add mainnet automatically when we have an explicit RPC for it.
 // Otherwise wallet tooling will probe viem's public defaults in the browser,
 // which can violate CSP or hit unreliable third-party endpoints.
-export const enabledChains = dedupeChains([...withOptionalMainnet, ...maybeLocalDevChains]);
+export const enabledChains = resolvedEnabledChains as [Chain, ...Chain[]];
 
 export const wagmiConfig = createConfig({
   chains: enabledChains,
