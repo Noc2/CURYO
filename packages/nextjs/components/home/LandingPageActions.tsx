@@ -47,6 +47,11 @@ export function LandingPageActions() {
       return;
     }
 
+    if (!address) {
+      redirectedAddressRef.current = null;
+      return;
+    }
+
     const addressKey = address.toLowerCase();
     if (redirectedAddressRef.current === addressKey) {
       return;

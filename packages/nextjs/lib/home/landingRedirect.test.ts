@@ -11,7 +11,7 @@ test("does not auto-redirect visitors who are not connected", () => {
       isConnected: false,
       voterIdResolved: false,
     }),
-    false
+    false,
   );
 });
 
@@ -24,7 +24,7 @@ test("does not auto-redirect externally connected wallets", () => {
       isConnected: true,
       voterIdResolved: true,
     }),
-    false
+    false,
   );
 });
 
@@ -37,7 +37,7 @@ test("does auto-redirect authenticated in-app wallet sessions once voter state r
       isConnected: true,
       voterIdResolved: true,
     }),
-    true
+    true,
   );
 });
 
@@ -50,6 +50,6 @@ test("respects the explicit landing override even for authenticated sessions", (
       isConnected: true,
       voterIdResolved: true,
     }),
-    false
+    false,
   );
 });
