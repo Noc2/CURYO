@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { defineChain } from "thirdweb";
 import { useActiveAccount, useConnect as useThirdwebConnect } from "thirdweb/react";
 import { useAccount } from "wagmi";
@@ -29,9 +29,10 @@ export function LocalTestWalletBridge() {
   const { connect } = useThirdwebConnect();
   const { syncWalletToWagmi } = useThirdwebWagmiSync();
   const isSyncingRef = useRef(false);
+  const thirdwebTargetChain = useMemo(() => defineChain(targetNetwork), [targetNetwork]);
 
   useEffect(() => {
-    if (!isLocalTestWalletEnabled() || !thirdwebClient || targetNetwork.id !== LOCAL_TEST_CHAIN_ID) {
+    if (!isLocalTestWalletEnabled() || !thirdwebClient || thirdwebTargetChain.id !== LOCAL_TEST_CHAIN_ID) {
       return;
     }
 
@@ -40,28 +41,8 @@ export function LocalTestWalletBridge() {
       return;
     }
 
-    const rpcUrl = targetNetwork.rpcUrls.default.http[0];
-    if (!rpcUrl) {
-      return;
-    }
-
     const wallet = createLocalTestWallet({
-      chain: defineChain({
-        blockExplorers:
-          targetNetwork.blockExplorers?.default?.url
-            ? [
-                {
-                  name: targetNetwork.blockExplorers.default.name,
-                  url: targetNetwork.blockExplorers.default.url,
-                },
-              ]
-            : [],
-        id: targetNetwork.id,
-        name: targetNetwork.name,
-        nativeCurrency: targetNetwork.nativeCurrency,
-        rpc: rpcUrl,
-        testnet: targetNetwork.testnet,
-      }),
+      chain: thirdwebTargetChain,
       client: thirdwebClient,
       privateKey,
     });
@@ -89,7 +70,7 @@ export function LocalTestWalletBridge() {
         }
 
         if (!cancelled && address?.toLowerCase() !== targetAddress) {
-          await syncWalletToWagmi(wallet, targetNetwork.id);
+          await syncWalletToWagmi(wallet, thirdwebTargetChain.id);
         }
       } catch (error) {
         console.error("Failed to connect local test wallet", error);
@@ -102,7 +83,7 @@ export function LocalTestWalletBridge() {
       cancelled = true;
       isSyncingRef.current = false;
     };
-  }, [activeThirdwebAccount?.address, address, connect, syncWalletToWagmi, targetNetwork.id]);
+  }, [activeThirdwebAccount?.address, address, connect, syncWalletToWagmi, thirdwebTargetChain]);
 
   return null;
 }
