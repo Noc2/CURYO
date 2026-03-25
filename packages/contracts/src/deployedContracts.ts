@@ -4,7 +4,7 @@
  */
 import type { GenericContractsDeclaration } from "./types";
 
-const deployedContracts = {
+const deployedContracts: GenericContractsDeclaration = {
   31337: {
     CategoryFeeLib: {
       address: "0x177036a851402dcdd65e05f6eee22861f684cb6a",
@@ -46975,6 +46975,6 @@ const deployedContracts = {
       deployedOnBlock: 20996434,
     },
   },
-} as const;
+};
 
-export default deployedContracts satisfies GenericContractsDeclaration;
+export default deployedContracts;
