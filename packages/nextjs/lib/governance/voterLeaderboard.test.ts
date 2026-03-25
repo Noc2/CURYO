@@ -49,3 +49,22 @@ test("voter leaderboard totalCount reflects the full ranked set", () => {
     },
   ]);
 });
+
+test("voter leaderboard falls back to discovered addresses when every balance is zero", () => {
+  const { rankedAddresses, selectedAddresses, totalCount } = rankVoterLeaderboardAddresses({
+    candidateAddresses: ["0x00000000000000000000000000000000000000bb", "0x00000000000000000000000000000000000000aa"],
+    balances: {
+      "0x00000000000000000000000000000000000000aa": 0n,
+      "0x00000000000000000000000000000000000000bb": 0n,
+    },
+    limit: 10,
+    includeAddress: null,
+  });
+
+  assert.equal(totalCount, 2);
+  assert.deepEqual(rankedAddresses, [
+    "0x00000000000000000000000000000000000000aa",
+    "0x00000000000000000000000000000000000000bb",
+  ]);
+  assert.deepEqual(selectedAddresses, rankedAddresses);
+});
