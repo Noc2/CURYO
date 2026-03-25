@@ -1,6 +1,6 @@
+import { getWagmiConnectorIdForThirdwebWallet, shouldSkipThirdwebWagmiSync } from "./useThirdwebWagmiSync";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getWagmiConnectorIdForThirdwebWallet, shouldSkipThirdwebWagmiSync } from "./useThirdwebWagmiSync";
 
 test("getWagmiConnectorIdForThirdwebWallet keeps in-app wallets on the in-app connector", () => {
   assert.equal(

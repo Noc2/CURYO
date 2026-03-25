@@ -1,7 +1,7 @@
 import {
   resolveWalletCapabilitiesForChain,
-  resolveWalletExecutionMode,
   resolveWalletExecutionChainId,
+  resolveWalletExecutionMode,
   walletCapabilitiesSupportPaymasterService,
 } from "./useWalletExecutionCapabilities";
 import assert from "node:assert/strict";
