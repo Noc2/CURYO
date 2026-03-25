@@ -13,12 +13,7 @@ import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 /// @title FrontendRegistry
 /// @notice Manages frontend operator registration (fixed 1,000 cREP stake) and fee distribution.
 /// @dev Frontend operators stake cREP, can be slashed by governance, and earn cREP fees from votes using their code.
-contract FrontendRegistry is
-    IFrontendRegistry,
-    Initializable,
-    AccessControlUpgradeable,
-    ReentrancyGuardTransient
-{
+contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     // --- Access Control Roles ---
@@ -367,8 +362,7 @@ contract FrontendRegistry is
     }
 
     function _isEligible(address frontend, Frontend storage f) internal view returns (bool) {
-        return
-            f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) == STAKE_AMOUNT
-                && frontendExitAvailableAt[frontend] == 0;
+        return f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) == STAKE_AMOUNT
+            && frontendExitAvailableAt[frontend] == 0;
     }
 }

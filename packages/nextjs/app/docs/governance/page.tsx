@@ -260,7 +260,9 @@ const GovernanceDocs: NextPage = () => {
         <strong>Deterrence:</strong> Several protocol features make collusion costly and difficult:
       </p>
       <ul>
-        <li>Identity verification &mdash; 1 person = 1 Voter ID via passport verification (Self.xyz).</li>
+        <li>
+          Identity verification &mdash; 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.
+        </li>
         <li>Stake caps &mdash; maximum 100 cREP per content per round limits single-voter influence.</li>
         <li>Vote cooldowns &mdash; 24-hour cooldown prevents rapid re-voting on the same content.</li>
         <li>Permanent revocation &mdash; losing your Voter ID is irreversible and eliminates voting ability.</li>

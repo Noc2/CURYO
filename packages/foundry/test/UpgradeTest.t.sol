@@ -82,8 +82,7 @@ contract UpgradeTest is Test {
     address public admin = address(1);
     address public governance = address(2);
     address public attacker = address(999);
-    bytes32 internal constant ERC1967_ADMIN_SLOT =
-        bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
+    bytes32 internal constant ERC1967_ADMIN_SLOT = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
 
     function setUp() public {
         vm.startPrank(admin);
@@ -95,11 +94,11 @@ contract UpgradeTest is Test {
         // --- ContentRegistry ---
         ContentRegistry crImpl = new ContentRegistry();
         TransparentUpgradeableProxy crProxy = new TransparentUpgradeableProxy(
-            address(crImpl), governance, abi.encodeCall(ContentRegistry.initialize, (admin, governance, address(crepToken)))
+            address(crImpl),
+            governance,
+            abi.encodeCall(ContentRegistry.initialize, (admin, governance, address(crepToken)))
         );
-        contentRegistry = ContentRegistry(
-            address(crProxy)
-        );
+        contentRegistry = ContentRegistry(address(crProxy));
         contentRegistryAdmin = _proxyAdmin(address(crProxy));
 
         // --- ProtocolConfig ---
@@ -116,12 +115,11 @@ contract UpgradeTest is Test {
             address(veImpl),
             governance,
             abi.encodeCall(
-                RoundVotingEngine.initialize, (governance, address(crepToken), address(contentRegistry), address(protocolConfig))
+                RoundVotingEngine.initialize,
+                (governance, address(crepToken), address(contentRegistry), address(protocolConfig))
             )
         );
-        votingEngine = RoundVotingEngine(
-            address(veProxy)
-        );
+        votingEngine = RoundVotingEngine(address(veProxy));
         votingEngineAdmin = _proxyAdmin(address(veProxy));
 
         // --- RoundRewardDistributor ---
@@ -134,9 +132,7 @@ contract UpgradeTest is Test {
                 (governance, address(crepToken), address(votingEngine), address(contentRegistry))
             )
         );
-        rewardDistributor = RoundRewardDistributor(
-            address(rdProxy)
-        );
+        rewardDistributor = RoundRewardDistributor(address(rdProxy));
         rewardDistributorAdmin = _proxyAdmin(address(rdProxy));
 
         // --- ProfileRegistry ---
@@ -150,11 +146,11 @@ contract UpgradeTest is Test {
         // --- FrontendRegistry ---
         FrontendRegistry frImpl = new FrontendRegistry();
         TransparentUpgradeableProxy frProxy = new TransparentUpgradeableProxy(
-            address(frImpl), governance, abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
+            address(frImpl),
+            governance,
+            abi.encodeCall(FrontendRegistry.initialize, (admin, governance, address(crepToken)))
         );
-        frontendRegistry = FrontendRegistry(
-            address(frProxy)
-        );
+        frontendRegistry = FrontendRegistry(address(frProxy));
         frontendRegistryAdmin = _proxyAdmin(address(frProxy));
 
         vm.stopPrank();

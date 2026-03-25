@@ -5,6 +5,8 @@ interface CuryoEmailTemplateParams {
   ctaHref: string;
   eyebrow?: string;
   footerNote?: string;
+  footerLinkLabel?: string;
+  footerLinkHref?: string;
   linkIntro?: string;
 }
 
@@ -26,6 +28,8 @@ export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
   const safeFooterNote = escapeHtml(
     params.footerNote ?? "You are receiving this email because you signed up for Curyo email notifications.",
   );
+  const safeFooterLinkLabel = params.footerLinkLabel ? escapeHtml(params.footerLinkLabel) : null;
+  const safeFooterLinkHref = params.footerLinkHref ? escapeHtml(params.footerLinkHref) : null;
   const safeLinkIntro = escapeHtml(params.linkIntro ?? "If the button does not work, open this link manually:");
 
   return `
@@ -128,6 +132,26 @@ export function buildCuryoEmailHtml(params: CuryoEmailTemplateParams) {
                   </div>
                   <div style="padding-top:18px; border-top:1px solid rgba(245,240,235,0.08); color:rgba(126,137,150,0.92); font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:1.6;">
                     ${safeFooterNote}
+                    ${
+                      safeFooterLinkHref && safeFooterLinkLabel
+                        ? `
+                      <div style="margin-top:10px;">
+                        <a
+                          href="${safeFooterLinkHref}"
+                          style="
+                            color:#f26426;
+                            font-family:Arial, Helvetica, sans-serif;
+                            font-size:13px;
+                            line-height:1.6;
+                            text-decoration:underline;
+                          "
+                        >
+                          ${safeFooterLinkLabel}
+                        </a>
+                      </div>
+                    `
+                        : ""
+                    }
                   </div>
                 </td>
               </tr>

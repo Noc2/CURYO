@@ -69,7 +69,7 @@ const CuryoAndAI: NextPage = () => {
         />
         <FeatureCard
           title="One Person, One Vote"
-          description="One passport = one Voter ID. No sock puppet farms can flood the signal, regardless of how many wallets an attacker controls."
+          description="One verified identity = one Voter ID. Self.xyz passport or biometric ID checks make sock puppet farms far harder, regardless of how many wallets an attacker controls."
         />
         <FeatureCard
           title="Verifiable Provenance"
@@ -82,7 +82,8 @@ const CuryoAndAI: NextPage = () => {
         A core design reason for building Curyo on a blockchain is that{" "}
         <strong>all rating data is inherently public and exportable</strong>. Every vote, every stake amount, every
         round outcome, and every resulting content rating is stored permanently and publicly, accessible by anyone.
-        There is no API rate limit, no terms-of-service restriction, and no company that can revoke access.
+        There is no protocol-owned API key, terms-of-service restriction, or company that can revoke access. Hosted
+        indexers can still apply service-level rate limits, but the underlying on-chain data remains openly accessible.
       </p>
       <p>This makes Curyo&apos;s ratings available as a public good for the entire ecosystem:</p>
       <ul>

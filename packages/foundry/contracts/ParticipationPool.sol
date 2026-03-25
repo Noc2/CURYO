@@ -140,7 +140,12 @@ contract ParticipationPool is IParticipationPool, Ownable, ReentrancyGuardTransi
     /// @notice Recover tokens that were transferred directly to the contract without increasing poolBalance.
     /// @param to Address to receive the recovered surplus
     /// @param amount Amount to recover (use type(uint256).max for the full surplus)
-    function recoverSurplus(address to, uint256 amount) external onlyOwner nonReentrant returns (uint256 recoveredAmount) {
+    function recoverSurplus(address to, uint256 amount)
+        external
+        onlyOwner
+        nonReentrant
+        returns (uint256 recoveredAmount)
+    {
         require(to != address(0), "Invalid address");
 
         uint256 actualBalance = crepToken.balanceOf(address(this));

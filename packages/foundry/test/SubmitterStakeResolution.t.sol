@@ -53,7 +53,10 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -118,9 +121,11 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertFalse(submitterStakeReturned, "submitter stake must remain locked while a later round is open");
-        assertEq(crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged");
+        assertEq(
+            crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged"
+        );
     }
 
     function test_ResolveSubmitterStake_AllowsResolutionAfterLaterRoundCancels() public {
@@ -150,7 +155,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         votingEngine.resolveSubmitterStake(1);
 
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertTrue(submitterStakeReturned, "submitter stake should resolve even if a later round is open");
         assertEq(
             crepToken.balanceOf(submitter) - submitterBalanceAfterSubmit,
@@ -174,9 +179,11 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         vm.expectRevert(RoundVotingEngine.ActiveRoundStillOpen.selector);
         votingEngine.resolveSubmitterStake(1);
 
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertFalse(submitterStakeReturned, "dormancy fallback must keep stake locked while the round is open");
-        assertEq(crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged");
+        assertEq(
+            crepToken.balanceOf(submitter), submitterBalanceAfterSubmit, "submitter balance should remain unchanged"
+        );
     }
 
     function test_ResolveSubmitterStake_DormancyFallbackWorksAfterOpenRoundCancels() public {
@@ -195,7 +202,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
 
         votingEngine.resolveSubmitterStake(1);
 
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertTrue(submitterStakeReturned, "closed rounds should allow dormancy fallback to resolve");
     }
 
@@ -221,7 +228,7 @@ contract SubmitterStakeResolutionTest is VotingTestBase {
         vm.warp(T0 + 24 hours + 1);
         votingEngine.resolveSubmitterStake(1);
 
-        (, , , , , , , , , bool submitterStakeReturned,,) = registry.contents(1);
+        (,,,,,,,,, bool submitterStakeReturned,,) = registry.contents(1);
         assertTrue(submitterStakeReturned, "low ratings should become slash-resolvable after grace");
     }
 

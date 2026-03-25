@@ -11,9 +11,10 @@ const SmartContracts: NextPage = () => {
 
       <h2>Architecture</h2>
       <p>
-        The upgradeable control-plane contracts use <strong>UUPS proxies</strong>: ContentRegistry, RoundVotingEngine,
-        RoundRewardDistributor, FrontendRegistry, and ProfileRegistry. Token, identity, faucet, participation,
-        governance, and helper contracts are intentionally non-upgradeable.
+        The upgradeable control-plane contracts use <strong>transparent proxies</strong> managed by timelock-owned proxy
+        admins: ContentRegistry, ProtocolConfig, RoundVotingEngine, RoundRewardDistributor, FrontendRegistry, and
+        ProfileRegistry. Token, identity, faucet, participation, governance, and helper contracts are intentionally
+        non-upgradeable.
       </p>
       <p>
         The current production surface also includes one stateless helper contract, <code>SubmissionCanonicalizer</code>
@@ -31,7 +32,7 @@ const SmartContracts: NextPage = () => {
           <tbody>
             <tr>
               <td className="font-mono text-primary">CuryoReputation</td>
-              <td>ERC-20 token (cREP) with governance voting power and flash-loan protection</td>
+              <td>ERC-20 token (cREP) with governance voting power, ERC-1363 hooks, and governance locks</td>
               <td>No</td>
             </tr>
             <tr>
@@ -42,22 +43,27 @@ const SmartContracts: NextPage = () => {
             <tr>
               <td className="font-mono text-primary">ContentRegistry</td>
               <td>Content lifecycle: submission, dormancy, rating updates, slashing</td>
-              <td>UUPS</td>
+              <td>Transparent</td>
+            </tr>
+            <tr>
+              <td className="font-mono text-primary">ProtocolConfig</td>
+              <td>Governance-controlled address book and round configuration for RoundVotingEngine</td>
+              <td>Transparent</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">RoundVotingEngine</td>
               <td>Core voting: tlock commit-reveal voting, epoch-weighted rewards, deterministic settlement</td>
-              <td>UUPS</td>
+              <td>Transparent</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">RoundRewardDistributor</td>
               <td>Pull-based reward claiming for settled rounds</td>
-              <td>UUPS</td>
+              <td>Transparent</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">FrontendRegistry</td>
               <td>Frontend operator registration and fee distribution</td>
-              <td>UUPS</td>
+              <td>Transparent</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">CategoryRegistry</td>
@@ -72,11 +78,11 @@ const SmartContracts: NextPage = () => {
             <tr>
               <td className="font-mono text-primary">ProfileRegistry</td>
               <td>On-chain user profiles with unique names, images, and public rating strategy text</td>
-              <td>UUPS</td>
+              <td>Transparent</td>
             </tr>
             <tr>
               <td className="font-mono text-primary">HumanFaucet</td>
-              <td>Sybil-resistant token distribution via Self.xyz passport verification</td>
+              <td>Sybil-resistant token distribution via Self.xyz passport or biometric ID verification</td>
               <td>No</td>
             </tr>
             <tr>
@@ -135,7 +141,8 @@ const SmartContracts: NextPage = () => {
           governance proposals. This is a transfer lock, not a per-proposal escrowed bond.
         </li>
         <li>
-          <strong>Flash-loan protection:</strong> Tracks first-receive block to prevent same-block vote attacks.
+          <strong>Snapshot-based governance:</strong> ERC20Votes provides historical voting-power snapshots for
+          governance, while cREP transfer locks apply after proposing or voting.
         </li>
         <li>
           <strong>Minting:</strong> Only <code>MINTER_ROLE</code> (HumanFaucet) can mint, up to <code>MAX_SUPPLY</code>.
@@ -167,7 +174,7 @@ const SmartContracts: NextPage = () => {
       <h2>VoterIdNFT</h2>
       <p>
         Soulbound (non-transferable) ERC-721 representing a verified human identity. Minted by HumanFaucet upon
-        successful Self.xyz passport verification. Token ID 0 is reserved (indicates no Voter ID).
+        successful Self.xyz passport or biometric ID verification. Token ID 0 is reserved (indicates no Voter ID).
       </p>
       <h3>Sybil Resistance</h3>
       <p>
@@ -195,8 +202,9 @@ const SmartContracts: NextPage = () => {
       <h3>Delegation</h3>
       <p>
         VoterIdNFT supports delegation: an SBT holder (cold wallet) can authorize a delegate (hot wallet) to act on
-        their behalf. The delegate transparently passes all Voter ID checks without holding an SBT. Setup and security
-        guidance now live in the <code>/settings?tab=delegation</code> flow.
+        their behalf for flows that accept delegated identities, notably content submission and voting. Holder-only
+        actions such as frontend registration, profile management, and category submission still require the SBT holder
+        address itself. Setup and security guidance now live in the <code>/settings?tab=delegation</code> flow.
       </p>
       <ul>
         <li>
@@ -240,7 +248,10 @@ const SmartContracts: NextPage = () => {
               <td>
                 <span className="badge badge-secondary badge-sm">Dormant</span>
               </td>
-              <td>No activity for 30 days. Can be revived up to 2 times (expires after 90 days).</td>
+              <td>
+                No meaningful activity for 30 days. The original submitter can revive it up to 2 times during the 1-day
+                exclusive revival window before the dormant key becomes releasable.
+              </td>
             </tr>
             <tr>
               <td>
@@ -269,7 +280,8 @@ const SmartContracts: NextPage = () => {
           reverts if content has an active open round.
         </li>
         <li>
-          <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 cREP, max 2 times).
+          <code>reviveContent(contentId)</code> &mdash; Revive dormant content (5 cREP, max 2 times). Only the original
+          submitter identity can do this, and only during the 1-day exclusive revival window.
         </li>
         <li>
           <code>updateRatingDirect(contentId, newRating)</code> &mdash; Called by RoundVotingEngine after settlement
@@ -422,6 +434,29 @@ const SmartContracts: NextPage = () => {
 
       <hr />
 
+      <h2>ProtocolConfig</h2>
+      <p>
+        Governance-controlled address book and parameter store for <code>RoundVotingEngine</code>. The engine snapshots
+        round config and reveal grace period at round creation so mid-round governance changes do not change an already
+        open round.
+      </p>
+      <ul>
+        <li>
+          <code>setConfig(epochDuration, maxDuration, minVoters, maxVoters)</code> &mdash; Update round parameters for
+          future rounds.
+        </li>
+        <li>
+          <code>setRevealGracePeriod(seconds)</code> &mdash; Update the grace period used for future round snapshots.
+        </li>
+        <li>
+          <code>setRewardDistributor(...)</code>, <code>setFrontendRegistry(...)</code>,{" "}
+          <code>setCategoryRegistry(...)</code>, <code>setVoterIdNFT(...)</code>, <code>setParticipationPool(...)</code>
+          , and <code>setTreasury(...)</code> &mdash; Maintain the engine&apos;s governance-controlled address book.
+        </li>
+      </ul>
+
+      <hr />
+
       <h2>RoundRewardDistributor</h2>
       <p>
         Pull-based reward claiming. <strong>Not pausable</strong> &mdash; users can always withdraw their tokens.
@@ -480,11 +515,12 @@ const SmartContracts: NextPage = () => {
       <ul>
         <li>
           <code>submitCategory(name, domain, subcategories)</code> &mdash; Submit category for governance sponsorship
-          (100 cREP stake). Requires Voter ID.
+          (500 cREP stake). Requires Voter ID.
         </li>
         <li>
           <code>linkApprovalProposal(categoryId, descriptionHash)</code> &mdash; Link the separately created governor
-          approval proposal to the pending category. Submitter only.
+          approval proposal to the pending category. Submitter only, and only for proposals created after that
+          submission.
         </li>
         <li>
           <code>clearApprovalProposal(categoryId)</code> &mdash; Clear a linked approval proposal after it was canceled
@@ -495,8 +531,8 @@ const SmartContracts: NextPage = () => {
           linked.
         </li>
         <li>
-          <code>approveCategory(categoryId, descriptionHash)</code> &mdash; Approve after successful governance vote for
-          the exact linked proposal (timelock only).
+          <code>approveCategory(categoryId, descriptionHash, approvalDigest)</code> &mdash; Approve after successful
+          governance vote for the exact linked proposal and current submission binding (timelock only).
         </li>
         <li>
           <code>rejectCategory(categoryId)</code> &mdash; Reject after a defeated vote (permissionless, checks proposal
@@ -541,13 +577,14 @@ const SmartContracts: NextPage = () => {
 
       <h2>HumanFaucet</h2>
       <p>
-        Sybil-resistant token distribution using Self.xyz zero-knowledge passport verification. Five tiers from Genesis
-        (10,000 cREP for the first 10 users) down to Settler (1 cREP), with each tier doubling in size while the claim
-        halves. Referral bonuses are 50% of the claim amount for both claimant and referrer.
+        Sybil-resistant token distribution using Self.xyz zero-knowledge passport or biometric ID-card verification.
+        Five tiers run from Genesis (10,000 cREP for the first 10 users) down to Settler (1 cREP), with claim sizes
+        stepping down 10x at claimant thresholds 10 / 1,000 / 10,000 / 1,000,000. Referral bonuses are 50% of the claim
+        amount for both claimant and referrer.
       </p>
       <p>
-        On a successful claim, HumanFaucet also mints a <strong>VoterIdNFT</strong> for the claimant, enabling
-        participation across the platform.
+        On a successful claim, HumanFaucet attempts to mint a <strong>VoterIdNFT</strong> for the claimant, enabling
+        participation across the platform. Governance can retry the mint if the claim succeeds but the NFT mint fails.
       </p>
       <p>Privileged sweeps of accounted faucet funds are disabled in the current launch hardening.</p>
 
@@ -640,11 +677,12 @@ const SmartContracts: NextPage = () => {
           timelock-owned proxy admins.
         </li>
         <li>
-          <strong>Reentrancy Guard:</strong> All token-transferring functions use ReentrancyGuard.
+          <strong>Reentrancy protection:</strong> Core registry, voting, reward, frontend, category, and participation
+          flows use reentrancy guards; HumanFaucet uses a dedicated claim lock.
         </li>
         <li>
-          <strong>Flash-Loan Protection:</strong> CuryoReputation tracks first-receive block to prevent same-block vote
-          attacks.
+          <strong>Snapshot-based governance:</strong> CuryoGovernor uses ERC20Votes snapshots for proposal voting power,
+          and governance participation also applies a 7-day cREP transfer lock.
         </li>
         <li>
           <strong>Sybil Resistance:</strong> VoterIdNFT (soulbound) required for all user actions. Per-identity stake

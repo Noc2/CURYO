@@ -1,6 +1,8 @@
+import "../helpers/fetch-shim";
+import { E2E_BASE_URL } from "../helpers/service-urls";
 import { expect, test } from "@playwright/test";
 
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = E2E_BASE_URL;
 
 test.describe("Profile follow API routes", () => {
   async function getFollowSessionStatus(address: string, cookie?: string) {

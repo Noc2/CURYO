@@ -7,7 +7,7 @@ type CommitVoteSearchOptions = {
   skipIfUnchanged?: boolean;
 };
 
-export function buildVoteSearchTarget(value: string): string {
+function buildVoteSearchTarget(value: string): string {
   const trimmed = value.trim();
   return trimmed ? `/vote?q=${encodeURIComponent(trimmed)}` : "/vote";
 }

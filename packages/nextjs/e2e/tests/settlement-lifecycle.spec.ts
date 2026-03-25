@@ -11,6 +11,7 @@ import {
   waitForPonderSync,
 } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
+import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { setupWallet } from "../helpers/wallet-session";
 import { getContentById, getContentList } from "../helpers/ponder-api";
@@ -156,7 +157,7 @@ test.describe("Settlement lifecycle", () => {
   });
 
   test("portfolio shows vote history after voting", async ({ browser }) => {
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 

@@ -7,11 +7,11 @@ import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 /// @notice Resolves approved categories and canonical submission keys for submitted URLs.
 /// @dev Stateless helper extracted from ContentRegistry to keep ContentRegistry under EIP-170.
 contract SubmissionCanonicalizer {
-    function resolveCategoryAndSubmissionKey(ICategoryRegistry categoryRegistry, string calldata url, uint256 categoryIdHint)
-        external
-        view
-        returns (uint256 resolvedCategoryId, bytes32 submissionKey)
-    {
+    function resolveCategoryAndSubmissionKey(
+        ICategoryRegistry categoryRegistry,
+        string calldata url,
+        uint256 categoryIdHint
+    ) external view returns (uint256 resolvedCategoryId, bytes32 submissionKey) {
         ICategoryRegistry.Category memory category = _resolveApprovedCategory(categoryRegistry, url);
         resolvedCategoryId = category.id;
         require(resolvedCategoryId != 0, "Domain not approved");

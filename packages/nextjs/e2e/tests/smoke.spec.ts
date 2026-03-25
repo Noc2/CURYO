@@ -1,5 +1,5 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { waitForFeedLoaded } from "../helpers/wait-helpers";
+import { getVisibleAuthConnectButton, waitForFeedLoaded, waitForWalletConnected } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
 import { expect, test } from "@playwright/test";
 
@@ -12,6 +12,7 @@ test.describe("Smoke tests", () => {
   test("wallet auto-connects via the localhost thirdweb test wallet", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
     await page.goto("/vote");
+    await waitForWalletConnected(page);
     await waitForFeedLoaded(page);
 
     // After feed loads, check for wallet connection indicators.
@@ -27,15 +28,13 @@ test.describe("Smoke tests", () => {
     // Use .first() to avoid strict mode violation when multiple indicators match
     await connectedIndicator.first().waitFor({ state: "visible", timeout: 15_000 });
 
-    // Verify the main "Connect your wallet to submit" prompt is NOT visible
-    // (that would mean the test wallet sync failed)
-    const mainPrompt = page.getByText("Connect your wallet to submit", { exact: false });
-    expect(await mainPrompt.isVisible().catch(() => false)).toBe(false);
+    await expect(getVisibleAuthConnectButton(page)).toHaveCount(0);
   });
 
   test("brand link can reopen landing page without redirecting connected users back to discover", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
     await page.goto("/vote");
+    await waitForWalletConnected(page);
     await waitForFeedLoaded(page);
 
     await page.getByRole("link", { name: /CURYO \(BETA\)/i }).click();

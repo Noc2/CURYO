@@ -2,8 +2,8 @@
  * Ponder REST API helpers for data verification in E2E tests.
  * Ponder runs at localhost:42069 by default.
  */
-
-const PONDER_URL = "http://localhost:42069";
+import "./fetch-shim";
+import { PONDER_URL } from "./ponder-url";
 
 /**
  * Fetch with automatic retry on 429 (Too Many Requests).

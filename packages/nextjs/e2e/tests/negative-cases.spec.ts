@@ -1,8 +1,9 @@
 import { cancelContent } from "../helpers/admin-helpers";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { setupWallet } from "../helpers/wallet-session";
-import { waitForFeedLoaded } from "../helpers/wait-helpers";
+import { findVoteableContent, waitForFeedLoaded } from "../helpers/wait-helpers";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -26,7 +27,7 @@ test.describe("Negative cases", () => {
     // Account #1 has no VoterID and no cREP — verify the vote page loads
     // and content is visible. Vote buttons may or may not be shown
     // (the contract will reject votes without VoterID regardless).
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account1.privateKey);
 
@@ -41,7 +42,7 @@ test.describe("Negative cases", () => {
   });
 
   test("submit page shows VoterID prompt for user without VoterID", async ({ browser }) => {
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account1.privateKey);
 
@@ -66,37 +67,17 @@ test.describe("Negative cases", () => {
     test.setTimeout(120_000);
 
     // Account #6 has VoterID #104 and cREP.
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account6.privateKey);
 
-    // Navigate to the feed and find voteable content.
-    // Prior runs may have used up content #2, so cycle through thumbnails.
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await expect(async () => {
+      await page.goto("/vote", { waitUntil: "domcontentloaded" });
+      await waitForFeedLoaded(page, 20_000);
+    }).toPass({ timeout: 30_000, intervals: [500, 1_000, 2_000] });
 
-    const voteUp = page.getByRole("button", { name: "Vote up" });
-    let canVote = await voteUp
-      .waitFor({ state: "visible", timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (!canVote) {
-      const thumbnails = page.locator("[data-testid='content-thumbnail']");
-      const thumbCount = await thumbnails.count();
-
-      for (let i = 0; i < Math.min(thumbCount, 20); i++) {
-        const thumb = thumbnails.nth(i);
-        if (await thumb.isVisible().catch(() => false)) {
-          await thumb.click();
-          canVote = await voteUp
-            .waitFor({ state: "visible", timeout: 5_000 })
-            .then(() => true)
-            .catch(() => false);
-          if (canVote) break;
-        }
-      }
-    }
+    const voteUp = page.getByRole("button", { name: /^Vote up$/i });
+    const canVote = await findVoteableContent(page);
 
     if (!canVote) {
       await context.close();

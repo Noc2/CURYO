@@ -1,3 +1,4 @@
+import "../helpers/fetch-shim";
 import {
   approveCREP,
   claimFrontendFee,

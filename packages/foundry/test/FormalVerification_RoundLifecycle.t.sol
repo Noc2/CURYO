@@ -58,7 +58,10 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -108,7 +111,9 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
         contentNonce++;
         vm.startPrank(submitter);
         crepToken.approve(address(registry), 10e6);
-        uint256 id = _submitContentWithReservation(registry, string(abi.encodePacked("https://t.co/lc", vm.toString(contentNonce))), "Goal", "Goal", "tag", 0);
+        uint256 id = _submitContentWithReservation(
+            registry, string(abi.encodePacked("https://t.co/lc", vm.toString(contentNonce))), "Goal", "Goal", "tag", 0
+        );
         vm.stopPrank();
         return id;
     }
@@ -139,7 +144,7 @@ contract FormalVerification_RoundLifecycleTest is VotingTestBase {
                 bool up = uint8(c.ciphertext[0]) == 1;
                 bytes32 s;
                 bytes memory ct = c.ciphertext;
-                assembly { s := mload(add(ct, 33)) }
+                assembly ("memory-safe") { s := mload(add(ct, 33)) }
                 try engine.revealVoteByCommitKey(cid, roundId, keys[i], up, s) { } catch { }
             }
         }

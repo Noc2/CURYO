@@ -1,4 +1,5 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { newE2EContext } from "../helpers/browser-context";
 import { setupWallet } from "../helpers/wallet-session";
 import { voteOnContent } from "../helpers/vote-helpers";
 import { waitForFeedLoaded } from "../helpers/wait-helpers";
@@ -6,7 +7,7 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Voting flow — 3-voter threshold", () => {
   test("vote page does not auto-request watchlist signatures on load", async ({ browser }) => {
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     let watchlistChallengeRequests = 0;
 
@@ -26,7 +27,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
   });
 
   test("vote buttons visible on non-own content", async ({ browser }) => {
-    const context = await browser.newContext();
+    const context = await newE2EContext(browser);
     const page = await context.newPage();
     // Account #3 viewing the feed
     await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
@@ -62,7 +63,7 @@ test.describe("Voting flow — 3-voter threshold", () => {
     let successCount = 0;
 
     for (const voter of voters) {
-      const context = await browser.newContext();
+      const context = await newE2EContext(browser);
       const page = await context.newPage();
       await setupWallet(page, voter.account.privateKey);
 

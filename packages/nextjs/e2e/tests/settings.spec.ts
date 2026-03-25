@@ -2,6 +2,7 @@ import { expect, test } from "../fixtures/wallet";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { readTokenBalance } from "../helpers/admin-helpers";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
+import { gotoWithRetry } from "../helpers/wait-helpers";
 
 test.describe("Settings page", () => {
   test("delegation tab can transfer cREP to another address", async ({ connectedPage: page }) => {
@@ -16,7 +17,7 @@ test.describe("Settings page", () => {
     const senderBalanceBefore = await readTokenBalance(sender, tokenAddress);
     const recipientBalanceBefore = await readTokenBalance(recipient, tokenAddress);
 
-    await page.goto("/settings?tab=delegation", { waitUntil: "domcontentloaded" });
+    await gotoWithRetry(page, "/settings?tab=delegation");
 
     await expect(page.getByRole("heading", { name: "Delegated Vote ID" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "Transfer cREP" })).toBeVisible({ timeout: 15_000 });
@@ -24,7 +25,7 @@ test.describe("Settings page", () => {
     await page.getByLabel("Transfer recipient").fill(recipient);
     await page.getByLabel("Transfer amount").fill(transferAmount);
 
-    const sendButton = page.getByRole("button", { name: "Send cREP" });
+    const sendButton = page.getByRole("button", { name: "Send cREP", exact: true });
     await expect(sendButton).toBeEnabled();
     await sendButton.click();
 

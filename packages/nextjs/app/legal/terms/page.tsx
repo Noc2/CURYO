@@ -158,10 +158,10 @@ const TermsPage: NextPage = () => {
             continue to operate independently
           </li>
           <li>
-            <strong>Identity Verification:</strong> The faucet uses Self.xyz for passport-based zero-knowledge identity
-            verification. While no personal data is shared with this Interface, the on-chain nullifier permanently links
-            one verification per passport. If Self.xyz&apos;s service becomes unavailable, alternative faucet mechanisms
-            may not be available
+            <strong>Identity Verification:</strong> The faucet uses Self.xyz for zero-knowledge identity verification
+            using supported documents such as passports or biometric ID cards. While no personal data is shared with
+            this Interface, the on-chain nullifier permanently links one verification per supported document. If
+            Self.xyz&apos;s service becomes unavailable, alternative faucet mechanisms may not be available
           </li>
         </ul>
 

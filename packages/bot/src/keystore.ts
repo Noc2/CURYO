@@ -1,10 +1,8 @@
 /**
  * Foundry keystore helpers for the bot.
  */
-import { decryptKeystore, getKeystoreAccountFromCredentials } from "@curyo/node-utils/keystore";
+import { getKeystoreAccountFromCredentials } from "@curyo/node-utils/keystore";
 import type { PrivateKeyAccount } from "viem/accounts";
-
-export { decryptKeystore };
 
 export function getKeystoreAccount(name: string, password: string): PrivateKeyAccount | null {
   try {

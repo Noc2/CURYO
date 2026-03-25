@@ -118,7 +118,7 @@ function deserializeSnapshot(raw: string): WalletDisplaySummary | null {
   }
 }
 
-export function readPersistedWalletDisplaySummary(address: string | undefined, now = Date.now()) {
+function readPersistedWalletDisplaySummary(address: string | undefined, now = Date.now()) {
   if (!address || typeof window === "undefined") return null;
 
   try {

@@ -117,7 +117,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     functionName: "proposeCategoryApproval",
     description: "Create a lower-threshold governor proposal to sponsor and approve a pending category submission.",
     allowCustomDescription: false,
-    note: "The description is fixed so the original category submitter can link it from the same wallet that staked the category.",
+    note: "The description is fixed and the proposal is bound to the current pending submission, so stale category approvals cannot be reused.",
     fields: [{ key: "categoryId", label: "Category ID", type: "uint", required: true }],
     buildArgs: (_, parser) => [parser.uint("categoryId", "Category ID")],
     buildDescription: values => `Approve category #${values.categoryId || "0"}`,
@@ -131,7 +131,7 @@ const actionTemplates: readonly GovernanceActionTemplate[] = [
     functionName: "linkApprovalProposal",
     description:
       "Directly link an existing governor proposal to a pending category when the proposal was created outside this composer.",
-    note: "Must be called by the original category submitter from the wallet that posted the stake.",
+    note: "Must be called by the original category submitter. Only proposals created after the current submission can link.",
     advanced: true,
     fields: [
       { key: "categoryId", label: "Category ID", type: "uint", required: true },

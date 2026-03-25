@@ -45,10 +45,7 @@ contract ProtocolConfig is Initializable, AccessControlUpgradeable {
         _initialize(admin, governance, governance);
     }
 
-    function initializeWithTreasury(address admin, address governance, address treasuryAuthority)
-        external
-        initializer
-    {
+    function initializeWithTreasury(address admin, address governance, address treasuryAuthority) external initializer {
         _initialize(admin, governance, treasuryAuthority);
     }
 

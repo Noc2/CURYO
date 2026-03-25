@@ -189,3 +189,30 @@ export async function verifyEmailNotificationToken(token: string) {
 
   return { ok: true as const, walletAddress: row.walletAddress, email: row.email };
 }
+
+export async function unsubscribeEmailNotificationSubscription(walletAddress: `0x${string}`, email: string) {
+  await ensureNotificationEmailSubscriptionsTable();
+
+  const [row] = await db
+    .select({
+      walletAddress: notificationEmailSubscriptions.walletAddress,
+    })
+    .from(notificationEmailSubscriptions)
+    .where(
+      and(
+        eq(notificationEmailSubscriptions.walletAddress, walletAddress),
+        eq(notificationEmailSubscriptions.email, email),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    return { ok: false as const };
+  }
+
+  await db
+    .delete(notificationEmailSubscriptions)
+    .where(eq(notificationEmailSubscriptions.walletAddress, walletAddress));
+
+  return { ok: true as const };
+}

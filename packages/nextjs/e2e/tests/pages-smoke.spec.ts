@@ -1,39 +1,41 @@
-import { expect, test } from "@playwright/test";
+import { E2E_BASE_URL } from "../helpers/service-urls";
+import { expect, test, type Page } from "@playwright/test";
+
+async function gotoPath(page: Page, path: string): Promise<void> {
+  await page.goto(new URL(path, E2E_BASE_URL).toString(), { waitUntil: "domcontentloaded" });
+}
 
 test.describe("Page smoke tests", () => {
   test("landing page loads", async ({ page }) => {
-    await page.goto("/");
+    await gotoPath(page, "/");
     // The page title should contain "Curyo" regardless of redirects
     await expect(page).toHaveTitle(/Curyo/i);
 
     // The landing page may redirect to /governance or /vote if a test wallet
     // session is already active. Either the hero section or a redirected page is acceptable.
-    const heroHeading = page.getByRole("heading", { name: /Curyo/i }).first();
+    const heroHeading = page.getByRole("heading", { name: /A Better Web/i }).first();
     const governancePage = page.getByRole("button", { name: /Profile|Leaderboard|Faucet/i }).first();
-    const feedPage = page.getByRole("button", { name: "Vote up" });
+    const feedPage = page.getByRole("button", { name: /Vote up|Vote down/i }).first();
 
     const landingOrRedirect = heroHeading.or(governancePage).or(feedPage);
     await expect(landingOrRedirect.first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("docs page renders documentation", async ({ page }) => {
-    await page.goto("/docs");
+    await gotoPath(page, "/docs");
 
-    // Docs page should have the "Introduction" heading
-    const introHeading = page.getByRole("heading", { name: /Introduction/i });
+    const introHeading = page.getByRole("heading", { name: /Introduction/i }).first();
     await expect(introHeading).toBeVisible({ timeout: 10_000 });
 
-    // Key sections should be present
-    const missionHeading = page.getByRole("heading", { name: /Mission/i });
-    await expect(missionHeading).toBeVisible({ timeout: 5_000 });
+    const keyPrinciplesHeading = page.getByRole("heading", { name: /Key Principles/i }).first();
+    await expect(keyPrinciplesHeading).toBeVisible({ timeout: 5_000 });
 
-    // Key principles section
     const skinInGame = page.getByText("Skin in the Game");
     await expect(skinInGame).toBeVisible({ timeout: 5_000 });
   });
 
   test("legal page shows legal cards", async ({ page }) => {
-    await page.goto("/legal");
+    await gotoPath(page, "/legal");
 
     // Main heading
     const heading = page.getByRole("heading", { name: "Legal", level: 1 });
@@ -51,7 +53,7 @@ test.describe("Page smoke tests", () => {
   });
 
   test("blockexplorer shows search and transactions", async ({ page }) => {
-    await page.goto("/blockexplorer");
+    await gotoPath(page, "/blockexplorer");
 
     // Search bar should be visible
     const searchInput = page.getByPlaceholder("Search by hash or address");
@@ -64,8 +66,7 @@ test.describe("Page smoke tests", () => {
 
   test("legal subpages load without errors", async ({ page }) => {
     for (const subpage of ["/legal/terms", "/legal/privacy", "/legal/imprint"]) {
-      // Use domcontentloaded to avoid timeouts when heavy resources stall the load event
-      await page.goto(subpage, { waitUntil: "domcontentloaded" });
+      await gotoPath(page, subpage);
 
       // Page should have some text content (not blank)
       const mainContent = page.locator("main");

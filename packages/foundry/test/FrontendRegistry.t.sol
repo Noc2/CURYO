@@ -78,7 +78,7 @@ contract FrontendRegistryTest is Test {
         // Deploy mock voting engine
         votingEngine = new MockVotingEngine();
 
-        // Deploy registry (UUPS proxy)
+        // Deploy registry behind an ERC1967 proxy for upgradeable storage behavior
         FrontendRegistry impl = new FrontendRegistry();
         registry = FrontendRegistry(
             address(

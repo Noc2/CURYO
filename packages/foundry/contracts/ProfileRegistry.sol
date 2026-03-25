@@ -143,10 +143,7 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
     function getProfile(address user) external view override returns (Profile memory) {
         StoredProfile storage profile = _profiles[user];
         return Profile({
-            name: profile.name,
-            strategy: profile.strategy,
-            createdAt: profile.createdAt,
-            updatedAt: profile.updatedAt
+            name: profile.name, strategy: profile.strategy, createdAt: profile.createdAt, updatedAt: profile.updatedAt
         });
     }
 
@@ -245,5 +242,4 @@ contract ProfileRegistry is IProfileRegistry, Initializable, AccessControlUpgrad
         }
         return keccak256(lowercased);
     }
-
 }

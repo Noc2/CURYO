@@ -7,7 +7,7 @@ import type { GenericContractsDeclaration } from "./types";
 const deployedContracts = {
   31337: {
     CategoryFeeLib: {
-      address: "0x08f18f144189bbf7d72318bbbb14c4255e637d4d",
+      address: "0x2a3fa94fabb12abaf1ced511042f76ab3ff41010",
       abi: [
         {
           type: "error",
@@ -43,7 +43,7 @@ const deployedContracts = {
       deployedOnBlock: 2,
     },
     SubmitterStakeLib: {
-      address: "0xda606dd4a2034e10ae5b2a7173ca02eae32d94cf",
+      address: "0xdb88870e45c84c8a343dc46c937248aaf875a2c5",
       abi: [
         {
           type: "error",
@@ -9487,6 +9487,11 @@ const deployedContracts = {
               type: "bytes32",
               internalType: "bytes32",
             },
+            {
+              name: "approvalDigest",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
           ],
           outputs: [],
           stateMutability: "nonpayable",
@@ -9717,6 +9722,44 @@ const deployedContracts = {
               name: "",
               type: "uint8",
               internalType: "enum ICategoryRegistry.CategoryStatus",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryApprovalDigest",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryCreatedBlock",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",
@@ -26248,6 +26291,11 @@ const deployedContracts = {
               type: "bytes32",
               internalType: "bytes32",
             },
+            {
+              name: "approvalDigest",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
           ],
           outputs: [],
           stateMutability: "nonpayable",
@@ -26478,6 +26526,44 @@ const deployedContracts = {
               name: "",
               type: "uint8",
               internalType: "enum ICategoryRegistry.CategoryStatus",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryApprovalDigest",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryCreatedBlock",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
             },
           ],
           stateMutability: "view",

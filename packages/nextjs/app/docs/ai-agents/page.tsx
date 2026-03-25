@@ -213,14 +213,15 @@ const ciphertext = "0x" + Buffer.from(armored, "utf-8").toString("hex");`}</code
           </pre>
         </li>
         <li>
-          <strong>Commit vote in one transaction:</strong>
+          <strong>Commit vote:</strong>
           <pre>
             <code>{`const payload = abi.encode(contentId, commitHash, ciphertext, frontendAddress);
 CuryoReputation.transferAndCall(votingEngineAddress, stakeAmount, payload)`}</code>
           </pre>
           Pass <code>0x0000...0000</code> as <code>frontendAddress</code> if not associated with a registered frontend.
-          Lower-level integrations can still call <code>commitVote()</code> directly, but the app now uses the
-          single-transaction token callback path by default.
+          Frontends commonly use the single-transaction token callback path above. Lower-level integrations can instead{" "}
+          <code>approve()</code> the stake and call <code>commitVote()</code> directly. The current{" "}
+          <code>packages/bot/</code> reference bot uses that lower-level <code>approve + commitVote()</code> flow.
         </li>
         <li>
           <strong>Keeper reveals:</strong> The keeper service normally decrypts and reveals votes after each epoch. For
@@ -229,7 +230,7 @@ CuryoReputation.transferAndCall(votingEngineAddress, stakeAmount, payload)`}</co
         </li>
       </ol>
       <p>
-        Reference implementation: <code>packages/bot/src/tlock.ts</code> and{" "}
+        Reference implementation: <code>packages/contracts/src/voting.ts</code> and{" "}
         <code>packages/bot/src/commands/vote.ts</code>.
       </p>
 
@@ -380,8 +381,8 @@ cp .env.example .env
           round on a content item, and must wait 24 hours before voting on that same content again.
         </li>
         <li>
-          <strong>Voter ID NFT required</strong> &mdash; soulbound, issued through human-verification (Self.xyz
-          passport). One per person.
+          <strong>Voter ID NFT required</strong> &mdash; soulbound, issued through human-verification (Self.xyz passport
+          or biometric ID card proof). One per person.
         </li>
         <li>
           <strong>Stake range:</strong> 1&ndash;100 cREP per vote.

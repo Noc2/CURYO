@@ -31,8 +31,7 @@ import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.
 contract DeployCuryo is ScaffoldETHDeploy {
     error DeploymentRoleVerificationFailed(string check);
 
-    bytes32 internal constant ERC1967_ADMIN_SLOT =
-        bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
+    bytes32 internal constant ERC1967_ADMIN_SLOT = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
 
     // Timelock delay: 2 days for standard operations
     uint256 public constant TIMELOCK_MIN_DELAY = 2 days;
@@ -127,9 +126,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         ContentRegistry registry = ContentRegistry(address(registryProxy));
 
         TransparentUpgradeableProxy protocolConfigProxy = new TransparentUpgradeableProxy(
-            address(protocolConfigImpl),
-            governance,
-            abi.encodeCall(ProtocolConfig.initialize, (deployer, governance))
+            address(protocolConfigImpl), governance, abi.encodeCall(ProtocolConfig.initialize, (deployer, governance))
         );
         ProtocolConfig protocolConfig = ProtocolConfig(address(protocolConfigProxy));
 
@@ -137,7 +134,8 @@ contract DeployCuryo is ScaffoldETHDeploy {
             address(votingEngineImpl),
             governance,
             abi.encodeCall(
-                RoundVotingEngine.initialize, (governance, address(crepToken), address(registry), address(protocolConfig))
+                RoundVotingEngine.initialize,
+                (governance, address(crepToken), address(registry), address(protocolConfig))
             )
         );
         RoundVotingEngine votingEngine = RoundVotingEngine(address(votingEngineProxy));
@@ -160,7 +158,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance, // timelock as governance
             address(votingEngine)
         );
-        CuryoGovernor(payable(governorAddr)).setCategoryRegistry(address(categoryRegistry));
+        if (!isLocalDev) {
+            CuryoGovernor(payable(governorAddr)).setCategoryRegistry(address(categoryRegistry));
+        }
 
         // 7. Deploy VoterIdNFT (soulbound identity for verified humans)
         VoterIdNFT voterIdNFT = new VoterIdNFT(deployer, governance);
@@ -472,7 +472,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             address(registry), registry.TREASURY_ADMIN_ROLE(), governance, "ContentRegistry governance treasury admin"
         );
         _requireLacksRole(address(registry), registry.CONFIG_ROLE(), deployerAddress, "ContentRegistry deployer config");
-        _requireLacksRole(address(registry), registry.TREASURY_ROLE(), deployerAddress, "ContentRegistry deployer treasury");
+        _requireLacksRole(
+            address(registry), registry.TREASURY_ROLE(), deployerAddress, "ContentRegistry deployer treasury"
+        );
         _requireProxyAdminOwner(address(registry), governance, "ContentRegistry proxy admin owner");
 
         _requireHasRole(
@@ -481,7 +483,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             "RoundVotingEngine governance default admin"
         );
-        _requireHasRole(address(votingEngine), votingEngine.PAUSER_ROLE(), governance, "RoundVotingEngine governance pauser");
+        _requireHasRole(
+            address(votingEngine), votingEngine.PAUSER_ROLE(), governance, "RoundVotingEngine governance pauser"
+        );
         _requireProxyAdminOwner(address(votingEngine), governance, "RoundVotingEngine proxy admin owner");
 
         _requireHasRole(
@@ -490,7 +494,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             "ProtocolConfig governance default admin"
         );
-        _requireHasRole(address(protocolConfig), protocolConfig.CONFIG_ROLE(), governance, "ProtocolConfig governance config");
+        _requireHasRole(
+            address(protocolConfig), protocolConfig.CONFIG_ROLE(), governance, "ProtocolConfig governance config"
+        );
         _requireHasRole(
             address(protocolConfig), protocolConfig.TREASURY_ROLE(), governance, "ProtocolConfig governance treasury"
         );
@@ -500,7 +506,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
             governance,
             "ProtocolConfig governance treasury admin"
         );
-        _requireLacksRole(address(protocolConfig), protocolConfig.CONFIG_ROLE(), deployerAddress, "ProtocolConfig deployer config");
+        _requireLacksRole(
+            address(protocolConfig), protocolConfig.CONFIG_ROLE(), deployerAddress, "ProtocolConfig deployer config"
+        );
         _requireLacksRole(
             address(protocolConfig), protocolConfig.TREASURY_ROLE(), deployerAddress, "ProtocolConfig deployer treasury"
         );

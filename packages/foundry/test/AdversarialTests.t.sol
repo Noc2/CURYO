@@ -63,7 +63,10 @@ contract AdversarialTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -145,7 +148,7 @@ contract AdversarialTests is VotingTestBase {
         bool up = uint8(c.ciphertext[0]) == 1;
         bytes32 s;
         bytes memory ct = c.ciphertext;
-        assembly {
+        assembly ("memory-safe") {
             s := mload(add(ct, 33))
         }
         engine.revealVoteByCommitKey(contentId, roundId, commitKey, up, s);
@@ -154,7 +157,9 @@ contract AdversarialTests is VotingTestBase {
     function _settleRound(uint256 contentId, uint256 roundId, bytes32[] memory commitKeys) internal {
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
         // Warp past epoch + reveal grace period so unrevealed votes don't block settlement
-        vm.warp(round.startTime + EPOCH_DURATION + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod() + 1);
+        vm.warp(
+            round.startTime + EPOCH_DURATION + ProtocolConfig(address(engine.protocolConfig())).revealGracePeriod() + 1
+        );
         for (uint256 i = 0; i < commitKeys.length; i++) {
             _reveal(contentId, roundId, commitKeys[i]);
         }
@@ -539,7 +544,10 @@ contract AdversarialTests is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(new RoundVotingEngine()),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(token2), address(reg2), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(token2), address(reg2), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );

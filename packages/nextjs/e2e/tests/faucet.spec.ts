@@ -1,10 +1,11 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
+import { E2E_BASE_URL } from "../helpers/service-urls";
 import { expect, test } from "@playwright/test";
 
 test.describe("Dev faucet API", () => {
   test("can mint cREP via API route", async ({ request }) => {
     // POST to dev faucet — requires DEV_FAUCET_ENABLED=true and FAUCET_PRIVATE_KEY in .env.local
-    const response = await request.post("http://localhost:3000/api/dev-faucet", {
+    const response = await request.post(`${E2E_BASE_URL}/api/dev-faucet`, {
       data: {
         address: ANVIL_ACCOUNTS.account1.address, // Account #1 has no pre-funded cREP
         action: "mint-crep",
@@ -26,7 +27,7 @@ test.describe("Dev faucet API", () => {
   });
 
   test("can mint VoterID via API route", async ({ request }) => {
-    const response = await request.post("http://localhost:3000/api/dev-faucet", {
+    const response = await request.post(`${E2E_BASE_URL}/api/dev-faucet`, {
       data: {
         address: ANVIL_ACCOUNTS.account1.address,
         action: "mint-voter-id",

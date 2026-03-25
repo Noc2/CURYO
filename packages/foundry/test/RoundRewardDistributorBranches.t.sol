@@ -54,7 +54,10 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -122,7 +125,7 @@ contract RoundRewardDistributorBranchesTest is VotingTestBase {
                 bytes memory ct = c.ciphertext;
                 bool isUp = uint8(ct[0]) == 1;
                 bytes32 salt;
-                assembly {
+                assembly ("memory-safe") {
                     salt := mload(add(ct, 33))
                 }
                 try votingEngine.revealVoteByCommitKey(contentId, roundId, keys[i], isUp, salt) { } catch { }

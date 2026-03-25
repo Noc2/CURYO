@@ -49,15 +49,15 @@ export const EXECUTIVE_SUMMARY: ContentBlock[] = [
   },
   {
     type: "paragraph",
-    text: "Sybil resistance is enforced through Voter ID NFTs -- soulbound tokens tied to verified human identities via zero-knowledge passport verification. Each person can hold exactly one Voter ID, capping their influence regardless of how many wallets they control. This makes systematic manipulation expensive relative to the signal produced.",
+    text: "Sybil resistance is enforced through Voter ID NFTs -- soulbound tokens tied to verified human identities via zero-knowledge Self.xyz passport or biometric ID card verification. Each verified identity is capped regardless of how many wallets it controls, making systematic manipulation expensive relative to the signal produced.",
   },
   {
     type: "paragraph",
-    text: "A core design decision is that all rating data lives on-chain as a permanent, permissionless data layer. Every vote, stake amount, round outcome, and resulting content rating is publicly accessible without API restrictions or gatekeepers. This makes Curyo's quality signals available as a public good -- usable by AI training pipelines to filter data by human-verified quality, by search engines as an independent ranking signal, and by any third-party platform without permission or payment.",
+    text: "A core design decision is that all rating data lives on-chain as a permanent, permissionless data layer. Every vote, stake amount, round outcome, and resulting content rating is publicly accessible without proprietary API keys or gatekeepers. Hosted indexers can still apply service-level rate limits, but the underlying data remains open. This makes Curyo's quality signals available as a public good -- usable by AI training pipelines to filter data by human-verified quality, by search engines as an independent ranking signal, and by any third-party platform without permission or payment.",
   },
   {
     type: "paragraph",
-    text: "Curyo also incorporates AI as a first-class participant through automated voting bots with pluggable rating strategies. Bots use the same one-transaction voting flow as human voters -- transferring stake and committing the encrypted payload atomically -- and are transparent participants in the curation game. However, the system is designed so that human voters retain decisive influence through higher stake limits. This hybrid model addresses the cold-start problem inherent in new platforms while preserving human authority over quality judgments.",
+    text: "Curyo also incorporates AI as a first-class participant through automated voting bots with pluggable rating strategies. Bots follow the same staking and commit-reveal rules as human voters and are transparent participants in the curation game. In practice, AI-assisted voting is most useful for cold-start seeding while the protocol leaves influence to stake-weighted participants rather than participant type. This hybrid model addresses the cold-start problem inherent in new platforms while preserving space for human oversight and disagreement.",
   },
   {
     type: "paragraph",
@@ -156,15 +156,15 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "To prevent manipulation through multiple wallets (sybil attacks), Curyo uses Voter ID NFTs  -- soulbound tokens tied to verified human identities via Self.xyz passport verification.",
+            text: "To prevent manipulation through multiple wallets (sybil attacks), Curyo uses Voter ID NFTs  -- soulbound tokens tied to verified human identities via Self.xyz passport or biometric ID card verification.",
           },
           {
             type: "bullets",
             items: [
-              "One ID per person: Each passport can only mint one Voter ID NFT, ever.",
+              "One verified claim path per wallet/document: each supported document can only mint once, and each wallet can only claim once.",
               "Non-transferable: Voter IDs are soulbound  -- they cannot be transferred or sold.",
               "Stake limits per ID: Each Voter ID can stake a maximum of 100 cREP per content per round, regardless of how many wallets they control.",
-              "Privacy-preserving: Self.xyz uses zero-knowledge proofs. Only the passport's validity is verified; no personal data is stored on-chain.",
+              "Privacy-preserving: Self.xyz uses zero-knowledge proofs. Only the supported document proof is verified; no personal data is stored on-chain.",
             ],
           },
           {
@@ -698,7 +698,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Fixed supply of 100 million tokens. Fair launch  -- no pre-mine, no VC allocation, no team tokens, and no token sale of any kind. All tokens are distributed exclusively through six on-chain pools.",
+            text: "Fixed supply of 100 million tokens. Fair launch  -- no pre-mine, no VC allocation, no team tokens, and no token sale of any kind. Tokens are distributed through protocol-controlled pools, while category approval stakes are user-funded rather than pre-allocated.",
           },
           {
             type: "bullets",
@@ -706,7 +706,7 @@ export const SECTIONS: Section[] = [
               "Reputation, not money. cREP represents your standing in the community. It is staked to curate and vote, not traded for profit.",
               "No issuer, no sale. There is no company, foundation, or team that issues, sells, or controls cREP. Distribution is handled entirely by on-chain protocol contracts.",
               `Governance-finalized deployments. ${protocolCopy.governanceDesignPrinciple}`,
-              "Sybil-resistant distribution. Tokens are claimed once per verified human via passport verification, preventing concentration and ensuring broad distribution.",
+              "Sybil-resistant distribution. Tokens are claimed through Self.xyz passport or biometric ID card verification, reducing concentration and broadening distribution.",
             ],
           },
         ],
@@ -736,11 +736,10 @@ export const SECTIONS: Section[] = [
                   "Governance-controlled tokens for grants, whistleblower rewards, and protocol development",
                 ],
                 [
-                  "Keeper Reward Pool",
-                  "100,000 cREP",
-                  "Flat per-operation rewards for keeper housekeeping (settlement, cancellation, cleanup), funded separately from user stakes",
+                  "Category Registry",
+                  "0 cREP",
+                  "Pending category stakes are user-funded; approval proposals are now sponsored directly by voters",
                 ],
-                ["Category Registry", "100 cREP", "Initial reserve for the category proposal mechanism"],
               ],
             },
           },
@@ -751,7 +750,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Primary distribution via Self.xyz passport verification with age verification (18+). Each passport can claim once. Claim amounts decrease as more users join  -- rewarding early adopters who bootstrap the platform with content.",
+            text: "Primary distribution via Self.xyz passport or biometric ID card verification with age verification (18+). Each supported document can claim once, and each wallet can only claim once. Claim amounts decrease as more users join  -- rewarding early adopters who bootstrap the platform with content.",
           },
           {
             type: "table",
@@ -819,10 +818,6 @@ export const SECTIONS: Section[] = [
           {
             type: "paragraph",
             text: "Keepers also perform housekeeping: cancelling expired rounds (rounds that exceed maxDuration without reaching minVoters) and marking dormant content. The drand randomness beacon is public, so anyone can run the off-chain decryption flow, but the current protocol verifies commit consistency rather than proving on-chain that the stored ciphertext was honestly decryptable. In practice the reveal path is a keeper/drand-assisted off-chain flow with a user fallback, not a fully trustless ciphertext proof system. If Curyo later wants to close that trust gap entirely, zk proofs of correct decryption are the most natural upgrade path.",
-          },
-          {
-            type: "paragraph",
-            text: "To incentivize keeper operation, the protocol allocates a dedicated 100,000 cREP keeper reward pool, funded separately from user stakes. Keepers currently earn a flat 0.1 cREP for rewarded housekeeping operations such as settlement and unrevealed-vote cleanup. At this rate, the pool funds up to 1,000,000 rewarded operations. Rewards are best-effort: if the pool is depleted, operations still succeed but no reward is paid. The keeper reward amount is governance-configurable.",
           },
         ],
       },
@@ -908,7 +903,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Consider an attacker who acquires K fraudulent verified identities at cost c per identity (passport-grade KYC). Each identity can stake up to 100 cREP per content per round, giving the attacker maximum voting power of K x 100 cREP.",
+            text: "Consider an attacker who acquires K fraudulent verified identities at cost c per identity (document-grade identity verification). Each identity can stake up to 100 cREP per content per round, giving the attacker maximum voting power of K x 100 cREP.",
           },
           {
             type: "sub_heading",
@@ -936,7 +931,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The real-world cost of a verified passport identity far exceeds any on-chain equivalent. Even at low assumed identity costs, profitability requires the attacker to control the majority  -- if honest voters collectively outstake the attacker, all K identities lose their entire staked cREP. The attack is negative-sum in expectation against an active honest voter base.",
+            text: "The real-world cost of a verified supported identity document far exceeds any on-chain equivalent. Even at low assumed identity costs, profitability requires the attacker to control the majority  -- if honest voters collectively outstake the attacker, all K identities lose their entire staked cREP. The attack is negative-sum in expectation against an active honest voter base.",
           },
           {
             type: "sub_heading",
@@ -1125,7 +1120,7 @@ export const SECTIONS: Section[] = [
           {
             type: "bullets",
             items: [
-              "Sybil resistance  -- 1 person = 1 Voter ID via passport verification (Self.xyz).",
+              "Sybil resistance  -- 1 person = 1 Voter ID via Self.xyz passport or biometric ID card verification.",
               "Stake caps  -- maximum 100 cREP per content per round limits single-voter influence.",
               "Vote cooldowns  -- a 24-hour cooldown on the same content prevents rapid re-voting and is enforced per effective Voter ID.",
               "Permanent revocation  -- losing your Voter ID is irreversible and eliminates voting ability.",
@@ -1259,7 +1254,7 @@ export const SECTIONS: Section[] = [
             items: [
               "Economic commitment  -- Each rating is backed by a token stake, making systematic manipulation expensive relative to the signal produced.",
               `Economic independence  -- tlock encryption hides votes during epoch 1, eliminating herd signals. Epoch-weighted rewards (${protocolDocFacts.earlyVoterAdvantageLabel} ratio) further penalize late followers, incentivizing genuine early assessment over copying.`,
-              "Sybil resistance  -- Passport-verified Voter IDs limit each human to one identity with a capped stake per content, preventing bot farms from flooding the signal.",
+              "Sybil resistance  -- Self.xyz passport or biometric ID-card verification limits each verified identity's stake per content, preventing bot farms from flooding the signal.",
               "Verifiability  -- All votes, stakes, and outcomes are recorded on-chain with cryptographic integrity, enabling third-party audit and reproducibility.",
             ],
           },
@@ -1270,7 +1265,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "A foundational design decision in Curyo is the use of a public blockchain as the settlement layer. This ensures that all quality ratings -- including individual vote directions, stake amounts, round outcomes, and resulting content scores -- are inherently public, permissionless, and exportable. No API key, rate limit, or terms-of-service restriction mediates access to the data.",
+            text: "A foundational design decision in Curyo is the use of a public blockchain as the settlement layer. This ensures that all quality ratings -- including individual vote directions, stake amounts, round outcomes, and resulting content scores -- are inherently public, permissionless, and exportable. No proprietary API key or platform terms-of-service restriction mediates access to the data; hosted indexers may still apply service-level rate limits, but the underlying chain data remains open.",
           },
           {
             type: "paragraph",
@@ -1304,7 +1299,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Bots use the same transferAndCall-based vote commit flow as human voters and participate under the same tlock privacy constraints  -- their vote direction is hidden until the epoch ends, just like human votes. Bots stake the minimum amount of cREP per vote, ensuring their influence remains small relative to human voters who may stake significantly more. Voting in epoch 1 (before any results are visible) gives bots the same 100% reward weight as early human voters, rewarding accurate strategies. The parimutuel mechanism provides natural selection pressure: strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation.",
+            text: "Bots participate under the same tlock privacy constraints as human voters  -- their vote direction is hidden until the epoch ends, just like human votes. The current reference bot uses a direct approve + commitVote flow and stakes the minimum amount of cREP per vote by default, while frontends often use the single-transaction transferAndCall path. Voting in epoch 1 (before any results are visible) gives bots the same 100% reward weight as early human voters, rewarding accurate strategies. The parimutuel mechanism provides natural selection pressure: strategies that produce inaccurate ratings lose their stakes, while accurate strategies accumulate reputation.",
           },
           {
             type: "sub_heading",
@@ -1312,7 +1307,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The system is designed so that human voters retain decisive influence. Bots staking the minimum are outweighed by any human voter staking more. In contentious rounds, the aggregate human stake dominates bot contributions. This creates a hybrid model: AI provides baseline signals and seeding, while humans provide authoritative quality judgments.",
+            text: "Bots and humans share the same protocol-level stake limits and reward rules, so influence ultimately depends on stake and accuracy rather than participant type. In practice, the reference bot stakes conservatively to seed rounds, while human voters can agree or disagree with whatever stake they choose. This creates a hybrid model: AI provides baseline signals and seeding, while humans provide additional oversight and judgment.",
           },
           {
             type: "sub_heading",
@@ -1421,7 +1416,7 @@ export const SECTIONS: Section[] = [
         blocks: [
           {
             type: "paragraph",
-            text: "Passport-based identity verification via Self.xyz provides strong Sybil resistance but excludes approximately 1.1 billion people globally who lack passports. The system has no appeal mechanism for false rejections, and recovery from a compromised or offline Self.xyz service is not documented. These are inherent trade-offs of passport-gated identity systems.",
+            text: "Document-based identity verification via Self.xyz provides strong Sybil resistance, but it still excludes people who lack supported documents or cannot complete the verification flow. The system has no documented appeal mechanism for false rejections, and recovery from a compromised or offline Self.xyz service is not described here. These are inherent trade-offs of document-gated identity systems.",
           },
         ],
       },

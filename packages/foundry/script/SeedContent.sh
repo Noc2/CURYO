@@ -189,9 +189,22 @@ for ((i = 0; i < TOTAL_ITEMS; i++)); do
   echo "  Approving cREP..."
   cast send "$TOKEN" "approve(address,uint256)" "$REGISTRY" "$SUBMITTER_STAKE" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
 
-  # 2. Submit content with categoryId (cREP-only model, no stakeToken param)
+  # 2. Reserve the hidden submission commitment before revealing the content metadata
+  printf -v SALT "%064x" "$((i + 1))"
+  REVEAL_COMMITMENT=$(node "$SCRIPT_DIR/../scripts-js/buildSubmissionReservation.js" \
+    "$RPC" "$REGISTRY" "$ADDR" "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT")
+  echo "  Reserving submission..."
+  cast send "$REGISTRY" "reserveSubmission(bytes32)" "$REVEAL_COMMITMENT" \
+    --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
+
+  # The registry enforces a small reveal delay to make front-running reservations harder.
+  sleep 1
+
+  # 3. Reveal the submission with the same deterministic salt used for the reservation
   echo "  Submitting: $URL (categoryId: $CATEGORY_ID)"
-  cast send "$REGISTRY" "submitContent(string,string,string,string,uint256)" "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1 || true
+  cast send "$REGISTRY" "submitContent(string,string,string,string,uint256,bytes32)" \
+    "$URL" "$TITLE" "$DESCRIPTION" "$TAG" "$CATEGORY_ID" "0x$SALT" \
+    --private-key "$KEY" --rpc-url "$RPC" > /dev/null 2>&1
   echo "  Done!"
   echo ""
 done
@@ -229,8 +242,8 @@ for VADDR in "$VOTER1_ADDR" "$VOTER2_ADDR"; do
 done
 echo ""
 
-# Mine 5 blocks for flash-loan protection (MIN_HOLD_BLOCKS = 5)
-echo "Mining blocks for flash-loan protection..."
+# Mine a few blocks so seeded voting happens after the initial setup transactions.
+echo "Mining blocks before seeded votes..."
 for _ in {1..5}; do
   cast rpc anvil_mine --rpc-url "$RPC" > /dev/null 2>&1
 done

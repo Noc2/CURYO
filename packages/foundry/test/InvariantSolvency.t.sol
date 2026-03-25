@@ -37,6 +37,7 @@ contract InvariantSolvency is VotingTestBase {
     uint256[] public contentIds;
 
     uint256 public initialTotalSupply;
+
     function setUp() public {
         vm.warp(1000);
         vm.roll(100);
@@ -63,7 +64,10 @@ contract InvariantSolvency is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );

@@ -72,7 +72,10 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
             address(
                 new ERC1967Proxy(
                     address(engineImpl),
-                    abi.encodeCall(RoundVotingEngine.initialize, (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner))))
+                    abi.encodeCall(
+                        RoundVotingEngine.initialize,
+                        (owner, address(crepToken), address(registry), address(_deployProtocolConfig(owner)))
+                    )
                 )
             )
         );
@@ -275,11 +278,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         assertEq(commit.voter, voter1, "commit voter");
         assertEq(commit.stakeAmount, STAKE, "commit stake");
         assertEq(commit.frontend, address(0), "frontend");
-        assertEq(
-            keccak256(commit.ciphertext),
-            keccak256(_testCiphertext(true, salt, contentId)),
-            "stored ciphertext"
-        );
+        assertEq(keccak256(commit.ciphertext), keccak256(_testCiphertext(true, salt, contentId)), "stored ciphertext");
         assertEq(crepToken.balanceOf(address(engine)), engineBalanceBefore + STAKE, "engine balance");
     }
 
@@ -997,9 +996,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         // Warp past epoch + reveal grace period (voter1's unrevealed vote no longer blocks settlement)
         RoundLib.Round memory rPU1start = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        vm.warp(
-            rPU1start.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1
-        );
+        vm.warp(rPU1start.startTime + EPOCH + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1);
 
         _reveal(contentId, roundId, ck2, true, s2);
         _reveal(contentId, roundId, ck3, false, s3);
@@ -1152,8 +1149,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
 
         uint256 roundId = RoundEngineReadHelpers.activeRoundId(engine, contentId);
         RoundLib.Round memory round = RoundEngineReadHelpers.round(engine, contentId, roundId);
-        uint256 finalDeadline =
-            round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod();
+        uint256 finalDeadline = round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod();
 
         vm.warp(finalDeadline - 1);
         vm.expectRevert(RoundVotingEngine.RevealGraceActive.selector);
@@ -1187,8 +1183,7 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         vm.warp(round.startTime + EPOCH + 1);
         _reveal(contentId, roundId, ck1, true, s1);
 
-        uint256 finalDeadline =
-            round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1;
+        uint256 finalDeadline = round.startTime + 7 days + ProtocolConfig(protocolConfigAddress).revealGracePeriod() + 1;
         vm.warp(finalDeadline);
         engine.finalizeRevealFailedRound(contentId, roundId);
 
@@ -1325,7 +1320,9 @@ contract RoundVotingEngineBranchesTest is VotingTestBase {
         uint256 contentId;
         vm.startPrank(delegate1);
         crepToken.approve(address(registry), 10e6);
-        contentId = _submitContentWithReservation(registry, "https://example.com/delegate-self-vote", "goal", "goal", "tags", 0);
+        contentId = _submitContentWithReservation(
+            registry, "https://example.com/delegate-self-vote", "goal", "goal", "tags", 0
+        );
         vm.stopPrank();
 
         bytes32 saltDelegate = keccak256(abi.encodePacked(delegate1, block.timestamp, "delegate"));

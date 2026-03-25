@@ -30,7 +30,7 @@ type HeaderMenuLink = {
   icon: React.ComponentType<{ className?: string }>;
 };
 
-export const menuLinks: HeaderMenuLink[] = [
+const menuLinks: HeaderMenuLink[] = [
   { label: "Discover", href: "/vote", icon: GlobeAltIcon },
   { label: "Submit", href: "/submit", icon: PlusCircleIcon },
   { label: "cREP", href: "/governance", icon: IdentificationIcon },
@@ -87,7 +87,7 @@ const HeaderNavLink = ({
   );
 };
 
-export const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop" }) => {
+const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop" }) => {
   const pathname = usePathname() ?? "";
   const isDocsPage = pathname.startsWith("/docs");
   const compact = variant === "mobile";

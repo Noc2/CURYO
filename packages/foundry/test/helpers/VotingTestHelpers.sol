@@ -14,7 +14,9 @@ function deployInitializedProtocolConfig(address admin) returns (ProtocolConfig 
 function deployInitializedProtocolConfig(address admin, address governance) returns (ProtocolConfig protocolConfig) {
     ProtocolConfig implementation = new ProtocolConfig();
     protocolConfig = ProtocolConfig(
-        address(new ERC1967Proxy(address(implementation), abi.encodeCall(ProtocolConfig.initialize, (admin, governance))))
+        address(
+            new ERC1967Proxy(address(implementation), abi.encodeCall(ProtocolConfig.initialize, (admin, governance)))
+        )
     );
 }
 

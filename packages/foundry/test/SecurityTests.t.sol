@@ -48,7 +48,7 @@ contract MaliciousToken is ERC20 {
             armed = false;
             (bool success, bytes memory returnData) = target.call(reentrantCalldata);
             if (!success) {
-                assembly {
+                assembly ("memory-safe") {
                     revert(add(returnData, 32), mload(returnData))
                 }
             }
@@ -202,7 +202,7 @@ contract SecurityReentrancyTest is VotingTestBase {
         bool up = uint8(c.ciphertext[0]) == 1;
         bytes32 s;
         bytes memory ct = c.ciphertext;
-        assembly {
+        assembly ("memory-safe") {
             s := mload(add(ct, 33))
         }
         votingEngine.revealVoteByCommitKey(cid, roundId, commitKey, up, s);
@@ -341,7 +341,9 @@ contract SecurityTransferAndCallTest is VotingTestBase {
         vm.prank(voter);
         crepToken.transfer(address(votingEngine), STAKE);
 
-        assertEq(RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "plain transfers do not create rounds");
+        assertEq(
+            RoundEngineReadHelpers.activeRoundId(votingEngine, contentId), 0, "plain transfers do not create rounds"
+        );
         assertEq(crepToken.balanceOf(address(votingEngine)), 1_000_000e6 + STAKE, "tokens transferred without vote");
     }
 }
@@ -441,7 +443,7 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         bool up = uint8(c.ciphertext[0]) == 1;
         bytes32 s;
         bytes memory ct = c.ciphertext;
-        assembly {
+        assembly ("memory-safe") {
             s := mload(add(ct, 33))
         }
         votingEngine.revealVoteByCommitKey(cid, roundId, commitKey, up, s);
@@ -461,7 +463,7 @@ contract SecuritySettlementTimingTest is VotingTestBase {
         bool up = uint8(c.ciphertext[0]) == 1;
         bytes32 s;
         bytes memory ct = c.ciphertext;
-        assembly {
+        assembly ("memory-safe") {
             s := mload(add(ct, 33))
         }
         vm.expectRevert(RoundVotingEngine.EpochNotEnded.selector);

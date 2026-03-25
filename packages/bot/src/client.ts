@@ -9,7 +9,7 @@ const CHAIN_NAMES: Record<number, string> = {
   11142220: "Celo Sepolia",
 };
 
-export const chain = defineChain({
+const chain = defineChain({
   id: config.chainId,
   name: CHAIN_NAMES[config.chainId] || `Chain ${config.chainId}`,
   nativeCurrency: { name: "CELO", symbol: "CELO", decimals: 18 },

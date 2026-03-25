@@ -13,6 +13,7 @@ import { TimelockController } from "@openzeppelin/contracts/governance/TimelockC
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { CuryoReputation } from "../CuryoReputation.sol";
+import { ICategoryRegistry } from "../interfaces/ICategoryRegistry.sol";
 
 /// @title CuryoGovernor
 /// @notice On-chain governance for the Curyo protocol using cREP voting power.
@@ -50,6 +51,8 @@ contract CuryoGovernor is
     uint256 public constant MAX_EXCLUDED_HOLDERS = 16;
     /// @notice CategoryRegistry address allowed for lower-threshold category approval proposals.
     address public categoryRegistry;
+    /// @notice Block number where each proposal was created.
+    mapping(uint256 => uint256) public proposalCreatedBlock;
 
     event CategoryRegistryUpdated(address indexed categoryRegistry);
 
@@ -221,6 +224,7 @@ contract CuryoGovernor is
     ) public virtual override(Governor) returns (uint256) {
         require(poolsInitialized, "Pools not initialized");
         uint256 proposalId = super.propose(targets, values, calldatas, description);
+        proposalCreatedBlock[proposalId] = block.number;
 
         // Lock proposal threshold amount for the proposer
         CuryoReputation(address(token())).lockForGovernance(msg.sender, proposalThreshold());
@@ -230,9 +234,15 @@ contract CuryoGovernor is
 
     /// @notice Create a category-approval proposal using the lower category-specific threshold.
     /// @dev Only proposals targeting the configured CategoryRegistry.approveCategory path can use this function.
+    ///      The approval calldata is bound to the current pending submission digest, and proposals must be created
+    ///      in a later block than the category submission.
     function proposeCategoryApproval(uint256 categoryId) public returns (uint256 proposalId) {
         require(poolsInitialized, "Pools not initialized");
         require(categoryRegistry != address(0), "Category registry not set");
+
+        ICategoryRegistry registry = ICategoryRegistry(categoryRegistry);
+        require(registry.getCategoryStatus(categoryId) == ICategoryRegistry.CategoryStatus.Pending, "Category not pending");
+        require(block.number > registry.getCategoryCreatedBlock(categoryId), "Category proposal too early");
 
         address proposer = _msgSender();
         uint256 threshold = categoryProposalThreshold();
@@ -247,6 +257,7 @@ contract CuryoGovernor is
         }
 
         bytes32 descriptionHash = keccak256(bytes(description));
+        bytes32 approvalDigest = registry.getCategoryApprovalDigest(categoryId);
         address[] memory targets = new address[](1);
         targets[0] = categoryRegistry;
 
@@ -254,9 +265,11 @@ contract CuryoGovernor is
         values[0] = 0;
 
         bytes[] memory calldatas = new bytes[](1);
-        calldatas[0] = abi.encodeWithSignature("approveCategory(uint256,bytes32)", categoryId, descriptionHash);
+        calldatas[0] =
+            abi.encodeWithSignature("approveCategory(uint256,bytes32,bytes32)", categoryId, descriptionHash, approvalDigest);
 
         proposalId = _propose(targets, values, calldatas, description, proposer);
+        proposalCreatedBlock[proposalId] = block.number;
 
         // Lock only the lower category threshold amount for the proposer.
         CuryoReputation(address(token())).lockForGovernance(proposer, threshold);

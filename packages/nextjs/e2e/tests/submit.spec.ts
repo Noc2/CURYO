@@ -1,14 +1,15 @@
 import { expect, test } from "../fixtures/wallet";
+import { gotoWithRetry } from "../helpers/wait-helpers";
 
 test.describe("Content submission", () => {
   test("submit page shows form when connected with VoterID", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+    await gotoWithRetry(page, "/submit");
     // Account #2 has a VoterID — the form should render with "Submit Content" heading
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
   });
 
   test("can fill out and submit content", async ({ connectedPage: page }) => {
-    await page.goto("/submit");
+    await gotoWithRetry(page, "/submit");
 
     // Wait for the form to appear (requires wallet + VoterID)
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
@@ -66,7 +67,9 @@ test.describe("Content submission", () => {
     await expect(submitBtn).toBeEnabled({ timeout: 5_000 });
     await submitBtn.click();
 
-    // 6. Wait for the "Content Submitted!" success heading
-    await expect(page.getByRole("heading", { name: /Content Submitted/i })).toBeVisible({ timeout: 30_000 });
+    // 6. Wait for the submission share modal to confirm success
+    const successDialog = page.getByRole("dialog", { name: /Content submitted/i });
+    await expect(successDialog).toBeVisible({ timeout: 60_000 });
+    await expect(successDialog.getByRole("heading", { name: /Content Submitted!/i })).toBeVisible();
   });
 });
