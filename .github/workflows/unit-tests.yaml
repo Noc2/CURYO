@@ -18,7 +18,7 @@ jobs:
           path: |
             packages/foundry/cache
             packages/foundry/out
-          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/contracts/**/*.sol') }}
+          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/**/*.sol') }}
       - run: forge test -vvv
         working-directory: packages/foundry
 

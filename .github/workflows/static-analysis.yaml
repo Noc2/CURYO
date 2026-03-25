@@ -24,7 +24,7 @@ jobs:
           path: |
             packages/foundry/cache
             packages/foundry/out
-          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/contracts/**/*.sol') }}
+          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/**/*.sol') }}
       - name: Build contracts
         working-directory: packages/foundry
         run: forge build
@@ -58,7 +58,7 @@ jobs:
           path: |
             packages/foundry/cache
             packages/foundry/out
-          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/contracts/**/*.sol') }}
+          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/**/*.sol') }}
       - name: Install Aderyn v0.6.8
         run: |
           curl --proto '=https' --tlsv1.2 -LsSf https://github.com/cyfrin/aderyn/releases/download/aderyn-v0.6.8/aderyn-installer.sh | bash
@@ -108,7 +108,7 @@ jobs:
           path: |
             packages/foundry/cache
             packages/foundry/out
-          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/contracts/**/*.sol') }}
+          key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/**/*.sol') }}
       - name: Build contracts for coverage
         working-directory: packages/foundry
         run: forge build
