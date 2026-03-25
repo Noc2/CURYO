@@ -28,8 +28,19 @@ test("buildFreeTransactionOperationKey is stable across equivalent numeric value
       },
     ],
   });
+  const fromDecimalString = buildFreeTransactionOperationKey({
+    ...BASE_PARAMS,
+    calls: [
+      {
+        data: "0xdeadbeef",
+        to: "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        value: "0",
+      },
+    ],
+  });
 
   assert.equal(fromBigInt, fromHex);
+  assert.equal(fromBigInt, fromDecimalString);
 });
 
 test("buildFreeTransactionOperationKey changes when call ordering changes", () => {
