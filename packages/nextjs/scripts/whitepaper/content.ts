@@ -8,6 +8,11 @@ import {
   whitepaperRewardSplitRows,
   whitepaperSettlementConfigRows,
 } from "../../lib/docs/protocolFacts";
+import {
+  CREP_MAX_SUPPLY_LABEL,
+  FAUCET_POOL_AMOUNT_COMPACT_LABEL,
+  tokenDistributionWhitepaperRows,
+} from "../../lib/docs/tokenomics";
 
 export type TableData = { headers: string[]; rows: string[][] };
 
@@ -690,7 +695,7 @@ export const SECTIONS: Section[] = [
               headers: ["Property", "Value"],
               rows: [
                 ["Name", "cREP"],
-                ["Max Supply", "100,000,000 cREP"],
+                ["Max Supply", CREP_MAX_SUPPLY_LABEL],
                 ["Decimals", "6"],
                 ["Type", "Reputation token (non-financial)"],
               ],
@@ -698,7 +703,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Fixed supply of 100 million tokens. Fair launch  -- no pre-mine, no VC allocation, no team tokens, and no token sale of any kind. Tokens are distributed through protocol-controlled pools, while category approval stakes are user-funded rather than pre-allocated.",
+            text: "Fixed supply of 100 million tokens. Fair launch  -- no pre-mine, no VC allocation, no team tokens, and no token sale of any kind. The full supply is minted at launch into protocol-controlled pools, while category approval stakes are user-funded rather than pre-allocated.",
           },
           {
             type: "bullets",
@@ -718,29 +723,7 @@ export const SECTIONS: Section[] = [
             type: "table",
             data: {
               headers: ["Pool", "Allocation", "Purpose"],
-              rows: [
-                [
-                  "Faucet Pool",
-                  "51,899,900 cREP",
-                  "One-time claims for verified humans (10,000 to 1 cREP per claim, tiered by adoption, serves up to ~41M users without referrals)",
-                ],
-                ["Participation Pool", "34,000,000 cREP", protocolCopy.participationPoolPurpose],
-                [
-                  "Consensus Subsidy",
-                  "4,000,000 cREP",
-                  "Pre-funded reserve for one-sided round rewards, replenished by 5% of each losing pool",
-                ],
-                [
-                  "Treasury",
-                  "10,000,000 cREP",
-                  "Governance-controlled tokens for grants, whistleblower rewards, and protocol development",
-                ],
-                [
-                  "Category Registry",
-                  "0 cREP",
-                  "Pending category stakes are user-funded; approval proposals are now sponsored directly by voters",
-                ],
-              ],
+              rows: tokenDistributionWhitepaperRows,
             },
           },
         ],
@@ -767,7 +750,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "The ~51.9M faucet pool serves up to ~41 million users without referrals (~15 million with full referral usage). Referral bonuses scale proportionally at 50% of the claim amount. The first 10 Genesis claimants receive 10,000 cREP each to bootstrap the platform from day one. As the platform grows and becomes more populated, later claimants need fewer tokens since there is already content to engage with.",
+            text: `The ${FAUCET_POOL_AMOUNT_COMPACT_LABEL} faucet pool serves up to ~41 million users without referrals (~15 million with full referral usage). Referral bonuses scale proportionally at 50% of the claim amount. The first 10 Genesis claimants receive 10,000 cREP each to bootstrap the platform from day one. As the platform grows and becomes more populated, later claimants need fewer tokens since there is already content to engage with.`,
           },
         ],
       },

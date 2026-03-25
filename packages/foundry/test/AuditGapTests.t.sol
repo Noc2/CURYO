@@ -569,7 +569,7 @@ contract AuditGapTests is VotingTestBase {
     // =========================================================================
 
     /// @notice After all claims in a settled round, the engine should have no stuck funds
-    ///         from that round (only keeper pool, consensus reserve, and other-round funds remain).
+    ///         from that round (only consensus reserve and other-round funds remain).
     function test_Solvency_AllClaimsExhaust_NoStuckFunds() public {
         uint256 contentId = _submitContent("https://solvency-test.com");
 

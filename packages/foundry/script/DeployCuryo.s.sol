@@ -30,11 +30,20 @@ import { SelfStructs } from "@selfxyz/contracts/contracts/libraries/SelfStructs.
 ///      Production: TimelockController + CuryoGovernor are deployed, timelock gets all permanent roles including treasury routing.
 contract DeployCuryo is ScaffoldETHDeploy {
     error DeploymentRoleVerificationFailed(string check);
+    error UnsupportedHumanFaucetChain(uint256 chainId);
 
     bytes32 internal constant ERC1967_ADMIN_SLOT = bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
 
     // Timelock delay: 2 days for standard operations
     uint256 public constant TIMELOCK_MIN_DELAY = 2 days;
+
+    // Launch token allocations (6 decimals)
+    uint256 public constant TOTAL_SUPPLY_CAP = 100_000_000 * 1e6;
+    uint256 public constant CONSENSUS_POOL_AMOUNT = 4_000_000 * 1e6;
+    uint256 public constant TREASURY_AMOUNT = 10_000_000 * 1e6;
+    uint256 public constant PARTICIPATION_POOL_AMOUNT = 34_000_000 * 1e6;
+    uint256 public constant FAUCET_POOL_AMOUNT =
+        TOTAL_SUPPLY_CAP - CONSENSUS_POOL_AMOUNT - TREASURY_AMOUNT - PARTICIPATION_POOL_AMOUNT;
 
     // Self.xyz IdentityVerificationHub addresses
     address constant CELO_MAINNET_HUB = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF;
@@ -197,30 +206,27 @@ contract DeployCuryo is ScaffoldETHDeploy {
         ProtocolConfig(address(votingEngine.protocolConfig())).setConfig(20 minutes, 7 days, 3, 1000); // epochDuration, maxDuration, minVoters, maxVoters
 
         // 12. Fund consensus reserve (pre-funded reserve for unanimous round rewards)
-        uint256 consensusPoolAmount = 4_000_000 * 1e6; // 4M cREP
         // Local dev: deployer has DEFAULT_ADMIN_ROLE and needs to grant MINTER_ROLE
         // Production: deployer already has MINTER_ROLE from constructor
         if (isLocalDev) {
             crepToken.grantRole(crepToken.MINTER_ROLE(), deployer);
         }
-        crepToken.mint(deployer, consensusPoolAmount);
-        crepToken.approve(address(votingEngine), consensusPoolAmount);
-        votingEngine.addToConsensusReserve(consensusPoolAmount);
+        crepToken.mint(deployer, CONSENSUS_POOL_AMOUNT);
+        crepToken.approve(address(votingEngine), CONSENSUS_POOL_AMOUNT);
+        votingEngine.addToConsensusReserve(CONSENSUS_POOL_AMOUNT);
         console.log("Funded 4M cREP to consensus reserve");
 
         // 12a. Fund treasury (10M cREP to governance treasury)
-        uint256 treasuryAmount = 10_000_000 * 1e6; // 10M cREP
-        crepToken.mint(governance, treasuryAmount);
+        crepToken.mint(governance, TREASURY_AMOUNT);
         console.log("Minted 10M cREP to governance treasury");
 
         // 12b. Deploy and fund ParticipationPool (34M cREP)
         ParticipationPool participationPool = new ParticipationPool(address(crepToken), governance);
         participationPool.setAuthorizedCaller(address(rewardDistributor), true);
         participationPool.setAuthorizedCaller(address(registry), true);
-        uint256 participationAmount = 34_000_000 * 1e6; // 34M cREP
-        crepToken.mint(deployer, participationAmount);
-        crepToken.approve(address(participationPool), participationAmount);
-        participationPool.depositPool(participationAmount);
+        crepToken.mint(deployer, PARTICIPATION_POOL_AMOUNT);
+        crepToken.approve(address(participationPool), PARTICIPATION_POOL_AMOUNT);
+        participationPool.depositPool(PARTICIPATION_POOL_AMOUNT);
         ProtocolConfig(address(votingEngine.protocolConfig())).setParticipationPool(address(participationPool));
         registry.setParticipationPool(address(participationPool));
         if (!isLocalDev) {
@@ -228,7 +234,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         }
         console.log("ParticipationPool deployed and funded with 34M cREP");
 
-        // 12c. Deploy and fund HumanFaucet (51,899,900 cREP, Self.xyz identity verification)
+        // 12c. Deploy and fund HumanFaucet (52,000,000 cREP, Self.xyz identity verification)
         HumanFaucet humanFaucet;
         {
             address hubAddress;
@@ -253,11 +259,9 @@ contract DeployCuryo is ScaffoldETHDeploy {
                 voterIdNFT.addMinter(address(humanFaucet));
                 humanFaucet.setVoterIdNFT(address(voterIdNFT));
 
-                // Fund with remaining supply:
-                // 52M baseline faucet allocation minus 100k keeper pool and minus the 100 cREP rounding remainder.
-                uint256 faucetAmount = 51_899_900 * 1e6;
-                crepToken.mint(address(humanFaucet), faucetAmount);
-                console.log("Minted 51,899,900 cREP to HumanFaucet");
+                // Fund the faucet with the full remaining launch allocation so launch minting reaches MAX_SUPPLY.
+                crepToken.mint(address(humanFaucet), FAUCET_POOL_AMOUNT);
+                console.log("Minted 52,000,000 cREP to HumanFaucet");
 
                 // Set verification config
                 if (!isFaucetMock) {
@@ -283,7 +287,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
                     console.log("HumanFaucet ownership transferred to governance");
                 }
             } else {
-                console.log("HumanFaucet skipped: unsupported chain for Self.xyz");
+                revert UnsupportedHumanFaucetChain(block.chainid);
             }
         }
 
@@ -302,6 +306,10 @@ contract DeployCuryo is ScaffoldETHDeploy {
             CuryoGovernor(payable(governorAddr)).initializePools(excludedHolders);
             console.log("Governor excluded holders initialized for dynamic quorum");
         }
+
+        _verifyLaunchMintAllocation(
+            crepToken, governance, votingEngine, participationPool, humanFaucet, categoryRegistry
+        );
 
         // 12e. Mint test tokens and Voter IDs for localhost development
         if (isLocalDev) {
@@ -435,6 +443,28 @@ contract DeployCuryo is ScaffoldETHDeploy {
         (, uint256 seededCategoryCount) = categoryRegistry.getApprovedCategoryIdsPaginated(0, 0);
         console.log("Seeded categories:", seededCategoryCount);
         console.log("Local dev:", isLocalDev);
+    }
+
+    function _verifyLaunchMintAllocation(
+        CuryoReputation crepToken,
+        address governance,
+        RoundVotingEngine votingEngine,
+        ParticipationPool participationPool,
+        HumanFaucet humanFaucet,
+        CategoryRegistry categoryRegistry
+    ) internal view {
+        _require(address(humanFaucet) != address(0), "HumanFaucet deployed");
+        _require(crepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "cREP max supply constant");
+        _require(crepToken.totalSupply() == TOTAL_SUPPLY_CAP, "cREP full launch mint");
+        _require(votingEngine.consensusReserve() == CONSENSUS_POOL_AMOUNT, "Consensus reserve launch allocation");
+        _require(crepToken.balanceOf(address(votingEngine)) == CONSENSUS_POOL_AMOUNT, "RoundVotingEngine launch balance");
+        _require(crepToken.balanceOf(governance) == TREASURY_AMOUNT, "Treasury launch allocation");
+        _require(
+            crepToken.balanceOf(address(participationPool)) == PARTICIPATION_POOL_AMOUNT,
+            "ParticipationPool launch allocation"
+        );
+        _require(crepToken.balanceOf(address(humanFaucet)) == FAUCET_POOL_AMOUNT, "HumanFaucet launch allocation");
+        _require(crepToken.balanceOf(address(categoryRegistry)) == 0, "CategoryRegistry launch allocation");
     }
 
     function _verifyProductionDeploymentRoles(

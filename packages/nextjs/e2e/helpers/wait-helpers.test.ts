@@ -1,6 +1,6 @@
-import { gotoWithRetry } from "./wait-helpers.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
+import { gotoWithRetry } from "./wait-helpers";
 
 function createPageStub(config: {
   gotoResults: Array<void | Error>;

@@ -998,7 +998,7 @@ contract AdversarialTests is VotingTestBase {
     // 11. ENGINE BALANCE SOLVENCY — after full cycle engine holds ≥ obligations
     // =========================================================================
 
-    /// @notice After settle + all claims, engine balance ≥ consensus reserve + keeper pool
+    /// @notice After settle + all claims, engine balance remains above outstanding protocol obligations.
     function test_Solvency_AfterFullCycle() public {
         uint256 contentId = _submitContent();
 

@@ -1,6 +1,7 @@
 import { TokenAllocationChart } from "~~/components/docs/TokenAllocationChart";
 import { protocolCopy } from "~~/lib/docs/protocolCopy";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
+import { CREP_MAX_SUPPLY_LABEL, tokenDistributionTableRows } from "~~/lib/docs/tokenomics";
 
 const Tokenomics = () => {
   return (
@@ -24,7 +25,7 @@ const Tokenomics = () => {
             </tr>
             <tr>
               <td className="font-medium">Max Supply</td>
-              <td>100,000,000 cREP</td>
+              <td>{CREP_MAX_SUPPLY_LABEL}</td>
             </tr>
             <tr>
               <td className="font-medium">Decimals</td>
@@ -38,7 +39,8 @@ const Tokenomics = () => {
         </table>
       </div>
       <p>
-        Supply is fixed at <strong>100 million cREP</strong>, with no pre-mine, team allocation, or token sale.
+        Supply is fixed at <strong>100 million cREP</strong>. The full supply is minted at launch into
+        protocol-controlled pools, with no team allocation or token sale.
       </p>
 
       <hr />
@@ -57,36 +59,13 @@ const Tokenomics = () => {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td className="font-medium">Faucet Pool</td>
-              <td className="font-mono">51,899,900 cREP</td>
-              <td>
-                One-time claims for verified humans (10,000 to 1 cREP per claim, tiered by adoption, serves up to ~41M
-                users)
-              </td>
-            </tr>
-            <tr>
-              <td className="font-medium">Participation Pool</td>
-              <td className="font-mono">34,000,000 cREP</td>
-              <td>{protocolCopy.participationPoolPurpose}</td>
-            </tr>
-            <tr>
-              <td className="font-medium">Consensus Subsidy Reserve</td>
-              <td className="font-mono">4,000,000 cREP</td>
-              <td>
-                Pre-funded reserve for unanimous agreement rewards, replenished by 5% of each round&apos;s losing stakes
-              </td>
-            </tr>
-            <tr>
-              <td className="font-medium">Treasury</td>
-              <td className="font-mono">10,000,000 cREP</td>
-              <td>Governance-controlled cREP tokens for grants, whistleblower rewards, and protocol development</td>
-            </tr>
-            <tr>
-              <td className="font-medium">Category Registry</td>
-              <td className="font-mono">0 cREP</td>
-              <td>Pending category stakes are user-funded; approval proposals are now sponsored directly by voters</td>
-            </tr>
+            {tokenDistributionTableRows.map(row => (
+              <tr key={row.label}>
+                <td className="font-medium">{row.label}</td>
+                <td className="font-mono">{row.amountLabel}</td>
+                <td>{row.purpose}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

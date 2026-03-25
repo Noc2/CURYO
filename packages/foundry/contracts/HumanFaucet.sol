@@ -13,7 +13,7 @@ import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
 /// @notice Allows verified humans (via Self.xyz passport or biometric ID card verification) to claim cREP tokens once.
 /// @dev Uses Self.xyz zero-knowledge identity verification for sybil resistance.
 ///      One claim per document nullifier (the same passport or biometric ID card can't claim twice).
-///      This contract holds a pre-minted supply of 52M cREP for distribution.
+///      This contract holds the 52M faucet allocation minted at launch.
 contract HumanFaucet is SelfVerificationRoot, Ownable, Pausable {
     using SafeERC20 for IERC20;
 

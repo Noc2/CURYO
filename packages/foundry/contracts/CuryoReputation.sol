@@ -11,12 +11,12 @@ import { Nonces } from "@openzeppelin/contracts/utils/Nonces.sol";
 /// @title CuryoReputation
 /// @notice Reputation token for Curyo platform with governance capabilities.
 /// @dev Uses 6 decimals. Includes ERC20Votes for governance and governance-specific token locking.
-///      Minter role allows HumanFaucet to mint tokens up to MAX_SUPPLY.
+///      Minting is role-gated and always bounded by MAX_SUPPLY.
 contract CuryoReputation is ERC20, ERC1363, ERC20Permit, ERC20Votes, AccessControl {
     uint8 private constant DECIMALS = 6;
-    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** DECIMALS; // 100M cREP total cap across faucet, participation, consensus, keeper, treasury, and future governance budgets
+    uint256 public constant MAX_SUPPLY = 100_000_000 * 10 ** DECIMALS; // 100M cREP total cap; launch deployment mints the full cap across faucet, participation, consensus, and treasury pools
 
-    /// @notice Role for minting tokens (granted to HumanFaucet)
+    /// @notice Role for minting tokens, always bounded by MAX_SUPPLY
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     /// @notice Role for configuring contract references (governor, voting contracts)

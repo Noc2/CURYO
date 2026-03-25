@@ -1,26 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-const SLICES = [
-  { label: "Faucet Pool", amount: "51,899,900 cREP", value: 51.8999, percentLabel: "51.8999%", color: "#7E8996" },
-  { label: "Participation Pool", amount: "34,000,000 cREP", value: 34, percentLabel: "34.0%", color: "#F26426" },
-  { label: "Treasury", amount: "10,000,000 cREP", value: 10, percentLabel: "10.0%", color: "#F5F0EB" },
-  {
-    label: "Consensus Subsidy Reserve",
-    amount: "4,000,000 cREP",
-    value: 4,
-    percentLabel: "4.0%",
-    color: "#B3341B",
-  },
-  {
-    label: "Category Registry",
-    amount: "100 cREP",
-    value: 0.0001,
-    percentLabel: "0.0001%",
-    color: "rgba(126, 137, 150, 0.55)",
-  },
-];
+import { CREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL, tokenAllocationChartSlices } from "~~/lib/docs/tokenomics";
 
 const SIZE = 200;
 const CENTER = SIZE / 2;
@@ -54,13 +35,15 @@ export function TokenAllocationChart() {
   const [hovered, setHovered] = useState<number | null>(null);
 
   let currentAngle = 0;
-  const arcs = SLICES.map((slice, i) => {
-    const angle = (slice.value / 100) * 360;
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + angle;
-    currentAngle = endAngle;
-    return { ...slice, startAngle, endAngle, index: i };
-  });
+  const arcs = tokenAllocationChartSlices
+    .filter(slice => slice.value > 0)
+    .map(slice => {
+      const angle = (slice.value / 100) * 360;
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + angle;
+      currentAngle = endAngle;
+      return { ...slice, startAngle, endAngle };
+    });
 
   return (
     <div className="flex items-center gap-6 my-4">
@@ -88,7 +71,7 @@ export function TokenAllocationChart() {
           fontSize={11}
           fontWeight={500}
         >
-          99.9M
+          {CREP_INITIAL_MINTED_SUPPLY_COMPACT_LABEL}
         </text>
         <text
           x={CENTER}
@@ -102,19 +85,19 @@ export function TokenAllocationChart() {
         </text>
       </svg>
       <div className="flex flex-col gap-2">
-        {SLICES.map((slice, i) => (
+        {tokenAllocationChartSlices.map(slice => (
           <div
-            key={i}
+            key={slice.index}
             className={`flex items-center gap-2 text-sm transition-opacity duration-150 ${
-              hovered !== null && hovered !== i ? "opacity-40" : ""
+              hovered !== null && hovered !== slice.index ? "opacity-40" : ""
             }`}
-            onMouseEnter={() => setHovered(i)}
+            onMouseEnter={() => setHovered(slice.index)}
             onMouseLeave={() => setHovered(null)}
           >
             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
             <span className="text-base-content/70">
               <span className="font-mono font-medium text-base-content/90">{slice.percentLabel}</span> {slice.label}{" "}
-              <span className="text-base-content/40">({slice.amount})</span>
+              <span className="text-base-content/40">({slice.amountLabel})</span>
             </span>
           </div>
         ))}
