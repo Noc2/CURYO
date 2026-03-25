@@ -1,5 +1,4 @@
 import type { NextPage } from "next";
-import { protocolCopy } from "~~/lib/docs/protocolCopy";
 import { protocolDocFacts } from "~~/lib/docs/protocolFacts";
 
 const GovernanceDocs: NextPage = () => {
@@ -9,7 +8,6 @@ const GovernanceDocs: NextPage = () => {
       <p className="lead text-base-content/60 text-lg">Community governance for shaping the platform&apos;s future.</p>
 
       <h2>Overview</h2>
-      <p>{protocolCopy.governanceOverview}</p>
       <p>
         Curyo is a <strong>reputation token with no monetary value</strong>. It is not sold, has no treasury backing,
         and is not designed as a financial instrument. Governance power comes from earning reputation through verified
@@ -21,18 +19,6 @@ const GovernanceDocs: NextPage = () => {
       <p>
         Curyo includes built-in governance capabilities with snapshot-based voting. Your voting power equals your cREP
         balance and is activated automatically &mdash; no delegation step required.
-      </p>
-
-      <h2>Leaderboards</h2>
-      <p>
-        The governance page now opens on your <strong>Profile</strong> by default. The <strong>Leaderboard</strong> tab
-        focuses on voting-performance rankings across all time, rolling windows, and the current season.
-      </p>
-      <p>
-        Your own <strong>Profile</strong> tab now lives on the governance page, so you can edit the same public profile
-        other curators see and track your balance history plus active stake.{" "}
-        <code className="bg-base-300 px-1 rounded text-base">/settings</code> now focuses on delegation and
-        notifications.
       </p>
 
       <h2>Proposal Lifecycle</h2>
