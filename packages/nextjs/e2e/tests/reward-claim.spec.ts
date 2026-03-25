@@ -20,6 +20,7 @@ import {
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
+import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
 import { getContentById, getContentList, getSubmitterRewards, ponderGet } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
@@ -195,7 +196,7 @@ test.describe("Reward claim lifecycle", () => {
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account3.privateKey);
 
-    await page.goto("/portfolio");
+    await gotoWithRetry(page, "/portfolio", { ensureWalletConnected: true });
 
     const heading = page.getByRole("heading", { name: "Portfolio" });
     await expect(heading).toBeVisible({ timeout: 15_000 });

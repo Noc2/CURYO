@@ -12,6 +12,7 @@ import {
 import { ANVIL_ACCOUNTS, DEPLOYER } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
+import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
 import { getContentById, getContentList, getVotes } from "../helpers/ponder-api";
 import { expect, test } from "@playwright/test";
@@ -127,7 +128,7 @@ test.describe("Manual reveal fallback", () => {
     const page = await context.newPage();
     await setupWallet(page, voter.privateKey);
 
-    await page.goto("/vote/reveal");
+    await gotoWithRetry(page, "/vote/reveal", { ensureWalletConnected: true });
     await expect(page.getByRole("heading", { name: "Reveal My Vote" })).toBeVisible({ timeout: 15_000 });
 
     // The vote should appear as a link or in the ready section

@@ -16,8 +16,8 @@ test.describe("Profile management", () => {
   const createProfileAccount = ANVIL_ACCOUNTS.account8;
   const updateProfileAccount = ANVIL_ACCOUNTS.account2;
 
-  async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithRetry>[0]) {
-    await gotoWithRetry(page, "/settings");
+async function openSettingsWithConnectedWallet(page: Parameters<typeof gotoWithRetry>[0]) {
+    await gotoWithRetry(page, "/settings", { ensureWalletConnected: true });
     await waitForVisibleWithReload(page, () => page.getByRole("button", { name: "Notifications", exact: true }), {
       timeout: 10_000,
     });
@@ -60,7 +60,7 @@ test.describe("Profile management", () => {
     await setupWallet(page, createProfileAccount.privateKey);
 
     await openSettingsWithConnectedWallet(page);
-    await gotoWithRetry(page, "/governance#profile");
+    await gotoWithRetry(page, "/governance#profile", { ensureWalletConnected: true });
 
     const nameInput = page.getByLabel("Profile name");
     const editProfileButton = page.getByRole("button", { name: "Edit profile", exact: true });
@@ -95,7 +95,7 @@ test.describe("Profile management", () => {
     await setupWallet(page, updateProfileAccount.privateKey);
 
     await openSettingsWithConnectedWallet(page);
-    await gotoWithRetry(page, `/profiles/${updateProfileAccount.address}`);
+    await gotoWithRetry(page, `/profiles/${updateProfileAccount.address}`, { ensureWalletConnected: true });
 
     const editProfileButton = page.getByRole("button", { name: "Edit profile", exact: true });
     await waitForVisibleWithReload(page, () => editProfileButton, { timeout: 15_000 });

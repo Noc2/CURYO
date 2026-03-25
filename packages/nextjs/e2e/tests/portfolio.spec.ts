@@ -6,7 +6,7 @@ import { setupWallet } from "../helpers/wallet-session";
 
 test.describe("Portfolio page", () => {
   test("shows stats for connected wallet", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/portfolio");
+    await gotoWithRetry(page, "/portfolio", { ensureWalletConnected: true });
 
     // Use heading role to target the main h1 "Portfolio"
     const heading = page.getByRole("heading", { name: "Portfolio" });
@@ -30,7 +30,7 @@ test.describe("Portfolio page", () => {
   });
 
   test("shows vote history section", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/portfolio");
+    await gotoWithRetry(page, "/portfolio", { ensureWalletConnected: true });
 
     // "Vote History" h2 is in main — use heading role to avoid matching h4s in sidebar
     const voteHistoryHeading = page.getByRole("heading", { name: "Vote History" });
@@ -48,7 +48,7 @@ test.describe("Portfolio page", () => {
     const context = await newE2EContext(browser);
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account1.privateKey);
-    await gotoWithRetry(page, "/portfolio");
+    await gotoWithRetry(page, "/portfolio", { ensureWalletConnected: true });
 
     // Should show Portfolio page with stats or "No votes yet"
     const main = page.locator("main");

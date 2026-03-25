@@ -58,6 +58,15 @@ function seedWalletSessionScript(privateKey: string): string {
 }
 
 /** Inject wallet session state into a page before navigation. */
-export async function setupWallet(page: Page, privateKey: string): Promise<void> {
+export async function setupWallet(
+  page: Page,
+  privateKey: string,
+  options: { bootstrap?: boolean } = {},
+): Promise<void> {
+  const { bootstrap = false } = options;
   await page.addInitScript(seedWalletSessionScript(privateKey));
+
+  if (bootstrap && page.url() === "about:blank") {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+  }
 }

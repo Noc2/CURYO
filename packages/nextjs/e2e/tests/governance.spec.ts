@@ -1,11 +1,12 @@
 import { expect, test } from "../fixtures/wallet";
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
 import { newE2EContext } from "../helpers/browser-context";
+import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
 
 test.describe("Governance page", () => {
   test("page loads and shows tabs", async ({ connectedPage: page }) => {
-    await page.goto("/governance", { waitUntil: "domcontentloaded" });
+    await gotoWithRetry(page, "/governance", { ensureWalletConnected: true });
     await expect(page).toHaveURL(/\/governance(?:#.*)?$/);
     // Wait for main content to render before checking tabs
     await expect(page.locator("main")).toBeVisible({ timeout: 15_000 });
@@ -22,7 +23,7 @@ test.describe("Governance page", () => {
   });
 
   test("leaderboard tab shows ranking filters", async ({ connectedPage: page }) => {
-    await page.goto("/governance");
+    await gotoWithRetry(page, "/governance", { ensureWalletConnected: true });
 
     const leaderboardTab = page.getByRole("button", { name: "Leaderboard" });
     await expect(leaderboardTab).toBeVisible({ timeout: 15_000 });
@@ -42,7 +43,7 @@ test.describe("Governance page", () => {
     const page = await context.newPage();
 
     await setupWallet(page, ANVIL_ACCOUNTS.account10.privateKey);
-    await page.goto("/governance#profile");
+    await gotoWithRetry(page, "/governance#profile", { ensureWalletConnected: true });
 
     const editProfileButton = page.getByRole("button", { name: "Edit profile", exact: true });
     await expect(editProfileButton).toBeVisible({ timeout: 15_000 });
@@ -56,7 +57,7 @@ test.describe("Governance page", () => {
   });
 
   test("own public profile is editable directly", async ({ connectedPage: page }) => {
-    await page.goto(`/profiles/${ANVIL_ACCOUNTS.account2.address}`);
+    await gotoWithRetry(page, `/profiles/${ANVIL_ACCOUNTS.account2.address}`, { ensureWalletConnected: true });
 
     const profileEditorEntry = page
       .getByRole("button", { name: "Edit profile", exact: true })
@@ -72,7 +73,7 @@ test.describe("Governance page", () => {
   });
 
   test("governance tab shows governance content", async ({ connectedPage: page }) => {
-    await page.goto("/governance");
+    await gotoWithRetry(page, "/governance", { ensureWalletConnected: true });
 
     // Click Governance tab (was previously "Vote", renamed in the tab UI)
     const governanceTabBtn = page.getByRole("button", { name: "Governance" });

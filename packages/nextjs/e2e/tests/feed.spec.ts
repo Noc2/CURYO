@@ -1,10 +1,10 @@
 import { expect, test } from "../fixtures/wallet";
-import { waitForFeedLoaded } from "../helpers/wait-helpers";
+import { gotoWithRetry, waitForFeedLoaded } from "../helpers/wait-helpers";
 
 test.describe("Content feed", () => {
   test("displays content items at /vote", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await waitForFeedLoaded(page, 30_000);
 
     // The feed should show vote UI or an empty state — one of these must be visible
     const anyState = page
@@ -18,8 +18,8 @@ test.describe("Content feed", () => {
   });
 
   test("category filter pills are visible", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await waitForFeedLoaded(page, 30_000);
 
     // "All" category pill should always be present — use .first() because the
     // CategoryFilter renders a hidden measurement row with duplicate buttons
@@ -28,8 +28,8 @@ test.describe("Content feed", () => {
   });
 
   test("connected users see the feed scope filter pill", async ({ connectedPage: page }) => {
-    await page.goto("/vote");
-    await waitForFeedLoaded(page);
+    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true, timeout: 45_000 });
+    await waitForFeedLoaded(page, 30_000);
 
     const filterPill = page.getByRole("button", { name: /^View$/i }).first();
     await expect(filterPill).toBeVisible({ timeout: 10_000 });
