@@ -42,12 +42,6 @@ export const tokenDistributionEntries: readonly TokenDistributionEntry[] = [
     purpose: "Pre-funded reserve for unanimous agreement rewards, replenished by 5% of each round's losing stakes",
     color: "#B3341B",
   },
-  {
-    label: "Category Registry",
-    amount: 0,
-    purpose: "Pending category stakes are user-funded; approval proposals are now sponsored directly by voters",
-    color: "rgba(126, 137, 150, 0.55)",
-  },
 ] as const;
 
 export const CREP_INITIAL_MINTED_SUPPLY = tokenDistributionEntries.reduce((sum, entry) => sum + entry.amount, 0);

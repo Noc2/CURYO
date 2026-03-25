@@ -703,7 +703,7 @@ export const SECTIONS: Section[] = [
           },
           {
             type: "paragraph",
-            text: "Fixed supply of 100 million tokens. Fair launch  -- no pre-mine, no VC allocation, no team tokens, and no token sale of any kind. The full supply is minted at launch into protocol-controlled pools, while category approval stakes are user-funded rather than pre-allocated.",
+            text: "Fixed supply of 100 million tokens. Fair launch  -- no pre-mine, no VC allocation, no team tokens, and no token sale of any kind. The full supply is minted at launch into protocol-controlled pools.",
           },
           {
             type: "bullets",

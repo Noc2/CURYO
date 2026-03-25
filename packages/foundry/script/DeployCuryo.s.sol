@@ -307,9 +307,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
             console.log("Governor excluded holders initialized for dynamic quorum");
         }
 
-        _verifyLaunchMintAllocation(
-            crepToken, governance, votingEngine, participationPool, humanFaucet, categoryRegistry
-        );
+        _verifyLaunchMintAllocation(crepToken, governance, votingEngine, participationPool, humanFaucet);
 
         // 12e. Mint test tokens and Voter IDs for localhost development
         if (isLocalDev) {
@@ -450,8 +448,7 @@ contract DeployCuryo is ScaffoldETHDeploy {
         address governance,
         RoundVotingEngine votingEngine,
         ParticipationPool participationPool,
-        HumanFaucet humanFaucet,
-        CategoryRegistry categoryRegistry
+        HumanFaucet humanFaucet
     ) internal view {
         _require(address(humanFaucet) != address(0), "HumanFaucet deployed");
         _require(crepToken.MAX_SUPPLY() == TOTAL_SUPPLY_CAP, "cREP max supply constant");
@@ -464,7 +461,6 @@ contract DeployCuryo is ScaffoldETHDeploy {
             "ParticipationPool launch allocation"
         );
         _require(crepToken.balanceOf(address(humanFaucet)) == FAUCET_POOL_AMOUNT, "HumanFaucet launch allocation");
-        _require(crepToken.balanceOf(address(categoryRegistry)) == 0, "CategoryRegistry launch allocation");
     }
 
     function _verifyProductionDeploymentRoles(
