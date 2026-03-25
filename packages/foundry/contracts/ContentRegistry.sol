@@ -7,6 +7,7 @@ import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/P
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SafeCast } from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import { ICategoryRegistry } from "./interfaces/ICategoryRegistry.sol";
 import { IRoundVotingEngine } from "./interfaces/IRoundVotingEngine.sol";
 import { IVoterIdNFT } from "./interfaces/IVoterIdNFT.sol";
@@ -19,6 +20,7 @@ import { SubmissionCanonicalizer } from "./SubmissionCanonicalizer.sol";
 /// @dev Stores only a metadata hash on-chain; full URL/title/description are emitted in events.
 contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpgradeable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
+    using SafeCast for uint256;
 
     // --- Access Control Roles ---
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -266,9 +268,9 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         pendingSubmissions[revealCommitment] = PendingSubmission({
             submitter: msg.sender,
             submitterIdentity: _resolveSubmitterIdentity(msg.sender),
-            reservedStake: uint64(MIN_SUBMITTER_STAKE),
-            reservedAt: uint48(block.timestamp),
-            expiresAt: uint48(block.timestamp + SUBMISSION_RESERVATION_PERIOD)
+            reservedStake: MIN_SUBMITTER_STAKE.toUint64(),
+            reservedAt: block.timestamp.toUint48(),
+            expiresAt: (block.timestamp + SUBMISSION_RESERVATION_PERIOD).toUint48()
         });
 
         emit SubmissionReserved(msg.sender, revealCommitment, block.timestamp + SUBMISSION_RESERVATION_PERIOD);
@@ -337,18 +339,18 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         contentSubmissionKey[contentId] = submissionKey;
         contentSubmitterIdentity[contentId] = pending.submitterIdentity;
         contents[contentId] = Content({
-            id: uint64(contentId),
+            id: contentId.toUint64(),
             contentHash: contentHash,
             submitter: msg.sender,
             submitterStake: pending.reservedStake,
-            createdAt: uint48(block.timestamp),
-            lastActivityAt: uint48(block.timestamp),
+            createdAt: block.timestamp.toUint48(),
+            lastActivityAt: block.timestamp.toUint48(),
             status: ContentStatus.Active,
             dormantCount: 0,
             reviver: address(0),
             submitterStakeReturned: false,
             rating: 50,
-            categoryId: uint64(resolvedCategoryId)
+            categoryId: resolvedCategoryId.toUint64()
         });
         dormancyAnchorAt[contentId] = block.timestamp;
         delete dormantKeyReleasableAt[contentId];
@@ -465,7 +467,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         c.status = ContentStatus.Active;
         c.dormantCount++;
-        c.lastActivityAt = uint48(block.timestamp);
+        c.lastActivityAt = block.timestamp.toUint48();
         dormancyAnchorAt[contentId] = block.timestamp;
         delete dormantKeyReleasableAt[contentId];
         c.reviver = msg.sender;
@@ -495,13 +497,13 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @dev Vote commits refresh UI-facing activity without extending the dormancy window.
     function updateActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
-        contents[contentId].lastActivityAt = uint48(block.timestamp);
+        contents[contentId].lastActivityAt = block.timestamp.toUint48();
     }
 
     /// @notice Called by VotingEngine when content reaches milestone 0 through a settled round.
     function recordMeaningfulActivity(uint256 contentId) external {
         require(msg.sender == votingEngine, "Only VotingEngine");
-        contents[contentId].lastActivityAt = uint48(block.timestamp);
+        contents[contentId].lastActivityAt = block.timestamp.toUint48();
         dormancyAnchorAt[contentId] = block.timestamp;
     }
 
@@ -513,7 +515,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
 
         Content storage c = contents[contentId];
         uint8 oldRating = c.rating;
-        uint8 clampedRating = newRating > 100 ? 100 : uint8(newRating);
+        uint8 clampedRating = newRating > 100 ? 100 : uint256(newRating).toUint8();
 
         if (clampedRating == oldRating) return;
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import { Test } from "forge-std/Test.sol";
+import { Test, stdStorage, StdStorage } from "forge-std/Test.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ContentRegistry } from "../contracts/ContentRegistry.sol";
 import { RoundVotingEngine } from "../contracts/RoundVotingEngine.sol";
@@ -20,6 +20,8 @@ import { VotingTestBase } from "./helpers/VotingTestHelpers.sol";
 // =========================================================================
 
 contract ContentRegistryBranchesTest is VotingTestBase {
+    using stdStorage for StdStorage;
+
     CuryoReputation public crepToken;
     ContentRegistry public registry;
     RoundVotingEngine public votingEngine;
@@ -222,6 +224,49 @@ contract ContentRegistryBranchesTest is VotingTestBase {
         crepToken.approve(address(registry), 10e6);
         vm.expectRevert("Category not approved");
         registry.submitContent("https://example.com/1", "goal", "goal", "tags", 99, bytes32(0));
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_RevertsWhenNextContentIdExceedsUint64() public {
+        stdstore.target(address(registry)).sig("nextContentId()").checked_write(uint256(type(uint64).max) + 1);
+
+        string memory url = "https://example.com/overflow-content-id";
+        string memory title = "goal";
+        string memory description = "goal";
+        string memory tags = "tags";
+        bytes32 salt = keccak256("overflow-content-id");
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        (, bytes32 submissionKey) = registry.previewSubmissionKey(url, 0);
+        bytes32 revealCommitment = keccak256(abi.encode(submissionKey, title, description, tags, 0, salt, submitter));
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert();
+        registry.submitContent(url, title, description, tags, 0, salt);
+        vm.stopPrank();
+    }
+
+    function test_SubmitContent_RevertsWhenResolvedCategoryIdExceedsUint64() public {
+        uint256 oversizedCategoryId = uint256(type(uint64).max) + 1;
+        mockCategoryRegistry.setDomain(oversizedCategoryId, "overflow-category.example");
+        mockCategoryRegistry.setApproved(oversizedCategoryId, true);
+
+        string memory url = "https://overflow-category.example/item";
+        string memory title = "goal";
+        string memory description = "goal";
+        string memory tags = "tags";
+        bytes32 salt = keccak256("overflow-category-id");
+
+        vm.startPrank(submitter);
+        crepToken.approve(address(registry), 10e6);
+        (, bytes32 submissionKey) = registry.previewSubmissionKey(url, oversizedCategoryId);
+        bytes32 revealCommitment =
+            keccak256(abi.encode(submissionKey, title, description, tags, oversizedCategoryId, salt, submitter));
+        registry.reserveSubmission(revealCommitment);
+        vm.warp(block.timestamp + 1);
+        vm.expectRevert();
+        registry.submitContent(url, title, description, tags, oversizedCategoryId, salt);
         vm.stopPrank();
     }
 

@@ -7,7 +7,7 @@ import type { GenericContractsDeclaration } from "./types";
 const deployedContracts = {
   31337: {
     CategoryFeeLib: {
-      address: "0x2a3fa94fabb12abaf1ced511042f76ab3ff41010",
+      address: "0xde23bb8dc2b12a36b16e62b61a39043c77da7f39",
       abi: [
         {
           type: "error",
@@ -43,7 +43,7 @@ const deployedContracts = {
       deployedOnBlock: 2,
     },
     SubmitterStakeLib: {
-      address: "0xdb88870e45c84c8a343dc46c937248aaf875a2c5",
+      address: "0xd972d943bbf9b85467945d2d7338ea3348b84dae",
       abi: [
         {
           type: "error",
@@ -3540,6 +3540,22 @@ const deployedContracts = {
           type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
+        },
+        {
+          type: "error",
+          name: "SafeCastOverflowedUintDowncast",
+          inputs: [
+            {
+              name: "bits",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
         },
         {
           type: "error",
@@ -9643,6 +9659,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getCategoryApprovalDigest",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getCategoryByDomain",
           inputs: [
             {
@@ -9709,44 +9744,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getCategoryStatus",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint8",
-              internalType: "enum ICategoryRegistry.CategoryStatus",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getCategoryApprovalDigest",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategoryCreatedBlock",
           inputs: [
             {
@@ -9760,6 +9757,25 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryStatus",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "enum ICategoryRegistry.CategoryStatus",
             },
           ],
           stateMutability: "view",
@@ -10419,7 +10435,10 @@ const deployedContracts = {
         getApprovedCategoryIdsPaginated:
           "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryApprovalDigest: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryCreatedBlock: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryStatus: "contracts/interfaces/ICategoryRegistry.sol",
         getSubmitter: "contracts/interfaces/ICategoryRegistry.sol",
         isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
         isDomainRegistered: "contracts/interfaces/ICategoryRegistry.sol",
@@ -16729,6 +16748,19 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "CATEGORY_PROPOSAL_THRESHOLD",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "CLOCK_MODE",
           inputs: [],
           outputs: [
@@ -16990,6 +17022,32 @@ const deployedContracts = {
             },
           ],
           stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
+          name: "categoryProposalThreshold",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "pure",
+        },
+        {
+          type: "function",
+          name: "categoryRegistry",
+          inputs: [],
+          outputs: [
+            {
+              name: "",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          stateMutability: "view",
         },
         {
           type: "function",
@@ -17456,6 +17514,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "proposalCreatedBlock",
+          inputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "proposalDeadline",
           inputs: [
             {
@@ -17627,6 +17704,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "proposeCategoryApproval",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "proposalId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          stateMutability: "nonpayable",
+        },
+        {
+          type: "function",
           name: "queue",
           inputs: [
             {
@@ -17745,6 +17841,19 @@ const deployedContracts = {
           ],
           outputs: [],
           stateMutability: "payable",
+        },
+        {
+          type: "function",
+          name: "setCategoryRegistry",
+          inputs: [
+            {
+              name: "_categoryRegistry",
+              type: "address",
+              internalType: "address",
+            },
+          ],
+          outputs: [],
+          stateMutability: "nonpayable",
         },
         {
           type: "function",
@@ -17913,6 +18022,19 @@ const deployedContracts = {
             },
           ],
           stateMutability: "view",
+        },
+        {
+          type: "event",
+          name: "CategoryRegistryUpdated",
+          inputs: [
+            {
+              name: "categoryRegistry",
+              type: "address",
+              indexed: true,
+              internalType: "address",
+            },
+          ],
+          anonymous: false,
         },
         {
           type: "event",
@@ -20344,6 +20466,22 @@ const deployedContracts = {
           type: "error",
           name: "ReentrancyGuardReentrantCall",
           inputs: [],
+        },
+        {
+          type: "error",
+          name: "SafeCastOverflowedUintDowncast",
+          inputs: [
+            {
+              name: "bits",
+              type: "uint8",
+              internalType: "uint8",
+            },
+            {
+              name: "value",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
         },
         {
           type: "error",
@@ -26447,6 +26585,25 @@ const deployedContracts = {
         },
         {
           type: "function",
+          name: "getCategoryApprovalDigest",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "bytes32",
+              internalType: "bytes32",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
           name: "getCategoryByDomain",
           inputs: [
             {
@@ -26513,44 +26670,6 @@ const deployedContracts = {
         },
         {
           type: "function",
-          name: "getCategoryStatus",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "uint8",
-              internalType: "enum ICategoryRegistry.CategoryStatus",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
-          name: "getCategoryApprovalDigest",
-          inputs: [
-            {
-              name: "categoryId",
-              type: "uint256",
-              internalType: "uint256",
-            },
-          ],
-          outputs: [
-            {
-              name: "",
-              type: "bytes32",
-              internalType: "bytes32",
-            },
-          ],
-          stateMutability: "view",
-        },
-        {
-          type: "function",
           name: "getCategoryCreatedBlock",
           inputs: [
             {
@@ -26564,6 +26683,25 @@ const deployedContracts = {
               name: "",
               type: "uint256",
               internalType: "uint256",
+            },
+          ],
+          stateMutability: "view",
+        },
+        {
+          type: "function",
+          name: "getCategoryStatus",
+          inputs: [
+            {
+              name: "categoryId",
+              type: "uint256",
+              internalType: "uint256",
+            },
+          ],
+          outputs: [
+            {
+              name: "",
+              type: "uint8",
+              internalType: "enum ICategoryRegistry.CategoryStatus",
             },
           ],
           stateMutability: "view",
@@ -27223,7 +27361,10 @@ const deployedContracts = {
         getApprovedCategoryIdsPaginated:
           "contracts/interfaces/ICategoryRegistry.sol",
         getCategory: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryApprovalDigest: "contracts/interfaces/ICategoryRegistry.sol",
         getCategoryByDomain: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryCreatedBlock: "contracts/interfaces/ICategoryRegistry.sol",
+        getCategoryStatus: "contracts/interfaces/ICategoryRegistry.sol",
         getSubmitter: "contracts/interfaces/ICategoryRegistry.sol",
         isApprovedCategory: "contracts/interfaces/ICategoryRegistry.sol",
         isDomainRegistered: "contracts/interfaces/ICategoryRegistry.sol",

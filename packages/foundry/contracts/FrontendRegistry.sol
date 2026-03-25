@@ -265,6 +265,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     /// @param reason Reason for the slash
     function slashFrontend(address frontend, uint256 amount, string calldata reason)
         external
+        nonReentrant
         onlyRole(GOVERNANCE_ROLE)
     {
         require(address(votingEngine) != address(0), "VotingEngine not set");
