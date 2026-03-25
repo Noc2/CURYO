@@ -7,7 +7,7 @@ import type { GenericContractsDeclaration } from "./types";
 const deployedContracts = {
   31337: {
     CategoryFeeLib: {
-      address: "0xde23bb8dc2b12a36b16e62b61a39043c77da7f39",
+      address: "0x177036a851402dcdd65e05f6eee22861f684cb6a",
       abi: [
         {
           type: "error",
@@ -43,7 +43,7 @@ const deployedContracts = {
       deployedOnBlock: 2,
     },
     SubmitterStakeLib: {
-      address: "0xd972d943bbf9b85467945d2d7338ea3348b84dae",
+      address: "0x987226bd082d53977b329aacf4c8c9bfb6b0b20c",
       abi: [
         {
           type: "error",
