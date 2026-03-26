@@ -443,7 +443,7 @@ export const Header = () => {
                 <Suspense>
                   <HeaderSearchBar />
                 </Suspense>
-                <CuryoConnectButton />
+                <CuryoConnectButton compact />
               </div>
             </>
           )}

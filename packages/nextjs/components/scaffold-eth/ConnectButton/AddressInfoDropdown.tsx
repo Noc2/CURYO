@@ -26,6 +26,8 @@ type AddressInfoDropdownProps = {
   inlineMenu?: boolean;
   /** When true, render only the menu items list (for mobile menu) */
   menuItemsOnly?: boolean;
+  /** When true, render the connected wallet as a compact avatar-only header affordance */
+  compact?: boolean;
 };
 
 const getMenuItemClass = (showText: boolean) =>
@@ -209,6 +211,7 @@ export const AddressInfoDropdown = ({
   displayName,
   inlineMenu = false,
   menuItemsOnly = false,
+  compact = false,
 }: AddressInfoDropdownProps) => {
   const isPageVisible = usePageVisibility();
   const disconnect = useCuryoDisconnect();
@@ -281,6 +284,14 @@ export const AddressInfoDropdown = ({
         <ul className="menu menu-vertical p-0 gap-0.5 w-full">
           <MenuItems disconnect={disconnect} showFaucet={showFaucet} />
         </ul>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="flex items-center justify-center py-1" data-testid="wallet-connected">
+        <BlockieAvatar address={checkSumAddress} size={30} ensImage={ensAvatar} />
       </div>
     );
   }
