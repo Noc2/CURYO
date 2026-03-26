@@ -9,7 +9,13 @@ import { useAccount } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useCuryoConnectModal } from "~~/hooks/useCuryoConnectModal";
 
-export const CuryoConnectButton = ({ inlineMenu = false, compact = false }: { inlineMenu?: boolean; compact?: boolean }) => {
+export const CuryoConnectButton = ({
+  inlineMenu = false,
+  compact = false,
+}: {
+  inlineMenu?: boolean;
+  compact?: boolean;
+}) => {
   const { targetNetwork } = useTargetNetwork();
   const { address, chain } = useAccount();
   const activeThirdwebAccount = useActiveAccount();
