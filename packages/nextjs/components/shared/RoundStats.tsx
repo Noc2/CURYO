@@ -27,7 +27,7 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
   const downCount = Number(round.downCount);
 
   return (
-    <div className="flex w-full max-w-full items-center gap-3 px-1 py-1">
+    <div className="flex w-full max-w-full items-center gap-3">
       <div className="inline-flex min-w-0 flex-1 items-center justify-start gap-2 whitespace-nowrap text-left text-error">
         <span className="font-semibold">Down</span>
         <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
