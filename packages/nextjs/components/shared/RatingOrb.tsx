@@ -1,15 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { clampContentRating, formatCommunityRatingAriaLabel, formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 
 const START_ANGLE = 0;
 const MIN_ANIMATION_MS = 500;
 const MAX_ANIMATION_MS = 1200;
-
-function clampRating(rating: number) {
-  if (Number.isNaN(rating)) return 0;
-  return Math.min(100, Math.max(0, rating));
-}
 
 function easeOutCubic(progress: number) {
   return 1 - Math.pow(1 - progress, 3);
@@ -31,22 +27,22 @@ interface RatingOrbProps {
 
 export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps) {
   const orbId = useId().replace(/:/g, "");
-  const clampedRating = clampRating(rating);
+  const clampedRating = clampContentRating(rating);
   const [animatedRating, setAnimatedRating] = useState(0);
   const animatedRatingRef = useRef(0);
   const center = size / 2;
   const trackRadius = size * 0.41;
   const trackWidth = Math.max(8, size * 0.034);
-  const displayedRating = clampRating(animatedRating);
-  const roundedDisplayedRating = Math.round(displayedRating);
+  const displayedRating = clampContentRating(animatedRating);
+  const displayedScore = formatRatingScoreOutOfTen(displayedRating);
   const progress = displayedRating / 100;
   const circumference = 2 * Math.PI * trackRadius;
   const progressLength = circumference * progress;
   const flareStroke = `url(#${orbId}-flare)`;
   const coreStroke = `url(#${orbId}-core)`;
   const endPoint = polarToCartesian(center, trackRadius, START_ANGLE + progress * 360);
-  const ratingFontSize = Math.max(44, size * 0.29);
-  const percentFontSize = Math.max(22, ratingFontSize * 0.46);
+  const ratingFontSize = Math.max(40, size * 0.27);
+  const scaleFontSize = Math.max(18, ratingFontSize * 0.42);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -95,7 +91,7 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
       className={`relative flex items-center justify-center ${className}`}
       style={{ width: size, height: size }}
       role="img"
-      aria-label={`Community rating ${clampedRating}%`}
+      aria-label={formatCommunityRatingAriaLabel(clampedRating)}
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 overflow-visible">
         <defs>
@@ -231,12 +227,17 @@ export function RatingOrb({ rating, size = 196, className = "" }: RatingOrbProps
 
       <div className="relative z-10 flex flex-col items-center justify-center text-center">
         <span
-          className="display-metric flex items-end justify-center text-base-content"
-          style={{ fontSize: ratingFontSize, maxWidth: trackRadius * 1.52 }}
+          className="display-metric inline-flex items-end justify-center text-base-content tabular-nums"
+          style={{ maxWidth: trackRadius * 1.7 }}
         >
-          <span>{roundedDisplayedRating}</span>
-          <span className="ml-1 shrink-0 leading-[0.92]" style={{ fontSize: percentFontSize }}>
-            %
+          <span className="font-semibold tracking-[-0.04em]" style={{ fontSize: ratingFontSize }}>
+            {displayedScore}
+          </span>
+          <span
+            className="ml-2 mb-[0.12em] shrink-0 font-medium leading-[0.92] text-base-content/46"
+            style={{ fontSize: scaleFontSize }}
+          >
+            /10
           </span>
         </span>
       </div>

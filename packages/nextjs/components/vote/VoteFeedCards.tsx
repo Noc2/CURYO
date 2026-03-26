@@ -11,6 +11,7 @@ import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
 import type { SubmitterProfile } from "~~/hooks/useSubmitterProfiles";
+import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 import type { QueueCardStatus } from "~~/lib/vote/queueCardStatus";
 import { detectPlatform } from "~~/utils/platforms";
 
@@ -367,7 +368,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
   const platform = detectPlatform(item.url);
   const [imageError, setImageError] = useState(false);
   const thumbnailSrc = getVoteFeedThumbnailSrc(item);
-  const ratingLabel = `${item.rating}%`;
+  const ratingScore = formatRatingScoreOutOfTen(item.rating);
   const statusBadgeClassName =
     queueStatus?.urgencyTone === "success"
       ? "bg-success/15 text-success ring-success/30"
@@ -419,8 +420,9 @@ export const FeedQueueCard = memo(function FeedQueueCard({
           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-base-content backdrop-blur">
             {queuePosition + 1}
           </span>
-          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-base-content backdrop-blur">
-            {ratingLabel}
+          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs text-base-content backdrop-blur">
+            <span className="font-semibold tabular-nums">{ratingScore}</span>
+            <span className="font-medium text-base-content/60">/10</span>
           </span>
         </div>
         {thumbnailSrc && !imageError ? (

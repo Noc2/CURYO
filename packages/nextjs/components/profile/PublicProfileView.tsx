@@ -37,6 +37,7 @@ import { useVoterAccuracy } from "~~/hooks/useVoterAccuracy";
 import { useVoterIdNFT } from "~~/hooks/useVoterIdNFT";
 import { avatarAccentHexToRgb, normalizeAvatarAccentHex } from "~~/lib/avatar/avatarAccent";
 import { MAX_PROFILE_STRATEGY_LENGTH } from "~~/lib/profile/profileValidation";
+import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 import { type PonderProfileDetailResponse, type PonderVoteItem, ponderApi } from "~~/services/ponder/client";
 import { getReputationAvatarUrl } from "~~/utils/profileImage";
 import { notification } from "~~/utils/scaffold-eth";
@@ -746,6 +747,7 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
             <div className="grid gap-3 md:grid-cols-2">
               {recentSubmissions.map(submission => {
                 const categoryName = submission.categoryName || `Category #${submission.categoryId}`;
+                const ratingScore = formatRatingScoreOutOfTen(submission.rating);
                 return (
                   <Link
                     key={submission.id}
@@ -761,7 +763,8 @@ export function PublicProfileView({ address, embedded = false }: PublicProfileVi
                         <p className="mt-1 line-clamp-2 text-sm text-base-content/65">{submission.description}</p>
                       </div>
                       <div className="rounded-full bg-base-content/[0.06] px-2.5 py-1 text-sm font-mono text-base-content/70">
-                        {submission.rating}/100
+                        <span className="font-semibold tabular-nums text-base-content/85">{ratingScore}</span>
+                        <span className="font-medium text-base-content/50">/10</span>
                       </div>
                     </div>
 

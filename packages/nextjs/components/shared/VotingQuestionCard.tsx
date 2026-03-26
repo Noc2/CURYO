@@ -31,7 +31,7 @@ interface VotingQuestionCardProps {
 }
 
 const RATING_GUIDANCE_TEXT =
-  "Rate this content against its current community score. Vote up when it deserves a higher rating and vote down when it deserves a lower one. Always vote down illegal, broken, or misdescribed content.";
+  "The community score runs from 0.0 to 10.0. Vote up when content deserves a higher score and vote down when it deserves a lower one. Always vote down illegal, broken, or misdescribed content.";
 
 /**
  * Displays the live rating signal and all voting controls in a separate card.
@@ -138,6 +138,9 @@ export function VotingQuestionCard({
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
           <RatingOrb rating={currentRating} size={orbSize} />
+          <p className="mt-2 text-[0.7rem] font-medium uppercase tracking-[0.16em] text-base-content/38">
+            0.0 lowest &bull; 10.0 highest
+          </p>
           <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
             {phase === "voting" || hasMyVote ? (
               <div className="flex flex-col items-center gap-2">

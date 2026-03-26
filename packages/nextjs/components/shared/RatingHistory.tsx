@@ -5,6 +5,7 @@ import { useScaffoldEventHistory, useScaffoldReadContract } from "~~/hooks/scaff
 import { usePageVisibility } from "~~/hooks/usePageVisibility";
 import { usePonderAvailability } from "~~/hooks/usePonderAvailability";
 import { usePonderQuery } from "~~/hooks/usePonderQuery";
+import { formatRatingScoreOutOfTen } from "~~/lib/ui/ratingDisplay";
 import { ponderApi } from "~~/services/ponder/client";
 import { publicEnv } from "~~/utils/env/public";
 
@@ -115,13 +116,17 @@ export function RatingHistory({ contentId, variant = "default", showHeader = tru
 
   const currentRatingValue = dataPoints[dataPoints.length - 1];
   const textColor = variant === "dark" ? "text-base-content/60" : "text-base-content/40";
+  const currentRatingScore = formatRatingScoreOutOfTen(currentRatingValue);
 
   return (
     <div className="w-full">
       {showHeader ? (
         <div className="flex items-center justify-between mb-1.5">
           <span className={`text-base font-medium ${textColor}`}>Rating history</span>
-          <span className={`text-base tabular-nums ${textColor}`}>{currentRatingValue}%</span>
+          <span className="inline-flex items-baseline gap-0.5 text-base tabular-nums">
+            <span className="font-semibold text-base-content/72">{currentRatingScore}</span>
+            <span className="font-medium text-base-content/38">/10</span>
+          </span>
         </div>
       ) : null}
       <Sparkline data={dataPoints} />
