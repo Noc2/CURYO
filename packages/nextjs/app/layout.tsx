@@ -1,9 +1,5 @@
 import Script from "next/script";
-import "@fontsource/bebas-neue/latin-400.css";
-import "@fontsource/space-grotesk/latin-400.css";
-import "@fontsource/space-grotesk/latin-500.css";
-import "@fontsource/space-grotesk/latin-600.css";
-import "@fontsource/space-grotesk/latin-700.css";
+import { Bebas_Neue, Source_Sans_3 } from "next/font/google";
 import "@scaffold-ui/components/styles.css";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import "~~/styles/globals.css";
@@ -17,9 +13,23 @@ export const metadata = getMetadata({
 
 const isProduction = process.env.NODE_ENV === "production";
 
+const sourceSans = Source_Sans_3({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-source-sans-3",
+  weight: ["400", "500", "600", "700"],
+});
+
+const bebasNeue = Bebas_Neue({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-bebas-neue",
+  weight: "400",
+});
+
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
   return (
-    <html data-theme="dark" style={{ colorScheme: "dark" }}>
+    <html className={`${sourceSans.variable} ${bebasNeue.variable}`} data-theme="dark" style={{ colorScheme: "dark" }}>
       <body>
         <ScaffoldEthAppWithProviders>{children}</ScaffoldEthAppWithProviders>
         {isProduction ? <Script src="https://scripts.simpleanalyticscdn.com/latest.js" /> : null}
