@@ -1,5 +1,5 @@
 import { inAppWalletConnector } from "@thirdweb-dev/wagmi-adapter";
-import { injected } from "wagmi/connectors";
+import { injected } from "@wagmi/core";
 import { getThirdwebWalletAuthConfig } from "~~/services/thirdweb/auth";
 import {
   getPreferredThirdwebChainId,
