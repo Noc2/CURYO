@@ -19,6 +19,12 @@ export default defineConfig({
 
   projects: [
     {
+      name: "ci-smoke",
+      use: { ...devices["Desktop Chrome"] },
+      testMatch:
+        /smoke|pages-smoke|docs-pages|nextjs-api|follow-api|watchlist-api|faucet|single-tx-vote|contract-boundaries/,
+    },
+    {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
       // Exclude tests that need special conditions:
