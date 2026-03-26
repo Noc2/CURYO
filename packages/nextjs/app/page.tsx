@@ -122,7 +122,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             How it <span className="text-base-content">Works</span>
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {STEPS.map(({ icon: Icon, title, description }) => (
+            {STEPS.map(({ icon: Icon, title, description }, index) => (
               <div
                 key={title}
                 className="surface-card flex h-full flex-col items-center rounded-[1.75rem] px-6 py-7 text-center"
@@ -130,7 +130,12 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
                   <Icon className="h-10 w-10 text-primary" />
                 </div>
-                <h3 className="display-section mb-2 text-2xl text-base-content">{title}</h3>
+                <div className="mb-3 flex items-center justify-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-sm font-semibold text-primary">
+                    {index + 1}
+                  </span>
+                  <h3 className="display-section text-2xl text-base-content">{title}</h3>
+                </div>
                 <p className="text-lg text-base-content/60">{description}</p>
               </div>
             ))}
