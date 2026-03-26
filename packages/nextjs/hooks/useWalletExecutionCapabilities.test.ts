@@ -2,6 +2,7 @@ import {
   resolveWalletCapabilitiesForChain,
   resolveWalletExecutionChainId,
   resolveWalletExecutionMode,
+  shouldQueryWalletCapabilities,
   walletCapabilitiesSupportPaymasterService,
 } from "./useWalletExecutionCapabilities";
 import assert from "node:assert/strict";
@@ -40,6 +41,35 @@ test("resolveWalletExecutionMode keeps external wallets on fee-currency flow for
       thirdwebSponsorshipMode: null,
     }),
     "fee_currency",
+  );
+});
+
+test("shouldQueryWalletCapabilities only enables capability probing for in-app wallets on supported chains", () => {
+  assert.equal(
+    shouldQueryWalletCapabilities({
+      chainId: 42220,
+      supportedChain: true,
+      walletId: "inApp",
+    }),
+    true,
+  );
+
+  assert.equal(
+    shouldQueryWalletCapabilities({
+      chainId: 42220,
+      supportedChain: true,
+      walletId: "io.metamask",
+    }),
+    false,
+  );
+
+  assert.equal(
+    shouldQueryWalletCapabilities({
+      chainId: undefined,
+      supportedChain: true,
+      walletId: "inApp",
+    }),
+    false,
   );
 });
 
