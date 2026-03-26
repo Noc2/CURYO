@@ -114,31 +114,41 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
               />
               {/* Docs submenu - single column, explicitly block layout */}
               <div className="flex flex-col space-y-4 w-full">
-                {DOCS_NAV.map(group => (
-                  <div key={group.section} className="w-full flex flex-col">
-                    <h3 className="text-base font-semibold uppercase tracking-wider text-base-content/55 mb-1.5 px-3 w-full">
-                      {group.section}
-                    </h3>
-                    <div className="flex flex-col space-y-0.5 w-full">
-                      {group.links.map(link => {
-                        const isLinkActive = pathname === link.href;
-                        return (
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
-                              isLinkActive
-                                ? "bg-primary/10 text-primary font-medium"
-                                : "text-base-content/75 hover:bg-base-content/[0.04] hover:text-base-content"
-                            }`}
-                          >
-                            {link.label}
-                          </Link>
-                        );
-                      })}
+                {DOCS_NAV.map(group => {
+                  const sectionHref = group.links[0]?.href ?? href;
+                  const isSectionActive = group.links.some(link => pathname === link.href);
+
+                  return (
+                    <div key={group.section} className="w-full flex flex-col">
+                      <h3 className="mb-1.5 w-full">
+                        <Link
+                          href={sectionHref}
+                          className={`block w-full rounded-lg px-3 text-base font-semibold uppercase tracking-wider transition-colors ${isSectionActive ? "text-base-content/80" : "text-base-content/55 hover:text-base-content/80"}`}
+                        >
+                          {group.section}
+                        </Link>
+                      </h3>
+                      <div className="flex flex-col space-y-0.5 w-full">
+                        {group.links.map(link => {
+                          const isLinkActive = pathname === link.href;
+                          return (
+                            <Link
+                              key={link.href}
+                              href={link.href}
+                              className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
+                                isLinkActive
+                                  ? "bg-primary/10 text-primary font-medium"
+                                  : "text-base-content/75 hover:bg-base-content/[0.04] hover:text-base-content"
+                              }`}
+                            >
+                              {link.label}
+                            </Link>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </li>
           );

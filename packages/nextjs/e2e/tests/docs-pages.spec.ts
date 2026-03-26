@@ -53,6 +53,31 @@ test.describe("Documentation pages", () => {
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
   });
 
+  test("docs section headings open the first page in each section", async ({ page }) => {
+    await page.goto("/docs/tokenomics");
+    await page.waitForLoadState("domcontentloaded");
+
+    const startHereLink = page.getByRole("link", { name: /^Start Here$/i });
+    await expect(startHereLink).toBeVisible({ timeout: 10_000 });
+    await startHereLink.click();
+    await page.waitForURL(/\/docs$/);
+    await expect(page.getByRole("heading", { name: /^Introduction$/i }).first()).toBeVisible({ timeout: 10_000 });
+
+    const conceptsLink = page.getByRole("link", { name: /^Concepts$/i });
+    await expect(conceptsLink).toBeVisible({ timeout: 10_000 });
+    await conceptsLink.click();
+    await page.waitForURL(/\/docs\/how-it-works$/);
+    await expect(page.getByRole("heading", { name: /^How It Works$/i }).first()).toBeVisible({ timeout: 10_000 });
+
+    const technicalLink = page.getByRole("link", { name: /^Technical$/i });
+    await expect(technicalLink).toBeVisible({ timeout: 10_000 });
+    await technicalLink.click();
+    await page.waitForURL(/\/docs\/smart-contracts$/);
+    await expect(page.getByRole("heading", { name: /^Smart Contracts$/i }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
   for (const path of legalPages) {
     test(`${path} loads with a heading`, async ({ page }) => {
       await page.goto(path, { waitUntil: "domcontentloaded" });
