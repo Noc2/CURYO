@@ -514,7 +514,10 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
             if (frontendOperator == address(0)) {
                 return (FrontendFeeDisposition.Direct, frontend);
             }
-            if (!eligible || slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
+            if (eligible) {
+                return (FrontendFeeDisposition.CreditRegistry, frontendOperator);
+            }
+            if (slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
                 return (FrontendFeeDisposition.Protocol, frontendOperator);
             }
             return (FrontendFeeDisposition.CreditRegistry, frontendOperator);
