@@ -9,6 +9,28 @@ interface UseVoteFeedStageOptions {
   windowSize?: number;
 }
 
+export function resolveVoteFeedActiveSourceIndex(
+  items: ReadonlyArray<{ id: bigint }>,
+  activeContentId: bigint | null,
+  requestedActiveId?: bigint | null,
+) {
+  if (items.length === 0) return -1;
+
+  const preferredContentId = activeContentId ?? requestedActiveId ?? null;
+  if (preferredContentId === null) return 0;
+
+  const preferredIndex = items.findIndex(item => item.id === preferredContentId);
+  if (preferredIndex !== -1) {
+    return preferredIndex;
+  }
+
+  if (requestedActiveId !== undefined && requestedActiveId !== null && preferredContentId === requestedActiveId) {
+    return -1;
+  }
+
+  return 0;
+}
+
 export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStageOptions) {
   const { visibleCount, requestedActiveId, windowSize = 7 } = options;
   const [activeContentId, setActiveContentId] = useState<bigint | null>(requestedActiveId ?? null);
@@ -20,7 +42,9 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
 
   useEffect(() => {
     if (items.length === 0) {
-      setActiveContentId(null);
+      if (requestedActiveId === undefined || requestedActiveId === null) {
+        setActiveContentId(null);
+      }
       return;
     }
 
@@ -29,15 +53,11 @@ export function useVoteFeedStage(items: ContentItem[], options: UseVoteFeedStage
     }
 
     setActiveContentId(null);
-  }, [activeContentId, items]);
+  }, [activeContentId, items, requestedActiveId]);
 
   const activeSourceIndex = useMemo(() => {
-    if (items.length === 0) return -1;
-    if (activeContentId === null) return 0;
-
-    const index = items.findIndex(item => item.id === activeContentId);
-    return index === -1 ? 0 : index;
-  }, [activeContentId, items]);
+    return resolveVoteFeedActiveSourceIndex(items, activeContentId, requestedActiveId);
+  }, [activeContentId, items, requestedActiveId]);
 
   const visibleItems = useMemo(() => {
     const loadedItems = items.slice(0, visibleCount);
