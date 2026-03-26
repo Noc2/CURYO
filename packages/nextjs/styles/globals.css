@@ -479,42 +479,67 @@ body {
   line-height: 1.7;
 }
 
+.docs-shell,
+.legal-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: min(100%, 74ch);
+}
+
+.docs-shell > .prose,
+.legal-prose {
+  max-width: none;
+  color: rgb(245 240 235 / 0.86);
+  font-size: clamp(1.0625rem, 1.01rem + 0.2vw, 1.125rem);
+  line-height: 1.78;
+}
+
 .prose h1 {
-  font-size: 1.875rem;
+  font-size: clamp(2rem, 1.72rem + 1.2vw, 2.65rem);
   font-weight: 700;
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.025em;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
 .prose h2 {
-  font-size: 1.25rem;
+  font-size: clamp(1.3rem, 1.18rem + 0.45vw, 1.55rem);
   font-weight: 600;
-  margin-top: 2rem;
+  margin-top: 2.4rem;
   margin-bottom: 0.75rem;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .prose h3 {
-  font-size: 1rem;
+  font-size: clamp(1.08rem, 1.01rem + 0.24vw, 1.18rem);
   font-weight: 600;
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-top: 1.7rem;
+  margin-bottom: 0.55rem;
 }
 
 .prose p {
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
+  margin-top: 0.95rem;
+  margin-bottom: 0.95rem;
+  color: rgb(245 240 235 / 0.84);
 }
 
 .prose .lead {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.65rem;
+  color: rgb(245 240 235 / 0.76);
+  font-size: clamp(1.125rem, 1.06rem + 0.28vw, 1.22rem);
+  line-height: 1.68;
+}
+
+.readability-meta {
+  color: rgb(245 240 235 / 0.72);
 }
 
 .prose ul,
 .prose ol {
-  margin-top: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding-left: 1.5rem;
+  margin-top: 0.7rem;
+  margin-bottom: 1rem;
+  padding-left: 1.35rem;
 }
 
 .prose ul {
@@ -526,8 +551,9 @@ body {
 }
 
 .prose li {
-  margin-top: 0.25rem;
-  margin-bottom: 0.25rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+  color: rgb(245 240 235 / 0.82);
 }
 
 .prose code {
@@ -540,6 +566,7 @@ body {
 
 .prose strong {
   font-weight: 600;
+  color: var(--color-base-content);
 }
 
 .prose hr {

@@ -3,14 +3,14 @@ import type { NextPage } from "next";
 
 const ImprintPage: NextPage = () => {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="legal-shell mx-auto w-full px-4 py-8">
       <Link href="/legal" className="link link-primary text-base mb-4 inline-block">
         &larr; Back to Legal
       </Link>
 
-      <article className="prose prose-sm max-w-none">
+      <article className="prose legal-prose max-w-none">
         <h1>Imprint (Impressum)</h1>
-        <p className="text-base-content/60">Information pursuant to &sect; 5 DDG (German Digital Services Act)</p>
+        <p className="readability-meta">Information pursuant to &sect; 5 DDG (German Digital Services Act)</p>
 
         <h2>Interface Operator</h2>
         <p>

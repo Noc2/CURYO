@@ -1,5 +1,9 @@
 import { AppPageShell } from "~~/components/shared/AppPageShell";
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
-  return <AppPageShell contentClassName="docs-prose">{children}</AppPageShell>;
+  return (
+    <AppPageShell contentClassName="docs-prose">
+      <div className="docs-shell">{children}</div>
+    </AppPageShell>
+  );
 }
