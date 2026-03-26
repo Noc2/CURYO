@@ -480,7 +480,7 @@ export function FaucetSection({ referrer }: FaucetSectionProps) {
           <p className="text-2xl font-bold text-warning">Tier {currentTier}</p>
         </div>
         <div className="bg-base-200 rounded-xl p-4">
-          <p className="text-base text-base-content/60">Verification</p>
+          <p className="text-base text-base-content/60">Verification Service</p>
           <a
             href="https://self.xyz"
             target="_blank"
