@@ -21,7 +21,7 @@ const STEPS = [
   {
     icon: ScaleIcon,
     title: "Reveal and Settle",
-    description: "After the blind phase, votes are revealed and the round settles. Winning voters earn rewards.",
+    description: "After the blind phase, votes are revealed, and once the round reaches 3 votes, it settles. Winning voters earn rewards.",
   },
 ];
 
