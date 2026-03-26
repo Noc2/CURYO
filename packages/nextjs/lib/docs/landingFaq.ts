@@ -30,7 +30,7 @@ export const landingFaqItems: LandingFaqItem[] = [
   },
   {
     question: "Can I lose cREP by voting?",
-    answer: `Yes. If your vote ends up on the losing side, part of your stake can be lost. Revealed losing voters can still reclaim ${protocolDocFacts.revealedLoserRefundPercentLabel} of raw stake, while winners get their original stake back plus a share of the losing pool.`,
+    answer: `Yes. If you vote with the losing side, you can lose most of your stake. If your losing vote was revealed, you can still recover ${protocolDocFacts.revealedLoserRefundPercentLabel} of the amount you originally staked. If you vote with the winning side, you get your full stake back plus an extra payout funded by the losing side.`,
     learnMoreHref: "/docs/tokenomics",
     learnMoreLabel: "Rewards & Risk",
   },
