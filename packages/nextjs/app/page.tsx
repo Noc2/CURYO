@@ -34,8 +34,8 @@ const FALLBACK_SOCIAL_PROOF_STATS = {
 
 async function getLandingPageSocialProofItems() {
   const fallbackItems = [
-    { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "stake-backed votes" },
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalVoterIds.toLocaleString("en-US"), label: "verified humans" },
+    { value: FALLBACK_SOCIAL_PROOF_STATS.totalVotes.toLocaleString("en-US"), label: "votes" },
     { value: FALLBACK_SOCIAL_PROOF_STATS.totalRoundsSettled.toLocaleString("en-US"), label: "rounds settled" },
   ];
 
@@ -60,8 +60,8 @@ async function getLandingPageSocialProofItems() {
     };
 
     return [
-      { value: Math.max(0, Number(stats.totalVotes ?? 0)).toLocaleString("en-US"), label: "stake-backed votes" },
       { value: Math.max(0, Number(stats.totalVoterIds ?? 0)).toLocaleString("en-US"), label: "verified humans" },
+      { value: Math.max(0, Number(stats.totalVotes ?? 0)).toLocaleString("en-US"), label: "votes" },
       {
         value: Math.max(0, Number(stats.totalRoundsSettled ?? 0)).toLocaleString("en-US"),
         label: "rounds settled",
@@ -92,7 +92,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
           {/* Title (left on large screens) */}
           <div className="flex flex-col items-center lg:items-start lg:flex-[1.08] lg:max-w-[43rem]">
-            <h1 className="hero-headline max-w-[14ch] text-center text-[2.7rem] text-base-content sm:text-[3.7rem] lg:max-w-none lg:text-left lg:text-[4.35rem] xl:text-[4.9rem]">
+            <h1 className="hero-headline max-w-[14ch] text-center text-[2.55rem] text-base-content sm:text-[3.45rem] lg:max-w-none lg:text-left lg:text-[4.05rem] xl:text-[4.55rem]">
               <span className="block">A Better Web,</span>
               <span className="block">Guided by Human Reputation</span>
             </h1>
@@ -102,13 +102,10 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
             <LandingPageActions />
             <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center text-sm text-base-content/62 sm:text-[0.95rem] lg:justify-start lg:text-left">
               {socialProofItems.map(({ value, label }, index) => (
-                <div key={label} className="flex items-center gap-3">
-                  {index > 0 ? (
-                    <span className="hidden text-base-content/28 sm:inline" aria-hidden="true">
-                      •
-                    </span>
-                  ) : null}
-                  <span className="whitespace-nowrap">
+                <div key={label} className="flex items-center">
+                  <span
+                    className={`whitespace-nowrap ${index < socialProofItems.length - 1 ? "sm:after:ml-3 sm:after:text-base-content/28 sm:after:content-['•']" : ""}`}
+                  >
                     <span className="font-semibold text-base-content">{value}</span> {label}
                   </span>
                 </div>
