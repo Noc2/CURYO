@@ -26,6 +26,7 @@ interface VotingQuestionCardProps {
   openRound?: ContentOpenRoundSummary | null;
   /** When true, removes card background/rounding (parent provides it). */
   embedded?: boolean;
+  compact?: boolean;
 }
 
 const RATING_GUIDANCE_TEXT =
@@ -46,6 +47,7 @@ export function VotingQuestionCard({
   isOwnContent,
   openRound,
   embedded,
+  compact = false,
 }: VotingQuestionCardProps) {
   // Check if user already voted on this content in the current round
   const roundSnapshot = useRoundSnapshot(contentId, openRound ?? undefined);
@@ -105,9 +107,17 @@ export function VotingQuestionCard({
     ) : null
   ) : null;
 
+  const orbSize = compact ? 166 : 190;
+  const shellClassName = compact
+    ? "p-3 space-y-2.5"
+    : "p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3";
+  const headingRowClassName = compact ? "mb-2.5" : "mb-3";
+  const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
+  const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
+
   return (
     <div
-      className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden p-4 space-y-3 xl:p-3 xl:space-y-2.5 2xl:p-4 2xl:space-y-3`}
+      className={`relative ${embedded ? "" : "rounded-2xl"} flex h-full min-h-0 flex-col overflow-hidden ${shellClassName}`}
       style={embedded ? {} : { background: "var(--curyo-surface-elevated)" }}
     >
       <div
@@ -117,12 +127,12 @@ export function VotingQuestionCard({
       {/* Content */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex shrink-0 flex-col items-center text-center">
-          <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65">
+          <div className={`${headingRowClassName} flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65`}>
             <span>Community rating</span>
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
-          <RatingOrb rating={currentRating} size={190} />
-          <div className="mt-3 flex w-full shrink-0 flex-col items-center gap-2">
+          <RatingOrb rating={currentRating} size={orbSize} />
+          <div className={`flex w-full shrink-0 flex-col items-center ${actionStackClassName}`}>
             {phase === "voting" || hasMyVote ? (
               <div className="flex flex-col items-center gap-2">
                 {phase === "voting" && (
@@ -189,13 +199,13 @@ export function VotingQuestionCard({
               </div>
             )}
 
-            <div className="mt-2 flex w-full shrink-0">
+            <div className={`${compact ? "mt-1.5" : "mt-2"} flex w-full shrink-0`}>
               <RoundRevealedBreakdown snapshot={roundSnapshot} />
             </div>
           </div>
         </div>
 
-        <div className="mt-3 flex shrink-0 flex-col gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3">
+        <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
           <RoundProgress snapshot={roundSnapshot} />
           <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
 

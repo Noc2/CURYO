@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
@@ -33,6 +33,8 @@ const ShareContentModal = dynamic(
   () => import("~~/components/shared/ShareContentModal").then(m => m.ShareContentModal),
   { ssr: false },
 );
+
+const LAPTOP_VOTE_CARD_MEDIA_QUERY = "(min-width: 1024px) and (max-width: 1535px)";
 
 function getThumbnailImageSrc(thumbnailUrl: string) {
   try {
@@ -95,9 +97,42 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   canPrevious = false,
   canNext = false,
 }: FeedVoteCardProps) {
+  const [isLaptopCompact, setIsLaptopCompact] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+
+    const mediaQuery = window.matchMedia(LAPTOP_VOTE_CARD_MEDIA_QUERY);
+    const updateCompactMode = () => {
+      setIsLaptopCompact(mediaQuery.matches);
+    };
+
+    updateCompactMode();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateCompactMode);
+      return () => {
+        mediaQuery.removeEventListener("change", updateCompactMode);
+      };
+    }
+
+    mediaQuery.addListener(updateCompactMode);
+    return () => {
+      mediaQuery.removeListener(updateCompactMode);
+    };
+  }, []);
+
+  const contentStackClassName = isLaptopCompact ? "gap-2.5" : "gap-3 xl:gap-2.5";
+  const contentGridClassName = isLaptopCompact
+    ? "grid min-h-0 grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(18.75rem,22rem)] xl:grid-cols-[minmax(0,1fr)_minmax(19.5rem,22.5rem)] lg:items-stretch"
+    : "grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:items-stretch";
+  const mediaHeightClassName = isLaptopCompact
+    ? "w-full lg:h-[clamp(14.75rem,36vh,21.5rem)] xl:h-[clamp(15.5rem,37vh,22.5rem)]"
+    : "w-full lg:h-[clamp(17rem,42vh,28rem)]";
+
   return (
     <div
-      className="flex h-full min-h-0 flex-col gap-3 xl:gap-2.5"
+      className={`flex h-full min-h-0 flex-col ${contentStackClassName}`}
       onClickCapture={event => {
         if (!onExternalOpen) return;
 
@@ -119,11 +154,12 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         onNext={onNext}
         canPrevious={canPrevious}
         canNext={canNext}
+        compact={isLaptopCompact}
       />
 
-      <div className="grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:items-stretch">
+      <div className={contentGridClassName}>
         <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
-          <div className="w-full lg:h-[clamp(17rem,42vh,28rem)]">
+          <div className={mediaHeightClassName}>
             <ContentEmbed url={item.url} prefetchedMetadata={item.contentMetadata} />
           </div>
         </div>
@@ -141,6 +177,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
             cooldownSecondsRemaining={cooldownSecondsRemaining}
             isOwnContent={item.isOwnContent}
             embedded
+            compact={isLaptopCompact}
           />
         </div>
       </div>
@@ -155,6 +192,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
         watchPending={watchPending}
         onToggleFollow={onToggleFollow}
         onToggleWatch={onToggleWatch}
+        compact={isLaptopCompact}
       />
     </div>
   );
@@ -170,6 +208,7 @@ interface FeedContentMetaCardProps {
   watchPending: boolean;
   onToggleWatch: (id: bigint) => void;
   onToggleFollow: (address: string) => void;
+  compact?: boolean;
 }
 
 interface FeedContentHeaderProps {
@@ -178,11 +217,12 @@ interface FeedContentHeaderProps {
   onNext?: () => void;
   canPrevious: boolean;
   canNext: boolean;
+  compact?: boolean;
 }
 
-function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: FeedContentHeaderProps) {
+function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext, compact }: FeedContentHeaderProps) {
   return (
-    <div className="rounded-2xl bg-base-200 p-4 xl:p-3">
+    <div className={`rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`}>
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -194,7 +234,11 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <h2 className="break-words text-center font-display text-[1.7rem] leading-[0.94] tracking-[0.02em] text-base-content sm:text-[1.9rem] xl:text-[1.75rem]">
+          <h2
+            className={`break-words text-center font-display leading-[0.94] tracking-[0.02em] text-base-content ${
+              compact ? "text-[1.55rem] sm:text-[1.7rem] xl:text-[1.62rem]" : "text-[1.7rem] sm:text-[1.9rem] xl:text-[1.75rem]"
+            }`}
+          >
             {item.title}
           </h2>
         </div>
@@ -222,13 +266,14 @@ function FeedContentMetaCard({
   watchPending,
   onToggleWatch,
   onToggleFollow,
+  compact = false,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
   const platformType = detectPlatform(item.url).type;
 
   return (
     <>
-      <div className="rounded-2xl bg-base-200 p-4 xl:p-3">
+      <div className={`rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`}>
         <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
@@ -260,7 +305,7 @@ function FeedContentMetaCard({
           </div>
         </div>
 
-        <div className="mt-3 text-base leading-relaxed text-base-content/85">
+        <div className={`text-base leading-relaxed text-base-content/85 ${compact ? "mt-2.5" : "mt-3"}`}>
           <span>{item.description}</span>
           <span className="ml-2 inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 align-middle text-sm font-medium leading-none text-base-content/80">
             {platformType}
