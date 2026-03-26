@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
+import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
 import { RatingOrb } from "~~/components/shared/RatingOrb";
 import { RoundProgress } from "~~/components/shared/RoundProgress";
@@ -59,7 +60,8 @@ export function VotingQuestionCard({
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const detailsId = `voting-card-details-${contentId.toString()}`;
 
   // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
@@ -116,7 +118,7 @@ export function VotingQuestionCard({
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
 
   useEffect(() => {
-    setIsHistoryOpen(false);
+    setIsDetailsOpen(false);
   }, [contentId]);
 
   return (
@@ -204,36 +206,25 @@ export function VotingQuestionCard({
                 )}
               </div>
             )}
-
-            <div className={`${compact ? "mt-1.5" : "mt-2"} flex w-full shrink-0`}>
-              <RoundRevealedBreakdown snapshot={roundSnapshot} />
-            </div>
           </div>
         </div>
 
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
-          <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
           <RoundProgress snapshot={roundSnapshot} />
-          {embedded ? (
-            <div className={`${compact ? "pt-0.5" : "pt-1"} flex flex-col items-start gap-2`}>
-              <button
-                type="button"
-                onClick={() => setIsHistoryOpen(current => !current)}
-                aria-expanded={isHistoryOpen}
-                aria-controls={`rating-history-${contentId.toString()}`}
-                className="text-sm text-base-content/60 underline decoration-base-content/15 underline-offset-4 transition-colors hover:text-base-content/80 focus-visible:outline-none focus-visible:text-base-content"
-              >
-                {isHistoryOpen ? "Hide history" : "Show history"}
-              </button>
-              {isHistoryOpen ? (
-                <div id={`rating-history-${contentId.toString()}`} className="w-full">
-                  <RatingHistory contentId={contentId} showHeader={false} />
-                </div>
-              ) : null}
+          <div className={compact ? "pt-0.5" : "pt-1"}>
+            <MoreToggleButton
+              expanded={isDetailsOpen}
+              onClick={() => setIsDetailsOpen(current => !current)}
+              controlsId={detailsId}
+            />
+          </div>
+          {isDetailsOpen ? (
+            <div id={detailsId} className={`flex flex-col ${compact ? "gap-2.5" : "gap-3"}`}>
+              <RoundRevealedBreakdown snapshot={roundSnapshot} />
+              <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+              <RatingHistory contentId={contentId} variant={embedded ? "dark" : "default"} />
             </div>
-          ) : (
-            <RatingHistory contentId={contentId} />
-          )}
+          ) : null}
         </div>
       </div>
     </div>

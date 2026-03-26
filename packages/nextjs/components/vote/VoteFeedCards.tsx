@@ -2,11 +2,12 @@
 
 import { memo, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
 import { FollowProfileButton } from "~~/components/shared/FollowProfileButton";
+import { MoreToggleButton } from "~~/components/shared/MoreToggleButton";
 import { VotingQuestionCard } from "~~/components/shared/VotingQuestionCard";
 import { WatchContentButton } from "~~/components/shared/WatchContentButton";
 import type { ContentItem } from "~~/hooks/useContentFeed";
@@ -99,6 +100,7 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   canNext = false,
 }: FeedVoteCardProps) {
   const [isLaptopCompact, setIsLaptopCompact] = useState(false);
+  const platformType = detectPlatform(item.url).type;
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -127,9 +129,12 @@ export const FeedVoteCard = memo(function FeedVoteCard({
   const contentGridClassName = isLaptopCompact
     ? "grid min-h-0 grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(18.75rem,22rem)] xl:grid-cols-[minmax(0,1fr)_minmax(19.5rem,22.5rem)] lg:items-stretch"
     : "grid min-h-0 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] xl:grid-cols-[minmax(0,1fr)_minmax(21rem,25rem)] lg:items-stretch";
-  const mediaHeightClassName = isLaptopCompact
-    ? "w-full lg:h-[clamp(13.75rem,33vh,18.75rem)] xl:h-[clamp(14.25rem,34vh,19.5rem)]"
-    : "w-full lg:h-[clamp(17rem,42vh,28rem)]";
+  const usesIntrinsicMediaHeight = platformType === "youtube";
+  const mediaHeightClassName = usesIntrinsicMediaHeight
+    ? "w-full"
+    : isLaptopCompact
+      ? "w-full lg:h-[clamp(13.75rem,33vh,18.75rem)] xl:h-[clamp(14.25rem,34vh,19.5rem)]"
+      : "w-full lg:h-[clamp(17rem,42vh,28rem)]";
 
   return (
     <div
@@ -279,6 +284,7 @@ function FeedContentMetaCard({
   const [showShare, setShowShare] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const platformType = detectPlatform(item.url).type;
+  const detailsId = `content-details-${item.id.toString()}`;
   const hasFollowButton = !(normalizedAddress && item.submitter.toLowerCase() === normalizedAddress);
   const description = item.description.trim();
   const hasDescription = description.length > 0;
@@ -327,23 +333,17 @@ function FeedContentMetaCard({
               <ShareIcon className="h-4 w-4" />
             </button>
             {hasExpandableDetails ? (
-              <button
-                type="button"
+              <MoreToggleButton
+                expanded={showExpandedDetails}
                 onClick={() => setIsExpanded(current => !current)}
-                aria-expanded={showExpandedDetails}
-                aria-label={showExpandedDetails ? "Collapse content details" : "Expand content details"}
-                className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
-              >
-                <ChevronDownIcon
-                  className={`h-4 w-4 transition-transform ${showExpandedDetails ? "rotate-180" : ""}`}
-                />
-              </button>
+                controlsId={detailsId}
+              />
             ) : null}
           </div>
         </div>
 
         {showExpandedDetails ? (
-          <div className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
+          <div id={detailsId} className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
             {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
 
             <div className="flex flex-wrap items-center gap-2">
