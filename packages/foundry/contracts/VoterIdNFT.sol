@@ -210,8 +210,8 @@ contract VoterIdNFT is ERC721, Ownable, IVoterIdNFT {
         holderToTokenId[to] = tokenId;
         tokenIdToHolder[tokenId] = to;
 
-        // Mint the NFT
-        _mint(to, tokenId);
+        // Safe minting prevents Voter IDs from being trapped in contracts that cannot receive ERC721 tokens.
+        _safeMint(to, tokenId);
 
         emit VoterIdMinted(tokenId, to, nullifier);
     }
