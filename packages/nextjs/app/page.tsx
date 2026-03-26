@@ -131,12 +131,9 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
                 <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-base-300 shadow-[0_14px_28px_rgba(9,10,12,0.24)]">
                   <Icon className="h-10 w-10 text-primary" />
                 </div>
-                <div className="mb-3 flex items-center justify-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-sm font-semibold text-primary">
-                    {index + 1}
-                  </span>
-                  <h3 className="display-section text-2xl text-base-content">{title}</h3>
-                </div>
+                <h3 className="display-section mb-3 text-2xl text-base-content">
+                  {index + 1}. {title}
+                </h3>
                 <p className="text-lg text-base-content/60">{description}</p>
               </div>
             ))}
