@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { CuryoConnectButton } from "~~/components/scaffold-eth";
 import { CuryoVoteButton } from "~~/components/shared/CuryoVoteButton";
 import { RatingHistory } from "~~/components/shared/RatingHistory";
@@ -58,6 +59,7 @@ export function VotingQuestionCard({
   const cooldownLabel = formatVoteCooldownRemaining(cooldownSecondsRemaining);
   const displayError =
     cooldownActive && error?.includes("You already voted on this content within the last") ? null : error;
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // Check if user has committed to this round (direction hidden until reveal)
   // voterCommitHash(contentId, roundId, voter) returns bytes32 (0 = no commit)
@@ -114,6 +116,10 @@ export function VotingQuestionCard({
   const headingRowClassName = compact ? "mb-2.5" : "mb-3";
   const actionStackClassName = compact ? "mt-2.5 gap-1.5" : "mt-3 gap-2";
   const footerStackClassName = compact ? "mt-2.5 gap-2" : "mt-3 gap-3 xl:mt-2.5 xl:gap-2.5 2xl:mt-3 2xl:gap-3";
+
+  useEffect(() => {
+    setIsHistoryOpen(false);
+  }, [contentId]);
 
   return (
     <div
@@ -208,9 +214,26 @@ export function VotingQuestionCard({
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
           <RoundProgress snapshot={roundSnapshot} />
           <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
-
-          {/* Rating history chart */}
-          <RatingHistory contentId={contentId} />
+          {embedded ? (
+            <div className={`${compact ? "pt-0.5" : "pt-1"} flex flex-col items-start gap-2`}>
+              <button
+                type="button"
+                onClick={() => setIsHistoryOpen(current => !current)}
+                aria-expanded={isHistoryOpen}
+                aria-controls={`rating-history-${contentId.toString()}`}
+                className="text-sm text-base-content/60 underline decoration-base-content/15 underline-offset-4 transition-colors hover:text-base-content/80 focus-visible:outline-none focus-visible:text-base-content"
+              >
+                {isHistoryOpen ? "Hide history" : "Show history"}
+              </button>
+              {isHistoryOpen ? (
+                <div id={`rating-history-${contentId.toString()}`} className="w-full">
+                  <RatingHistory contentId={contentId} showHeader={false} />
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <RatingHistory contentId={contentId} />
+          )}
         </div>
       </div>
     </div>

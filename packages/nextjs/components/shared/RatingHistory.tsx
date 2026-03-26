@@ -11,13 +11,14 @@ import { publicEnv } from "~~/utils/env/public";
 interface RatingHistoryProps {
   contentId: bigint;
   variant?: "default" | "dark";
+  showHeader?: boolean;
 }
 
 /**
  * SVG sparkline chart showing the content's rating over time.
  * Plots data from RatingUpdated events + current on-chain rating.
  */
-export function RatingHistory({ contentId, variant = "default" }: RatingHistoryProps) {
+export function RatingHistory({ contentId, variant = "default", showHeader = true }: RatingHistoryProps) {
   const rpcFallbackEnabled = publicEnv.rpcFallbackEnabled;
   const ponderAvailable = usePonderAvailability(rpcFallbackEnabled);
   const rpcFallbackActive = rpcFallbackEnabled && ponderAvailable === false;
@@ -117,10 +118,12 @@ export function RatingHistory({ contentId, variant = "default" }: RatingHistoryP
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className={`text-base font-medium ${textColor}`}>Rating history</span>
-        <span className={`text-base tabular-nums ${textColor}`}>{currentRatingValue}%</span>
-      </div>
+      {showHeader ? (
+        <div className="flex items-center justify-between mb-1.5">
+          <span className={`text-base font-medium ${textColor}`}>Rating history</span>
+          <span className={`text-base tabular-nums ${textColor}`}>{currentRatingValue}%</span>
+        </div>
+      ) : null}
       <Sparkline data={dataPoints} />
     </div>
   );
