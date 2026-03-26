@@ -67,7 +67,7 @@ const HeaderNavLink = ({
       className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-xl ${
         compact ? "px-3 py-2.5" : "px-4 py-3"
       } ${className ?? ""} transition-colors duration-200 ${
-        isActive ? "text-base-content" : "text-base-content/60 hover:bg-base-content/[0.04] hover:text-base-content"
+        isActive ? "text-base-content" : "text-base-content/75 hover:bg-base-content/[0.04] hover:text-base-content"
       }`}
     >
       <Icon className={`relative z-10 h-6 w-6 shrink-0 transition-colors duration-200 ${navTone}`} />
@@ -116,7 +116,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
               <div className="flex flex-col space-y-4 w-full">
                 {DOCS_NAV.map(group => (
                   <div key={group.section} className="w-full flex flex-col">
-                    <h3 className="text-base font-semibold uppercase tracking-wider text-base-content/40 mb-1.5 px-3 w-full">
+                    <h3 className="text-base font-semibold uppercase tracking-wider text-base-content/55 mb-1.5 px-3 w-full">
                       {group.section}
                     </h3>
                     <div className="flex flex-col space-y-0.5 w-full">
@@ -129,7 +129,7 @@ const HeaderMenuLinks = ({ variant = "mobile" }: { variant?: "mobile" | "desktop
                             className={`block w-full px-3 py-1.5 text-base rounded-lg transition-colors ${
                               isLinkActive
                                 ? "bg-primary/10 text-primary font-medium"
-                                : "text-base-content/60 hover:bg-base-content/[0.04] hover:text-base-content"
+                                : "text-base-content/75 hover:bg-base-content/[0.04] hover:text-base-content"
                             }`}
                           >
                             {link.label}
@@ -203,7 +203,7 @@ const HeaderBrand = ({ className, compact = false }: { className?: string; compa
       >
         CURYO (BETA)
       </span>
-      <span className={`${compact ? "truncate" : ""} text-base-content/60`} style={{ fontSize: "14px" }}>
+      <span className={`${compact ? "truncate" : ""} text-base-content/75`} style={{ fontSize: "14px" }}>
         A Better Web
       </span>
     </div>
@@ -242,7 +242,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
   const isSidebar = className?.includes("sidebar");
   return (
     <div className={`relative ${className ?? ""} ${isSidebar ? "w-full min-w-0" : "hidden sm:block"}`}>
-      <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/30 pointer-events-none" />
+      <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/45 pointer-events-none" />
       <input
         type="text"
         placeholder="Search..."

@@ -57,7 +57,7 @@ function NotificationPreferenceToggle({
     <label className="flex items-start justify-between gap-4 rounded-2xl bg-base-300 px-4 py-3">
       <div>
         <div className="text-base font-medium text-base-content">{label}</div>
-        <p className="mt-1 text-sm text-base-content/50">{description}</p>
+        <p className="mt-1 text-sm text-base-content/70">{description}</p>
       </div>
       <input
         type="checkbox"
@@ -245,7 +245,7 @@ export function NotificationSettingsPanel({
               Notifications
             </div>
             <h2 className="mt-3 text-3xl font-semibold text-base-content sm:text-4xl">Notification settings</h2>
-            <p className="mt-3 text-base text-base-content/60">
+            <p className="mt-3 text-base text-base-content/75">
               Sign in to choose which in-app, browser, and email alerts you want to receive.
             </p>
           </div>
@@ -274,7 +274,7 @@ export function NotificationSettingsPanel({
             </div>
             <h2 className="mt-3 text-3xl font-semibold text-base-content sm:text-4xl">Notification settings</h2>
           </div>
-          <div className="rounded-2xl bg-base-300 px-4 py-3 text-sm text-base-content/60">
+          <div className="rounded-2xl bg-base-300 px-4 py-3 text-sm text-base-content/75">
             {browserPermission === "granted"
               ? "Browser notifications are enabled."
               : browserPermission === "denied"
@@ -317,13 +317,13 @@ export function NotificationSettingsPanel({
       <section className="surface-card rounded-3xl p-6 sm:p-8">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-base-content/[0.06] px-3 py-1 text-sm font-semibold uppercase tracking-wide text-base-content/65">
+            <div className="inline-flex items-center gap-2 rounded-full bg-base-content/[0.06] px-3 py-1 text-sm font-semibold uppercase tracking-wide text-base-content/80">
               <EnvelopeIcon className="h-4 w-4" />
               Email delivery
             </div>
             <h2 className="mt-3 text-xl font-semibold text-base-content">Email notifications</h2>
           </div>
-          <div className="rounded-2xl bg-base-300 px-4 py-3 text-sm text-base-content/60">
+          <div className="rounded-2xl bg-base-300 px-4 py-3 text-sm text-base-content/75">
             {!emailSettings.email
               ? "No email configured yet."
               : emailSettings.verified
@@ -334,7 +334,7 @@ export function NotificationSettingsPanel({
 
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-base-content/65" htmlFor="notification-email">
+            <label className="mb-2 block text-sm font-medium text-base-content/80" htmlFor="notification-email">
               Delivery email
             </label>
             <input
@@ -346,7 +346,7 @@ export function NotificationSettingsPanel({
               className="input input-bordered w-full bg-base-200/50 text-base"
               autoComplete="email"
             />
-            <p className="mt-2 text-sm text-base-content/45">
+            <p className="mt-2 text-sm text-base-content/65">
               Clearing the address removes all email notifications for this wallet.
             </p>
           </div>

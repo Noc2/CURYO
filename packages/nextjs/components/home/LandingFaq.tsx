@@ -19,7 +19,7 @@ export function LandingFaq() {
                 <ChevronDownIcon className="h-5 w-5 shrink-0 text-primary/70 transition-transform duration-200 group-open:rotate-180 group-open:text-primary" />
               </summary>
 
-              <div className="border-t border-white/6 px-6 pt-4 pb-6 text-base leading-7 text-base-content/65 sm:text-[1.05rem]">
+              <div className="border-t border-white/6 px-6 pt-4 pb-6 text-base leading-7 text-base-content/80 sm:text-[1.05rem]">
                 <p>{item.answer}</p>
                 {item.learnMoreHref ? (
                   <Link

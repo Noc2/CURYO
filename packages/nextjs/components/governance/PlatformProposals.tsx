@@ -91,7 +91,7 @@ export function PlatformProposals() {
       <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
         <div className="space-y-1">
           <h2 className={surfaceSectionHeadingClassName}>Platform Approval</h2>
-          <p className="text-base text-base-content/60">Submit on Submit. Approve and vote here.</p>
+          <p className="text-base text-base-content/75">Submit on Submit. Approve and vote here.</p>
         </div>
         <Link href="/submit#category" className="btn btn-ghost btn-sm">
           Open Submit
@@ -117,14 +117,14 @@ export function PlatformProposals() {
       {proposalsLoading && (
         <div className="text-center py-8">
           <span className="loading loading-spinner loading-md" />
-          <p className="text-base text-base-content/60 mt-2">Loading proposals...</p>
+          <p className="mt-2 text-base text-base-content/75">Loading proposals...</p>
         </div>
       )}
 
       {/* Error State */}
       {!proposalsLoading && error && (
         <div className="text-center py-8">
-          <p className="text-base text-base-content/50">Unable to load proposals</p>
+          <p className="text-base text-base-content/70">Unable to load proposals</p>
         </div>
       )}
 
@@ -138,8 +138,8 @@ export function PlatformProposals() {
       ) : !proposalsLoading && !error ? (
         <div className="text-center py-8">
           <GlobeAltIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
-          <p className="text-base-content/60 mb-2">No platform submissions yet</p>
-          <p className="text-base text-base-content/40">
+          <p className="mb-2 text-base-content/75">No platform submissions yet</p>
+          <p className="text-base text-base-content/65">
             <Link href="/submit#category" className="link link-primary">
               Submit a new platform →
             </Link>
@@ -207,11 +207,11 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
             <h3 className="font-semibold">{category.name}</h3>
             {getStatusBadge()}
           </div>
-          <p className="text-base text-base-content/60">{category.domain}</p>
+          <p className="text-base text-base-content/75">{category.domain}</p>
         </div>
         {stakeFormatted > 0 && (
           <div className="text-right">
-            <p className="text-base text-base-content/50">Stake</p>
+            <p className="text-base text-base-content/70">Stake</p>
             <p className="font-medium">{stakeFormatted} cREP</p>
           </div>
         )}
@@ -226,7 +226,7 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
             </span>
           ))}
           {category.subcategories.length > 5 && (
-            <span className="px-2 py-0.5 bg-base-300 text-base rounded-full text-base-content/50">
+            <span className="px-2 py-0.5 bg-base-300 text-base rounded-full text-base-content/70">
               +{category.subcategories.length - 5} more
             </span>
           )}
@@ -234,7 +234,7 @@ function PlatformProposalCard({ categoryId, filter }: { categoryId: bigint; filt
       )}
 
       {/* Submitter */}
-      <div className="flex items-center justify-between gap-3 text-base text-base-content/50 flex-wrap">
+      <div className="flex items-center justify-between gap-3 text-base text-base-content/70 flex-wrap">
         <p>Submitted by {formatAddress(category.submitter)}</p>
         {category.proposalId > 0n && <p>Proposal #{category.proposalId.toString()}</p>}
       </div>

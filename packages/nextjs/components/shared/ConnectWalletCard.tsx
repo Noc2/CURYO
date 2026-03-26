@@ -13,7 +13,7 @@ export function ConnectWalletCard({ title, message }: ConnectWalletCardProps) {
     <div className="flex grow flex-col items-center justify-center px-6 pt-20">
       <div className="surface-card max-w-sm rounded-2xl p-8 text-center">
         <h1 className={`${surfaceSectionHeadingClassName} mb-3`}>{title}</h1>
-        <p className="mb-6 text-base text-base-content/50">{message}</p>
+        <p className="mb-6 text-base text-base-content/70">{message}</p>
         <CuryoConnectButton />
       </div>
     </div>
