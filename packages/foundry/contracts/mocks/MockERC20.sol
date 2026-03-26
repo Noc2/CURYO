@@ -7,7 +7,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 /// @title MockERC20
 /// @notice Mock ERC20 token for testing (simulates USDC/USDT with 6 decimals)
 contract MockERC20 is ERC20 {
-    uint8 private _decimals;
+    uint8 private immutable _decimals;
     uint256 public constant FAUCET_AMOUNT = 1000; // 1000 tokens (before decimals)
 
     constructor(string memory name, string memory symbol, uint8 decimals_) ERC20(name, symbol) {
