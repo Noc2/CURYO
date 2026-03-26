@@ -451,9 +451,9 @@ export const Header = () => {
       </div>
 
       {/* Desktop: left sidebar */}
-      <aside className="fixed left-0 top-0 z-20 hidden h-screen w-56 shrink-0 flex-col items-stretch bg-base-200 py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
+      <aside className="fixed left-0 top-0 z-20 hidden h-screen w-52 shrink-0 flex-col items-stretch bg-base-200 py-4 shadow-[18px_0_48px_rgba(9,10,12,0.24)] backdrop-blur-xl xl:flex">
         <HeaderBrand className="mb-4 shrink-0 px-4" />
-        <div className="w-full min-w-0 px-3 mb-4">
+        <div className="mb-4 w-full min-w-0 px-2.5">
           <Suspense>
             <HeaderSearchBar className="sidebar" />
           </Suspense>
@@ -463,7 +463,7 @@ export const Header = () => {
             <HeaderMenuLinks variant="desktop" />
           </ul>
         </nav>
-        <div className="flex flex-col items-stretch gap-2 pt-4 border-t border-base-300 mt-auto shrink-0 w-full px-3">
+        <div className="mt-auto flex w-full shrink-0 flex-col items-stretch gap-2 border-t border-base-300 px-2.5 pt-4">
           <div className="w-full flex justify-stretch">
             <CuryoConnectButton inlineMenu />
           </div>

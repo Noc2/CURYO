@@ -27,8 +27,8 @@ const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {
     <>
       <div className="flex min-h-screen flex-col">
         <Header />
-        {/* Main content: offset by left sidebar on desktop (224px at xl) */}
-        <div className="flex flex-1 flex-col xl:pl-56">
+        {/* Main content: offset by left sidebar on desktop (208px at xl) */}
+        <div className="flex flex-1 flex-col xl:pl-52">
           <main className="relative flex flex-1 flex-col overflow-x-hidden">{children}</main>
           <Footer />
         </div>
