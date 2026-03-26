@@ -51,11 +51,14 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const coinId = info.id || (info.metadata?.coinId as string);
+  const imageSrc = token?.imageUrl ? `/api/image-proxy?url=${encodeURIComponent(token.imageUrl)}` : undefined;
 
   useEffect(() => {
     setImageError(false);
     setImageLoaded(false);
+  }, [imageSrc]);
 
+  useEffect(() => {
     if (!coinId) {
       setToken(null);
       setLoading(false);
@@ -163,7 +166,7 @@ export function CoinGeckoEmbed({ info, compact, prefetchedMetadata }: CoinGeckoE
         )}
         <div className="flex h-full w-full items-center justify-center p-8 embed-surface">
           <img
-            src={`/api/image-proxy?url=${encodeURIComponent(token.imageUrl)}`}
+            src={imageSrc}
             alt={token.name}
             loading="lazy"
             width={192}

@@ -65,11 +65,10 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
   const [imageLoaded, setImageLoaded] = useState(false);
 
   const movieId = info.id || (info.metadata?.movieId as string);
+  const posterImageSrc = movie?.posterUrl ? getPosterImageSrc(movie.posterUrl) : undefined;
 
   useEffect(() => {
     setFetchError(false);
-    setImageError(false);
-    setImageLoaded(false);
 
     if (!movieId) {
       setMovie(null);
@@ -111,6 +110,11 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
       cancelled = true;
     };
   }, [movieId, info.url, prefetchedMetadata]);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoaded(false);
+  }, [posterImageSrc]);
 
   // Loading state
   if (loading) {
@@ -186,7 +190,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
           </div>
         )}
         <img
-          src={getPosterImageSrc(movie.posterUrl)}
+          src={posterImageSrc}
           alt={movie.title}
           loading="lazy"
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
