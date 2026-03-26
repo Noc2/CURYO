@@ -118,7 +118,6 @@ export function SelfVerifyButton({ onStart, onSuccess }: SelfVerifyButtonProps) 
           <p className="text-error text-base">{errorMessage}</p>
         </div>
       )}
-      <p className="text-base text-base-content/60 text-center">Use a passport or biometric ID card in Self.</p>
     </div>
   );
 }
