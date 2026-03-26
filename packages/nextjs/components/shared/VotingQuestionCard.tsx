@@ -212,8 +212,8 @@ export function VotingQuestionCard({
         </div>
 
         <div className={`flex shrink-0 flex-col ${footerStackClassName}`}>
-          <RoundProgress snapshot={roundSnapshot} />
           <RoundStats categoryId={categoryId} snapshot={roundSnapshot} />
+          <RoundProgress snapshot={roundSnapshot} />
           {embedded ? (
             <div className={`${compact ? "pt-0.5" : "pt-1"} flex flex-col items-start gap-2`}>
               <button
