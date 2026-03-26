@@ -34,6 +34,7 @@ import {
 } from "~~/lib/vote/discoverFeedFilter";
 import { type DiscoverFeedMode, sortDiscoverFeed } from "~~/lib/vote/feedModes";
 import { rankForYouFeed } from "~~/lib/vote/forYouRanker";
+import { mergeRequestedContentIntoFeed } from "~~/lib/vote/requestedContent";
 import { type VoteView, getVoteViewGroups, isActivityViewOption } from "~~/lib/vote/viewOptions";
 import { buildRecommendationSignalContext, trackRecommendationSignal } from "~~/utils/recommendationTracker";
 import { notification } from "~~/utils/scaffold-eth";
@@ -88,6 +89,14 @@ const HomeInner = () => {
   const searchParams = useSearchParams();
   const searchQuery = searchParams?.get("q") ?? "";
   const contentParam = searchParams?.get("content");
+  const requestedActiveId = useMemo(() => {
+    if (!contentParam) return null;
+    try {
+      return BigInt(contentParam);
+    } catch {
+      return null;
+    }
+  }, [contentParam]);
 
   const { address } = useAccount();
   const nowSeconds = useUnixTime(60_000);
@@ -128,12 +137,10 @@ const HomeInner = () => {
   const viewGroups = useMemo(() => getVoteViewGroups(hasWallet), [hasWallet]);
   const activeScope: ScopeOption = isActivityViewOption(view) ? view : "all";
   const activeFeedMode: DiscoverFeedMode = isActivityViewOption(view) ? "for_you" : view;
-  const feedRequestLimit = contentParam
-    ? undefined
-    : Math.max(
-        !isSearchMode && activeScope === "all" ? FEED_PAGE_SIZE * 4 : FEED_PAGE_SIZE * 2,
-        visibleCount + FEED_PREFETCH_BUFFER + 1,
-      );
+  const feedRequestLimit = Math.max(
+    !isSearchMode && activeScope === "all" ? FEED_PAGE_SIZE * 4 : FEED_PAGE_SIZE * 2,
+    visibleCount + FEED_PREFETCH_BUFFER + 1,
+  );
 
   const watchedContentOrder = useMemo(() => {
     const seen = new Set<string>();
@@ -207,6 +214,10 @@ const HomeInner = () => {
     if (feedRequestLimit === undefined) return scopedContentIds;
     return scopedContentIds.slice(0, feedRequestLimit);
   }, [scopedContentIds, feedRequestLimit]);
+  const requestedContentIds = useMemo(
+    () => (requestedActiveId !== null ? [requestedActiveId] : undefined),
+    [requestedActiveId],
+  );
 
   const {
     feed,
@@ -222,6 +233,13 @@ const HomeInner = () => {
     sortBy: isSearchMode ? effectiveSearchSortBy : "newest",
     submitter: activeScope === "my_submissions" ? address : undefined,
   });
+  const { feed: requestedContentFeed, isLoading: requestedContentLoading } = useContentFeed(address, {
+    contentIds: requestedContentIds,
+    enabled: requestedActiveId !== null,
+    keepPrevious: false,
+    limit: 1,
+  });
+  const requestedContentItem = requestedContentFeed[0] ?? null;
   const totalContent = scopedContentIds?.length ?? serverTotalContent;
   const hasMoreFeed = scopedContentIds ? feed.length < totalContent : serverHasMoreFeed;
   const interestProfile = useInterestProfile({
@@ -347,15 +365,6 @@ const HomeInner = () => {
     history.replaceState(null, "", hash || window.location.pathname + window.location.search);
   }, []);
 
-  const requestedActiveId = useMemo(() => {
-    if (!contentParam) return null;
-    try {
-      return BigInt(contentParam);
-    } catch {
-      return null;
-    }
-  }, [contentParam]);
-
   const displayFeedRef = useRef<ContentItem[]>([]);
   const activeViewSessionRef = useRef<{ contentId: string; startedAt: number; hasPositiveInteraction: boolean } | null>(
     null,
@@ -461,6 +470,8 @@ const HomeInner = () => {
   ]);
 
   const displayFeed = useMemo(() => {
+    const withRequestedItem = (items: ContentItem[]) =>
+      requestedActiveId !== null ? mergeRequestedContentIntoFeed(items, requestedContentItem) : items;
     const items = [...filteredFeed];
 
     if (isSearchMode) {
@@ -473,13 +484,13 @@ const HomeInner = () => {
           break;
         case "highest_rated":
         case "lowest_rated":
-          return items;
+          return withRequestedItem(items);
       }
-      return items;
+      return withRequestedItem(items);
     }
 
     if (activeScope === "all" && activeFeedMode !== "for_you") {
-      return sortDiscoverFeed(items, activeFeedMode, nowSeconds);
+      return withRequestedItem(sortDiscoverFeed(items, activeFeedMode, nowSeconds));
     }
 
     switch (activeScope) {
@@ -515,16 +526,18 @@ const HomeInner = () => {
         });
         break;
       default:
-        return rankForYouFeed(items, {
-          nowSeconds,
-          profile: interestProfile,
-          votedContentIds,
-          watchedContentIds,
-          followedWallets,
-        });
+        return withRequestedItem(
+          rankForYouFeed(items, {
+            nowSeconds,
+            profile: interestProfile,
+            votedContentIds,
+            watchedContentIds,
+            followedWallets,
+          }),
+        );
     }
 
-    return items;
+    return withRequestedItem(items);
   }, [
     activeFeedMode,
     activeScope,
@@ -540,6 +553,8 @@ const HomeInner = () => {
     votedContentIds,
     watchedContentIds,
     watchedOrderMap,
+    requestedActiveId,
+    requestedContentItem,
   ]);
   displayFeedRef.current = displayFeed;
 
@@ -907,6 +922,10 @@ const HomeInner = () => {
   }, [categories]);
 
   const emptyStateMessage = useMemo(() => {
+    if (requestedActiveId !== null && !requestedContentLoading && !requestedContentItem) {
+      return "This content could not be found.";
+    }
+
     if (searchQuery) {
       return `No results for "${searchQuery}"`;
     }
@@ -960,7 +979,18 @@ const HomeInner = () => {
     }
 
     return `No content found in "${activeCategory}".`;
-  }, [activeCategory, activeFeedMode, activeScope, address, searchQuery]);
+  }, [
+    activeCategory,
+    activeFeedMode,
+    activeScope,
+    address,
+    requestedActiveId,
+    requestedContentItem,
+    requestedContentLoading,
+    searchQuery,
+  ]);
+
+  const showRequestedContentLoading = requestedActiveId !== null && requestedContentLoading;
 
   return (
     <AppPageShell>
@@ -1015,7 +1045,10 @@ const HomeInner = () => {
 
       <div className="min-w-0">
         {/* Main content */}
-        {isLoading || categoriesLoading || scopeLoading ? (
+        {categoriesLoading ||
+        scopeLoading ||
+        showRequestedContentLoading ||
+        (requestedActiveId === null && isLoading) ? (
           <div className="flex justify-center py-16 xl:py-10">
             <span className="loading loading-spinner loading-lg text-primary"></span>
           </div>
