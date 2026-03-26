@@ -28,18 +28,18 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
 
   return (
     <div className="flex w-full max-w-full items-center gap-3">
-      <div className="inline-flex min-w-0 flex-1 items-center justify-start gap-2 whitespace-nowrap text-left text-error">
+      <div className="inline-flex min-w-0 flex-1 items-center justify-start gap-2 whitespace-nowrap text-left text-base-content/60">
         <span className="font-semibold">Down</span>
         <span className="font-semibold tabular-nums">{downPoolFormatted.toFixed(0)} cREP</span>
-        <span className="text-xs text-error/70">
+        <span className="text-xs text-base-content/60">
           {downCount} vote{downCount === 1 ? "" : "s"}
         </span>
       </div>
       <div className="h-4 w-px shrink-0 bg-base-content/10" />
-      <div className="inline-flex min-w-0 flex-1 items-center justify-end gap-2 whitespace-nowrap text-right text-success">
+      <div className="inline-flex min-w-0 flex-1 items-center justify-end gap-2 whitespace-nowrap text-right text-base-content/60">
         <span className="font-semibold">Up</span>
         <span className="font-semibold tabular-nums">{upPoolFormatted.toFixed(0)} cREP</span>
-        <span className="text-xs text-success/70">
+        <span className="text-xs text-base-content/60">
           {upCount} vote{upCount === 1 ? "" : "s"}
         </span>
       </div>
