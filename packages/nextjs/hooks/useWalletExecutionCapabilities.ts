@@ -88,6 +88,14 @@ export function walletCapabilitiesSupportPaymasterService(capabilities: Record<s
   return isObjectRecord(paymasterService) && paymasterService.supported === true;
 }
 
+export function shouldQueryWalletCapabilities(params: {
+  chainId: number | undefined;
+  supportedChain: boolean;
+  walletId: string | undefined;
+}) {
+  return params.walletId === "inApp" && typeof params.chainId === "number" && params.supportedChain;
+}
+
 export function useWalletExecutionCapabilities() {
   const wallet = useActiveWallet();
   const thirdwebAccount = useActiveAccount();
@@ -95,10 +103,16 @@ export function useWalletExecutionCapabilities() {
   const { chainId: wagmiChainId } = useAccount();
   const chainId = resolveWalletExecutionChainId(wagmiChainId, activeWalletChain?.id);
   const supportedChain = supportsThirdwebExecutionCapabilities(chainId);
+  const walletId = wallet?.id;
+  const shouldQueryCapabilities = shouldQueryWalletCapabilities({
+    chainId,
+    supportedChain,
+    walletId,
+  });
   const { data: capabilities } = useCapabilities({
     chainId,
     queryOptions: {
-      enabled: Boolean(wallet) && typeof chainId === "number" && supportedChain,
+      enabled: shouldQueryCapabilities,
       retry: 0,
     },
   });
