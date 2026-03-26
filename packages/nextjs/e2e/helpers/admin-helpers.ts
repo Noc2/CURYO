@@ -29,6 +29,33 @@ async function rpcRequest<T = any>(method: string, params: unknown[]): Promise<T
   return (json.result ?? null) as T | null;
 }
 
+async function resolveProtocolConfigAddress(contractAddress: string): Promise<string> {
+  const { decodeFunctionResult, encodeFunctionData } = await import("viem");
+  const abi = [
+    {
+      name: "protocolConfig",
+      type: "function",
+      inputs: [],
+      outputs: [{ name: "", type: "address" }],
+      stateMutability: "view",
+    },
+  ] as const;
+
+  const data = encodeFunctionData({ abi, functionName: "protocolConfig" });
+  const result = await rpcRequest<`0x${string}`>("eth_call", [{ to: contractAddress, data }, "latest"]);
+  if (!result) return contractAddress;
+
+  try {
+    return decodeFunctionResult({
+      abi,
+      functionName: "protocolConfig",
+      data: result,
+    }) as string;
+  } catch {
+    return contractAddress;
+  }
+}
+
 async function buildSubmissionReservation(
   url: string,
   title: string,
@@ -1491,8 +1518,9 @@ export async function waitForPonderIndexed(
 }
 
 /**
- * Read the current RoundVotingEngine config tuple.
- * Returns the 4 fields from the config() public getter.
+ * Read the current round config tuple.
+ * Accepts either a RoundVotingEngine address (resolves its ProtocolConfig)
+ * or a ProtocolConfig address directly.
  */
 export async function readRoundConfig(contractAddress: string): Promise<{
   epochDuration: bigint;
@@ -1515,6 +1543,7 @@ export async function readRoundConfig(contractAddress: string): Promise<{
       stateMutability: "view",
     },
   ] as const;
+  const configAddress = await resolveProtocolConfigAddress(contractAddress);
   const data = encodeFunctionData({ abi, functionName: "config" });
   const res = await fetch(ANVIL_RPC, {
     method: "POST",
@@ -1522,7 +1551,7 @@ export async function readRoundConfig(contractAddress: string): Promise<{
     body: JSON.stringify({
       jsonrpc: "2.0",
       method: "eth_call",
-      params: [{ to: contractAddress, data }, "latest"],
+      params: [{ to: configAddress, data }, "latest"],
       id: Date.now(),
     }),
   });
@@ -1537,8 +1566,9 @@ export async function readRoundConfig(contractAddress: string): Promise<{
 }
 
 /**
- * Set test-friendly config on the RoundVotingEngine.
- * Calls setConfig(epochDuration, maxDuration, minVoters, maxVoters).
+ * Set test-friendly round config on ProtocolConfig.
+ * Accepts either a RoundVotingEngine address (resolves its ProtocolConfig)
+ * or a ProtocolConfig address directly.
  * Requires CONFIG_ROLE (account #9 / DEPLOYER in local dev).
  */
 export async function setTestConfig(
@@ -1550,6 +1580,7 @@ export async function setTestConfig(
   maxVoters = 100,
 ): Promise<boolean> {
   const { encodeFunctionData } = await import("viem");
+  const configAddress = await resolveProtocolConfigAddress(contractAddress);
   const data = encodeFunctionData({
     abi: [
       {
@@ -1568,7 +1599,7 @@ export async function setTestConfig(
     functionName: "setConfig",
     args: [BigInt(epochDuration), BigInt(maxDuration), BigInt(minVoters), BigInt(maxVoters)],
   });
-  return sendTx(fromAddress, contractAddress, data);
+  return sendTx(fromAddress, configAddress, data);
 }
 
 /**
