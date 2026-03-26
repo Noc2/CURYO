@@ -236,7 +236,9 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext, com
         <div className="min-w-0 flex-1">
           <h2
             className={`break-words text-center font-display leading-[0.94] tracking-[0.02em] text-base-content ${
-              compact ? "text-[1.55rem] sm:text-[1.7rem] xl:text-[1.62rem]" : "text-[1.7rem] sm:text-[1.9rem] xl:text-[1.75rem]"
+              compact
+                ? "text-[1.55rem] sm:text-[1.7rem] xl:text-[1.62rem]"
+                : "text-[1.7rem] sm:text-[1.9rem] xl:text-[1.75rem]"
             }`}
           >
             {item.title}

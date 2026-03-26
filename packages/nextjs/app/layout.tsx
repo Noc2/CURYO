@@ -1,5 +1,5 @@
-import Script from "next/script";
 import { Bebas_Neue, Source_Sans_3 } from "next/font/google";
+import Script from "next/script";
 import "@scaffold-ui/components/styles.css";
 import { ScaffoldEthAppWithProviders } from "~~/components/ScaffoldEthAppWithProviders";
 import "~~/styles/globals.css";
