@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { ContentEmbed } from "~~/components/content/ContentEmbed";
 import { SubmitterBadge } from "~~/components/content/SubmitterBadge";
@@ -159,26 +159,24 @@ export const FeedVoteCard = memo(function FeedVoteCard({
       />
 
       <div className={contentGridClassName}>
-        <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
-          <div className={mediaHeightClassName}>
+        <div className="flex min-w-0 min-h-0 flex-col overflow-hidden rounded-2xl bg-base-200">
+          <div className={`${mediaHeightClassName} overflow-hidden`}>
             <ContentEmbed url={item.url} prefetchedMetadata={item.contentMetadata} />
           </div>
-          {isLaptopCompact ? (
-            <FeedContentMetaCard
-              item={item}
-              submitterProfile={submitterProfile}
-              normalizedAddress={normalizedAddress}
-              following={following}
-              followPending={followPending}
-              watched={watched}
-              watchPending={watchPending}
-              onToggleFollow={onToggleFollow}
-              onToggleWatch={onToggleWatch}
-              compact
-              embedded
-              collapseDescription
-            />
-          ) : null}
+          <FeedContentMetaCard
+            item={item}
+            submitterProfile={submitterProfile}
+            normalizedAddress={normalizedAddress}
+            following={following}
+            followPending={followPending}
+            watched={watched}
+            watchPending={watchPending}
+            onToggleFollow={onToggleFollow}
+            onToggleWatch={onToggleWatch}
+            compact={isLaptopCompact}
+            embedded
+            collapseDescription
+          />
         </div>
 
         <div className="min-w-0 min-h-0 overflow-hidden rounded-2xl bg-base-200">
@@ -198,21 +196,6 @@ export const FeedVoteCard = memo(function FeedVoteCard({
           />
         </div>
       </div>
-
-      {isLaptopCompact ? null : (
-        <FeedContentMetaCard
-          item={item}
-          submitterProfile={submitterProfile}
-          normalizedAddress={normalizedAddress}
-          following={following}
-          followPending={followPending}
-          watched={watched}
-          watchPending={watchPending}
-          onToggleFollow={onToggleFollow}
-          onToggleWatch={onToggleWatch}
-          compact={isLaptopCompact}
-        />
-      )}
     </div>
   );
 });
@@ -291,23 +274,19 @@ function FeedContentMetaCard({
   onToggleFollow,
   compact = false,
   embedded = false,
-  collapseDescription = false,
+  collapseDescription = true,
 }: FeedContentMetaCardProps) {
   const [showShare, setShowShare] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(!collapseDescription);
+  const [isExpanded, setIsExpanded] = useState(false);
   const platformType = detectPlatform(item.url).type;
   const hasFollowButton = !(normalizedAddress && item.submitter.toLowerCase() === normalizedAddress);
   const description = item.description.trim();
   const hasDescription = description.length > 0;
-  const showAddress = Boolean(submitterProfile?.username) && !compact;
-  const descriptionClampThreshold = compact ? 140 : 220;
+  const hasTags = item.tags.length > 0;
   const hasMagicDisclaimer = item.categoryId === 3n;
-  const showCollapsedDescription = collapseDescription && !isExpanded;
-  const visibleTags = (showCollapsedDescription ? item.tags.slice(0, 1) : item.tags).filter(Boolean).slice(0, 3);
-  const canExpandDetails =
-    collapseDescription &&
-    (description.length > descriptionClampThreshold || hasMagicDisclaimer || item.tags.length > 1);
-  const showCompactMagicDisclaimer = hasMagicDisclaimer && showCollapsedDescription;
+  const hasExpandableDetails = hasDescription || hasTags || hasMagicDisclaimer;
+  const showExpandedDetails = !collapseDescription || isExpanded;
+  const visibleTags = showExpandedDetails ? item.tags.filter(Boolean) : [];
   const wrapperClassName = embedded
     ? compact
       ? "border-t border-base-content/10 px-3 py-3"
@@ -315,22 +294,22 @@ function FeedContentMetaCard({
     : `rounded-2xl bg-base-200 ${compact ? "p-3" : "p-4 xl:p-3"}`;
 
   useEffect(() => {
-    setIsExpanded(!collapseDescription);
-  }, [item.id, collapseDescription]);
+    setIsExpanded(false);
+  }, [item.id]);
 
   return (
     <>
       <div className={wrapperClassName}>
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <SubmitterBadge
             address={item.submitter}
             username={submitterProfile?.username}
             winRate={submitterProfile?.winRate}
             totalSettledVotes={submitterProfile?.totalSettledVotes}
             size="sm"
-            showAddress={showAddress}
+            addressMode={submitterProfile?.username ? "inline" : "hidden"}
           />
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             {hasFollowButton ? (
               <FollowProfileButton
                 following={following}
@@ -347,57 +326,53 @@ function FeedContentMetaCard({
             >
               <ShareIcon className="h-4 w-4" />
             </button>
-          </div>
-        </div>
-
-        <div className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
-          {hasDescription ? (
-            <p
-              className={`text-base leading-relaxed text-base-content/85 ${showCollapsedDescription ? "line-clamp-2" : ""}`}
-            >
-              {description}
-            </p>
-          ) : null}
-
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
-              {platformType}
-            </span>
-            {visibleTags.map(tag => (
-              <span key={tag} className="text-sm text-base-content/70">
-                #{tag}
-              </span>
-            ))}
-            {canExpandDetails ? (
+            {hasExpandableDetails ? (
               <button
                 type="button"
                 onClick={() => setIsExpanded(current => !current)}
-                className="text-sm font-medium text-base-content/60 underline decoration-base-content/15 underline-offset-4 transition-colors hover:text-base-content/80"
+                aria-expanded={showExpandedDetails}
+                aria-label={showExpandedDetails ? "Collapse content details" : "Expand content details"}
+                className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
               >
-                {isExpanded ? "Show less" : "Show more"}
+                <ChevronDownIcon
+                  className={`h-4 w-4 transition-transform ${showExpandedDetails ? "rotate-180" : ""}`}
+                />
               </button>
             ) : null}
           </div>
-
-          {showCompactMagicDisclaimer ? (
-            <p className="text-sm leading-tight text-base-content/60">Unofficial MTG fan content.</p>
-          ) : null}
-
-          {hasMagicDisclaimer && !showCompactMagicDisclaimer ? (
-            <p className="text-base leading-tight text-base-content/70">
-              Magic: The Gathering content is unofficial Fan Content permitted under the{" "}
-              <a
-                href="https://company.wizards.com/en/legal/fancontentpolicy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-base-content/70"
-              >
-                Fan Content Policy
-              </a>
-              . Not approved/endorsed by Wizards.
-            </p>
-          ) : null}
         </div>
+
+        {showExpandedDetails ? (
+          <div className={compact ? "mt-2.5 space-y-2" : "mt-3 space-y-2.5"}>
+            {hasDescription ? <p className="text-base leading-relaxed text-base-content/85">{description}</p> : null}
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 text-sm font-medium leading-none text-base-content/80">
+                {platformType}
+              </span>
+              {visibleTags.map(tag => (
+                <span key={tag} className="text-sm text-base-content/70">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+
+            {hasMagicDisclaimer ? (
+              <p className="text-base leading-tight text-base-content/70">
+                Magic: The Gathering content is unofficial Fan Content permitted under the{" "}
+                <a
+                  href="https://company.wizards.com/en/legal/fancontentpolicy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-base-content/70"
+                >
+                  Fan Content Policy
+                </a>
+                . Not approved/endorsed by Wizards.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {showShare ? (

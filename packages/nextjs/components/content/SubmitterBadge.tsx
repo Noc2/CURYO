@@ -7,7 +7,7 @@ interface SubmitterBadgeProps {
   address: string;
   username?: string | null;
   size?: "sm" | "md";
-  showAddress?: boolean;
+  addressMode?: "hidden" | "stacked" | "inline";
   winRate?: number;
   totalSettledVotes?: number;
   action?: React.ReactNode;
@@ -20,7 +20,7 @@ export function SubmitterBadge({
   address,
   username,
   size = "sm",
-  showAddress = false,
+  addressMode = "hidden",
   winRate,
   totalSettledVotes,
   action,
@@ -30,6 +30,7 @@ export function SubmitterBadge({
 
   const truncatedAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
   const displayName = username || truncatedAddress;
+  const inlineAddress = addressMode === "inline" && username ? truncatedAddress : null;
   const profileHref = `/profiles/${address.toLowerCase()}`;
   const avatarSrc = getReputationAvatarUrl(address, avatarSize) || "";
 
@@ -76,6 +77,11 @@ export function SubmitterBadge({
               >
                 {displayName}
               </span>
+              {inlineAddress ? (
+                <span className="truncate text-sm font-mono text-base-content/45 transition-colors group-hover:text-base-content/60">
+                  {inlineAddress}
+                </span>
+              ) : null}
               {showAccuracy && (
                 <span
                   className={`text-xs font-semibold px-1.5 py-0.5 rounded-full bg-base-200 ${accuracyColor}`}
@@ -85,7 +91,7 @@ export function SubmitterBadge({
                 </span>
               )}
             </div>
-            {showAddress && username && (
+            {addressMode === "stacked" && username && (
               <span className="text-base text-base-content/50 font-mono transition-colors group-hover:text-base-content/70">
                 {truncatedAddress}
               </span>
