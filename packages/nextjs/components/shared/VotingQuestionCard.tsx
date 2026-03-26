@@ -78,29 +78,29 @@ export function VotingQuestionCard({
         data-tip="Your vote is encrypted until the blind phase ends. The keeper normally reveals eligible votes afterward, and you can self-reveal if needed."
       >
         <span className="text-base font-semibold text-primary">Committed</span>
-        <span className="text-base text-base-content/50">hidden</span>
+        <span className="text-base text-base-content/70">hidden</span>
       </div>
     ) : isOwnContent ? (
       <div
         className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
         data-tip="Content submitters cannot vote on their own submissions."
       >
-        <span className="text-base text-base-content/40">Your submission</span>
+        <span className="text-base text-base-content/65">Your submission</span>
       </div>
     ) : cooldownActive ? (
       <div
         className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
         data-tip={`You already voted on this content within the last 24 hours. Try again in ${cooldownLabel}.`}
       >
-        <span className="text-base font-medium text-base-content/55">Cooldown</span>
-        <span className="text-base text-base-content/35">{cooldownLabel}</span>
+        <span className="text-base font-medium text-base-content/75">Cooldown</span>
+        <span className="text-base text-base-content/60">{cooldownLabel}</span>
       </div>
     ) : isRoundFull ? (
       <div
         className="tooltip tooltip-bottom cursor-help flex items-center gap-2 rounded-full border border-base-content/10 bg-base-content/5 px-4 py-2"
         data-tip="This round has reached the maximum number of voters. A new round will start after resolution."
       >
-        <span className="text-base text-base-content/40">Round full</span>
+        <span className="text-base text-base-content/65">Round full</span>
       </div>
     ) : null
   ) : null;
@@ -117,7 +117,7 @@ export function VotingQuestionCard({
       {/* Content */}
       <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex shrink-0 flex-col items-center text-center">
-          <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/45">
+          <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-base-content/65">
             <span>Community rating</span>
             <InfoTooltip text={RATING_GUIDANCE_TEXT} position="bottom" />
           </div>
@@ -147,7 +147,7 @@ export function VotingQuestionCard({
                         <svg
                           key={`empty-${i}`}
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-3.5 w-3.5 text-base-content/20"
+                          className="h-3.5 w-3.5 text-base-content/30"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >

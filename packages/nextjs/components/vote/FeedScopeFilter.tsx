@@ -86,12 +86,12 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
             <div className="mb-3 flex items-center justify-between sm:hidden">
               <div>
                 <p className="text-sm font-semibold text-base-content">{label}</p>
-                <p className="text-xs text-base-content/50">Choose how you want to browse content.</p>
+                <p className="text-xs text-base-content/70">Choose how you want to browse content.</p>
               </div>
               <button
                 type="button"
                 onClick={close}
-                className="rounded-full bg-base-200 p-2 text-base-content/60"
+                className="rounded-full bg-base-200 p-2 text-base-content/75"
                 aria-label="Close feed options"
               >
                 <XMarkIcon className="h-5 w-5" />
@@ -102,7 +102,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
               {groups.map(group => (
                 <div key={group.label}>
                   {groups.length > 1 ? (
-                    <p className="px-2 pb-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/40">
+                    <p className="px-2 pb-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/60">
                       {group.label}
                     </p>
                   ) : null}
@@ -136,7 +136,7 @@ export function FeedScopeFilter({ value, groups, onChange, label = "View" }: Fee
             </div>
 
             {selectedOption && isFiltered ? (
-              <p className="mt-3 hidden text-xs text-base-content/50 sm:block">Showing: {selectedOption.label}</p>
+              <p className="mt-3 hidden text-xs text-base-content/70 sm:block">Showing: {selectedOption.label}</p>
             ) : null}
           </div>
         </>

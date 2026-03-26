@@ -25,7 +25,7 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
 
   if (!isReady) {
     return (
-      <div className="flex items-center gap-2 text-base text-base-content/40">
+      <div className="flex items-center gap-2 text-base text-base-content/60">
         <span className="loading loading-spinner loading-xs" />
         <span>Loading round...</span>
       </div>
@@ -101,7 +101,7 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
   }
 
   return (
-    <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap text-base text-base-content/60">
+    <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap text-base text-base-content/75">
       {progressMessaging ? (
         <div className="flex items-center gap-1.5">
           <span
@@ -139,7 +139,7 @@ export function RoundProgress({ snapshot }: RoundProgressProps) {
                     ? "text-warning"
                     : progressMessaging.detailTone === "primary"
                       ? "text-primary/80"
-                      : "text-base-content/60"
+                      : "text-base-content/75"
               }`}
             >
               {progressMessaging.detailLabel}

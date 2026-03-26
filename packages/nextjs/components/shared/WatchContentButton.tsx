@@ -19,7 +19,7 @@ export function WatchContentButton({ watched, pending = false, onClick, variant 
           watched ? "text-primary opacity-100" : "text-base-content opacity-0 group-hover:opacity-100"
         } transition-opacity`
       : `btn btn-ghost btn-sm btn-circle ${
-          watched ? "text-primary hover:text-primary" : "text-base-content/50 hover:text-base-content"
+          watched ? "text-primary hover:text-primary" : "text-base-content/70 hover:text-base-content"
         }`;
 
   return (

@@ -189,7 +189,7 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
           onClick={onPrevious}
           disabled={!canPrevious}
           aria-label="Show previous card"
-          className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/65 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+          className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/80 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
@@ -203,7 +203,7 @@ function FeedContentHeader({ item, onPrevious, onNext, canPrevious, canNext }: F
           onClick={onNext}
           disabled={!canNext}
           aria-label="Show next card"
-          className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/65 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
+          className="btn btn-circle btn-sm border-0 bg-base-300 text-base-content/80 hover:bg-base-content/20 hover:text-primary disabled:cursor-not-allowed disabled:opacity-30"
         >
           <ChevronRightIcon className="h-4 w-4" />
         </button>
@@ -252,7 +252,7 @@ function FeedContentMetaCard({
             <button
               type="button"
               onClick={() => setShowShare(true)}
-              className="btn btn-ghost btn-sm btn-circle text-base-content/50 hover:text-base-content"
+              className="btn btn-ghost btn-sm btn-circle text-base-content/70 hover:text-base-content"
               aria-label="Share content"
             >
               <ShareIcon className="h-4 w-4" />
@@ -262,16 +262,16 @@ function FeedContentMetaCard({
 
         <div className="mt-3 text-base leading-relaxed text-base-content/85">
           <span>{item.description}</span>
-          <span className="ml-2 inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 align-middle text-sm font-medium leading-none text-base-content/70">
+          <span className="ml-2 inline-flex items-center rounded-full bg-base-300 px-2.5 py-1 align-middle text-sm font-medium leading-none text-base-content/80">
             {platformType}
           </span>
           {item.tags[0] ? (
-            <span className="ml-2 inline text-sm text-base-content/55 align-middle">#{item.tags[0]}</span>
+            <span className="ml-2 inline text-sm text-base-content/70 align-middle">#{item.tags[0]}</span>
           ) : null}
         </div>
 
         {item.categoryId === 3n ? (
-          <p className="mt-3 text-base leading-tight text-base-content/50">
+          <p className="mt-3 text-base leading-tight text-base-content/70">
             Magic: The Gathering content is unofficial Fan Content permitted under the{" "}
             <a
               href="https://company.wizards.com/en/legal/fancontentpolicy"
@@ -328,7 +328,7 @@ export const FeedQueueCard = memo(function FeedQueueCard({
         ? "bg-warning/15 text-warning ring-warning/30"
         : queueStatus?.phaseTone === "blind"
           ? "bg-primary/15 text-primary ring-primary/30"
-          : "bg-base-content/[0.05] text-base-content/65 ring-base-content/10";
+          : "bg-base-content/[0.05] text-base-content/75 ring-base-content/10";
 
   return (
     <button

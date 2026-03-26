@@ -21,12 +21,12 @@ export function FollowProfileButton({
       ? `btn btn-sm rounded-full border-none ${
           following
             ? "bg-primary/10 text-primary hover:bg-primary/15"
-            : "bg-base-200 text-base-content/70 hover:text-base-content"
+            : "bg-base-200 text-base-content/80 hover:text-base-content"
         }`
       : `inline-flex items-center justify-center rounded-full p-1.5 transition-colors ${
           following
             ? "bg-primary/10 text-primary hover:bg-primary/15"
-            : "bg-base-200 text-base-content/50 hover:text-base-content"
+            : "bg-base-200 text-base-content/70 hover:text-base-content"
         }`;
 
   return (

@@ -29,11 +29,11 @@ function RevealVoteCard({
           >
             Content #{vote.contentId.toString()}
           </Link>
-          <span className="text-sm text-base-content/40">Round #{vote.roundId.toString()}</span>
+          <span className="text-sm text-base-content/60">Round #{vote.roundId.toString()}</span>
         </div>
-        <div className="text-sm text-base-content/60">
+        <div className="text-sm text-base-content/75">
           {stake} cREP
-          <span className="mx-2 text-base-content/30">·</span>
+          <span className="mx-2 text-base-content/45">·</span>
           Epoch {vote.epochIndex + 1}
         </div>
       </div>
@@ -42,7 +42,7 @@ function RevealVoteCard({
           {isPending ? "Revealing..." : "Reveal"}
         </button>
       ) : (
-        <div className="text-sm text-base-content/50 font-mono tabular-nums">
+        <div className="text-sm text-base-content/70 font-mono tabular-nums">
           opens in {formatTimeRemaining(vote.secondsUntilReveal)}
         </div>
       )}
@@ -59,7 +59,7 @@ export function ManualRevealPage() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
         <div className="surface-card rounded-3xl p-8 max-w-md text-center space-y-4">
           <h1 className="text-3xl font-semibold">Reveal My Vote</h1>
-          <p className="text-base-content/60">
+          <p className="text-base-content/75">
             Hidden fallback for manual reveals. Auto-reveal stays the default path.
           </p>
           <CuryoConnectButton />
@@ -75,7 +75,7 @@ export function ManualRevealPage() {
           <div className="space-y-2">
             <Link
               href="/vote"
-              className="inline-flex items-center gap-2 text-sm text-base-content/50 hover:text-base-content transition-colors"
+              className="inline-flex items-center gap-2 text-sm text-base-content/70 hover:text-base-content transition-colors"
             >
               <ArrowLeftIcon className="w-4 h-4" />
               Back to vote
@@ -87,13 +87,13 @@ export function ManualRevealPage() {
                 position="right"
               />
             </div>
-            <p className="text-base-content/60 max-w-2xl">
+            <p className="max-w-2xl text-base-content/75">
               This fallback decrypts the stored ciphertext in your browser after the epoch ends, then submits the
               standard reveal transaction from your wallet.
             </p>
           </div>
           <div className="surface-card rounded-2xl px-4 py-3 min-w-44">
-            <div className="text-xs uppercase tracking-[0.2em] text-base-content/40">Ready now</div>
+            <div className="text-xs uppercase tracking-[0.2em] text-base-content/60">Ready now</div>
             <div className="text-3xl font-semibold tabular-nums">{readyVotes.length}</div>
           </div>
         </div>
@@ -105,7 +105,7 @@ export function ManualRevealPage() {
         ) : votes.length === 0 ? (
           <div className="surface-card rounded-3xl p-8 space-y-2">
             <h2 className="text-xl font-semibold">No unrevealed votes</h2>
-            <p className="text-base-content/60">Nothing needs manual help right now.</p>
+            <p className="text-base-content/75">Nothing needs manual help right now.</p>
           </div>
         ) : (
           <>
@@ -129,7 +129,7 @@ export function ManualRevealPage() {
                   ))}
                 </div>
               ) : (
-                <div className="surface-card rounded-2xl p-5 text-base-content/60">Nothing is revealable yet.</div>
+                <div className="surface-card rounded-2xl p-5 text-base-content/75">Nothing is revealable yet.</div>
               )}
             </section>
 
