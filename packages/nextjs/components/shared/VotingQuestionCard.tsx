@@ -31,7 +31,7 @@ interface VotingQuestionCardProps {
 }
 
 const RATING_GUIDANCE_TEXT =
-  "The community score runs from 0.0 to 10.0. Vote up when content deserves a higher score and vote down when it deserves a lower one. Always vote down illegal, broken, or misdescribed content.";
+  "The community score runs from 0.0 to 10.0, where higher means better. Vote up when content deserves a better score and vote down when it deserves a worse one. Always vote down illegal, broken, or misdescribed content.";
 
 /**
  * Displays the live rating signal and all voting controls in a separate card.
