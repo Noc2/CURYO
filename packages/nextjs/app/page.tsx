@@ -84,15 +84,15 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
     <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
       <div className="w-full max-w-5xl flex flex-col items-center">
         {/* Hero: stacked on mobile, side-by-side on large screens */}
-        <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-4 xl:gap-8">
+        <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-3 xl:gap-6">
           {/* Animation (right on large screens) */}
-          <div className="lg:flex-[0.92]">
+          <div className="lg:flex-[0.84] xl:flex-[0.88]">
             <CuryoAnimation />
           </div>
 
           {/* Title (left on large screens) */}
-          <div className="flex flex-col items-center lg:items-start lg:flex-[1.08] lg:max-w-[43rem]">
-            <h1 className="hero-headline max-w-[14ch] text-center text-[2.55rem] text-base-content sm:text-[3.45rem] lg:max-w-none lg:text-left lg:text-[4.05rem] xl:text-[4.55rem]">
+          <div className="flex flex-col items-center lg:items-start lg:flex-[1.16] lg:max-w-[45rem]">
+            <h1 className="hero-headline max-w-[14ch] text-center text-[2.55rem] text-base-content sm:text-[3.45rem] lg:max-w-none lg:text-left lg:text-[3.75rem] xl:text-[4.2rem]">
               <span className="block">A Better Web,</span>
               <span className="block">Guided by Human Reputation</span>
             </h1>
