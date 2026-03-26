@@ -82,7 +82,7 @@ export default async function LandingPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="flex flex-col items-center grow px-4 pt-0 pb-16">
-      <div className="w-full max-w-7xl flex flex-col items-center">
+      <div className="w-full max-w-5xl flex flex-col items-center">
         {/* Hero: stacked on mobile, side-by-side on large screens */}
         <div className="w-full flex flex-col lg:flex-row-reverse lg:items-center lg:gap-4 xl:gap-8">
           {/* Animation (right on large screens) */}
