@@ -102,6 +102,8 @@ test("mergeRoundDataWithFallback keeps the higher feed vote totals for the same 
       totalStake: 100_000_000n,
       upPool: 100_000_000n,
       downPool: 0n,
+      upCount: 1,
+      downCount: 0,
       startTime: 1_000n,
     },
   });
@@ -111,6 +113,7 @@ test("mergeRoundDataWithFallback keeps the higher feed vote totals for the same 
   assert.equal(merged.round.voteCount, 1n);
   assert.equal(merged.round.totalStake, 100_000_000n);
   assert.equal(merged.round.upPool, 100_000_000n);
+  assert.equal(merged.round.upCount, 1n);
 });
 
 test("mergeRoundDataWithFallback keeps the fallback start time when the round snapshot is zeroed", () => {

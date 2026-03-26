@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { type ContentItem, mergeContentFeedMetadata } from "~~/hooks/contentFeed/shared";
+import { type ContentItem, mapContentItem, mergeContentFeedMetadata } from "~~/hooks/contentFeed/shared";
 import { getContentFeedMetadataCacheKey, getContentFeedMetadataUrls } from "~~/hooks/useContentFeedMetadata";
 
 function makeContentItem(overrides: Partial<ContentItem> & Pick<ContentItem, "id" | "url">): ContentItem {
@@ -79,4 +79,33 @@ test("mergeContentFeedMetadata preserves prior metadata when a later refresh omi
   const [preserved] = mergeContentFeedMetadata([enriched], {}, {});
   assert.equal(preserved.contentMetadata?.title, "openai/openai-node");
   assert.equal(preserved.thumbnailUrl, "https://avatars.githubusercontent.com/u/14957082?v=4");
+});
+
+test("mapContentItem preserves open-round directional vote counts", () => {
+  const mapped = mapContentItem({
+    id: "1",
+    url: "https://example.com/content",
+    title: "Example title",
+    description: "Example description",
+    tags: "",
+    submitter: "0x0000000000000000000000000000000000000001",
+    contentHash: "0xhash",
+    categoryId: "1",
+    rating: 50,
+    openRound: {
+      roundId: "3",
+      voteCount: 1,
+      revealedCount: 1,
+      totalStake: "100000000",
+      upPool: "100000000",
+      downPool: "0",
+      upCount: 1,
+      downCount: 0,
+      startTime: "1000",
+      estimatedSettlementTime: "4600",
+    },
+  });
+
+  assert.equal(mapped.openRound?.upCount, 1);
+  assert.equal(mapped.openRound?.downCount, 0);
 });

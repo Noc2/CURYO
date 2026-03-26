@@ -10,6 +10,8 @@ export interface ContentOpenRoundSummary {
   totalStake: bigint;
   upPool: bigint;
   downPool: bigint;
+  upCount?: number;
+  downCount?: number;
   startTime: bigint | null;
   estimatedSettlementTime: bigint | null;
 }
@@ -69,6 +71,8 @@ export function mapContentItem(
       totalStake: string;
       upPool: string;
       downPool: string;
+      upCount?: number;
+      downCount?: number;
       startTime: string | null;
       estimatedSettlementTime: string | null;
     } | null;
@@ -98,6 +102,8 @@ export function mapContentItem(
           totalStake: BigInt(item.openRound.totalStake),
           upPool: BigInt(item.openRound.upPool),
           downPool: BigInt(item.openRound.downPool),
+          upCount: item.openRound.upCount,
+          downCount: item.openRound.downCount,
           startTime: item.openRound.startTime ? BigInt(item.openRound.startTime) : null,
           estimatedSettlementTime: item.openRound.estimatedSettlementTime
             ? BigInt(item.openRound.estimatedSettlementTime)

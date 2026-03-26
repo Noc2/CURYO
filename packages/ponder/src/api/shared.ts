@@ -88,6 +88,8 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
       totalStake: round.totalStake,
       upPool: round.upPool,
       downPool: round.downPool,
+      upCount: round.upCount,
+      downCount: round.downCount,
       startTime: round.startTime,
     })
     .from(round)
@@ -114,6 +116,8 @@ export async function attachOpenRoundSummary<T extends { id: bigint }>(items: T[
             totalStake: openRound.totalStake,
             upPool: openRound.upPool,
             downPool: openRound.downPool,
+            upCount: openRound.upCount,
+            downCount: openRound.downCount,
             startTime: openRound.startTime,
             estimatedSettlementTime: getEstimatedSettlementTime(openRound.startTime),
           }

@@ -18,6 +18,8 @@ export interface OpenRoundFallbackData {
   totalStake: bigint;
   upPool: bigint;
   downPool: bigint;
+  upCount?: number;
+  downCount?: number;
   startTime: bigint | null;
 }
 
@@ -227,6 +229,8 @@ export function mergeRoundDataWithFallback(params: {
 
   const fallbackVoteCount = BigInt(Math.max(0, fallback.voteCount));
   const fallbackRevealedCount = BigInt(Math.max(0, fallback.revealedCount));
+  const fallbackUpCount = BigInt(Math.max(0, fallback.upCount ?? 0));
+  const fallbackDownCount = BigInt(Math.max(0, fallback.downCount ?? 0));
   const resolvedRoundId = params.roundId > 0n ? params.roundId : fallback.roundId;
 
   return {
@@ -239,8 +243,8 @@ export function mergeRoundDataWithFallback(params: {
       totalStake: maxBigInt(round?.totalStake ?? 0n, fallback.totalStake),
       upPool: maxBigInt(round?.upPool ?? 0n, fallback.upPool),
       downPool: maxBigInt(round?.downPool ?? 0n, fallback.downPool),
-      upCount: round?.upCount ?? 0n,
-      downCount: round?.downCount ?? 0n,
+      upCount: maxBigInt(round?.upCount ?? 0n, fallbackUpCount),
+      downCount: maxBigInt(round?.downCount ?? 0n, fallbackDownCount),
       upWins: round?.upWins ?? false,
       settledAt: round?.settledAt ?? 0n,
       thresholdReachedAt: round?.thresholdReachedAt ?? 0n,

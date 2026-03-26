@@ -158,6 +158,8 @@ export interface PonderContentOpenRoundSummary {
   totalStake: string;
   upPool: string;
   downPool: string;
+  upCount?: number;
+  downCount?: number;
   startTime: string | null;
   estimatedSettlementTime: string | null;
 }
