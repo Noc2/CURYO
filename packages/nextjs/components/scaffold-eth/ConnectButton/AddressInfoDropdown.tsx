@@ -93,10 +93,9 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
   }
 
   return (
-    <div className={`flex items-center gap-1 text-xs text-base-content/50 ${className ?? ""}`}>
-      <span>
-        {remaining}/{limit} free tx
-      </span>
+    <div className={`flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/62 ${className ?? ""}`}>
+      <span className="tabular-nums">{remaining}/{limit}</span>
+      <span className="text-base-content/48">free tx</span>
       <InfoTooltip text={`Verified wallets get ${limit} free app transactions. Add CELO for gas after that.`} />
     </div>
   );
@@ -145,10 +144,14 @@ function WalletSummaryDetails({
 
   return (
     <>
-      <div className={balanceClassName}>{formatCrepAmount(liquidBalance)} cREP</div>
+      <div className={balanceClassName}>
+        <span className="tabular-nums">{formatCrepAmount(liquidBalance)}</span>{" "}
+        <span className="text-base-content/52">cREP</span>
+      </div>
       {showStaked ? (
         <div className={stakeClassName}>
-          {formatCrepAmount(totalStakedMicro)} Staked
+          <span className="tabular-nums">{formatCrepAmount(totalStakedMicro)}</span>
+          <span className="text-base-content/52">Staked</span>
           {stakeTooltip ? <InfoTooltip text={stakeTooltip} position="bottom" /> : null}
         </div>
       ) : null}
@@ -162,9 +165,9 @@ function InlineWalletSummary({ address, crepBalance }: { address: Address; crepB
     <WalletSummaryDetails
       address={address}
       crepBalance={crepBalance}
-      balanceClassName="text-base text-base-content text-left px-4 pl-12"
+      balanceClassName="px-4 pl-12 text-left text-sm font-medium leading-5 text-base-content/78"
       freeTxClassName="px-4 pl-12 text-left"
-      stakeClassName="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12"
+      stakeClassName="flex items-center justify-start gap-1.5 px-4 pl-12 text-left text-sm font-medium leading-5 text-base-content/68"
     />
   );
 }
@@ -243,15 +246,15 @@ export const AddressInfoDropdown = ({
           <div className="flex items-center gap-3">
             <BlockieAvatar address={checkSumAddress} size={24} ensImage={ensAvatar} />
             <div className="min-w-0">
-              <p className="truncate text-base">
+              <p className="truncate text-sm font-medium leading-5 text-base-content/72">
                 {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
               </p>
               <WalletSummaryDetails
                 address={address}
                 crepBalance={crepBalance}
-                balanceClassName="text-sm text-base-content/60"
+                balanceClassName="text-sm font-medium leading-5 text-base-content/78"
                 freeTxClassName="pt-0.5"
-                stakeClassName="flex items-center gap-1 pt-0.5 text-sm text-base-content/60"
+                stakeClassName="flex items-center gap-1.5 pt-0.5 text-sm font-medium leading-5 text-base-content/68"
               />
             </div>
           </div>
@@ -265,7 +268,7 @@ export const AddressInfoDropdown = ({
     <div className="w-full flex flex-col gap-0.5">
       <div className="flex items-center justify-start gap-3 px-4 py-3 w-full">
         <BlockieAvatar address={checkSumAddress} size={24} ensImage={ensAvatar} />
-        <span className="text-base truncate">
+        <span className="truncate text-sm font-medium leading-5 text-base-content/72">
           {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
         </span>
       </div>
@@ -275,9 +278,9 @@ export const AddressInfoDropdown = ({
           <WalletSummaryDetails
             address={address}
             crepBalance={crepBalance}
-            balanceClassName="text-base text-base-content text-left px-4 pl-12"
+            balanceClassName="px-4 pl-12 text-left text-sm font-medium leading-5 text-base-content/78"
             freeTxClassName="px-4 pl-12 text-left"
-            stakeClassName="flex items-center justify-start gap-1 text-base text-base-content px-4 pl-12"
+            stakeClassName="flex items-center justify-start gap-1.5 px-4 pl-12 text-left text-sm font-medium leading-5 text-base-content/68"
           />
         </>
       ) : null}
@@ -306,9 +309,9 @@ export const AddressInfoDropdown = ({
       <WalletSummaryDetails
         address={address}
         crepBalance={crepBalance}
-        balanceClassName="hidden lg:inline lg:px-2 text-base text-base-content"
+        balanceClassName="hidden lg:inline lg:px-2 text-sm font-medium leading-5 text-base-content/78"
         freeTxClassName="hidden lg:flex lg:px-2"
-        stakeClassName="hidden lg:flex lg:px-2 items-center gap-1 text-base text-base-content"
+        stakeClassName="hidden lg:flex lg:px-2 items-center gap-1.5 text-sm font-medium leading-5 text-base-content/68"
       />
     </div>
   );
