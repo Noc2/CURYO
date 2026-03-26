@@ -56,7 +56,7 @@ export function RoundRevealedBreakdown({ snapshot }: RoundRevealedBreakdownProps
  */
 export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
   const contentLabel = useContentLabel(categoryId);
-  const { round, isLoading, maxVoters, isRoundFull, phase, isEpoch1 } = snapshot;
+  const { round, isLoading, maxVoters, isRoundFull, phase } = snapshot;
 
   if (isLoading) {
     return (
@@ -72,8 +72,6 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
 
   const totalStakeFormatted = Number(round.totalStake) / 1e6;
   const voteCount = Number(round.voteCount);
-  const revealedCount = round.revealedCount;
-  const pendingCount = Math.max(0, voteCount - revealedCount);
   return (
     <div className="flex flex-col gap-1.5 text-base text-base-content/60">
       <div className="flex items-center gap-x-3 gap-y-1.5 flex-wrap">
@@ -95,25 +93,6 @@ export function RoundStats({ categoryId, snapshot }: RoundStatsProps) {
           </span>
           <span className="font-semibold tabular-nums">{voteCount}</span>
         </div>
-        {pendingCount > 0 && (
-          <>
-            <div className="h-4 w-px bg-base-content/10" />
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1">
-                {isEpoch1 ? "Reveals later" : "Pending"}
-                <InfoTooltip
-                  text={
-                    isEpoch1
-                      ? "Votes are encrypted until the blind phase ends. The keeper normally reveals eligible votes afterward, and users can self-reveal if needed."
-                      : "The keeper is revealing votes. Revealed votes are counted toward resolution."
-                  }
-                  position="bottom"
-                />
-              </span>
-              <span className="font-semibold tabular-nums">{pendingCount}</span>
-            </div>
-          </>
-        )}
       </div>
 
       {phase === "voting" && isRoundFull && (
