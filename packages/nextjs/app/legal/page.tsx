@@ -27,7 +27,7 @@ const LegalPage: NextPage = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <h1 className="text-3xl font-bold mb-2">Legal</h1>
-      <p className="text-base-content/60 mb-8">Legal documents and disclosures for cREP.</p>
+      <p className="mb-8 text-base-content/75">Legal documents and disclosures for cREP.</p>
 
       <div className="grid gap-4 md:grid-cols-3">
         {legalPages.map(page => (
@@ -39,7 +39,7 @@ const LegalPage: NextPage = () => {
             <div className="card-body">
               <page.icon className="w-8 h-8 text-primary mb-2" />
               <h2 className="card-title text-lg">{page.title}</h2>
-              <p className="text-base text-base-content/60">{page.description}</p>
+              <p className="text-base text-base-content/75">{page.description}</p>
             </div>
           </Link>
         ))}

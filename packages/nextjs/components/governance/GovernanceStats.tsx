@@ -50,7 +50,7 @@ export const GovernanceStats = () => {
           governance roles are wired directly to the deployer instead of a deployed <code>CuryoGovernor</code>.
         </p>
         {governorAddress && (
-          <p className="text-base text-base-content/50">
+          <p className="text-base text-base-content/70">
             Token governor address: <span className="font-mono">{governorAddress}</span>
           </p>
         )}
@@ -70,7 +70,7 @@ export const GovernanceStats = () => {
               <p className="text-base font-medium">Voting Delay</p>
               <InfoTooltip text="Blocks between proposal creation and the start of voting." />
             </div>
-            <p className="text-base text-base-content/60">{formatBlocks(votingDelay)}</p>
+            <p className="text-base text-base-content/75">{formatBlocks(votingDelay)}</p>
           </div>
         </div>
 
@@ -81,7 +81,7 @@ export const GovernanceStats = () => {
               <p className="text-base font-medium">Voting Period</p>
               <InfoTooltip text="Blocks during which votes can be cast." />
             </div>
-            <p className="text-base text-base-content/60">{formatBlocks(votingPeriod)}</p>
+            <p className="text-base text-base-content/75">{formatBlocks(votingPeriod)}</p>
           </div>
         </div>
 
@@ -92,7 +92,7 @@ export const GovernanceStats = () => {
               <p className="text-base font-medium">Proposal Threshold</p>
               <InfoTooltip text="Voting power required to create a proposal." />
             </div>
-            <p className="text-base text-base-content/60">{formatCRep(proposalThreshold)}</p>
+            <p className="text-base text-base-content/75">{formatCRep(proposalThreshold)}</p>
           </div>
         </div>
 
@@ -103,8 +103,8 @@ export const GovernanceStats = () => {
               <p className="text-base font-medium">Current Quorum</p>
               <InfoTooltip text="Live quorum at the current block using the governor's dynamic circulating-supply calculation." />
             </div>
-            <p className="text-base text-base-content/60">{formatCRep(currentQuorum)}</p>
-            <p className="text-base text-base-content/40">
+            <p className="text-base text-base-content/75">{formatCRep(currentQuorum)}</p>
+            <p className="text-base text-base-content/65">
               {quorumNumerator ? `${quorumNumerator.toString()}% of circulating supply` : "—"} with floor{" "}
               {formatCRep(minimumQuorum)}
             </p>
@@ -118,7 +118,7 @@ export const GovernanceStats = () => {
               <p className="text-base font-medium">Timelock Delay</p>
               <InfoTooltip text="Minimum delay between a queued proposal and execution." />
             </div>
-            <p className="text-base text-base-content/60">{formatDelay(timelockDelay)}</p>
+            <p className="text-base text-base-content/75">{formatDelay(timelockDelay)}</p>
           </div>
         </div>
       </div>

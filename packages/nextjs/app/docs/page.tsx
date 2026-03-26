@@ -70,7 +70,7 @@ function FeatureCard({ title, description }: { title: string; description: strin
   return (
     <div className="surface-card rounded-xl p-4">
       <h3 className="text-base font-semibold mb-1.5">{title}</h3>
-      <p className="text-base text-base-content/50 leading-relaxed">{description}</p>
+      <p className="text-base leading-relaxed text-base-content/75">{description}</p>
     </div>
   );
 }

@@ -59,7 +59,7 @@ const HeaderNavLink = ({
   isActive,
   label,
 }: HeaderNavLinkProps) => {
-  const navTone = isActive ? "text-base-content" : "text-secondary group-hover:text-base-content";
+  const navTone = isActive ? "text-base-content" : "text-base-content/75 group-hover:text-base-content";
 
   return (
     <Link
@@ -265,7 +265,7 @@ const HeaderSearchBar = ({ className }: { className?: string }) => {
           aria-label="Clear search"
           className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-base-content/10 flex items-center justify-center hover:bg-base-content/20 transition-colors"
         >
-          <XMarkIcon className="w-3 h-3 text-base-content/50" />
+          <XMarkIcon className="w-3 h-3 text-base-content/65" />
         </button>
       )}
     </div>
@@ -315,7 +315,7 @@ const MobileHeaderSearch = ({ onClose }: { onClose: () => void }) => {
             type="button"
             onClick={() => setDraftValue("")}
             aria-label="Clear search"
-            className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-base-content/10 text-base-content/50"
+            className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-base-content/10 text-base-content/70"
           >
             <XMarkIcon className="h-3 w-3" />
           </button>

@@ -98,7 +98,7 @@ export const ProposalList = () => {
       <div className="flex items-center justify-between mb-4 gap-3">
         <div>
           <h2 className={surfaceSectionHeadingClassName}>Proposals</h2>
-          <p className="text-base text-base-content/50">
+          <p className="text-base text-base-content/70">
             {hasGovernorContract
               ? `${proposals.length} on-chain proposal${proposals.length === 1 ? "" : "s"}`
               : isGovernorContractLoading
@@ -129,15 +129,15 @@ export const ProposalList = () => {
       {isGovernorContractLoading && (
         <div className="text-center py-10">
           <span className="loading loading-spinner loading-md" />
-          <p className="text-base text-base-content/60 mt-2">Checking governance...</p>
+          <p className="mt-2 text-base text-base-content/75">Checking governance...</p>
         </div>
       )}
 
       {!isGovernorContractLoading && !hasGovernorContract && (
-        <div className="text-center py-10 text-base-content/60">
+        <div className="text-center py-10 text-base-content/75">
           <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
           <p className="mb-2">Governance proposals are unavailable on this network.</p>
-          <p className="text-base text-base-content/40">
+          <p className="text-base text-base-content/65">
             Direct registry actions can still be used below when the underlying contract allows them.
           </p>
         </div>
@@ -146,15 +146,15 @@ export const ProposalList = () => {
       {hasGovernorContract && !isGovernorContractLoading && isLoading && (
         <div className="text-center py-10">
           <span className="loading loading-spinner loading-md" />
-          <p className="text-base text-base-content/60 mt-2">Loading on-chain proposals...</p>
+          <p className="mt-2 text-base text-base-content/75">Loading on-chain proposals...</p>
         </div>
       )}
 
       {hasGovernorContract && !isGovernorContractLoading && !isLoading && error && (
         <div className="text-center py-10">
           <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
-          <p className="text-base-content/60 mb-2">Unable to load proposals from chain.</p>
-          <p className="text-base text-base-content/40">Check your connection and try again.</p>
+          <p className="mb-2 text-base-content/75">Unable to load proposals from chain.</p>
+          <p className="text-base text-base-content/65">Check your connection and try again.</p>
         </div>
       )}
 
@@ -176,10 +176,10 @@ export const ProposalList = () => {
       {hasGovernorContract && !isGovernorContractLoading && !isLoading && !error && filteredProposals.length === 0 && (
         <div className="text-center py-10">
           <DocumentTextIcon className="w-12 h-12 text-base-content/20 mx-auto mb-4" />
-          <p className="text-base-content/60 mb-2">
+          <p className="mb-2 text-base-content/75">
             {proposals.length === 0 ? "No on-chain proposals have been created yet." : `No ${filter} proposals found.`}
           </p>
-          <p className="text-base text-base-content/40">
+          <p className="text-base text-base-content/65">
             Create a new governance action below to submit the next proposal.
           </p>
         </div>
