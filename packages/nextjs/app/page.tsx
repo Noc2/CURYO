@@ -11,7 +11,7 @@ const STEPS = [
   {
     icon: ShieldCheckIcon,
     title: "Get Verified",
-    description: "Claim your Voter ID.",
+    description: "Claim your Voter ID and cREP, a decentralized reputation token with a fair launch.",
   },
   {
     icon: EyeSlashIcon,
