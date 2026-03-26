@@ -2,6 +2,24 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { gotoWithRetry } from "./wait-helpers";
 
+function withCiEnv<T>(value: string | undefined, run: () => Promise<T>): Promise<T> {
+  const previousCi = process.env.CI;
+
+  if (value === undefined) {
+    delete process.env.CI;
+  } else {
+    process.env.CI = value;
+  }
+
+  return run().finally(() => {
+    if (previousCi === undefined) {
+      delete process.env.CI;
+    } else {
+      process.env.CI = previousCi;
+    }
+  });
+}
+
 function createPageStub(config: {
   gotoResults: Array<void | Error>;
   runtimeErrorVisible?: boolean;
@@ -30,6 +48,9 @@ function createPageStub(config: {
     },
     async waitForTimeout(ms: number) {
       waits.push(ms);
+    },
+    isClosed() {
+      return false;
     },
   };
 
@@ -64,4 +85,32 @@ test("gotoWithRetry reloads when the application error heading is visible after 
   await gotoWithRetry(page, "/vote", { timeout: 8_000, waitUntil: "load" });
 
   assert.deepEqual(reloadCalls, [{ timeout: 8_000, waitUntil: "domcontentloaded" }]);
+});
+
+test("gotoWithRetry retries cold page.goto timeouts", async () => {
+  const { page, gotoCalls, waits } = createPageStub({
+    gotoResults: [new Error("page.goto: Timeout 30000ms exceeded."), undefined],
+  });
+
+  await gotoWithRetry(page, "/vote", { attempts: 2, timeout: 30_000 });
+
+  assert.equal(gotoCalls.length, 2);
+  assert.deepEqual(waits, [1_000]);
+});
+
+test("gotoWithRetry raises the timeout floor in CI", async () => {
+  const { page, gotoCalls } = createPageStub({
+    gotoResults: [undefined],
+  });
+
+  await withCiEnv("true", async () => {
+    await gotoWithRetry(page, "/portfolio", { timeout: 12_345 });
+  });
+
+  assert.deepEqual(gotoCalls, [
+    {
+      url: "/portfolio",
+      options: { timeout: 60_000, waitUntil: "domcontentloaded" },
+    },
+  ]);
 });
