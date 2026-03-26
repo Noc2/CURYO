@@ -27,7 +27,9 @@ jobs:
           key: forge-${{ hashFiles('packages/foundry/foundry.toml', 'packages/foundry/**/*.sol') }}
       - name: Build contracts
         working-directory: packages/foundry
-        run: forge build
+        run: |
+          forge clean
+          forge build --skip script --skip test
       - uses: crytic/slither-action@b52cc1cbfee9ca3e8722dd5224299d16c9a6b80f # v0.4.2
         id: slither
         continue-on-error: true
