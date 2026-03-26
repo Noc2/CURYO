@@ -479,14 +479,12 @@ body {
   line-height: 1.7;
 }
 
-.docs-shell,
 .legal-shell {
   margin-inline: auto;
   width: 100%;
   max-width: min(100%, 74ch);
 }
 
-.docs-shell > .prose,
 .legal-prose {
   max-width: none;
   color: rgb(245 240 235 / 0.86);
