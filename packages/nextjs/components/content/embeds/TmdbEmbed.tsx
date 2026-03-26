@@ -19,6 +19,19 @@ interface TmdbMovie {
   releaseYear?: string;
 }
 
+function getPosterImageSrc(posterUrl: string) {
+  try {
+    const parsed = new URL(posterUrl);
+    if (parsed.protocol === "https:" && parsed.hostname === "image.tmdb.org") {
+      return `/api/image-proxy?url=${encodeURIComponent(posterUrl)}`;
+    }
+  } catch {
+    return posterUrl;
+  }
+
+  return posterUrl;
+}
+
 /** TMDB brand icon */
 function TmdbIcon({ className }: { className?: string }) {
   return (
@@ -173,7 +186,7 @@ export function TmdbEmbed({ info, compact, prefetchedMetadata }: TmdbEmbedProps)
           </div>
         )}
         <img
-          src={movie.posterUrl}
+          src={getPosterImageSrc(movie.posterUrl)}
           alt={movie.title}
           loading="lazy"
           className={`rounded-t-xl shadow-lg transition-transform group-hover:scale-[1.02] ${
