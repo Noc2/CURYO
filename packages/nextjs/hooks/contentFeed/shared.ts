@@ -42,6 +42,8 @@ export type FeedSort = "newest" | "oldest" | "highest_rated" | "lowest_rated" | 
 export interface UseContentFeedOptions {
   categoryId?: bigint;
   contentIds?: bigint[];
+  enabled?: boolean;
+  keepPrevious?: boolean;
   limit?: number;
   offset?: number;
   searchQuery?: string;

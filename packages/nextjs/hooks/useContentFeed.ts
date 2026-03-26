@@ -31,6 +31,8 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   const isPageVisible = usePageVisibility();
   const categoryId = options.categoryId;
   const contentIds = options.contentIds;
+  const enabled = options.enabled ?? true;
+  const keepPrevious = options.keepPrevious ?? true;
   const limit = options.limit && options.limit > 0 ? Math.floor(options.limit) : undefined;
   const offset = options.offset && options.offset > 0 ? Math.floor(options.offset) : 0;
   const searchQuery = options.searchQuery?.trim();
@@ -40,8 +42,8 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
   const { data: events, isLoading: eventsLoading } = useScaffoldEventHistory({
     contractName: "ContentRegistry",
     eventName: "ContentSubmitted",
-    watch: rpcFallbackActive && isPageVisible,
-    enabled: rpcFallbackActive && isPageVisible,
+    watch: rpcFallbackActive && isPageVisible && enabled,
+    enabled: rpcFallbackActive && isPageVisible && enabled,
   });
 
   const rpcFeed = useMemo(() => {
@@ -153,14 +155,15 @@ export function useContentFeed(voterAddress?: string, options: UseContentFeedOpt
       totalContent: rpcTotalContent,
     }),
     rpcEnabled: rpcFallbackEnabled,
+    enabled,
     staleTime: 15_000,
     refetchInterval: isPageVisible ? 30_000 : false,
-    keepPrevious: true,
+    keepPrevious,
   });
 
   const baseFeed = result?.source === "rpc" ? pagedRpcFeed : (result?.data?.feed ?? pagedRpcFeed);
   const totalContent = result?.source === "rpc" ? rpcTotalContent : (result?.data?.totalContent ?? rpcTotalContent);
-  const isLoading = ponderLoading || (rpcFallbackActive && eventsLoading && result?.source !== "ponder");
+  const isLoading = enabled && (ponderLoading || (rpcFallbackActive && eventsLoading && result?.source !== "ponder"));
   const source = result?.source ?? (rpcFallbackActive ? "rpc" : "ponder");
   const { metadataMap, validationMap } = useContentFeedMetadata(baseFeed);
 
