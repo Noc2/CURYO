@@ -6,6 +6,8 @@ async function gotoPath(page: Page, path: string): Promise<void> {
 }
 
 test.describe("Page smoke tests", () => {
+  const legalSubpages = ["/legal/terms", "/legal/privacy", "/legal/imprint"];
+
   test("landing page loads", async ({ page }) => {
     await gotoPath(page, "/");
     // The page title should contain "Curyo" regardless of redirects
@@ -55,27 +57,28 @@ test.describe("Page smoke tests", () => {
   test("blockexplorer shows search and transactions", async ({ page }) => {
     await gotoPath(page, "/blockexplorer");
 
-    // Search bar should be visible
+    const localOnlyGuard = page.getByRole("heading", { name: "Local Block Explorer Only" });
     const searchInput = page.getByPlaceholder("Search by hash or address");
-    await expect(searchInput).toBeVisible({ timeout: 10_000 });
 
-    // Transaction table should be present (deploy txs from yarn deploy)
-    const table = page.locator("table");
-    await expect(table).toBeVisible({ timeout: 10_000 });
+    if (await localOnlyGuard.isVisible().catch(() => false)) {
+      await expect(page.getByRole("link", { name: "Celo Explorer" })).toBeVisible({ timeout: 10_000 });
+      return;
+    }
+
+    await expect(searchInput).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator("table")).toBeVisible({ timeout: 10_000 });
   });
 
-  test("legal subpages load without errors", async ({ page }) => {
-    for (const subpage of ["/legal/terms", "/legal/privacy", "/legal/imprint"]) {
+  for (const subpage of legalSubpages) {
+    test(`${subpage} loads without errors`, async ({ page }) => {
       await gotoPath(page, subpage);
 
-      // Page should have some text content (not blank)
       const mainContent = page.locator("main");
       await expect(mainContent).toBeVisible({ timeout: 10_000 });
 
-      // Each page should not show a Next.js error overlay
       const errorOverlay = page.locator("nextjs-portal");
       const hasError = await errorOverlay.isVisible({ timeout: 1_000 }).catch(() => false);
       expect(hasError).toBe(false);
-    }
-  });
+    });
+  }
 });

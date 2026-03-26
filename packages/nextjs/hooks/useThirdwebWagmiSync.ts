@@ -59,14 +59,12 @@ export function useThirdwebWagmiSync() {
       }
 
       try {
-        await connectAsync(
-          {
-            chainId: requestedChainId,
-            connector,
-            isReconnecting: options?.reconnect,
-            ...(connector.id === "in-app-wallet" ? { wallet } : {}),
-          } as any,
-        );
+        await connectAsync({
+          chainId: requestedChainId,
+          connector,
+          isReconnecting: options?.reconnect,
+          ...(connector.id === "in-app-wallet" ? { wallet } : {}),
+        } as any);
       } catch (error) {
         if (error instanceof ConnectorAlreadyConnectedError) {
           return;

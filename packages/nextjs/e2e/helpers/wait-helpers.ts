@@ -1,6 +1,13 @@
 import type { Locator, Page } from "@playwright/test";
+import { CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY } from "../../services/thirdweb/testWalletStorage";
 
-const RETRIABLE_GOTO_ERROR_PATTERNS = [/ERR_ABORTED/i, /frame was detached/i, /Test timeout/i];
+const RETRIABLE_GOTO_ERROR_PATTERNS = [
+  /ERR_ABORTED/i,
+  /ERR_CONNECTION_RESET/i,
+  /ECONNRESET/i,
+  /frame was detached/i,
+  /Test timeout/i,
+];
 
 function isRetriableGotoError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -19,16 +26,68 @@ export async function waitForWalletConnected(page: Page, timeout = 20_000): Prom
   await getVisibleConnectedWallet(page).first().waitFor({ state: "visible", timeout });
 }
 
+async function hasInjectedLocalTestWallet(page: Page): Promise<boolean> {
+  try {
+    return await page.evaluate(
+      storageKey => Boolean(window.localStorage.getItem(storageKey)),
+      CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY,
+    );
+  } catch {
+    return false;
+  }
+}
+
+export async function ensureInjectedWalletConnected(page: Page, timeout: number): Promise<void> {
+  if (!(await hasInjectedLocalTestWallet(page))) {
+    return;
+  }
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (page.isClosed()) {
+      throw new Error("Page closed while waiting for injected wallet connection");
+    }
+
+    const connectedWallet = getVisibleConnectedWallet(page).first();
+    if (await connectedWallet.isVisible().catch(() => false)) {
+      return;
+    }
+
+    const connectButton = getVisibleAuthConnectButton(page).first();
+    const signInVisible = await connectButton.isVisible().catch(() => false);
+    if (!signInVisible) {
+      await connectedWallet.waitFor({ state: "visible", timeout }).catch(() => undefined);
+      if (await connectedWallet.isVisible().catch(() => false)) {
+        return;
+      }
+    } else {
+      await connectButton.click({ timeout: 5_000 }).catch(() => undefined);
+      await connectedWallet.waitFor({ state: "visible", timeout: Math.min(timeout, 20_000) }).catch(() => undefined);
+      if (await connectedWallet.isVisible().catch(() => false)) {
+        return;
+      }
+    }
+
+    if (attempt === 1) {
+      break;
+    }
+
+    await page.reload({ waitUntil: "domcontentloaded", timeout });
+  }
+
+  await waitForWalletConnected(page, timeout);
+}
+
 export async function gotoWithRetry(
   page: Page,
   url: string,
   options: {
     attempts?: number;
+    ensureWalletConnected?: boolean;
     timeout?: number;
     waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
   } = {},
 ): Promise<void> {
-  const { attempts = 3, timeout = 90_000, waitUntil = "domcontentloaded" } = options;
+  const { attempts = 3, ensureWalletConnected = false, timeout = 30_000, waitUntil = "domcontentloaded" } = options;
 
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -40,6 +99,10 @@ export async function gotoWithRetry(
         await page.reload({ timeout, waitUntil: "domcontentloaded" });
       }
 
+      if (ensureWalletConnected || (await hasInjectedLocalTestWallet(page))) {
+        await ensureInjectedWalletConnected(page, Math.min(timeout, 30_000));
+      }
+
       return;
     } catch (error) {
       lastError = error;
@@ -47,7 +110,18 @@ export async function gotoWithRetry(
         throw error;
       }
 
-      await page.waitForTimeout(1_000 * (attempt + 1));
+      if (page.isClosed()) {
+        throw error;
+      }
+
+      try {
+        await page.waitForTimeout(1_000 * (attempt + 1));
+      } catch {
+        if (page.isClosed()) {
+          throw error;
+        }
+        throw error;
+      }
     }
   }
 
@@ -91,6 +165,10 @@ export async function waitForFeedLoaded(page: Page, timeout = 15_000): Promise<v
         throw error;
       }
 
+      if (page.isClosed()) {
+        throw error;
+      }
+
       await page.reload({ waitUntil: "domcontentloaded" });
       await page.waitForLoadState("networkidle").catch(() => undefined);
     }
@@ -122,6 +200,10 @@ export async function waitForVisibleWithReload(
       const loadingVisible = await page.getByText("Loading...").first().isVisible().catch(() => false);
 
       if (attempt === attempts - 1 || (!connectPromptVisible && !loadingVisible)) {
+        throw error;
+      }
+
+      if (page.isClosed()) {
         throw error;
       }
 

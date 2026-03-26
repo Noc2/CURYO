@@ -6,6 +6,7 @@ import { WriteContractErrorType, WriteContractReturnType, getPublicClient } from
 import { WriteContractVariables } from "wagmi/query";
 import { useSelectedNetwork } from "~~/hooks/scaffold-eth";
 import { useDeployedContractInfo, useTransactor } from "~~/hooks/scaffold-eth";
+import { useLocalE2ETestWalletClient } from "~~/hooks/scaffold-eth/useLocalE2ETestWalletClient";
 import { AllowedChainIds, notification } from "~~/utils/scaffold-eth";
 import {
   ContractAbi,
@@ -52,12 +53,12 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
   const wagmiConfig = useConfig();
 
   const { chain: accountChain, address: accountAddress } = useAccount();
-  const writeTx = useTransactor();
   const [isMining, setIsMining] = useState(false);
+  const selectedNetwork = useSelectedNetwork(chainId);
+  const localE2ETestWalletClient = useLocalE2ETestWalletClient(accountAddress, selectedNetwork.id);
+  const writeTx = useTransactor(localE2ETestWalletClient);
 
   const wagmiContractWrite = useWriteContract(finalWriteContractParams);
-
-  const selectedNetwork = useSelectedNetwork(chainId);
 
   const { data: deployedContractData, isLoading: deployedContractLoading } = useDeployedContractInfo({
     contractName,
@@ -138,8 +139,12 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
         }
       }
 
-      const makeWriteWithParams = () =>
-        wagmiContractWrite.writeContractAsync(
+      const makeWriteWithParams = () => {
+        if (localE2ETestWalletClient) {
+          return localE2ETestWalletClient.writeContract(writeContractObject as any);
+        }
+
+        return wagmiContractWrite.writeContractAsync(
           writeContractObject,
           mutateOptions as
             | MutateOptions<
@@ -150,6 +155,7 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
               >
             | undefined,
         );
+      };
       const writeTxResult = await writeTx(makeWriteWithParams, { blockConfirmations, onBlockConfirmation });
 
       return writeTxResult;
@@ -185,6 +191,10 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
 
     // Reset wagmi mutation state to prevent stale state from blocking new transactions
     wagmiContractWrite.reset();
+    if (localE2ETestWalletClient) {
+      void sendContractWriteAsyncTx(variables as any, options as any).catch(() => undefined);
+      return;
+    }
     wagmiContractWrite.writeContract(
       {
         abi: deployedContractData.abi as Abi,
@@ -205,6 +215,7 @@ export function useScaffoldWriteContract<TContractName extends ContractName>(
   return {
     ...wagmiContractWrite,
     isMining,
+    isPending: wagmiContractWrite.isPending || isMining,
     // Overwrite wagmi's writeContactAsync
     writeContractAsync: sendContractWriteAsyncTx,
     // Overwrite wagmi's writeContract

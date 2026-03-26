@@ -1,5 +1,10 @@
 import { ANVIL_ACCOUNTS } from "../helpers/anvil-accounts";
-import { getVisibleAuthConnectButton, waitForFeedLoaded, waitForWalletConnected } from "../helpers/wait-helpers";
+import {
+  getVisibleAuthConnectButton,
+  gotoWithRetry,
+  waitForFeedLoaded,
+  waitForWalletConnected,
+} from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
 import { expect, test } from "@playwright/test";
 
@@ -11,9 +16,9 @@ test.describe("Smoke tests", () => {
 
   test("wallet auto-connects via the localhost thirdweb test wallet", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await page.goto("/vote");
+    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
     await waitForWalletConnected(page);
-    await waitForFeedLoaded(page);
+    await waitForFeedLoaded(page, 30_000);
 
     // After feed loads, check for wallet connection indicators.
     // If the feed is empty ("No content submitted yet"), the sort dropdown still renders,
@@ -33,9 +38,9 @@ test.describe("Smoke tests", () => {
 
   test("brand link can reopen landing page without redirecting connected users back to discover", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await page.goto("/vote");
+    await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
     await waitForWalletConnected(page);
-    await waitForFeedLoaded(page);
+    await waitForFeedLoaded(page, 30_000);
 
     await page.getByRole("link", { name: /CURYO \(BETA\)/i }).click();
 
@@ -45,7 +50,7 @@ test.describe("Smoke tests", () => {
 
   test("navigation to submit page works", async ({ page }) => {
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
-    await page.goto("/submit", { waitUntil: "domcontentloaded" });
+    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
 
     await expect(page).toHaveURL(/\/submit/);
     // Verify the submit page rendered (form, VoterID prompt, or connect wallet prompt)

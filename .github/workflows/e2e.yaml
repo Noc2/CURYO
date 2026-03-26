@@ -21,7 +21,7 @@ jobs:
       matrix:
         include:
           - suite: smoke
-            command: yarn e2e
+            command: yarn workspace @curyo/nextjs e2e:ci:smoke
             timeout: 30
             start_keeper: false
           - suite: lifecycle

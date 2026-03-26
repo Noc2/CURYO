@@ -3,13 +3,13 @@ import { gotoWithRetry } from "../helpers/wait-helpers";
 
 test.describe("Content submission", () => {
   test("submit page shows form when connected with VoterID", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/submit");
+    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
     // Account #2 has a VoterID — the form should render with "Submit Content" heading
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
   });
 
   test("can fill out and submit content", async ({ connectedPage: page }) => {
-    await gotoWithRetry(page, "/submit");
+    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
 
     // Wait for the form to appear (requires wallet + VoterID)
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });

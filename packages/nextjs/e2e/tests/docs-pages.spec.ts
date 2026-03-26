@@ -14,26 +14,15 @@ test.describe("Documentation pages", () => {
     "/docs/frontend-codes",
     "/docs/whitepaper",
   ];
+  const legalPages = ["/legal", "/legal/terms", "/legal/privacy", "/legal/imprint"];
 
-  test("all doc pages load with h1 heading", async ({ page }) => {
-    test.setTimeout(180_000); // 7 pages
-    const errors: string[] = [];
-
-    for (const path of docPages) {
+  for (const path of docPages) {
+    test(`${path} loads with a heading`, async ({ page }) => {
       await page.goto(path, { waitUntil: "domcontentloaded" });
       const h1 = page.locator("h1");
-      const visible = await h1
-        .first()
-        .waitFor({ state: "visible", timeout: 20_000 })
-        .then(() => true)
-        .catch(() => false);
-      if (!visible) {
-        errors.push(`${path}: no visible h1 heading`);
-      }
-    }
-
-    expect(errors, `Pages missing h1: ${errors.join(", ")}`).toEqual([]);
-  });
+      await expect(h1.first(), `${path} should expose a visible h1 heading`).toBeVisible({ timeout: 20_000 });
+    });
+  }
 
   test("blind voting docs redirect to how it works", async ({ page }) => {
     await page.goto("/docs/blind-voting");
@@ -64,24 +53,11 @@ test.describe("Documentation pages", () => {
     await expect(page.locator("h1").first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("legal pages load with headings", async ({ page }) => {
-    test.setTimeout(90_000); // 4 pages × ~10s each
-    const legalPages = ["/legal", "/legal/terms", "/legal/privacy", "/legal/imprint"];
-    const errors: string[] = [];
-
-    for (const path of legalPages) {
+  for (const path of legalPages) {
+    test(`${path} loads with a heading`, async ({ page }) => {
       await page.goto(path, { waitUntil: "domcontentloaded" });
       const h1 = page.locator("h1");
-      const visible = await h1
-        .first()
-        .waitFor({ state: "visible", timeout: 10_000 })
-        .then(() => true)
-        .catch(() => false);
-      if (!visible) {
-        errors.push(`${path}: no visible h1 heading`);
-      }
-    }
-
-    expect(errors, `Pages missing h1: ${errors.join(", ")}`).toEqual([]);
-  });
+      await expect(h1.first(), `${path} should expose a visible h1 heading`).toBeVisible({ timeout: 10_000 });
+    });
+  }
 });

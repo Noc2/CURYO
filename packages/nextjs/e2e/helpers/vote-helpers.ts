@@ -1,4 +1,4 @@
-import { waitForFeedLoaded } from "./wait-helpers";
+import { gotoWithRetry, waitForFeedLoaded } from "./wait-helpers";
 import type { Page } from "@playwright/test";
 
 /**
@@ -9,7 +9,7 @@ import type { Page } from "@playwright/test";
  * Handles transaction reverts gracefully by returning false instead of throwing.
  */
 export async function voteOnContent(page: Page, direction: "up" | "down"): Promise<boolean> {
-  await page.goto("/vote");
+  await gotoWithRetry(page, "/vote", { ensureWalletConnected: true });
   await waitForFeedLoaded(page);
 
   const ariaLabel = direction === "up" ? "Vote up" : "Vote down";
@@ -126,7 +126,7 @@ export async function voteOnSpecificContent(
   contentId: string | number,
   direction: "up" | "down",
 ): Promise<boolean> {
-  await page.goto(`/vote?content=${contentId}`);
+  await gotoWithRetry(page, `/vote?content=${contentId}`, { ensureWalletConnected: true });
   await waitForFeedLoaded(page);
 
   const ariaLabel = direction === "up" ? "Vote up" : "Vote down";

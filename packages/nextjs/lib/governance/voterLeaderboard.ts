@@ -24,16 +24,18 @@ export function rankVoterLeaderboardAddresses({
 }: RankVoterLeaderboardAddressesParams) {
   const normalizedIncludeAddress = includeAddress?.toLowerCase() ?? null;
   const normalizedAddresses = [...new Set(candidateAddresses.map(address => address.toLowerCase()))];
+  const positiveBalanceAddresses = normalizedAddresses.filter(
+    address => address === normalizedIncludeAddress || (balances[address] ?? 0n) > 0n,
+  );
+  const addressesToRank = positiveBalanceAddresses.length > 0 ? positiveBalanceAddresses : normalizedAddresses;
 
-  const rankedAddresses = normalizedAddresses
-    .filter(address => address === normalizedIncludeAddress || (balances[address] ?? 0n) > 0n)
-    .sort((left, right) => {
-      const leftBalance = balances[left] ?? 0n;
-      const rightBalance = balances[right] ?? 0n;
-      if (rightBalance > leftBalance) return 1;
-      if (rightBalance < leftBalance) return -1;
-      return left.localeCompare(right);
-    });
+  const rankedAddresses = addressesToRank.sort((left, right) => {
+    const leftBalance = balances[left] ?? 0n;
+    const rightBalance = balances[right] ?? 0n;
+    if (rightBalance > leftBalance) return 1;
+    if (rightBalance < leftBalance) return -1;
+    return left.localeCompare(right);
+  });
 
   const selectedAddresses = rankedAddresses.slice(0, limit);
   if (

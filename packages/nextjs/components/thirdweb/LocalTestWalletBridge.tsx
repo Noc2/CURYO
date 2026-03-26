@@ -3,13 +3,17 @@
 import { useEffect, useMemo, useRef } from "react";
 import { defineChain } from "thirdweb";
 import { useActiveAccount, useConnect as useThirdwebConnect } from "thirdweb/react";
+import { foundry } from "viem/chains";
 import { useAccount } from "wagmi";
 import { useTargetNetwork } from "~~/hooks/scaffold-eth/useTargetNetwork";
 import { useThirdwebWagmiSync } from "~~/hooks/useThirdwebWagmiSync";
+import scaffoldConfig from "~~/scaffold.config";
+import { useGlobalState } from "~~/services/store/store";
 import { thirdwebClient } from "~~/services/thirdweb/client";
 import { createLocalTestWallet } from "~~/services/thirdweb/localTestWallet";
 import { CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY } from "~~/services/thirdweb/testWalletStorage";
 import { publicEnv } from "~~/utils/env/public";
+import { NETWORKS_EXTRA_DATA } from "~~/utils/scaffold-eth";
 
 const LOCALHOST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 const LOCAL_TEST_CHAIN_ID = 31337;
@@ -28,16 +32,31 @@ export function LocalTestWalletBridge() {
   const activeThirdwebAccount = useActiveAccount();
   const { connect } = useThirdwebConnect();
   const { syncWalletToWagmi } = useThirdwebWagmiSync();
+  const setTargetNetwork = useGlobalState(state => state.setTargetNetwork);
   const isSyncingRef = useRef(false);
   const thirdwebTargetChain = useMemo(() => defineChain(targetNetwork), [targetNetwork]);
 
   useEffect(() => {
-    if (!isLocalTestWalletEnabled() || !thirdwebClient || thirdwebTargetChain.id !== LOCAL_TEST_CHAIN_ID) {
+    if (!isLocalTestWalletEnabled() || !thirdwebClient) {
       return;
     }
 
     const privateKey = window.localStorage.getItem(CURYO_E2E_TEST_WALLET_PRIVATE_KEY_STORAGE_KEY)?.trim();
     if (!privateKey) {
+      return;
+    }
+
+    if (targetNetwork.id !== LOCAL_TEST_CHAIN_ID) {
+      const localTestNetwork =
+        scaffoldConfig.targetNetworks.find(network => network.id === LOCAL_TEST_CHAIN_ID) ?? foundry;
+      setTargetNetwork({
+        ...localTestNetwork,
+        ...NETWORKS_EXTRA_DATA[LOCAL_TEST_CHAIN_ID],
+      });
+      return;
+    }
+
+    if (thirdwebTargetChain.id !== LOCAL_TEST_CHAIN_ID) {
       return;
     }
 
@@ -64,16 +83,24 @@ export function LocalTestWalletBridge() {
     isSyncingRef.current = true;
 
     void (async () => {
-      try {
-        if (activeThirdwebAccount?.address?.toLowerCase() !== targetAddress) {
-          await connect(wallet);
-        }
+      let thirdwebConnected = activeThirdwebAccount?.address?.toLowerCase() === targetAddress;
 
+      try {
+        if (!thirdwebConnected) {
+          await connect(wallet);
+          thirdwebConnected = true;
+        }
+      } catch (error) {
+        // Keep going: local E2E only needs the wagmi session for most flows.
+        console.error("Failed to connect local test wallet to thirdweb", error);
+      }
+
+      try {
         if (!cancelled && address?.toLowerCase() !== targetAddress) {
           await syncWalletToWagmi(wallet, thirdwebTargetChain.id);
         }
       } catch (error) {
-        console.error("Failed to connect local test wallet", error);
+        console.error("Failed to sync local test wallet to wagmi", error);
       } finally {
         isSyncingRef.current = false;
       }
@@ -83,7 +110,15 @@ export function LocalTestWalletBridge() {
       cancelled = true;
       isSyncingRef.current = false;
     };
-  }, [activeThirdwebAccount?.address, address, connect, syncWalletToWagmi, thirdwebTargetChain]);
+  }, [
+    activeThirdwebAccount?.address,
+    address,
+    connect,
+    setTargetNetwork,
+    syncWalletToWagmi,
+    targetNetwork.id,
+    thirdwebTargetChain,
+  ]);
 
   return null;
 }

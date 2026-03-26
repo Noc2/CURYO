@@ -11,6 +11,7 @@ import { newE2EContext } from "../helpers/browser-context";
 import { CONTRACT_ADDRESSES } from "../helpers/contracts";
 import { fastForwardTime, waitForSettlementIndexed } from "../helpers/keeper";
 import { PONDER_URL } from "../helpers/ponder-url";
+import { gotoWithRetry } from "../helpers/wait-helpers";
 import { setupWallet } from "../helpers/wallet-session";
 import { getContentById, getContentList } from "../helpers/ponder-api";
 import { voteOnSpecificContent } from "../helpers/vote-helpers";
@@ -56,7 +57,7 @@ test.describe("Tied round lifecycle", () => {
     const page = await context.newPage();
     await setupWallet(page, ANVIL_ACCOUNTS.account2.privateKey);
 
-    await page.goto("/submit");
+    await gotoWithRetry(page, "/submit", { ensureWalletConnected: true });
     await expect(page.getByRole("heading", { name: "Submit Content" })).toBeVisible({ timeout: 15_000 });
 
     // Select YouTube platform — handle "No platforms available" if categories not loaded

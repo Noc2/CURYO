@@ -19,25 +19,47 @@ test.describe("Category filter", () => {
     const allButton = page.getByRole("button", { name: /^All$/i }).first();
     await allButton.waitFor({ state: "visible", timeout: 10_000 }).catch(() => null);
 
-    // Known seeded categories — try each one
-    const knownCategories = ["AI", "Books", "Crypto Tokens", "Games", "Movies", "Music"];
-    for (const name of knownCategories) {
-      const pill = page.getByRole("button", { name, exact: true }).first();
-      const isVisible = await pill.isVisible().catch(() => false);
-      if (isVisible) return { name, locator: pill };
+    const knownCategories = [
+      "AI",
+      "Books",
+      "Crypto Tokens",
+      "Games",
+      "Movies",
+      "Music",
+      "People",
+      "Twitch",
+      "YouTube",
+      "Magic: The Gathering",
+    ];
+
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      for (const name of knownCategories) {
+        const pill = page.getByRole("button", { name, exact: true }).first();
+        const isVisible = await pill.isVisible().catch(() => false);
+        if (isVisible) {
+          return { name, locator: pill };
+        }
+      }
+
+      const pills = page.locator("main").getByRole("button");
+      const count = await pills.count();
+      for (let i = 0; i < count; i++) {
+        const pill = pills.nth(i);
+        const text = (await pill.textContent())?.trim() ?? "";
+        if (!text || text === "All" || text === "View" || /^\+\d+ more/.test(text) || text.length < 2) {
+          continue;
+        }
+
+        const isVisible = await pill.isVisible().catch(() => false);
+        if (isVisible) {
+          return { name: text, locator: pill };
+        }
+      }
+
+      await page.waitForTimeout(500);
     }
 
-    // Fallback: find any button sibling of "All" that isn't "All" or "+N more"
-    const pillContainer = allButton.locator("..");
-    const pills = pillContainer.locator("> button");
-    const count = await pills.count();
-    for (let i = 0; i < count; i++) {
-      const pill = pills.nth(i);
-      const text = (await pill.textContent())?.trim() ?? "";
-      if (!text || text === "All" || /^\+\d+ more/.test(text) || text.length < 2) continue;
-      const isVisible = await pill.isVisible().catch(() => false);
-      if (isVisible) return { name: text, locator: pill };
-    }
     return null;
   }
 
