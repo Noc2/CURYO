@@ -112,6 +112,14 @@ jobs:
           timeout 120 bash -c 'until curl -s "http://localhost:42069/content?limit=1" > /dev/null 2>&1; do sleep 2; done'
           echo "✓ Ponder ready"
 
+      - name: Warm critical Next.js routes
+        run: |
+          # Avoid spending Playwright's navigation budget on first-hit Next dev compilation.
+          for route in / /vote /submit /portfolio /vote/reveal; do
+            echo "Warming ${route}"
+            timeout 120 bash -c "until curl -fsS http://localhost:3000${route} > /dev/null 2>&1; do sleep 2; done"
+          done
+
       - name: Start keeper service
         if: matrix.start_keeper
         env:
