@@ -79,6 +79,7 @@
     "mcp:check-types": "yarn workspace @curyo/mcp-server check-types",
     "node-utils:check-types": "yarn workspace @curyo/node-utils check-types",
     "e2e": "yarn workspace @curyo/nextjs e2e",
+    "e2e:ci:full": "yarn workspace @curyo/nextjs e2e:ci:full",
     "e2e:ui": "yarn workspace @curyo/nextjs e2e:ui",
     "test:ts": "yarn contracts:check-types && yarn node-utils:check-types && yarn contracts:test && yarn next:test && yarn workspace @curyo/keeper test && yarn workspace @curyo/bot test && yarn workspace @curyo/ponder test && yarn workspace @curyo/mcp-server test"
   },
