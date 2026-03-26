@@ -4,6 +4,7 @@ import {
   claimFrontendFee,
   claimFrontendFees,
   commitVoteDirect,
+  confiscateFrontendFee,
   evmIncreaseTime,
   getActiveRoundId,
   getFrontendAccumulatedFees,
@@ -183,7 +184,7 @@ test.describe("Frontend fee claim lifecycle", () => {
       BigInt(contentId),
       roundId,
       frontendAddress,
-      DEPLOYER.address,
+      frontendAddress,
       REWARD_DISTRIBUTOR,
     );
     expect(claimed, "Frontend fee claim should succeed for an eligible frontend").toBe(true);
@@ -198,13 +199,13 @@ test.describe("Frontend fee claim lifecycle", () => {
       BigInt(contentId),
       roundId,
       frontendAddress,
-      DEPLOYER.address,
+      frontendAddress,
       REWARD_DISTRIBUTOR,
     );
     expect(doubleClaim, "Frontend fee should not be claimable twice").toBe(false);
   });
 
-  test("slashed frontends no longer accrue historical frontend fees", async () => {
+  test("slashed frontends route historical frontend fees to protocol", async () => {
     test.setTimeout(180_000);
 
     const uniqueId = Date.now() + 1;
@@ -223,14 +224,14 @@ test.describe("Frontend fee claim lifecycle", () => {
     expect(slashOk, "Frontend slash should succeed").toBe(true);
 
     const feesBefore = await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY);
-    const claimed = await claimFrontendFee(
+    const confiscated = await confiscateFrontendFee(
       BigInt(contentId),
       roundId,
       frontendAddress,
       DEPLOYER.address,
       REWARD_DISTRIBUTOR,
     );
-    expect(claimed, "Historical frontend fee claim should still execute while slashed").toBe(true);
+    expect(confiscated, "Historical frontend fee should be confiscatable while slashed").toBe(true);
     expect(await getFrontendAccumulatedFees(frontendAddress, FRONTEND_REGISTRY)).toBe(feesBefore);
   });
 

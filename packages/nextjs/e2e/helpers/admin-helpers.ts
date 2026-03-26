@@ -810,6 +810,39 @@ export async function claimFrontendFee(
 }
 
 /**
+ * Route a settled frontend fee to protocol once the frontend is slashed or underbonded.
+ * Calls RoundRewardDistributor.confiscateFrontendFee(uint256 contentId, uint256 roundId, address frontend).
+ * Admin only.
+ */
+export async function confiscateFrontendFee(
+  contentId: number | bigint,
+  roundId: number | bigint,
+  frontendAddress: string,
+  fromAddress: string,
+  contractAddress: string,
+): Promise<boolean> {
+  const { encodeFunctionData } = await import("viem");
+  const data = encodeFunctionData({
+    abi: [
+      {
+        name: "confiscateFrontendFee",
+        type: "function",
+        inputs: [
+          { name: "contentId", type: "uint256" },
+          { name: "roundId", type: "uint256" },
+          { name: "frontend", type: "address" },
+        ],
+        outputs: [],
+        stateMutability: "nonpayable",
+      },
+    ],
+    functionName: "confiscateFrontendFee",
+    args: [BigInt(contentId), BigInt(roundId), frontendAddress as `0x${string}`],
+  });
+  return sendTx(fromAddress, contractAddress, data);
+}
+
+/**
  * Check if an address has a VoterID on-chain (not Ponder).
  * Calls holderToTokenId(address) — returns true if tokenId > 0.
  */
