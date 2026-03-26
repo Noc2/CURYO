@@ -94,7 +94,9 @@ function FreeTransactionAllowanceText({ className }: { className?: string }) {
 
   return (
     <div className={`flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/62 ${className ?? ""}`}>
-      <span className="tabular-nums">{remaining}/{limit}</span>
+      <span className="tabular-nums">
+        {remaining}/{limit}
+      </span>
       <span className="text-base-content/48">free tx</span>
       <InfoTooltip text={`Verified wallets get ${limit} free app transactions. Add CELO for gas after that.`} />
     </div>
@@ -157,18 +159,6 @@ function WalletSummaryDetails({
       ) : null}
       <FreeTransactionAllowanceText className={freeTxClassName} />
     </>
-  );
-}
-
-function InlineWalletSummary({ address, crepBalance }: { address: Address; crepBalance: bigint | undefined }) {
-  return (
-    <WalletSummaryDetails
-      address={address}
-      crepBalance={crepBalance}
-      balanceClassName="px-4 pl-12 text-left text-sm font-medium leading-5 text-base-content/78"
-      freeTxClassName="px-4 pl-12 text-left"
-      stakeClassName="flex items-center justify-start gap-1.5 px-4 pl-12 text-left text-sm font-medium leading-5 text-base-content/68"
-    />
   );
 }
 
@@ -243,9 +233,9 @@ export const AddressInfoDropdown = ({
     return (
       <>
         <li className="px-3 py-2" data-testid="wallet-connected">
-          <div className="flex items-center gap-3">
+          <div className="flex items-start gap-3">
             <BlockieAvatar address={checkSumAddress} size={24} ensImage={ensAvatar} />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium leading-5 text-base-content/72">
                 {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
               </p>
@@ -253,8 +243,8 @@ export const AddressInfoDropdown = ({
                 address={address}
                 crepBalance={crepBalance}
                 balanceClassName="text-sm font-medium leading-5 text-base-content/78"
-                freeTxClassName="pt-0.5"
-                stakeClassName="flex items-center gap-1.5 pt-0.5 text-sm font-medium leading-5 text-base-content/68"
+                freeTxClassName="text-left"
+                stakeClassName="flex items-center gap-1.5 text-sm font-medium leading-5 text-base-content/68"
               />
             </div>
           </div>
@@ -265,25 +255,22 @@ export const AddressInfoDropdown = ({
   }
 
   const walletSummary = (
-    <div className="w-full flex flex-col gap-0.5">
-      <div className="flex items-center justify-start gap-3 px-4 py-3 w-full">
+    <div className="w-full px-4 py-3">
+      <div className="flex items-start gap-3">
         <BlockieAvatar address={checkSumAddress} size={24} ensImage={ensAvatar} />
-        <span className="truncate text-sm font-medium leading-5 text-base-content/72">
-          {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
-        </span>
-      </div>
-      {inlineMenu ? <InlineWalletSummary address={address} crepBalance={crepBalance} /> : null}
-      {!inlineMenu ? (
-        <>
+        <div className="min-w-0 flex flex-1 flex-col gap-1">
+          <span className="truncate text-sm font-medium leading-5 text-base-content/72">
+            {isENS(displayName) ? displayName : checkSumAddress?.slice(0, 6) + "..." + checkSumAddress?.slice(-4)}
+          </span>
           <WalletSummaryDetails
             address={address}
             crepBalance={crepBalance}
-            balanceClassName="px-4 pl-12 text-left text-sm font-medium leading-5 text-base-content/78"
-            freeTxClassName="px-4 pl-12 text-left"
-            stakeClassName="flex items-center justify-start gap-1.5 px-4 pl-12 text-left text-sm font-medium leading-5 text-base-content/68"
+            balanceClassName="text-left text-sm font-medium leading-5 text-base-content/78"
+            freeTxClassName="text-left"
+            stakeClassName="flex items-center justify-start gap-1.5 text-left text-sm font-medium leading-5 text-base-content/68"
           />
-        </>
-      ) : null}
+        </div>
+      </div>
     </div>
   );
 
