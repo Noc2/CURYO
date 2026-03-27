@@ -51,6 +51,7 @@ Copy `.env.example` to `.env` in the package directory and fill in the deployed 
 | `VOTER_ID_NFT_ADDRESS` | Auto-derived for supported chains | Fallback VoterIdNFT address |
 | `CATEGORY_REGISTRY_ADDRESS` | Auto-derived for supported chains | Fallback CategoryRegistry address |
 | `PONDER_URL` | — | Ponder indexer URL |
+| `RATE_FRONTEND_ADDRESS` | — | Optional frontend code/operator address attributed on `commitVote()` calls |
 
 **Optional External API Keys:**
 

@@ -11,7 +11,13 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as `0x${string
 export async function runVote() {
   const account = getAccount(config.rateBot);
   const wallet = getWalletClient(config.rateBot, account);
+  const frontendAddress = config.voteFrontendAddress ?? ZERO_ADDRESS;
   log.info(`Rating bot address: ${account.address}`);
+  log.info(
+    frontendAddress === ZERO_ADDRESS
+      ? "Vote frontend attribution: disabled"
+      : `Vote frontend attribution: ${frontendAddress}`,
+  );
 
   // 1. Check Voter ID NFT
   const hasVoterId = await publicClient.readContract({
@@ -137,7 +143,7 @@ export async function runVote() {
       const voteTx = await wallet.writeContract({
         ...contractConfig.votingEngine,
         functionName: "commitVote",
-        args: [contentId, commitHash, ciphertext, config.voteStake, ZERO_ADDRESS],
+        args: [contentId, commitHash, ciphertext, config.voteStake, frontendAddress],
       });
       await publicClient.waitForTransactionReceipt({ hash: voteTx });
       log.info(`Committed vote on content #${item.id} (${Number(config.voteStake) / 1e6} cREP, ${isUp ? "UP" : "DOWN"} — hidden until epoch ends): ${voteTx}`);
