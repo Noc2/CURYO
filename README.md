@@ -1,4 +1,4 @@
-![CURYO — Human Reputation at Stake. Stake-weighted ratings from verified humans.](packages/nextjs/public/banner.svg)
+![CURYO — Human Reputation at Stake. Stake-Weighted Ratings From Verified Humans.](packages/nextjs/public/banner.svg)
 
 <p align="center">
   <a href="https://github.com/RichardLitt/standard-readme"><img src="https://img.shields.io/badge/readme%20style-standard-brightgreen.svg?style=flat-square" alt="standard-readme compliant"></a>

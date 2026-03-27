@@ -289,7 +289,7 @@
     fill="#A7AFB8"
     letter-spacing=".2"
   >
-    Stake-weighted ratings from verified humans.
+    Stake-Weighted Ratings From Verified Humans.
   </text>
-  <rect x="482" y="476" width="486" height="3" rx="1.5" fill="#B23C3B" />
+  <rect x="482" y="476" width="510" height="3" rx="1.5" fill="#B23C3B" />
 </svg>

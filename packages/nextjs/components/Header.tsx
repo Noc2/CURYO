@@ -214,7 +214,7 @@ const HeaderBrand = ({ className, compact = false }: { className?: string; compa
         CURYO (BETA)
       </span>
       <span className={`${compact ? "truncate" : ""} text-base-content/75`} style={{ fontSize: "14px" }}>
-        A Better Web
+        Human Reputation
       </span>
     </div>
   </Link>
