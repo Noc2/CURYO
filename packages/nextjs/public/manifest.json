@@ -1,7 +1,7 @@
 {
   "name": "Curyo",
   "short_name": "Curyo",
-  "description": "Stake-Weighted Ratings From Verified Humans.",
+  "description": "Stake-Weighted Ratings From Verified Humans",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#050607",

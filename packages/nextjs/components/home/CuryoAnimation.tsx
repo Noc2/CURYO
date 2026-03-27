@@ -11,8 +11,8 @@ export function CuryoAnimation() {
   ];
 
   return (
-    <div className="mx-auto flex h-[360px] w-full items-center justify-center sm:h-[500px] lg:h-[560px] xl:h-[620px]">
-      <div className="relative flex h-[24rem] w-[20rem] items-center justify-center sm:h-[32rem] sm:w-[28rem] lg:h-[34rem] lg:w-[30rem] xl:h-[38rem] xl:w-[34rem]">
+    <div className="mx-auto flex h-[360px] w-full items-center justify-center sm:h-[500px] lg:h-[576px] xl:h-[620px]">
+      <div className="relative flex h-[24rem] w-[20rem] items-center justify-center sm:h-[32rem] sm:w-[28rem] lg:h-[35rem] lg:w-[31rem] xl:h-[38rem] xl:w-[34rem]">
         <div className="absolute inset-[10%] rounded-full bg-[radial-gradient(circle,_rgba(242,100,38,0.12),_rgba(179,52,27,0.08)_24%,_rgba(126,137,150,0.05)_50%,_rgba(9,10,12,0)_74%)] blur-3xl" />
         <div className="absolute inset-[16%] rounded-full bg-[radial-gradient(circle,_rgba(245,240,235,0.06),_rgba(9,10,12,0)_70%)] blur-[96px]" />
 
@@ -31,7 +31,7 @@ export function CuryoAnimation() {
           />
         ))}
 
-        <div className="curyo-animation__logo relative h-[16rem] w-[16rem] sm:h-[23rem] sm:w-[23rem] lg:h-[26rem] lg:w-[26rem] xl:h-[29rem] xl:w-[29rem]">
+        <div className="curyo-animation__logo relative h-[16rem] w-[16rem] sm:h-[23rem] sm:w-[23rem] lg:h-[27rem] lg:w-[27rem] xl:h-[29rem] xl:w-[29rem]">
           <CuryoBrandMark className="h-full w-full" title="Curyo logo" animated variant="hero" />
         </div>
       </div>
