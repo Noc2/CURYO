@@ -120,7 +120,7 @@ export function useQueueNavigation<T extends HTMLElement>({
         touchGestureRef.current.axis = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
       }
 
-      if (touchGestureRef.current.axis === "x") {
+      if (touchGestureRef.current.axis === "x" && event.cancelable) {
         event.preventDefault();
       }
     };
