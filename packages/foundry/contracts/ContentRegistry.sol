@@ -774,7 +774,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(bytes(url).length <= MAX_URL_LENGTH, "URL too long");
         require(_isValidSubmissionUrl(url), "Invalid URL");
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
+        (resolvedCategoryId, submissionKey) =
+            SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
     }
 
     /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
@@ -833,12 +834,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {
         if (votingEngine == address(0)) return false;
 
-        uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
-        if (activeRoundId == 0) return false;
-
-        (, RoundLib.RoundState roundState,,,,,,,,,,,,) =
-            IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
-        return roundState == RoundLib.RoundState.Open;
+        return IRoundVotingEngine(votingEngine).currentRoundId(contentId) != 0;
     }
 
     // --- Admin ---
