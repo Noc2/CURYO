@@ -834,7 +834,12 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     function _hasOpenRound(uint256 contentId) internal view returns (bool) {
         if (votingEngine == address(0)) return false;
 
-        return IRoundVotingEngine(votingEngine).currentRoundId(contentId) != 0;
+        uint256 activeRoundId = IRoundVotingEngine(votingEngine).currentRoundId(contentId);
+        if (activeRoundId == 0) return false;
+
+        (, RoundLib.RoundState roundState,,,,,,,,,,,,) =
+            IRoundVotingEngine(votingEngine).rounds(contentId, activeRoundId);
+        return roundState == RoundLib.RoundState.Open;
     }
 
     // --- Admin ---
