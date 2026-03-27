@@ -21,3 +21,7 @@ test("resolvePonderUrl rejects invalid production URLs", () => {
 test("resolvePonderUrl disables localhost URLs in production without crashing module evaluation", () => {
   assert.equal(resolvePonderUrl("http://localhost:42069", true), null);
 });
+
+test("resolvePonderUrl can allow localhost URLs for local production-style E2E", () => {
+  assert.equal(resolvePonderUrl("http://localhost:42069", true, true), "http://localhost:42069");
+});

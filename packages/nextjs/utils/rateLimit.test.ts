@@ -18,8 +18,13 @@ let rateLimit: RateLimitModule;
 let dbModule: DbModule;
 let dbTestMemory: DbTestMemoryModule;
 
-function makeRequest(pathname: string, method = "GET", headers: Record<string, string> = {}) {
-  return new NextRequest(`http://localhost${pathname}`, {
+function makeRequest(
+  pathname: string,
+  method = "GET",
+  headers: Record<string, string> = {},
+  origin = "http://localhost",
+) {
+  return new NextRequest(`${origin}${pathname}`, {
     method,
     headers: new Headers(headers),
   });
@@ -106,11 +111,16 @@ test("resolveRateLimitSubject trusts Vercel forwarded IP headers by default", ()
 
 test("resolveRateLimitSubject falls back to a request fingerprint when no trusted IP is available", () => {
   const subject = rateLimit.resolveRateLimitSubject(
-    makeRequest("/api/watchlist/content", "POST", {
-      "user-agent": "test-agent",
-      "accept-language": "en-US",
-      cookie: "session=abc123",
-    }),
+    makeRequest(
+      "/api/watchlist/content",
+      "POST",
+      {
+        "user-agent": "test-agent",
+        "accept-language": "en-US",
+        cookie: "session=abc123",
+      },
+      "https://curyo.xyz",
+    ),
     { extraKeyParts: ["0xAbC", "watch"] },
   );
 
@@ -120,6 +130,24 @@ test("resolveRateLimitSubject falls back to a request fingerprint when no truste
 
 test("checkRateLimit fails closed in production when no trusted client IP can be derived", async () => {
   const response = await rateLimit.checkRateLimit(
+    makeRequest(
+      "/api/watchlist/content",
+      "GET",
+      {
+        "user-agent": "test-agent",
+        "accept-language": "en-US",
+      },
+      "https://curyo.xyz",
+    ),
+    { limit: 10, windowMs: 60_000 },
+  );
+
+  assert.equal(response?.status, 503);
+  assert.deepEqual(await response?.json(), { error: "Rate limiting is misconfigured" });
+});
+
+test("checkRateLimit accepts localhost production requests without proxy headers", async () => {
+  const response = await rateLimit.checkRateLimit(
     makeRequest("/api/watchlist/content", "GET", {
       "user-agent": "test-agent",
       "accept-language": "en-US",
@@ -127,8 +155,7 @@ test("checkRateLimit fails closed in production when no trusted client IP can be
     { limit: 10, windowMs: 60_000 },
   );
 
-  assert.equal(response?.status, 503);
-  assert.deepEqual(await response?.json(), { error: "Rate limiting is misconfigured" });
+  assert.equal(response, null);
 });
 
 test("checkRateLimit accepts Vercel forwarded IP headers without extra env config", async () => {

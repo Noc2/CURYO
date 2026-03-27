@@ -36,6 +36,17 @@ describe("loadConfig", () => {
         realm: "curyo-mcp",
         tokenHashes: [],
         scopes: ["mcp:read"],
+        tokens: [],
+      },
+      write: {
+        enabled: false,
+        rpcUrl: null,
+        chainId: null,
+        chainName: null,
+        maxGasPerTx: 2_000_000,
+        defaultIdentityId: null,
+        identities: [],
+        contracts: null,
       },
     });
   });
@@ -81,6 +92,7 @@ describe("loadConfig", () => {
     expect(config.httpAuth.realm).toBe("curyo-prod");
     expect(config.httpAuth.tokenHashes).toHaveLength(2);
     expect(config.httpAuth.scopes).toEqual(["mcp:read", "metrics:read"]);
+    expect(config.httpAuth.tokens).toHaveLength(2);
   });
 
   it("requires a bearer token when bearer auth is enabled", () => {
@@ -88,7 +100,67 @@ describe("loadConfig", () => {
       loadConfig({
         CURYO_MCP_HTTP_AUTH_MODE: "bearer",
       }),
-    ).toThrow("CURYO_MCP_HTTP_BEARER_TOKEN or CURYO_MCP_HTTP_BEARER_TOKENS is required");
+    ).toThrow("CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, or CURYO_MCP_HTTP_TOKENS_JSON is required");
+  });
+
+  it("loads scoped bearer tokens bound to write identities", () => {
+    const config = loadConfig({
+      CURYO_MCP_HTTP_AUTH_MODE: "bearer",
+      CURYO_MCP_HTTP_TOKENS_JSON: JSON.stringify([
+        {
+          token: "writer-token",
+          clientId: "claude-prod",
+          scopes: ["mcp:read", "mcp:write:vote"],
+          identityId: "writer",
+        },
+      ]),
+      CURYO_MCP_WRITE_ENABLED: "true",
+      CURYO_MCP_RPC_URL: "https://rpc.celo.example",
+      CURYO_MCP_CHAIN_ID: "11142220",
+      CURYO_MCP_WRITE_IDENTITIES: JSON.stringify([
+        {
+          id: "writer",
+          privateKey: `0x${"11".repeat(32)}`,
+          frontendAddress: "0x7777777777777777777777777777777777777777",
+        },
+      ]),
+    });
+
+    expect(config.httpAuth.tokens).toEqual([
+      expect.objectContaining({
+        clientId: "claude-prod",
+        scopes: ["mcp:read", "mcp:write:vote"],
+        identityId: "writer",
+      }),
+    ]);
+    expect(config.write.enabled).toBe(true);
+    expect(config.write.defaultIdentityId).toBe(null);
+    expect(config.write.identities).toEqual([
+      expect.objectContaining({
+        id: "writer",
+        frontendAddress: "0x7777777777777777777777777777777777777777",
+      }),
+    ]);
+    expect(config.write.contracts).toEqual(
+      expect.objectContaining({
+        votingEngine: expect.stringMatching(/^0x[0-9a-fA-F]{40}$/),
+        frontendRegistry: expect.stringMatching(/^0x[0-9a-fA-F]{40}$/),
+      }),
+    );
+  });
+
+  it("requires known write identities for scoped bearer tokens", () => {
+    expect(() =>
+      loadConfig({
+        CURYO_MCP_HTTP_AUTH_MODE: "bearer",
+        CURYO_MCP_HTTP_TOKENS_JSON: JSON.stringify([
+          {
+            token: "writer-token",
+            identityId: "missing",
+          },
+        ]),
+      }),
+    ).toThrow('references unknown identity "missing"');
   });
 });
 

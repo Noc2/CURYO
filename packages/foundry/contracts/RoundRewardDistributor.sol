@@ -402,7 +402,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         roundParticipationRewardFinalized[contentId][roundId] = true;
         if (releasedDust > 0) {
-            IParticipationPool(rewardPoolAddress).releaseReservedReward(releasedDust);
+            releasedDust = IParticipationPool(rewardPoolAddress).releaseReservedReward(releasedDust);
             roundParticipationRewardReserved[contentId][roundId] = reservedReward - releasedDust;
         }
 

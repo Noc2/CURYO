@@ -22,6 +22,8 @@ async function main() {
       httpPath: config.httpPath,
       ponderBaseUrl: config.ponderBaseUrl,
       httpAuthMode: config.httpAuth.mode,
+      writeEnabled: config.write.enabled,
+      writeChainId: config.write.chainId,
     });
 
     registerShutdownHandlers(async () => {
@@ -42,6 +44,8 @@ async function main() {
   logEvent("info", "mcp_stdio_server_started", {
     ponderBaseUrl: config.ponderBaseUrl,
     httpAuthMode: config.httpAuth.mode,
+    writeEnabled: config.write.enabled,
+    writeChainId: config.write.chainId,
   });
   registerShutdownHandlers(async () => {
     logEvent("info", "mcp_stdio_server_stopping", {

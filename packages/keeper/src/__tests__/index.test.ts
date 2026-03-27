@@ -8,6 +8,7 @@ type KeeperIndexOptions = {
   balance?: bigint;
   consensusReserve?: bigint;
   failRead?: "consensusReserve" | null;
+  frontendFeeEnabled?: boolean;
 };
 
 async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
@@ -47,6 +48,12 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
   const getConsecutiveErrors = vi.fn(() => 0);
   const getWalletClient = vi.fn(() => ({ kind: "wallet" }));
   const getAccount = vi.fn(() => ({ address: ACCOUNT }));
+  const claimConfiguredFrontendFees = vi.fn().mockResolvedValue({
+    frontendAddress: ACCOUNT,
+    roundsClaimed: 0,
+    withdrawals: 0,
+    withdrawnAmount: 0n,
+  });
   const processOn = vi.spyOn(process, "on").mockImplementation(((..._args: any[]) => process) as typeof process.on);
   const setIntervalMock = vi.fn(() => 1 as unknown as NodeJS.Timeout);
   const clearIntervalMock = vi.fn();
@@ -68,6 +75,18 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
       startupJitterMs: 0,
       minGasBalanceWei: "100",
       logFormat: "text",
+      frontendFees: {
+        enabled: options.frontendFeeEnabled ?? false,
+        frontendAddress: undefined,
+        lookbackRounds: 8,
+        withdrawEnabled: true,
+        contracts: options.frontendFeeEnabled
+          ? {
+              roundRewardDistributor: "0x4444444444444444444444444444444444444444",
+              frontendRegistry: "0x5555555555555555555555555555555555555555",
+            }
+          : null,
+      },
     },
   }));
   vi.doMock("../logger.js", () => ({
@@ -85,6 +104,9 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
   vi.doMock("../keeper.js", () => ({
     resolveRounds,
     validateKeeperContracts,
+  }));
+  vi.doMock("../frontend-fees.js", () => ({
+    claimConfiguredFrontendFees,
   }));
   vi.doMock("../metrics.js", () => ({
     startMetricsServer: vi.fn(),
@@ -109,6 +131,7 @@ async function loadKeeperIndex(options: KeeperIndexOptions = {}) {
     recordError,
     getWalletClient,
     getAccount,
+    claimConfiguredFrontendFees,
     processOn,
     setIntervalMock,
     clearIntervalMock,
@@ -167,5 +190,19 @@ describe("keeper index", () => {
     expect(keeper.setGauge).toHaveBeenCalledWith("keeper_wallet_balance_wei", 50);
     expect(keeper.setGauge).toHaveBeenCalledWith("keeper_consensus_reserve_wei", 4000);
     expect(keeper.resolveRounds).toHaveBeenCalledOnce();
+  });
+
+  it("runs the hosted frontend fee sweep when enabled", async () => {
+    const keeper = await loadKeeperIndex({
+      frontendFeeEnabled: true,
+    });
+
+    expect(keeper.claimConfiguredFrontendFees).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ address: ACCOUNT }),
+      expect.anything(),
+    );
   });
 });

@@ -84,23 +84,30 @@ jobs:
           yarn deploy
 
       - name: Start Ponder indexer
+        env:
+          PONDER_NETWORK: hardhat
+          PONDER_RPC_URL_31337: http://127.0.0.1:8545
         run: yarn ponder:dev &
 
       - name: Build Next.js
         env:
           CURYO_E2E_PRODUCTION_BUILD: "true"
+          NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD: "true"
           DATABASE_URL: file:local.db
           NEXT_PUBLIC_PONDER_URL: http://127.0.0.1:42069
           NEXT_PUBLIC_TARGET_NETWORKS: "31337,11142220"
+          NEXT_PUBLIC_THIRDWEB_CLIENT_ID: 124332de491a2aa8b7ba8ea6db1ce693
           NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: 3a8170812b534d0ff9d794f19a901d64
         run: yarn workspace @curyo/nextjs build
 
       - name: Start Next.js (production)
         env:
           CURYO_E2E_PRODUCTION_BUILD: "true"
+          NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD: "true"
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/curyo_app
           NEXT_PUBLIC_PONDER_URL: http://127.0.0.1:42069
           NEXT_PUBLIC_TARGET_NETWORKS: "31337,11142220"
+          NEXT_PUBLIC_THIRDWEB_CLIENT_ID: 124332de491a2aa8b7ba8ea6db1ce693
           NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: 3a8170812b534d0ff9d794f19a901d64
         run: yarn workspace @curyo/nextjs serve &
 
@@ -111,7 +118,7 @@ jobs:
           echo "✓ Next.js ready"
 
           # Wait for Ponder
-          timeout 120 bash -c 'until curl -s "http://localhost:42069/content?limit=1" > /dev/null 2>&1; do sleep 2; done'
+          timeout 120 bash -c 'until curl -sf http://127.0.0.1:42069/ready > /dev/null 2>&1; do sleep 2; done'
           echo "✓ Ponder ready"
 
       - name: Warm critical Next.js routes
@@ -142,9 +149,12 @@ jobs:
         run: ${{ matrix.command }}
         env:
           CI: true
+          CURYO_E2E_PRODUCTION_BUILD: "true"
+          NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD: "true"
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/curyo_app
           NEXT_PUBLIC_PONDER_URL: http://127.0.0.1:42069
           NEXT_PUBLIC_TARGET_NETWORKS: "31337,11142220"
+          NEXT_PUBLIC_THIRDWEB_CLIENT_ID: 124332de491a2aa8b7ba8ea6db1ce693
           NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: 3a8170812b534d0ff9d794f19a901d64
           # Anvil/Hardhat account #2 — well-known test key, no real funds
           KEEPER_PRIVATE_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"

@@ -4,7 +4,6 @@ import { RPC_OVERRIDES } from "~~/config/shared";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "~~/utils/env/targetNetworks";
 
 const isProduction = process.env.NODE_ENV === "production";
-const allowLocalE2EProductionBuild = process.env.CURYO_E2E_PRODUCTION_BUILD === "true";
 export type { SupportedTargetNetwork } from "~~/utils/env/targetNetworks";
 const DEV_WALLET_CONNECT_PROJECT_ID = "3a8170812b534d0ff9d794f19a901d64";
 
@@ -24,6 +23,7 @@ const rawPublicEnv = {
   alchemyApiKey: optionalEnv(process.env.NEXT_PUBLIC_ALCHEMY_API_KEY),
   enableRpcFallback: optionalEnv(process.env.NEXT_PUBLIC_ENABLE_RPC_FALLBACK),
   frontendCode: optionalEnv(process.env.NEXT_PUBLIC_FRONTEND_CODE),
+  localE2EProductionBuild: optionalEnv(process.env.NEXT_PUBLIC_CURYO_E2E_PRODUCTION_BUILD),
   ponderUrl: optionalEnv(process.env.NEXT_PUBLIC_PONDER_URL),
   targetNetworks: optionalEnv(process.env.NEXT_PUBLIC_TARGET_NETWORKS),
   thirdwebClientId: optionalEnv(process.env.NEXT_PUBLIC_THIRDWEB_CLIENT_ID),
@@ -38,7 +38,7 @@ function requireUrl(name: string, value: string | undefined, fallback?: string):
   }
 
   try {
-    if (isProduction && !allowLocalE2EProductionBuild && isLocalhostUrl(resolvedValue)) {
+    if (isProduction && rawPublicEnv.localE2EProductionBuild !== "true" && isLocalhostUrl(resolvedValue)) {
       throw new Error(`${name} must not point to localhost in production.`);
     }
   } catch (error) {
@@ -54,7 +54,7 @@ function requireUrl(name: string, value: string | undefined, fallback?: string):
 
 const targetNetworks = resolveTargetNetworks(rawPublicEnv.targetNetworks, {
   alchemyApiKey: rawPublicEnv.alchemyApiKey,
-  allowFoundryInProduction: allowLocalE2EProductionBuild,
+  allowFoundryInProduction: rawPublicEnv.localE2EProductionBuild === "true",
   production: isProduction,
   fallback: !isProduction ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
   rpcOverrides: RPC_OVERRIDES,

@@ -7,7 +7,15 @@ const bearerAuthConfig: HttpAuthConfig = {
   mode: "bearer",
   realm: "curyo-mcp",
   tokenHashes: [
-    "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94", // sha256("secret-token")
+    "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+  ],
+  tokens: [
+    {
+      tokenHash: "930bbdc51b6aed5c2a5678fd6e28dee7a05e8a4b643cfc0b4427c3efb86c0d94",
+      clientId: "static-bearer:930bbdc51b6a",
+      scopes: ["mcp:read"],
+      identityId: null,
+    },
   ],
   scopes: ["mcp:read"],
 };
@@ -18,6 +26,7 @@ describe("authenticateRequest", () => {
       mode: "none",
       realm: "curyo-mcp",
       tokenHashes: [],
+      tokens: [],
       scopes: ["mcp:read"],
     });
 
@@ -44,6 +53,7 @@ describe("authenticateRequest", () => {
       extra: {
         keyId: "930bbdc51b6a",
         authMode: "bearer",
+        identityId: null,
       },
     });
   });

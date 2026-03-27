@@ -271,15 +271,26 @@
   </text>
   <text
     x="696"
-    y="278"
+    y="274"
     font-family="'Helvetica Neue', Arial, sans-serif"
-    font-size="27"
+    font-size="38"
+    font-weight="700"
+    fill="#FFF8F2"
+    letter-spacing=".4"
+  >
+    <tspan x="696" dy="0">Human Reputation</tspan>
+    <tspan x="696" dy="46">at Stake</tspan>
+  </text>
+  <text
+    x="696"
+    y="364"
+    font-family="'Helvetica Neue', Arial, sans-serif"
+    font-size="21"
     font-weight="400"
     fill="#A7AFB8"
     letter-spacing=".2"
   >
-    <tspan x="696" dy="0">A Better Web,</tspan>
-    <tspan x="696" dy="34">Guided by Human Reputation</tspan>
+    Stake-weighted ratings from verified humans.
   </text>
-  <rect x="696" y="342" width="356" height="2" rx="1" fill="#B23C3B" />
+  <rect x="696" y="392" width="420" height="2" rx="1" fill="#B23C3B" />
 </svg>

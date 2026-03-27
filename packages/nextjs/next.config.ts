@@ -1,10 +1,11 @@
 import { RPC_OVERRIDES } from "./config/shared";
+import { isLocalE2EProductionBuildEnabled } from "./utils/env/e2eProduction";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "./utils/env/targetNetworks";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
-const allowLocalE2EProductionBuild = process.env.CURYO_E2E_PRODUCTION_BUILD === "true";
+const allowLocalE2EProductionBuild = isLocalE2EProductionBuildEnabled();
 const targetNetworks = resolveTargetNetworks(process.env.NEXT_PUBLIC_TARGET_NETWORKS, {
   alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
   allowFoundryInProduction: allowLocalE2EProductionBuild,

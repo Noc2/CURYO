@@ -72,6 +72,20 @@ function requireAddressEnv(name: string, errors: string[]): `0x${string}` {
   return value as `0x${string}`;
 }
 
+function readOptionalAddressEnv(name: string, errors: string[]): `0x${string}` | undefined {
+  const value = readEnv(name);
+  if (!value) {
+    return undefined;
+  }
+
+  if (!isAddress(value)) {
+    errors.push(`${name} must be a valid address`);
+    return undefined;
+  }
+
+  return value as `0x${string}`;
+}
+
 function resolveContractAddress(params: {
   chainId: number;
   envName: string;
@@ -179,6 +193,7 @@ function loadConfig() {
     // Voting
     voteStake: BigInt(process.env.VOTE_STAKE || "1000000"),
     voteThreshold: Number.parseFloat(process.env.VOTE_THRESHOLD || "5.0"),
+    voteFrontendAddress: readOptionalAddressEnv("RATE_FRONTEND_ADDRESS", errors),
     // Limits
     maxVotesPerRun: Number.parseInt(process.env.MAX_VOTES_PER_RUN || "10", 10),
     maxSubmissionsPerRun: Number.parseInt(process.env.MAX_SUBMISSIONS_PER_RUN || "5", 10),

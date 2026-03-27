@@ -491,7 +491,7 @@ export async function resolveRounds(
   return result;
 }
 
-async function writeContractAndConfirm(
+export async function writeContractAndConfirm(
   publicClient: Pick<PublicClient, "waitForTransactionReceipt">,
   walletClient: WalletClient,
   request: Parameters<WalletClient["writeContract"]>[0],

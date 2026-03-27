@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { getSharedDeploymentAddress as getSharedArtifactAddress } from "@curyo/contracts/deployments";
+import { isAddress, type Address } from "viem";
 
 export interface ServerConfig {
   ponderBaseUrl: string;
@@ -12,6 +14,7 @@ export interface ServerConfig {
   httpPublicBaseUrl: string | null;
   httpCorsOrigin: string;
   httpAuth: HttpAuthConfig;
+  write: WriteConfig;
 }
 
 export interface HttpAuthConfig {
@@ -19,6 +22,59 @@ export interface HttpAuthConfig {
   realm: string;
   tokenHashes: string[];
   scopes: string[];
+  tokens: HttpAuthTokenConfig[];
+}
+
+export interface HttpAuthTokenConfig {
+  tokenHash: string;
+  clientId: string;
+  scopes: string[];
+  identityId: string | null;
+}
+
+export interface WriteIdentityConfig {
+  id: string;
+  label: string | null;
+  privateKey?: `0x${string}`;
+  keystoreAccount?: string;
+  keystorePassword?: string;
+  frontendAddress: Address | null;
+}
+
+export interface WriteContractsConfig {
+  crepToken: Address;
+  contentRegistry: Address;
+  votingEngine: Address;
+  voterIdNFT: Address;
+  roundRewardDistributor: Address;
+  frontendRegistry: Address;
+}
+
+export interface WriteConfig {
+  enabled: boolean;
+  rpcUrl: string | null;
+  chainId: number | null;
+  chainName: string | null;
+  maxGasPerTx: number;
+  defaultIdentityId: string | null;
+  identities: WriteIdentityConfig[];
+  contracts: WriteContractsConfig | null;
+}
+
+interface RawHttpTokenConfig {
+  token: string;
+  clientId?: string;
+  scopes?: string[];
+  identityId?: string | null;
+}
+
+interface RawWriteIdentityConfig {
+  id: string;
+  label?: string | null;
+  privateKey?: string;
+  keystoreAccount?: string;
+  keystorePassword?: string;
+  frontendAddress?: string | null;
 }
 
 const DEFAULT_PONDER_URL = "http://127.0.0.1:42069";
@@ -29,6 +85,13 @@ const DEFAULT_HTTP_PATH = "/mcp";
 const DEFAULT_HTTP_CORS_ORIGIN = "http://localhost:3000";
 const DEFAULT_HTTP_AUTH_REALM = "curyo-mcp";
 const DEFAULT_HTTP_AUTH_SCOPES = ["mcp:read"] as const;
+const DEFAULT_MAX_GAS_PER_TX = 2_000_000;
+
+const KNOWN_CHAIN_NAMES: Record<number, string> = {
+  31337: "Foundry",
+  42220: "Celo",
+  11142220: "Celo Sepolia",
+};
 
 const SERVER_TRANSPORT_VALUES = ["stdio", "streamable-http"] as const;
 export type ServerTransport = (typeof SERVER_TRANSPORT_VALUES)[number];
@@ -55,6 +118,11 @@ export function normalizeOptionalBaseUrl(value: string | undefined): string | nu
   return trimmed ? normalizeBaseUrl(trimmed) : null;
 }
 
+function readEnv(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  const value = env[name]?.trim();
+  return value ? value : undefined;
+}
+
 function parseIntegerEnv(value: string | undefined, fallback: number, label: string, minimum: number): number {
   if (value === undefined) return fallback;
 
@@ -64,6 +132,37 @@ function parseIntegerEnv(value: string | undefined, fallback: number, label: str
   }
 
   return parsed;
+}
+
+function parseRequiredInteger(value: string | undefined, label: string, minimum: number, errors: string[]): number | null {
+  if (value === undefined) {
+    errors.push(`${label} is required`);
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < minimum) {
+    errors.push(`${label} must be an integer greater than or equal to ${minimum}`);
+    return null;
+  }
+
+  return parsed;
+}
+
+function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["0", "false", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  throw new Error(`Expected a boolean-like environment value, received ${value}`);
 }
 
 function parseTransportEnv(value: string | undefined): ServerTransport {
@@ -91,35 +190,372 @@ function parseCsvEnv(value: string | undefined): string[] {
     .filter((entry) => entry.length > 0);
 }
 
+function parseJsonEnv<T>(value: string | undefined, label: string): T | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(value) as T;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown parse error";
+    throw new Error(`${label} must be valid JSON: ${message}`);
+  }
+}
+
 function hashToken(token: string): string {
   return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
-function loadHttpAuthConfig(env: NodeJS.ProcessEnv): HttpAuthConfig {
+function parseAddressValue(value: string, label: string, errors: string[]): Address | null {
+  if (!isAddress(value)) {
+    errors.push(`${label} must be a valid address`);
+    return null;
+  }
+
+  return value as Address;
+}
+
+function parsePrivateKeyValue(value: string, label: string, errors: string[]): `0x${string}` | null {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(value)) {
+    errors.push(`${label} must be a 32-byte 0x-prefixed hex private key`);
+    return null;
+  }
+
+  return value as `0x${string}`;
+}
+
+function resolveContractAddress(params: {
+  env: NodeJS.ProcessEnv;
+  chainId: number;
+  envNames: string[];
+  contractName: string;
+  errors: string[];
+  warnings: string[];
+}): Address | null {
+  const { env, chainId, envNames, contractName, errors, warnings } = params;
+  const sharedAddress = getSharedArtifactAddress(chainId, contractName);
+  const envName = envNames.find((name) => readEnv(env, name));
+  const envValue = envName ? readEnv(env, envName) : undefined;
+
+  if (sharedAddress) {
+    if (envValue && envName) {
+      if (isAddress(envValue)) {
+        if (envValue.toLowerCase() !== sharedAddress.toLowerCase()) {
+          warnings.push(
+            `Ignoring ${envName}=${envValue} for chain ${chainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+          );
+        }
+      } else {
+        warnings.push(
+          `Ignoring invalid ${envName} value for chain ${chainId}; using ${contractName} from shared deployment artifacts (${sharedAddress}).`,
+        );
+      }
+    }
+
+    return sharedAddress;
+  }
+
+  if (!envValue || !envName) {
+    errors.push(`${envNames[0]} is required`);
+    return null;
+  }
+
+  return parseAddressValue(envValue, envName, errors);
+}
+
+function loadWriteConfig(env: NodeJS.ProcessEnv): WriteConfig {
+  const enabled = parseBooleanEnv(readEnv(env, "CURYO_MCP_WRITE_ENABLED"), false);
+  if (!enabled) {
+    return {
+      enabled: false,
+      rpcUrl: null,
+      chainId: null,
+      chainName: null,
+      maxGasPerTx: DEFAULT_MAX_GAS_PER_TX,
+      defaultIdentityId: null,
+      identities: [],
+      contracts: null,
+    };
+  }
+
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const rpcUrlValue = readEnv(env, "CURYO_MCP_RPC_URL") ?? readEnv(env, "RPC_URL");
+  let rpcUrl: string | null = null;
+  if (!rpcUrlValue) {
+    errors.push("CURYO_MCP_RPC_URL or RPC_URL is required when CURYO_MCP_WRITE_ENABLED=true");
+  } else {
+    try {
+      rpcUrl = normalizeBaseUrl(rpcUrlValue);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid RPC URL";
+      errors.push(`CURYO_MCP_RPC_URL must be a valid http(s) URL: ${message}`);
+    }
+  }
+
+  const chainId = parseRequiredInteger(
+    readEnv(env, "CURYO_MCP_CHAIN_ID") ?? readEnv(env, "CHAIN_ID"),
+    "CURYO_MCP_CHAIN_ID or CHAIN_ID",
+    1,
+    errors,
+  );
+
+  const rawIdentities = parseJsonEnv<RawWriteIdentityConfig[]>(
+    readEnv(env, "CURYO_MCP_WRITE_IDENTITIES"),
+    "CURYO_MCP_WRITE_IDENTITIES",
+  ) ?? [];
+
+  if (!Array.isArray(rawIdentities) || rawIdentities.length === 0) {
+    errors.push("CURYO_MCP_WRITE_IDENTITIES must be a non-empty JSON array when CURYO_MCP_WRITE_ENABLED=true");
+  }
+
+  const identities: WriteIdentityConfig[] = [];
+  const seenIdentityIds = new Set<string>();
+
+  for (const [index, rawIdentity] of rawIdentities.entries()) {
+    if (!rawIdentity || typeof rawIdentity !== "object") {
+      errors.push(`CURYO_MCP_WRITE_IDENTITIES[${index}] must be an object`);
+      continue;
+    }
+
+    const id = rawIdentity.id?.trim();
+    if (!id) {
+      errors.push(`CURYO_MCP_WRITE_IDENTITIES[${index}].id is required`);
+      continue;
+    }
+
+    if (seenIdentityIds.has(id)) {
+      errors.push(`CURYO_MCP_WRITE_IDENTITIES contains duplicate identity id "${id}"`);
+      continue;
+    }
+    seenIdentityIds.add(id);
+
+    const privateKey = rawIdentity.privateKey?.trim();
+    const keystoreAccount = rawIdentity.keystoreAccount?.trim();
+    const keystorePassword = rawIdentity.keystorePassword;
+
+    if (!privateKey && !keystoreAccount) {
+      errors.push(`CURYO_MCP_WRITE_IDENTITIES[${index}] must define either privateKey or keystoreAccount`);
+      continue;
+    }
+
+    if (privateKey && keystoreAccount) {
+      errors.push(`CURYO_MCP_WRITE_IDENTITIES[${index}] must not define both privateKey and keystoreAccount`);
+      continue;
+    }
+
+    let normalizedPrivateKey: `0x${string}` | undefined;
+    if (privateKey) {
+      const parsedPrivateKey = parsePrivateKeyValue(privateKey, `CURYO_MCP_WRITE_IDENTITIES[${index}].privateKey`, errors);
+      if (!parsedPrivateKey) {
+        continue;
+      }
+      normalizedPrivateKey = parsedPrivateKey;
+    }
+
+    if (keystoreAccount && !keystorePassword) {
+      errors.push(`CURYO_MCP_WRITE_IDENTITIES[${index}].keystorePassword is required with keystoreAccount`);
+      continue;
+    }
+
+    let frontendAddress: Address | null = null;
+    if (typeof rawIdentity.frontendAddress === "string" && rawIdentity.frontendAddress.trim().length > 0) {
+      frontendAddress = parseAddressValue(
+        rawIdentity.frontendAddress.trim(),
+        `CURYO_MCP_WRITE_IDENTITIES[${index}].frontendAddress`,
+        errors,
+      );
+      if (!frontendAddress) {
+        continue;
+      }
+    }
+
+    identities.push({
+      id,
+      label: rawIdentity.label?.trim() || null,
+      privateKey: normalizedPrivateKey,
+      keystoreAccount: keystoreAccount || undefined,
+      keystorePassword,
+      frontendAddress,
+    });
+  }
+
+  const defaultIdentityId = readEnv(env, "CURYO_MCP_WRITE_DEFAULT_IDENTITY") ?? null;
+  if (defaultIdentityId && !seenIdentityIds.has(defaultIdentityId)) {
+    errors.push(`CURYO_MCP_WRITE_DEFAULT_IDENTITY references unknown identity "${defaultIdentityId}"`);
+  }
+
+  let contracts: WriteContractsConfig | null = null;
+  if (chainId !== null) {
+    const crepToken = resolveContractAddress({
+      env,
+      chainId,
+      envNames: ["CURYO_MCP_CREP_TOKEN_ADDRESS", "CREP_TOKEN_ADDRESS"],
+      contractName: "CuryoReputation",
+      errors,
+      warnings,
+    });
+    const contentRegistry = resolveContractAddress({
+      env,
+      chainId,
+      envNames: ["CURYO_MCP_CONTENT_REGISTRY_ADDRESS", "CONTENT_REGISTRY_ADDRESS"],
+      contractName: "ContentRegistry",
+      errors,
+      warnings,
+    });
+    const votingEngine = resolveContractAddress({
+      env,
+      chainId,
+      envNames: ["CURYO_MCP_VOTING_ENGINE_ADDRESS", "VOTING_ENGINE_ADDRESS"],
+      contractName: "RoundVotingEngine",
+      errors,
+      warnings,
+    });
+    const voterIdNFT = resolveContractAddress({
+      env,
+      chainId,
+      envNames: ["CURYO_MCP_VOTER_ID_NFT_ADDRESS", "VOTER_ID_NFT_ADDRESS"],
+      contractName: "VoterIdNFT",
+      errors,
+      warnings,
+    });
+    const roundRewardDistributor = resolveContractAddress({
+      env,
+      chainId,
+      envNames: ["CURYO_MCP_ROUND_REWARD_DISTRIBUTOR_ADDRESS"],
+      contractName: "RoundRewardDistributor",
+      errors,
+      warnings,
+    });
+    const frontendRegistry = resolveContractAddress({
+      env,
+      chainId,
+      envNames: ["CURYO_MCP_FRONTEND_REGISTRY_ADDRESS"],
+      contractName: "FrontendRegistry",
+      errors,
+      warnings,
+    });
+
+    if (crepToken && contentRegistry && votingEngine && voterIdNFT && roundRewardDistributor && frontendRegistry) {
+      contracts = {
+        crepToken,
+        contentRegistry,
+        votingEngine,
+        voterIdNFT,
+        roundRewardDistributor,
+        frontendRegistry,
+      };
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Invalid MCP write configuration:\n- ${errors.join("\n- ")}`);
+  }
+
+  for (const warning of warnings) {
+    console.warn(`[mcp config] ${warning}`);
+  }
+
+  return {
+    enabled: true,
+    rpcUrl,
+    chainId,
+    chainName: readEnv(env, "CURYO_MCP_CHAIN_NAME") ?? KNOWN_CHAIN_NAMES[chainId!] ?? `Chain ${chainId}`,
+    maxGasPerTx: parseIntegerEnv(readEnv(env, "CURYO_MCP_MAX_GAS_PER_TX"), DEFAULT_MAX_GAS_PER_TX, "CURYO_MCP_MAX_GAS_PER_TX", 0),
+    defaultIdentityId,
+    identities,
+    contracts,
+  };
+}
+
+function loadHttpAuthConfig(env: NodeJS.ProcessEnv, identityIds: ReadonlySet<string>): HttpAuthConfig {
   const mode = parseHttpAuthMode(env.CURYO_MCP_HTTP_AUTH_MODE);
   const realm = env.CURYO_MCP_HTTP_AUTH_REALM ?? DEFAULT_HTTP_AUTH_REALM;
+  const scopes = parseCsvEnv(env.CURYO_MCP_HTTP_AUTH_SCOPES);
+  const defaultScopes = scopes.length > 0 ? scopes : [...DEFAULT_HTTP_AUTH_SCOPES];
+
   const tokenValues = [
     ...parseCsvEnv(env.CURYO_MCP_HTTP_BEARER_TOKENS),
     ...(env.CURYO_MCP_HTTP_BEARER_TOKEN ? [env.CURYO_MCP_HTTP_BEARER_TOKEN.trim()] : []),
   ].filter((token) => token.length > 0);
 
-  if (mode === "bearer" && tokenValues.length === 0) {
-    throw new Error("CURYO_MCP_HTTP_BEARER_TOKEN or CURYO_MCP_HTTP_BEARER_TOKENS is required when CURYO_MCP_HTTP_AUTH_MODE=bearer");
+  const legacyTokens: HttpAuthTokenConfig[] = tokenValues.map((token) => {
+    const tokenHash = hashToken(token);
+    return {
+      tokenHash,
+      clientId: `static-bearer:${tokenHash.slice(0, 12)}`,
+      scopes: [...defaultScopes],
+      identityId: null,
+    };
+  });
+
+  const rawTokenConfigs = parseJsonEnv<RawHttpTokenConfig[]>(
+    readEnv(env, "CURYO_MCP_HTTP_TOKENS_JSON"),
+    "CURYO_MCP_HTTP_TOKENS_JSON",
+  ) ?? [];
+
+  if (!Array.isArray(rawTokenConfigs) && rawTokenConfigs !== null) {
+    throw new Error("CURYO_MCP_HTTP_TOKENS_JSON must be a JSON array");
   }
 
-  const scopes = parseCsvEnv(env.CURYO_MCP_HTTP_AUTH_SCOPES);
+  const configuredTokens: HttpAuthTokenConfig[] = [];
+  const tokenErrors: string[] = [];
+
+  for (const [index, rawToken] of rawTokenConfigs.entries()) {
+    if (!rawToken || typeof rawToken !== "object") {
+      tokenErrors.push(`CURYO_MCP_HTTP_TOKENS_JSON[${index}] must be an object`);
+      continue;
+    }
+
+    const token = rawToken.token?.trim();
+    if (!token) {
+      tokenErrors.push(`CURYO_MCP_HTTP_TOKENS_JSON[${index}].token is required`);
+      continue;
+    }
+
+    const identityId = rawToken.identityId?.trim() || null;
+    if (identityId && !identityIds.has(identityId)) {
+      tokenErrors.push(`CURYO_MCP_HTTP_TOKENS_JSON[${index}] references unknown identity "${identityId}"`);
+      continue;
+    }
+
+    const tokenHash = hashToken(token);
+    configuredTokens.push({
+      tokenHash,
+      clientId: rawToken.clientId?.trim() || `static-bearer:${tokenHash.slice(0, 12)}`,
+      scopes: rawToken.scopes && rawToken.scopes.length > 0 ? rawToken.scopes.map((scope) => scope.trim()).filter(Boolean) : [...defaultScopes],
+      identityId,
+    });
+  }
+
+  if (tokenErrors.length > 0) {
+    throw new Error(`Invalid MCP HTTP token configuration:\n- ${tokenErrors.join("\n- ")}`);
+  }
+
+  const tokens = [...legacyTokens, ...configuredTokens];
+
+  if (mode === "bearer" && tokens.length === 0) {
+    throw new Error(
+      "CURYO_MCP_HTTP_BEARER_TOKEN, CURYO_MCP_HTTP_BEARER_TOKENS, or CURYO_MCP_HTTP_TOKENS_JSON is required when CURYO_MCP_HTTP_AUTH_MODE=bearer",
+    );
+  }
 
   return {
     mode,
     realm,
-    tokenHashes: tokenValues.map(hashToken),
-    scopes: scopes.length > 0 ? scopes : [...DEFAULT_HTTP_AUTH_SCOPES],
+    tokenHashes: tokens.map((token) => token.tokenHash),
+    scopes: defaultScopes,
+    tokens,
   };
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const ponderBaseUrl = normalizeBaseUrl(env.CURYO_PONDER_URL ?? env.PONDER_URL ?? DEFAULT_PONDER_URL);
   const transport = parseTransportEnv(env.CURYO_MCP_TRANSPORT);
+  const write = loadWriteConfig(env);
+  const httpAuth = loadHttpAuthConfig(env, new Set(write.identities.map((identity) => identity.id)));
 
   return {
     ponderBaseUrl,
@@ -132,6 +568,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
     httpPath: normalizeHttpPath(env.CURYO_MCP_HTTP_PATH ?? DEFAULT_HTTP_PATH),
     httpPublicBaseUrl: normalizeOptionalBaseUrl(env.CURYO_MCP_PUBLIC_BASE_URL),
     httpCorsOrigin: env.CURYO_MCP_HTTP_CORS_ORIGIN ?? DEFAULT_HTTP_CORS_ORIGIN,
-    httpAuth: loadHttpAuthConfig(env),
+    httpAuth,
+    write,
   };
 }

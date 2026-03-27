@@ -48,6 +48,15 @@ describe("bot config", () => {
     expect(getIdentityConfig("rate")).toMatchObject({ privateKey: VALID_ENV.RATE_PRIVATE_KEY });
   });
 
+  it("loads an optional frontend address for vote attribution", async () => {
+    const frontendAddress = "0x7777777777777777777777777777777777777777";
+    const { config } = await loadBotConfig({
+      RATE_FRONTEND_ADDRESS: frontendAddress,
+    });
+
+    expect(config.voteFrontendAddress).toBe(frontendAddress);
+  });
+
   it("warns when no source API keys are configured", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -144,5 +153,13 @@ describe("bot config", () => {
         ],
       ),
     ).rejects.toThrow("CREP_TOKEN_ADDRESS is required");
+  });
+
+  it("rejects an invalid vote frontend address", async () => {
+    await expect(
+      loadBotConfig({
+        RATE_FRONTEND_ADDRESS: "not-an-address",
+      }),
+    ).rejects.toThrow("RATE_FRONTEND_ADDRESS must be a valid address");
   });
 });

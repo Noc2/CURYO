@@ -2,6 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 import type { PonderClient } from "../clients/ponder.js";
 import { createServer } from "../server.js";
 
+const disabledWriteConfig = {
+  enabled: false,
+  rpcUrl: null,
+  chainId: null,
+  chainName: null,
+  maxGasPerTx: 2_000_000,
+  defaultIdentityId: null,
+  identities: [],
+  contracts: null,
+};
+
 describe("createServer", () => {
   it("builds a disconnected MCP server with the read-only toolset", () => {
     const server = createServer({
@@ -20,7 +31,9 @@ describe("createServer", () => {
         realm: "curyo-mcp",
         tokenHashes: [],
         scopes: ["mcp:read"],
+        tokens: [],
       },
+      write: disabledWriteConfig,
     });
 
     expect(server.isConnected()).toBe(false);
@@ -50,7 +63,9 @@ describe("createServer", () => {
           realm: "curyo-mcp",
           tokenHashes: [],
           scopes: ["mcp:read"],
+          tokens: [],
         },
+        write: disabledWriteConfig,
       },
       ponderClient,
     );
@@ -99,5 +114,66 @@ describe("createServer", () => {
     );
     expect(prompt.messages[0]?.content.text).toContain("AI safety papers");
     expect(prompt.messages[0]?.content.text).toContain("search_content");
+  });
+
+  it("registers hosted write tools when write mode is enabled", () => {
+    const server = createServer({
+      ponderBaseUrl: "https://ponder.curyo.xyz",
+      ponderTimeoutMs: 10_000,
+      serverName: "curyo-test",
+      serverVersion: "0.0.1",
+      transport: "stdio",
+      httpHost: "127.0.0.1",
+      httpPort: 3334,
+      httpPath: "/mcp",
+      httpPublicBaseUrl: null,
+      httpCorsOrigin: "*",
+      httpAuth: {
+        mode: "bearer",
+        realm: "curyo-mcp",
+        tokenHashes: ["abc"],
+        scopes: ["mcp:read"],
+        tokens: [
+          {
+            tokenHash: "abc",
+            clientId: "writer",
+            scopes: ["mcp:read", "mcp:write"],
+            identityId: "writer",
+          },
+        ],
+      },
+      write: {
+        enabled: true,
+        rpcUrl: "https://rpc.celo.example",
+        chainId: 11142220,
+        chainName: "Celo Sepolia",
+        maxGasPerTx: 2_000_000,
+        defaultIdentityId: null,
+        identities: [
+          {
+            id: "writer",
+            label: "Writer",
+            privateKey: `0x${"11".repeat(32)}`,
+            frontendAddress: "0x7777777777777777777777777777777777777777",
+          },
+        ],
+        contracts: {
+          crepToken: "0x1111111111111111111111111111111111111111",
+          contentRegistry: "0x2222222222222222222222222222222222222222",
+          votingEngine: "0x3333333333333333333333333333333333333333",
+          voterIdNFT: "0x4444444444444444444444444444444444444444",
+          roundRewardDistributor: "0x5555555555555555555555555555555555555555",
+          frontendRegistry: "0x6666666666666666666666666666666666666666",
+        },
+      },
+    });
+
+    const internalServer = server as unknown as {
+      _registeredTools: Record<string, unknown>;
+    };
+
+    expect(Object.keys(internalServer._registeredTools)).toEqual(
+      expect.arrayContaining(["vote", "submit_content", "claim_reward", "claim_frontend_fee"]),
+    );
   });
 });

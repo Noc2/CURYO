@@ -774,7 +774,8 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         require(bytes(url).length <= MAX_URL_LENGTH, "URL too long");
         require(_isValidSubmissionUrl(url), "Invalid URL");
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        return SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
+        (resolvedCategoryId, submissionKey) =
+            SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, categoryId);
     }
 
     /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.

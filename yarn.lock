@@ -449,10 +449,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@curyo/mcp-server@workspace:packages/mcp-server"
   dependencies:
+    "@curyo/contracts": "workspace:*"
+    "@curyo/node-utils": "workspace:*"
     "@modelcontextprotocol/sdk": ^1.27.1
     "@types/node": ^20.10.7
     tsx: ^4.19.0
     typescript: ~5.8.2
+    viem: 2.39.0
     vitest: ^4.0.18
     zod: ^3.25.76
   languageName: unknown

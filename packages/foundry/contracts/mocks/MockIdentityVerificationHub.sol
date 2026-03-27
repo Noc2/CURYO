@@ -82,6 +82,28 @@ contract MockIdentityVerificationHub {
         return configId == MOCK_CONFIG_ID;
     }
 
+    function _buildMockVerificationOutput(address user, uint256 olderThan)
+        internal
+        view
+        returns (ISelfVerificationRoot.GenericDiscloseOutputV2 memory)
+    {
+        return ISelfVerificationRoot.GenericDiscloseOutputV2({
+            attestationId: MOCK_PASSPORT_ATTESTATION_ID,
+            userIdentifier: uint256(uint160(user)),
+            nullifier: userNullifiers[user],
+            forbiddenCountriesListPacked: [uint256(0), uint256(0), uint256(0), uint256(0)],
+            issuingState: "",
+            name: new string[](0),
+            idNumber: "",
+            nationality: "",
+            dateOfBirth: "",
+            gender: "",
+            expiryDate: "",
+            olderThan: olderThan,
+            ofac: [false, false, false]
+        });
+    }
+
     /// @notice Mock verify function - not used in testing, simulation is done via simulateVerification
     function verify(
         bytes calldata,
@@ -105,11 +127,7 @@ contract MockIdentityVerificationHub {
         require(userNullifiers[user] != 0, "No nullifier set");
 
         // Build the GenericDiscloseOutputV2 output
-        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
-        output.attestationId = MOCK_PASSPORT_ATTESTATION_ID;
-        output.userIdentifier = uint256(uint160(user));
-        output.nullifier = userNullifiers[user];
-        output.olderThan = 18; // Default to adult (18+) for standard test flow
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output = _buildMockVerificationOutput(user, 18);
 
         // Encode the output for the callback
         bytes memory encodedOutput = abi.encode(output);
@@ -142,11 +160,7 @@ contract MockIdentityVerificationHub {
         require(userNullifiers[user] != 0, "No nullifier set");
 
         // Build the GenericDiscloseOutputV2 output
-        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
-        output.attestationId = MOCK_PASSPORT_ATTESTATION_ID;
-        output.userIdentifier = uint256(uint160(user));
-        output.nullifier = userNullifiers[user];
-        output.olderThan = 18; // Default to adult (18+) for standard test flow
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output = _buildMockVerificationOutput(user, 18);
 
         // Encode the output for the callback
         bytes memory encodedOutput = abi.encode(output);
@@ -166,11 +180,7 @@ contract MockIdentityVerificationHub {
         require(userNullifiers[user] != 0, "No nullifier set");
 
         // Build the GenericDiscloseOutputV2 output
-        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output;
-        output.attestationId = MOCK_PASSPORT_ATTESTATION_ID;
-        output.userIdentifier = uint256(uint160(user));
-        output.nullifier = userNullifiers[user];
-        output.olderThan = age;
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory output = _buildMockVerificationOutput(user, age);
 
         // Encode the output for the callback
         bytes memory encodedOutput = abi.encode(output);

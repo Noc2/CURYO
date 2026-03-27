@@ -3,13 +3,16 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 export interface DataEnvelope extends Record<string, unknown> {
   data: Record<string, unknown>;
   provenance: {
-    source: "ponder";
+    source: "ponder" | "chain";
     endpoint: string;
     baseUrl: string;
     retrievedAt: string;
+    action?: string;
+    chainId?: number;
+    account?: string;
   };
   freshness: {
-    kind: "indexed";
+    kind: "indexed" | "onchain";
   };
   warnings?: string[];
 }
@@ -30,6 +33,35 @@ export function createDataEnvelope(
     },
     freshness: {
       kind: "indexed",
+    },
+    ...(warnings && warnings.length > 0 ? { warnings } : {}),
+  };
+}
+
+export function createChainEnvelope(
+  source: {
+    action: string;
+    rpcUrl: string;
+    chainId: number;
+    account: string;
+    mode: "simulation" | "transaction";
+  },
+  data: Record<string, unknown>,
+  warnings?: string[],
+): DataEnvelope {
+  return {
+    data,
+    provenance: {
+      source: "chain",
+      endpoint: source.mode,
+      baseUrl: source.rpcUrl,
+      retrievedAt: new Date().toISOString(),
+      action: source.action,
+      chainId: source.chainId,
+      account: source.account,
+    },
+    freshness: {
+      kind: "onchain",
     },
     ...(warnings && warnings.length > 0 ? { warnings } : {}),
   };

@@ -52,6 +52,7 @@ const s = StyleSheet.create({
   cover: { flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 60 },
   coverTitle: { fontSize: 48, fontFamily: "Helvetica-Bold", color: DARK, marginTop: 30 },
   coverSubtitle: { fontSize: 16, color: GRAY, marginTop: 36, textAlign: "center" },
+  coverDeck: { fontSize: 12, color: GRAY, marginTop: 12, textAlign: "center" },
   coverMeta: { fontSize: 11, color: GRAY, marginTop: 24, textAlign: "center" },
   // TOC
   tocTitle: { fontSize: 24, fontFamily: "Helvetica-Bold", color: DARK, marginBottom: 20 },
@@ -226,13 +227,14 @@ function Footer() {
 // ── Main document ──
 function WhitepaperDocument({ tocPageNumbers }: { tocPageNumbers?: Record<number, number> }) {
   return (
-    <Document title="Curyo Whitepaper" author={META.author} subject={META.subtitle}>
+    <Document title="Curyo Whitepaper" author={META.author} subject={`${META.subtitle} — ${META.deck}`}>
       {/* Cover page */}
       <Page size="A4" style={[s.page, { paddingTop: 0, paddingBottom: 0 }]}>
         <View style={s.cover}>
           <CoverLogo />
           <Text style={s.coverTitle}>{META.title}</Text>
           <Text style={s.coverSubtitle}>{META.subtitle}</Text>
+          <Text style={s.coverDeck}>{META.deck}</Text>
           <Text style={s.coverMeta}>
             Author: {META.author}
             {"  |  "}Version {META.version}

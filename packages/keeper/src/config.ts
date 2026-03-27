@@ -18,6 +18,18 @@ function readEnv(name: string): string | undefined {
   return value ? value : undefined;
 }
 
+function parseBooleanEnv(value: string | undefined, fallback: boolean, label: string): boolean {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+
+  throw new Error(`${label} must be a boolean-like value`);
+}
+
 function requireUrlEnv(name: string, errors: string[]): string {
   const value = readEnv(name);
   if (!value) {
@@ -95,6 +107,20 @@ function requireAddressEnv(name: string, errors: string[]): `0x${string}` {
   return value as `0x${string}`;
 }
 
+function readOptionalAddressEnv(name: string, errors: string[]): `0x${string}` | undefined {
+  const value = readEnv(name);
+  if (!value) {
+    return undefined;
+  }
+
+  if (!isAddress(value)) {
+    errors.push(`${name} must be a valid address`);
+    return undefined;
+  }
+
+  return value as `0x${string}`;
+}
+
 function resolveContractAddress(params: {
   chainId: number;
   envName: string;
@@ -133,10 +159,31 @@ function loadConfig() {
   const chainId = requireIntEnv("CHAIN_ID", errors);
   const keystoreAccount = readEnv("KEYSTORE_ACCOUNT");
   const privateKey = readEnv("KEEPER_PRIVATE_KEY") as `0x${string}` | undefined;
+  const frontendFeeEnabled = parseBooleanEnv(readEnv("KEEPER_FRONTEND_FEE_ENABLED"), false, "KEEPER_FRONTEND_FEE_ENABLED");
 
   if (!keystoreAccount && !privateKey) {
     errors.push("KEYSTORE_ACCOUNT or KEEPER_PRIVATE_KEY is required");
   }
+
+  const frontendFeeContracts =
+    frontendFeeEnabled && chainId > 0
+      ? {
+          roundRewardDistributor: resolveContractAddress({
+            chainId,
+            envName: "ROUND_REWARD_DISTRIBUTOR_ADDRESS",
+            contractName: "RoundRewardDistributor",
+            errors,
+            warnings,
+          }),
+          frontendRegistry: resolveContractAddress({
+            chainId,
+            envName: "FRONTEND_REGISTRY_ADDRESS",
+            contractName: "FrontendRegistry",
+            errors,
+            warnings,
+          }),
+        }
+      : null;
 
   const loadedConfig = {
     // Network
@@ -184,6 +231,15 @@ function loadConfig() {
 
     // Logging
     logFormat: (process.env.LOG_FORMAT || "json") as "json" | "text",
+
+    // Hosted MCP frontend-fee ops
+    frontendFees: {
+      enabled: frontendFeeEnabled,
+      frontendAddress: readOptionalAddressEnv("KEEPER_FRONTEND_ADDRESS", errors),
+      lookbackRounds: readPositiveIntEnv("KEEPER_FRONTEND_FEE_LOOKBACK_ROUNDS", "8", errors),
+      withdrawEnabled: parseBooleanEnv(readEnv("KEEPER_FRONTEND_FEE_WITHDRAW"), true, "KEEPER_FRONTEND_FEE_WITHDRAW"),
+      contracts: frontendFeeContracts,
+    },
   };
 
   if (errors.length > 0) {

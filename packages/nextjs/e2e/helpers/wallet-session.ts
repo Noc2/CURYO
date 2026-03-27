@@ -63,7 +63,7 @@ export async function setupWallet(
   privateKey: string,
   options: { bootstrap?: boolean } = {},
 ): Promise<void> {
-  const { bootstrap = false } = options;
+  const { bootstrap = true } = options;
   await page.addInitScript(seedWalletSessionScript(privateKey));
 
   if (bootstrap && page.url() === "about:blank") {

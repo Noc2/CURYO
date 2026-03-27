@@ -46,6 +46,7 @@ describe("keeper config", () => {
     expect(config.chainId).toBe(11142220);
     expect(config.chainName).toBe("Celo Sepolia");
     expect(config.cleanupBatchSize).toBe(25);
+    expect(config.frontendFees.enabled).toBe(false);
   });
 
   it("accepts a private key when no keystore account is configured", async () => {
@@ -123,5 +124,35 @@ describe("keeper config", () => {
         ["VOTING_ENGINE_ADDRESS", "CONTENT_REGISTRY_ADDRESS"],
       ),
     ).rejects.toThrow("VOTING_ENGINE_ADDRESS is required");
+  });
+
+  it("loads hosted frontend fee sweep settings from the environment", async () => {
+    const { config } = await loadKeeperConfig({
+      KEEPER_FRONTEND_FEE_ENABLED: "true",
+      KEEPER_FRONTEND_ADDRESS: "0x7777777777777777777777777777777777777777",
+      KEEPER_FRONTEND_FEE_LOOKBACK_ROUNDS: "12",
+      KEEPER_FRONTEND_FEE_WITHDRAW: "false",
+    });
+
+    expect(config.frontendFees).toEqual(
+      expect.objectContaining({
+        enabled: true,
+        frontendAddress: "0x7777777777777777777777777777777777777777",
+        lookbackRounds: 12,
+        withdrawEnabled: false,
+        contracts: expect.objectContaining({
+          roundRewardDistributor: expect.stringMatching(/^0x[0-9a-fA-F]{40}$/),
+          frontendRegistry: expect.stringMatching(/^0x[0-9a-fA-F]{40}$/),
+        }),
+      }),
+    );
+  });
+
+  it("rejects an invalid hosted frontend address", async () => {
+    await expect(
+      loadKeeperConfig({
+        KEEPER_FRONTEND_ADDRESS: "not-an-address",
+      }),
+    ).rejects.toThrow("KEEPER_FRONTEND_ADDRESS must be a valid address");
   });
 });
