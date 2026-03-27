@@ -15,6 +15,7 @@ import {
   dailyVoteActivity,
   voterStreak,
 } from "ponder:schema";
+import { formatUtcDateKey, getPreviousUtcDateKey, normalizeUtcDateKey } from "./streak-utils.js";
 
 ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
   const { contentId, roundId, voter, commitHash, stake } = event.args;
@@ -115,10 +116,7 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
 
   // --- Daily streak tracking ---
   const date = new Date(Number(event.block.timestamp) * 1000);
-  const dateStr =
-    date.getUTCFullYear().toString() +
-    (date.getUTCMonth() + 1).toString().padStart(2, "0") +
-    date.getUTCDate().toString().padStart(2, "0");
+  const dateStr = formatUtcDateKey(date);
   const activityKey = `${voter}-${dateStr}`;
 
   // Upsert daily activity
@@ -136,12 +134,7 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
     }));
 
   // Compute yesterday's date string
-  const yesterday = new Date(date);
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  const yesterdayStr =
-    yesterday.getUTCFullYear().toString() +
-    (yesterday.getUTCMonth() + 1).toString().padStart(2, "0") +
-    yesterday.getUTCDate().toString().padStart(2, "0");
+  const yesterdayStr = getPreviousUtcDateKey(dateStr);
 
   // Upsert voter streak
   const existingStreak = await context.db.find(voterStreak, { voter });
@@ -154,9 +147,14 @@ ponder.on("RoundVotingEngine:VoteCommitted", async ({ event, context }) => {
       totalActiveDays: 1,
       lastMilestoneDay: 0,
     });
-  } else if (existingStreak.lastActiveDate === dateStr) {
+  } else if (normalizeUtcDateKey(existingStreak.lastActiveDate) === dateStr) {
     // Already active today — no streak change
-  } else if (existingStreak.lastActiveDate === yesterdayStr) {
+    if (existingStreak.lastActiveDate !== dateStr) {
+      await context.db.update(voterStreak, { voter }).set({
+        lastActiveDate: dateStr,
+      });
+    }
+  } else if (yesterdayStr !== null && normalizeUtcDateKey(existingStreak.lastActiveDate) === yesterdayStr) {
     // Consecutive day — increment streak
     const newStreak = existingStreak.currentDailyStreak + 1;
     await context.db.update(voterStreak, { voter }).set({

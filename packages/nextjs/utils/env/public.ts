@@ -4,6 +4,7 @@ import { RPC_OVERRIDES } from "~~/config/shared";
 import { DEFAULT_DEV_TARGET_NETWORKS, resolveTargetNetworks } from "~~/utils/env/targetNetworks";
 
 const isProduction = process.env.NODE_ENV === "production";
+const allowLocalE2EProductionBuild = process.env.CURYO_E2E_PRODUCTION_BUILD === "true";
 export type { SupportedTargetNetwork } from "~~/utils/env/targetNetworks";
 const DEV_WALLET_CONNECT_PROJECT_ID = "3a8170812b534d0ff9d794f19a901d64";
 
@@ -37,7 +38,7 @@ function requireUrl(name: string, value: string | undefined, fallback?: string):
   }
 
   try {
-    if (isProduction && isLocalhostUrl(resolvedValue)) {
+    if (isProduction && !allowLocalE2EProductionBuild && isLocalhostUrl(resolvedValue)) {
       throw new Error(`${name} must not point to localhost in production.`);
     }
   } catch (error) {
@@ -53,6 +54,7 @@ function requireUrl(name: string, value: string | undefined, fallback?: string):
 
 const targetNetworks = resolveTargetNetworks(rawPublicEnv.targetNetworks, {
   alchemyApiKey: rawPublicEnv.alchemyApiKey,
+  allowFoundryInProduction: allowLocalE2EProductionBuild,
   production: isProduction,
   fallback: !isProduction ? DEFAULT_DEV_TARGET_NETWORKS : undefined,
   rpcOverrides: RPC_OVERRIDES,

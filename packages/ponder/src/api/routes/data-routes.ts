@@ -13,6 +13,7 @@ import {
   tokenTransfer,
   vote,
   voterCategoryStats,
+  dailyVoteActivity,
   voterId,
   voterStats,
   voterStreak,
@@ -20,6 +21,7 @@ import {
 import type { ApiApp } from "../shared.js";
 import { AVATAR_CATEGORY_WINDOW_SECONDS, jsonBig } from "../shared.js";
 import { isValidAddress, safeBigInt, safeLimit, safeOffset } from "../utils.js";
+import { deriveEffectiveVoterStreak } from "../../streak-utils.js";
 
 const STREAK_MILESTONES = [
   { days: 7, baseBonus: 10 },
@@ -73,7 +75,7 @@ export function registerDataRoutes(app: ApiApp) {
     const address = c.req.param("address").toLowerCase() as `0x${string}`;
     if (!isValidAddress(address)) return c.json({ error: "Invalid address" }, 400);
 
-    const [stats, streak, voterIdRecord] = await Promise.all([
+    const [stats, streak, streakActivity, voterIdRecord] = await Promise.all([
       db
         .select()
         .from(voterStats)
@@ -86,6 +88,13 @@ export function registerDataRoutes(app: ApiApp) {
         .where(eq(voterStreak.voter, address))
         .limit(1)
         .then(rows => rows[0] ?? null),
+      db
+        .select({
+          date: dailyVoteActivity.date,
+        })
+        .from(dailyVoteActivity)
+        .where(eq(dailyVoteActivity.voter, address))
+        .orderBy(asc(dailyVoteActivity.date)),
       db
         .select({
           tokenId: voterId.tokenId,
@@ -160,17 +169,16 @@ export function registerDataRoutes(app: ApiApp) {
         return 0;
       });
 
+    const effectiveStreak = deriveEffectiveVoterStreak(
+      streakActivity.map(row => row.date),
+      streak,
+    );
+
     return jsonBig(c, {
       address,
       voterId: voterIdRecord,
       stats: statsWithRate,
-      streak: streak ?? {
-        currentDailyStreak: 0,
-        bestDailyStreak: 0,
-        totalActiveDays: 0,
-        lastActiveDate: null,
-        lastMilestoneDay: 0,
-      },
+      streak: effectiveStreak,
       categories90d,
     });
   });
@@ -436,33 +444,34 @@ export function registerDataRoutes(app: ApiApp) {
 
     const voterAddr = voter.toLowerCase() as `0x${string}`;
 
-    const [streak] = await db
-      .select()
-      .from(voterStreak)
-      .where(eq(voterStreak.voter, voterAddr))
-      .limit(1);
+    const [streak, streakActivity] = await Promise.all([
+      db
+        .select()
+        .from(voterStreak)
+        .where(eq(voterStreak.voter, voterAddr))
+        .limit(1)
+        .then(rows => rows[0] ?? null),
+      db
+        .select({
+          date: dailyVoteActivity.date,
+        })
+        .from(dailyVoteActivity)
+        .where(eq(dailyVoteActivity.voter, voterAddr))
+        .orderBy(asc(dailyVoteActivity.date)),
+    ]);
 
-    if (!streak) {
-      return jsonBig(c, {
-        currentDailyStreak: 0,
-        bestDailyStreak: 0,
-        totalActiveDays: 0,
-        lastActiveDate: null,
-        lastMilestoneDay: 0,
-        milestones: STREAK_MILESTONES,
-        nextMilestone: STREAK_MILESTONES[0].days,
-        nextMilestoneBaseBonus: STREAK_MILESTONES[0].baseBonus,
-      });
-    }
-
-    const nextMilestone = STREAK_MILESTONES.find(milestone => milestone.days > streak.currentDailyStreak);
+    const effectiveStreak = deriveEffectiveVoterStreak(
+      streakActivity.map(row => row.date),
+      streak,
+    );
+    const nextMilestone = STREAK_MILESTONES.find(milestone => milestone.days > effectiveStreak.currentDailyStreak);
 
     return jsonBig(c, {
-      currentDailyStreak: streak.currentDailyStreak,
-      bestDailyStreak: streak.bestDailyStreak,
-      totalActiveDays: streak.totalActiveDays,
-      lastActiveDate: streak.lastActiveDate,
-      lastMilestoneDay: streak.lastMilestoneDay,
+      currentDailyStreak: effectiveStreak.currentDailyStreak,
+      bestDailyStreak: effectiveStreak.bestDailyStreak,
+      totalActiveDays: effectiveStreak.totalActiveDays,
+      lastActiveDate: effectiveStreak.lastActiveDate,
+      lastMilestoneDay: effectiveStreak.lastMilestoneDay,
       milestones: STREAK_MILESTONES,
       nextMilestone: nextMilestone?.days ?? null,
       nextMilestoneBaseBonus: nextMilestone?.baseBonus ?? null,

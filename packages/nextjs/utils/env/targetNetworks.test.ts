@@ -12,3 +12,15 @@ test("Celo Sepolia uses CELO as the native token symbol", () => {
 
   assert.equal(network.nativeCurrency.symbol, "CELO");
 });
+
+test("production builds can explicitly opt into the local Foundry chain", () => {
+  const networks = resolveTargetNetworks(`${chains.foundry.id},${chains.celoSepolia.id}`, {
+    allowFoundryInProduction: true,
+    production: true,
+  });
+
+  assert.deepEqual(
+    networks.map(network => network.id),
+    [chains.foundry.id, chains.celoSepolia.id],
+  );
+});

@@ -212,7 +212,7 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
     function claimSubmitterReward(uint256 contentId, uint256 roundId) external nonReentrant {
         require(!submitterRewardClaimed[contentId][roundId], "Already claimed");
 
-        (,, address submitter,,,,,,,,,) = registry.contents(contentId);
+        address submitter = registry.getContentSubmitter(contentId);
         require(msg.sender == submitter, "Not submitter");
 
         RoundLib.Round memory round = _readRound(contentId, roundId);
@@ -509,10 +509,13 @@ contract RoundRewardDistributor is Initializable, AccessControlUpgradeable, Reen
 
         IFrontendRegistry snapshotRegistry = IFrontendRegistry(snapshotRegistryAddress);
         try snapshotRegistry.getFrontendInfo(frontend) returns (
-            address frontendOperator, uint256 stakedAmount, bool, bool slashed
+            address frontendOperator, uint256 stakedAmount, bool eligible, bool slashed
         ) {
             if (frontendOperator == address(0)) {
                 return (FrontendFeeDisposition.Direct, frontend);
+            }
+            if (eligible) {
+                return (FrontendFeeDisposition.CreditRegistry, frontendOperator);
             }
             if (slashed || stakedAmount < snapshotRegistry.STAKE_AMOUNT()) {
                 return (FrontendFeeDisposition.Protocol, frontendOperator);

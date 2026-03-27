@@ -211,7 +211,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         require(f.operator != address(0), "Not registered");
         require(!f.slashed, "Frontend is slashed");
         if (frontendExitAvailableAt[msg.sender] != 0) revert FrontendExitPending();
-        require(uint256(f.stakedAmount) == STAKE_AMOUNT, "Frontend is underbonded");
+        require(uint256(f.stakedAmount) >= STAKE_AMOUNT, "Frontend is underbonded");
 
         uint256 crepAmount = uint256(f.crepFees);
 
@@ -234,7 +234,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
         Frontend storage f = frontends[frontend];
         require(f.operator != address(0), "Frontend not registered");
         require(!f.slashed, "Frontend is slashed");
-        require(uint256(f.stakedAmount) == STAKE_AMOUNT, "Frontend is underbonded");
+        require(uint256(f.stakedAmount) >= STAKE_AMOUNT, "Frontend is underbonded");
         f.crepFees += uint64(crepAmount);
         emit FeesCredited(frontend, crepAmount);
     }
@@ -363,7 +363,7 @@ contract FrontendRegistry is IFrontendRegistry, Initializable, AccessControlUpgr
     }
 
     function _isEligible(address frontend, Frontend storage f) internal view returns (bool) {
-        return f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) == STAKE_AMOUNT
+        return f.operator != address(0) && !f.slashed && uint256(f.stakedAmount) >= STAKE_AMOUNT
             && frontendExitAvailableAt[frontend] == 0;
     }
 }

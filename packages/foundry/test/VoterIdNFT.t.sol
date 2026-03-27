@@ -4,7 +4,16 @@ pragma solidity ^0.8.20;
 import { Test } from "forge-std/Test.sol";
 import { VoterIdNFT } from "../contracts/VoterIdNFT.sol";
 import { IERC721Errors } from "@openzeppelin/contracts/interfaces/draft-IERC6093.sol";
+import { IERC721Receiver } from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MockERC721Receiver is IERC721Receiver {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure returns (bytes4) {
+        return IERC721Receiver.onERC721Received.selector;
+    }
+}
+
+contract NonERC721Receiver { }
 
 /// @title VoterIdNFT Unit Tests
 contract VoterIdNFTTest is Test {
@@ -16,6 +25,8 @@ contract VoterIdNFTTest is Test {
     address public user1 = address(4);
     address public user2 = address(5);
     address public user3 = address(6);
+    MockERC721Receiver public receiverContract;
+    NonERC721Receiver public nonReceiverContract;
 
     uint256 public constant NULLIFIER_1 = 111111;
     uint256 public constant NULLIFIER_2 = 222222;
@@ -27,6 +38,9 @@ contract VoterIdNFTTest is Test {
         voterIdNFT.addMinter(minterAddr);
         voterIdNFT.setStakeRecorder(recorderAddr);
         vm.stopPrank();
+
+        receiverContract = new MockERC721Receiver();
+        nonReceiverContract = new NonERC721Receiver();
     }
 
     // ====================================================
@@ -207,6 +221,25 @@ contract VoterIdNFTTest is Test {
         vm.expectEmit(true, true, true, true);
         emit VoterIdNFT.VoterIdMinted(1, user1, NULLIFIER_1);
         voterIdNFT.mint(user1, NULLIFIER_1);
+    }
+
+    function test_Mint_SucceedsForERC721ReceiverContract() public {
+        vm.prank(minterAddr);
+        uint256 tokenId = voterIdNFT.mint(address(receiverContract), NULLIFIER_1);
+
+        assertEq(tokenId, 1);
+        assertEq(voterIdNFT.ownerOf(tokenId), address(receiverContract));
+        assertEq(voterIdNFT.holderToTokenId(address(receiverContract)), tokenId);
+    }
+
+    function test_Mint_RevertForNonERC721ReceiverContract() public {
+        vm.prank(minterAddr);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IERC721Errors.ERC721InvalidReceiver.selector, address(nonReceiverContract)
+            )
+        );
+        voterIdNFT.mint(address(nonReceiverContract), NULLIFIER_1);
     }
 
     // ====================================================

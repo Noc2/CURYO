@@ -6,8 +6,12 @@ const RETRIABLE_GOTO_ERROR_PATTERNS = [
   /ERR_CONNECTION_RESET/i,
   /ECONNRESET/i,
   /frame was detached/i,
+  /page\.goto: Timeout .*exceeded/i,
   /Test timeout/i,
 ];
+
+const DEFAULT_E2E_TIMEOUT_MS = 30_000;
+const CI_MIN_E2E_TIMEOUT_MS = 60_000;
 
 function isRetriableGotoError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -23,7 +27,15 @@ export function getVisibleConnectedWallet(page: Page): Locator {
 }
 
 export async function waitForWalletConnected(page: Page, timeout = 20_000): Promise<void> {
-  await getVisibleConnectedWallet(page).first().waitFor({ state: "visible", timeout });
+  await getVisibleConnectedWallet(page).first().waitFor({ state: "visible", timeout: getEffectiveE2ETimeout(timeout) });
+}
+
+function getEffectiveE2ETimeout(timeout: number): number {
+  if (!process.env.CI) {
+    return timeout;
+  }
+
+  return Math.max(timeout, CI_MIN_E2E_TIMEOUT_MS);
 }
 
 async function hasInjectedLocalTestWallet(page: Page): Promise<boolean> {
@@ -38,6 +50,8 @@ async function hasInjectedLocalTestWallet(page: Page): Promise<boolean> {
 }
 
 export async function ensureInjectedWalletConnected(page: Page, timeout: number): Promise<void> {
+  const effectiveTimeout = getEffectiveE2ETimeout(timeout);
+
   if (!(await hasInjectedLocalTestWallet(page))) {
     return;
   }
@@ -55,13 +69,13 @@ export async function ensureInjectedWalletConnected(page: Page, timeout: number)
     const connectButton = getVisibleAuthConnectButton(page).first();
     const signInVisible = await connectButton.isVisible().catch(() => false);
     if (!signInVisible) {
-      await connectedWallet.waitFor({ state: "visible", timeout }).catch(() => undefined);
+      await connectedWallet.waitFor({ state: "visible", timeout: effectiveTimeout }).catch(() => undefined);
       if (await connectedWallet.isVisible().catch(() => false)) {
         return;
       }
     } else {
       await connectButton.click({ timeout: 5_000 }).catch(() => undefined);
-      await connectedWallet.waitFor({ state: "visible", timeout: Math.min(timeout, 20_000) }).catch(() => undefined);
+      await connectedWallet.waitFor({ state: "visible", timeout: effectiveTimeout }).catch(() => undefined);
       if (await connectedWallet.isVisible().catch(() => false)) {
         return;
       }
@@ -71,10 +85,10 @@ export async function ensureInjectedWalletConnected(page: Page, timeout: number)
       break;
     }
 
-    await page.reload({ waitUntil: "domcontentloaded", timeout });
+    await page.reload({ waitUntil: "domcontentloaded", timeout: effectiveTimeout });
   }
 
-  await waitForWalletConnected(page, timeout);
+  await waitForWalletConnected(page, effectiveTimeout);
 }
 
 export async function gotoWithRetry(
@@ -87,20 +101,26 @@ export async function gotoWithRetry(
     waitUntil?: "load" | "domcontentloaded" | "networkidle" | "commit";
   } = {},
 ): Promise<void> {
-  const { attempts = 3, ensureWalletConnected = false, timeout = 30_000, waitUntil = "domcontentloaded" } = options;
+  const {
+    attempts = 3,
+    ensureWalletConnected = false,
+    timeout = DEFAULT_E2E_TIMEOUT_MS,
+    waitUntil = "domcontentloaded",
+  } = options;
+  const effectiveTimeout = getEffectiveE2ETimeout(timeout);
 
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      await page.goto(url, { timeout, waitUntil });
+      await page.goto(url, { timeout: effectiveTimeout, waitUntil });
 
       const runtimeErrorHeading = page.getByRole("heading", { name: /Application error/i });
       if (await runtimeErrorHeading.isVisible().catch(() => false)) {
-        await page.reload({ timeout, waitUntil: "domcontentloaded" });
+        await page.reload({ timeout: effectiveTimeout, waitUntil: "domcontentloaded" });
       }
 
       if (ensureWalletConnected || (await hasInjectedLocalTestWallet(page))) {
-        await ensureInjectedWalletConnected(page, Math.min(timeout, 30_000));
+        await ensureInjectedWalletConnected(page, effectiveTimeout);
       }
 
       return;

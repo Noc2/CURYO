@@ -734,6 +734,15 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
         return contentSubmitterIdentity[contentId];
     }
 
+    function getContentSubmitter(uint256 contentId) external view returns (address) {
+        return contents[contentId].submitter;
+    }
+
+    function isContentActive(uint256 contentId) external view returns (bool) {
+        Content storage c = contents[contentId];
+        return c.id != 0 && c.status == ContentStatus.Active;
+    }
+
     function isDormancyEligible(uint256 contentId) external view returns (bool) {
         Content storage c = contents[contentId];
         if (c.id == 0 || c.status != ContentStatus.Active) return false;
@@ -748,9 +757,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
             return submissionKeyUsed[keccak256(abi.encodePacked(url))];
         }
 
-        try SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, 0) returns (
-            uint256, bytes32 submissionKey
-        ) {
+        try SUBMISSION_CANONICALIZER.resolveSubmissionKey(categoryRegistry, url, 0) returns (bytes32 submissionKey) {
             return submissionKeyUsed[submissionKey];
         } catch {
             return false;
@@ -773,7 +780,7 @@ contract ContentRegistry is Initializable, AccessControlUpgradeable, PausableUpg
     /// @notice Resolve the canonical submission key for a URL using the configured CategoryRegistry.
     function resolveSubmissionKey(string calldata url) external view returns (bytes32 submissionKey) {
         require(address(categoryRegistry) != address(0), "CategoryRegistry not set");
-        (, submissionKey) = SUBMISSION_CANONICALIZER.resolveCategoryAndSubmissionKey(categoryRegistry, url, 0);
+        return SUBMISSION_CANONICALIZER.resolveSubmissionKey(categoryRegistry, url, 0);
     }
 
     function _computeRevealCommitment(

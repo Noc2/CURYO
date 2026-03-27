@@ -8,6 +8,7 @@ import {
 
 const isProduction = process.env.NODE_ENV === "production";
 const defaultDevDatabaseUrl = "postgresql://postgres:postgres@127.0.0.1:5432/curyo_app";
+const allowLocalE2EProductionBuild = process.env.CURYO_E2E_PRODUCTION_BUILD === "true";
 
 function readEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
@@ -42,7 +43,11 @@ function normalizeDatabaseUrl(rawUrl: string): string {
   }
 }
 
-export function resolveAppUrl(rawValue: string | undefined, production: boolean): string | null {
+export function resolveAppUrl(
+  rawValue: string | undefined,
+  production: boolean,
+  allowLocalhostInProduction = false,
+): string | null {
   const resolvedValue = rawValue?.trim() || (!production ? "http://localhost:3000" : undefined);
 
   if (!resolvedValue) {
@@ -54,7 +59,7 @@ export function resolveAppUrl(rawValue: string | undefined, production: boolean)
     if (url.protocol !== "http:" && url.protocol !== "https:") {
       return null;
     }
-    if (production && isLocalhostHostname(url.hostname)) {
+    if (production && !allowLocalhostInProduction && isLocalhostHostname(url.hostname)) {
       return null;
     }
     return url.toString().replace(/\/$/, "");
@@ -63,7 +68,11 @@ export function resolveAppUrl(rawValue: string | undefined, production: boolean)
   }
 }
 
-export function resolveServerPonderUrl(rawValue: string | undefined, production: boolean): string | null {
+export function resolveServerPonderUrl(
+  rawValue: string | undefined,
+  production: boolean,
+  allowLocalhostInProduction = false,
+): string | null {
   const resolvedValue = rawValue?.trim() || (!production ? "http://localhost:42069" : undefined);
 
   if (!resolvedValue) {
@@ -72,7 +81,7 @@ export function resolveServerPonderUrl(rawValue: string | undefined, production:
 
   try {
     const url = new URL(resolvedValue);
-    if (production && isLocalhostHostname(url.hostname)) {
+    if (production && !allowLocalhostInProduction && isLocalhostHostname(url.hostname)) {
       return null;
     }
     return url.toString().replace(/\/$/, "");
@@ -82,7 +91,7 @@ export function resolveServerPonderUrl(rawValue: string | undefined, production:
 }
 
 export function getOptionalPonderUrl(): string | null {
-  return resolveServerPonderUrl(readEnv("NEXT_PUBLIC_PONDER_URL"), isProduction);
+  return resolveServerPonderUrl(readEnv("NEXT_PUBLIC_PONDER_URL"), isProduction, allowLocalE2EProductionBuild);
 }
 
 export function resolveServerTargetNetworks(
@@ -148,7 +157,10 @@ export function getTmdbApiKey(): string | undefined {
 }
 
 export function getOptionalAppUrl(): string | undefined {
-  return resolveAppUrl(readEnv("APP_URL") ?? readEnv("NEXT_PUBLIC_APP_URL"), isProduction) ?? undefined;
+  return (
+    resolveAppUrl(readEnv("APP_URL") ?? readEnv("NEXT_PUBLIC_APP_URL"), isProduction, allowLocalE2EProductionBuild) ??
+    undefined
+  );
 }
 
 export function getResendConfig() {

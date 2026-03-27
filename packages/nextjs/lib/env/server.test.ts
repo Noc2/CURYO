@@ -33,6 +33,10 @@ test("resolveServerPonderUrl treats localhost production URLs as unavailable", (
   assert.equal(resolveServerPonderUrl("http://localhost:42069", true), null);
 });
 
+test("resolveServerPonderUrl allows localhost production URLs for explicit e2e builds", () => {
+  assert.equal(resolveServerPonderUrl("http://localhost:42069", true, true), "http://localhost:42069");
+});
+
 test("resolveServerTargetNetworks tolerates local-chain builds in production mode", () => {
   const networks = resolveServerTargetNetworks("31337,11142220", true);
   assert.deepEqual(

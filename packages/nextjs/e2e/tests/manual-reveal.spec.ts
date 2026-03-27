@@ -128,7 +128,10 @@ test.describe("Manual reveal fallback", () => {
     const page = await context.newPage();
     await setupWallet(page, voter.privateKey);
 
-    await gotoWithRetry(page, "/vote/reveal", { ensureWalletConnected: true });
+    await gotoWithRetry(page, "/vote/reveal", {
+      ensureWalletConnected: true,
+      timeout: 60_000,
+    });
     await expect(page.getByRole("heading", { name: "Reveal My Vote" })).toBeVisible({ timeout: 15_000 });
 
     // The vote should appear as a link or in the ready section

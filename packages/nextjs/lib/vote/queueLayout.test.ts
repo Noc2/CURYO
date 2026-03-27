@@ -15,6 +15,19 @@ test("computeVoteQueueLayout keeps one row on standard desktop heights", () => {
   assert.equal(layout.pageSize, layout.columns);
 });
 
+test("computeVoteQueueLayout hides the desktop queue when height is too small", () => {
+  const layout = computeVoteQueueLayout({
+    viewportWidth: 1440,
+    viewportHeight: 900,
+    containerWidth: 1024,
+    availableHeight: 180,
+    rootFontSize: 16,
+  });
+
+  assert.equal(layout.rows, 0);
+  assert.equal(layout.pageSize, 0);
+});
+
 test("computeVoteQueueLayout enables two rows only on extra-large viewports with enough height", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 1440,
@@ -29,12 +42,39 @@ test("computeVoteQueueLayout enables two rows only on extra-large viewports with
   assert.equal(layout.pageSize, layout.columns * 2);
 });
 
+test("computeVoteQueueLayout enables three rows on very tall desktop layouts", () => {
+  const layout = computeVoteQueueLayout({
+    viewportWidth: 1728,
+    viewportHeight: 1440,
+    containerWidth: 1180,
+    availableHeight: 760,
+    rootFontSize: 16,
+  });
+
+  assert.equal(layout.rows, 3);
+  assert.ok(layout.columns >= 5);
+  assert.equal(layout.pageSize, layout.columns * 3);
+});
+
 test("computeVoteQueueLayout keeps one row when a second row would overflow the viewport", () => {
   const layout = computeVoteQueueLayout({
     viewportWidth: 1440,
     viewportHeight: 980,
     containerWidth: 1024,
     availableHeight: 390,
+    rootFontSize: 16,
+  });
+
+  assert.equal(layout.rows, 1);
+  assert.equal(layout.pageSize, layout.columns);
+});
+
+test("computeVoteQueueLayout keeps one row on mobile regardless of tight height", () => {
+  const layout = computeVoteQueueLayout({
+    viewportWidth: 390,
+    viewportHeight: 844,
+    containerWidth: 358,
+    availableHeight: 140,
     rootFontSize: 16,
   });
 
