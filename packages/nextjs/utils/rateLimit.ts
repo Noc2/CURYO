@@ -31,6 +31,7 @@ const DEV_FALLBACK_IP = "127.0.0.1";
 const FORWARDED_FOR_HEADER = "x-forwarded-for";
 const FORWARDED_HEADER = "forwarded";
 const REAL_IP_HEADER = "x-real-ip";
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 const DEFAULT_VERCEL_TRUSTED_IP_HEADERS = [FORWARDED_FOR_HEADER, REAL_IP_HEADER] as const;
 const FALLBACK_FINGERPRINT_HEADERS = [
   "user-agent",
@@ -118,6 +119,10 @@ function extractIpFromHeader(headerName: string, value: string | null): string |
   return firstValue || null;
 }
 
+function isLocalRequest(request: NextRequest): boolean {
+  return LOCAL_HOSTNAMES.has(request.nextUrl.hostname);
+}
+
 function getTrustedClientIp(request: NextRequest): string | null {
   const nextRequest = request as NextRequest & { ip?: string };
 
@@ -125,7 +130,7 @@ function getTrustedClientIp(request: NextRequest): string | null {
     return nextRequest.ip.trim();
   }
 
-  if (process.env.NODE_ENV === "development") {
+  if (process.env.NODE_ENV === "development" || isLocalRequest(request)) {
     return (
       extractIpFromHeader(FORWARDED_FOR_HEADER, request.headers.get(FORWARDED_FOR_HEADER)) ??
       extractIpFromHeader(REAL_IP_HEADER, request.headers.get(REAL_IP_HEADER)) ??
