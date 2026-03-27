@@ -140,7 +140,7 @@ contract CuryoGovernor is
     ///      Returns at least MINIMUM_QUORUM to keep early bootstrap governance intentionally conservative.
     function quorum(uint256 blockNumber) public view override(Governor, GovernorVotesQuorumFraction) returns (uint256) {
         uint256 totalSupply = token().getPastTotalSupply(blockNumber);
-        uint256 locked;
+        uint256 locked = 0;
         uint256 excludedHoldersLength = _excludedHolders.length;
         for (uint256 i = 0; i < excludedHoldersLength; i++) {
             locked += crepToken.getPastVotes(_excludedHolders[i], blockNumber);

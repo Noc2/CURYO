@@ -255,7 +255,7 @@ contract RoundVotingEngine is
         bool hasVoterIdNft = address(currentVoterIdNft) != address(0);
 
         // Voter ID check (if configured)
-        uint256 voterId;
+        uint256 voterId = 0;
         if (hasVoterIdNft) {
             if (!currentVoterIdNft.hasVoterId(voter)) revert VoterIdRequired();
             voterId = currentVoterIdNft.getTokenId(voter);
